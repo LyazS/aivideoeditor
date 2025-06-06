@@ -8,7 +8,7 @@
         </svg>
       </button>
       
-      <button class="control-btn" @click="skipBackward" title="后退10秒">
+      <button class="control-btn" @click="previousFrame" title="前一帧">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
           <path d="M11.5,12L20,18V6M11,18V6L2.5,12L11,18Z" />
         </svg>
@@ -23,7 +23,7 @@
         </svg>
       </button>
       
-      <button class="control-btn" @click="skipForward" title="前进10秒">
+      <button class="control-btn" @click="nextFrame" title="后一帧">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
           <path d="M13,6V18L21.5,12M4,18L12.5,12L4,6V18Z" />
         </svg>
@@ -41,32 +41,7 @@
         </svg>
       </button>
     </div>
-    
-    <!-- 时间显示和进度条 -->
-    <div class="time-section">
-      <span class="time-display">{{ formatTime(currentTime) }}</span>
-      
-      <div class="progress-container">
-        <input
-          type="range"
-          class="progress-slider"
-          :min="0"
-          :max="totalDuration"
-          :value="currentTime"
-          @input="handleProgressChange"
-          @mousedown="startSeeking"
-          @mouseup="stopSeeking"
-        />
-        <div class="progress-track">
-          <div 
-            class="progress-fill"
-            :style="{ width: progressPercentage + '%' }"
-          ></div>
-        </div>
-      </div>
-      
-      <span class="time-display">{{ formatTime(totalDuration) }}</span>
-    </div>
+
     
     <!-- 音量控制 -->
     <div class="volume-section">
@@ -105,6 +80,9 @@
         <option value="1.25">1.25x</option>
         <option value="1.5">1.5x</option>
         <option value="2">2x</option>
+        <option value="3">3x</option>
+        <option value="4">4x</option>
+        <option value="5">5x</option>
       </select>
     </div>
   </div>
@@ -116,20 +94,22 @@ import { useVideoStore } from '../stores/counter'
 
 const videoStore = useVideoStore()
 
-const volume = ref(1)
-const isMuted = ref(false)
-const isSeeking = ref(false)
+const volume = ref(0) // 默认静音
+const isMuted = ref(true) // 默认静音状态
 
 const isPlaying = computed(() => videoStore.isPlaying)
-const currentTime = computed(() => videoStore.currentTime)
 const totalDuration = computed(() => videoStore.totalDuration)
 const contentEndTime = computed(() => videoStore.contentEndTime)
 const playbackRate = computed(() => videoStore.playbackRate)
 
-const progressPercentage = computed(() => {
-  if (totalDuration.value === 0) return 0
-  return (currentTime.value / totalDuration.value) * 100
-})
+// 帧控制函数
+function previousFrame() {
+  videoStore.previousFrame()
+}
+
+function nextFrame() {
+  videoStore.nextFrame()
+}
 
 function togglePlayPause() {
   if (isPlaying.value) {
@@ -153,33 +133,7 @@ function skipToEnd() {
   videoStore.setCurrentTime(endTime)
 }
 
-function skipBackward() {
-  const newTime = Math.max(0, currentTime.value - 10)
-  videoStore.setCurrentTime(newTime)
-}
 
-function skipForward() {
-  // 快进时不超过内容结束时间
-  const endTime = contentEndTime.value > 0 ? contentEndTime.value : totalDuration.value
-  const newTime = Math.min(endTime, currentTime.value + 10)
-  videoStore.setCurrentTime(newTime)
-}
-
-function handleProgressChange(event: Event) {
-  if (isSeeking.value) {
-    const target = event.target as HTMLInputElement
-    const newTime = parseFloat(target.value)
-    videoStore.setCurrentTime(newTime)
-  }
-}
-
-function startSeeking() {
-  isSeeking.value = true
-}
-
-function stopSeeking() {
-  isSeeking.value = false
-}
 
 function toggleMute() {
   isMuted.value = !isMuted.value
@@ -199,11 +153,7 @@ function handleSpeedChange(event: Event) {
   videoStore.setPlaybackRate(newRate)
 }
 
-function formatTime(seconds: number): string {
-  const mins = Math.floor(seconds / 60)
-  const secs = Math.floor(seconds % 60)
-  return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
-}
+
 </script>
 
 <style scoped>
@@ -251,61 +201,7 @@ function formatTime(seconds: number): string {
   background-color: #ff6666;
 }
 
-.time-section {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
 
-.time-display {
-  font-family: monospace;
-  font-size: 14px;
-  color: #ccc;
-  min-width: 50px;
-}
-
-.progress-container {
-  flex: 1;
-  position: relative;
-  height: 20px;
-  display: flex;
-  align-items: center;
-}
-
-.progress-slider {
-  width: 100%;
-  height: 4px;
-  background: transparent;
-  outline: none;
-  position: absolute;
-  z-index: 2;
-  cursor: pointer;
-}
-
-.progress-slider::-webkit-slider-thumb {
-  appearance: none;
-  width: 16px;
-  height: 16px;
-  background: #ff4444;
-  border-radius: 50%;
-  cursor: pointer;
-}
-
-.progress-track {
-  width: 100%;
-  height: 4px;
-  background-color: #555;
-  border-radius: 2px;
-  position: relative;
-}
-
-.progress-fill {
-  height: 100%;
-  background-color: #ff4444;
-  border-radius: 2px;
-  transition: width 0.1s;
-}
 
 .volume-section {
   display: flex;

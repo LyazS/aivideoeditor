@@ -56,6 +56,7 @@
           </svg>
           调试
         </button>
+
       </div>
     </div>
 
@@ -65,6 +66,7 @@
       @dragover="handleDragOver"
       @drop="handleDrop"
       @click="handleTimelineClick"
+      @wheel="handleWheel"
     >
       <!-- 拖拽提示 -->
       <div v-if="clips.length === 0" class="drop-zone">
@@ -92,11 +94,14 @@
       <!-- 时间轴背景网格 -->
       <div class="timeline-grid">
         <div
-          v-for="i in gridLines"
-          :key="i"
+          v-for="line in gridLines"
+          :key="line.time"
           class="grid-line"
-          :style="{ left: (i / videoStore.totalDuration) * timelineWidth + 'px' }"
-        ></div>
+          :class="{ 'frame-line': line.isFrame }"
+          :style="{ left: videoStore.timeToPixel(line.time, timelineWidth) + 'px' }"
+        >
+
+        </div>
       </div>
     </div>
   </div>
@@ -121,12 +126,55 @@ const overlappingCount = computed(() => {
 // 网格线
 const gridLines = computed(() => {
   const lines = []
-  const interval = 5 // 每5秒一条网格线
-  for (let i = 0; i <= videoStore.totalDuration; i += interval) {
-    lines.push(i)
+  const pixelsPerSecond = (timelineWidth.value * videoStore.zoomLevel) / videoStore.totalDuration
+
+  // 根据缩放级别决定网格间隔
+  let interval = 5 // 默认每5秒一条网格线
+  let frameInterval = 0 // 帧间隔
+  let isFrameLevel = false
+
+  if (pixelsPerSecond >= 100) { // 降低帧级别的阈值
+    interval = 1 // 高缩放：每秒一条线
+    frameInterval = 1 / videoStore.frameRate // 同时显示帧级别的线
+    isFrameLevel = true
+  } else if (pixelsPerSecond >= 50) {
+    interval = 2 // 中等缩放：每2秒一条线
+  } else if (pixelsPerSecond >= 50) {
+    interval = 5 // 正常缩放：每5秒一条线
+  } else {
+    interval = 10 // 低缩放：每10秒一条线
   }
-  return lines
+
+  // 计算可见时间范围
+  const startTime = videoStore.scrollOffset / pixelsPerSecond
+  const endTime = startTime + (timelineWidth.value / pixelsPerSecond)
+
+  // 生成主网格线（秒级别）
+  const startLine = Math.floor(startTime / interval) * interval
+  const endLine = Math.ceil(endTime / interval) * interval
+
+  for (let i = startLine; i <= Math.min(endLine, videoStore.totalDuration); i += interval) {
+    if (i >= 0) {
+      lines.push({ time: i, isFrame: false })
+    }
+  }
+
+  // 在帧级别缩放时，添加帧网格线
+  if (isFrameLevel && frameInterval > 0) {
+    const frameStartTime = Math.floor(startTime / frameInterval) * frameInterval
+    const frameEndTime = Math.ceil(endTime / frameInterval) * frameInterval
+
+    for (let i = frameStartTime; i <= Math.min(frameEndTime, videoStore.totalDuration); i += frameInterval) {
+      if (i >= 0 && Math.abs(i % interval) > 0.001) { // 避免与主网格线重复
+        lines.push({ time: i, isFrame: true })
+      }
+    }
+  }
+
+  return lines.sort((a, b) => a.time - b.time)
 })
+
+
 
 function updateTimelineWidth() {
   if (timelineContainer.value) {
@@ -150,10 +198,13 @@ async function handleDrop(event: DragEvent) {
     return
   }
   
-  // 计算拖拽位置对应的时间
+  // 计算拖拽位置对应的时间（考虑缩放和滚动偏移量）
   const rect = timelineContainer.value!.getBoundingClientRect()
   const dropX = event.clientX - rect.left
-  const dropTime = (dropX / timelineWidth.value) * videoStore.totalDuration
+  const dropTime = videoStore.pixelToTime(dropX, timelineWidth.value)
+
+  // 如果拖拽位置超出当前时间轴长度，动态扩展时间轴
+  videoStore.expandTimelineIfNeeded(dropTime + 10) // 预留10秒缓冲
   
   for (const file of videoFiles) {
     await createVideoClip(file, dropTime)
@@ -206,6 +257,45 @@ function handleTimelineClick(event: MouseEvent) {
   }
 }
 
+function handleWheel(event: WheelEvent) {
+  event.preventDefault()
+
+  if (event.altKey) {
+    // Alt + 滚轮：缩放
+    const zoomFactor = 1.1
+    const rect = timelineContainer.value?.getBoundingClientRect()
+    if (!rect) return
+
+    // 获取鼠标在时间轴上的位置
+    const mouseX = event.clientX - rect.left
+    const mouseTime = videoStore.pixelToTime(mouseX, timelineWidth.value)
+
+    if (event.deltaY < 0) {
+      // 向上滚动：放大
+      videoStore.zoomIn(zoomFactor, timelineWidth.value)
+    } else {
+      // 向下滚动：缩小
+      videoStore.zoomOut(zoomFactor, timelineWidth.value)
+    }
+
+    // 调整滚动偏移量，使鼠标位置保持在相同的时间点
+    const newMousePixel = videoStore.timeToPixel(mouseTime, timelineWidth.value)
+    const offsetAdjustment = newMousePixel - mouseX
+    videoStore.setScrollOffset(videoStore.scrollOffset + offsetAdjustment, timelineWidth.value)
+
+  } else if (event.shiftKey) {
+    // Shift + 滚轮：水平滚动
+    const scrollAmount = 50
+    if (event.deltaY < 0) {
+      // 向上滚动：向左滚动
+      videoStore.scrollLeft(scrollAmount, timelineWidth.value)
+    } else {
+      // 向下滚动：向右滚动
+      videoStore.scrollRight(scrollAmount, timelineWidth.value)
+    }
+  }
+}
+
 function splitSelectedClip() {
   if (videoStore.selectedClipId) {
     console.log('🔪 开始裁剪片段:', videoStore.selectedClipId)
@@ -239,6 +329,8 @@ function handleKeyDown(event: KeyboardEvent) {
 function autoArrange() {
   videoStore.autoArrangeClips()
 }
+
+
 
 function debugTimeline() {
   console.group('🎬 时间轴配置调试信息')
@@ -543,4 +635,12 @@ onUnmounted(() => {
   background-color: #444;
   opacity: 0.5;
 }
+
+.grid-line.frame-line {
+  background-color: #666;
+  opacity: 0.3;
+  width: 1px;
+}
+
+
 </style>

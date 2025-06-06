@@ -18,10 +18,15 @@ export const useVideoStore = defineStore('video', () => {
   const clips = ref<VideoClip[]>([])
   const currentTime = ref(0)
   const isPlaying = ref(false)
-  const timelineDuration = ref(60) // 默认60秒时间轴
+  const timelineDuration = ref(300) // 默认300秒时间轴，确保有足够的刻度线空间
   const currentClip = ref<VideoClip | null>(null)
   const playbackRate = ref(1) // 播放速度
   const selectedClipId = ref<string | null>(null) // 当前选中的片段ID
+
+  // 时间轴缩放和滚动状态
+  const zoomLevel = ref(1) // 缩放级别，1为默认，大于1为放大，小于1为缩小
+  const scrollOffset = ref(0) // 水平滚动偏移量（像素）
+  const frameRate = ref(30) // 假设视频帧率为30fps
 
   // 全局时间控制器
   let timeUpdateInterval: number | null = null
@@ -31,6 +36,57 @@ export const useVideoStore = defineStore('video', () => {
     const maxEndTime = Math.max(...clips.value.map(clip => clip.timelinePosition + clip.duration))
     return Math.max(maxEndTime, timelineDuration.value)
   })
+
+  // 动态扩展时间轴长度（用于拖拽时预先扩展）
+  function expandTimelineIfNeeded(targetTime: number) {
+    if (targetTime > timelineDuration.value) {
+      // 扩展到目标时间的1.5倍，确保有足够的空间
+      timelineDuration.value = Math.max(targetTime * 1.5, timelineDuration.value)
+    }
+  }
+
+  // 计算最大允许的可见时间范围（基于视频内容长度）
+  const maxVisibleDuration = computed(() => {
+    if (contentEndTime.value === 0) {
+      return 300 // 没有视频时使用默认值300秒
+    }
+    // 最大可见范围：视频内容长度的4倍
+    return contentEndTime.value * 4
+  })
+
+  // 缩放相关计算属性
+  const minZoomLevel = computed(() => {
+    // 基于最大可见范围计算最小缩放级别
+    return totalDuration.value / maxVisibleDuration.value
+  })
+
+  // 当前可见时间范围（受最大可见范围限制）
+  const visibleDuration = computed(() => {
+    const calculatedDuration = totalDuration.value / zoomLevel.value
+    return Math.min(calculatedDuration, maxVisibleDuration.value)
+  })
+
+  // 计算最大缩放级别的函数（需要时间轴宽度参数）
+  function getMaxZoomLevel(timelineWidth: number): number {
+    // 最大缩放级别：一帧占用容器宽度的1/20（即5%）
+    const targetFrameWidth = timelineWidth / 20 // 一帧占1/20横幅
+    const frameDuration = 1 / frameRate.value // 一帧的时长（秒）
+    const requiredPixelsPerSecond = targetFrameWidth / frameDuration
+    const maxZoom = (requiredPixelsPerSecond * totalDuration.value) / timelineWidth
+
+
+
+    return Math.max(maxZoom, 100) // 确保至少有100倍缩放
+  }
+
+  // 计算最大滚动偏移量的函数（需要时间轴宽度参数）
+  function getMaxScrollOffset(timelineWidth: number): number {
+    // 基于最大可见范围计算滚动限制，而不是基于totalDuration
+    const effectiveDuration = Math.min(totalDuration.value, maxVisibleDuration.value)
+    const pixelsPerSecond = (timelineWidth * zoomLevel.value) / totalDuration.value
+    const maxScrollableTime = Math.max(0, effectiveDuration - (timelineWidth / pixelsPerSecond))
+    return maxScrollableTime * pixelsPerSecond
+  }
 
   // 计算实际内容的结束时间（最后一个视频片段的结束时间）
   const contentEndTime = computed(() => {
@@ -260,9 +316,18 @@ export const useVideoStore = defineStore('video', () => {
     ) || null
   }
 
-  function setCurrentTime(time: number) {
-    currentTime.value = time
-    currentClip.value = getClipAtTime(time)
+  // 将时间对齐到帧边界
+  function alignTimeToFrame(time: number): number {
+    const frameDuration = 1 / frameRate.value
+    return Math.floor(time / frameDuration) * frameDuration
+  }
+
+  function setCurrentTime(time: number, forceAlign: boolean = true) {
+    const finalTime = forceAlign ? alignTimeToFrame(time) : time
+    currentTime.value = finalTime
+    currentClip.value = getClipAtTime(finalTime)
+
+
   }
 
   function startTimeUpdate() {
@@ -309,6 +374,21 @@ export const useVideoStore = defineStore('video', () => {
     playbackRate.value = rate
   }
 
+  // 前一帧控制
+  function previousFrame() {
+    const frameDuration = 1 / frameRate.value
+    const newTime = Math.max(0, currentTime.value - frameDuration)
+    setCurrentTime(newTime)
+  }
+
+  // 后一帧控制
+  function nextFrame() {
+    const frameDuration = 1 / frameRate.value
+    const endTime = contentEndTime.value > 0 ? contentEndTime.value : totalDuration.value
+    const newTime = Math.min(endTime, currentTime.value + frameDuration)
+    setCurrentTime(newTime)
+  }
+
   // 获取所有重叠的片段对
   function getOverlappingClips(): Array<{ clip1: VideoClip, clip2: VideoClip }> {
     const overlaps: Array<{ clip1: VideoClip, clip2: VideoClip }> = []
@@ -336,6 +416,86 @@ export const useVideoStore = defineStore('video', () => {
     }
   }
 
+  // 缩放和滚动方法
+  function setZoomLevel(newZoomLevel: number, timelineWidth: number = 800) {
+    const maxZoom = getMaxZoomLevel(timelineWidth)
+    const minZoom = minZoomLevel.value
+    const clampedZoom = Math.max(minZoom, Math.min(newZoomLevel, maxZoom))
+
+    // 如果达到最小缩放级别，提供调试信息
+    if (newZoomLevel < minZoom && contentEndTime.value > 0) {
+      console.log(`🔍 已达到最小缩放级别 (${minZoom.toFixed(3)})`)
+      console.log(`📏 当前视频总长度: ${contentEndTime.value.toFixed(1)}秒`)
+      console.log(`👁️ 最大可见范围限制: ${maxVisibleDuration.value.toFixed(1)}秒`)
+      console.log(`🎯 当前可见范围: ${visibleDuration.value.toFixed(1)}秒`)
+    }
+
+    zoomLevel.value = clampedZoom
+
+    // 调整滚动偏移量以保持在有效范围内
+    const maxOffset = getMaxScrollOffset(timelineWidth)
+    scrollOffset.value = Math.max(0, Math.min(scrollOffset.value, maxOffset))
+  }
+
+  function setScrollOffset(newOffset: number, timelineWidth: number = 800) {
+    const maxOffset = getMaxScrollOffset(timelineWidth)
+    scrollOffset.value = Math.max(0, Math.min(newOffset, maxOffset))
+  }
+
+  function zoomIn(factor: number = 1.2, timelineWidth: number = 800) {
+    setZoomLevel(zoomLevel.value * factor, timelineWidth)
+  }
+
+  function zoomOut(factor: number = 1.2, timelineWidth: number = 800) {
+    setZoomLevel(zoomLevel.value / factor, timelineWidth)
+
+    // 当缩小时间轴时，确保基础时间轴长度足够大以显示更多刻度线
+    const pixelsPerSecond = (timelineWidth * zoomLevel.value) / totalDuration.value
+    const visibleDuration = timelineWidth / pixelsPerSecond
+
+    // 如果可见时间范围超过当前时间轴长度，扩展时间轴
+    if (visibleDuration > timelineDuration.value) {
+      timelineDuration.value = Math.max(visibleDuration * 1.5, timelineDuration.value)
+    }
+  }
+
+  function scrollLeft(amount: number = 50, timelineWidth: number = 800) {
+    setScrollOffset(scrollOffset.value - amount, timelineWidth)
+  }
+
+  function scrollRight(amount: number = 50, timelineWidth: number = 800) {
+    setScrollOffset(scrollOffset.value + amount, timelineWidth)
+  }
+
+  // 计算用于刻度线显示的虚拟时间轴长度
+  function getVirtualTimelineDuration(timelineWidth: number): number {
+    // 当缩小时间轴时，计算可见范围的结束时间
+    const pixelsPerSecond = (timelineWidth * zoomLevel.value) / totalDuration.value
+    const visibleEndTime = scrollOffset.value / pixelsPerSecond + (timelineWidth / pixelsPerSecond)
+
+    // 返回当前内容长度和可见范围结束时间的较大值，确保刻度线能够扩展
+    return Math.max(totalDuration.value, visibleEndTime + 60) // 额外添加60秒缓冲
+  }
+
+  // 将时间转换为像素位置（考虑缩放和滚动）
+  function timeToPixel(time: number, timelineWidth: number): number {
+    const pixelsPerSecond = (timelineWidth * zoomLevel.value) / totalDuration.value
+    return (time * pixelsPerSecond) - scrollOffset.value
+  }
+
+  // 将像素位置转换为时间（考虑缩放和滚动）
+  function pixelToTime(pixel: number, timelineWidth: number): number {
+    const pixelsPerSecond = (timelineWidth * zoomLevel.value) / totalDuration.value
+    return (pixel + scrollOffset.value) / pixelsPerSecond
+  }
+
+  // 专门用于刻度线计算的时间到像素转换（使用虚拟时间轴长度）
+  function timeToPixelForScale(time: number, timelineWidth: number): number {
+    const virtualDuration = getVirtualTimelineDuration(timelineWidth)
+    const pixelsPerSecond = (timelineWidth * zoomLevel.value) / virtualDuration
+    return (time * pixelsPerSecond) - scrollOffset.value
+  }
+
   return {
     clips,
     currentTime,
@@ -346,6 +506,16 @@ export const useVideoStore = defineStore('video', () => {
     contentEndTime,
     playbackRate,
     selectedClipId,
+    // 缩放和滚动状态
+    zoomLevel,
+    scrollOffset,
+    frameRate,
+    minZoomLevel,
+    visibleDuration,
+    maxVisibleDuration,
+    getMaxZoomLevel,
+    getMaxScrollOffset,
+    // 原有方法
     addClip,
     removeClip,
     updateClipPosition,
@@ -358,10 +528,25 @@ export const useVideoStore = defineStore('video', () => {
     pause,
     stop,
     setPlaybackRate,
+    previousFrame,
+    nextFrame,
     startTimeUpdate,
     stopTimeUpdate,
     isOverlapping,
     getOverlappingClips,
-    autoArrangeClips
+    autoArrangeClips,
+    // 缩放和滚动方法
+    setZoomLevel,
+    setScrollOffset,
+    zoomIn,
+    zoomOut,
+    scrollLeft,
+    scrollRight,
+    timeToPixel,
+    pixelToTime,
+    alignTimeToFrame,
+    expandTimelineIfNeeded,
+    getVirtualTimelineDuration,
+    timeToPixelForScale
   }
 })

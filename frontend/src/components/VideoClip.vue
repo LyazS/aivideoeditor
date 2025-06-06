@@ -1,7 +1,12 @@
 <template>
   <div
     class="video-clip"
-    :class="{ 'overlapping': isOverlapping, 'selected': isSelected }"
+    :class="{
+      'overlapping': isOverlapping,
+      'selected': isSelected,
+      'dragging': isDragging,
+      'resizing': isResizing
+    }"
     :style="clipStyle"
     @mousedown="startDrag"
     @click="selectClip"
@@ -76,15 +81,27 @@ const isResizing = ref(false)
 const resizeDirection = ref<'left' | 'right' | null>(null)
 const dragStartX = ref(0)
 const dragStartPosition = ref(0)
+const tempPosition = ref(0) // 临时位置，用于拖拽过程中的视觉反馈
 const resizeStartX = ref(0)
 const resizeStartDuration = ref(0)
 const resizeStartPosition = ref(0)
+const tempDuration = ref(0) // 临时时长，用于调整大小过程中的视觉反馈
+const tempResizePosition = ref(0) // 临时调整位置
 
 // 计算片段样式
 const clipStyle = computed(() => {
-  const pixelsPerSecond = props.timelineWidth / props.totalDuration
-  const left = props.clip.timelinePosition * pixelsPerSecond
-  const width = props.clip.duration * pixelsPerSecond
+  const videoStore = useVideoStore()
+
+  // 在拖拽或调整大小时使用临时值，否则使用实际值
+  const position = isDragging.value ? tempPosition.value :
+                   isResizing.value ? tempResizePosition.value :
+                   props.clip.timelinePosition
+  const duration = isResizing.value ? tempDuration.value : props.clip.duration
+
+  const left = videoStore.timeToPixel(position, props.timelineWidth)
+  const endTime = position + duration
+  const right = videoStore.timeToPixel(endTime, props.timelineWidth)
+  const width = right - left
 
   return {
     left: `${left}px`,
@@ -96,8 +113,16 @@ const clipStyle = computed(() => {
 
 // 判断是否应该显示详细信息（当片段足够宽时）
 const showDetails = computed(() => {
-  const pixelsPerSecond = props.timelineWidth / props.totalDuration
-  const width = props.clip.duration * pixelsPerSecond
+  // 在拖拽或调整大小时使用临时值，否则使用实际值
+  const position = isDragging.value ? tempPosition.value :
+                   isResizing.value ? tempResizePosition.value :
+                   props.clip.timelinePosition
+  const duration = isResizing.value ? tempDuration.value : props.clip.duration
+
+  const endTime = position + duration
+  const left = videoStore.timeToPixel(position, props.timelineWidth)
+  const right = videoStore.timeToPixel(endTime, props.timelineWidth)
+  const width = right - left
   return width >= 100 // 宽度大于100px时显示详细信息
 })
 
@@ -167,6 +192,7 @@ function startDrag(event: MouseEvent) {
   isDragging.value = true
   dragStartX.value = event.clientX
   dragStartPosition.value = props.clip.timelinePosition
+  tempPosition.value = props.clip.timelinePosition // 初始化临时位置
 
   document.addEventListener('mousemove', handleDrag)
   document.addEventListener('mouseup', stopDrag)
@@ -176,18 +202,25 @@ function startDrag(event: MouseEvent) {
 
 function handleDrag(event: MouseEvent) {
   if (!isDragging.value) return
-  
+
   const deltaX = event.clientX - dragStartX.value
-  const pixelsPerSecond = props.timelineWidth / props.totalDuration
-  const deltaTime = deltaX / pixelsPerSecond
-  
-  const newPosition = Math.max(0, dragStartPosition.value + deltaTime)
+  const currentPixel = videoStore.timeToPixel(dragStartPosition.value, props.timelineWidth)
+  const newPixel = currentPixel + deltaX
+  const newTime = videoStore.pixelToTime(newPixel, props.timelineWidth)
+
+  const newPosition = Math.max(0, newTime)
   const maxPosition = props.totalDuration - props.clip.duration
-  
-  emit('update-position', props.clip.id, Math.min(newPosition, maxPosition))
+
+  // 只更新临时位置，不触发 store 更新
+  tempPosition.value = Math.min(newPosition, maxPosition)
 }
 
 function stopDrag() {
+  if (isDragging.value) {
+    // 只在拖拽结束时更新 store，避免拖拽过程中的频繁更新
+    emit('update-position', props.clip.id, tempPosition.value)
+  }
+
   isDragging.value = false
   document.removeEventListener('mousemove', handleDrag)
   document.removeEventListener('mouseup', stopDrag)
@@ -200,6 +233,10 @@ function startResize(direction: 'left' | 'right', event: MouseEvent) {
   resizeStartDuration.value = props.clip.duration
   resizeStartPosition.value = props.clip.timelinePosition
 
+  // 初始化临时值
+  tempDuration.value = props.clip.duration
+  tempResizePosition.value = props.clip.timelinePosition
+
   document.addEventListener('mousemove', handleResize)
   document.addEventListener('mouseup', stopResize)
 
@@ -210,28 +247,27 @@ function handleResize(event: MouseEvent) {
   if (!isResizing.value || !resizeDirection.value) return
 
   const deltaX = event.clientX - resizeStartX.value
-  const pixelsPerSecond = props.timelineWidth / props.totalDuration
-  const deltaTime = deltaX / pixelsPerSecond
 
   let newDuration = resizeStartDuration.value
   let newTimelinePosition = resizeStartPosition.value
 
   if (resizeDirection.value === 'left') {
     // 拖拽左边把柄：调整时长和时间轴位置
-    // 向左拖拽增加时长，向右拖拽减少时长
-    newDuration = resizeStartDuration.value - deltaTime
-    newTimelinePosition = resizeStartPosition.value + deltaTime
+    const currentLeftPixel = videoStore.timeToPixel(resizeStartPosition.value, props.timelineWidth)
+    const newLeftPixel = currentLeftPixel + deltaX
+    const newLeftTime = videoStore.pixelToTime(newLeftPixel, props.timelineWidth)
 
-    // 确保不会拖拽到负位置
-    if (newTimelinePosition < 0) {
-      const adjustment = -newTimelinePosition
-      newTimelinePosition = 0
-      newDuration = newDuration + adjustment
-    }
+    newTimelinePosition = Math.max(0, newLeftTime)
+    newDuration = resizeStartDuration.value + (resizeStartPosition.value - newTimelinePosition)
+
   } else if (resizeDirection.value === 'right') {
     // 拖拽右边把柄：只调整时长
-    // 向右拖拽增加时长，向左拖拽减少时长
-    newDuration = resizeStartDuration.value + deltaTime
+    const endTime = resizeStartPosition.value + resizeStartDuration.value
+    const currentRightPixel = videoStore.timeToPixel(endTime, props.timelineWidth)
+    const newRightPixel = currentRightPixel + deltaX
+    const newRightTime = videoStore.pixelToTime(newRightPixel, props.timelineWidth)
+
+    newDuration = newRightTime - resizeStartPosition.value
   }
 
   // 确保最小时长（0.1秒）和最大时长
@@ -239,10 +275,17 @@ function handleResize(event: MouseEvent) {
   const maxDuration = props.clip.originalDuration * 10 // 最多可以拉伸到10倍长度
   newDuration = Math.max(minDuration, Math.min(newDuration, maxDuration))
 
-  emit('update-timing', props.clip.id, newDuration, newTimelinePosition)
+  // 只更新临时值，不触发 store 更新
+  tempDuration.value = newDuration
+  tempResizePosition.value = newTimelinePosition
 }
 
 function stopResize() {
+  if (isResizing.value) {
+    // 只在调整结束时更新 store，避免调整过程中的频繁更新
+    emit('update-timing', props.clip.id, tempDuration.value, tempResizePosition.value)
+  }
+
   isResizing.value = false
   resizeDirection.value = null
   document.removeEventListener('mousemove', handleResize)
@@ -303,6 +346,12 @@ onUnmounted(() => {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
   border: 2px solid transparent;
   transition: all 0.2s;
+}
+
+/* 在拖拽或调整大小时禁用过渡效果，避免延迟 */
+.video-clip.dragging,
+.video-clip.resizing {
+  transition: none !important;
 }
 
 .video-clip:hover {
