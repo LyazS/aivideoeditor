@@ -57,12 +57,13 @@ import { useVideoStore } from '../stores/counter'
 
 interface Props {
   clip: VideoClip
+  track?: any
   timelineWidth: number
   totalDuration: number
 }
 
 interface Emits {
-  (e: 'update-position', clipId: string, newPosition: number): void
+  (e: 'update-position', clipId: string, newPosition: number, newTrackId?: number): void
   (e: 'update-timing', clipId: string, newDuration: number, timelinePosition?: number): void
   (e: 'remove', clipId: string): void
 }
@@ -80,8 +81,10 @@ const isDragging = ref(false)
 const isResizing = ref(false)
 const resizeDirection = ref<'left' | 'right' | null>(null)
 const dragStartX = ref(0)
+const dragStartY = ref(0)
 const dragStartPosition = ref(0)
 const tempPosition = ref(0) // 临时位置，用于拖拽过程中的视觉反馈
+const tempTrackId = ref(0) // 临时轨道ID，用于拖拽过程中的视觉反馈
 const resizeStartX = ref(0)
 const resizeStartDuration = ref(0)
 const resizeStartPosition = ref(0)
@@ -106,8 +109,9 @@ const clipStyle = computed(() => {
   return {
     left: `${left}px`,
     width: `${Math.max(width, 20)}px`, // 最小宽度20px，确保可见但不影响时间准确性
-    top: '10px', // 压缩顶部间距
-    height: '60px' // 压缩视频片段高度
+    top: '10px', // 相对于轨道的顶部间距
+    height: '60px', // 片段高度
+    position: 'absolute'
   }
 })
 
@@ -126,10 +130,11 @@ const showDetails = computed(() => {
   return width >= 100 // 宽度大于100px时显示详细信息
 })
 
-// 检查当前片段是否与其他片段重叠
+// 检查当前片段是否与同轨道的其他片段重叠
 const isOverlapping = computed(() => {
   return videoStore.clips.some(otherClip =>
     otherClip.id !== props.clip.id &&
+    otherClip.trackId === props.clip.trackId &&
     videoStore.isOverlapping(props.clip, otherClip)
   )
 })
@@ -191,8 +196,10 @@ function startDrag(event: MouseEvent) {
 
   isDragging.value = true
   dragStartX.value = event.clientX
+  dragStartY.value = event.clientY
   dragStartPosition.value = props.clip.timelinePosition
   tempPosition.value = props.clip.timelinePosition // 初始化临时位置
+  tempTrackId.value = props.clip.trackId // 初始化临时轨道ID
 
   document.addEventListener('mousemove', handleDrag)
   document.addEventListener('mouseup', stopDrag)
@@ -204,6 +211,9 @@ function handleDrag(event: MouseEvent) {
   if (!isDragging.value) return
 
   const deltaX = event.clientX - dragStartX.value
+  const deltaY = event.clientY - dragStartY.value
+
+  // 计算新的时间位置
   const currentPixel = videoStore.timeToPixel(dragStartPosition.value, props.timelineWidth)
   const newPixel = currentPixel + deltaX
   const newTime = videoStore.pixelToTime(newPixel, props.timelineWidth)
@@ -211,14 +221,33 @@ function handleDrag(event: MouseEvent) {
   const newPosition = Math.max(0, newTime)
   const maxPosition = props.totalDuration - props.clip.duration
 
-  // 只更新临时位置，不触发 store 更新
+  // 计算新的轨道ID（基于Y坐标变化）
+  const newTrackId = getTrackIdFromDelta(deltaY)
+
+  // 只更新临时位置和轨道，不触发 store 更新
   tempPosition.value = Math.min(newPosition, maxPosition)
+  tempTrackId.value = newTrackId
+}
+
+// 根据Y坐标变化确定目标轨道
+function getTrackIdFromDelta(deltaY: number): number {
+  const tracks = videoStore.tracks
+  const currentTrackIndex = tracks.findIndex(t => t.id === props.clip.trackId)
+
+  if (currentTrackIndex === -1) return props.clip.trackId
+
+  // 计算轨道变化（每80px为一个轨道高度）
+  const trackChange = Math.round(deltaY / 80)
+  const newTrackIndex = Math.max(0, Math.min(currentTrackIndex + trackChange, tracks.length - 1))
+
+  return tracks[newTrackIndex].id
 }
 
 function stopDrag() {
   if (isDragging.value) {
     // 只在拖拽结束时更新 store，避免拖拽过程中的频繁更新
-    emit('update-position', props.clip.id, tempPosition.value)
+    const newTrackId = tempTrackId.value !== props.clip.trackId ? tempTrackId.value : undefined
+    emit('update-position', props.clip.id, tempPosition.value, newTrackId)
   }
 
   isDragging.value = false

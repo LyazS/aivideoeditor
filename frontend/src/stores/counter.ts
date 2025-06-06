@@ -12,10 +12,24 @@ export interface VideoClip {
   timelinePosition: number
   name: string
   playbackRate?: number // 播放速度倍率（自动计算：originalDuration / duration）
+  trackId: number // 所属轨道ID
+}
+
+export interface Track {
+  id: number
+  name: string
+  isVisible: boolean
+  isMuted: boolean
+  height: number // 轨道高度
 }
 
 export const useVideoStore = defineStore('video', () => {
   const clips = ref<VideoClip[]>([])
+  const tracks = ref<Track[]>([
+    { id: 1, name: '轨道 1', isVisible: true, isMuted: false, height: 80 },
+    { id: 2, name: '轨道 2', isVisible: true, isMuted: false, height: 80 },
+    { id: 3, name: '轨道 3', isVisible: true, isMuted: false, height: 80 }
+  ])
   const currentTime = ref(0)
   const isPlaying = ref(false)
   const timelineDuration = ref(300) // 默认300秒时间轴，确保有足够的刻度线空间
@@ -99,8 +113,12 @@ export const useVideoStore = defineStore('video', () => {
   })
 
   function addClip(clip: VideoClip) {
-    // 检查并调整新片段的位置以避免重叠
-    const adjustedPosition = resolveOverlap(clip.id, clip.timelinePosition)
+    // 如果没有指定轨道，默认分配到第一个轨道
+    if (!clip.trackId) {
+      clip.trackId = 1
+    }
+    // 检查并调整新片段的位置以避免重叠（只在同一轨道内检查）
+    const adjustedPosition = resolveOverlap(clip.id, clip.timelinePosition, clip.trackId)
     clip.timelinePosition = adjustedPosition
     clips.value.push(clip)
   }
@@ -112,11 +130,15 @@ export const useVideoStore = defineStore('video', () => {
     }
   }
 
-  function updateClipPosition(clipId: string, newPosition: number) {
+  function updateClipPosition(clipId: string, newPosition: number, newTrackId?: number) {
     const clip = clips.value.find(c => c.id === clipId)
     if (clip) {
-      // 检查并处理重叠
-      const adjustedPosition = resolveOverlap(clipId, newPosition)
+      // 如果指定了新轨道，更新轨道ID
+      if (newTrackId !== undefined) {
+        clip.trackId = newTrackId
+      }
+      // 检查并处理重叠（只在同一轨道内检查）
+      const adjustedPosition = resolveOverlap(clipId, newPosition, clip.trackId)
       clip.timelinePosition = adjustedPosition
     }
   }
@@ -135,7 +157,7 @@ export const useVideoStore = defineStore('video', () => {
 
       // 如果提供了新的时间轴位置，也更新它
       if (timelinePosition !== undefined) {
-        const adjustedPosition = resolveOverlap(clipId, timelinePosition)
+        const adjustedPosition = resolveOverlap(clipId, timelinePosition, clip.trackId)
         clip.timelinePosition = adjustedPosition
       }
     }
@@ -195,20 +217,22 @@ export const useVideoStore = defineStore('video', () => {
     // 创建第一个片段（从开始到分割点）
     const firstClip: VideoClip = {
       ...originalClip,
-      id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+      id: Date.now().toString() + Math.random().toString(36).substring(2, 11),
       duration: relativeTimelineTime,
       endTime: splitVideoTime,
-      playbackRate: videoContentDuration / originalClip.duration // 保持原有播放速度
+      playbackRate: videoContentDuration / originalClip.duration, // 保持原有播放速度
+      trackId: originalClip.trackId // 保持原轨道
     }
 
     // 创建第二个片段（从分割点到结束）
     const secondClip: VideoClip = {
       ...originalClip,
-      id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+      id: Date.now().toString() + Math.random().toString(36).substring(2, 11),
       timelinePosition: splitTime,
       duration: originalClip.duration - relativeTimelineTime,
       startTime: splitVideoTime,
-      playbackRate: videoContentDuration / originalClip.duration // 保持原有播放速度
+      playbackRate: videoContentDuration / originalClip.duration, // 保持原有播放速度
+      trackId: originalClip.trackId // 保持原轨道
     }
 
     console.log('✂️ 第一个片段:')
@@ -244,20 +268,23 @@ export const useVideoStore = defineStore('video', () => {
     return !(clip1End <= clip2Start || clip2End <= clip1Start)
   }
 
-  // 解决重叠问题
-  function resolveOverlap(movingClipId: string, newPosition: number): number {
+  // 解决重叠问题（只在同一轨道内检查）
+  function resolveOverlap(movingClipId: string, newPosition: number, trackId: number): number {
     const movingClip = clips.value.find(c => c.id === movingClipId)
     if (!movingClip) return newPosition
 
     // 创建临时片段用于检测
     const tempClip: VideoClip = {
       ...movingClip,
-      timelinePosition: newPosition
+      timelinePosition: newPosition,
+      trackId: trackId
     }
 
-    // 找到所有与移动片段重叠的其他片段
+    // 找到所有与移动片段重叠的同轨道其他片段
     const overlappingClips = clips.value.filter(clip =>
-      clip.id !== movingClipId && isOverlapping(tempClip, clip)
+      clip.id !== movingClipId &&
+      clip.trackId === trackId &&
+      isOverlapping(tempClip, clip)
     )
 
     if (overlappingClips.length === 0) {
@@ -268,9 +295,9 @@ export const useVideoStore = defineStore('video', () => {
     return findNearestGap(tempClip, overlappingClips)
   }
 
-  // 寻找最近的可用空隙
+  // 寻找最近的可用空隙（只在同一轨道内）
   function findNearestGap(movingClip: VideoClip, overlappingClips: VideoClip[]): number {
-    const allClips = clips.value.filter(c => c.id !== movingClip.id)
+    const allClips = clips.value.filter(c => c.id !== movingClip.id && c.trackId === movingClip.trackId)
 
     // 按时间位置排序
     allClips.sort((a, b) => a.timelinePosition - b.timelinePosition)
@@ -428,15 +455,79 @@ export const useVideoStore = defineStore('video', () => {
     return overlaps
   }
 
-  // 自动整理所有片段，消除重叠
+  // 自动整理所有片段，消除重叠（按轨道分组处理）
   function autoArrangeClips() {
-    // 按时间位置排序
-    const sortedClips = [...clips.value].sort((a, b) => a.timelinePosition - b.timelinePosition)
+    // 按轨道分组，然后在每个轨道内按时间位置排序
+    const trackGroups = new Map<number, VideoClip[]>()
 
-    let currentPosition = 0
-    for (const clip of sortedClips) {
-      clip.timelinePosition = currentPosition
-      currentPosition += clip.duration
+    clips.value.forEach(clip => {
+      if (!trackGroups.has(clip.trackId)) {
+        trackGroups.set(clip.trackId, [])
+      }
+      trackGroups.get(clip.trackId)!.push(clip)
+    })
+
+    // 在每个轨道内重新排列片段
+    trackGroups.forEach((trackClips) => {
+      const sortedClips = trackClips.sort((a, b) => a.timelinePosition - b.timelinePosition)
+      let currentPosition = 0
+      for (const clip of sortedClips) {
+        clip.timelinePosition = currentPosition
+        currentPosition += clip.duration
+      }
+    })
+  }
+
+  // 轨道管理方法
+  function addTrack(name?: string): Track {
+    const newId = Math.max(...tracks.value.map(t => t.id)) + 1
+    const newTrack: Track = {
+      id: newId,
+      name: name || `轨道 ${newId}`,
+      isVisible: true,
+      isMuted: false,
+      height: 80
+    }
+    tracks.value.push(newTrack)
+    return newTrack
+  }
+
+  function removeTrack(trackId: number) {
+    // 不能删除最后一个轨道
+    if (tracks.value.length <= 1) return
+
+    // 将该轨道的所有片段移动到第一个轨道
+    clips.value.forEach(clip => {
+      if (clip.trackId === trackId) {
+        clip.trackId = tracks.value[0].id
+      }
+    })
+
+    // 删除轨道
+    const index = tracks.value.findIndex(t => t.id === trackId)
+    if (index > -1) {
+      tracks.value.splice(index, 1)
+    }
+  }
+
+  function toggleTrackVisibility(trackId: number) {
+    const track = tracks.value.find(t => t.id === trackId)
+    if (track) {
+      track.isVisible = !track.isVisible
+    }
+  }
+
+  function toggleTrackMute(trackId: number) {
+    const track = tracks.value.find(t => t.id === trackId)
+    if (track) {
+      track.isMuted = !track.isMuted
+    }
+  }
+
+  function renameTrack(trackId: number, newName: string) {
+    const track = tracks.value.find(t => t.id === trackId)
+    if (track) {
+      track.name = newName
     }
   }
 
@@ -522,6 +613,7 @@ export const useVideoStore = defineStore('video', () => {
 
   return {
     clips,
+    tracks,
     currentTime,
     isPlaying,
     timelineDuration,
@@ -567,6 +659,12 @@ export const useVideoStore = defineStore('video', () => {
     isOverlapping,
     getOverlappingClips,
     autoArrangeClips,
+    // 轨道管理方法
+    addTrack,
+    removeTrack,
+    toggleTrackVisibility,
+    toggleTrackMute,
+    renameTrack,
     // 缩放和滚动方法
     setZoomLevel,
     setScrollOffset,

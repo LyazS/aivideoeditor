@@ -1,14 +1,22 @@
 <template>
   <div class="timeline">
+    <!-- 顶部区域：轨道管理器头部 + 时间刻度 -->
+    <div class="timeline-header">
+      <div class="track-manager-header">
+        <h3>轨道</h3>
+        <button class="add-track-btn" @click="addNewTrack" title="添加新轨道">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z" />
+          </svg>
+        </button>
+      </div>
+      <div class="timeline-scale">
+        <TimeScale />
+      </div>
+    </div>
 
-    <div
-      class="timeline-container"
-      ref="timelineContainer"
-      @dragover="handleDragOver"
-      @drop="handleDrop"
-      @click="handleTimelineClick"
-      @wheel="handleWheel"
-    >
+    <!-- 主体区域：每个轨道一行，包含左侧控制和右侧内容 -->
+    <div class="timeline-body" ref="timelineBody">
       <!-- 拖拽提示 -->
       <div v-if="clips.length === 0" class="drop-zone">
         <div class="drop-hint">
@@ -19,19 +27,103 @@
           <p class="hint">支持 MP4, WebM, AVI 等格式</p>
         </div>
       </div>
-      
-      <!-- 视频片段 -->
-      <VideoClip
-        v-for="clip in clips"
-        :key="clip.id"
-        :clip="clip"
-        :timeline-width="timelineWidth"
-        :total-duration="videoStore.totalDuration"
-        @update-position="handleClipPositionUpdate"
-        @update-timing="handleClipTimingUpdate"
-        @remove="handleClipRemove"
-      />
-      
+
+      <!-- 每个轨道一行 -->
+      <div
+        v-for="track in tracks"
+        :key="track.id"
+        class="track-row"
+        :style="{ height: track.height + 'px' }"
+      >
+        <!-- 左侧轨道控制 -->
+        <div class="track-controls">
+          <!-- 轨道名称 -->
+          <div class="track-name">
+            <input
+              v-if="editingTrackId === track.id"
+              v-model="editingTrackName"
+              @blur="finishRename"
+              @keyup.enter="finishRename"
+              @keyup.escape="cancelRename"
+              class="track-name-input"
+              ref="nameInput"
+            />
+            <span
+              v-else
+              @dblclick="startRename(track)"
+              class="track-name-text"
+              :title="'双击编辑轨道名称'"
+            >
+              {{ track.name }}
+            </span>
+          </div>
+
+          <!-- 控制按钮 -->
+          <div class="track-buttons">
+            <!-- 可见性切换 -->
+            <button
+              class="track-btn"
+              :class="{ active: track.isVisible }"
+              @click="toggleVisibility(track.id)"
+              :title="track.isVisible ? '隐藏轨道' : '显示轨道'"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                <path v-if="track.isVisible" d="M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 12,9M12,17A5,5 0 0,1 7,12A5,5 0 0,1 12,7A5,5 0 0,1 17,12A5,5 0 0,1 12,17M12,4.5C7,4.5 2.73,7.61 1,12C2.73,16.39 7,19.5 12,19.5C17,19.5 21.27,16.39 23,12C21.27,7.61 17,4.5 12,4.5Z" />
+                <path v-else d="M11.83,9L15,12.16C15,12.11 15,12.05 15,12A3,3 0 0,0 12,9C11.94,9 11.89,9 11.83,9M7.53,9.8L9.08,11.35C9.03,11.56 9,11.77 9,12A3,3 0 0,0 12,15C12.22,15 12.44,14.97 12.65,14.92L14.2,16.47C13.53,16.8 12.79,17 12,17A5,5 0 0,1 7,12C7,11.21 7.2,10.47 7.53,9.8M2,4.27L4.28,6.55L4.73,7C3.08,8.3 1.78,10 1,12C2.73,16.39 7,19.5 12,19.5C13.55,19.5 15.03,19.2 16.38,18.66L16.81,19.09L19.73,22L21,20.73L3.27,3M12,7A5,5 0 0,1 17,12C17,12.64 16.87,13.26 16.64,13.82L19.57,16.75C21.07,15.5 22.27,13.86 23,12C21.27,7.61 17,4.5 12,4.5C10.6,4.5 9.26,4.75 8,5.2L10.17,7.35C10.76,7.13 11.37,7 12,7Z" />
+              </svg>
+            </button>
+
+            <!-- 静音切换 -->
+            <button
+              class="track-btn"
+              :class="{ active: !track.isMuted }"
+              @click="toggleMute(track.id)"
+              :title="track.isMuted ? '取消静音' : '静音'"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                <path v-if="!track.isMuted" d="M14,3.23V5.29C16.89,6.15 19,8.83 19,12C19,15.17 16.89,17.85 14,18.71V20.77C18,19.86 21,16.28 21,12C21,7.72 18,4.14 14,3.23M16.5,12C16.5,10.23 15.5,8.71 14,7.97V16C15.5,15.29 16.5,13.76 16.5,12M3,9V15H7L12,20V4L7,9H3Z" />
+                <path v-else d="M12,4L9.91,6.09L12,8.18M4.27,3L3,4.27L7.73,9H3V15H7L12,20V13.27L16.25,17.53C15.58,18.04 14.83,18.46 14,18.7V20.77C15.38,20.45 16.63,19.82 17.68,18.96L19.73,21L21,19.73L12,10.73M19,12C19,12.94 18.8,13.82 18.46,14.64L19.97,16.15C20.62,14.91 21,13.5 21,12C21,7.72 18,4.14 14,3.23V5.29C16.89,6.15 19,8.83 19,12M16.5,12C16.5,10.23 15.5,8.71 14,7.97V10.18L16.45,12.63C16.5,12.43 16.5,12.21 16.5,12Z" />
+              </svg>
+            </button>
+
+            <!-- 删除轨道 -->
+            <button
+              v-if="tracks.length > 1"
+              class="track-btn delete-btn"
+              @click="removeTrack(track.id)"
+              title="删除轨道"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- 右侧轨道内容区域 -->
+        <div
+          class="track-content"
+          :data-track-id="track.id"
+          @dragover="handleDragOver"
+          @drop="handleDrop"
+          @click="handleTimelineClick"
+          @wheel="handleWheel"
+        >
+          <!-- 该轨道的视频片段 -->
+          <VideoClip
+            v-for="clip in getClipsForTrack(track.id)"
+            :key="clip.id"
+            :clip="clip"
+            :track="track"
+            :timeline-width="timelineWidth"
+            :total-duration="videoStore.totalDuration"
+            @update-position="handleClipPositionUpdate"
+            @update-timing="handleClipTimingUpdate"
+            @remove="handleClipRemove"
+          />
+        </div>
+      </div>
+
       <!-- 时间轴背景网格 -->
       <div class="timeline-grid">
         <div
@@ -39,9 +131,8 @@
           :key="line.time"
           class="grid-line"
           :class="{ 'frame-line': line.isFrame }"
-          :style="{ left: videoStore.timeToPixel(line.time, timelineWidth) + 'px' }"
+          :style="{ left: (200 + videoStore.timeToPixel(line.time, timelineWidth)) + 'px' }"
         >
-
         </div>
       </div>
     </div>
@@ -49,15 +140,72 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { useVideoStore, type VideoClip as VideoClipType } from '../stores/counter'
 import VideoClip from './VideoClip.vue'
+import TimeScale from './TimeScale.vue'
 
 const videoStore = useVideoStore()
-const timelineContainer = ref<HTMLElement>()
+const timelineBody = ref<HTMLElement>()
 const timelineWidth = ref(800)
 
 const clips = computed(() => videoStore.clips)
+const tracks = computed(() => videoStore.tracks)
+
+// 编辑轨道名称相关
+const editingTrackId = ref<number | null>(null)
+const editingTrackName = ref('')
+const nameInput = ref<HTMLInputElement>()
+
+// 获取指定轨道的片段
+function getClipsForTrack(trackId: number) {
+  return clips.value.filter(clip => clip.trackId === trackId)
+}
+
+// 轨道管理方法
+function addNewTrack() {
+  videoStore.addTrack()
+}
+
+function removeTrack(trackId: number) {
+  if (tracks.value.length <= 1) {
+    alert('至少需要保留一个轨道')
+    return
+  }
+
+  if (confirm('确定要删除这个轨道吗？轨道上的所有片段将移动到第一个轨道。')) {
+    videoStore.removeTrack(trackId)
+  }
+}
+
+function toggleVisibility(trackId: number) {
+  videoStore.toggleTrackVisibility(trackId)
+}
+
+function toggleMute(trackId: number) {
+  videoStore.toggleTrackMute(trackId)
+}
+
+async function startRename(track: any) {
+  editingTrackId.value = track.id
+  editingTrackName.value = track.name
+  await nextTick()
+  nameInput.value?.focus()
+  nameInput.value?.select()
+}
+
+function finishRename() {
+  if (editingTrackId.value && editingTrackName.value.trim()) {
+    videoStore.renameTrack(editingTrackId.value, editingTrackName.value.trim())
+  }
+  editingTrackId.value = null
+  editingTrackName.value = ''
+}
+
+function cancelRename() {
+  editingTrackId.value = null
+  editingTrackName.value = ''
+}
 
 // 网格线
 const gridLines = computed(() => {
@@ -113,8 +261,9 @@ const gridLines = computed(() => {
 
 
 function updateTimelineWidth() {
-  if (timelineContainer.value) {
-    timelineWidth.value = timelineContainer.value.clientWidth
+  if (timelineBody.value) {
+    // 计算轨道内容区域的宽度（总宽度减去轨道控制区域的200px）
+    timelineWidth.value = timelineBody.value.clientWidth - 200
   }
 }
 
@@ -125,36 +274,43 @@ function handleDragOver(event: DragEvent) {
 
 async function handleDrop(event: DragEvent) {
   event.preventDefault()
-  
+
   const files = Array.from(event.dataTransfer?.files || [])
   const videoFiles = files.filter(file => file.type.startsWith('video/'))
-  
+
   if (videoFiles.length === 0) {
     alert('请拖拽视频文件')
     return
   }
-  
+
+  // 获取目标轨道ID
+  const targetElement = event.target as HTMLElement
+  const trackContent = targetElement.closest('.track-content')
+  const targetTrackId = trackContent ? parseInt(trackContent.getAttribute('data-track-id') || '1') : 1
+
   // 计算拖拽位置对应的时间（考虑缩放和滚动偏移量）
-  const rect = timelineContainer.value!.getBoundingClientRect()
-  const dropX = event.clientX - rect.left
+  const trackContentRect = trackContent?.getBoundingClientRect()
+  if (!trackContentRect) return
+
+  const dropX = event.clientX - trackContentRect.left
   const dropTime = videoStore.pixelToTime(dropX, timelineWidth.value)
 
   // 如果拖拽位置超出当前时间轴长度，动态扩展时间轴
   videoStore.expandTimelineIfNeeded(dropTime + 10) // 预留10秒缓冲
-  
+
   for (const file of videoFiles) {
-    await createVideoClip(file, dropTime)
+    await createVideoClip(file, dropTime, targetTrackId)
   }
 }
 
-async function createVideoClip(file: File, startTime: number): Promise<void> {
+async function createVideoClip(file: File, startTime: number, trackId: number = 1): Promise<void> {
   return new Promise((resolve) => {
     const url = URL.createObjectURL(file)
     const video = document.createElement('video')
-    
+
     video.onloadedmetadata = () => {
       const clip: VideoClipType = {
-        id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+        id: Date.now().toString() + Math.random().toString(36).substring(2, 11),
         file,
         url,
         duration: video.duration, // 初始时间轴显示时长等于原始时长
@@ -163,19 +319,20 @@ async function createVideoClip(file: File, startTime: number): Promise<void> {
         endTime: video.duration,
         timelinePosition: Math.max(0, startTime),
         name: file.name,
-        playbackRate: 1.0 // 初始播放速度为正常速度
+        playbackRate: 1.0, // 初始播放速度为正常速度
+        trackId: trackId // 指定轨道
       }
 
       videoStore.addClip(clip)
       resolve()
     }
-    
+
     video.src = url
   })
 }
 
-function handleClipPositionUpdate(clipId: string, newPosition: number) {
-  videoStore.updateClipPosition(clipId, newPosition)
+function handleClipPositionUpdate(clipId: string, newPosition: number, newTrackId?: number) {
+  videoStore.updateClipPosition(clipId, newPosition, newTrackId)
 }
 
 function handleClipTimingUpdate(clipId: string, newDuration: number, timelinePosition?: number) {
@@ -187,23 +344,23 @@ function handleClipRemove(clipId: string) {
 }
 
 function handleTimelineClick(event: MouseEvent) {
-  // 点击空白区域取消选中
-  if (event.target === timelineContainer.value) {
+  // 点击轨道内容空白区域取消选中
+  const target = event.target as HTMLElement
+  if (target.classList.contains('track-content')) {
     videoStore.selectClip(null)
   }
 }
 
 function handleWheel(event: WheelEvent) {
-  event.preventDefault()
-
   if (event.altKey) {
     // Alt + 滚轮：缩放
+    event.preventDefault()
     const zoomFactor = 1.1
-    const rect = timelineContainer.value?.getBoundingClientRect()
+    const rect = timelineBody.value?.getBoundingClientRect()
     if (!rect) return
 
-    // 获取鼠标在时间轴上的位置
-    const mouseX = event.clientX - rect.left
+    // 获取鼠标在时间轴上的位置（减去轨道控制区域的200px）
+    const mouseX = event.clientX - rect.left - 200
     const mouseTime = videoStore.pixelToTime(mouseX, timelineWidth.value)
 
     if (event.deltaY < 0) {
@@ -221,6 +378,7 @@ function handleWheel(event: WheelEvent) {
 
   } else if (event.shiftKey) {
     // Shift + 滚轮：水平滚动
+    event.preventDefault()
     const scrollAmount = 50
     if (event.deltaY < 0) {
       // 向上滚动：向左滚动
@@ -229,6 +387,9 @@ function handleWheel(event: WheelEvent) {
       // 向下滚动：向右滚动
       videoStore.scrollRight(scrollAmount, timelineWidth.value)
     }
+  } else {
+    // 普通滚轮：垂直滚动（让浏览器处理默认的滚动行为）
+    // 不阻止默认行为，允许正常的垂直滚动
   }
 }
 
@@ -266,14 +427,157 @@ onUnmounted(() => {
   flex-direction: column;
 }
 
+.timeline-header {
+  display: flex;
+  flex-shrink: 0;
+  border-bottom: 1px solid #555;
+}
 
+.track-manager-header {
+  width: 200px;
+  padding: 12px;
+  background-color: #333;
+  border-right: 1px solid #555;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-shrink: 0;
+}
 
-.timeline-container {
-  width: 100%;
+.track-manager-header h3 {
+  margin: 0;
+  font-size: 14px;
+  color: #fff;
+}
+
+.add-track-btn {
+  background: #4CAF50;
+  border: none;
+  border-radius: 4px;
+  color: white;
+  padding: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s;
+}
+
+.add-track-btn:hover {
+  background: #45a049;
+}
+
+.timeline-scale {
+  flex: 1;
+  background-color: #1a1a1a;
+}
+
+.timeline-body {
+  flex: 1;
+  overflow-y: auto; /* 允许垂直滚动 */
+  overflow-x: hidden; /* 隐藏水平滚动条，因为我们有自定义的水平滚动 */
+  position: relative;
+}
+
+.track-row {
+  display: flex;
+  border-bottom: 1px solid #555;
+  min-height: 80px;
+}
+
+.track-controls {
+  width: 200px;
+  background-color: #333;
+  border-right: 1px solid #555;
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  justify-content: center;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 10; /* 确保轨道操作区域在视频片段上方 */
+}
+
+.track-content {
   flex: 1;
   position: relative;
-  min-height: 90px; /* 压缩轨道高度 */
+  background-color: #2a2a2a;
+  overflow: hidden; /* 防止视频片段溢出到轨道操作区域 */
 }
+
+.track-content:hover {
+  background-color: #333;
+}
+
+.track-name {
+  flex: 1;
+}
+
+.track-name-text {
+  font-size: 12px;
+  color: #fff;
+  cursor: pointer;
+  display: block;
+  padding: 2px 4px;
+  border-radius: 2px;
+  transition: background-color 0.2s;
+}
+
+.track-name-text:hover {
+  background-color: #444;
+}
+
+.track-name-input {
+  background: #444;
+  border: 1px solid #666;
+  border-radius: 2px;
+  color: #fff;
+  font-size: 12px;
+  padding: 2px 4px;
+  width: 100%;
+}
+
+.track-buttons {
+  display: flex;
+  gap: 4px;
+  justify-content: flex-start;
+}
+
+.track-btn {
+  background: #555;
+  border: none;
+  border-radius: 3px;
+  color: #ccc;
+  padding: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  width: 24px;
+  height: 24px;
+}
+
+.track-btn:hover {
+  background: #666;
+  color: #fff;
+}
+
+.track-btn.active {
+  background: #4CAF50;
+  color: #fff;
+}
+
+.track-btn.delete-btn {
+  background: #f44336;
+}
+
+.track-btn.delete-btn:hover {
+  background: #d32f2f;
+}
+
+
 
 .drop-zone {
   position: absolute;
@@ -315,7 +619,7 @@ onUnmounted(() => {
   right: 0;
   bottom: 0;
   pointer-events: none;
-  z-index: 1; /* 确保网格线在视频片段下方 */
+  z-index: 0; /* 确保网格线在视频片段下方 */
 }
 
 .grid-line {

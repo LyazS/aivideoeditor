@@ -67,9 +67,31 @@ const videoStore = useVideoStore()
 
 const clips = computed(() => videoStore.clips)
 
-// 计算重叠片段数量
+// 计算重叠片段数量（只计算同轨道内的重叠）
 const overlappingCount = computed(() => {
-  return videoStore.getOverlappingClips().length
+  let count = 0
+  const tracks = new Map<number, any[]>()
+
+  // 按轨道分组
+  videoStore.clips.forEach(clip => {
+    if (!tracks.has(clip.trackId)) {
+      tracks.set(clip.trackId, [])
+    }
+    tracks.get(clip.trackId)!.push(clip)
+  })
+
+  // 检查每个轨道内的重叠
+  tracks.forEach(trackClips => {
+    for (let i = 0; i < trackClips.length; i++) {
+      for (let j = i + 1; j < trackClips.length; j++) {
+        if (videoStore.isOverlapping(trackClips[i], trackClips[j])) {
+          count++
+        }
+      }
+    }
+  })
+
+  return count
 })
 
 function splitSelectedClip() {

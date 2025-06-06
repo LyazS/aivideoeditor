@@ -16,7 +16,6 @@
         <div class="clip-management-toolbar">
           <ClipManagementToolbar />
         </div>
-        <TimeScale />
         <Timeline />
       </div>
     </div>
@@ -26,7 +25,6 @@
 <script setup lang="ts">
 import PreviewWindow from './PreviewWindow.vue'
 import Timeline from './Timeline.vue'
-import TimeScale from './TimeScale.vue'
 import PlaybackControls from './PlaybackControls.vue'
 import ClipManagementToolbar from './ClipManagementToolbar.vue'
 </script>
@@ -62,7 +60,7 @@ import ClipManagementToolbar from './ClipManagementToolbar.vue'
 }
 
 .timeline-section {
-  height: 180px; /* 压缩时间轴区域高度 */
+  height: 300px; /* 增加高度以容纳多轨道 */
   background-color: #2a2a2a;
   border-radius: 8px;
   padding: 8px; /* 减小内边距 */
