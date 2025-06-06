@@ -106,8 +106,8 @@ const clipStyle = computed(() => {
   return {
     left: `${left}px`,
     width: `${Math.max(width, 20)}px`, // 最小宽度20px，确保可见但不影响时间准确性
-    top: '20px',
-    height: '80px'
+    top: '10px', // 压缩顶部间距
+    height: '60px' // 压缩视频片段高度
   }
 })
 
@@ -344,6 +344,7 @@ onUnmounted(() => {
   cursor: move;
   user-select: none;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  z-index: 10; /* 确保视频片段在网格线上方 */
   border: 2px solid transparent;
   transition: all 0.2s;
 }
@@ -385,14 +386,14 @@ onUnmounted(() => {
   height: 100%;
   display: flex;
   align-items: center;
-  padding: 8px;
+  padding: 6px; /* 压缩内边距 */
   position: relative;
   overflow: hidden;
 }
 
 .clip-thumbnail {
-  width: 60px;
-  height: 40px;
+  width: 50px; /* 压缩缩略图宽度 */
+  height: 32px; /* 压缩缩略图高度 */
   background-color: #000;
   border-radius: 2px;
   overflow: hidden;
@@ -412,12 +413,12 @@ onUnmounted(() => {
 
 .clip-info {
   flex: 1;
-  margin-left: 8px;
+  margin-left: 6px; /* 压缩左边距 */
   min-width: 0;
 }
 
 .clip-name {
-  font-size: 12px;
+  font-size: 11px; /* 稍微减小字体 */
   font-weight: bold;
   color: white;
   white-space: nowrap;
@@ -426,9 +427,9 @@ onUnmounted(() => {
 }
 
 .clip-duration {
-  font-size: 10px;
+  font-size: 9px; /* 减小时长文字 */
   color: rgba(255, 255, 255, 0.8);
-  margin-top: 2px;
+  margin-top: 1px; /* 减小上边距 */
 }
 
 .clip-speed {

@@ -23,6 +23,10 @@ export const useVideoStore = defineStore('video', () => {
   const playbackRate = ref(1) // 播放速度
   const selectedClipId = ref<string | null>(null) // 当前选中的片段ID
 
+  // 音量控制
+  const volume = ref(1) // 音量 0-1
+  const isMuted = ref(false) // 是否静音
+
   // 时间轴缩放和滚动状态
   const zoomLevel = ref(1) // 缩放级别，1为默认，大于1为放大，小于1为缩小
   const scrollOffset = ref(0) // 水平滚动偏移量（像素）
@@ -374,6 +378,26 @@ export const useVideoStore = defineStore('video', () => {
     playbackRate.value = rate
   }
 
+  // 音量控制方法
+  function setVolume(newVolume: number) {
+    volume.value = Math.max(0, Math.min(1, newVolume)) // 确保音量在0-1范围内
+    if (volume.value > 0) {
+      isMuted.value = false
+    }
+  }
+
+  function toggleMute() {
+    isMuted.value = !isMuted.value
+  }
+
+  function mute() {
+    isMuted.value = true
+  }
+
+  function unmute() {
+    isMuted.value = false
+  }
+
   // 前一帧控制
   function previousFrame() {
     const frameDuration = 1 / frameRate.value
@@ -506,6 +530,9 @@ export const useVideoStore = defineStore('video', () => {
     contentEndTime,
     playbackRate,
     selectedClipId,
+    // 音量状态
+    volume,
+    isMuted,
     // 缩放和滚动状态
     zoomLevel,
     scrollOffset,
@@ -528,6 +555,11 @@ export const useVideoStore = defineStore('video', () => {
     pause,
     stop,
     setPlaybackRate,
+    // 音量控制方法
+    setVolume,
+    toggleMute,
+    mute,
+    unmute,
     previousFrame,
     nextFrame,
     startTimeUpdate,

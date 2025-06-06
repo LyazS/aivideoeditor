@@ -27,7 +27,7 @@
     
     <!-- 时间显示 -->
     <div class="time-display">
-      {{ formatTime(videoStore.currentTime) }} / {{ formatTime(videoStore.totalDuration) }}
+      {{ formatTime(videoStore.currentTime) }} / {{ formatTime(videoStore.contentEndTime || videoStore.totalDuration) }}
     </div>
   </div>
 </template>
@@ -43,10 +43,7 @@ const currentVideoSrc = computed(() => {
   return videoStore.currentClip?.url || undefined
 })
 
-const currentClipTime = computed(() => {
-  if (!videoStore.currentClip) return 0
-  return videoStore.currentTime - videoStore.currentClip.timelinePosition
-})
+
 
 // 判断是否在播放空白区域
 const isPlayingBlankArea = computed(() => {
@@ -83,6 +80,20 @@ watch(() => videoStore.currentTime, (newTime) => {
     if (Math.abs(videoElement.value.currentTime - actualVideoTime) > 0.2) {
       videoElement.value.currentTime = Math.max(videoStore.currentClip.startTime, Math.min(actualVideoTime, videoStore.currentClip.endTime))
     }
+  }
+})
+
+// 监听音量变化，同步视频元素音量
+watch(() => videoStore.volume, (newVolume) => {
+  if (videoElement.value) {
+    videoElement.value.volume = newVolume
+  }
+})
+
+// 监听静音状态变化，同步视频元素静音
+watch(() => videoStore.isMuted, (muted) => {
+  if (videoElement.value) {
+    videoElement.value.muted = muted
   }
 })
 
@@ -127,6 +138,10 @@ async function onVideoLoaded() {
 
   // 设置播放速度
   videoElement.value.playbackRate = videoStore.currentClip.playbackRate || 1.0
+
+  // 设置音量和静音状态
+  videoElement.value.volume = videoStore.volume
+  videoElement.value.muted = videoStore.isMuted
 
   const clipTime = videoStore.currentTime - videoStore.currentClip.timelinePosition
   // 计算在原始视频中的实际时间位置
@@ -175,7 +190,8 @@ function formatTime(seconds: number): string {
 onMounted(() => {
   // 初始化视频元素
   if (videoElement.value) {
-    videoElement.value.volume = 1
+    videoElement.value.volume = videoStore.volume
+    videoElement.value.muted = videoStore.isMuted
   }
 })
 </script>

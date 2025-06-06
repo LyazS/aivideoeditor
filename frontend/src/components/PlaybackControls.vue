@@ -94,13 +94,12 @@ import { useVideoStore } from '../stores/counter'
 
 const videoStore = useVideoStore()
 
-const volume = ref(0) // 默认静音
-const isMuted = ref(true) // 默认静音状态
-
 const isPlaying = computed(() => videoStore.isPlaying)
 const totalDuration = computed(() => videoStore.totalDuration)
 const contentEndTime = computed(() => videoStore.contentEndTime)
 const playbackRate = computed(() => videoStore.playbackRate)
+const volume = computed(() => videoStore.volume)
+const isMuted = computed(() => videoStore.isMuted)
 
 // 帧控制函数
 function previousFrame() {
@@ -136,15 +135,13 @@ function skipToEnd() {
 
 
 function toggleMute() {
-  isMuted.value = !isMuted.value
-  // TODO: 实际的静音功能需要在视频元素上实现
+  videoStore.toggleMute()
 }
 
 function handleVolumeChange(event: Event) {
   const target = event.target as HTMLInputElement
-  volume.value = parseFloat(target.value)
-  isMuted.value = volume.value === 0
-  // TODO: 实际的音量控制需要在视频元素上实现
+  const newVolume = parseFloat(target.value)
+  videoStore.setVolume(newVolume)
 }
 
 function handleSpeedChange(event: Event) {
@@ -160,17 +157,18 @@ function handleSpeedChange(event: Event) {
 .playback-controls {
   display: flex;
   align-items: center;
-  gap: 20px;
-  padding: 0 20px;
+  gap: 15px; /* 减小间距 */
+  padding: 0 15px; /* 减小内边距 */
   background-color: #333;
-  border-radius: 8px;
+  border-radius: 6px;
   height: 100%;
+  min-height: 50px; /* 确保最小高度 */
 }
 
 .control-buttons {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px; /* 减小按钮间距 */
 }
 
 .control-btn {
@@ -178,7 +176,7 @@ function handleSpeedChange(event: Event) {
   border: none;
   color: #ccc;
   cursor: pointer;
-  padding: 8px;
+  padding: 6px; /* 减小按钮内边距 */
   border-radius: 4px;
   display: flex;
   align-items: center;
@@ -194,7 +192,7 @@ function handleSpeedChange(event: Event) {
 .control-btn.primary {
   background-color: #ff4444;
   color: white;
-  padding: 12px;
+  padding: 10px; /* 减小主按钮内边距 */
 }
 
 .control-btn.primary:hover {

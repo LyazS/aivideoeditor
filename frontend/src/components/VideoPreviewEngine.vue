@@ -1,20 +1,23 @@
 <template>
   <div class="video-preview-engine">
     <div class="main-content">
-      <!-- 预览窗口 -->
+      <!-- 预览窗口和控制面板 -->
       <div class="preview-section">
         <PreviewWindow />
+        <!-- 播放控制面板紧贴在预览窗口下方 -->
+        <div class="controls-section">
+          <PlaybackControls />
+        </div>
       </div>
-      
+
       <!-- 时间轴区域 -->
       <div class="timeline-section">
+        <!-- 片段管理工具栏在时间刻度上方 -->
+        <div class="clip-management-toolbar">
+          <ClipManagementToolbar />
+        </div>
         <TimeScale />
         <Timeline />
-      </div>
-      
-      <!-- 控制面板 -->
-      <div class="controls-section">
-        <PlaybackControls />
       </div>
     </div>
   </div>
@@ -25,6 +28,7 @@ import PreviewWindow from './PreviewWindow.vue'
 import Timeline from './Timeline.vue'
 import TimeScale from './TimeScale.vue'
 import PlaybackControls from './PlaybackControls.vue'
+import ClipManagementToolbar from './ClipManagementToolbar.vue'
 </script>
 
 <style scoped>
@@ -46,34 +50,40 @@ import PlaybackControls from './PlaybackControls.vue'
 }
 
 .preview-section {
-  /* 固定预览窗口尺寸，使用16:9宽高比 */
+  /* 预览窗口和控制面板的容器 */
   width: 100%;
   max-width: 800px; /* 最大宽度 */
-  height: 450px; /* 固定高度，对应16:9比例 */
   margin: 0 auto; /* 水平居中 */
   display: flex;
-  justify-content: center;
+  flex-direction: column;
   align-items: center;
-  overflow: hidden;
   flex-shrink: 0; /* 防止被压缩 */
+  gap: 10px; /* 预览窗口和控制面板之间的间距 */
 }
 
 .timeline-section {
-  height: 200px;
+  height: 180px; /* 压缩时间轴区域高度 */
   background-color: #2a2a2a;
   border-radius: 8px;
-  padding: 10px;
+  padding: 8px; /* 减小内边距 */
   display: flex;
   flex-direction: column;
 }
 
+.clip-management-toolbar {
+  /* 片段管理工具栏 */
+  flex-shrink: 0;
+}
+
 .controls-section {
-  height: 80px;
+  /* 压缩后的控制面板 */
+  height: 50px; /* 减小高度 */
+  width: 100%;
   background-color: #333;
-  border-radius: 8px;
+  border-radius: 6px;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0 20px;
+  padding: 0 15px; /* 减小内边距 */
 }
 </style>
