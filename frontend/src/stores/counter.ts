@@ -611,6 +611,26 @@ export const useVideoStore = defineStore('video', () => {
     return (time * pixelsPerSecond) - scrollOffset.value
   }
 
+  // 更新片段名称
+  function updateClipName(clipId: string, newName: string) {
+    const clip = clips.value.find(c => c.id === clipId)
+    if (clip) {
+      clip.name = newName
+    }
+  }
+
+  // 更新片段播放速度
+  function updateClipPlaybackRate(clipId: string, newRate: number) {
+    const clip = clips.value.find(c => c.id === clipId)
+    if (clip) {
+      // 确保播放速度在合理范围内
+      const clampedRate = Math.max(0.25, Math.min(4, newRate))
+      clip.playbackRate = clampedRate
+      // 根据新的播放速度重新计算时间轴显示时长
+      clip.duration = clip.originalDuration / clampedRate
+    }
+  }
+
   return {
     clips,
     tracks,
@@ -639,6 +659,8 @@ export const useVideoStore = defineStore('video', () => {
     removeClip,
     updateClipPosition,
     updateClipDuration,
+    updateClipName,
+    updateClipPlaybackRate,
     selectClip,
     splitClipAtTime,
     getClipAtTime,

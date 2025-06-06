@@ -39,9 +39,6 @@
       <span v-if="overlappingCount > 0" class="overlap-warning">
         ⚠️ {{ overlappingCount }} 个重叠
       </span>
-      <span v-if="videoStore.selectedClipId" class="split-hint">
-        💡 选中片段: {{ getSelectedClipName() }}
-      </span>
     </div>
 
     <div class="toolbar-section">
@@ -109,13 +106,6 @@ function deleteSelectedClip() {
   }
 }
 
-function getSelectedClipName() {
-  if (videoStore.selectedClipId) {
-    const clip = videoStore.clips.find(c => c.id === videoStore.selectedClipId)
-    return clip ? clip.name : ''
-  }
-  return ''
-}
 
 function autoArrange() {
   videoStore.autoArrangeClips()

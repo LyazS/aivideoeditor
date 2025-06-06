@@ -23,8 +23,8 @@
           <svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor">
             <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z" />
           </svg>
-          <p>拖拽视频文件到此处</p>
-          <p class="hint">支持 MP4, WebM, AVI 等格式</p>
+          <p>从素材库拖拽视频到此处</p>
+          <p class="hint">先将视频文件导入到素材库</p>
         </div>
       </div>
 
@@ -269,66 +269,93 @@ function updateTimelineWidth() {
 
 function handleDragOver(event: DragEvent) {
   event.preventDefault()
-  event.dataTransfer!.dropEffect = 'copy'
+
+  // 检查拖拽数据类型
+  const types = event.dataTransfer?.types || []
+  if (types.includes('application/media-item')) {
+    event.dataTransfer!.dropEffect = 'copy'
+  } else if (types.includes('Files')) {
+    // 文件拖拽，但我们不再支持直接文件拖拽
+    event.dataTransfer!.dropEffect = 'none'
+  } else {
+    event.dataTransfer!.dropEffect = 'copy'
+  }
 }
 
 async function handleDrop(event: DragEvent) {
   event.preventDefault()
+  console.log('时间轴接收到拖拽事件')
 
-  const files = Array.from(event.dataTransfer?.files || [])
-  const videoFiles = files.filter(file => file.type.startsWith('video/'))
+  // 检查是否是从素材库拖拽的素材
+  const mediaItemData = event.dataTransfer?.getData('application/media-item')
+  console.log('拖拽数据:', mediaItemData)
 
-  if (videoFiles.length === 0) {
-    alert('请拖拽视频文件')
-    return
-  }
+  if (mediaItemData) {
+    // 处理素材库拖拽
+    try {
+      const mediaItem = JSON.parse(mediaItemData)
+      console.log('解析的素材数据:', mediaItem)
 
-  // 获取目标轨道ID
-  const targetElement = event.target as HTMLElement
-  const trackContent = targetElement.closest('.track-content')
-  const targetTrackId = trackContent ? parseInt(trackContent.getAttribute('data-track-id') || '1') : 1
+      // 获取目标轨道ID
+      const targetElement = event.target as HTMLElement
+      const trackContent = targetElement.closest('.track-content')
+      const targetTrackId = trackContent ? parseInt(trackContent.getAttribute('data-track-id') || '1') : 1
+      console.log('目标轨道ID:', targetTrackId)
 
-  // 计算拖拽位置对应的时间（考虑缩放和滚动偏移量）
-  const trackContentRect = trackContent?.getBoundingClientRect()
-  if (!trackContentRect) return
+      // 计算拖拽位置对应的时间（考虑缩放和滚动偏移量）
+      const trackContentRect = trackContent?.getBoundingClientRect()
+      if (!trackContentRect) {
+        console.error('无法获取轨道区域信息')
+        return
+      }
 
-  const dropX = event.clientX - trackContentRect.left
-  const dropTime = videoStore.pixelToTime(dropX, timelineWidth.value)
+      const dropX = event.clientX - trackContentRect.left
+      const dropTime = videoStore.pixelToTime(dropX, timelineWidth.value)
+      console.log('拖拽位置:', dropX, '对应时间:', dropTime)
 
-  // 如果拖拽位置超出当前时间轴长度，动态扩展时间轴
-  videoStore.expandTimelineIfNeeded(dropTime + 10) // 预留10秒缓冲
+      // 如果拖拽位置超出当前时间轴长度，动态扩展时间轴
+      videoStore.expandTimelineIfNeeded(dropTime + 10) // 预留10秒缓冲
 
-  for (const file of videoFiles) {
-    await createVideoClip(file, dropTime, targetTrackId)
+      // 从素材库项创建视频片段
+      await createVideoClipFromMediaItem(mediaItem, dropTime, targetTrackId)
+    } catch (error) {
+      console.error('Failed to parse media item data:', error)
+      alert('拖拽数据格式错误')
+    }
+  } else {
+    console.log('没有检测到素材库拖拽数据')
+    // 不再支持直接拖拽文件
+    alert('请先将视频文件导入到素材库，然后从素材库拖拽到时间轴')
   }
 }
 
-async function createVideoClip(file: File, startTime: number, trackId: number = 1): Promise<void> {
-  return new Promise((resolve) => {
-    const url = URL.createObjectURL(file)
-    const video = document.createElement('video')
+// 从素材库项创建视频片段
+async function createVideoClipFromMediaItem(mediaItem: any, startTime: number, trackId: number = 1): Promise<void> {
+  console.log('创建视频片段从素材库:', mediaItem)
 
-    video.onloadedmetadata = () => {
-      const clip: VideoClipType = {
-        id: Date.now().toString() + Math.random().toString(36).substring(2, 11),
-        file,
-        url,
-        duration: video.duration, // 初始时间轴显示时长等于原始时长
-        originalDuration: video.duration,
-        startTime: 0,
-        endTime: video.duration,
-        timelinePosition: Math.max(0, startTime),
-        name: file.name,
-        playbackRate: 1.0, // 初始播放速度为正常速度
-        trackId: trackId // 指定轨道
-      }
-
-      videoStore.addClip(clip)
-      resolve()
-    }
-
-    video.src = url
+  // 创建一个虚拟的 File 对象，用于兼容现有的 VideoClip 接口
+  // 注意：这里我们主要使用 URL，File 对象主要用于显示文件信息
+  const virtualFile = new File([], mediaItem.fileInfo.name, {
+    type: mediaItem.fileInfo.type,
+    lastModified: mediaItem.fileInfo.lastModified
   })
+
+  const clip: VideoClipType = {
+    id: Date.now().toString() + Math.random().toString(36).substring(2, 11),
+    file: virtualFile,
+    url: mediaItem.url, // 使用现有的 URL
+    duration: mediaItem.duration, // 初始时间轴显示时长等于原始时长
+    originalDuration: mediaItem.duration,
+    startTime: 0,
+    endTime: mediaItem.duration,
+    timelinePosition: Math.max(0, startTime),
+    name: mediaItem.name,
+    playbackRate: 1.0, // 初始播放速度为正常速度
+    trackId: trackId // 指定轨道
+  }
+
+  console.log('添加片段到时间轴:', clip)
+  videoStore.addClip(clip)
 }
 
 function handleClipPositionUpdate(clipId: string, newPosition: number, newTrackId?: number) {

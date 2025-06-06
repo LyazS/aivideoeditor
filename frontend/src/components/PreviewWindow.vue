@@ -17,17 +17,12 @@
             <path d="M8 5v14l11-7z"/>
           </svg>
           <p>预览窗口</p>
-          <p class="hint">拖拽视频文件到时间轴开始编辑</p>
+          <p class="hint">将视频文件导入到素材库开始编辑</p>
         </div>
         <div v-else class="blank-area-indicator">
           <div class="time-indicator">{{ formatTime(videoStore.currentTime) }}</div>
         </div>
       </div>
-    </div>
-    
-    <!-- 时间显示 -->
-    <div class="time-display">
-      {{ formatTime(videoStore.currentTime) }} / {{ formatTime(videoStore.contentEndTime || videoStore.totalDuration) }}
     </div>
   </div>
 </template>
@@ -199,8 +194,8 @@ onMounted(() => {
 <style scoped>
 .preview-window {
   width: 100%;
-  height: 100%;
-  background-color: #000;
+  flex: 1;
+  background-color: #444; /* 改为灰色背景 */
   border-radius: 8px;
   overflow: hidden;
   position: relative;
@@ -208,9 +203,9 @@ onMounted(() => {
   flex-direction: column;
   border: 2px solid #333;
   box-sizing: border-box;
-  /* 确保预览窗口尺寸固定 */
-  min-width: 400px;
-  min-height: 300px;
+  /* 允许极大压缩，适应任何大小 */
+  min-width: 150px;
+  min-height: 100px;
 }
 
 .video-container {
@@ -219,21 +214,21 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  overflow: hidden;
   width: 100%;
   height: 100%;
-  /* 确保容器尺寸固定，不随视频内容变化 */
-  min-height: 250px;
+  background-color: #333; /* 与控制条一致的背景色 */
+  /* 允许极小尺寸 */
+  min-height: 80px;
 }
 
 .video-player {
+  /* 视频保持原始比例，在容器内居中显示 */
   max-width: 100%;
   max-height: 100%;
   width: auto;
   height: auto;
-  object-fit: contain;
+  object-fit: contain; /* 保持比例，可能会有黑边 */
   display: block;
-  /* 确保视频不会超出容器 */
   box-sizing: border-box;
 }
 
@@ -246,12 +241,12 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: #111;
+  background-color: transparent; /* 透明背景，使用父容器的灰色背景 */
   transition: background-color 0.3s ease;
 }
 
 .placeholder.playing-blank {
-  background-color: #000;
+  background-color: transparent; /* 播放空白区域时也使用透明背景 */
 }
 
 .placeholder-content {
@@ -288,14 +283,5 @@ onMounted(() => {
   border: 1px solid #333;
 }
 
-.time-display {
-  position: absolute;
-  bottom: 10px;
-  right: 10px;
-  background-color: rgba(0, 0, 0, 0.7);
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 14px;
-  font-family: monospace;
-}
+
 </style>

@@ -2,18 +2,6 @@
   <div class="playback-controls">
     <!-- 播放控制按钮 -->
     <div class="control-buttons">
-      <button class="control-btn" @click="skipToStart" title="跳转到开始">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M6,18V6H8V18H6M9.5,12L18,6V18L9.5,12Z" />
-        </svg>
-      </button>
-      
-      <button class="control-btn" @click="previousFrame" title="前一帧">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M11.5,12L20,18V6M11,18V6L2.5,12L11,18Z" />
-        </svg>
-      </button>
-      
       <button class="control-btn primary" @click="togglePlayPause" :title="isPlaying ? '暂停' : '播放'">
         <svg v-if="!isPlaying" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
           <path d="M8,5.14V19.14L19,12.14L8,5.14Z" />
@@ -22,19 +10,7 @@
           <path d="M14,19H18V5H14M6,19H10V5H6V19Z" />
         </svg>
       </button>
-      
-      <button class="control-btn" @click="nextFrame" title="后一帧">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M13,6V18L21.5,12M4,18L12.5,12L4,6V18Z" />
-        </svg>
-      </button>
-      
-      <button class="control-btn" @click="skipToEnd" title="跳转到结束">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M16,18H18V6H16M6,18L14.5,12L6,6V18Z" />
-        </svg>
-      </button>
-      
+
       <button class="control-btn" @click="stop" title="停止">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
           <path d="M18,18H6V6H18V18Z" />
@@ -42,34 +18,8 @@
       </button>
     </div>
 
-    
-    <!-- 音量控制 -->
-    <div class="volume-section">
-      <button class="control-btn" @click="toggleMute" :title="isMuted ? '取消静音' : '静音'">
-        <svg v-if="!isMuted && volume > 0.5" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M14,3.23V5.29C16.89,6.15 19,8.83 19,12C19,15.17 16.89,17.85 14,18.71V20.77C18.01,19.86 21,16.28 21,12C21,7.72 18.01,4.14 14,3.23M16.5,12C16.5,10.23 15.5,8.71 14,7.97V16C15.5,15.29 16.5,13.76 16.5,12M3,9V15H7L12,20V4L7,9H3Z" />
-        </svg>
-        <svg v-else-if="!isMuted && volume > 0" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M5,9V15H9L14,20V4L9,9M18.5,12C18.5,10.23 17.5,8.71 16,7.97V16C17.5,15.29 18.5,13.76 18.5,12Z" />
-        </svg>
-        <svg v-else width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M12,4L9.91,6.09L12,8.18M4.27,3L3,4.27L7.73,9H3V15H7L12,20V13.27L16.25,17.53C15.58,18.04 14.83,18.46 14,18.7V20.77C15.38,20.45 16.63,19.82 17.68,18.96L19.73,21L21,19.73L12,10.73M19,12C19,12.94 18.8,13.82 18.46,14.64L19.97,16.15C20.62,14.91 21,13.5 21,12C21,7.72 18,4.14 14,3.23V5.29C16.89,6.15 19,8.83 19,12M16.5,12C16.5,10.23 15.5,8.71 14,7.97V10.18L16.45,12.63C16.5,12.43 16.5,12.21 16.5,12Z" />
-        </svg>
-      </button>
-      
-      <div class="volume-container">
-        <input
-          type="range"
-          class="volume-slider"
-          :min="0"
-          :max="1"
-          :step="0.1"
-          :value="volume"
-          @input="handleVolumeChange"
-        />
-      </div>
-    </div>
-    
+
+
     <!-- 播放速度控制 -->
     <div class="speed-section">
       <select class="speed-select" :value="playbackRate" @change="handleSpeedChange">
@@ -98,17 +48,7 @@ const isPlaying = computed(() => videoStore.isPlaying)
 const totalDuration = computed(() => videoStore.totalDuration)
 const contentEndTime = computed(() => videoStore.contentEndTime)
 const playbackRate = computed(() => videoStore.playbackRate)
-const volume = computed(() => videoStore.volume)
-const isMuted = computed(() => videoStore.isMuted)
 
-// 帧控制函数
-function previousFrame() {
-  videoStore.previousFrame()
-}
-
-function nextFrame() {
-  videoStore.nextFrame()
-}
 
 function togglePlayPause() {
   if (isPlaying.value) {
@@ -122,27 +62,7 @@ function stop() {
   videoStore.stop()
 }
 
-function skipToStart() {
-  videoStore.setCurrentTime(0)
-}
 
-function skipToEnd() {
-  // 跳转到最后一个视频片段的结束，如果没有片段则跳转到时间轴结束
-  const endTime = contentEndTime.value > 0 ? contentEndTime.value : totalDuration.value
-  videoStore.setCurrentTime(endTime)
-}
-
-
-
-function toggleMute() {
-  videoStore.toggleMute()
-}
-
-function handleVolumeChange(event: Event) {
-  const target = event.target as HTMLInputElement
-  const newVolume = parseFloat(target.value)
-  videoStore.setVolume(newVolume)
-}
 
 function handleSpeedChange(event: Event) {
   const target = event.target as HTMLSelectElement
@@ -157,18 +77,22 @@ function handleSpeedChange(event: Event) {
 .playback-controls {
   display: flex;
   align-items: center;
-  gap: 15px; /* 减小间距 */
-  padding: 0 15px; /* 减小内边距 */
+  gap: 8px; /* 进一步减小间距以适应压缩 */
+  padding: 0 8px; /* 减小内边距以适应压缩 */
   background-color: #333;
   border-radius: 6px;
   height: 100%;
   min-height: 50px; /* 确保最小高度 */
+  min-width: 200px; /* 设置最小宽度 */
+  overflow: hidden; /* 防止内容溢出 */
+  justify-content: center; /* 居中对齐 */
 }
 
 .control-buttons {
   display: flex;
   align-items: center;
-  gap: 6px; /* 减小按钮间距 */
+  gap: 4px; /* 进一步减小按钮间距 */
+  flex-shrink: 0; /* 防止按钮被压缩 */
 }
 
 .control-btn {
@@ -176,12 +100,13 @@ function handleSpeedChange(event: Event) {
   border: none;
   color: #ccc;
   cursor: pointer;
-  padding: 6px; /* 减小按钮内边距 */
+  padding: 4px; /* 进一步减小按钮内边距 */
   border-radius: 4px;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: all 0.2s;
+  flex-shrink: 0; /* 防止按钮被压缩 */
 }
 
 .control-btn:hover {
@@ -192,7 +117,7 @@ function handleSpeedChange(event: Event) {
 .control-btn.primary {
   background-color: #ff4444;
   color: white;
-  padding: 10px; /* 减小主按钮内边距 */
+  padding: 8px; /* 进一步减小主按钮内边距 */
 }
 
 .control-btn.primary:hover {
@@ -201,36 +126,12 @@ function handleSpeedChange(event: Event) {
 
 
 
-.volume-section {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
 
-.volume-container {
-  width: 80px;
-}
-
-.volume-slider {
-  width: 100%;
-  height: 4px;
-  background: #555;
-  outline: none;
-  border-radius: 2px;
-}
-
-.volume-slider::-webkit-slider-thumb {
-  appearance: none;
-  width: 12px;
-  height: 12px;
-  background: #ccc;
-  border-radius: 50%;
-  cursor: pointer;
-}
 
 .speed-section {
   display: flex;
   align-items: center;
+  flex-shrink: 0; /* 防止速度选择器被压缩 */
 }
 
 .speed-select {
@@ -238,9 +139,10 @@ function handleSpeedChange(event: Event) {
   color: white;
   border: 1px solid #555;
   border-radius: 4px;
-  padding: 4px 8px;
-  font-size: 12px;
+  padding: 2px 6px; /* 减小内边距 */
+  font-size: 11px; /* 减小字体 */
   cursor: pointer;
+  min-width: 50px; /* 设置最小宽度 */
 }
 
 .speed-select:focus {
