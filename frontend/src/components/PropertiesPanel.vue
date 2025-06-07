@@ -46,8 +46,8 @@
             <div class="duration-controls">
               <input
                 v-model.number="targetDuration"
-                @input="updateTargetDuration"
                 @blur="updateTargetDuration"
+                @keyup.enter="updateTargetDuration"
                 type="number"
                 step="0.1"
                 min="0.1"
@@ -115,10 +115,13 @@
                 <span class="position-label">X</span>
                 <div class="number-input-wrapper">
                   <input
-                    v-model.number="transformX"
-                    @input="updateTransform"
+                    v-model="tempTransformX"
+                    @blur="confirmTransformXFromInput"
+                    @keyup.enter="confirmTransformXFromInput"
                     type="number"
                     step="1"
+                    :min="-videoStore.videoResolution.width"
+                    :max="videoStore.videoResolution.width"
                     class="property-input position-input-field"
                   />
                   <div class="number-controls">
@@ -131,10 +134,13 @@
                 <span class="position-label">Y</span>
                 <div class="number-input-wrapper">
                   <input
-                    v-model.number="transformY"
-                    @input="updateTransform"
+                    v-model="tempTransformY"
+                    @blur="confirmTransformYFromInput"
+                    @keyup.enter="confirmTransformYFromInput"
                     type="number"
                     step="1"
+                    :min="-videoStore.videoResolution.height"
+                    :max="videoStore.videoResolution.height"
                     class="property-input position-input-field"
                   />
                   <div class="number-controls">
@@ -166,17 +172,18 @@
                 @input="updateUniformScale"
                 type="range"
                 min="0.1"
-                max="3"
+                max="10"
                 step="0.01"
                 class="scale-slider"
               />
               <div class="number-input-wrapper">
                 <input
-                  :value="uniformScale.toFixed(2)"
-                  @input="updateUniformScaleFromInput"
+                  v-model="tempUniformScale"
+                  @blur="confirmUniformScaleFromInput"
+                  @keyup.enter="confirmUniformScaleFromInput"
                   type="number"
                   min="0.1"
-                  max="3"
+                  max="10"
                   step="0.01"
                   class="scale-input-box"
                 />
@@ -198,17 +205,18 @@
                   @input="updateTransform"
                   type="range"
                   min="0.1"
-                  max="3"
+                  max="10"
                   step="0.01"
                   class="scale-slider"
                 />
                 <div class="number-input-wrapper">
                   <input
-                    :value="scaleX.toFixed(2)"
-                    @input="updateScaleXFromInput"
+                    v-model="tempScaleX"
+                    @blur="confirmScaleXFromInput"
+                    @keyup.enter="confirmScaleXFromInput"
                     type="number"
                     min="0.1"
-                    max="3"
+                    max="10"
                     step="0.01"
                     class="scale-input-box"
                   />
@@ -227,17 +235,18 @@
                   @input="updateTransform"
                   type="range"
                   min="0.1"
-                  max="3"
+                  max="10"
                   step="0.01"
                   class="scale-slider"
                 />
                 <div class="number-input-wrapper">
                   <input
-                    :value="scaleY.toFixed(2)"
-                    @input="updateScaleYFromInput"
+                    v-model="tempScaleY"
+                    @blur="confirmScaleYFromInput"
+                    @keyup.enter="confirmScaleYFromInput"
                     type="number"
                     min="0.1"
-                    max="3"
+                    max="10"
                     step="0.01"
                     class="scale-input-box"
                   />
@@ -263,8 +272,9 @@
               />
               <div class="number-input-wrapper">
                 <input
-                  :value="rotation.toFixed(1)"
-                  @input="updateRotationFromInput"
+                  v-model="tempRotation"
+                  @blur="confirmRotationFromInput"
+                  @keyup.enter="confirmRotationFromInput"
                   type="number"
                   min="-180"
                   max="180"
@@ -292,8 +302,9 @@
               />
               <div class="number-input-wrapper">
                 <input
-                  :value="opacity.toFixed(2)"
-                  @input="updateOpacityFromInput"
+                  v-model="tempOpacity"
+                  @blur="confirmOpacityFromInput"
+                  @keyup.enter="confirmOpacityFromInput"
                   type="number"
                   min="0"
                   max="1"
@@ -310,8 +321,9 @@
           <div class="property-item">
             <label>层级</label>
             <input
-              v-model.number="zIndex"
-              @input="updateZIndex"
+              v-model="tempZIndex"
+              @blur="confirmZIndexFromInput"
+              @keyup.enter="confirmZIndexFromInput"
               type="number"
               min="0"
               step="1"
@@ -367,6 +379,16 @@ const zIndex = ref(0)
 const proportionalScale = ref(true) // 默认开启等比缩放
 const uniformScale = ref(1) // 统一缩放值
 
+// 临时输入值（用于延迟更新）
+const tempTransformX = ref('0')
+const tempTransformY = ref('0')
+const tempUniformScale = ref('1.00')
+const tempScaleX = ref('1.00')
+const tempScaleY = ref('1.00')
+const tempRotation = ref('0.0')
+const tempOpacity = ref('1.00')
+const tempZIndex = ref('0')
+
 // 监听选中片段变化，更新本地状态
 watch(selectedClip, (newClip) => {
   if (newClip) {
@@ -391,6 +413,16 @@ watch(selectedClip, (newClip) => {
     // 检查是否为等比缩放（X和Y缩放值相等）
     proportionalScale.value = Math.abs(newClip.transform.scaleX - newClip.transform.scaleY) < 0.01
     uniformScale.value = proportionalScale.value ? newClip.transform.scaleX : 1
+
+    // 更新临时输入值
+    tempTransformX.value = transformX.value.toString()
+    tempTransformY.value = transformY.value.toString()
+    tempUniformScale.value = uniformScale.value.toFixed(2)
+    tempScaleX.value = scaleX.value.toFixed(2)
+    tempScaleY.value = scaleY.value.toFixed(2)
+    tempRotation.value = rotation.value.toFixed(1)
+    tempOpacity.value = opacity.value.toFixed(2)
+    tempZIndex.value = zIndex.value.toString()
   } else {
     clipName.value = ''
     playbackRate.value = 1
@@ -410,6 +442,16 @@ watch(selectedClip, (newClip) => {
     // 重置等比缩放属性
     proportionalScale.value = true
     uniformScale.value = 1
+
+    // 重置临时输入值
+    tempTransformX.value = '0'
+    tempTransformY.value = '0'
+    tempUniformScale.value = '1.00'
+    tempScaleX.value = '1.00'
+    tempScaleY.value = '1.00'
+    tempRotation.value = '0.0'
+    tempOpacity.value = '1.00'
+    tempZIndex.value = '0'
   }
 }, { immediate: true })
 
@@ -519,12 +561,7 @@ const updateTransform = () => {
   }
 }
 
-// 更新层级
-const updateZIndex = () => {
-  if (selectedClip.value) {
-    videoStore.updateClipZIndex(selectedClip.value.id, zIndex.value)
-  }
-}
+
 
 // 切换等比缩放
 const toggleProportionalScale = () => {
@@ -551,91 +588,159 @@ const updateUniformScale = () => {
 // 调整位置数值的方法
 const adjustTransformX = (delta: number) => {
   transformX.value += delta
+  tempTransformX.value = transformX.value.toString()
   updateTransform()
 }
 
 const adjustTransformY = (delta: number) => {
   transformY.value += delta
+  tempTransformY.value = transformY.value.toString()
   updateTransform()
 }
 
 // 调整统一缩放数值的方法
 const adjustUniformScale = (delta: number) => {
-  uniformScale.value = Math.max(0.1, Math.min(3, uniformScale.value + delta))
+  uniformScale.value = Math.max(0.1, Math.min(10, uniformScale.value + delta))
+  tempUniformScale.value = uniformScale.value.toFixed(2)
   updateUniformScale()
 }
 
 // 调整X缩放数值的方法
 const adjustScaleX = (delta: number) => {
-  scaleX.value = Math.max(0.1, Math.min(3, scaleX.value + delta))
+  scaleX.value = Math.max(0.1, Math.min(10, scaleX.value + delta))
+  tempScaleX.value = scaleX.value.toFixed(2)
   updateTransform()
 }
 
 // 调整Y缩放数值的方法
 const adjustScaleY = (delta: number) => {
-  scaleY.value = Math.max(0.1, Math.min(3, scaleY.value + delta))
+  scaleY.value = Math.max(0.1, Math.min(10, scaleY.value + delta))
+  tempScaleY.value = scaleY.value.toFixed(2)
   updateTransform()
 }
 
 // 调整旋转数值的方法
 const adjustRotation = (delta: number) => {
   rotation.value = Math.max(-180, Math.min(180, rotation.value + delta))
+  tempRotation.value = rotation.value.toFixed(1)
   updateTransform()
 }
 
 // 调整透明度数值的方法
 const adjustOpacity = (delta: number) => {
   opacity.value = Math.max(0, Math.min(1, opacity.value + delta))
+  tempOpacity.value = opacity.value.toFixed(2)
   updateTransform()
 }
 
-// 从输入框更新统一缩放
-const updateUniformScaleFromInput = (event: Event) => {
-  const target = event.target as HTMLInputElement
-  const value = parseFloat(target.value)
+// 确认统一缩放输入（失焦或回车时）
+const confirmUniformScaleFromInput = () => {
+  const value = parseFloat(tempUniformScale.value)
   if (!isNaN(value)) {
-    uniformScale.value = Math.max(0.1, Math.min(3, value))
+    uniformScale.value = Math.max(0.1, Math.min(10, value))
+    tempUniformScale.value = uniformScale.value.toFixed(2)
     updateUniformScale()
+  } else {
+    // 如果输入无效，恢复到当前值
+    tempUniformScale.value = uniformScale.value.toFixed(2)
   }
 }
 
-// 从输入框更新X缩放
-const updateScaleXFromInput = (event: Event) => {
-  const target = event.target as HTMLInputElement
-  const value = parseFloat(target.value)
+// 确认X缩放输入（失焦或回车时）
+const confirmScaleXFromInput = () => {
+  const value = parseFloat(tempScaleX.value)
   if (!isNaN(value)) {
-    scaleX.value = Math.max(0.1, Math.min(3, value))
+    scaleX.value = Math.max(0.1, Math.min(10, value))
+    tempScaleX.value = scaleX.value.toFixed(2)
     updateTransform()
+  } else {
+    // 如果输入无效，恢复到当前值
+    tempScaleX.value = scaleX.value.toFixed(2)
   }
 }
 
-// 从输入框更新Y缩放
-const updateScaleYFromInput = (event: Event) => {
-  const target = event.target as HTMLInputElement
-  const value = parseFloat(target.value)
+// 确认Y缩放输入（失焦或回车时）
+const confirmScaleYFromInput = () => {
+  const value = parseFloat(tempScaleY.value)
   if (!isNaN(value)) {
-    scaleY.value = Math.max(0.1, Math.min(3, value))
+    scaleY.value = Math.max(0.1, Math.min(10, value))
+    tempScaleY.value = scaleY.value.toFixed(2)
     updateTransform()
+  } else {
+    // 如果输入无效，恢复到当前值
+    tempScaleY.value = scaleY.value.toFixed(2)
   }
 }
 
-// 从输入框更新旋转
-const updateRotationFromInput = (event: Event) => {
-  const target = event.target as HTMLInputElement
-  const value = parseFloat(target.value)
+// 确认位置X输入（失焦或回车时）
+const confirmTransformXFromInput = () => {
+  const value = parseInt(tempTransformX.value)
+  if (!isNaN(value)) {
+    transformX.value = Math.max(-videoStore.videoResolution.width, Math.min(videoStore.videoResolution.width, value))
+    tempTransformX.value = transformX.value.toString()
+    updateTransform()
+  } else {
+    // 如果输入无效，恢复到当前值
+    tempTransformX.value = transformX.value.toString()
+  }
+}
+
+// 确认位置Y输入（失焦或回车时）
+const confirmTransformYFromInput = () => {
+  const value = parseInt(tempTransformY.value)
+  if (!isNaN(value)) {
+    transformY.value = Math.max(-videoStore.videoResolution.height, Math.min(videoStore.videoResolution.height, value))
+    tempTransformY.value = transformY.value.toString()
+    updateTransform()
+  } else {
+    // 如果输入无效，恢复到当前值
+    tempTransformY.value = transformY.value.toString()
+  }
+}
+
+// 确认旋转输入（失焦或回车时）
+const confirmRotationFromInput = () => {
+  const value = parseFloat(tempRotation.value)
   if (!isNaN(value)) {
     rotation.value = Math.max(-180, Math.min(180, value))
+    tempRotation.value = rotation.value.toFixed(1)
     updateTransform()
+  } else {
+    // 如果输入无效，恢复到当前值
+    tempRotation.value = rotation.value.toFixed(1)
   }
 }
 
-// 从输入框更新透明度
-const updateOpacityFromInput = (event: Event) => {
-  const target = event.target as HTMLInputElement
-  const value = parseFloat(target.value)
+// 确认透明度输入（失焦或回车时）
+const confirmOpacityFromInput = () => {
+  const value = parseFloat(tempOpacity.value)
   if (!isNaN(value)) {
     opacity.value = Math.max(0, Math.min(1, value))
+    tempOpacity.value = opacity.value.toFixed(2)
     updateTransform()
+  } else {
+    // 如果输入无效，恢复到当前值
+    tempOpacity.value = opacity.value.toFixed(2)
+  }
+}
+
+// 确认层级输入（失焦或回车时）
+const confirmZIndexFromInput = () => {
+  const value = parseInt(tempZIndex.value)
+  if (!isNaN(value) && value >= 0) {
+    zIndex.value = value
+    tempZIndex.value = zIndex.value.toString()
+    updateZIndex()
+  } else {
+    // 如果输入无效，恢复到当前值
+    tempZIndex.value = zIndex.value.toString()
+  }
+}
+
+// 更新层级
+const updateZIndex = () => {
+  if (selectedClip.value) {
+    videoStore.updateClipZIndex(selectedClip.value.id, zIndex.value)
   }
 }
 

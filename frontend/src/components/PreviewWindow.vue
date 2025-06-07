@@ -2,46 +2,26 @@
   <div class="preview-window">
     <div class="video-container">
       <!-- Canvas渲染器 -->
-      <CanvasVideoRenderer v-if="hasClips" />
-
-      <!-- 空白区域显示（没有片段时显示提示） -->
-      <div v-if="!hasClips" class="placeholder">
-        <div class="placeholder-content">
-          <svg width="64" height="64" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M8 5v14l11-7z"/>
-          </svg>
-          <p>预览窗口</p>
-          <p class="hint">将视频文件导入到素材库开始编辑</p>
-        </div>
-      </div>
+      <CanvasVideoRenderer />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
-import { useVideoStore } from '../stores/counter'
 import CanvasVideoRenderer from './CanvasVideoRenderer.vue'
-
-const videoStore = useVideoStore()
-
-// 检查是否有视频片段
-const hasClips = computed(() => {
-  return videoStore.clips.length > 0
-})
 </script>
 
 <style scoped>
 .preview-window {
   width: 100%;
   flex: 1;
-  background-color: #444; /* 改为灰色背景 */
+  background-color: #2a2a2a; /* 改为灰色背景 */
   border-radius: 8px;
   overflow: hidden;
   position: relative;
   display: flex;
   flex-direction: column;
-  border: 2px solid #333;
+  border: 2px solid #2a2a2a;
   box-sizing: border-box;
   /* 允许极大压缩，适应任何大小 */
   min-width: 150px;
@@ -72,41 +52,7 @@ const hasClips = computed(() => {
   box-sizing: border-box;
 }
 
-.placeholder {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background-color: transparent; /* 透明背景，使用父容器的灰色背景 */
-  transition: background-color 0.3s ease;
-}
 
-.placeholder.playing-blank {
-  background-color: transparent; /* 播放空白区域时也使用透明背景 */
-}
-
-.placeholder-content {
-  text-align: center;
-  color: #666;
-}
-
-.placeholder-content svg {
-  margin-bottom: 16px;
-  opacity: 0.5;
-}
-
-.placeholder-content p {
-  margin: 8px 0;
-}
-
-.hint {
-  font-size: 14px;
-  opacity: 0.7;
-}
 
 .blank-area-indicator {
   text-align: center;
@@ -137,9 +83,8 @@ const hasClips = computed(() => {
 .frame-border {
   width: 100%;
   height: 100%;
-  border: 2px dashed #ff4444;
   border-radius: 4px;
-  background-color: rgba(255, 68, 68, 0.1);
+  background-color: #666;
   position: relative;
 }
 

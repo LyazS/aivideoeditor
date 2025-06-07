@@ -116,9 +116,25 @@ const renderVideoWithTransform = (video: HTMLVideoElement, clip: VideoClip) => {
   // 应用旋转
   ctx.rotate((transform.rotation * Math.PI) / 180)
 
-  // 计算视频尺寸
-  const videoWidth = video.videoWidth * transform.scaleX
-  const videoHeight = video.videoHeight * transform.scaleY
+  // 计算缩放1.0时的基础尺寸 - 让视频片段能够完全覆盖画布（类似object-fit: cover）
+  const canvasAspectRatio = canvasWidth.value / canvasHeight.value
+  const videoAspectRatio = video.videoWidth / video.videoHeight
+
+  let baseWidth, baseHeight
+
+  if (videoAspectRatio > canvasAspectRatio) {
+    // 视频比画布更宽，以高度为准进行缩放
+    baseHeight = canvasHeight.value
+    baseWidth = baseHeight * videoAspectRatio
+  } else {
+    // 视频比画布更高，以宽度为准进行缩放
+    baseWidth = canvasWidth.value
+    baseHeight = baseWidth / videoAspectRatio
+  }
+
+  // 应用用户设置的缩放
+  const videoWidth = baseWidth * transform.scaleX
+  const videoHeight = baseHeight * transform.scaleY
 
   // 绘制视频（以中心为原点）
   ctx.drawImage(
@@ -190,14 +206,13 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: #1a1a1a;
+  background-color: #2a2a2a;
 }
 
 .video-canvas {
   max-width: 100%;
   max-height: 100%;
   object-fit: contain;
-  border: 2px dashed #ff4444;
   background-color: #000;
 }
 

@@ -79,7 +79,7 @@ function handleSpeedChange(event: Event) {
   align-items: center;
   gap: 8px; /* 进一步减小间距以适应压缩 */
   padding: 0 8px; /* 减小内边距以适应压缩 */
-  background-color: #333;
+  background-color: #2a2a2a;
   border-radius: 6px;
   height: 100%;
   min-height: 50px; /* 确保最小高度 */
@@ -136,7 +136,7 @@ function handleSpeedChange(event: Event) {
 }
 
 .speed-select {
-  background-color: #444;
+  background-color: #2a2a2a;
   color: white;
   border: 1px solid #555;
   border-radius: 4px;

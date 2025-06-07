@@ -32,11 +32,6 @@
             </div>
             <!-- 右侧比例按钮 -->
             <div class="right-controls">
-              <button class="debug-btn" @click="debugResolution" title="调试分辨率信息">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4M11,16.5L6.5,12L7.91,10.59L11,13.67L16.59,8.09L18,9.5L11,16.5Z" />
-                </svg>
-              </button>
               <button class="aspect-ratio-btn" @click="openResolutionModal" title="设置视频分辨率">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M19,12H22L18,8L14,12H17V16H7V12H10L6,8L2,12H5V16A2,2 0 0,0 7,18H17A2,2 0 0,0 19,16V12Z" />
@@ -431,20 +426,6 @@ function selectCustomResolution() {
   }
 }
 
-function debugResolution() {
-  console.log('=== 分辨率调试信息 ===')
-  console.log('当前分辨率 (currentResolution):', currentResolution.value)
-  console.log('VideoStore中的分辨率 (videoStore.videoResolution):', videoStore.videoResolution)
-  console.log('PreviewWindow的样式计算:', {
-    aspectRatio: videoStore.videoResolution.width / videoStore.videoResolution.height,
-    width: videoStore.videoResolution.width,
-    height: videoStore.videoResolution.height
-  })
-  console.log('临时选择的分辨率 (tempSelectedResolution):', tempSelectedResolution.value)
-  console.log('是否显示自定义输入 (showCustomResolution):', showCustomResolution.value)
-  console.log('自定义宽高:', { width: customWidth.value, height: customHeight.value })
-  console.log('===================')
-}
 
 function openResolutionModal() {
   // 初始化临时选择为当前分辨率
@@ -621,7 +602,7 @@ onUnmounted(() => {
   /* 可压缩的控制面板 */
   height: 50px;
   width: 100%;
-  background-color: #333;
+  background-color: #2a2a2a;
   border-radius: 6px;
   display: flex;
   align-items: center;
@@ -643,6 +624,7 @@ onUnmounted(() => {
   flex: 1; /* 占据中间剩余空间 */
   display: flex;
   justify-content: center; /* 中间对齐 */
+  background-color: #2a2a2a;
 }
 
 .right-controls {
@@ -650,6 +632,7 @@ onUnmounted(() => {
   flex-shrink: 0;
   display: flex;
   justify-content: flex-end;
+  align-items: center;
   gap: 4px;
 }
 
@@ -677,26 +660,7 @@ onUnmounted(() => {
   font-family: monospace;
 }
 
-.debug-btn {
-  background: none;
-  border: 1px solid #555;
-  color: #ccc;
-  cursor: pointer;
-  padding: 4px;
-  border-radius: 4px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s;
-  width: 28px;
-  height: 28px;
-}
 
-.debug-btn:hover {
-  background-color: #444;
-  border-color: #666;
-  color: white;
-}
 
 /* 分辨率选择弹窗样式 */
 .modal-overlay {
@@ -729,7 +693,7 @@ onUnmounted(() => {
   align-items: center;
   padding: 16px 20px;
   border-bottom: 1px solid #444;
-  background-color: #333;
+  background-color: #2a2a2a;
 }
 
 .modal-header h3 {
