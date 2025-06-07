@@ -339,7 +339,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, nextTick } from 'vue'
 import { useVideoStore } from '../stores/counter'
 
 const videoStore = useVideoStore()
@@ -376,7 +376,10 @@ const opacity = ref(1)
 const zIndex = ref(0)
 
 // 等比缩放相关
-const proportionalScale = ref(true) // 默认开启等比缩放
+const proportionalScale = computed({
+  get: () => videoStore.proportionalScale,
+  set: (value) => { videoStore.proportionalScale = value }
+})
 const uniformScale = ref(1) // 统一缩放值
 
 // 临时输入值（用于延迟更新）
@@ -389,30 +392,33 @@ const tempRotation = ref('0.0')
 const tempOpacity = ref('1.00')
 const tempZIndex = ref('0')
 
-// 监听选中片段变化，更新本地状态
-watch(selectedClip, (newClip) => {
-  if (newClip) {
-    clipName.value = newClip.name
-    playbackRate.value = newClip.playbackRate || 1
-    targetDuration.value = newClip.duration
-    speedInputValue.value = newClip.playbackRate || 1
+// 标志：是否正在程序更新（避免用户输入时的冲突）
+const isUpdatingFromExternal = ref(false)
+
+// 更新本地状态的函数
+const updateLocalState = (clip: any) => {
+  if (clip) {
+    clipName.value = clip.name
+    playbackRate.value = clip.playbackRate || 1
+    targetDuration.value = clip.duration
+    speedInputValue.value = clip.playbackRate || 1
 
     // 根据当前播放速度更新归一化值
-    normalizedSpeed.value = speedToNormalized(newClip.playbackRate || 1)
+    normalizedSpeed.value = speedToNormalized(clip.playbackRate || 1)
 
     // 更新变换属性
-    transformX.value = newClip.transform.x
-    transformY.value = newClip.transform.y
-    scaleX.value = newClip.transform.scaleX
-    scaleY.value = newClip.transform.scaleY
-    rotation.value = newClip.transform.rotation
-    opacity.value = newClip.transform.opacity
-    zIndex.value = newClip.zIndex
+    transformX.value = clip.transform.x
+    transformY.value = clip.transform.y
+    scaleX.value = clip.transform.scaleX
+    scaleY.value = clip.transform.scaleY
+    rotation.value = clip.transform.rotation
+    opacity.value = clip.transform.opacity
+    zIndex.value = clip.zIndex
 
     // 更新等比缩放相关属性
-    // 检查是否为等比缩放（X和Y缩放值相等）
-    proportionalScale.value = Math.abs(newClip.transform.scaleX - newClip.transform.scaleY) < 0.01
-    uniformScale.value = proportionalScale.value ? newClip.transform.scaleX : 1
+    // 保持用户设置的等比缩放状态，不要自动修改
+    // 只更新uniformScale的值
+    uniformScale.value = proportionalScale.value ? clip.transform.scaleX : 1
 
     // 更新临时输入值
     tempTransformX.value = transformX.value.toString()
@@ -453,7 +459,53 @@ watch(selectedClip, (newClip) => {
     tempOpacity.value = '1.00'
     tempZIndex.value = '0'
   }
-}, { immediate: true })
+}
+
+// 监听选中片段变化，更新本地状态
+watch(selectedClip, updateLocalState, { immediate: true })
+
+// 监听选中片段的变换属性变化
+watch(() => selectedClip.value?.transform, (newTransform) => {
+  if (newTransform && selectedClip.value && !isUpdatingFromExternal.value) {
+    isUpdatingFromExternal.value = true
+
+    // 只更新变换相关的属性，避免重复更新其他属性
+    transformX.value = newTransform.x
+    transformY.value = newTransform.y
+    scaleX.value = newTransform.scaleX
+    scaleY.value = newTransform.scaleY
+    rotation.value = newTransform.rotation
+    opacity.value = newTransform.opacity
+
+    // 不要自动修改等比缩放状态，保持用户的选择
+    // 只更新uniformScale的值（如果当前是等比缩放模式）
+    if (proportionalScale.value) {
+      uniformScale.value = newTransform.scaleX // 使用X轴缩放作为统一缩放值
+    }
+
+    // 更新临时输入值
+    tempTransformX.value = transformX.value.toString()
+    tempTransformY.value = transformY.value.toString()
+    tempUniformScale.value = uniformScale.value.toFixed(2)
+    tempScaleX.value = scaleX.value.toFixed(2)
+    tempScaleY.value = scaleY.value.toFixed(2)
+    tempRotation.value = rotation.value.toFixed(1)
+    tempOpacity.value = opacity.value.toFixed(2)
+
+    // 下一个tick后重置标志
+    nextTick(() => {
+      isUpdatingFromExternal.value = false
+    })
+  }
+}, { deep: true })
+
+// 监听选中片段的zIndex变化
+watch(() => selectedClip.value?.zIndex, (newZIndex) => {
+  if (newZIndex !== undefined) {
+    zIndex.value = newZIndex
+    tempZIndex.value = zIndex.value.toString()
+  }
+})
 
 // 更新片段名称
 const updateClipName = () => {

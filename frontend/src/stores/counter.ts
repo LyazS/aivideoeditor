@@ -55,6 +55,9 @@ export const useVideoStore = defineStore('video', () => {
   const playbackRate = ref(1) // 播放速度
   const selectedClipId = ref<string | null>(null) // 当前选中的片段ID
 
+  // 编辑设置
+  const proportionalScale = ref(true) // 等比缩放设置
+
   // 音量控制
   const volume = ref(1) // 音量 0-1
   const isMuted = ref(false) // 是否静音
@@ -694,6 +697,8 @@ export const useVideoStore = defineStore('video', () => {
     contentEndTime,
     playbackRate,
     selectedClipId,
+    // 编辑设置
+    proportionalScale,
     // 音量状态
     volume,
     isMuted,

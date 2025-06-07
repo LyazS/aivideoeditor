@@ -122,7 +122,9 @@ const handleDragOver = (event: DragEvent) => {
 
 const handleDragLeave = (event: DragEvent) => {
   // 只有当离开整个拖拽区域时才取消高亮
-  if (!event.currentTarget?.contains(event.relatedTarget as Node)) {
+  const currentTarget = event.currentTarget as Element
+  const relatedTarget = event.relatedTarget as Node
+  if (currentTarget && !currentTarget.contains(relatedTarget)) {
     isDragOver.value = false
   }
 }

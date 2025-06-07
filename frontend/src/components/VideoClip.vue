@@ -111,7 +111,7 @@ const clipStyle = computed(() => {
     width: `${Math.max(width, 20)}px`, // 最小宽度20px，确保可见但不影响时间准确性
     top: '10px', // 相对于轨道的顶部间距
     height: '60px', // 片段高度
-    position: 'absolute'
+    position: 'absolute' as const
   }
 })
 
