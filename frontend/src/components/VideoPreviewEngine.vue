@@ -1,5 +1,14 @@
 <template>
   <div class="video-preview-engine">
+    <!-- 状态栏 -->
+    <div class="status-bar-container">
+      <div class="status-bar">
+        <div class="status-content">
+          <span class="app-title">AI编辑器</span>
+        </div>
+      </div>
+    </div>
+
     <div class="main-content">
       <!-- 预览区域：三列布局 -->
       <div class="preview-section" :style="{ height: previewHeight + '%' }">
@@ -472,12 +481,40 @@ onUnmounted(() => {
   color: white;
 }
 
+.status-bar-container {
+  padding: 6px 6px 0 6px;
+  flex-shrink: 0;
+}
+
+.status-bar {
+  height: 30px;
+  background-color: #2a2a2a;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  padding: 0 12px;
+}
+
+.status-content {
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.app-title {
+  font-size: 13px;
+  color: #ccc;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+}
+
 .main-content {
   flex: 1;
   display: flex;
   flex-direction: column;
   padding: 6px;
-  height: calc(100vh - 12px); /* 减去padding */
+  height: calc(100vh - 48px); /* 减去padding和状态栏容器高度 */
   overflow: hidden;
 }
 
