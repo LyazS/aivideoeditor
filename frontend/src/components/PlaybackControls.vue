@@ -115,13 +115,14 @@ function handleSpeedChange(event: Event) {
 }
 
 .control-btn.primary {
-  background-color: #ff4444;
-  color: white;
+  background: none;
+  color: #ccc;
   padding: 8px; /* 进一步减小主按钮内边距 */
 }
 
 .control-btn.primary:hover {
-  background-color: #ff6666;
+  background-color: #444;
+  color: white;
 }
 
 
@@ -139,10 +140,10 @@ function handleSpeedChange(event: Event) {
   color: white;
   border: 1px solid #555;
   border-radius: 4px;
-  padding: 2px 6px; /* 减小内边距 */
-  font-size: 11px; /* 减小字体 */
+  padding: 4px 8px; /* 增加内边距 */
+  font-size: 13px; /* 增加字体大小 */
   cursor: pointer;
-  min-width: 50px; /* 设置最小宽度 */
+  min-width: 65px; /* 增加最小宽度 */
 }
 
 .speed-select:focus {

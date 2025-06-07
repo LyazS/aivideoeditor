@@ -1,6 +1,15 @@
 import { ref, computed } from 'vue'
 import { defineStore } from 'pinia'
 
+export interface VideoTransform {
+  x: number // X轴位置 (像素，相对于画布中心)
+  y: number // Y轴位置 (像素，相对于画布中心)
+  scaleX: number // X轴缩放 (1.0 = 100%)
+  scaleY: number // Y轴缩放 (1.0 = 100%)
+  rotation: number // 旋转角度 (度)
+  opacity: number // 透明度 (0-1)
+}
+
 export interface VideoClip {
   id: string
   file: File
@@ -13,6 +22,16 @@ export interface VideoClip {
   name: string
   playbackRate?: number // 播放速度倍率（自动计算：originalDuration / duration）
   trackId: number // 所属轨道ID
+  transform: VideoTransform // 视频变换属性
+  zIndex: number // 层级顺序
+}
+
+export interface VideoResolution {
+  name: string
+  width: number
+  height: number
+  aspectRatio: string
+  category?: string
 }
 
 export interface Track {
@@ -27,8 +46,7 @@ export const useVideoStore = defineStore('video', () => {
   const clips = ref<VideoClip[]>([])
   const tracks = ref<Track[]>([
     { id: 1, name: '轨道 1', isVisible: true, isMuted: false, height: 80 },
-    { id: 2, name: '轨道 2', isVisible: true, isMuted: false, height: 80 },
-    { id: 3, name: '轨道 3', isVisible: true, isMuted: false, height: 80 }
+    { id: 2, name: '轨道 2', isVisible: true, isMuted: false, height: 80 }
   ])
   const currentTime = ref(0)
   const isPlaying = ref(false)
@@ -45,6 +63,14 @@ export const useVideoStore = defineStore('video', () => {
   const zoomLevel = ref(1) // 缩放级别，1为默认，大于1为放大，小于1为缩小
   const scrollOffset = ref(0) // 水平滚动偏移量（像素）
   const frameRate = ref(30) // 假设视频帧率为30fps
+
+  // 视频分辨率设置
+  const videoResolution = ref<VideoResolution>({
+    name: '1080p',
+    width: 1920,
+    height: 1080,
+    aspectRatio: '16:9'
+  })
 
   // 全局时间控制器
   let timeUpdateInterval: number | null = null
@@ -146,9 +172,9 @@ export const useVideoStore = defineStore('video', () => {
   function updateClipDuration(clipId: string, newDuration: number, timelinePosition?: number) {
     const clip = clips.value.find(c => c.id === clipId)
     if (clip) {
-      // 确保最小时长（0.1秒）和最大时长限制
-      const minDuration = 0.1
-      const maxDuration = clip.originalDuration * 10 // 最多可以拉伸到10倍长度（0.1倍速）
+      // 确保最小时长（0.01秒）和最大时长限制
+      const minDuration = 0.01
+      const maxDuration = clip.originalDuration * 100 // 最多可以拉伸到100倍长度（0.01倍速）
       const validDuration = Math.max(minDuration, Math.min(newDuration, maxDuration))
 
       clip.duration = validDuration
@@ -221,7 +247,9 @@ export const useVideoStore = defineStore('video', () => {
       duration: relativeTimelineTime,
       endTime: splitVideoTime,
       playbackRate: videoContentDuration / originalClip.duration, // 保持原有播放速度
-      trackId: originalClip.trackId // 保持原轨道
+      trackId: originalClip.trackId, // 保持原轨道
+      transform: { ...originalClip.transform }, // 复制变换属性
+      zIndex: originalClip.zIndex
     }
 
     // 创建第二个片段（从分割点到结束）
@@ -232,7 +260,9 @@ export const useVideoStore = defineStore('video', () => {
       duration: originalClip.duration - relativeTimelineTime,
       startTime: splitVideoTime,
       playbackRate: videoContentDuration / originalClip.duration, // 保持原有播放速度
-      trackId: originalClip.trackId // 保持原轨道
+      trackId: originalClip.trackId, // 保持原轨道
+      transform: { ...originalClip.transform }, // 复制变换属性
+      zIndex: originalClip.zIndex
     }
 
     console.log('✂️ 第一个片段:')
@@ -619,15 +649,37 @@ export const useVideoStore = defineStore('video', () => {
     }
   }
 
+  // 设置视频分辨率
+  function setVideoResolution(resolution: VideoResolution) {
+    videoResolution.value = resolution
+    console.log('视频分辨率已设置为:', resolution)
+  }
+
   // 更新片段播放速度
   function updateClipPlaybackRate(clipId: string, newRate: number) {
     const clip = clips.value.find(c => c.id === clipId)
     if (clip) {
-      // 确保播放速度在合理范围内
-      const clampedRate = Math.max(0.25, Math.min(4, newRate))
+      // 确保播放速度在合理范围内（扩展到0.1-100倍）
+      const clampedRate = Math.max(0.1, Math.min(100, newRate))
       clip.playbackRate = clampedRate
       // 根据新的播放速度重新计算时间轴显示时长
       clip.duration = clip.originalDuration / clampedRate
+    }
+  }
+
+  // 更新片段变换属性
+  function updateClipTransform(clipId: string, transform: Partial<VideoTransform>) {
+    const clip = clips.value.find(c => c.id === clipId)
+    if (clip) {
+      clip.transform = { ...clip.transform, ...transform }
+    }
+  }
+
+  // 更新片段层级
+  function updateClipZIndex(clipId: string, zIndex: number) {
+    const clip = clips.value.find(c => c.id === clipId)
+    if (clip) {
+      clip.zIndex = zIndex
     }
   }
 
@@ -661,6 +713,8 @@ export const useVideoStore = defineStore('video', () => {
     updateClipDuration,
     updateClipName,
     updateClipPlaybackRate,
+    updateClipTransform,
+    updateClipZIndex,
     selectClip,
     splitClipAtTime,
     getClipAtTime,
@@ -699,6 +753,9 @@ export const useVideoStore = defineStore('video', () => {
     alignTimeToFrame,
     expandTimelineIfNeeded,
     getVirtualTimelineDuration,
-    timeToPixelForScale
+    timeToPixelForScale,
+    // 分辨率相关
+    videoResolution,
+    setVideoResolution
   }
 })

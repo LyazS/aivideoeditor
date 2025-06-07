@@ -299,9 +299,9 @@ function handleResize(event: MouseEvent) {
     newDuration = newRightTime - resizeStartPosition.value
   }
 
-  // 确保最小时长（0.1秒）和最大时长
-  const minDuration = 0.1
-  const maxDuration = props.clip.originalDuration * 10 // 最多可以拉伸到10倍长度
+  // 确保最小时长（0.01秒）和最大时长
+  const minDuration = 0.01
+  const maxDuration = props.clip.originalDuration * 100 // 最多可以拉伸到100倍长度
   newDuration = Math.max(minDuration, Math.min(newDuration, maxDuration))
 
   // 只更新临时值，不触发 store 更新
@@ -396,9 +396,9 @@ onUnmounted(() => {
 }
 
 .video-clip.selected {
-  background: linear-gradient(135deg, #ffd700, #ffb347);
-  border-color: #ffd700;
-  box-shadow: 0 2px 12px rgba(255, 215, 0, 0.6);
+  background: linear-gradient(135deg, #ff6b35, #f7931e);
+  border-color: #ff6b35;
+  box-shadow: 0 2px 12px rgba(255, 107, 53, 0.6);
 }
 
 @keyframes pulse-warning {

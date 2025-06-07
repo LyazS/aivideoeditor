@@ -17,16 +17,6 @@
 
     <!-- 主体区域：每个轨道一行，包含左侧控制和右侧内容 -->
     <div class="timeline-body" ref="timelineBody">
-      <!-- 拖拽提示 -->
-      <div v-if="clips.length === 0" class="drop-zone">
-        <div class="drop-hint">
-          <svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z" />
-          </svg>
-          <p>从素材库拖拽视频到此处</p>
-          <p class="hint">先将视频文件导入到素材库</p>
-        </div>
-      </div>
 
       <!-- 每个轨道一行 -->
       <div
@@ -351,7 +341,16 @@ async function createVideoClipFromMediaItem(mediaItem: any, startTime: number, t
     timelinePosition: Math.max(0, startTime),
     name: mediaItem.name,
     playbackRate: 1.0, // 初始播放速度为正常速度
-    trackId: trackId // 指定轨道
+    trackId: trackId, // 指定轨道
+    transform: {
+      x: 0,
+      y: 0,
+      scaleX: 1.0,
+      scaleY: 1.0,
+      rotation: 0,
+      opacity: 1.0
+    },
+    zIndex: videoStore.clips.length
   }
 
   console.log('添加片段到时间轴:', clip)
@@ -598,46 +597,17 @@ onUnmounted(() => {
 
 .track-btn.delete-btn {
   background: #f44336;
+  color: white; /* 确保删除按钮图标是白色 */
 }
 
 .track-btn.delete-btn:hover {
   background: #d32f2f;
+  color: white; /* 确保悬停时图标也是白色 */
 }
 
 
 
-.drop-zone {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 2px dashed #555;
-  border-radius: 4px;
-  margin: 10px;
-}
 
-.drop-hint {
-  text-align: center;
-  color: #888;
-}
-
-.drop-hint svg {
-  margin-bottom: 12px;
-  opacity: 0.6;
-}
-
-.drop-hint p {
-  margin: 4px 0;
-}
-
-.hint {
-  font-size: 14px;
-  opacity: 0.7;
-}
 
 .timeline-grid {
   position: absolute;
@@ -664,5 +634,28 @@ onUnmounted(() => {
   width: 1px;
 }
 
+/* 自定义滚动条样式 */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
 
+::-webkit-scrollbar-track {
+  background: #1a1a1a;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #555;
+  border-radius: 4px;
+  border: 1px solid #333;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #666;
+}
+
+::-webkit-scrollbar-corner {
+  background: #1a1a1a;
+}
 </style>

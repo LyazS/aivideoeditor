@@ -39,71 +39,288 @@
         <!-- 播放设置 -->
         <div class="property-section">
           <h4>播放设置</h4>
+
+          <!-- 精确时长控制 -->
           <div class="property-item">
-            <label>播放速度</label>
-            <div class="speed-controls">
-              <input 
-                v-model.number="playbackRate" 
-                @input="updatePlaybackRate"
-                type="range"
-                min="0.25"
-                max="4"
-                step="0.25"
-                class="speed-slider"
+            <label>目标时长</label>
+            <div class="duration-controls">
+              <input
+                v-model.number="targetDuration"
+                @input="updateTargetDuration"
+                @blur="updateTargetDuration"
+                type="number"
+                step="0.1"
+                min="0.1"
+                class="property-input number-input"
+                placeholder="秒"
               />
-              <span class="speed-value">{{ playbackRate }}x</span>
+              <span class="duration-unit">秒</span>
+            </div>
+          </div>
+
+          <!-- 倍速控制 -->
+          <div class="property-item">
+            <label>倍速</label>
+            <div class="speed-controls">
+              <!-- 分段倍速滑块 -->
+              <div class="segmented-speed-container">
+                <input
+                  v-model.number="normalizedSpeed"
+                  @input="updateNormalizedSpeed"
+                  type="range"
+                  min="0"
+                  max="100"
+                  step="1"
+                  class="segmented-speed-slider"
+                />
+                <!-- 分段竖线 -->
+                <div class="speed-dividers">
+                  <div class="speed-divider" style="left: 20%"></div>
+                  <div class="speed-divider" style="left: 40%"></div>
+                  <div class="speed-divider" style="left: 60%"></div>
+                  <div class="speed-divider" style="left: 80%"></div>
+                </div>
+                <!-- 分段标签 -->
+                <div class="speed-labels">
+                  <span class="speed-label" style="left: 10%">0.1-1x</span>
+                  <span class="speed-label" style="left: 30%">1-2x</span>
+                  <span class="speed-label" style="left: 50%">2-5x</span>
+                  <span class="speed-label" style="left: 70%">5-10x</span>
+                  <span class="speed-label" style="left: 90%">10-100x</span>
+                </div>
+              </div>
+              <input
+                v-model.number="speedInputValue"
+                @input="updateSpeedFromInput"
+                @blur="updateSpeedFromInput"
+                @keyup.enter="updateSpeedFromInput"
+                type="number"
+                step="0.1"
+                min="0.1"
+                max="100"
+                class="speed-input"
+              />
             </div>
           </div>
         </div>
 
-        <!-- 时间范围 -->
+        <!-- 位置大小 -->
         <div class="property-section">
-          <h4>时间范围</h4>
+          <h4>位置大小</h4>
+          <!-- 位置：XY在同一行 -->
           <div class="property-item">
-            <label>开始时间</label>
-            <span class="property-value">{{ formatDuration(selectedClip.startTime) }}</span>
+            <label>位置</label>
+            <div class="position-controls">
+              <div class="position-input-group">
+                <span class="position-label">X</span>
+                <div class="number-input-wrapper">
+                  <input
+                    v-model.number="transformX"
+                    @input="updateTransform"
+                    type="number"
+                    step="1"
+                    class="property-input position-input-field"
+                  />
+                  <div class="number-controls">
+                    <button @click="adjustTransformX(1)" class="number-btn number-btn-up">▲</button>
+                    <button @click="adjustTransformX(-1)" class="number-btn number-btn-down">▼</button>
+                  </div>
+                </div>
+              </div>
+              <div class="position-input-group">
+                <span class="position-label">Y</span>
+                <div class="number-input-wrapper">
+                  <input
+                    v-model.number="transformY"
+                    @input="updateTransform"
+                    type="number"
+                    step="1"
+                    class="property-input position-input-field"
+                  />
+                  <div class="number-controls">
+                    <button @click="adjustTransformY(1)" class="number-btn number-btn-up">▲</button>
+                    <button @click="adjustTransformY(-1)" class="number-btn number-btn-down">▼</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 等比缩放选项 -->
+          <div class="property-item">
+            <label>等比缩放</label>
+            <input
+              v-model="proportionalScale"
+              @change="toggleProportionalScale"
+              type="checkbox"
+              class="checkbox-input"
+            />
+          </div>
+
+          <!-- 等比缩放时的统一缩放控制 -->
+          <div v-if="proportionalScale" class="property-item">
+            <label>缩放</label>
+            <div class="scale-controls">
+              <input
+                v-model.number="uniformScale"
+                @input="updateUniformScale"
+                type="range"
+                min="0.1"
+                max="3"
+                step="0.01"
+                class="scale-slider"
+              />
+              <div class="number-input-wrapper">
+                <input
+                  :value="uniformScale.toFixed(2)"
+                  @input="updateUniformScaleFromInput"
+                  type="number"
+                  min="0.1"
+                  max="3"
+                  step="0.01"
+                  class="scale-input-box"
+                />
+                <div class="number-controls">
+                  <button @click="adjustUniformScale(0.1)" class="number-btn number-btn-up">▲</button>
+                  <button @click="adjustUniformScale(-0.1)" class="number-btn number-btn-down">▼</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 非等比缩放时的独立XY缩放控制 -->
+          <template v-else>
+            <div class="property-item">
+              <label>X缩放</label>
+              <div class="scale-controls">
+                <input
+                  v-model.number="scaleX"
+                  @input="updateTransform"
+                  type="range"
+                  min="0.1"
+                  max="3"
+                  step="0.01"
+                  class="scale-slider"
+                />
+                <div class="number-input-wrapper">
+                  <input
+                    :value="scaleX.toFixed(2)"
+                    @input="updateScaleXFromInput"
+                    type="number"
+                    min="0.1"
+                    max="3"
+                    step="0.01"
+                    class="scale-input-box"
+                  />
+                  <div class="number-controls">
+                    <button @click="adjustScaleX(0.1)" class="number-btn number-btn-up">▲</button>
+                    <button @click="adjustScaleX(-0.1)" class="number-btn number-btn-down">▼</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="property-item">
+              <label>Y缩放</label>
+              <div class="scale-controls">
+                <input
+                  v-model.number="scaleY"
+                  @input="updateTransform"
+                  type="range"
+                  min="0.1"
+                  max="3"
+                  step="0.01"
+                  class="scale-slider"
+                />
+                <div class="number-input-wrapper">
+                  <input
+                    :value="scaleY.toFixed(2)"
+                    @input="updateScaleYFromInput"
+                    type="number"
+                    min="0.1"
+                    max="3"
+                    step="0.01"
+                    class="scale-input-box"
+                  />
+                  <div class="number-controls">
+                    <button @click="adjustScaleY(0.1)" class="number-btn number-btn-up">▲</button>
+                    <button @click="adjustScaleY(-0.1)" class="number-btn number-btn-down">▼</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </template>
+          <div class="property-item">
+            <label>旋转</label>
+            <div class="rotation-controls">
+              <input
+                v-model.number="rotation"
+                @input="updateTransform"
+                type="range"
+                min="-180"
+                max="180"
+                step="0.1"
+                class="rotation-slider"
+              />
+              <div class="number-input-wrapper">
+                <input
+                  :value="rotation.toFixed(1)"
+                  @input="updateRotationFromInput"
+                  type="number"
+                  min="-180"
+                  max="180"
+                  step="0.1"
+                  class="scale-input-box"
+                />
+                <div class="number-controls">
+                  <button @click="adjustRotation(1)" class="number-btn number-btn-up">▲</button>
+                  <button @click="adjustRotation(-1)" class="number-btn number-btn-down">▼</button>
+                </div>
+              </div>
+            </div>
           </div>
           <div class="property-item">
-            <label>结束时间</label>
-            <span class="property-value">{{ formatDuration(selectedClip.endTime) }}</span>
+            <label>透明度</label>
+            <div class="opacity-controls">
+              <input
+                v-model.number="opacity"
+                @input="updateTransform"
+                type="range"
+                min="0"
+                max="1"
+                step="0.01"
+                class="opacity-slider"
+              />
+              <div class="number-input-wrapper">
+                <input
+                  :value="opacity.toFixed(2)"
+                  @input="updateOpacityFromInput"
+                  type="number"
+                  min="0"
+                  max="1"
+                  step="0.01"
+                  class="scale-input-box"
+                />
+                <div class="number-controls">
+                  <button @click="adjustOpacity(0.01)" class="number-btn number-btn-up">▲</button>
+                  <button @click="adjustOpacity(-0.01)" class="number-btn number-btn-down">▼</button>
+                </div>
+              </div>
+            </div>
           </div>
           <div class="property-item">
-            <label>原始时长</label>
-            <span class="property-value">{{ formatDuration(selectedClip.originalDuration) }}</span>
+            <label>层级</label>
+            <input
+              v-model.number="zIndex"
+              @input="updateZIndex"
+              type="number"
+              min="0"
+              step="1"
+              class="property-input number-input"
+            />
           </div>
         </div>
 
-        <!-- 文件信息 -->
-        <div class="property-section">
-          <h4>文件信息</h4>
-          <div class="property-item">
-            <label>文件名</label>
-            <span class="property-value" :title="selectedClip.file.name">
-              {{ selectedClip.file.name }}
-            </span>
-          </div>
-          <div class="property-item">
-            <label>文件大小</label>
-            <span class="property-value">{{ formatFileSize(selectedClip.file.size) }}</span>
-          </div>
-          <div class="property-item">
-            <label>文件类型</label>
-            <span class="property-value">{{ selectedClip.file.type }}</span>
-          </div>
-        </div>
 
-        <!-- 操作按钮 -->
-        <div class="property-section">
-          <h4>操作</h4>
-          <div class="action-buttons">
-            <button class="action-btn danger" @click="removeClip">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z" />
-              </svg>
-              删除片段
-            </button>
-          </div>
-        </div>
       </div>
     </div>
   </div>
@@ -124,15 +341,75 @@ const selectedClip = computed(() => {
 // 可编辑的属性
 const clipName = ref('')
 const playbackRate = ref(1)
+const targetDuration = ref(0)
+const normalizedSpeed = ref(20) // 0-100的归一化值，默认20对应1x
+const speedInputValue = ref(1) // 倍速输入框的值
+
+// 倍速分段配置
+const speedSegments = [
+  { min: 0.1, max: 1, normalizedStart: 0, normalizedEnd: 20 },    // 0-20%: 0.1-1x
+  { min: 1, max: 2, normalizedStart: 20, normalizedEnd: 40 },     // 20-40%: 1-2x
+  { min: 2, max: 5, normalizedStart: 40, normalizedEnd: 60 },     // 40-60%: 2-5x
+  { min: 5, max: 10, normalizedStart: 60, normalizedEnd: 80 },    // 60-80%: 5-10x
+  { min: 10, max: 100, normalizedStart: 80, normalizedEnd: 100 }  // 80-100%: 10-100x
+]
+
+// 变换属性
+const transformX = ref(0)
+const transformY = ref(0)
+const scaleX = ref(1)
+const scaleY = ref(1)
+const rotation = ref(0)
+const opacity = ref(1)
+const zIndex = ref(0)
+
+// 等比缩放相关
+const proportionalScale = ref(true) // 默认开启等比缩放
+const uniformScale = ref(1) // 统一缩放值
 
 // 监听选中片段变化，更新本地状态
 watch(selectedClip, (newClip) => {
   if (newClip) {
     clipName.value = newClip.name
     playbackRate.value = newClip.playbackRate || 1
+    targetDuration.value = newClip.duration
+    speedInputValue.value = newClip.playbackRate || 1
+
+    // 根据当前播放速度更新归一化值
+    normalizedSpeed.value = speedToNormalized(newClip.playbackRate || 1)
+
+    // 更新变换属性
+    transformX.value = newClip.transform.x
+    transformY.value = newClip.transform.y
+    scaleX.value = newClip.transform.scaleX
+    scaleY.value = newClip.transform.scaleY
+    rotation.value = newClip.transform.rotation
+    opacity.value = newClip.transform.opacity
+    zIndex.value = newClip.zIndex
+
+    // 更新等比缩放相关属性
+    // 检查是否为等比缩放（X和Y缩放值相等）
+    proportionalScale.value = Math.abs(newClip.transform.scaleX - newClip.transform.scaleY) < 0.01
+    uniformScale.value = proportionalScale.value ? newClip.transform.scaleX : 1
   } else {
     clipName.value = ''
     playbackRate.value = 1
+    targetDuration.value = 0
+    normalizedSpeed.value = 20
+    speedInputValue.value = 1
+
+    // 重置变换属性
+    transformX.value = 0
+    transformY.value = 0
+    scaleX.value = 1
+    scaleY.value = 1
+    rotation.value = 0
+    opacity.value = 1
+    zIndex.value = 0
+
+    // 重置等比缩放属性
+    proportionalScale.value = true
+    uniformScale.value = 1
   }
 }, { immediate: true })
 
@@ -147,6 +424,218 @@ const updateClipName = () => {
 const updatePlaybackRate = () => {
   if (selectedClip.value) {
     videoStore.updateClipPlaybackRate(selectedClip.value.id, playbackRate.value)
+    // 同步更新目标时长和输入框值
+    targetDuration.value = selectedClip.value.originalDuration / playbackRate.value
+    speedInputValue.value = playbackRate.value
+  }
+}
+
+// 更新目标时长
+const updateTargetDuration = () => {
+  if (selectedClip.value && targetDuration.value > 0) {
+    const newPlaybackRate = selectedClip.value.originalDuration / targetDuration.value
+    // 确保播放速度在合理范围内（0.1-100x）
+    const clampedRate = Math.max(0.1, Math.min(100, newPlaybackRate))
+    playbackRate.value = clampedRate
+    // 更新归一化值
+    normalizedSpeed.value = speedToNormalized(clampedRate)
+    videoStore.updateClipPlaybackRate(selectedClip.value.id, clampedRate)
+    // 重新计算实际时长（可能因为范围限制而有所调整）
+    targetDuration.value = selectedClip.value.originalDuration / clampedRate
+  }
+}
+
+// 更新归一化速度
+const updateNormalizedSpeed = () => {
+  const actualSpeed = normalizedToSpeed(normalizedSpeed.value)
+  playbackRate.value = actualSpeed
+  speedInputValue.value = actualSpeed
+  updatePlaybackRate()
+}
+
+// 从输入框更新倍速
+const updateSpeedFromInput = () => {
+  if (speedInputValue.value && speedInputValue.value > 0) {
+    // 确保倍速在合理范围内
+    const clampedSpeed = Math.max(0.1, Math.min(100, speedInputValue.value))
+    playbackRate.value = clampedSpeed
+    speedInputValue.value = clampedSpeed
+    // 更新归一化值和滑块位置
+    normalizedSpeed.value = speedToNormalized(clampedSpeed)
+    updatePlaybackRate()
+  }
+}
+
+// 将归一化值(0-100)转换为实际播放速度
+const normalizedToSpeed = (normalized: number) => {
+  // 找到对应的段
+  for (const segment of speedSegments) {
+    if (normalized >= segment.normalizedStart && normalized <= segment.normalizedEnd) {
+      // 在段内进行线性插值
+      const segmentProgress = (normalized - segment.normalizedStart) / (segment.normalizedEnd - segment.normalizedStart)
+      return segment.min + segmentProgress * (segment.max - segment.min)
+    }
+  }
+  return 1 // 默认值
+}
+
+// 将实际播放速度转换为归一化值(0-100)
+const speedToNormalized = (speed: number) => {
+  // 找到对应的段
+  for (const segment of speedSegments) {
+    if (speed >= segment.min && speed <= segment.max) {
+      // 在段内进行线性插值
+      const segmentProgress = (speed - segment.min) / (segment.max - segment.min)
+      return segment.normalizedStart + segmentProgress * (segment.normalizedEnd - segment.normalizedStart)
+    }
+  }
+  return 20 // 默认值对应1x
+}
+
+// 格式化倍速显示值
+const formatSpeedValue = (rate: number) => {
+  if (rate >= 10) {
+    return `${Math.round(rate)}x`
+  } else if (rate >= 1) {
+    return `${rate.toFixed(1)}x`
+  } else {
+    return `${rate.toFixed(2)}x`
+  }
+}
+
+
+
+// 更新变换属性
+const updateTransform = () => {
+  if (selectedClip.value) {
+    videoStore.updateClipTransform(selectedClip.value.id, {
+      x: transformX.value,
+      y: transformY.value,
+      scaleX: scaleX.value,
+      scaleY: scaleY.value,
+      rotation: rotation.value,
+      opacity: opacity.value
+    })
+  }
+}
+
+// 更新层级
+const updateZIndex = () => {
+  if (selectedClip.value) {
+    videoStore.updateClipZIndex(selectedClip.value.id, zIndex.value)
+  }
+}
+
+// 切换等比缩放
+const toggleProportionalScale = () => {
+  if (proportionalScale.value) {
+    // 开启等比缩放时，使用当前X缩放值作为统一缩放值
+    uniformScale.value = scaleX.value
+    scaleY.value = scaleX.value
+    updateTransform()
+  } else {
+    // 关闭等比缩放时，保持当前的缩放值
+    uniformScale.value = scaleX.value
+  }
+}
+
+// 更新统一缩放
+const updateUniformScale = () => {
+  if (proportionalScale.value) {
+    scaleX.value = uniformScale.value
+    scaleY.value = uniformScale.value
+    updateTransform()
+  }
+}
+
+// 调整位置数值的方法
+const adjustTransformX = (delta: number) => {
+  transformX.value += delta
+  updateTransform()
+}
+
+const adjustTransformY = (delta: number) => {
+  transformY.value += delta
+  updateTransform()
+}
+
+// 调整统一缩放数值的方法
+const adjustUniformScale = (delta: number) => {
+  uniformScale.value = Math.max(0.1, Math.min(3, uniformScale.value + delta))
+  updateUniformScale()
+}
+
+// 调整X缩放数值的方法
+const adjustScaleX = (delta: number) => {
+  scaleX.value = Math.max(0.1, Math.min(3, scaleX.value + delta))
+  updateTransform()
+}
+
+// 调整Y缩放数值的方法
+const adjustScaleY = (delta: number) => {
+  scaleY.value = Math.max(0.1, Math.min(3, scaleY.value + delta))
+  updateTransform()
+}
+
+// 调整旋转数值的方法
+const adjustRotation = (delta: number) => {
+  rotation.value = Math.max(-180, Math.min(180, rotation.value + delta))
+  updateTransform()
+}
+
+// 调整透明度数值的方法
+const adjustOpacity = (delta: number) => {
+  opacity.value = Math.max(0, Math.min(1, opacity.value + delta))
+  updateTransform()
+}
+
+// 从输入框更新统一缩放
+const updateUniformScaleFromInput = (event: Event) => {
+  const target = event.target as HTMLInputElement
+  const value = parseFloat(target.value)
+  if (!isNaN(value)) {
+    uniformScale.value = Math.max(0.1, Math.min(3, value))
+    updateUniformScale()
+  }
+}
+
+// 从输入框更新X缩放
+const updateScaleXFromInput = (event: Event) => {
+  const target = event.target as HTMLInputElement
+  const value = parseFloat(target.value)
+  if (!isNaN(value)) {
+    scaleX.value = Math.max(0.1, Math.min(3, value))
+    updateTransform()
+  }
+}
+
+// 从输入框更新Y缩放
+const updateScaleYFromInput = (event: Event) => {
+  const target = event.target as HTMLInputElement
+  const value = parseFloat(target.value)
+  if (!isNaN(value)) {
+    scaleY.value = Math.max(0.1, Math.min(3, value))
+    updateTransform()
+  }
+}
+
+// 从输入框更新旋转
+const updateRotationFromInput = (event: Event) => {
+  const target = event.target as HTMLInputElement
+  const value = parseFloat(target.value)
+  if (!isNaN(value)) {
+    rotation.value = Math.max(-180, Math.min(180, value))
+    updateTransform()
+  }
+}
+
+// 从输入框更新透明度
+const updateOpacityFromInput = (event: Event) => {
+  const target = event.target as HTMLInputElement
+  const value = parseFloat(target.value)
+  if (!isNaN(value)) {
+    opacity.value = Math.max(0, Math.min(1, value))
+    updateTransform()
   }
 }
 
@@ -182,14 +671,14 @@ const formatFileSize = (bytes: number): string => {
   width: 100%;
   height: 100%;
   background-color: #2a2a2a;
-  border-radius: 8px;
+  border-radius: 4px;
   display: flex;
   flex-direction: column;
   overflow: hidden;
 }
 
 .panel-header {
-  padding: 12px 16px;
+  padding: 8px 12px;
   background-color: #333;
   border-bottom: 1px solid #555;
   flex-shrink: 0;
@@ -232,29 +721,29 @@ const formatFileSize = (bytes: number): string => {
 }
 
 .properties-content {
-  padding: 16px;
+  padding: 8px 12px;
 }
 
 .property-section {
-  margin-bottom: 20px;
+  margin-bottom: 12px;
 }
 
 .property-section h4 {
-  margin: 0 0 12px 0;
+  margin: 0 0 8px 0;
   font-size: 12px;
   color: #ccc;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   border-bottom: 1px solid #444;
-  padding-bottom: 4px;
+  padding-bottom: 3px;
 }
 
 .property-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 8px;
-  gap: 8px;
+  margin-bottom: 6px;
+  gap: 6px;
 }
 
 .property-item label {
@@ -288,6 +777,21 @@ const formatFileSize = (bytes: number): string => {
   border-color: #4CAF50;
 }
 
+/* 时长控制样式 */
+.duration-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+
+.duration-unit {
+  font-size: 12px;
+  color: #999;
+  min-width: 20px;
+}
+
+/* 倍速控制样式 */
 .speed-controls {
   display: flex;
   align-items: center;
@@ -295,7 +799,269 @@ const formatFileSize = (bytes: number): string => {
   flex: 1;
 }
 
-.speed-slider {
+/* 分段倍速滑块容器 */
+.segmented-speed-container {
+  position: relative;
+  flex: 1;
+  height: 40px;
+  display: flex;
+  align-items: center;
+}
+
+.segmented-speed-slider {
+  width: 100%;
+  height: 4px;
+  background: #444;
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+  -webkit-appearance: none;
+  position: relative;
+  z-index: 2;
+}
+
+.segmented-speed-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  background: #ffffff;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.segmented-speed-slider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  background: #ffffff;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+}
+
+/* 分段竖线 */
+.speed-dividers {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 12px;
+  transform: translateY(-50%);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.speed-divider {
+  position: absolute;
+  width: 1px;
+  height: 100%;
+  background: #666;
+  transform: translateX(-50%);
+}
+
+/* 分段标签 */
+.speed-labels {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  height: 16px;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.speed-label {
+  position: absolute;
+  font-size: 9px;
+  color: #999;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  margin-top: 2px;
+}
+
+/* 倍速输入框 */
+.speed-input {
+  background: #444;
+  border: 1px solid #666;
+  border-radius: 3px;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 6px;
+  min-width: 50px;
+  max-width: 60px;
+  text-align: center;
+}
+
+.speed-input:focus {
+  outline: none;
+  border-color: #ffffff;
+}
+
+.speed-input::-webkit-outer-spin-button,
+.speed-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.number-input {
+  max-width: 80px;
+  text-align: right;
+}
+
+/* 位置控制样式 */
+.position-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+
+.position-input-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+}
+
+.position-label {
+  font-size: 11px;
+  color: #999;
+  min-width: 12px;
+  text-align: center;
+}
+
+/* 数字输入框包装器 */
+.number-input-wrapper {
+  display: flex;
+  align-items: stretch;
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.position-input-field {
+  max-width: 60px;
+  text-align: center;
+  flex: 1;
+  border-radius: 0; /* 移除圆角，由包装器控制 */
+  border-right: none; /* 移除右边框，与按钮连接 */
+}
+
+/* 隐藏默认的数字输入框上下箭头 */
+.position-input-field::-webkit-outer-spin-button,
+.position-input-field::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.position-input-field[type=number] {
+  -moz-appearance: textfield;
+}
+
+/* 自定义数字控制按钮 */
+.number-controls {
+  display: flex;
+  flex-direction: column;
+  width: 18px;
+  flex-shrink: 0;
+}
+
+.number-btn {
+  background: #555;
+  border: 1px solid #666;
+  border-left: none;
+  color: #fff;
+  cursor: pointer;
+  font-size: 8px;
+  line-height: 1;
+  padding: 0;
+  width: 100%;
+  height: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s;
+  flex: 1;
+}
+
+.number-btn:hover {
+  background: #666;
+}
+
+.number-btn:active {
+  background: #777;
+}
+
+.number-btn-up {
+  border-radius: 0;
+  border-bottom: 0.5px solid #444;
+}
+
+.number-btn-down {
+  border-radius: 0;
+  border-top: 0.5px solid #444;
+}
+
+/* 复选框样式 */
+.checkbox-input {
+  width: 16px;
+  height: 16px;
+  accent-color: #ffffff;
+  cursor: pointer;
+}
+
+/* 缩放输入框样式 */
+.scale-input-box {
+  background: #444;
+  border: 1px solid #666;
+  border-radius: 0; /* 移除圆角，由包装器控制 */
+  border-right: none; /* 移除右边框，与按钮连接 */
+  color: #fff;
+  font-size: 11px;
+  padding: 2px 4px;
+  width: 60px; /* 固定宽度 */
+  text-align: center;
+  flex: 0 0 auto;
+}
+
+.scale-input-box:focus {
+  outline: none;
+  border-color: #4CAF50;
+}
+
+/* 隐藏所有数字输入框的默认箭头 */
+.scale-input-box::-webkit-outer-spin-button,
+.scale-input-box::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.scale-input-box[type=number] {
+  -moz-appearance: textfield;
+}
+
+.scale-controls,
+.rotation-controls,
+.opacity-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+}
+
+/* 让数字输入框包装器在这些控件中保持固定宽度，滑杆占满剩余空间 */
+.scale-controls .number-input-wrapper,
+.rotation-controls .number-input-wrapper,
+.opacity-controls .number-input-wrapper {
+  flex: 0 0 auto;
+  width: 80px; /* 固定宽度 */
+}
+
+.scale-slider,
+.rotation-slider,
+.opacity-slider {
   flex: 1;
   height: 4px;
   background: #444;
@@ -304,28 +1070,34 @@ const formatFileSize = (bytes: number): string => {
   -webkit-appearance: none;
 }
 
-.speed-slider::-webkit-slider-thumb {
+.scale-slider::-webkit-slider-thumb,
+.rotation-slider::-webkit-slider-thumb,
+.opacity-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   width: 12px;
   height: 12px;
-  background: #4CAF50;
+  background: #2196F3;
   border-radius: 50%;
   cursor: pointer;
 }
 
-.speed-slider::-moz-range-thumb {
+.scale-slider::-moz-range-thumb,
+.rotation-slider::-moz-range-thumb,
+.opacity-slider::-moz-range-thumb {
   width: 12px;
   height: 12px;
-  background: #4CAF50;
+  background: #2196F3;
   border-radius: 50%;
   cursor: pointer;
   border: none;
 }
 
-.speed-value {
+.scale-value,
+.rotation-value,
+.opacity-value {
   font-size: 11px;
   color: #fff;
-  min-width: 30px;
+  min-width: 40px;
   text-align: right;
 }
 
@@ -360,5 +1132,30 @@ const formatFileSize = (bytes: number): string => {
 
 .action-btn.danger:hover {
   background: #d32f2f;
+}
+
+/* 自定义滚动条样式 */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #1a1a1a;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #555;
+  border-radius: 4px;
+  border: 1px solid #333;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #666;
+}
+
+::-webkit-scrollbar-corner {
+  background: #1a1a1a;
 }
 </style>

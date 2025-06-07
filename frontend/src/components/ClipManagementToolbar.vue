@@ -23,7 +23,7 @@
           <path d="M19,3H5C3.89,3 3,3.89 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V5C21,3.89 20.1,3 19,3M19,19H5V5H19V19Z" />
           <path d="M12,7V17M7,12H17" stroke="white" stroke-width="1"/>
         </svg>
-        裁剪片段
+        裁剪
       </button>
       <button
         v-if="videoStore.selectedClipId"
@@ -34,7 +34,7 @@
         <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
           <path d="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z" />
         </svg>
-        删除片段
+        删除
       </button>
       <span v-if="overlappingCount > 0" class="overlap-warning">
         ⚠️ {{ overlappingCount }} 个重叠

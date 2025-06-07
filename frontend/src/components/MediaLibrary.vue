@@ -246,14 +246,14 @@ const formatFileSize = (bytes: number): string => {
   width: 100%;
   height: 100%;
   background-color: #2a2a2a;
-  border-radius: 8px;
+  border-radius: 4px;
   display: flex;
   flex-direction: column;
   overflow: hidden;
 }
 
 .library-header {
-  padding: 12px 16px;
+  padding: 8px 12px;
   background-color: #333;
   border-bottom: 1px solid #555;
   display: flex;
@@ -410,5 +410,30 @@ const formatFileSize = (bytes: number): string => {
 
 .remove-btn:hover {
   background: #d32f2f;
+}
+
+/* 自定义滚动条样式 */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #1a1a1a;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #555;
+  border-radius: 4px;
+  border: 1px solid #333;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #666;
+}
+
+::-webkit-scrollbar-corner {
+  background: #1a1a1a;
 }
 </style>
