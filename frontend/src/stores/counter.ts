@@ -399,7 +399,7 @@ export const useVideoStore = defineStore('video', () => {
 
     timeUpdateInterval = setInterval(() => {
       if (isPlaying.value) {
-        const newTime = currentTime.value + (0.1 * playbackRate.value) // 每100ms更新一次
+        const newTime = currentTime.value + (0.05 * playbackRate.value) // 每50ms更新一次
         // 如果有视频片段，播放到最后一个片段结束；如果没有片段，播放到时间轴结束
         const endTime = contentEndTime.value > 0 ? contentEndTime.value : totalDuration.value
         if (newTime >= endTime) {
@@ -408,7 +408,7 @@ export const useVideoStore = defineStore('video', () => {
           setCurrentTime(newTime)
         }
       }
-    }, 100) // 100ms间隔，确保流畅播放
+    }, 50) // 50ms间隔，确保流畅播放
   }
 
   function stopTimeUpdate() {

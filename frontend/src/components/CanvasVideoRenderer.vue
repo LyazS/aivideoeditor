@@ -701,7 +701,7 @@ const onKeyDown = (event: KeyboardEvent) => {
 onMounted(() => {
   if (canvasRef.value) {
     ctx = canvasRef.value.getContext('2d')
-    startRenderLoop()
+    // startRenderLoop()
   }
 
   // 添加键盘事件监听
@@ -710,7 +710,7 @@ onMounted(() => {
 
 // 组件卸载
 onUnmounted(() => {
-  stopRenderLoop()
+  // stopRenderLoop()
   window.removeEventListener('keydown', onKeyDown)
 })
 </script>
