@@ -46,7 +46,7 @@ export const useVideoStore = defineStore('video', () => {
   const clips = ref<VideoClip[]>([])
   const tracks = ref<Track[]>([
     { id: 1, name: '轨道 1', isVisible: true, isMuted: false, height: 80 },
-    { id: 2, name: '轨道 2', isVisible: true, isMuted: false, height: 80 }
+    { id: 2, name: '轨道 2', isVisible: true, isMuted: false, height: 80 },
   ])
   const currentTime = ref(0)
   const isPlaying = ref(false)
@@ -72,7 +72,7 @@ export const useVideoStore = defineStore('video', () => {
     name: '1080p',
     width: 1920,
     height: 1080,
-    aspectRatio: '16:9'
+    aspectRatio: '16:9',
   })
 
   // 全局时间控制器
@@ -80,7 +80,7 @@ export const useVideoStore = defineStore('video', () => {
 
   const totalDuration = computed(() => {
     if (clips.value.length === 0) return timelineDuration.value
-    const maxEndTime = Math.max(...clips.value.map(clip => clip.timelinePosition + clip.duration))
+    const maxEndTime = Math.max(...clips.value.map((clip) => clip.timelinePosition + clip.duration))
     return Math.max(maxEndTime, timelineDuration.value)
   })
 
@@ -121,8 +121,6 @@ export const useVideoStore = defineStore('video', () => {
     const requiredPixelsPerSecond = targetFrameWidth / frameDuration
     const maxZoom = (requiredPixelsPerSecond * totalDuration.value) / timelineWidth
 
-
-
     return Math.max(maxZoom, 100) // 确保至少有100倍缩放
   }
 
@@ -131,14 +129,14 @@ export const useVideoStore = defineStore('video', () => {
     // 基于最大可见范围计算滚动限制，而不是基于totalDuration
     const effectiveDuration = Math.min(totalDuration.value, maxVisibleDuration.value)
     const pixelsPerSecond = (timelineWidth * zoomLevel.value) / totalDuration.value
-    const maxScrollableTime = Math.max(0, effectiveDuration - (timelineWidth / pixelsPerSecond))
+    const maxScrollableTime = Math.max(0, effectiveDuration - timelineWidth / pixelsPerSecond)
     return maxScrollableTime * pixelsPerSecond
   }
 
   // 计算实际内容的结束时间（最后一个视频片段的结束时间）
   const contentEndTime = computed(() => {
     if (clips.value.length === 0) return 0
-    return Math.max(...clips.value.map(clip => clip.timelinePosition + clip.duration))
+    return Math.max(...clips.value.map((clip) => clip.timelinePosition + clip.duration))
   })
 
   function addClip(clip: VideoClip) {
@@ -153,14 +151,14 @@ export const useVideoStore = defineStore('video', () => {
   }
 
   function removeClip(clipId: string) {
-    const index = clips.value.findIndex(clip => clip.id === clipId)
+    const index = clips.value.findIndex((clip) => clip.id === clipId)
     if (index > -1) {
       clips.value.splice(index, 1)
     }
   }
 
   function updateClipPosition(clipId: string, newPosition: number, newTrackId?: number) {
-    const clip = clips.value.find(c => c.id === clipId)
+    const clip = clips.value.find((c) => c.id === clipId)
     if (clip) {
       // 如果指定了新轨道，更新轨道ID
       if (newTrackId !== undefined) {
@@ -173,7 +171,7 @@ export const useVideoStore = defineStore('video', () => {
   }
 
   function updateClipDuration(clipId: string, newDuration: number, timelinePosition?: number) {
-    const clip = clips.value.find(c => c.id === clipId)
+    const clip = clips.value.find((c) => c.id === clipId)
     if (clip) {
       // 确保最小时长（0.01秒）和最大时长限制
       const minDuration = 0.01
@@ -199,7 +197,7 @@ export const useVideoStore = defineStore('video', () => {
   function splitClipAtTime(clipId: string, splitTime: number) {
     console.group('🔪 视频片段裁剪调试')
 
-    const clipIndex = clips.value.findIndex(c => c.id === clipId)
+    const clipIndex = clips.value.findIndex((c) => c.id === clipId)
     if (clipIndex === -1) {
       console.error('❌ 找不到要裁剪的片段:', clipId)
       console.groupEnd()
@@ -217,7 +215,10 @@ export const useVideoStore = defineStore('video', () => {
     console.log('  - 原始时长:', originalClip.originalDuration)
 
     // 检查分割时间是否在片段范围内
-    if (splitTime <= originalClip.timelinePosition || splitTime >= originalClip.timelinePosition + originalClip.duration) {
+    if (
+      splitTime <= originalClip.timelinePosition ||
+      splitTime >= originalClip.timelinePosition + originalClip.duration
+    ) {
       console.error('❌ 分割时间不在片段范围内')
       console.log('  - 分割时间:', splitTime)
       console.log('  - 片段开始:', originalClip.timelinePosition)
@@ -252,7 +253,7 @@ export const useVideoStore = defineStore('video', () => {
       playbackRate: videoContentDuration / originalClip.duration, // 保持原有播放速度
       trackId: originalClip.trackId, // 保持原轨道
       transform: { ...originalClip.transform }, // 复制变换属性
-      zIndex: originalClip.zIndex
+      zIndex: originalClip.zIndex,
     }
 
     // 创建第二个片段（从分割点到结束）
@@ -265,7 +266,7 @@ export const useVideoStore = defineStore('video', () => {
       playbackRate: videoContentDuration / originalClip.duration, // 保持原有播放速度
       trackId: originalClip.trackId, // 保持原轨道
       transform: { ...originalClip.transform }, // 复制变换属性
-      zIndex: originalClip.zIndex
+      zIndex: originalClip.zIndex,
     }
 
     console.log('✂️ 第一个片段:')
@@ -303,21 +304,20 @@ export const useVideoStore = defineStore('video', () => {
 
   // 解决重叠问题（只在同一轨道内检查）
   function resolveOverlap(movingClipId: string, newPosition: number, trackId: number): number {
-    const movingClip = clips.value.find(c => c.id === movingClipId)
+    const movingClip = clips.value.find((c) => c.id === movingClipId)
     if (!movingClip) return newPosition
 
     // 创建临时片段用于检测
     const tempClip: VideoClip = {
       ...movingClip,
       timelinePosition: newPosition,
-      trackId: trackId
+      trackId: trackId,
     }
 
     // 找到所有与移动片段重叠的同轨道其他片段
-    const overlappingClips = clips.value.filter(clip =>
-      clip.id !== movingClipId &&
-      clip.trackId === trackId &&
-      isOverlapping(tempClip, clip)
+    const overlappingClips = clips.value.filter(
+      (clip) =>
+        clip.id !== movingClipId && clip.trackId === trackId && isOverlapping(tempClip, clip),
     )
 
     if (overlappingClips.length === 0) {
@@ -330,7 +330,9 @@ export const useVideoStore = defineStore('video', () => {
 
   // 寻找最近的可用空隙（只在同一轨道内）
   function findNearestGap(movingClip: VideoClip, overlappingClips: VideoClip[]): number {
-    const allClips = clips.value.filter(c => c.id !== movingClip.id && c.trackId === movingClip.trackId)
+    const allClips = clips.value.filter(
+      (c) => c.id !== movingClip.id && c.trackId === movingClip.trackId,
+    )
 
     // 按时间位置排序
     allClips.sort((a, b) => a.timelinePosition - b.timelinePosition)
@@ -358,7 +360,7 @@ export const useVideoStore = defineStore('video', () => {
     for (const pos of possiblePositions) {
       if (pos + movingClip.duration <= totalDuration.value) {
         const tempClip: VideoClip = { ...movingClip, timelinePosition: pos }
-        const hasOverlap = allClips.some(clip => isOverlapping(tempClip, clip))
+        const hasOverlap = allClips.some((clip) => isOverlapping(tempClip, clip))
 
         if (!hasOverlap) {
           const distance = Math.abs(pos - originalPosition)
@@ -374,10 +376,11 @@ export const useVideoStore = defineStore('video', () => {
   }
 
   function getClipAtTime(time: number): VideoClip | null {
-    return clips.value.find(clip =>
-      time >= clip.timelinePosition &&
-      time < clip.timelinePosition + clip.duration
-    ) || null
+    return (
+      clips.value.find(
+        (clip) => time >= clip.timelinePosition && time < clip.timelinePosition + clip.duration,
+      ) || null
+    )
   }
 
   // 将时间对齐到帧边界
@@ -390,8 +393,6 @@ export const useVideoStore = defineStore('video', () => {
     const finalTime = forceAlign ? alignTimeToFrame(time) : time
     currentTime.value = finalTime
     currentClip.value = getClipAtTime(finalTime)
-
-
   }
 
   function startTimeUpdate() {
@@ -399,7 +400,7 @@ export const useVideoStore = defineStore('video', () => {
 
     timeUpdateInterval = setInterval(() => {
       if (isPlaying.value) {
-        const newTime = currentTime.value + (0.05 * playbackRate.value) // 每50ms更新一次
+        const newTime = currentTime.value + 0.05 * playbackRate.value // 每50ms更新一次
         // 如果有视频片段，播放到最后一个片段结束；如果没有片段，播放到时间轴结束
         const endTime = contentEndTime.value > 0 ? contentEndTime.value : totalDuration.value
         if (newTime >= endTime) {
@@ -474,8 +475,8 @@ export const useVideoStore = defineStore('video', () => {
   }
 
   // 获取所有重叠的片段对
-  function getOverlappingClips(): Array<{ clip1: VideoClip, clip2: VideoClip }> {
-    const overlaps: Array<{ clip1: VideoClip, clip2: VideoClip }> = []
+  function getOverlappingClips(): Array<{ clip1: VideoClip; clip2: VideoClip }> {
+    const overlaps: Array<{ clip1: VideoClip; clip2: VideoClip }> = []
 
     for (let i = 0; i < clips.value.length; i++) {
       for (let j = i + 1; j < clips.value.length; j++) {
@@ -493,7 +494,7 @@ export const useVideoStore = defineStore('video', () => {
     // 按轨道分组，然后在每个轨道内按时间位置排序
     const trackGroups = new Map<number, VideoClip[]>()
 
-    clips.value.forEach(clip => {
+    clips.value.forEach((clip) => {
       if (!trackGroups.has(clip.trackId)) {
         trackGroups.set(clip.trackId, [])
       }
@@ -513,13 +514,13 @@ export const useVideoStore = defineStore('video', () => {
 
   // 轨道管理方法
   function addTrack(name?: string): Track {
-    const newId = Math.max(...tracks.value.map(t => t.id)) + 1
+    const newId = Math.max(...tracks.value.map((t) => t.id)) + 1
     const newTrack: Track = {
       id: newId,
       name: name || `轨道 ${newId}`,
       isVisible: true,
       isMuted: false,
-      height: 80
+      height: 80,
     }
     tracks.value.push(newTrack)
     return newTrack
@@ -530,35 +531,35 @@ export const useVideoStore = defineStore('video', () => {
     if (tracks.value.length <= 1) return
 
     // 将该轨道的所有片段移动到第一个轨道
-    clips.value.forEach(clip => {
+    clips.value.forEach((clip) => {
       if (clip.trackId === trackId) {
         clip.trackId = tracks.value[0].id
       }
     })
 
     // 删除轨道
-    const index = tracks.value.findIndex(t => t.id === trackId)
+    const index = tracks.value.findIndex((t) => t.id === trackId)
     if (index > -1) {
       tracks.value.splice(index, 1)
     }
   }
 
   function toggleTrackVisibility(trackId: number) {
-    const track = tracks.value.find(t => t.id === trackId)
+    const track = tracks.value.find((t) => t.id === trackId)
     if (track) {
       track.isVisible = !track.isVisible
     }
   }
 
   function toggleTrackMute(trackId: number) {
-    const track = tracks.value.find(t => t.id === trackId)
+    const track = tracks.value.find((t) => t.id === trackId)
     if (track) {
       track.isMuted = !track.isMuted
     }
   }
 
   function renameTrack(trackId: number, newName: string) {
-    const track = tracks.value.find(t => t.id === trackId)
+    const track = tracks.value.find((t) => t.id === trackId)
     if (track) {
       track.name = newName
     }
@@ -619,7 +620,7 @@ export const useVideoStore = defineStore('video', () => {
   function getVirtualTimelineDuration(timelineWidth: number): number {
     // 当缩小时间轴时，计算可见范围的结束时间
     const pixelsPerSecond = (timelineWidth * zoomLevel.value) / totalDuration.value
-    const visibleEndTime = scrollOffset.value / pixelsPerSecond + (timelineWidth / pixelsPerSecond)
+    const visibleEndTime = scrollOffset.value / pixelsPerSecond + timelineWidth / pixelsPerSecond
 
     // 返回当前内容长度和可见范围结束时间的较大值，确保刻度线能够扩展
     return Math.max(totalDuration.value, visibleEndTime + 60) // 额外添加60秒缓冲
@@ -628,7 +629,7 @@ export const useVideoStore = defineStore('video', () => {
   // 将时间转换为像素位置（考虑缩放和滚动）
   function timeToPixel(time: number, timelineWidth: number): number {
     const pixelsPerSecond = (timelineWidth * zoomLevel.value) / totalDuration.value
-    return (time * pixelsPerSecond) - scrollOffset.value
+    return time * pixelsPerSecond - scrollOffset.value
   }
 
   // 将像素位置转换为时间（考虑缩放和滚动）
@@ -641,12 +642,12 @@ export const useVideoStore = defineStore('video', () => {
   function timeToPixelForScale(time: number, timelineWidth: number): number {
     const virtualDuration = getVirtualTimelineDuration(timelineWidth)
     const pixelsPerSecond = (timelineWidth * zoomLevel.value) / virtualDuration
-    return (time * pixelsPerSecond) - scrollOffset.value
+    return time * pixelsPerSecond - scrollOffset.value
   }
 
   // 更新片段名称
   function updateClipName(clipId: string, newName: string) {
-    const clip = clips.value.find(c => c.id === clipId)
+    const clip = clips.value.find((c) => c.id === clipId)
     if (clip) {
       clip.name = newName
     }
@@ -660,7 +661,7 @@ export const useVideoStore = defineStore('video', () => {
 
   // 更新片段播放速度
   function updateClipPlaybackRate(clipId: string, newRate: number) {
-    const clip = clips.value.find(c => c.id === clipId)
+    const clip = clips.value.find((c) => c.id === clipId)
     if (clip) {
       // 确保播放速度在合理范围内（扩展到0.1-100倍）
       const clampedRate = Math.max(0.1, Math.min(100, newRate))
@@ -672,7 +673,7 @@ export const useVideoStore = defineStore('video', () => {
 
   // 更新片段变换属性
   function updateClipTransform(clipId: string, transform: Partial<VideoTransform>) {
-    const clip = clips.value.find(c => c.id === clipId)
+    const clip = clips.value.find((c) => c.id === clipId)
     if (clip) {
       clip.transform = { ...clip.transform, ...transform }
     }
@@ -680,7 +681,7 @@ export const useVideoStore = defineStore('video', () => {
 
   // 更新片段层级
   function updateClipZIndex(clipId: string, zIndex: number) {
-    const clip = clips.value.find(c => c.id === clipId)
+    const clip = clips.value.find((c) => c.id === clipId)
     if (clip) {
       clip.zIndex = zIndex
     }
@@ -761,6 +762,6 @@ export const useVideoStore = defineStore('video', () => {
     timeToPixelForScale,
     // 分辨率相关
     videoResolution,
-    setVideoResolution
+    setVideoResolution,
   }
 })

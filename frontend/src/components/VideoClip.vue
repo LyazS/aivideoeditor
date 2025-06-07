@@ -2,10 +2,10 @@
   <div
     class="video-clip"
     :class="{
-      'overlapping': isOverlapping,
-      'selected': isSelected,
-      'dragging': isDragging,
-      'resizing': isResizing
+      overlapping: isOverlapping,
+      selected: isSelected,
+      dragging: isDragging,
+      resizing: isResizing,
     }"
     :style="clipStyle"
     @mousedown="startDrag"
@@ -29,7 +29,9 @@
       <div v-if="showDetails" class="clip-info">
         <div class="clip-name">{{ clip.name }}</div>
         <div class="clip-duration">{{ formatDuration(clip.duration) }}</div>
-        <div class="clip-speed" v-if="clip.playbackRate && clip.playbackRate !== 1">{{ formatSpeed(clip.playbackRate) }}</div>
+        <div class="clip-speed" v-if="clip.playbackRate && clip.playbackRate !== 1">
+          {{ formatSpeed(clip.playbackRate) }}
+        </div>
       </div>
 
       <!-- 简化显示 - 片段较窄时只显示时长 -->
@@ -41,7 +43,7 @@
       <div class="resize-handle left" @mousedown.stop="startResize('left', $event)"></div>
       <div class="resize-handle right" @mousedown.stop="startResize('right', $event)"></div>
     </div>
-    
+
     <!-- 右键菜单 -->
     <div v-if="showMenu" class="context-menu" :style="menuStyle" @click.stop>
       <div class="menu-item" @click="removeClip">删除</div>
@@ -96,9 +98,11 @@ const clipStyle = computed(() => {
   const videoStore = useVideoStore()
 
   // 在拖拽或调整大小时使用临时值，否则使用实际值
-  const position = isDragging.value ? tempPosition.value :
-                   isResizing.value ? tempResizePosition.value :
-                   props.clip.timelinePosition
+  const position = isDragging.value
+    ? tempPosition.value
+    : isResizing.value
+      ? tempResizePosition.value
+      : props.clip.timelinePosition
   const duration = isResizing.value ? tempDuration.value : props.clip.duration
 
   const left = videoStore.timeToPixel(position, props.timelineWidth)
@@ -111,16 +115,18 @@ const clipStyle = computed(() => {
     width: `${Math.max(width, 20)}px`, // 最小宽度20px，确保可见但不影响时间准确性
     top: '10px', // 相对于轨道的顶部间距
     height: '60px', // 片段高度
-    position: 'absolute' as const
+    position: 'absolute' as const,
   }
 })
 
 // 判断是否应该显示详细信息（当片段足够宽时）
 const showDetails = computed(() => {
   // 在拖拽或调整大小时使用临时值，否则使用实际值
-  const position = isDragging.value ? tempPosition.value :
-                   isResizing.value ? tempResizePosition.value :
-                   props.clip.timelinePosition
+  const position = isDragging.value
+    ? tempPosition.value
+    : isResizing.value
+      ? tempResizePosition.value
+      : props.clip.timelinePosition
   const duration = isResizing.value ? tempDuration.value : props.clip.duration
 
   const endTime = position + duration
@@ -132,10 +138,11 @@ const showDetails = computed(() => {
 
 // 检查当前片段是否与同轨道的其他片段重叠
 const isOverlapping = computed(() => {
-  return videoStore.clips.some(otherClip =>
-    otherClip.id !== props.clip.id &&
-    otherClip.trackId === props.clip.trackId &&
-    videoStore.isOverlapping(props.clip, otherClip)
+  return videoStore.clips.some(
+    (otherClip) =>
+      otherClip.id !== props.clip.id &&
+      otherClip.trackId === props.clip.trackId &&
+      videoStore.isOverlapping(props.clip, otherClip),
   )
 })
 
@@ -161,20 +168,20 @@ function formatSpeed(rate: number): string {
 
 function generateThumbnail() {
   if (!thumbnailVideo.value || !thumbnailCanvas.value) return
-  
+
   const video = thumbnailVideo.value
   const canvas = thumbnailCanvas.value
   const ctx = canvas.getContext('2d')
-  
+
   if (!ctx) return
-  
+
   // 设置画布尺寸
   canvas.width = 60
   canvas.height = 40
-  
+
   // 跳转到视频中间帧
   video.currentTime = video.duration / 2
-  
+
   video.onseeked = () => {
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
   }
@@ -232,7 +239,7 @@ function handleDrag(event: MouseEvent) {
 // 根据Y坐标变化确定目标轨道
 function getTrackIdFromDelta(deltaY: number): number {
   const tracks = videoStore.tracks
-  const currentTrackIndex = tracks.findIndex(t => t.id === props.clip.trackId)
+  const currentTrackIndex = tracks.findIndex((t) => t.id === props.clip.trackId)
 
   if (currentTrackIndex === -1) return props.clip.trackId
 
@@ -288,7 +295,6 @@ function handleResize(event: MouseEvent) {
 
     newTimelinePosition = Math.max(0, newLeftTime)
     newDuration = resizeStartDuration.value + (resizeStartPosition.value - newTimelinePosition)
-
   } else if (resizeDirection.value === 'right') {
     // 拖拽右边把柄：只调整时长
     const endTime = resizeStartPosition.value + resizeStartDuration.value
@@ -324,12 +330,12 @@ function stopResize() {
 function showContextMenu(event: MouseEvent) {
   event.preventDefault()
   showMenu.value = true
-  
+
   menuStyle.value = {
     left: `${event.offsetX}px`,
-    top: `${event.offsetY}px`
+    top: `${event.offsetY}px`,
   }
-  
+
   // 点击其他地方关闭菜单
   setTimeout(() => {
     document.addEventListener('click', hideContextMenu, { once: true })
@@ -402,7 +408,8 @@ onUnmounted(() => {
 }
 
 @keyframes pulse-warning {
-  0%, 100% {
+  0%,
+  100% {
     box-shadow: 0 2px 12px rgba(231, 76, 60, 0.4);
   }
   50% {

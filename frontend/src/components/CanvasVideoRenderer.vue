@@ -1,11 +1,6 @@
 <template>
   <div class="canvas-video-renderer">
-    <canvas
-      ref="canvasRef"
-      :width="canvasWidth"
-      :height="canvasHeight"
-      class="video-canvas"
-    />
+    <canvas ref="canvasRef" :width="canvasWidth" :height="canvasHeight" class="video-canvas" />
     <!-- 交互层 -->
     <div
       ref="interactionLayerRef"
@@ -50,7 +45,7 @@
       <video
         v-for="clip in activeClips"
         :key="clip.id"
-        :ref="el => setVideoRef(clip.id, el)"
+        :ref="(el) => setVideoRef(clip.id, el)"
         :src="clip.url"
         muted
         preload="metadata"
@@ -85,7 +80,7 @@ const hasDragged = ref(false) // 标记是否发生了实际的拖拽
 // 获取当前选中的片段
 const selectedClip = computed(() => {
   if (!videoStore.selectedClipId) return null
-  return videoStore.clips.find(clip => clip.id === videoStore.selectedClipId) || null
+  return videoStore.clips.find((clip) => clip.id === videoStore.selectedClipId) || null
 })
 
 // Canvas尺寸
@@ -153,8 +148,8 @@ const selectionBoxStyle = computed(() => {
   const displayHeight = videoHeight * scaleY
 
   // 计算在canvas中的中心位置（考虑位置偏移）
-  const canvasCenterX = (canvasDisplayWidth / 2) + (transform.x * scaleX)
-  const canvasCenterY = (canvasDisplayHeight / 2) + (transform.y * scaleY)
+  const canvasCenterX = canvasDisplayWidth / 2 + transform.x * scaleX
+  const canvasCenterY = canvasDisplayHeight / 2 + transform.y * scaleY
 
   // 转换到交互层坐标系
   const centerX = canvasOffsetX + canvasCenterX
@@ -167,7 +162,7 @@ const selectionBoxStyle = computed(() => {
     width: `${displayWidth}px`,
     height: `${displayHeight}px`,
     transform: `rotate(${transform.rotation}deg)`,
-    transformOrigin: 'center center'
+    transformOrigin: 'center center',
   }
 })
 
@@ -191,7 +186,7 @@ const onMouseDown = (event: MouseEvent) => {
       y: transform.y,
       scaleX: transform.scaleX,
       scaleY: transform.scaleY,
-      rotation: transform.rotation
+      rotation: transform.rotation,
     }
 
     event.preventDefault()
@@ -256,7 +251,7 @@ const onWheel = (event: WheelEvent) => {
 
   videoStore.updateClipTransform(selectedClip.value.id, {
     scaleX: newScaleX,
-    scaleY: newScaleY
+    scaleY: newScaleY,
   })
 }
 
@@ -289,8 +284,12 @@ const onClick = (event: MouseEvent) => {
   const canvasClickY = clickY - canvasOffsetY
 
   // 检查点击是否在canvas范围内
-  if (canvasClickX < 0 || canvasClickX > canvasRect.width ||
-      canvasClickY < 0 || canvasClickY > canvasRect.height) {
+  if (
+    canvasClickX < 0 ||
+    canvasClickX > canvasRect.width ||
+    canvasClickY < 0 ||
+    canvasClickY > canvasRect.height
+  ) {
     // 点击在canvas外部，取消选择
     videoStore.selectClip(null)
     return
@@ -369,7 +368,7 @@ const isPointInClip = (canvasX: number, canvasY: number, clip: VideoClip): boole
   const dy = canvasY - centerY
 
   // 反向旋转点击点
-  const angle = -transform.rotation * Math.PI / 180
+  const angle = (-transform.rotation * Math.PI) / 180
   const cos = Math.cos(angle)
   const sin = Math.sin(angle)
 
@@ -400,12 +399,17 @@ const handleMove = (deltaX: number, deltaY: number) => {
 
   videoStore.updateClipTransform(selectedClip.value.id, {
     x: newX,
-    y: newY
+    y: newY,
   })
 }
 
 // 处理缩放
-const handleResize = (handle: string, deltaX: number, deltaY: number, proportional: boolean = false) => {
+const handleResize = (
+  handle: string,
+  deltaX: number,
+  deltaY: number,
+  proportional: boolean = false,
+) => {
   if (!selectedClip.value || !canvasRef.value) return
 
   const canvas = canvasRef.value
@@ -488,7 +492,7 @@ const handleResize = (handle: string, deltaX: number, deltaY: number, proportion
 
   videoStore.updateClipTransform(selectedClip.value.id, {
     scaleX: newScaleX,
-    scaleY: newScaleY
+    scaleY: newScaleY,
   })
 }
 
@@ -504,7 +508,7 @@ const handleRotate = (deltaX: number, _deltaY: number) => {
   const clampedRotation = ((newRotation + 180) % 360) - 180
 
   videoStore.updateClipTransform(selectedClip.value.id, {
-    rotation: clampedRotation
+    rotation: clampedRotation,
   })
 }
 
@@ -512,7 +516,7 @@ const handleRotate = (deltaX: number, _deltaY: number) => {
 const activeClips = computed(() => {
   const currentTime = videoStore.currentTime
   return videoStore.clips
-    .filter(clip => {
+    .filter((clip) => {
       const clipStart = clip.timelinePosition
       const clipEnd = clip.timelinePosition + clip.duration
       return currentTime >= clipStart && currentTime < clipEnd
@@ -552,8 +556,8 @@ const renderFrame = () => {
 
     // 计算视频在片段中的当前时间
     const clipRelativeTime = videoStore.currentTime - clip.timelinePosition
-    const videoTime = clip.startTime + (clipRelativeTime * (clip.playbackRate || 1))
-    
+    const videoTime = clip.startTime + clipRelativeTime * (clip.playbackRate || 1)
+
     // 设置视频时间
     if (Math.abs(videoElement.currentTime - videoTime) > 0.1) {
       videoElement.currentTime = videoTime
@@ -608,13 +612,7 @@ const renderVideoWithTransform = (video: HTMLVideoElement, clip: VideoClip) => {
   const videoHeight = baseHeight * transform.scaleY
 
   // 绘制视频（以中心为原点）
-  ctx.drawImage(
-    video,
-    -videoWidth / 2,
-    -videoHeight / 2,
-    videoWidth,
-    videoHeight
-  )
+  ctx.drawImage(video, -videoWidth / 2, -videoHeight / 2, videoWidth, videoHeight)
 
   // 恢复状态
   ctx.restore()
@@ -639,14 +637,21 @@ const stopRenderLoop = () => {
 }
 
 // 监听当前时间变化
-watch(() => videoStore.currentTime, () => {
-  renderFrame()
-})
+watch(
+  () => videoStore.currentTime,
+  () => {
+    renderFrame()
+  },
+)
 
 // 监听活跃片段变化
-watch(activeClips, () => {
-  renderFrame()
-}, { deep: true })
+watch(
+  activeClips,
+  () => {
+    renderFrame()
+  },
+  { deep: true },
+)
 
 // 监听画布尺寸变化
 watch([canvasWidth, canvasHeight], () => {
@@ -666,25 +671,25 @@ const onKeyDown = (event: KeyboardEvent) => {
     case 'ArrowLeft':
       event.preventDefault()
       videoStore.updateClipTransform(selectedClip.value.id, {
-        x: transform.x - step
+        x: transform.x - step,
       })
       break
     case 'ArrowRight':
       event.preventDefault()
       videoStore.updateClipTransform(selectedClip.value.id, {
-        x: transform.x + step
+        x: transform.x + step,
       })
       break
     case 'ArrowUp':
       event.preventDefault()
       videoStore.updateClipTransform(selectedClip.value.id, {
-        y: transform.y - step
+        y: transform.y - step,
       })
       break
     case 'ArrowDown':
       event.preventDefault()
       videoStore.updateClipTransform(selectedClip.value.id, {
-        y: transform.y + step
+        y: transform.y + step,
       })
       break
     case 'Delete':
@@ -809,7 +814,7 @@ onUnmounted(() => {
   transform: translateX(-50%);
   width: 16px;
   height: 16px;
-  background-color: #4CAF50;
+  background-color: #4caf50;
   border: 2px solid #fff;
   border-radius: 50%;
   pointer-events: auto;
@@ -818,7 +823,7 @@ onUnmounted(() => {
 }
 
 .rotate-handle:hover {
-  background-color: #66BB6A;
+  background-color: #66bb6a;
   transform: translateX(-50%) scale(1.2);
 }
 

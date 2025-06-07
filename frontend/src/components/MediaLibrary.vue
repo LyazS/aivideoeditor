@@ -10,7 +10,7 @@
     </div>
 
     <!-- 拖拽区域 -->
-    <div 
+    <div
       class="drop-zone"
       :class="{ 'drag-over': isDragOver }"
       @dragover="handleDragOver"
@@ -19,7 +19,9 @@
     >
       <div v-if="mediaItems.length === 0" class="empty-state">
         <svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z" />
+          <path
+            d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"
+          />
         </svg>
         <p>拖拽文件到此处导入</p>
         <p class="hint">支持 MP4, WebM, AVI 等格式</p>
@@ -60,7 +62,9 @@
             title="移除素材"
           >
             <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z" />
+              <path
+                d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z"
+              />
             </svg>
           </button>
         </div>
@@ -132,15 +136,15 @@ const handleDragLeave = (event: DragEvent) => {
 const handleDrop = (event: DragEvent) => {
   event.preventDefault()
   isDragOver.value = false
-  
+
   const files = Array.from(event.dataTransfer?.files || [])
   processFiles(files)
 }
 
 // 处理文件
 const processFiles = async (files: File[]) => {
-  const videoFiles = files.filter(file => file.type.startsWith('video/'))
-  
+  const videoFiles = files.filter((file) => file.type.startsWith('video/'))
+
   if (videoFiles.length === 0) {
     alert('请选择视频文件')
     return
@@ -164,7 +168,7 @@ const addMediaItem = async (file: File): Promise<void> => {
         url,
         name: file.name,
         duration: video.duration,
-        type: file.type
+        type: file.type,
       }
 
       mediaItems.value.push(mediaItem)
@@ -183,7 +187,7 @@ const addMediaItem = async (file: File): Promise<void> => {
 
 // 移除素材项
 const removeMediaItem = (id: string) => {
-  const index = mediaItems.value.findIndex(item => item.id === id)
+  const index = mediaItems.value.findIndex((item) => item.id === id)
   if (index !== -1) {
     const item = mediaItems.value[index]
     URL.revokeObjectURL(item.url)
@@ -205,8 +209,8 @@ const handleItemDragStart = (event: DragEvent, item: MediaItem) => {
       name: item.file.name,
       size: item.file.size,
       type: item.file.type,
-      lastModified: item.file.lastModified
-    }
+      lastModified: item.file.lastModified,
+    },
   }
 
   event.dataTransfer!.setData('application/media-item', JSON.stringify(dragData))
@@ -271,7 +275,7 @@ const formatFileSize = (bytes: number): string => {
 }
 
 .import-btn {
-  background: #4CAF50;
+  background: #4caf50;
   border: none;
   border-radius: 4px;
   color: white;
@@ -296,7 +300,7 @@ const formatFileSize = (bytes: number): string => {
 
 .drop-zone.drag-over {
   background-color: #3a3a3a;
-  border: 2px dashed #4CAF50;
+  border: 2px dashed #4caf50;
 }
 
 .empty-state {

@@ -52,8 +52,6 @@ import CanvasVideoRenderer from './CanvasVideoRenderer.vue'
   box-sizing: border-box;
 }
 
-
-
 .blank-area-indicator {
   text-align: center;
   color: #666;
@@ -68,8 +66,6 @@ import CanvasVideoRenderer from './CanvasVideoRenderer.vue'
   border-radius: 4px;
   border: 1px solid #333;
 }
-
-
 
 .aspect-ratio-frame {
   position: absolute;
@@ -101,6 +97,4 @@ import CanvasVideoRenderer from './CanvasVideoRenderer.vue'
   font-family: monospace;
   font-weight: bold;
 }
-
-
 </style>

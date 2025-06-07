@@ -12,9 +12,8 @@
         <div v-if="mark.isMajor" class="mark-label">
           {{ formatTime(mark.time) }}
         </div>
-
       </div>
-      
+
       <!-- 播放头 -->
       <div
         class="playhead"
@@ -54,12 +53,13 @@ const timeMarks = computed((): TimeMark[] => {
 
   // 根据缩放级别决定刻度间隔
   let majorInterval = 10 // 主刻度间隔（秒）
-  let minorInterval = 1  // 次刻度间隔（秒）
+  let minorInterval = 1 // 次刻度间隔（秒）
 
   // 在高缩放级别下，显示更精细的刻度
   let isFrameLevel = false
 
-  if (pixelsPerSecond >= 100) { // 降低帧级别的阈值
+  if (pixelsPerSecond >= 100) {
+    // 降低帧级别的阈值
     // 每帧显示刻度（假设30fps）
     majorInterval = 1
     minorInterval = 1 / videoStore.frameRate
@@ -96,8 +96,8 @@ const timeMarks = computed((): TimeMark[] => {
   }
 
   // 计算可见时间范围（受最大可见范围限制）
-  const startTime = videoStore.scrollOffset / (pixelsPerSecond)
-  const calculatedEndTime = startTime + (containerWidth.value / pixelsPerSecond)
+  const startTime = videoStore.scrollOffset / pixelsPerSecond
+  const calculatedEndTime = startTime + containerWidth.value / pixelsPerSecond
   const endTime = Math.min(calculatedEndTime, videoStore.maxVisibleDuration)
 
   // 生成刻度标记（基于可见范围，不受当前内容长度限制）
@@ -136,7 +136,7 @@ const timeMarks = computed((): TimeMark[] => {
         time,
         position,
         isMajor,
-        isFrame: isFrameLevel && Math.abs(time % adjustedMinorInterval) < 0.001
+        isFrame: isFrameLevel && Math.abs(time % adjustedMinorInterval) < 0.001,
       })
     }
   }
@@ -158,8 +158,6 @@ const playheadPosition = computed(() => {
 
   return position
 })
-
-
 
 function formatTime(seconds: number): string {
   const mins = Math.floor(seconds / 60)
@@ -244,8 +242,6 @@ function handleWheel(event: WheelEvent) {
     const rect = scaleContainer.value?.getBoundingClientRect()
     if (!rect) return
 
-
-
     // 获取鼠标在时间轴上的位置
     const mouseX = event.clientX - rect.left
     const mouseTime = videoStore.pixelToTime(mouseX, containerWidth.value)
@@ -262,7 +258,6 @@ function handleWheel(event: WheelEvent) {
     const newMousePixel = videoStore.timeToPixel(mouseTime, containerWidth.value)
     const offsetAdjustment = newMousePixel - mouseX
     videoStore.setScrollOffset(videoStore.scrollOffset + offsetAdjustment, containerWidth.value)
-
   } else if (event.shiftKey) {
     // Shift + 滚轮：水平滚动
     const scrollAmount = 50
@@ -387,6 +382,4 @@ onUnmounted(() => {
   left: -8px;
   box-shadow: 0 3px 8px rgba(0, 0, 0, 0.5);
 }
-
-
 </style>

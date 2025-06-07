@@ -17,7 +17,6 @@
 
     <!-- 主体区域：每个轨道一行，包含左侧控制和右侧内容 -->
     <div class="timeline-body" ref="timelineBody">
-
       <!-- 每个轨道一行 -->
       <div
         v-for="track in tracks"
@@ -58,8 +57,14 @@
               :title="track.isVisible ? '隐藏轨道' : '显示轨道'"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                <path v-if="track.isVisible" d="M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 12,9M12,17A5,5 0 0,1 7,12A5,5 0 0,1 12,7A5,5 0 0,1 17,12A5,5 0 0,1 12,17M12,4.5C7,4.5 2.73,7.61 1,12C2.73,16.39 7,19.5 12,19.5C17,19.5 21.27,16.39 23,12C21.27,7.61 17,4.5 12,4.5Z" />
-                <path v-else d="M11.83,9L15,12.16C15,12.11 15,12.05 15,12A3,3 0 0,0 12,9C11.94,9 11.89,9 11.83,9M7.53,9.8L9.08,11.35C9.03,11.56 9,11.77 9,12A3,3 0 0,0 12,15C12.22,15 12.44,14.97 12.65,14.92L14.2,16.47C13.53,16.8 12.79,17 12,17A5,5 0 0,1 7,12C7,11.21 7.2,10.47 7.53,9.8M2,4.27L4.28,6.55L4.73,7C3.08,8.3 1.78,10 1,12C2.73,16.39 7,19.5 12,19.5C13.55,19.5 15.03,19.2 16.38,18.66L16.81,19.09L19.73,22L21,20.73L3.27,3M12,7A5,5 0 0,1 17,12C17,12.64 16.87,13.26 16.64,13.82L19.57,16.75C21.07,15.5 22.27,13.86 23,12C21.27,7.61 17,4.5 12,4.5C10.6,4.5 9.26,4.75 8,5.2L10.17,7.35C10.76,7.13 11.37,7 12,7Z" />
+                <path
+                  v-if="track.isVisible"
+                  d="M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 12,9M12,17A5,5 0 0,1 7,12A5,5 0 0,1 12,7A5,5 0 0,1 17,12A5,5 0 0,1 12,17M12,4.5C7,4.5 2.73,7.61 1,12C2.73,16.39 7,19.5 12,19.5C17,19.5 21.27,16.39 23,12C21.27,7.61 17,4.5 12,4.5Z"
+                />
+                <path
+                  v-else
+                  d="M11.83,9L15,12.16C15,12.11 15,12.05 15,12A3,3 0 0,0 12,9C11.94,9 11.89,9 11.83,9M7.53,9.8L9.08,11.35C9.03,11.56 9,11.77 9,12A3,3 0 0,0 12,15C12.22,15 12.44,14.97 12.65,14.92L14.2,16.47C13.53,16.8 12.79,17 12,17A5,5 0 0,1 7,12C7,11.21 7.2,10.47 7.53,9.8M2,4.27L4.28,6.55L4.73,7C3.08,8.3 1.78,10 1,12C2.73,16.39 7,19.5 12,19.5C13.55,19.5 15.03,19.2 16.38,18.66L16.81,19.09L19.73,22L21,20.73L3.27,3M12,7A5,5 0 0,1 17,12C17,12.64 16.87,13.26 16.64,13.82L19.57,16.75C21.07,15.5 22.27,13.86 23,12C21.27,7.61 17,4.5 12,4.5C10.6,4.5 9.26,4.75 8,5.2L10.17,7.35C10.76,7.13 11.37,7 12,7Z"
+                />
               </svg>
             </button>
 
@@ -71,8 +76,14 @@
               :title="track.isMuted ? '取消静音' : '静音'"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                <path v-if="!track.isMuted" d="M14,3.23V5.29C16.89,6.15 19,8.83 19,12C19,15.17 16.89,17.85 14,18.71V20.77C18,19.86 21,16.28 21,12C21,7.72 18,4.14 14,3.23M16.5,12C16.5,10.23 15.5,8.71 14,7.97V16C15.5,15.29 16.5,13.76 16.5,12M3,9V15H7L12,20V4L7,9H3Z" />
-                <path v-else d="M12,4L9.91,6.09L12,8.18M4.27,3L3,4.27L7.73,9H3V15H7L12,20V13.27L16.25,17.53C15.58,18.04 14.83,18.46 14,18.7V20.77C15.38,20.45 16.63,19.82 17.68,18.96L19.73,21L21,19.73L12,10.73M19,12C19,12.94 18.8,13.82 18.46,14.64L19.97,16.15C20.62,14.91 21,13.5 21,12C21,7.72 18,4.14 14,3.23V5.29C16.89,6.15 19,8.83 19,12M16.5,12C16.5,10.23 15.5,8.71 14,7.97V10.18L16.45,12.63C16.5,12.43 16.5,12.21 16.5,12Z" />
+                <path
+                  v-if="!track.isMuted"
+                  d="M14,3.23V5.29C16.89,6.15 19,8.83 19,12C19,15.17 16.89,17.85 14,18.71V20.77C18,19.86 21,16.28 21,12C21,7.72 18,4.14 14,3.23M16.5,12C16.5,10.23 15.5,8.71 14,7.97V16C15.5,15.29 16.5,13.76 16.5,12M3,9V15H7L12,20V4L7,9H3Z"
+                />
+                <path
+                  v-else
+                  d="M12,4L9.91,6.09L12,8.18M4.27,3L3,4.27L7.73,9H3V15H7L12,20V13.27L16.25,17.53C15.58,18.04 14.83,18.46 14,18.7V20.77C15.38,20.45 16.63,19.82 17.68,18.96L19.73,21L21,19.73L12,10.73M19,12C19,12.94 18.8,13.82 18.46,14.64L19.97,16.15C20.62,14.91 21,13.5 21,12C21,7.72 18,4.14 14,3.23V5.29C16.89,6.15 19,8.83 19,12M16.5,12C16.5,10.23 15.5,8.71 14,7.97V10.18L16.45,12.63C16.5,12.43 16.5,12.21 16.5,12Z"
+                />
               </svg>
             </button>
 
@@ -84,7 +95,9 @@
               title="删除轨道"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z" />
+                <path
+                  d="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z"
+                />
               </svg>
             </button>
           </div>
@@ -121,9 +134,8 @@
           :key="line.time"
           class="grid-line"
           :class="{ 'frame-line': line.isFrame }"
-          :style="{ left: (200 + videoStore.timeToPixel(line.time, timelineWidth)) + 'px' }"
-        >
-        </div>
+          :style="{ left: 200 + videoStore.timeToPixel(line.time, timelineWidth) + 'px' }"
+        ></div>
       </div>
     </div>
   </div>
@@ -149,7 +161,7 @@ const nameInput = ref<HTMLInputElement>()
 
 // 获取指定轨道的片段
 function getClipsForTrack(trackId: number) {
-  return clips.value.filter(clip => clip.trackId === trackId)
+  return clips.value.filter((clip) => clip.trackId === trackId)
 }
 
 // 轨道管理方法
@@ -207,7 +219,8 @@ const gridLines = computed(() => {
   let frameInterval = 0 // 帧间隔
   let isFrameLevel = false
 
-  if (pixelsPerSecond >= 100) { // 降低帧级别的阈值
+  if (pixelsPerSecond >= 100) {
+    // 降低帧级别的阈值
     interval = 1 // 高缩放：每秒一条线
     frameInterval = 1 / videoStore.frameRate // 同时显示帧级别的线
     isFrameLevel = true
@@ -221,7 +234,7 @@ const gridLines = computed(() => {
 
   // 计算可见时间范围
   const startTime = videoStore.scrollOffset / pixelsPerSecond
-  const endTime = startTime + (timelineWidth.value / pixelsPerSecond)
+  const endTime = startTime + timelineWidth.value / pixelsPerSecond
 
   // 生成主网格线（秒级别）
   const startLine = Math.floor(startTime / interval) * interval
@@ -238,8 +251,13 @@ const gridLines = computed(() => {
     const frameStartTime = Math.floor(startTime / frameInterval) * frameInterval
     const frameEndTime = Math.ceil(endTime / frameInterval) * frameInterval
 
-    for (let i = frameStartTime; i <= Math.min(frameEndTime, videoStore.totalDuration); i += frameInterval) {
-      if (i >= 0 && Math.abs(i % interval) > 0.001) { // 避免与主网格线重复
+    for (
+      let i = frameStartTime;
+      i <= Math.min(frameEndTime, videoStore.totalDuration);
+      i += frameInterval
+    ) {
+      if (i >= 0 && Math.abs(i % interval) > 0.001) {
+        // 避免与主网格线重复
         lines.push({ time: i, isFrame: true })
       }
     }
@@ -247,8 +265,6 @@ const gridLines = computed(() => {
 
   return lines.sort((a, b) => a.time - b.time)
 })
-
-
 
 function updateTimelineWidth() {
   if (timelineBody.value) {
@@ -289,7 +305,9 @@ async function handleDrop(event: DragEvent) {
       // 获取目标轨道ID
       const targetElement = event.target as HTMLElement
       const trackContent = targetElement.closest('.track-content')
-      const targetTrackId = trackContent ? parseInt(trackContent.getAttribute('data-track-id') || '1') : 1
+      const targetTrackId = trackContent
+        ? parseInt(trackContent.getAttribute('data-track-id') || '1')
+        : 1
       console.log('目标轨道ID:', targetTrackId)
 
       // 计算拖拽位置对应的时间（考虑缩放和滚动偏移量）
@@ -320,14 +338,18 @@ async function handleDrop(event: DragEvent) {
 }
 
 // 从素材库项创建视频片段
-async function createVideoClipFromMediaItem(mediaItem: any, startTime: number, trackId: number = 1): Promise<void> {
+async function createVideoClipFromMediaItem(
+  mediaItem: any,
+  startTime: number,
+  trackId: number = 1,
+): Promise<void> {
   console.log('创建视频片段从素材库:', mediaItem)
 
   // 创建一个虚拟的 File 对象，用于兼容现有的 VideoClip 接口
   // 注意：这里我们主要使用 URL，File 对象主要用于显示文件信息
   const virtualFile = new File([], mediaItem.fileInfo.name, {
     type: mediaItem.fileInfo.type,
-    lastModified: mediaItem.fileInfo.lastModified
+    lastModified: mediaItem.fileInfo.lastModified,
   })
 
   const clip: VideoClipType = {
@@ -348,9 +370,9 @@ async function createVideoClipFromMediaItem(mediaItem: any, startTime: number, t
       scaleX: 1.0,
       scaleY: 1.0,
       rotation: 0,
-      opacity: 1.0
+      opacity: 1.0,
     },
-    zIndex: videoStore.clips.length
+    zIndex: videoStore.clips.length,
   }
 
   console.log('添加片段到时间轴:', clip)
@@ -401,7 +423,6 @@ function handleWheel(event: WheelEvent) {
     const newMousePixel = videoStore.timeToPixel(mouseTime, timelineWidth.value)
     const offsetAdjustment = newMousePixel - mouseX
     videoStore.setScrollOffset(videoStore.scrollOffset + offsetAdjustment, timelineWidth.value)
-
   } else if (event.shiftKey) {
     // Shift + 滚轮：水平滚动
     event.preventDefault()
@@ -419,16 +440,12 @@ function handleWheel(event: WheelEvent) {
   }
 }
 
-
-
 function handleKeyDown(event: KeyboardEvent) {
   // 按 Escape 键取消选中
   if (event.key === 'Escape') {
     videoStore.selectClip(null)
   }
 }
-
-
 
 onMounted(() => {
   updateTimelineWidth()
@@ -477,7 +494,7 @@ onUnmounted(() => {
 }
 
 .add-track-btn {
-  background: #4CAF50;
+  background: #4caf50;
   border: none;
   border-radius: 4px;
   color: white;
@@ -591,7 +608,7 @@ onUnmounted(() => {
 }
 
 .track-btn.active {
-  background: #4CAF50;
+  background: #4caf50;
   color: #fff;
 }
 
@@ -604,10 +621,6 @@ onUnmounted(() => {
   background: #d32f2f;
   color: white; /* 确保悬停时图标也是白色 */
 }
-
-
-
-
 
 .timeline-grid {
   position: absolute;

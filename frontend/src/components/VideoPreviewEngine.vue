@@ -12,7 +12,7 @@
         <div
           class="vertical-splitter left-splitter"
           @mousedown="startLeftResize"
-          :class="{ 'dragging': isLeftDragging }"
+          :class="{ dragging: isLeftDragging }"
         >
           <div class="vertical-splitter-handle"></div>
         </div>
@@ -24,7 +24,8 @@
           <div class="controls-section">
             <!-- 时间显示 -->
             <div class="time-display">
-              {{ formatTime(videoStore.currentTime) }} / {{ formatTime(videoStore.contentEndTime || videoStore.totalDuration) }}
+              {{ formatTime(videoStore.currentTime) }} /
+              {{ formatTime(videoStore.contentEndTime || videoStore.totalDuration) }}
             </div>
             <!-- 中间播放控制 -->
             <div class="center-controls">
@@ -34,7 +35,9 @@
             <div class="right-controls">
               <button class="aspect-ratio-btn" @click="openResolutionModal" title="设置视频分辨率">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M19,12H22L18,8L14,12H17V16H7V12H10L6,8L2,12H5V16A2,2 0 0,0 7,18H17A2,2 0 0,0 19,16V12Z" />
+                  <path
+                    d="M19,12H22L18,8L14,12H17V16H7V12H10L6,8L2,12H5V16A2,2 0 0,0 7,18H17A2,2 0 0,0 19,16V12Z"
+                  />
                 </svg>
                 <span class="aspect-ratio-text">{{ currentResolutionText }}</span>
               </button>
@@ -46,7 +49,7 @@
         <div
           class="vertical-splitter right-splitter"
           @mousedown="startRightResize"
-          :class="{ 'dragging': isRightDragging }"
+          :class="{ dragging: isRightDragging }"
         >
           <div class="vertical-splitter-handle"></div>
         </div>
@@ -58,11 +61,7 @@
       </div>
 
       <!-- 可拖动的分割器 -->
-      <div
-        class="resizable-splitter"
-        @mousedown="startResize"
-        :class="{ 'dragging': isDragging }"
-      >
+      <div class="resizable-splitter" @mousedown="startResize" :class="{ dragging: isDragging }">
         <div class="splitter-handle"></div>
       </div>
 
@@ -90,7 +89,11 @@
               v-for="resolution in resolutionOptions"
               :key="resolution.name"
               class="resolution-option"
-              :class="{ 'active': tempSelectedResolution.name === resolution.name && tempSelectedResolution.category !== '自定义' }"
+              :class="{
+                active:
+                  tempSelectedResolution.name === resolution.name &&
+                  tempSelectedResolution.category !== '自定义',
+              }"
               @click="selectPresetResolution(resolution)"
             >
               <div class="resolution-preview" :style="getPreviewStyle(resolution)"></div>
@@ -104,14 +107,21 @@
             <!-- 自定义分辨率选项 -->
             <div
               class="resolution-option custom-option"
-              :class="{ 'active': tempSelectedResolution.category === '自定义' }"
+              :class="{ active: tempSelectedResolution.category === '自定义' }"
               @click="selectCustomResolution"
             >
-              <div class="resolution-preview" :style="getPreviewStyle({ width: customWidth, height: customHeight })"></div>
+              <div
+                class="resolution-preview"
+                :style="getPreviewStyle({ width: customWidth, height: customHeight })"
+              ></div>
               <div class="resolution-info">
                 <div class="resolution-name">自定义</div>
-                <div v-if="!showCustomResolution" class="resolution-size">{{ customWidth }} × {{ customHeight }}</div>
-                <div v-if="!showCustomResolution" class="resolution-ratio">{{ customResolutionText }}</div>
+                <div v-if="!showCustomResolution" class="resolution-size">
+                  {{ customWidth }} × {{ customHeight }}
+                </div>
+                <div v-if="!showCustomResolution" class="resolution-ratio">
+                  {{ customResolutionText }}
+                </div>
 
                 <!-- 自定义分辨率输入（集成在选项内） -->
                 <div v-if="showCustomResolution" class="custom-inputs">
@@ -177,7 +187,7 @@ const currentResolution = ref({
   width: 1920,
   height: 1080,
   aspectRatio: '16:9',
-  category: '横屏'
+  category: '横屏',
 })
 
 const resolutionOptions = [
@@ -201,7 +211,7 @@ const resolutionOptions = [
 
   // 超宽屏
   { name: '超宽屏 21:9', width: 2560, height: 1080, aspectRatio: '21:9', category: '超宽屏' },
-  { name: '超宽屏 32:9', width: 3840, height: 1080, aspectRatio: '32:9', category: '超宽屏' }
+  { name: '超宽屏 32:9', width: 3840, height: 1080, aspectRatio: '32:9', category: '超宽屏' },
 ]
 
 const currentResolutionText = computed(() => {
@@ -217,7 +227,7 @@ const customWidth = ref(1920)
 const customHeight = ref(1080)
 
 const customResolutionText = computed(() => {
-  const gcd = (a: number, b: number): number => b === 0 ? a : gcd(b, a % b)
+  const gcd = (a: number, b: number): number => (b === 0 ? a : gcd(b, a % b))
   const divisor = gcd(customWidth.value, customHeight.value)
   const ratioW = customWidth.value / divisor
   const ratioH = customHeight.value / divisor
@@ -232,7 +242,7 @@ watch([customWidth, customHeight], () => {
       width: customWidth.value,
       height: customHeight.value,
       aspectRatio: customResolutionText.value,
-      category: '自定义'
+      category: '自定义',
     }
   }
 })
@@ -376,7 +386,7 @@ function getPreviewStyle(resolution: { width: number; height: number }) {
 
   return {
     width: `${width}px`,
-    height: `${height}px`
+    height: `${height}px`,
   }
 }
 
@@ -388,7 +398,7 @@ function confirmSelection() {
       width: customWidth.value,
       height: customHeight.value,
       aspectRatio: customResolutionText.value,
-      category: '自定义'
+      category: '自定义',
     }
     currentResolution.value = customResolution
     videoStore.setVideoResolution(customResolution)
@@ -410,7 +420,7 @@ function cancelSelection() {
   tempSelectedResolution.value = currentResolution.value
 }
 
-function selectPresetResolution(resolution: typeof resolutionOptions[0]) {
+function selectPresetResolution(resolution: (typeof resolutionOptions)[0]) {
   showCustomResolution.value = false
   tempSelectedResolution.value = resolution
 }
@@ -422,10 +432,9 @@ function selectCustomResolution() {
     width: customWidth.value,
     height: customHeight.value,
     aspectRatio: customResolutionText.value,
-    category: '自定义'
+    category: '自定义',
   }
 }
-
 
 function openResolutionModal() {
   // 初始化临时选择为当前分辨率
@@ -441,8 +450,6 @@ function openResolutionModal() {
 
   showResolutionModal.value = true
 }
-
-
 
 // 清理事件监听器
 onUnmounted(() => {
@@ -660,8 +667,6 @@ onUnmounted(() => {
   font-family: monospace;
 }
 
-
-
 /* 分辨率选择弹窗样式 */
 .modal-overlay {
   position: fixed;
@@ -855,7 +860,8 @@ onUnmounted(() => {
   border-top: 1px solid #444;
 }
 
-.cancel-btn, .confirm-btn {
+.cancel-btn,
+.confirm-btn {
   padding: 8px 16px;
   border: none;
   border-radius: 4px;

@@ -2,7 +2,11 @@
   <div class="playback-controls">
     <!-- 播放控制按钮 -->
     <div class="control-buttons">
-      <button class="control-btn primary" @click="togglePlayPause" :title="isPlaying ? '暂停' : '播放'">
+      <button
+        class="control-btn primary"
+        @click="togglePlayPause"
+        :title="isPlaying ? '暂停' : '播放'"
+      >
         <svg v-if="!isPlaying" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
           <path d="M8,5.14V19.14L19,12.14L8,5.14Z" />
         </svg>
@@ -17,8 +21,6 @@
         </svg>
       </button>
     </div>
-
-
 
     <!-- 播放速度控制 -->
     <div class="speed-section">
@@ -49,7 +51,6 @@ const totalDuration = computed(() => videoStore.totalDuration)
 const contentEndTime = computed(() => videoStore.contentEndTime)
 const playbackRate = computed(() => videoStore.playbackRate)
 
-
 function togglePlayPause() {
   if (isPlaying.value) {
     videoStore.pause()
@@ -62,15 +63,11 @@ function stop() {
   videoStore.stop()
 }
 
-
-
 function handleSpeedChange(event: Event) {
   const target = event.target as HTMLSelectElement
   const newRate = parseFloat(target.value)
   videoStore.setPlaybackRate(newRate)
 }
-
-
 </script>
 
 <style scoped>
@@ -124,10 +121,6 @@ function handleSpeedChange(event: Event) {
   background-color: #444;
   color: white;
 }
-
-
-
-
 
 .speed-section {
   display: flex;

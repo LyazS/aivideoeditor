@@ -7,7 +7,9 @@
     <div class="panel-content">
       <div v-if="!selectedClip" class="empty-state">
         <svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4M11,16.5L18,9.5L16.5,8L11,13.5L7.5,10L6,11.5L11,16.5Z" />
+          <path
+            d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4M11,16.5L18,9.5L16.5,8L11,13.5L7.5,10L6,11.5L11,16.5Z"
+          />
         </svg>
         <p>选择片段查看属性</p>
         <p class="hint">在时间轴上点击视频片段</p>
@@ -19,8 +21,8 @@
           <h4>基本信息</h4>
           <div class="property-item">
             <label>名称</label>
-            <input 
-              v-model="clipName" 
+            <input
+              v-model="clipName"
               @blur="updateClipName"
               @keyup.enter="updateClipName"
               class="property-input"
@@ -126,7 +128,9 @@
                   />
                   <div class="number-controls">
                     <button @click="adjustTransformX(1)" class="number-btn number-btn-up">▲</button>
-                    <button @click="adjustTransformX(-1)" class="number-btn number-btn-down">▼</button>
+                    <button @click="adjustTransformX(-1)" class="number-btn number-btn-down">
+                      ▼
+                    </button>
                   </div>
                 </div>
               </div>
@@ -145,7 +149,9 @@
                   />
                   <div class="number-controls">
                     <button @click="adjustTransformY(1)" class="number-btn number-btn-up">▲</button>
-                    <button @click="adjustTransformY(-1)" class="number-btn number-btn-down">▼</button>
+                    <button @click="adjustTransformY(-1)" class="number-btn number-btn-down">
+                      ▼
+                    </button>
                   </div>
                 </div>
               </div>
@@ -188,8 +194,12 @@
                   class="scale-input-box"
                 />
                 <div class="number-controls">
-                  <button @click="adjustUniformScale(0.1)" class="number-btn number-btn-up">▲</button>
-                  <button @click="adjustUniformScale(-0.1)" class="number-btn number-btn-down">▼</button>
+                  <button @click="adjustUniformScale(0.1)" class="number-btn number-btn-up">
+                    ▲
+                  </button>
+                  <button @click="adjustUniformScale(-0.1)" class="number-btn number-btn-down">
+                    ▼
+                  </button>
                 </div>
               </div>
             </div>
@@ -222,7 +232,9 @@
                   />
                   <div class="number-controls">
                     <button @click="adjustScaleX(0.1)" class="number-btn number-btn-up">▲</button>
-                    <button @click="adjustScaleX(-0.1)" class="number-btn number-btn-down">▼</button>
+                    <button @click="adjustScaleX(-0.1)" class="number-btn number-btn-down">
+                      ▼
+                    </button>
                   </div>
                 </div>
               </div>
@@ -252,7 +264,9 @@
                   />
                   <div class="number-controls">
                     <button @click="adjustScaleY(0.1)" class="number-btn number-btn-up">▲</button>
-                    <button @click="adjustScaleY(-0.1)" class="number-btn number-btn-down">▼</button>
+                    <button @click="adjustScaleY(-0.1)" class="number-btn number-btn-down">
+                      ▼
+                    </button>
                   </div>
                 </div>
               </div>
@@ -313,7 +327,9 @@
                 />
                 <div class="number-controls">
                   <button @click="adjustOpacity(0.01)" class="number-btn number-btn-up">▲</button>
-                  <button @click="adjustOpacity(-0.01)" class="number-btn number-btn-down">▼</button>
+                  <button @click="adjustOpacity(-0.01)" class="number-btn number-btn-down">
+                    ▼
+                  </button>
                 </div>
               </div>
             </div>
@@ -331,8 +347,6 @@
             />
           </div>
         </div>
-
-
       </div>
     </div>
   </div>
@@ -347,7 +361,7 @@ const videoStore = useVideoStore()
 // 选中的片段
 const selectedClip = computed(() => {
   if (!videoStore.selectedClipId) return null
-  return videoStore.clips.find(clip => clip.id === videoStore.selectedClipId) || null
+  return videoStore.clips.find((clip) => clip.id === videoStore.selectedClipId) || null
 })
 
 // 可编辑的属性
@@ -359,11 +373,11 @@ const speedInputValue = ref(1) // 倍速输入框的值
 
 // 倍速分段配置
 const speedSegments = [
-  { min: 0.1, max: 1, normalizedStart: 0, normalizedEnd: 20 },    // 0-20%: 0.1-1x
-  { min: 1, max: 2, normalizedStart: 20, normalizedEnd: 40 },     // 20-40%: 1-2x
-  { min: 2, max: 5, normalizedStart: 40, normalizedEnd: 60 },     // 40-60%: 2-5x
-  { min: 5, max: 10, normalizedStart: 60, normalizedEnd: 80 },    // 60-80%: 5-10x
-  { min: 10, max: 100, normalizedStart: 80, normalizedEnd: 100 }  // 80-100%: 10-100x
+  { min: 0.1, max: 1, normalizedStart: 0, normalizedEnd: 20 }, // 0-20%: 0.1-1x
+  { min: 1, max: 2, normalizedStart: 20, normalizedEnd: 40 }, // 20-40%: 1-2x
+  { min: 2, max: 5, normalizedStart: 40, normalizedEnd: 60 }, // 40-60%: 2-5x
+  { min: 5, max: 10, normalizedStart: 60, normalizedEnd: 80 }, // 60-80%: 5-10x
+  { min: 10, max: 100, normalizedStart: 80, normalizedEnd: 100 }, // 80-100%: 10-100x
 ]
 
 // 变换属性
@@ -378,7 +392,9 @@ const zIndex = ref(0)
 // 等比缩放相关
 const proportionalScale = computed({
   get: () => videoStore.proportionalScale,
-  set: (value) => { videoStore.proportionalScale = value }
+  set: (value) => {
+    videoStore.proportionalScale = value
+  },
 })
 const uniformScale = ref(1) // 统一缩放值
 
@@ -465,47 +481,54 @@ const updateLocalState = (clip: any) => {
 watch(selectedClip, updateLocalState, { immediate: true })
 
 // 监听选中片段的变换属性变化
-watch(() => selectedClip.value?.transform, (newTransform) => {
-  if (newTransform && selectedClip.value && !isUpdatingFromExternal.value) {
-    isUpdatingFromExternal.value = true
+watch(
+  () => selectedClip.value?.transform,
+  (newTransform) => {
+    if (newTransform && selectedClip.value && !isUpdatingFromExternal.value) {
+      isUpdatingFromExternal.value = true
 
-    // 只更新变换相关的属性，避免重复更新其他属性
-    transformX.value = newTransform.x
-    transformY.value = newTransform.y
-    scaleX.value = newTransform.scaleX
-    scaleY.value = newTransform.scaleY
-    rotation.value = newTransform.rotation
-    opacity.value = newTransform.opacity
+      // 只更新变换相关的属性，避免重复更新其他属性
+      transformX.value = newTransform.x
+      transformY.value = newTransform.y
+      scaleX.value = newTransform.scaleX
+      scaleY.value = newTransform.scaleY
+      rotation.value = newTransform.rotation
+      opacity.value = newTransform.opacity
 
-    // 不要自动修改等比缩放状态，保持用户的选择
-    // 只更新uniformScale的值（如果当前是等比缩放模式）
-    if (proportionalScale.value) {
-      uniformScale.value = newTransform.scaleX // 使用X轴缩放作为统一缩放值
+      // 不要自动修改等比缩放状态，保持用户的选择
+      // 只更新uniformScale的值（如果当前是等比缩放模式）
+      if (proportionalScale.value) {
+        uniformScale.value = newTransform.scaleX // 使用X轴缩放作为统一缩放值
+      }
+
+      // 更新临时输入值
+      tempTransformX.value = transformX.value.toString()
+      tempTransformY.value = transformY.value.toString()
+      tempUniformScale.value = uniformScale.value.toFixed(2)
+      tempScaleX.value = scaleX.value.toFixed(2)
+      tempScaleY.value = scaleY.value.toFixed(2)
+      tempRotation.value = rotation.value.toFixed(1)
+      tempOpacity.value = opacity.value.toFixed(2)
+
+      // 下一个tick后重置标志
+      nextTick(() => {
+        isUpdatingFromExternal.value = false
+      })
     }
-
-    // 更新临时输入值
-    tempTransformX.value = transformX.value.toString()
-    tempTransformY.value = transformY.value.toString()
-    tempUniformScale.value = uniformScale.value.toFixed(2)
-    tempScaleX.value = scaleX.value.toFixed(2)
-    tempScaleY.value = scaleY.value.toFixed(2)
-    tempRotation.value = rotation.value.toFixed(1)
-    tempOpacity.value = opacity.value.toFixed(2)
-
-    // 下一个tick后重置标志
-    nextTick(() => {
-      isUpdatingFromExternal.value = false
-    })
-  }
-}, { deep: true })
+  },
+  { deep: true },
+)
 
 // 监听选中片段的zIndex变化
-watch(() => selectedClip.value?.zIndex, (newZIndex) => {
-  if (newZIndex !== undefined) {
-    zIndex.value = newZIndex
-    tempZIndex.value = zIndex.value.toString()
-  }
-})
+watch(
+  () => selectedClip.value?.zIndex,
+  (newZIndex) => {
+    if (newZIndex !== undefined) {
+      zIndex.value = newZIndex
+      tempZIndex.value = zIndex.value.toString()
+    }
+  },
+)
 
 // 更新片段名称
 const updateClipName = () => {
@@ -566,7 +589,8 @@ const normalizedToSpeed = (normalized: number) => {
   for (const segment of speedSegments) {
     if (normalized >= segment.normalizedStart && normalized <= segment.normalizedEnd) {
       // 在段内进行线性插值
-      const segmentProgress = (normalized - segment.normalizedStart) / (segment.normalizedEnd - segment.normalizedStart)
+      const segmentProgress =
+        (normalized - segment.normalizedStart) / (segment.normalizedEnd - segment.normalizedStart)
       return segment.min + segmentProgress * (segment.max - segment.min)
     }
   }
@@ -580,7 +604,10 @@ const speedToNormalized = (speed: number) => {
     if (speed >= segment.min && speed <= segment.max) {
       // 在段内进行线性插值
       const segmentProgress = (speed - segment.min) / (segment.max - segment.min)
-      return segment.normalizedStart + segmentProgress * (segment.normalizedEnd - segment.normalizedStart)
+      return (
+        segment.normalizedStart +
+        segmentProgress * (segment.normalizedEnd - segment.normalizedStart)
+      )
     }
   }
   return 20 // 默认值对应1x
@@ -597,8 +624,6 @@ const formatSpeedValue = (rate: number) => {
   }
 }
 
-
-
 // 更新变换属性
 const updateTransform = () => {
   if (selectedClip.value) {
@@ -608,12 +633,10 @@ const updateTransform = () => {
       scaleX: scaleX.value,
       scaleY: scaleY.value,
       rotation: rotation.value,
-      opacity: opacity.value
+      opacity: opacity.value,
     })
   }
 }
-
-
 
 // 切换等比缩放
 const toggleProportionalScale = () => {
@@ -728,7 +751,10 @@ const confirmScaleYFromInput = () => {
 const confirmTransformXFromInput = () => {
   const value = parseInt(tempTransformX.value)
   if (!isNaN(value)) {
-    transformX.value = Math.max(-videoStore.videoResolution.width, Math.min(videoStore.videoResolution.width, value))
+    transformX.value = Math.max(
+      -videoStore.videoResolution.width,
+      Math.min(videoStore.videoResolution.width, value),
+    )
     tempTransformX.value = transformX.value.toString()
     updateTransform()
   } else {
@@ -741,7 +767,10 @@ const confirmTransformXFromInput = () => {
 const confirmTransformYFromInput = () => {
   const value = parseInt(tempTransformY.value)
   if (!isNaN(value)) {
-    transformY.value = Math.max(-videoStore.videoResolution.height, Math.min(videoStore.videoResolution.height, value))
+    transformY.value = Math.max(
+      -videoStore.videoResolution.height,
+      Math.min(videoStore.videoResolution.height, value),
+    )
     tempTransformY.value = transformY.value.toString()
     updateTransform()
   } else {
@@ -931,7 +960,7 @@ const formatFileSize = (bytes: number): string => {
 
 .property-input:focus {
   outline: none;
-  border-color: #4CAF50;
+  border-color: #4caf50;
 }
 
 /* 时长控制样式 */
@@ -1113,7 +1142,7 @@ const formatFileSize = (bytes: number): string => {
   margin: 0;
 }
 
-.position-input-field[type=number] {
+.position-input-field[type='number'] {
   -moz-appearance: textfield;
 }
 
@@ -1185,7 +1214,7 @@ const formatFileSize = (bytes: number): string => {
 
 .scale-input-box:focus {
   outline: none;
-  border-color: #4CAF50;
+  border-color: #4caf50;
 }
 
 /* 隐藏所有数字输入框的默认箭头 */
@@ -1195,7 +1224,7 @@ const formatFileSize = (bytes: number): string => {
   margin: 0;
 }
 
-.scale-input-box[type=number] {
+.scale-input-box[type='number'] {
   -moz-appearance: textfield;
 }
 
@@ -1233,7 +1262,7 @@ const formatFileSize = (bytes: number): string => {
   -webkit-appearance: none;
   width: 12px;
   height: 12px;
-  background: #2196F3;
+  background: #2196f3;
   border-radius: 50%;
   cursor: pointer;
 }
@@ -1243,7 +1272,7 @@ const formatFileSize = (bytes: number): string => {
 .opacity-slider::-moz-range-thumb {
   width: 12px;
   height: 12px;
-  background: #2196F3;
+  background: #2196f3;
   border-radius: 50%;
   cursor: pointer;
   border: none;
