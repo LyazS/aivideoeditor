@@ -80,7 +80,16 @@ export const useVideoStore = defineStore('video', () => {
 
   const totalDuration = computed(() => {
     if (clips.value.length === 0) return timelineDuration.value
-    const maxEndTime = Math.max(...clips.value.map((clip) => clip.timelinePosition + clip.duration))
+
+    // 优化：避免使用Math.max(...array.map())，对大量片段性能更好
+    let maxEndTime = 0
+    for (const clip of clips.value) {
+      const endTime = clip.timelinePosition + clip.duration
+      if (endTime > maxEndTime) {
+        maxEndTime = endTime
+      }
+    }
+
     return Math.max(maxEndTime, timelineDuration.value)
   })
 
@@ -136,7 +145,17 @@ export const useVideoStore = defineStore('video', () => {
   // 计算实际内容的结束时间（最后一个视频片段的结束时间）
   const contentEndTime = computed(() => {
     if (clips.value.length === 0) return 0
-    return Math.max(...clips.value.map((clip) => clip.timelinePosition + clip.duration))
+
+    // 优化：避免使用Math.max(...array.map())，对大量片段性能更好
+    let maxEndTime = 0
+    for (const clip of clips.value) {
+      const endTime = clip.timelinePosition + clip.duration
+      if (endTime > maxEndTime) {
+        maxEndTime = endTime
+      }
+    }
+
+    return maxEndTime
   })
 
   function addClip(clip: VideoClip) {
@@ -656,6 +675,8 @@ export const useVideoStore = defineStore('video', () => {
   // 设置视频分辨率
   function setVideoResolution(resolution: VideoResolution) {
     videoResolution.value = resolution
+    // 清理适应缩放缓存，因为分辨率变化会影响所有视频的适应缩放
+    fitScaleCache.clear()
     console.log('视频分辨率已设置为:', resolution)
   }
 
@@ -704,11 +725,23 @@ export const useVideoStore = defineStore('video', () => {
     return { width: 1920, height: 1080 }
   }
 
+  // 缓存适应缩放比例，避免重复计算
+  const fitScaleCache = new Map<string, { scaleX: number; scaleY: number; fitScale: number; cacheKey: string }>()
+
   // 计算视频片段在画布中的适应缩放比例
   function getVideoFitScale(clipId: string): { scaleX: number; scaleY: number; fitScale: number } {
     const videoElement = videoElementsMap.get(clipId)
     if (!videoElement || videoElement.videoWidth === 0 || videoElement.videoHeight === 0) {
       return { scaleX: 1, scaleY: 1, fitScale: 1 }
+    }
+
+    // 创建缓存键
+    const cacheKey = `${videoElement.videoWidth}x${videoElement.videoHeight}_${videoResolution.value.width}x${videoResolution.value.height}`
+
+    // 检查缓存
+    const cached = fitScaleCache.get(clipId)
+    if (cached && cached.cacheKey === cacheKey) {
+      return { scaleX: cached.scaleX, scaleY: cached.scaleY, fitScale: cached.fitScale }
     }
 
     const videoWidth = videoElement.videoWidth
@@ -723,7 +756,11 @@ export const useVideoStore = defineStore('video', () => {
     // 选择较小的缩放比例以确保视频完全适应画布
     const fitScale = Math.min(scaleX, scaleY)
 
-    return { scaleX, scaleY, fitScale }
+    // 缓存结果
+    const result = { scaleX, scaleY, fitScale }
+    fitScaleCache.set(clipId, { ...result, cacheKey })
+
+    return result
   }
 
   // 计算视频片段的实际显示尺寸（考虑适应缩放）

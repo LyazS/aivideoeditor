@@ -95,11 +95,21 @@ const isClipVisible = (clip: VideoClip) => {
   return currentTime >= clipStart && currentTime < clipEnd
 }
 
-// 计算选中片段的控制框样式
+// 计算选中片段的控制框样式（使用缓存优化）
 const selectionBoxStyle = computed(() => {
   if (!selectedClip.value || !canvasRef.value || !interactionLayerRef.value) return {}
 
   const clip = selectedClip.value
+  const { transform } = clip
+
+  // 创建缓存键
+  const cacheKey = `${clip.id}_${transform.x}_${transform.y}_${transform.scaleX}_${transform.scaleY}_${transform.rotation}_${canvasWidth.value}_${canvasHeight.value}`
+
+  // 检查缓存
+  if (selectionBoxStyleCache && selectionBoxStyleCache.cacheKey === cacheKey) {
+    return selectionBoxStyleCache.style
+  }
+
   const canvas = canvasRef.value
   const interactionLayer = interactionLayerRef.value
 
@@ -119,15 +129,12 @@ const selectionBoxStyle = computed(() => {
   const scaleX = canvasDisplayWidth / canvasWidth.value
   const scaleY = canvasDisplayHeight / canvasHeight.value
 
-  // 计算视频片段的变换后尺寸
-  const { transform } = clip
-
   // 获取视频元素以计算原始尺寸
   const videoElement = videoElements.get(clip.id)
   if (!videoElement) return {}
 
-  // 使用新的显示尺寸计算方法
-  const { width: videoWidth, height: videoHeight } = videoStore.getVideoDisplaySize(
+  // 使用缓存的显示尺寸计算方法
+  const { width: videoWidth, height: videoHeight } = getCachedVideoDisplaySize(
     clip.id,
     transform.scaleX,
     transform.scaleY
@@ -145,7 +152,7 @@ const selectionBoxStyle = computed(() => {
   const centerX = canvasOffsetX + canvasCenterX
   const centerY = canvasOffsetY + canvasCenterY
 
-  return {
+  const style = {
     position: 'absolute' as const,
     left: `${centerX - displayWidth / 2}px`,
     top: `${centerY - displayHeight / 2}px`,
@@ -154,6 +161,11 @@ const selectionBoxStyle = computed(() => {
     transform: `rotate(${transform.rotation}deg)`,
     transformOrigin: 'center center',
   }
+
+  // 缓存结果
+  selectionBoxStyleCache = { style, cacheKey }
+
+  return style
 })
 
 // 鼠标事件处理
@@ -326,8 +338,8 @@ const isPointInClip = (canvasX: number, canvasY: number, clip: VideoClip): boole
   const centerX = canvasWidth.value / 2 + transform.x
   const centerY = canvasHeight.value / 2 + transform.y
 
-  // 使用新的显示尺寸计算方法
-  const { width: videoWidth, height: videoHeight } = videoStore.getVideoDisplaySize(
+  // 使用缓存的显示尺寸计算方法
+  const { width: videoWidth, height: videoHeight } = getCachedVideoDisplaySize(
     clip.id,
     transform.scaleX,
     transform.scaleY
@@ -486,16 +498,35 @@ const handleRotate = (deltaX: number, _deltaY: number) => {
   })
 }
 
-// 当前时间的活跃片段
+// 缓存活跃片段计算结果
+let activeClipsCache: { clips: VideoClip[]; cacheKey: string } | null = null
+
+// 缓存选择框样式计算结果
+let selectionBoxStyleCache: { style: any; cacheKey: string } | null = null
+
+// 当前时间的活跃片段（使用缓存优化）
 const activeClips = computed(() => {
   const currentTime = videoStore.currentTime
-  return videoStore.clips
+  const cacheKey = `${currentTime}_${videoStore.clips.length}_${videoStore.clips.map(c => `${c.id}_${c.timelinePosition}_${c.duration}_${c.zIndex}`).join('|')}`
+
+  // 检查缓存
+  if (activeClipsCache && activeClipsCache.cacheKey === cacheKey) {
+    return activeClipsCache.clips
+  }
+
+  // 重新计算
+  const clips = videoStore.clips
     .filter((clip) => {
       const clipStart = clip.timelinePosition
       const clipEnd = clip.timelinePosition + clip.duration
       return currentTime >= clipStart && currentTime < clipEnd
     })
     .sort((a, b) => a.zIndex - b.zIndex) // 按层级排序
+
+  // 缓存结果
+  activeClipsCache = { clips, cacheKey }
+
+  return clips
 })
 
 // 设置视频元素引用
@@ -528,8 +559,8 @@ const getClipResolutionText = (clip: VideoClip): string => {
 
   if (originalWidth === 0 || originalHeight === 0) return '加载中...'
 
-  // 使用新的显示尺寸计算方法
-  const { width, height } = videoStore.getVideoDisplaySize(
+  // 使用缓存的显示尺寸计算方法
+  const { width, height } = getCachedVideoDisplaySize(
     clip.id,
     clip.transform.scaleX,
     clip.transform.scaleY
@@ -565,6 +596,33 @@ const renderFrame = () => {
   }
 }
 
+// 缓存视频尺寸计算结果，避免在渲染循环中重复计算
+const videoSizeCache = new Map<string, { width: number; height: number; cacheKey: string }>()
+
+// 清理指定视频的缓存
+const clearVideoSizeCache = (clipId?: string) => {
+  if (clipId) {
+    videoSizeCache.delete(clipId)
+  } else {
+    videoSizeCache.clear()
+  }
+}
+
+// 获取缓存的视频显示尺寸
+const getCachedVideoDisplaySize = (clipId: string, scaleX: number, scaleY: number) => {
+  const cacheKey = `${clipId}_${scaleX}_${scaleY}`
+  const cached = videoSizeCache.get(clipId)
+
+  if (cached && cached.cacheKey === cacheKey) {
+    return { width: cached.width, height: cached.height }
+  }
+
+  const result = videoStore.getVideoDisplaySize(clipId, scaleX, scaleY)
+  videoSizeCache.set(clipId, { ...result, cacheKey })
+
+  return result
+}
+
 // 应用变换并渲染视频
 const renderVideoWithTransform = (video: HTMLVideoElement, clip: VideoClip) => {
   if (!ctx) return
@@ -588,9 +646,9 @@ const renderVideoWithTransform = (video: HTMLVideoElement, clip: VideoClip) => {
   // 应用旋转
   ctx.rotate((transform.rotation * Math.PI) / 180)
 
-  // 使用新的显示尺寸计算方法
+  // 使用缓存的显示尺寸计算方法
   // 缩放1.0 = 视频完全适应画布
-  const { width: videoWidth, height: videoHeight } = videoStore.getVideoDisplaySize(
+  const { width: videoWidth, height: videoHeight } = getCachedVideoDisplaySize(
     clip.id,
     transform.scaleX,
     transform.scaleY
@@ -604,22 +662,22 @@ const renderVideoWithTransform = (video: HTMLVideoElement, clip: VideoClip) => {
 }
 
 // 动画循环
-let animationId: number | null = null
+// let animationId: number | null = null
 
-const startRenderLoop = () => {
-  const render = () => {
-    renderFrame()
-    animationId = requestAnimationFrame(render)
-  }
-  render()
-}
+// const startRenderLoop = () => {
+//   const render = () => {
+//     renderFrame()
+//     animationId = requestAnimationFrame(render)
+//   }
+//   render()
+// }
 
-const stopRenderLoop = () => {
-  if (animationId) {
-    cancelAnimationFrame(animationId)
-    animationId = null
-  }
-}
+// const stopRenderLoop = () => {
+//   if (animationId) {
+//     cancelAnimationFrame(animationId)
+//     animationId = null
+//   }
+// }
 
 // 监听当前时间变化
 watch(
@@ -640,10 +698,32 @@ watch(
 
 // 监听画布尺寸变化
 watch([canvasWidth, canvasHeight], () => {
+  // 清理所有缓存，因为画布尺寸变化会影响所有视频的显示尺寸
+  clearVideoSizeCache()
   nextTick(() => {
     renderFrame()
   })
 })
+
+// 监听视频分辨率变化
+watch(() => videoStore.videoResolution, () => {
+  // 清理所有缓存，因为分辨率变化会影响所有视频的适应缩放
+  clearVideoSizeCache()
+}, { deep: true })
+
+// 监听片段变化，清理相关缓存
+watch(() => videoStore.clips, (newClips, oldClips) => {
+  // 清理活跃片段缓存
+  activeClipsCache = null
+
+  // 清理选择框样式缓存
+  selectionBoxStyleCache = null
+
+  // 如果片段数量变化，清理所有视频尺寸缓存
+  if (!oldClips || newClips.length !== oldClips.length) {
+    clearVideoSizeCache()
+  }
+}, { deep: true })
 
 // 键盘事件处理
 const onKeyDown = (event: KeyboardEvent) => {
