@@ -272,6 +272,41 @@
               </div>
             </div>
           </template>
+
+          <!-- 分辨率控制 -->
+          <div class="property-item">
+            <label>分辨率</label>
+            <div class="resolution-controls">
+              <div class="resolution-inputs">
+                <div class="resolution-input-group">
+                  <label class="resolution-label">宽</label>
+                  <input
+                    v-model="tempResolutionWidth"
+                    @blur="confirmResolutionFromInput"
+                    @keyup.enter="confirmResolutionFromInput"
+                    type="number"
+                    min="1"
+                    max="7680"
+                    class="resolution-input"
+                  />
+                </div>
+                <span class="resolution-separator">×</span>
+                <div class="resolution-input-group">
+                  <label class="resolution-label">高</label>
+                  <input
+                    v-model="tempResolutionHeight"
+                    @blur="confirmResolutionFromInput"
+                    @keyup.enter="confirmResolutionFromInput"
+                    type="number"
+                    min="1"
+                    max="4320"
+                    class="resolution-input"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
           <div class="property-item">
             <label>旋转</label>
             <div class="rotation-controls">
@@ -408,6 +443,10 @@ const tempRotation = ref('0.0')
 const tempOpacity = ref('1.00')
 const tempZIndex = ref('0')
 
+// 分辨率相关
+const tempResolutionWidth = ref('1920')
+const tempResolutionHeight = ref('1080')
+
 // 标志：是否正在程序更新（避免用户输入时的冲突）
 const isUpdatingFromExternal = ref(false)
 
@@ -445,6 +484,9 @@ const updateLocalState = (clip: any) => {
     tempRotation.value = rotation.value.toFixed(1)
     tempOpacity.value = opacity.value.toFixed(2)
     tempZIndex.value = zIndex.value.toString()
+
+    // 更新分辨率显示
+    updateResolutionDisplay()
   } else {
     clipName.value = ''
     playbackRate.value = 1
@@ -474,6 +516,8 @@ const updateLocalState = (clip: any) => {
     tempRotation.value = '0.0'
     tempOpacity.value = '1.00'
     tempZIndex.value = '0'
+    tempResolutionWidth.value = '1920'
+    tempResolutionHeight.value = '1080'
   }
 }
 
@@ -509,6 +553,9 @@ watch(
       tempScaleY.value = scaleY.value.toFixed(2)
       tempRotation.value = rotation.value.toFixed(1)
       tempOpacity.value = opacity.value.toFixed(2)
+
+      // 更新分辨率显示
+      updateResolutionDisplay()
 
       // 下一个tick后重置标志
       nextTick(() => {
@@ -849,6 +896,73 @@ const formatFileSize = (bytes: number): string => {
   const sizes = ['B', 'KB', 'MB', 'GB']
   const i = Math.floor(Math.log(bytes) / Math.log(k))
   return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i]
+}
+
+// 计算当前分辨率
+const getCurrentResolution = () => {
+  if (!selectedClip.value) return { width: 1920, height: 1080 }
+
+  // 从 store 获取视频原始分辨率
+  const originalResolution = videoStore.getVideoOriginalResolution(selectedClip.value.id)
+
+  const scaledWidth = Math.round(originalResolution.width * selectedClip.value.transform.scaleX)
+  const scaledHeight = Math.round(originalResolution.height * selectedClip.value.transform.scaleY)
+
+  return { width: scaledWidth, height: scaledHeight }
+}
+
+// 更新分辨率显示
+const updateResolutionDisplay = () => {
+  const resolution = getCurrentResolution()
+  tempResolutionWidth.value = resolution.width.toString()
+  tempResolutionHeight.value = resolution.height.toString()
+}
+
+// 确认分辨率输入
+const confirmResolutionFromInput = () => {
+  if (!selectedClip.value) return
+
+  const newWidth = parseInt(tempResolutionWidth.value)
+  const newHeight = parseInt(tempResolutionHeight.value)
+
+  if (isNaN(newWidth) || isNaN(newHeight) || newWidth <= 0 || newHeight <= 0) {
+    // 如果输入无效，恢复到当前值
+    updateResolutionDisplay()
+    return
+  }
+
+  // 从 store 获取视频原始分辨率
+  const originalResolution = videoStore.getVideoOriginalResolution(selectedClip.value.id)
+
+  const newScaleX = newWidth / originalResolution.width
+  const newScaleY = newHeight / originalResolution.height
+
+  // 限制缩放范围
+  const clampedScaleX = Math.max(0.1, Math.min(10, newScaleX))
+  const clampedScaleY = Math.max(0.1, Math.min(10, newScaleY))
+
+  // 更新缩放值
+  scaleX.value = clampedScaleX
+  scaleY.value = clampedScaleY
+
+  // 如果是等比缩放模式，使用平均值
+  if (proportionalScale.value) {
+    const avgScale = (clampedScaleX + clampedScaleY) / 2
+    scaleX.value = avgScale
+    scaleY.value = avgScale
+    uniformScale.value = avgScale
+    tempUniformScale.value = avgScale.toFixed(2)
+  }
+
+  // 更新临时缩放值
+  tempScaleX.value = scaleX.value.toFixed(2)
+  tempScaleY.value = scaleY.value.toFixed(2)
+
+  // 应用变换
+  updateTransform()
+
+  // 重新计算并显示实际分辨率
+  updateResolutionDisplay()
 }
 </script>
 
@@ -1318,6 +1432,65 @@ const formatFileSize = (bytes: number): string => {
 
 .action-btn.danger:hover {
   background: #d32f2f;
+}
+
+/* 分辨率控件样式 */
+.resolution-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.resolution-inputs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.resolution-input-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.resolution-label {
+  font-size: 10px;
+  color: #ccc;
+  margin: 0;
+}
+
+.resolution-input {
+  background: #444;
+  border: 1px solid #666;
+  border-radius: 4px;
+  color: #fff;
+  font-size: 11px;
+  padding: 4px 6px;
+  width: 60px;
+  text-align: center;
+}
+
+.resolution-input:focus {
+  outline: none;
+  border-color: #4caf50;
+}
+
+.resolution-input::-webkit-outer-spin-button,
+.resolution-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.resolution-input[type='number'] {
+  -moz-appearance: textfield;
+}
+
+.resolution-separator {
+  font-size: 14px;
+  color: #ccc;
+  font-weight: bold;
+  margin: 0 4px;
 }
 
 /* 自定义滚动条样式 */

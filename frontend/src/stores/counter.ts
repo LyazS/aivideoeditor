@@ -679,6 +679,31 @@ export const useVideoStore = defineStore('video', () => {
     }
   }
 
+  // 视频元素引用映射（用于获取原始分辨率）
+  const videoElementsMap = new Map<string, HTMLVideoElement>()
+
+  // 设置视频元素引用
+  function setVideoElement(clipId: string, videoElement: HTMLVideoElement | null) {
+    if (videoElement) {
+      videoElementsMap.set(clipId, videoElement)
+    } else {
+      videoElementsMap.delete(clipId)
+    }
+  }
+
+  // 获取视频原始分辨率
+  function getVideoOriginalResolution(clipId: string): { width: number; height: number } {
+    const videoElement = videoElementsMap.get(clipId)
+    if (videoElement && videoElement.videoWidth > 0 && videoElement.videoHeight > 0) {
+      return {
+        width: videoElement.videoWidth,
+        height: videoElement.videoHeight,
+      }
+    }
+    // 默认分辨率
+    return { width: 1920, height: 1080 }
+  }
+
   // 更新片段层级
   function updateClipZIndex(clipId: string, zIndex: number) {
     const clip = clips.value.find((c) => c.id === clipId)
@@ -763,5 +788,8 @@ export const useVideoStore = defineStore('video', () => {
     // 分辨率相关
     videoResolution,
     setVideoResolution,
+    // 视频元素管理
+    setVideoElement,
+    getVideoOriginalResolution,
   }
 })

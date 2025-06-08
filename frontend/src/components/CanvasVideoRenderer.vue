@@ -35,7 +35,7 @@
 
         <!-- 片段信息标签 -->
         <div class="clip-info-label">
-          {{ selectedClip.name }}
+          {{ getClipResolutionText(selectedClip) }}
         </div>
       </div>
     </div>
@@ -126,18 +126,9 @@ const selectionBoxStyle = computed(() => {
   const videoElement = videoElements.get(clip.id)
   if (!videoElement) return {}
 
-  // 计算基础尺寸（缩放1.0时的尺寸）
-  const canvasAspectRatio = canvasWidth.value / canvasHeight.value
-  const videoAspectRatio = videoElement.videoWidth / videoElement.videoHeight
-
-  let baseWidth, baseHeight
-  if (videoAspectRatio > canvasAspectRatio) {
-    baseHeight = canvasHeight.value
-    baseWidth = baseHeight * videoAspectRatio
-  } else {
-    baseWidth = canvasWidth.value
-    baseHeight = baseWidth / videoAspectRatio
-  }
+  // 简化基础尺寸计算：直接使用视频原始分辨率
+  const baseWidth = videoElement.videoWidth
+  const baseHeight = videoElement.videoHeight
 
   // 应用用户缩放
   const videoWidth = baseWidth * transform.scaleX
@@ -336,18 +327,9 @@ const isPointInClip = (canvasX: number, canvasY: number, clip: VideoClip): boole
   const centerX = canvasWidth.value / 2 + transform.x
   const centerY = canvasHeight.value / 2 + transform.y
 
-  // 计算基础尺寸
-  const canvasAspectRatio = canvasWidth.value / canvasHeight.value
-  const videoAspectRatio = videoElement.videoWidth / videoElement.videoHeight
-
-  let baseWidth, baseHeight
-  if (videoAspectRatio > canvasAspectRatio) {
-    baseHeight = canvasHeight.value
-    baseWidth = baseHeight * videoAspectRatio
-  } else {
-    baseWidth = canvasWidth.value
-    baseHeight = baseWidth / videoAspectRatio
-  }
+  // 简化基础尺寸计算：直接使用视频原始分辨率
+  const baseWidth = videoElement.videoWidth
+  const baseHeight = videoElement.videoHeight
 
   // 应用缩放
   const videoWidth = baseWidth * transform.scaleX
@@ -427,18 +409,9 @@ const handleResize = (
   const videoElement = videoElements.get(selectedClip.value.id)
   if (!videoElement) return
 
-  // 计算基础尺寸
-  const canvasAspectRatio = canvasWidth.value / canvasHeight.value
-  const videoAspectRatio = videoElement.videoWidth / videoElement.videoHeight
-
-  let baseWidth, baseHeight
-  if (videoAspectRatio > canvasAspectRatio) {
-    baseHeight = canvasHeight.value
-    baseWidth = baseHeight * videoAspectRatio
-  } else {
-    baseWidth = canvasWidth.value
-    baseHeight = baseWidth / videoAspectRatio
-  }
+  // 简化基础尺寸计算：直接使用视频原始分辨率
+  const baseWidth = videoElement.videoWidth
+  const baseHeight = videoElement.videoHeight
 
   // 根据手柄位置计算缩放变化
   let scaleChangeX = 0
@@ -530,8 +503,11 @@ const setVideoRef = (clipId: string, el: any) => {
   const videoElement = el?.$el || el
   if (videoElement && videoElement instanceof HTMLVideoElement) {
     videoElements.set(clipId, videoElement)
+    // 同时设置到 store 中，供属性面板使用
+    videoStore.setVideoElement(clipId, videoElement)
   } else {
     videoElements.delete(clipId)
+    videoStore.setVideoElement(clipId, null)
   }
 }
 
@@ -539,6 +515,23 @@ const setVideoRef = (clipId: string, el: any) => {
 const onVideoLoaded = (clipId: string) => {
   loadedVideos.add(clipId)
   console.log(`视频 ${clipId} 加载完成`)
+}
+
+// 获取视频片段缩放后的分辨率文本
+const getClipResolutionText = (clip: VideoClip): string => {
+  const videoElement = videoElements.get(clip.id)
+  if (!videoElement) return '加载中...'
+
+  const originalWidth = videoElement.videoWidth
+  const originalHeight = videoElement.videoHeight
+
+  if (originalWidth === 0 || originalHeight === 0) return '加载中...'
+
+  // 计算缩放后的分辨率
+  const scaledWidth = Math.round(originalWidth * clip.transform.scaleX)
+  const scaledHeight = Math.round(originalHeight * clip.transform.scaleY)
+
+  return `${scaledWidth}×${scaledHeight}`
 }
 
 // 渲染帧
@@ -591,25 +584,10 @@ const renderVideoWithTransform = (video: HTMLVideoElement, clip: VideoClip) => {
   // 应用旋转
   ctx.rotate((transform.rotation * Math.PI) / 180)
 
-  // 计算缩放1.0时的基础尺寸 - 让视频片段能够完全覆盖画布（类似object-fit: cover）
-  const canvasAspectRatio = canvasWidth.value / canvasHeight.value
-  const videoAspectRatio = video.videoWidth / video.videoHeight
-
-  let baseWidth, baseHeight
-
-  if (videoAspectRatio > canvasAspectRatio) {
-    // 视频比画布更宽，以高度为准进行缩放
-    baseHeight = canvasHeight.value
-    baseWidth = baseHeight * videoAspectRatio
-  } else {
-    // 视频比画布更高，以宽度为准进行缩放
-    baseWidth = canvasWidth.value
-    baseHeight = baseWidth / videoAspectRatio
-  }
-
-  // 应用用户设置的缩放
-  const videoWidth = baseWidth * transform.scaleX
-  const videoHeight = baseHeight * transform.scaleY
+  // 简化缩放逻辑：基于视频原始分辨率进行缩放
+  // 缩放1.0 = 视频原始分辨率大小
+  const videoWidth = video.videoWidth * transform.scaleX
+  const videoHeight = video.videoHeight * transform.scaleY
 
   // 绘制视频（以中心为原点）
   ctx.drawImage(video, -videoWidth / 2, -videoHeight / 2, videoWidth, videoHeight)
