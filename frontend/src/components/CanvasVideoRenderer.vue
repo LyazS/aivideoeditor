@@ -126,13 +126,12 @@ const selectionBoxStyle = computed(() => {
   const videoElement = videoElements.get(clip.id)
   if (!videoElement) return {}
 
-  // 简化基础尺寸计算：直接使用视频原始分辨率
-  const baseWidth = videoElement.videoWidth
-  const baseHeight = videoElement.videoHeight
-
-  // 应用用户缩放
-  const videoWidth = baseWidth * transform.scaleX
-  const videoHeight = baseHeight * transform.scaleY
+  // 使用新的显示尺寸计算方法
+  const { width: videoWidth, height: videoHeight } = videoStore.getVideoDisplaySize(
+    clip.id,
+    transform.scaleX,
+    transform.scaleY
+  )
 
   // 转换到显示坐标系
   const displayWidth = videoWidth * scaleX
@@ -327,13 +326,12 @@ const isPointInClip = (canvasX: number, canvasY: number, clip: VideoClip): boole
   const centerX = canvasWidth.value / 2 + transform.x
   const centerY = canvasHeight.value / 2 + transform.y
 
-  // 简化基础尺寸计算：直接使用视频原始分辨率
-  const baseWidth = videoElement.videoWidth
-  const baseHeight = videoElement.videoHeight
-
-  // 应用缩放
-  const videoWidth = baseWidth * transform.scaleX
-  const videoHeight = baseHeight * transform.scaleY
+  // 使用新的显示尺寸计算方法
+  const { width: videoWidth, height: videoHeight } = videoStore.getVideoDisplaySize(
+    clip.id,
+    transform.scaleX,
+    transform.scaleY
+  )
 
   // 如果没有旋转，使用简单的矩形检测
   if (Math.abs(transform.rotation) < 0.1) {
@@ -409,9 +407,12 @@ const handleResize = (
   const videoElement = videoElements.get(selectedClip.value.id)
   if (!videoElement) return
 
-  // 简化基础尺寸计算：直接使用视频原始分辨率
-  const baseWidth = videoElement.videoWidth
-  const baseHeight = videoElement.videoHeight
+  // 获取适应缩放比例
+  const { fitScale } = videoStore.getVideoFitScale(selectedClip.value.id)
+
+  // 计算基础尺寸（考虑适应缩放）
+  const baseWidth = videoElement.videoWidth * fitScale
+  const baseHeight = videoElement.videoHeight * fitScale
 
   // 根据手柄位置计算缩放变化
   let scaleChangeX = 0
@@ -527,11 +528,14 @@ const getClipResolutionText = (clip: VideoClip): string => {
 
   if (originalWidth === 0 || originalHeight === 0) return '加载中...'
 
-  // 计算缩放后的分辨率
-  const scaledWidth = Math.round(originalWidth * clip.transform.scaleX)
-  const scaledHeight = Math.round(originalHeight * clip.transform.scaleY)
+  // 使用新的显示尺寸计算方法
+  const { width, height } = videoStore.getVideoDisplaySize(
+    clip.id,
+    clip.transform.scaleX,
+    clip.transform.scaleY
+  )
 
-  return `${scaledWidth}×${scaledHeight}`
+  return `${Math.round(width)}×${Math.round(height)}`
 }
 
 // 渲染帧
@@ -584,10 +588,13 @@ const renderVideoWithTransform = (video: HTMLVideoElement, clip: VideoClip) => {
   // 应用旋转
   ctx.rotate((transform.rotation * Math.PI) / 180)
 
-  // 简化缩放逻辑：基于视频原始分辨率进行缩放
-  // 缩放1.0 = 视频原始分辨率大小
-  const videoWidth = video.videoWidth * transform.scaleX
-  const videoHeight = video.videoHeight * transform.scaleY
+  // 使用新的显示尺寸计算方法
+  // 缩放1.0 = 视频完全适应画布
+  const { width: videoWidth, height: videoHeight } = videoStore.getVideoDisplaySize(
+    clip.id,
+    transform.scaleX,
+    transform.scaleY
+  )
 
   // 绘制视频（以中心为原点）
   ctx.drawImage(video, -videoWidth / 2, -videoHeight / 2, videoWidth, videoHeight)

@@ -704,6 +704,48 @@ export const useVideoStore = defineStore('video', () => {
     return { width: 1920, height: 1080 }
   }
 
+  // 计算视频片段在画布中的适应缩放比例
+  function getVideoFitScale(clipId: string): { scaleX: number; scaleY: number; fitScale: number } {
+    const videoElement = videoElementsMap.get(clipId)
+    if (!videoElement || videoElement.videoWidth === 0 || videoElement.videoHeight === 0) {
+      return { scaleX: 1, scaleY: 1, fitScale: 1 }
+    }
+
+    const videoWidth = videoElement.videoWidth
+    const videoHeight = videoElement.videoHeight
+    const canvasWidth = videoResolution.value.width
+    const canvasHeight = videoResolution.value.height
+
+    // 计算适应画布的缩放比例
+    const scaleX = canvasWidth / videoWidth
+    const scaleY = canvasHeight / videoHeight
+
+    // 选择较小的缩放比例以确保视频完全适应画布
+    const fitScale = Math.min(scaleX, scaleY)
+
+    return { scaleX, scaleY, fitScale }
+  }
+
+  // 计算视频片段的实际显示尺寸（考虑适应缩放）
+  function getVideoDisplaySize(clipId: string, userScaleX: number, userScaleY: number): { width: number; height: number } {
+    const videoElement = videoElementsMap.get(clipId)
+    if (!videoElement || videoElement.videoWidth === 0 || videoElement.videoHeight === 0) {
+      return { width: videoResolution.value.width, height: videoResolution.value.height }
+    }
+
+    const { fitScale } = getVideoFitScale(clipId)
+
+    // 基础尺寸：视频原始尺寸 * 适应缩放
+    const baseWidth = videoElement.videoWidth * fitScale
+    const baseHeight = videoElement.videoHeight * fitScale
+
+    // 应用用户缩放
+    const displayWidth = baseWidth * userScaleX
+    const displayHeight = baseHeight * userScaleY
+
+    return { width: displayWidth, height: displayHeight }
+  }
+
   // 更新片段层级
   function updateClipZIndex(clipId: string, zIndex: number) {
     const clip = clips.value.find((c) => c.id === clipId)
@@ -791,5 +833,7 @@ export const useVideoStore = defineStore('video', () => {
     // 视频元素管理
     setVideoElement,
     getVideoOriginalResolution,
+    getVideoFitScale,
+    getVideoDisplaySize,
   }
 })
