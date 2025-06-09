@@ -1,16 +1,10 @@
 <template>
   <div class="multi-track-video-renderer">
-    <canvas 
-      ref="canvasRef" 
-      :width="canvasWidth" 
-      :height="canvasHeight" 
+    <canvas
+      ref="canvasRef"
+      :width="canvasWidth"
+      :height="canvasHeight"
       class="video-canvas"
-      @mousedown="onMouseDown"
-      @mousemove="onMouseMove"
-      @mouseup="onMouseUp"
-      @mouseleave="onMouseLeave"
-      @wheel="onWheel"
-      @click="onClick"
     />
     
     <!-- 加载状态 -->
@@ -23,6 +17,7 @@
     <div v-if="showPerformanceInfo" class="performance-info">
       <span>FPS: {{ fps }}</span>
       <span>活跃片段: {{ activeClipsCount }}</span>
+      <button @click="debugStatus" style="margin-left: 10px; padding: 2px 6px; font-size: 10px;">调试</button>
     </div>
   </div>
 </template>
@@ -30,7 +25,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useVideoStore } from '@/stores/counter'
-import { MultiTrackVideoRenderer } from '@/utils/multiTrackRenderer'
+import { SingleVideoRenderer } from '@/utils/multiTrackRenderer'
 import { createVideoElement, createVideoElementFromURL, loadVideoAtTime } from '@/utils/ffmpegHelper'
 
 const videoStore = useVideoStore()
@@ -44,9 +39,8 @@ const fps = ref(0)
 const showPerformanceInfo = ref(true)
 
 // 渲染器和视频元素
-let renderer: MultiTrackVideoRenderer | null = null
-const videoElements = new Map<string, HTMLVideoElement>()
-const loadedVideos = new Set<string>()
+let renderer: SingleVideoRenderer | null = null
+let videoElement: HTMLVideoElement | null = null
 
 // 性能监控
 let animationId: number | null = null
@@ -54,83 +48,93 @@ let frameCount = 0
 let lastFrameTime = 0
 let fpsUpdateTime = 0
 
-// 鼠标交互
-const isDragging = ref(false)
-const lastMousePos = ref({ x: 0, y: 0 })
+
 
 // 计算属性
 const canvasWidth = computed(() => videoStore.videoResolution.width)
 const canvasHeight = computed(() => videoStore.videoResolution.height)
 
-const activeClips = computed(() => {
-  const currentTime = videoStore.currentTime
-  return videoStore.clips.filter(clip => 
-    currentTime >= clip.timelinePosition && 
-    currentTime < clip.timelinePosition + clip.duration
-  )
+// 获取第一个轨道的第一个视频片段
+const firstClip = computed(() => {
+  const track1Clips = videoStore.clips.filter(clip => clip.trackId === 1)
+  if (track1Clips.length === 0) return null
+
+  // 按时间轴位置排序，取第一个
+  const sortedClips = track1Clips.sort((a, b) => a.timelinePosition - b.timelinePosition)
+  return sortedClips[0]
 })
 
-const activeClipsCount = computed(() => activeClips.value.length)
+// 检查第一个片段是否在当前时间活跃
+const isFirstClipActive = computed(() => {
+  if (!firstClip.value) return false
+  const currentTime = videoStore.currentTime
+  return currentTime >= firstClip.value.timelinePosition &&
+         currentTime < firstClip.value.timelinePosition + firstClip.value.duration
+})
 
-// 监听片段变化，加载视频
-watch(() => videoStore.clips, async (newClips, oldClips) => {
-  console.log('Clips changed:', {
-    newCount: newClips.length,
-    oldCount: oldClips?.length || 0,
-    clips: newClips.map(c => ({ id: c.id, name: c.name }))
+const activeClipsCount = computed(() => isFirstClipActive.value ? 1 : 0)
+
+// 监听第一个片段变化，加载视频
+watch(() => firstClip.value, async (newClip, oldClip) => {
+  console.log('First clip changed:', {
+    newClip: newClip ? { id: newClip.id, name: newClip.name, trackId: newClip.trackId, timelinePosition: newClip.timelinePosition } : null,
+    oldClip: oldClip ? { id: oldClip.id, name: oldClip.name } : null
   })
 
-  // 找出需要加载的片段（还没有视频元素的片段）
-  const clipsToLoad = newClips.filter(clip => !videoElements.has(clip.id))
+  // 如果有新的第一个片段且与之前不同，加载它
+  if (newClip && (!oldClip || newClip.id !== oldClip.id)) {
+    console.log('Loading new first clip:', newClip.id)
+    await loadVideoForClip(newClip.id, newClip.file)
 
-  console.log('Clips to load:', clipsToLoad.length)
-  console.log('Clips to load IDs:', clipsToLoad.map(c => c.id))
-
-  // 加载新片段的视频
-  for (const clip of clipsToLoad) {
-    console.log('Loading clip:', clip.id, clip.name)
-    await loadVideoForClip(clip.id, clip.file)
-  }
-
-  // 清理已删除的片段
-  const currentClipIds = new Set(newClips.map(c => c.id))
-  for (const [clipId, video] of videoElements) {
-    if (!currentClipIds.has(clipId)) {
-      console.log('Cleaning up clip:', clipId)
-      video.pause()
-      URL.revokeObjectURL(video.src)
-      videoElements.delete(clipId)
-      loadedVideos.delete(clipId)
-      renderer?.setVideoElement(clipId, null)
+    // 如果当前时间不在片段范围内，跳转到片段开始时间
+    if (videoStore.currentTime < newClip.timelinePosition ||
+        videoStore.currentTime >= newClip.timelinePosition + newClip.duration) {
+      console.log('Jumping to clip start time:', newClip.timelinePosition)
+      videoStore.setCurrentTime(newClip.timelinePosition)
     }
   }
-}, { deep: true, immediate: false })
 
-// 监听当前时间变化 - 只在暂停时手动渲染
+  // 如果没有第一个片段了，清理视频
+  if (!newClip && videoElement) {
+    console.log('No first clip, cleaning up')
+    cleanup()
+  }
+}, { deep: true, immediate: true })
+
+// 监听当前时间变化 - 只在暂停时或用户拖拽时手动同步视频时间
 watch(() => videoStore.currentTime, () => {
-  if (!videoStore.isPlaying) {
+  if (!videoStore.isPlaying && videoElement && firstClip.value) {
+    // 暂停时手动同步视频时间
+    updateVideoTime()
     renderFrame()
   }
 })
 
 // 监听播放状态变化
 watch(() => videoStore.isPlaying, (isPlaying) => {
-  for (const video of videoElements.values()) {
+  if (videoElement) {
     if (isPlaying) {
-      video.play().catch(() => {}) // 忽略播放错误
+      videoElement.play()
     } else {
-      video.pause()
+      videoElement.pause()
     }
   }
 })
 
 // 加载视频片段
 const loadVideoForClip = async (clipId: string, file: File) => {
-  if (videoElements.has(clipId)) return
+  // 如果已经加载了相同的片段，跳过
+  if (videoElement && firstClip.value?.id === clipId && videoElement.src) return
 
   try {
     isLoading.value = true
-    console.log('Loading video for clip:', clipId, file.name)
+    console.log('Loading video for first clip:', clipId, file.name)
+
+    // 清理之前的视频
+    if (videoElement) {
+      videoElement.pause()
+      URL.revokeObjectURL(videoElement.src)
+    }
 
     // 检查是否是从时间轴创建的片段（有现成的URL）
     const clip = videoStore.clips.find(c => c.id === clipId)
@@ -144,11 +148,6 @@ const loadVideoForClip = async (clipId: string, file: File) => {
       // 使用文件创建视频元素（用于直接上传的文件）
       video = await createVideoElement(file)
     }
-
-    // 配置视频元素以减少闪烁
-    video.muted = true
-    video.playsInline = true
-    video.preload = 'metadata'
 
     // 等待视频完全加载
     await new Promise<void>((resolve) => {
@@ -168,9 +167,13 @@ const loadVideoForClip = async (clipId: string, file: File) => {
       checkReady()
     })
 
-    videoElements.set(clipId, video)
-    loadedVideos.add(clipId)
-    renderer?.setVideoElement(clipId, video)
+    videoElement = video
+    renderer?.setVideo(video)
+
+    // 添加视频事件监听器 - 参考项目策略
+    video.addEventListener('timeupdate', handleTimeUpdate)
+    video.addEventListener('ended', handleVideoEnded)
+    video.addEventListener('error', (e) => console.error('Video error:', e))
 
     // 设置视频元素引用到store
     videoStore.setVideoElement(clipId, video)
@@ -182,11 +185,48 @@ const loadVideoForClip = async (clipId: string, file: File) => {
   }
 }
 
-// 渲染帧
+// 更新视频时间 - 参考项目策略
+const updateVideoTime = async () => {
+  if (!videoElement || !firstClip.value) return
+
+  try {
+    const currentTime = videoStore.currentTime
+    const clipRelativeTime = currentTime - firstClip.value.timelinePosition
+    const targetVideoTime = firstClip.value.startTime + clipRelativeTime * (firstClip.value.playbackRate || 1)
+
+    // 使用 loadVideoAtTime 进行精确的时间设置
+    await loadVideoAtTime(videoElement, targetVideoTime)
+  } catch (error) {
+    console.error('Error updating video time:', error)
+  }
+}
+
+// 处理视频时间更新 - 参考项目策略
+const handleTimeUpdate = () => {
+  if (videoElement && videoStore.isPlaying && firstClip.value) {
+    // 将视频时间转换为时间轴时间
+    const videoTime = videoElement.currentTime
+    const clipRelativeTime = (videoTime - firstClip.value.startTime) / (firstClip.value.playbackRate || 1)
+    const timelineTime = firstClip.value.timelinePosition + clipRelativeTime
+
+    // 更新时间轴时间
+    videoStore.setCurrentTime(timelineTime)
+  }
+}
+
+// 处理视频结束
+const handleVideoEnded = () => {
+  videoStore.pause()
+}
+
+// 渲染帧 - 参考项目策略：只渲染，不强制同步时间
 const renderFrame = () => {
   if (!renderer) return
 
-  renderer.drawMultiTrackFrame(videoStore.clips, videoStore.currentTime)
+  // 只渲染第一个活跃的片段
+  const clipToRender = isFirstClipActive.value ? firstClip.value : null
+
+  renderer.drawVideoFrame(clipToRender)
 
   // 计算FPS
   frameCount++
@@ -198,18 +238,21 @@ const renderFrame = () => {
   }
 }
 
-// 开始渲染循环 - 统一渲染策略
+// 开始渲染循环 - 智能渲染策略
 const startRenderLoop = () => {
   let lastRenderTime = 0
 
   const render = (currentTime: number) => {
+    // 根据播放状态调整渲染频率
+    const isPlaying = videoStore.isPlaying
+    const renderInterval = isPlaying ? 33 : 100 // 播放时30fps，暂停时10fps
+
     // 控制渲染频率
-    if (currentTime - lastRenderTime >= 33) { // 限制到30fps
+    if (currentTime - lastRenderTime >= renderInterval) {
       renderFrame()
       lastRenderTime = currentTime
     }
 
-    // 始终保持渲染循环运行，但在暂停时降低频率
     animationId = requestAnimationFrame(render)
   }
 
@@ -224,58 +267,26 @@ const stopRenderLoop = () => {
   }
 }
 
-// 鼠标事件处理
-const onMouseDown = (event: MouseEvent) => {
-  isDragging.value = true
-  lastMousePos.value = { x: event.clientX, y: event.clientY }
-}
 
-const onMouseMove = (event: MouseEvent) => {
-  if (!isDragging.value) return
-  
-  const deltaX = event.clientX - lastMousePos.value.x
-  const deltaY = event.clientY - lastMousePos.value.y
-  
-  // 这里可以实现拖拽功能，比如移动选中的片段
-  lastMousePos.value = { x: event.clientX, y: event.clientY }
-}
-
-const onMouseUp = () => {
-  isDragging.value = false
-}
-
-const onMouseLeave = () => {
-  isDragging.value = false
-}
-
-const onWheel = (event: WheelEvent) => {
-  event.preventDefault()
-  // 这里可以实现缩放功能
-}
-
-const onClick = (event: MouseEvent) => {
-  // 这里可以实现点击选择片段功能
-}
 
 // 初始化
 const initRenderer = () => {
   if (!canvasRef.value) return
-  
-  renderer = new MultiTrackVideoRenderer(canvasRef.value)
+
+  renderer = new SingleVideoRenderer(canvasRef.value)
   startRenderLoop()
 }
 
 // 清理资源
 const cleanup = () => {
   stopRenderLoop()
-  
-  for (const [clipId, video] of videoElements) {
-    video.pause()
-    URL.revokeObjectURL(video.src)
+
+  if (videoElement) {
+    videoElement.pause()
+    URL.revokeObjectURL(videoElement.src)
+    videoElement = null
   }
-  videoElements.clear()
-  loadedVideos.clear()
-  
+
   renderer?.destroy()
   renderer = null
 }
@@ -290,14 +301,12 @@ onMounted(() => {
   })
 })
 
-// 加载现有的视频片段
+// 加载现有的第一个视频片段
 const loadExistingClips = async () => {
   console.log('Loading existing clips:', videoStore.clips.length)
-  for (const clip of videoStore.clips) {
-    if (!videoElements.has(clip.id)) {
-      console.log('Loading existing clip:', clip.id, clip.name)
-      await loadVideoForClip(clip.id, clip.file)
-    }
+  if (firstClip.value && !videoElement) {
+    console.log('Loading first clip:', firstClip.value.id, firstClip.value.name)
+    await loadVideoForClip(firstClip.value.id, firstClip.value.file)
   }
 }
 
@@ -312,6 +321,36 @@ watch([canvasWidth, canvasHeight], () => {
     renderFrame()
   })
 })
+
+// 调试方法
+const debugStatus = () => {
+  console.group('🎬 视频渲染器调试信息')
+  console.log('总片段数:', videoStore.clips.length)
+  console.log('所有片段:', videoStore.clips.map(c => ({
+    id: c.id,
+    name: c.name,
+    trackId: c.trackId,
+    timelinePosition: c.timelinePosition,
+    duration: c.duration
+  })))
+  console.log('第一个片段:', firstClip.value ? {
+    id: firstClip.value.id,
+    name: firstClip.value.name,
+    timelinePosition: firstClip.value.timelinePosition,
+    duration: firstClip.value.duration
+  } : null)
+  console.log('当前时间:', videoStore.currentTime)
+  console.log('第一个片段是否活跃:', isFirstClipActive.value)
+  console.log('视频元素状态:', videoElement ? {
+    readyState: videoElement.readyState,
+    currentTime: videoElement.currentTime,
+    duration: videoElement.duration,
+    videoWidth: videoElement.videoWidth,
+    videoHeight: videoElement.videoHeight
+  } : '无视频元素')
+  console.log('渲染器状态:', !!renderer)
+  console.groupEnd()
+}
 </script>
 
 <style scoped>
@@ -330,11 +369,6 @@ watch([canvasWidth, canvasHeight], () => {
   max-height: 100%;
   object-fit: contain;
   background-color: #000;
-  cursor: grab;
-}
-
-.video-canvas:active {
-  cursor: grabbing;
 }
 
 .loading-overlay {

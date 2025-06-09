@@ -81,7 +81,7 @@ export const createVideoElement = (file: File): Promise<HTMLVideoElement> => {
     video.crossOrigin = 'anonymous'
     video.muted = true
     video.playsInline = true
-    video.preload = 'metadata'
+    video.preload = 'auto' // 改为自动预加载，提高播放流畅度
 
     let resolved = false
 
@@ -137,7 +137,7 @@ export const createVideoElementFromURL = (url: string): Promise<HTMLVideoElement
     video.crossOrigin = 'anonymous'
     video.muted = true
     video.playsInline = true
-    video.preload = 'metadata'
+    video.preload = 'auto' // 改为自动预加载，提高播放流畅度
 
     let resolved = false
 
