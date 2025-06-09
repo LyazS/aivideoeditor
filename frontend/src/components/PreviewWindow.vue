@@ -1,14 +1,14 @@
 <template>
   <div class="preview-window">
     <div class="video-container">
-      <!-- Canvas渲染器 -->
-      <CanvasVideoRenderer />
+      <!-- 多轨道视频渲染器 -->
+      <MultiTrackVideoRenderer />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import CanvasVideoRenderer from './CanvasVideoRenderer.vue'
+import MultiTrackVideoRenderer from './MultiTrackVideoRenderer.vue'
 </script>
 
 <style scoped>

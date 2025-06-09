@@ -1,5 +1,6 @@
 import { ref, computed } from 'vue'
 import { defineStore } from 'pinia'
+import type { VideoMetadata, VideoRenderInfo } from '@/types/video'
 
 export interface VideoTransform {
   x: number // X轴位置 (像素，相对于画布中心)
@@ -703,13 +704,34 @@ export const useVideoStore = defineStore('video', () => {
   // 视频元素引用映射（用于获取原始分辨率）
   const videoElementsMap = new Map<string, HTMLVideoElement>()
 
+  // 视频渲染信息映射（用于FFmpeg集成）
+  const videoRenderInfoMap = new Map<string, VideoRenderInfo>()
+
   // 设置视频元素引用
   function setVideoElement(clipId: string, videoElement: HTMLVideoElement | null) {
     if (videoElement) {
       videoElementsMap.set(clipId, videoElement)
+      // 更新渲染信息
+      const renderInfo = videoRenderInfoMap.get(clipId) || { isLoaded: false }
+      renderInfo.videoElement = videoElement
+      renderInfo.isLoaded = true
+      videoRenderInfoMap.set(clipId, renderInfo)
     } else {
       videoElementsMap.delete(clipId)
+      videoRenderInfoMap.delete(clipId)
     }
+  }
+
+  // 设置视频元数据
+  function setVideoMetadata(clipId: string, metadata: VideoMetadata) {
+    const renderInfo = videoRenderInfoMap.get(clipId) || { isLoaded: false }
+    renderInfo.metadata = metadata
+    videoRenderInfoMap.set(clipId, renderInfo)
+  }
+
+  // 获取视频渲染信息
+  function getVideoRenderInfo(clipId: string): VideoRenderInfo | null {
+    return videoRenderInfoMap.get(clipId) || null
   }
 
   // 获取视频原始分辨率
@@ -869,6 +891,8 @@ export const useVideoStore = defineStore('video', () => {
     setVideoResolution,
     // 视频元素管理
     setVideoElement,
+    setVideoMetadata,
+    getVideoRenderInfo,
     getVideoOriginalResolution,
     getVideoFitScale,
     getVideoDisplaySize,
