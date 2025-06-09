@@ -106,9 +106,11 @@ watch(() => videoStore.clips, async (newClips, oldClips) => {
   }
 }, { deep: true, immediate: false })
 
-// 监听当前时间变化
+// 监听当前时间变化 - 只在暂停时手动渲染
 watch(() => videoStore.currentTime, () => {
-  renderFrame()
+  if (!videoStore.isPlaying) {
+    renderFrame()
+  }
 })
 
 // 监听播放状态变化
@@ -142,6 +144,11 @@ const loadVideoForClip = async (clipId: string, file: File) => {
       // 使用文件创建视频元素（用于直接上传的文件）
       video = await createVideoElement(file)
     }
+
+    // 配置视频元素以减少闪烁
+    video.muted = true
+    video.playsInline = true
+    video.preload = 'metadata'
 
     // 等待视频完全加载
     await new Promise<void>((resolve) => {
@@ -178,9 +185,9 @@ const loadVideoForClip = async (clipId: string, file: File) => {
 // 渲染帧
 const renderFrame = () => {
   if (!renderer) return
-  
+
   renderer.drawMultiTrackFrame(videoStore.clips, videoStore.currentTime)
-  
+
   // 计算FPS
   frameCount++
   const currentTime = performance.now()
@@ -191,13 +198,22 @@ const renderFrame = () => {
   }
 }
 
-// 开始渲染循环
+// 开始渲染循环 - 统一渲染策略
 const startRenderLoop = () => {
+  let lastRenderTime = 0
+
   const render = (currentTime: number) => {
-    renderFrame()
+    // 控制渲染频率
+    if (currentTime - lastRenderTime >= 33) { // 限制到30fps
+      renderFrame()
+      lastRenderTime = currentTime
+    }
+
+    // 始终保持渲染循环运行，但在暂停时降低频率
     animationId = requestAnimationFrame(render)
   }
-  render(performance.now())
+
+  animationId = requestAnimationFrame(render)
 }
 
 // 停止渲染循环

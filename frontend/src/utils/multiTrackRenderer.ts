@@ -126,8 +126,6 @@ export class MultiTrackVideoRenderer {
 
   // 渲染多轨道视频帧
   drawMultiTrackFrame(clips: VideoClip[], currentTime: number) {
-    this.clear()
-
     // 获取当前时间活跃的片段
     const activeClips = clips.filter(clip => this.isClipActive(clip, currentTime))
 
@@ -141,6 +139,15 @@ export class MultiTrackVideoRenderer {
       })
       this.lastActiveClipsCount = activeClips.length
     }
+
+    // 检查是否需要重新渲染
+    const needsRedraw = this.shouldRedraw(activeClips, currentTime)
+    if (!needsRedraw) {
+      return
+    }
+
+    // 清除画布
+    this.clear()
 
     // 按zIndex排序，从低到高渲染
     const sortedClips = activeClips.sort((a, b) => a.zIndex - b.zIndex)
@@ -156,15 +163,16 @@ export class MultiTrackVideoRenderer {
         continue
       }
 
-      // 设置视频时间
-      const videoTime = this.getClipVideoTime(clip, currentTime)
-      if (Math.abs(video.currentTime - videoTime) > 0.1) {
-        video.currentTime = videoTime
-      }
+      // 同步视频时间 - 使用更智能的同步策略
+      this.syncVideoTime(video, clip, currentTime)
 
       // 渲染视频片段
       this.drawVideoClip(video, clip, currentTime)
     }
+
+    // 更新最后渲染状态
+    this.lastRenderTime = currentTime
+    this.lastActiveClips = activeClips.map(c => c.id)
   }
 
   private lastActiveClipsCount = -1
@@ -172,6 +180,38 @@ export class MultiTrackVideoRenderer {
   private warnedNotReady = new Set<string>()
   private warnedZeroDimensions = new Set<string>()
   private successfullyRendered = new Set<string>()
+  private lastRenderTime = -1
+  private lastActiveClips: string[] = []
+  private videoTimeCache = new Map<string, number>()
+
+  // 检查是否需要重新渲染
+  private shouldRedraw(activeClips: VideoClip[], currentTime: number): boolean {
+    // 时间变化超过阈值
+    if (Math.abs(currentTime - this.lastRenderTime) > 0.033) { // ~30fps
+      return true
+    }
+
+    // 活跃片段发生变化
+    const currentClipIds = activeClips.map(c => c.id)
+    if (currentClipIds.length !== this.lastActiveClips.length ||
+        !currentClipIds.every(id => this.lastActiveClips.includes(id))) {
+      return true
+    }
+
+    return false
+  }
+
+  // 智能视频时间同步
+  private syncVideoTime(video: HTMLVideoElement, clip: VideoClip, currentTime: number) {
+    const videoTime = this.getClipVideoTime(clip, currentTime)
+    const cachedTime = this.videoTimeCache.get(clip.id)
+
+    // 只在时间差异较大时才更新
+    if (cachedTime === undefined || Math.abs(video.currentTime - videoTime) > 0.1) {
+      video.currentTime = videoTime
+      this.videoTimeCache.set(clip.id, videoTime)
+    }
+  }
 
   // 调整画布尺寸
   resize(width: number, height: number) {
