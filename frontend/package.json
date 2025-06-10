@@ -13,6 +13,8 @@
     "format": "prettier --write src/"
   },
   "dependencies": {
+    "@webav/av-canvas": "^1.1.5",
+    "@webav/av-cliper": "^1.1.5",
     "pinia": "^3.0.1",
     "vue": "^3.5.13"
   },

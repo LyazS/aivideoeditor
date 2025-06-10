@@ -1,23 +1,42 @@
 <template>
   <div class="multi-track-video-renderer">
-    <canvas
-      ref="canvasRef"
-      :width="canvasWidth"
-      :height="canvasHeight"
-      class="video-canvas"
+    <!-- WebAV Canvas容器 -->
+    <div
+      ref="canvasContainer"
+      class="webav-canvas-container"
     />
-    
+
+    <!-- 浏览器兼容性提示 -->
+    <div class="compatibility-warning" v-if="!isSupported">
+      <div class="warning-content">
+        <div class="warning-icon">⚠️</div>
+        <h3>浏览器不支持</h3>
+        <p>此应用需要支持 WebCodecs API 的现代浏览器</p>
+        <p>请使用 Chrome 94+ 或 Edge 94+ 浏览器</p>
+      </div>
+    </div>
+
     <!-- 加载状态 -->
     <div v-if="isLoading" class="loading-overlay">
       <div class="loading-spinner"></div>
       <p>正在加载视频...</p>
     </div>
-    
+
     <!-- 性能信息 -->
     <div v-if="showPerformanceInfo" class="performance-info">
-      <span>FPS: {{ fps }}</span>
+      <span>引擎: WebAV</span>
       <span>活跃片段: {{ activeClipsCount }}</span>
       <button @click="debugStatus" style="margin-left: 10px; padding: 2px 6px; font-size: 10px;">调试</button>
+    </div>
+
+    <!-- 错误信息 -->
+    <div v-if="errorMessage" class="error-message">
+      <div class="error-content">
+        <div class="error-icon">❌</div>
+        <h3>加载失败</h3>
+        <p>{{ errorMessage }}</p>
+        <button @click="clearError" class="retry-btn">重试</button>
+      </div>
     </div>
   </div>
 </template>
@@ -25,30 +44,48 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useVideoStore } from '@/stores/counter'
-import { SingleVideoRenderer } from '@/utils/multiTrackRenderer'
-import { createVideoElement, createVideoElementFromURL, loadVideoAtTime } from '@/utils/videoHelper'
+import { WebAVRenderer } from '@/utils/webavRenderer'
 
 const videoStore = useVideoStore()
 
 // 组件引用
-const canvasRef = ref<HTMLCanvasElement>()
+const canvasContainer = ref<HTMLDivElement>()
 
 // 状态
 const isLoading = ref(false)
-const fps = ref(0)
 const showPerformanceInfo = ref(true)
+const isSupported = ref(true)
+const errorMessage = ref('')
 
-// 渲染器和视频元素
-let renderer: SingleVideoRenderer | null = null
-let videoElement: HTMLVideoElement | null = null
+// WebAV渲染器
+let renderer: WebAVRenderer | null = null
 
 // 性能监控
 let animationId: number | null = null
-let frameCount = 0
-let lastFrameTime = 0
-let fpsUpdateTime = 0
 
 
+
+// 检查浏览器兼容性
+const checkBrowserSupport = () => {
+  console.log('检查浏览器兼容性...')
+
+  // 检查 WebCodecs API 支持
+  if (typeof VideoDecoder === 'undefined' || typeof VideoEncoder === 'undefined') {
+    console.warn('WebCodecs API 不支持')
+    isSupported.value = false
+    return false
+  }
+
+  // 检查其他必要的 API
+  if (typeof OffscreenCanvas === 'undefined') {
+    console.warn('OffscreenCanvas 不支持')
+    isSupported.value = false
+    return false
+  }
+
+  console.log('浏览器兼容性检查通过')
+  return true
+}
 
 // 计算属性
 const canvasWidth = computed(() => videoStore.videoResolution.width)
@@ -76,6 +113,8 @@ const activeClipsCount = computed(() => isFirstClipActive.value ? 1 : 0)
 
 // 监听第一个片段变化，加载视频
 watch(() => firstClip.value, async (newClip, oldClip) => {
+  if (!isSupported.value) return
+
   console.log('First clip changed:', {
     newClip: newClip ? { id: newClip.id, name: newClip.name, trackId: newClip.trackId, timelinePosition: newClip.timelinePosition } : null,
     oldClip: oldClip ? { id: oldClip.id, name: oldClip.name } : null
@@ -83,8 +122,8 @@ watch(() => firstClip.value, async (newClip, oldClip) => {
 
   // 如果有新的第一个片段且与之前不同，加载它
   if (newClip && (!oldClip || newClip.id !== oldClip.id)) {
-    console.log('Loading new first clip:', newClip.id)
-    await loadVideoForClip(newClip.id, newClip.file)
+    console.log('Loading new first clip with WebAV:', newClip.id)
+    await loadVideoClip(newClip)
 
     // 如果当前时间不在片段范围内，跳转到片段开始时间
     if (videoStore.currentTime < newClip.timelinePosition ||
@@ -95,222 +134,165 @@ watch(() => firstClip.value, async (newClip, oldClip) => {
   }
 
   // 如果没有第一个片段了，清理视频
-  if (!newClip && videoElement) {
-    console.log('No first clip, cleaning up')
-    cleanup()
+  if (!newClip && renderer) {
+    console.log('No first clip, cleaning up WebAV renderer')
+    renderer.clear()
   }
 }, { deep: true, immediate: true })
 
-// 监听当前时间变化 - 只在暂停时或用户拖拽时手动同步视频时间
+// 监听当前时间变化 - WebAV版本
 watch(() => videoStore.currentTime, () => {
-  if (!videoStore.isPlaying && videoElement && firstClip.value) {
-    // 暂停时手动同步视频时间
-    updateVideoTime()
-    renderFrame()
+  if (!videoStore.isPlaying && renderer && firstClip.value) {
+    // 暂停时预览指定时间的帧
+    const currentTime = videoStore.currentTime
+    const clipRelativeTime = currentTime - firstClip.value.timelinePosition
+    const targetVideoTime = (firstClip.value.startTime + clipRelativeTime * (firstClip.value.playbackRate || 1)) * 1e6 // 转换为微秒
+
+    renderer.previewFrame(Math.max(0, targetVideoTime))
   }
 })
 
-// 监听播放状态变化
-watch(() => videoStore.isPlaying, (isPlaying) => {
-  if (videoElement) {
-    if (isPlaying) {
-      videoElement.play()
-    } else {
-      videoElement.pause()
-    }
+// 监听播放状态变化 - WebAV版本
+watch(() => videoStore.isPlaying, async (isPlaying) => {
+  if (!renderer || !firstClip.value) return
+
+  if (isPlaying) {
+    const currentTime = videoStore.currentTime
+    const clipRelativeTime = currentTime - firstClip.value.timelinePosition
+    const startTime = (firstClip.value.startTime + clipRelativeTime * (firstClip.value.playbackRate || 1)) * 1e6 // 转换为微秒
+    const endTime = (firstClip.value.startTime + firstClip.value.duration * (firstClip.value.playbackRate || 1)) * 1e6
+
+    await renderer.play({ start: Math.max(0, startTime), end: endTime })
+  } else {
+    renderer.pause()
   }
 })
 
-// 加载视频片段
-const loadVideoForClip = async (clipId: string, file: File) => {
-  // 如果已经加载了相同的片段，跳过
-  if (videoElement && firstClip.value?.id === clipId && videoElement.src) return
+// 事件监听器是否已设置的标志
+let eventListenersSet = false
+
+// 使用WebAV加载视频片段
+const loadVideoClip = async (clip: VideoClip) => {
+  if (!renderer || !isSupported.value) return
 
   try {
     isLoading.value = true
-    console.log('Loading video for first clip:', clipId, file.name)
+    errorMessage.value = ''
+    console.log('WebAV: Loading video clip:', clip.name)
 
-    // 清理之前的视频
-    if (videoElement) {
-      videoElement.pause()
-      URL.revokeObjectURL(videoElement.src)
-    }
+    // 使用WebAV渲染器加载视频片段
+    await renderer.loadVideoClip(clip)
 
-    // 检查是否是从时间轴创建的片段（有现成的URL）
-    const clip = videoStore.clips.find(c => c.id === clipId)
-    let video: HTMLVideoElement
+    // 只在第一次加载时设置事件监听器，避免重复监听
+    const avCanvas = renderer.getAVCanvas()
+    if (avCanvas && !eventListenersSet) {
+      // 监听时间更新
+      avCanvas.on('timeupdate', (time: number) => {
+        if (videoStore.isPlaying && firstClip.value) {
+          // 将WebAV时间转换为时间轴时间
+          const videoTime = time / 1e6 // 转换为秒
+          const clipRelativeTime = (videoTime - firstClip.value.startTime) / (firstClip.value.playbackRate || 1)
+          const timelineTime = firstClip.value.timelinePosition + clipRelativeTime
 
-    if (clip && clip.url && file.size === 0) {
-      // 使用现有的URL创建视频元素（用于从媒体库拖拽的片段）
-      console.log('Using existing URL for clip:', clipId, clip.url)
-      video = await createVideoElementFromURL(clip.url)
-    } else {
-      // 使用文件创建视频元素（用于直接上传的文件）
-      video = await createVideoElement(file)
-    }
-
-    // 等待视频完全加载
-    await new Promise<void>((resolve) => {
-      const checkReady = () => {
-        if (video.readyState >= 2 && video.videoWidth > 0) {
-          console.log('Video loaded successfully:', {
-            clipId,
-            readyState: video.readyState,
-            dimensions: { width: video.videoWidth, height: video.videoHeight },
-            duration: video.duration
-          })
-          resolve()
-        } else {
-          setTimeout(checkReady, 100)
+          videoStore.setCurrentTime(timelineTime)
         }
-      }
-      checkReady()
-    })
+      })
 
-    videoElement = video
-    renderer?.setVideo(video)
+      // 监听播放状态
+      avCanvas.on('playing', () => {
+        // WebAV播放状态已在watch中处理
+        console.log('WebAV: 播放开始')
+      })
 
-    // 添加视频事件监听器 - 参考项目策略
-    video.addEventListener('timeupdate', handleTimeUpdate)
-    video.addEventListener('ended', handleVideoEnded)
-    video.addEventListener('error', (e) => console.error('Video error:', e))
+      avCanvas.on('paused', () => {
+        // WebAV暂停状态已在watch中处理
+        console.log('WebAV: 播放暂停')
+      })
 
-    // 设置视频元素引用到store
-    videoStore.setVideoElement(clipId, video)
+      eventListenersSet = true
+      console.log('WebAV: 事件监听器已设置')
+    }
 
+    console.log('WebAV: Video clip loaded successfully')
   } catch (error) {
-    console.error(`Failed to load video for clip ${clipId}:`, error)
+    console.error('WebAV: Failed to load video clip:', error)
+    if (error instanceof Error) {
+      errorMessage.value = error.message
+    } else {
+      errorMessage.value = '加载视频失败，请检查文件格式是否支持'
+    }
   } finally {
     isLoading.value = false
   }
 }
 
-// 更新视频时间 - 参考项目策略
-const updateVideoTime = async () => {
-  if (!videoElement || !firstClip.value) return
+// 清除错误信息
+const clearError = () => {
+  errorMessage.value = ''
+}
+
+// WebAV不需要手动渲染循环，它会自动处理渲染
+
+
+
+// 初始化WebAV渲染器
+const initRenderer = async () => {
+  if (!canvasContainer.value || !isSupported.value) return
 
   try {
-    const currentTime = videoStore.currentTime
-    const clipRelativeTime = currentTime - firstClip.value.timelinePosition
-    const targetVideoTime = firstClip.value.startTime + clipRelativeTime * (firstClip.value.playbackRate || 1)
-
-    // 使用 loadVideoAtTime 进行精确的时间设置
-    await loadVideoAtTime(videoElement, targetVideoTime)
+    console.log('初始化WebAV渲染器...')
+    renderer = new WebAVRenderer(canvasContainer.value)
+    await renderer.initAVCanvas()
+    console.log('WebAV渲染器初始化成功')
   } catch (error) {
-    console.error('Error updating video time:', error)
+    console.error('WebAV渲染器初始化失败:', error)
+    errorMessage.value = '渲染器初始化失败，请刷新页面重试'
   }
-}
-
-// 处理视频时间更新 - 参考项目策略
-const handleTimeUpdate = () => {
-  if (videoElement && videoStore.isPlaying && firstClip.value) {
-    // 将视频时间转换为时间轴时间
-    const videoTime = videoElement.currentTime
-    const clipRelativeTime = (videoTime - firstClip.value.startTime) / (firstClip.value.playbackRate || 1)
-    const timelineTime = firstClip.value.timelinePosition + clipRelativeTime
-
-    // 更新时间轴时间
-    videoStore.setCurrentTime(timelineTime)
-  }
-}
-
-// 处理视频结束
-const handleVideoEnded = () => {
-  videoStore.pause()
-}
-
-// 渲染帧 - 参考项目策略：只渲染，不强制同步时间
-const renderFrame = () => {
-  if (!renderer) return
-
-  // 只渲染第一个活跃的片段
-  const clipToRender = isFirstClipActive.value ? firstClip.value : null
-
-  renderer.drawVideoFrame(clipToRender)
-
-  // 计算FPS
-  frameCount++
-  const currentTime = performance.now()
-  if (currentTime - fpsUpdateTime >= 1000) {
-    fps.value = frameCount
-    frameCount = 0
-    fpsUpdateTime = currentTime
-  }
-}
-
-// 开始渲染循环 - 智能渲染策略
-const startRenderLoop = () => {
-  let lastRenderTime = 0
-
-  const render = (currentTime: number) => {
-    // 根据播放状态调整渲染频率
-    const isPlaying = videoStore.isPlaying
-    const renderInterval = isPlaying ? 33 : 100 // 播放时30fps，暂停时10fps
-
-    // 控制渲染频率
-    if (currentTime - lastRenderTime >= renderInterval) {
-      renderFrame()
-      lastRenderTime = currentTime
-    }
-
-    animationId = requestAnimationFrame(render)
-  }
-
-  animationId = requestAnimationFrame(render)
-}
-
-// 停止渲染循环
-const stopRenderLoop = () => {
-  if (animationId) {
-    cancelAnimationFrame(animationId)
-    animationId = null
-  }
-}
-
-
-
-// 初始化
-const initRenderer = () => {
-  if (!canvasRef.value) return
-
-  renderer = new SingleVideoRenderer(canvasRef.value)
-  startRenderLoop()
 }
 
 // 清理资源
 const cleanup = () => {
-  stopRenderLoop()
-
-  if (videoElement) {
-    videoElement.pause()
-    URL.revokeObjectURL(videoElement.src)
-    videoElement = null
+  if (animationId) {
+    cancelAnimationFrame(animationId)
+    animationId = null
   }
 
   renderer?.destroy()
   renderer = null
+  eventListenersSet = false // 重置事件监听器标志
 }
 
 // 生命周期
 onMounted(() => {
-  nextTick(() => {
-    console.log('MultiTrackVideoRenderer mounted, clips count:', videoStore.clips.length)
-    initRenderer()
-    // 立即加载现有的视频片段
-    loadExistingClips()
-  })
+  console.log('WebAV MultiTrackVideoRenderer mounted')
+
+  // 检查浏览器兼容性
+  checkBrowserSupport()
+
+  if (isSupported.value) {
+    nextTick(async () => {
+      await initRenderer()
+      // 立即加载现有的视频片段
+      loadExistingClips()
+    })
+  }
+
+  // 添加窗口resize监听器
+  window.addEventListener('resize', handleWindowResize)
 })
 
 // 加载现有的第一个视频片段
 const loadExistingClips = async () => {
   console.log('Loading existing clips:', videoStore.clips.length)
-  if (firstClip.value && !videoElement) {
-    console.log('Loading first clip:', firstClip.value.id, firstClip.value.name)
-    await loadVideoForClip(firstClip.value.id, firstClip.value.file)
+  if (firstClip.value && renderer) {
+    console.log('Loading first clip with WebAV:', firstClip.value.id, firstClip.value.name)
+    await loadVideoClip(firstClip.value)
   }
 }
 
 onUnmounted(() => {
+  // 移除窗口resize监听器
+  window.removeEventListener('resize', handleWindowResize)
   cleanup()
 })
 
@@ -318,13 +300,23 @@ onUnmounted(() => {
 watch([canvasWidth, canvasHeight], () => {
   nextTick(() => {
     renderer?.resize(canvasWidth.value, canvasHeight.value)
-    renderFrame()
   })
 })
 
+// 监听窗口大小变化
+const handleWindowResize = () => {
+  if (renderer) {
+    // 延迟调整，避免频繁调用
+    setTimeout(() => {
+      renderer?.resize(canvasWidth.value, canvasHeight.value)
+    }, 100)
+  }
+}
+
 // 调试方法
 const debugStatus = () => {
-  console.group('🎬 视频渲染器调试信息')
+  console.group('🎬 WebAV视频渲染器调试信息')
+  console.log('浏览器兼容性:', isSupported.value)
   console.log('总片段数:', videoStore.clips.length)
   console.log('所有片段:', videoStore.clips.map(c => ({
     id: c.id,
@@ -341,14 +333,9 @@ const debugStatus = () => {
   } : null)
   console.log('当前时间:', videoStore.currentTime)
   console.log('第一个片段是否活跃:', isFirstClipActive.value)
-  console.log('视频元素状态:', videoElement ? {
-    readyState: videoElement.readyState,
-    currentTime: videoElement.currentTime,
-    duration: videoElement.duration,
-    videoWidth: videoElement.videoWidth,
-    videoHeight: videoElement.videoHeight
-  } : '无视频元素')
-  console.log('渲染器状态:', !!renderer)
+  console.log('WebAV渲染器状态:', !!renderer)
+  console.log('AVCanvas状态:', renderer?.getAVCanvas() ? '已初始化' : '未初始化')
+  console.log('错误信息:', errorMessage.value || '无')
   console.groupEnd()
 }
 </script>
@@ -364,11 +351,11 @@ const debugStatus = () => {
   background-color: #2a2a2a;
 }
 
-.video-canvas {
-  max-width: 100%;
-  max-height: 100%;
-  object-fit: contain;
-  background-color: #000;
+.webav-canvas-container {
+  width: 100%;
+  height: 100%;
+  background-color: #2a2a2a;
+  /* WebAV渲染器内部会处理尺寸和比例 */
 }
 
 .loading-overlay {
@@ -398,6 +385,91 @@ const debugStatus = () => {
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
+}
+
+.compatibility-warning {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  padding: 40px;
+  background: #fff3cd;
+  border: 1px solid #ffeaa7;
+  border-radius: 8px;
+  z-index: 10;
+}
+
+.warning-content {
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.warning-icon {
+  font-size: 3rem;
+  margin-bottom: 15px;
+}
+
+.compatibility-warning h3 {
+  color: #856404;
+  margin: 0 0 15px 0;
+  font-size: 1.5rem;
+}
+
+.compatibility-warning p {
+  color: #856404;
+  margin: 8px 0;
+  line-height: 1.5;
+}
+
+.error-message {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  padding: 30px;
+  background: #f8d7da;
+  border: 1px solid #f5c6cb;
+  border-radius: 8px;
+  z-index: 10;
+}
+
+.error-content {
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.error-icon {
+  font-size: 3rem;
+  margin-bottom: 15px;
+}
+
+.error-message h3 {
+  color: #721c24;
+  margin: 0 0 15px 0;
+  font-size: 1.5rem;
+}
+
+.error-message p {
+  color: #721c24;
+  margin: 8px 0 20px 0;
+  line-height: 1.5;
+}
+
+.retry-btn {
+  background: #dc3545;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: background 0.3s ease;
+}
+
+.retry-btn:hover {
+  background: #c82333;
 }
 
 .performance-info {
