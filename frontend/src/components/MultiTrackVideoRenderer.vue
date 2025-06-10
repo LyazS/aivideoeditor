@@ -140,13 +140,43 @@ watch(() => firstClip.value, async (newClip, oldClip) => {
   }
 }, { deep: true, immediate: true })
 
+// 监听第一个片段的属性变化，实时更新WebAV
+watch(() => firstClip.value ? {
+  transform: firstClip.value.transform,
+  playbackRate: firstClip.value.playbackRate,
+  zIndex: firstClip.value.zIndex
+} : null, (newProps) => {
+  if (newProps && renderer && firstClip.value) {
+    console.log('First clip properties changed, updating WebAV:', newProps)
+    renderer.updateClipProperties(firstClip.value)
+  }
+}, { deep: true })
+
+// 监听时间轴选中状态变化，同步到WebAV画布
+watch(() => videoStore.selectedClipId, (selectedClipId) => {
+  if (renderer && firstClip.value) {
+    // 如果选中的是当前显示的片段，在WebAV中选中它
+    const shouldSelect = selectedClipId === firstClip.value.id
+    console.log('时间轴选中状态变化，同步到WebAV:', { selectedClipId, firstClipId: firstClip.value.id, shouldSelect })
+    renderer.setCurrentSpriteSelected(shouldSelect)
+  }
+})
+
 // 监听当前时间变化 - WebAV版本
 watch(() => videoStore.currentTime, () => {
   if (!videoStore.isPlaying && renderer && firstClip.value) {
     // 暂停时预览指定时间的帧
     const currentTime = videoStore.currentTime
     const clipRelativeTime = currentTime - firstClip.value.timelinePosition
-    const targetVideoTime = (firstClip.value.startTime + clipRelativeTime * (firstClip.value.playbackRate || 1)) * 1e6 // 转换为微秒
+    const playbackRate = firstClip.value.playbackRate || 1
+    const targetVideoTime = (firstClip.value.startTime + clipRelativeTime * playbackRate) * 1e6 // 转换为微秒
+
+    console.log('WebAV预览帧:', {
+      currentTime,
+      clipRelativeTime,
+      playbackRate,
+      targetVideoTime: targetVideoTime / 1e6
+    })
 
     renderer.previewFrame(Math.max(0, targetVideoTime))
   }
@@ -159,8 +189,25 @@ watch(() => videoStore.isPlaying, async (isPlaying) => {
   if (isPlaying) {
     const currentTime = videoStore.currentTime
     const clipRelativeTime = currentTime - firstClip.value.timelinePosition
-    const startTime = (firstClip.value.startTime + clipRelativeTime * (firstClip.value.playbackRate || 1)) * 1e6 // 转换为微秒
-    const endTime = (firstClip.value.startTime + firstClip.value.duration * (firstClip.value.playbackRate || 1)) * 1e6
+    const playbackRate = firstClip.value.playbackRate || 1
+
+    // 计算视频内的实际播放时间（考虑播放速度）
+    const videoStartTime = firstClip.value.startTime + clipRelativeTime * playbackRate
+    const videoEndTime = firstClip.value.startTime + firstClip.value.duration * playbackRate
+
+    // 转换为微秒
+    const startTime = videoStartTime * 1e6
+    const endTime = videoEndTime * 1e6
+
+    console.log('WebAV播放参数:', {
+      currentTime,
+      clipRelativeTime,
+      playbackRate,
+      videoStartTime,
+      videoEndTime,
+      startTimeMicros: startTime,
+      endTimeMicros: endTime
+    })
 
     await renderer.play({ start: Math.max(0, startTime), end: endTime })
   } else {
@@ -179,6 +226,26 @@ const loadVideoClip = async (clip: VideoClip) => {
     isLoading.value = true
     errorMessage.value = ''
     console.log('WebAV: Loading video clip:', clip.name)
+
+    // 设置属性变化回调，实现从WebAV到属性面板的同步
+    renderer.setPropsChangeCallback((transform) => {
+      console.log('WebAV属性变化，同步到store:', transform)
+      if (firstClip.value) {
+        videoStore.updateClipTransform(firstClip.value.id, transform)
+      }
+    })
+
+    // 设置sprite选中状态变化回调，实现从WebAV到时间轴的选中同步
+    renderer.setSpriteSelectCallback((clipId) => {
+      console.log('WebAV选中状态变化，同步到时间轴:', clipId)
+      videoStore.selectClip(clipId)
+    })
+
+    // 设置视频元数据回调，保存原始分辨率信息
+    renderer.setVideoMetaCallback((clipId, width, height) => {
+      console.log('WebAV视频元数据获取，保存原始分辨率:', { clipId, width, height })
+      videoStore.updateClipOriginalResolution(clipId, width, height)
+    })
 
     // 使用WebAV渲染器加载视频片段
     await renderer.loadVideoClip(clip)

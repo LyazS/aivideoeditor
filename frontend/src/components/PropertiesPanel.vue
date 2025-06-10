@@ -36,6 +36,10 @@
             <label>位置</label>
             <span class="property-value">{{ formatDuration(selectedClip.timelinePosition) }}</span>
           </div>
+          <div class="property-item">
+            <label>原始分辨率</label>
+            <span class="property-value">{{ formatResolution(selectedClip) }}</span>
+          </div>
         </div>
 
         <!-- 播放设置 -->
@@ -477,7 +481,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, nextTick } from 'vue'
-import { useVideoStore } from '../stores/counter'
+import { useVideoStore, type VideoClip } from '../stores/counter'
 
 const videoStore = useVideoStore()
 
@@ -975,6 +979,14 @@ const formatDuration = (seconds: number): string => {
   const secs = Math.floor(seconds % 60)
   const ms = Math.floor((seconds % 1) * 1000)
   return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}.${ms.toString().padStart(3, '0')}`
+}
+
+// 格式化分辨率
+const formatResolution = (clip: VideoClip): string => {
+  if (clip.originalWidth && clip.originalHeight) {
+    return `${clip.originalWidth} × ${clip.originalHeight}`
+  }
+  return '未知'
 }
 
 // 格式化文件大小

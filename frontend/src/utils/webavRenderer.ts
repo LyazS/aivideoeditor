@@ -12,6 +12,11 @@ export class WebAVRenderer {
   private currentSprite: VisibleSprite | null = null
   private currentClip: MP4Clip | null = null
   private isDestroyed = false
+  private baseVideoSize: { width: number; height: number; x: number; y: number } | null = null
+  private onPropsChangeCallback: ((transform: VideoTransform) => void) | null = null
+  private onSpriteSelectCallback: ((clipId: string | null) => void) | null = null
+  private onVideoMetaCallback: ((clipId: string, width: number, height: number) => void) | null = null
+  private currentClipId: string | null = null
 
   constructor(container: HTMLElement) {
     this.container = container
@@ -60,6 +65,21 @@ export class WebAVRenderer {
         width: 800,
         height: 450,
         bgColor: '#000000',
+      })
+
+      // 监听sprite选中状态变化
+      this.avCanvas.on('activeSpriteChange', (activeSprite) => {
+        if (this.onSpriteSelectCallback) {
+          // 如果有活跃的sprite且是当前的sprite，选中对应的clip
+          if (activeSprite === this.currentSprite && this.currentClipId) {
+            console.log('WebAV: Sprite被选中，同步选中时间轴片段:', this.currentClipId)
+            this.onSpriteSelectCallback(this.currentClipId)
+          } else if (!activeSprite) {
+            // 如果没有活跃的sprite，取消选中
+            console.log('WebAV: Sprite取消选中，同步取消时间轴选中')
+            this.onSpriteSelectCallback(null)
+          }
+        }
       })
 
       console.log('WebAV AVCanvas 初始化成功')
@@ -154,6 +174,11 @@ export class WebAVRenderer {
       await mp4Clip.ready
       console.log('WebAV MP4Clip 准备完成:', mp4Clip.meta)
 
+      // 调用视频元数据回调，保存原始分辨率
+      if (this.onVideoMetaCallback) {
+        this.onVideoMetaCallback(clip.id, mp4Clip.meta.width, mp4Clip.meta.height)
+      }
+
       // 创建VisibleSprite
       const sprite = new VisibleSprite(mp4Clip)
 
@@ -166,9 +191,21 @@ export class WebAVRenderer {
       // 添加到画布
       await this.avCanvas.addSprite(sprite)
 
+      // 监听sprite属性变化，同步回属性面板
+      sprite.on('propsChange', (changedProps) => {
+        if (this.onPropsChangeCallback && this.baseVideoSize) {
+          console.log('WebAV: Sprite属性变化', changedProps)
+
+          // 将WebAV的sprite属性转换为我们的VideoTransform格式
+          const transform = this.convertSpriteToTransform(sprite)
+          this.onPropsChangeCallback(transform)
+        }
+      })
+
       // 保存引用
       this.currentClip = mp4Clip
       this.currentSprite = sprite
+      this.currentClipId = clip.id
 
       console.log('WebAV视频片段加载完成')
     } catch (error) {
@@ -214,6 +251,14 @@ export class WebAVRenderer {
       sprite.rect.x = (canvasWidth - displayWidth) / 2
       sprite.rect.y = (canvasHeight - displayHeight) / 2
 
+      // 保存基础尺寸，用于变换计算
+      this.baseVideoSize = {
+        width: displayWidth,
+        height: displayHeight,
+        x: sprite.rect.x,
+        y: sprite.rect.y
+      }
+
       console.log('计算后的显示尺寸:', {
         width: displayWidth,
         height: displayHeight,
@@ -239,42 +284,36 @@ export class WebAVRenderer {
     try {
       const { transform } = clip
 
-      // 保存当前的尺寸和位置（由setVideoSize设置的正确比例）
-      const currentW = sprite.rect.w
-      const currentH = sprite.rect.h
-      const currentX = sprite.rect.x
-      const currentY = sprite.rect.y
+      // 获取基础尺寸（由setVideoSize设置的正确比例）
+      const baseWidth = this.baseVideoSize?.width || sprite.rect.w
+      const baseHeight = this.baseVideoSize?.height || sprite.rect.h
+      const baseX = this.baseVideoSize?.x || sprite.rect.x
+      const baseY = this.baseVideoSize?.y || sprite.rect.y
 
-      // 只有当transform有明确的位置设置时才覆盖
-      if (transform.x !== undefined && transform.x !== 0) {
-        sprite.rect.x = transform.x
-      }
-      if (transform.y !== undefined && transform.y !== 0) {
-        sprite.rect.y = transform.y
-      }
+      // 应用位置变换（相对于画布中心）
+      const canvasWidth = 800
+      const canvasHeight = 450
+      const centerX = canvasWidth / 2
+      const centerY = canvasHeight / 2
 
-      // 应用缩放（基于当前正确的尺寸）
-      if (transform.scaleX && transform.scaleX !== 1) {
-        sprite.rect.w = currentW * transform.scaleX
-      }
-      if (transform.scaleY && transform.scaleY !== 1) {
-        sprite.rect.h = currentH * transform.scaleY
-      }
+      sprite.rect.x = baseX + transform.x
+      sprite.rect.y = baseY + transform.y
+
+      // 应用缩放（基于基础尺寸）
+      sprite.rect.w = baseWidth * transform.scaleX
+      sprite.rect.h = baseHeight * transform.scaleY
 
       // 设置旋转（WebAV使用弧度）
-      if (transform.rotation) {
-        sprite.rect.angle = (transform.rotation * Math.PI) / 180
-      }
+      sprite.rect.angle = (transform.rotation * Math.PI) / 180
 
       // 设置透明度
-      if (transform.opacity !== undefined) {
-        sprite.opacity = transform.opacity
-      }
+      sprite.opacity = transform.opacity
 
       // 设置层级
       sprite.zIndex = clip.zIndex
 
       console.log('WebAV: 变换属性已应用', {
+        transform: transform,
         position: { x: sprite.rect.x, y: sprite.rect.y },
         size: { w: sprite.rect.w, h: sprite.rect.h },
         rotation: sprite.rect.angle,
@@ -302,6 +341,96 @@ export class WebAVRenderer {
     // WebAV的渲染是自动的，这里主要用于更新变换属性
     if (this.currentSprite && clip) {
       this.applyTransform(this.currentSprite, clip)
+    }
+  }
+
+  /**
+   * 更新片段属性 - 新增方法用于实时属性同步
+   * @param clip 要更新的片段
+   */
+  updateClipProperties(clip: VideoClip) {
+    if (!this.avCanvas || this.isDestroyed || !this.currentSprite) return
+
+    // 应用最新的变换属性
+    this.applyTransform(this.currentSprite, clip)
+  }
+
+  /**
+   * 设置属性变化回调函数
+   * @param callback 当WebAV中的sprite属性变化时调用的回调函数
+   */
+  setPropsChangeCallback(callback: (transform: VideoTransform) => void) {
+    this.onPropsChangeCallback = callback
+  }
+
+  /**
+   * 设置sprite选中状态变化回调函数
+   * @param callback 当WebAV中的sprite选中状态变化时调用的回调函数
+   */
+  setSpriteSelectCallback(callback: (clipId: string | null) => void) {
+    this.onSpriteSelectCallback = callback
+  }
+
+  /**
+   * 设置视频元数据回调函数
+   * @param callback 当获取到视频原始分辨率时调用的回调函数
+   */
+  setVideoMetaCallback(callback: (clipId: string, width: number, height: number) => void) {
+    this.onVideoMetaCallback = callback
+  }
+
+  /**
+   * 设置当前sprite的选中状态
+   * @param selected 是否选中
+   */
+  setCurrentSpriteSelected(selected: boolean) {
+    if (!this.avCanvas || this.isDestroyed) return
+
+    if (selected && this.currentSprite) {
+      // 选中当前sprite
+      this.avCanvas.activeSprite = this.currentSprite
+      console.log('WebAV: 设置当前sprite为选中状态')
+    } else {
+      // 取消选中
+      this.avCanvas.activeSprite = null
+      console.log('WebAV: 取消sprite选中状态')
+    }
+  }
+
+  /**
+   * 将WebAV的sprite属性转换为VideoTransform格式
+   */
+  private convertSpriteToTransform(sprite: VisibleSprite): VideoTransform {
+    if (!this.baseVideoSize) {
+      // 如果没有基础尺寸，返回默认值
+      return {
+        x: 0,
+        y: 0,
+        scaleX: 1,
+        scaleY: 1,
+        rotation: 0,
+        opacity: 1
+      }
+    }
+
+    // 计算相对于基础位置的偏移
+    const x = sprite.rect.x - this.baseVideoSize.x
+    const y = sprite.rect.y - this.baseVideoSize.y
+
+    // 计算相对于基础尺寸的缩放
+    const scaleX = sprite.rect.w / this.baseVideoSize.width
+    const scaleY = sprite.rect.h / this.baseVideoSize.height
+
+    // 将弧度转换为角度
+    const rotation = (sprite.rect.angle * 180) / Math.PI
+
+    return {
+      x: Math.round(x * 100) / 100, // 保留2位小数
+      y: Math.round(y * 100) / 100,
+      scaleX: Math.round(scaleX * 1000) / 1000, // 保留3位小数
+      scaleY: Math.round(scaleY * 1000) / 1000,
+      rotation: Math.round(rotation * 100) / 100,
+      opacity: Math.round(sprite.opacity * 1000) / 1000
     }
   }
 

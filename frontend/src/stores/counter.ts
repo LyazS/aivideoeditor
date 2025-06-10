@@ -25,6 +25,8 @@ export interface VideoClip {
   trackId: number // 所属轨道ID
   transform: VideoTransform // 视频变换属性
   zIndex: number // 层级顺序
+  originalWidth?: number // 视频原始宽度
+  originalHeight?: number // 视频原始高度
 }
 
 export interface VideoResolution {
@@ -701,6 +703,16 @@ export const useVideoStore = defineStore('video', () => {
     }
   }
 
+  // 更新片段原始分辨率
+  function updateClipOriginalResolution(clipId: string, width: number, height: number) {
+    const clip = clips.value.find((c) => c.id === clipId)
+    if (clip) {
+      clip.originalWidth = width
+      clip.originalHeight = height
+      console.log(`片段 ${clip.name} 原始分辨率已更新: ${width}x${height}`)
+    }
+  }
+
   // 视频元素引用映射（用于获取原始分辨率）
   const videoElementsMap = new Map<string, HTMLVideoElement>()
 
@@ -839,6 +851,7 @@ export const useVideoStore = defineStore('video', () => {
     updateClipName,
     updateClipPlaybackRate,
     updateClipTransform,
+    updateClipOriginalResolution,
     updateClipZIndex,
     selectClip,
     splitClipAtTime,
