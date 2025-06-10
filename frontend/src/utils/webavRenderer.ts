@@ -17,10 +17,30 @@ export class WebAVRenderer {
   private onSpriteSelectCallback: ((clipId: string | null) => void) | null = null
   private onVideoMetaCallback: ((clipId: string, width: number, height: number) => void) | null = null
   private currentClipId: string | null = null
+  private canvasWidth: number = 1920
+  private canvasHeight: number = 1080
 
   constructor(container: HTMLElement) {
     this.container = container
     // 不在构造函数中初始化，改为在外部调用
+  }
+
+  /**
+   * 设置画布尺寸
+   */
+  setCanvasSize(width: number, height: number) {
+    const oldWidth = this.canvasWidth
+    const oldHeight = this.canvasHeight
+    this.canvasWidth = width
+    this.canvasHeight = height
+
+    console.log('📏 WebAV画布尺寸更新:')
+    console.log('  - 旧尺寸:', { width: oldWidth, height: oldHeight })
+    console.log('  - 新尺寸:', { width, height })
+    console.log('  - 宽高比变化:', {
+      old: (oldWidth / oldHeight).toFixed(3),
+      new: (width / height).toFixed(3)
+    })
   }
 
   /**
@@ -42,11 +62,11 @@ export class WebAVRenderer {
         background: #2a2a2a;
       `
 
-      // 创建实际的canvas容器，保持固定宽高比
+      // 创建实际的canvas容器，使用动态尺寸
       const canvasContainer = document.createElement('div')
       canvasContainer.style.cssText = `
-        width: 800px;
-        height: 450px;
+        width: ${this.canvasWidth}px;
+        height: ${this.canvasHeight}px;
         max-width: 100%;
         max-height: 100%;
         background: transparent;
@@ -60,12 +80,28 @@ export class WebAVRenderer {
       canvasWrapper.appendChild(canvasContainer)
       this.container.appendChild(canvasWrapper)
 
-      // 创建AVCanvas
+      // 创建AVCanvas，使用动态尺寸
       this.avCanvas = new AVCanvas(canvasContainer, {
-        width: 800,
-        height: 450,
+        width: this.canvasWidth,
+        height: this.canvasHeight,
         bgColor: '#000000',
       })
+
+      // 输出WebAV画布的实际尺寸信息
+      console.log('🎬 WebAV画布初始化完成:')
+      console.log('  - 设置的画布尺寸:', { width: this.canvasWidth, height: this.canvasHeight })
+      console.log('  - AVCanvas实例:', this.avCanvas)
+
+      // 获取实际的canvas元素尺寸
+      const actualCanvas = canvasContainer.querySelector('canvas')
+      if (actualCanvas) {
+        console.log('  - 实际Canvas元素尺寸:', {
+          width: actualCanvas.width,
+          height: actualCanvas.height,
+          clientWidth: actualCanvas.clientWidth,
+          clientHeight: actualCanvas.clientHeight
+        })
+      }
 
       // 监听sprite选中状态变化
       this.avCanvas.on('activeSpriteChange', (activeSprite) => {
@@ -97,18 +133,18 @@ export class WebAVRenderer {
     const containerWidth = containerRect.width
     const containerHeight = containerRect.height
 
-    const targetAspectRatio = 800 / 450 // 16:9 比例
+    const targetAspectRatio = this.canvasWidth / this.canvasHeight // 使用动态宽高比
     const containerAspectRatio = containerWidth / containerHeight
 
     let canvasWidth, canvasHeight
 
     if (containerAspectRatio > targetAspectRatio) {
       // 容器比目标宽，以高度为准
-      canvasHeight = Math.min(containerHeight * 0.9, 450)
+      canvasHeight = Math.min(containerHeight * 0.9, this.canvasHeight)
       canvasWidth = canvasHeight * targetAspectRatio
     } else {
       // 容器比目标高，以宽度为准
-      canvasWidth = Math.min(containerWidth * 0.9, 800)
+      canvasWidth = Math.min(containerWidth * 0.9, this.canvasWidth)
       canvasHeight = canvasWidth / targetAspectRatio
     }
 
@@ -174,6 +210,13 @@ export class WebAVRenderer {
       await mp4Clip.ready
       console.log('WebAV MP4Clip 准备完成:', mp4Clip.meta)
 
+      // 输出详细的视频信息
+      console.log('🎥 视频文件详细信息:')
+      console.log('  - 视频原始尺寸:', { width: mp4Clip.meta.width, height: mp4Clip.meta.height })
+      console.log('  - 视频时长:', mp4Clip.meta.duration / 1e6, '秒')
+      console.log('  - 视频比特率:', mp4Clip.meta.bitrate)
+      console.log('  - 完整meta信息:', mp4Clip.meta)
+
       // 调用视频元数据回调，保存原始分辨率
       if (this.onVideoMetaCallback) {
         this.onVideoMetaCallback(clip.id, mp4Clip.meta.width, mp4Clip.meta.height)
@@ -215,56 +258,51 @@ export class WebAVRenderer {
   }
 
   /**
-   * 设置视频在画布中的尺寸，保持原始宽高比
+   * 设置视频在画布中的尺寸，使用原始分辨率作为基础
    */
   private setVideoSize(sprite: VisibleSprite, mp4Clip: MP4Clip) {
     try {
       const videoWidth = mp4Clip.meta.width
       const videoHeight = mp4Clip.meta.height
-      const canvasWidth = 800
-      const canvasHeight = 450
 
-      console.log('视频原始尺寸:', { width: videoWidth, height: videoHeight })
-      console.log('画布尺寸:', { width: canvasWidth, height: canvasHeight })
+      console.log('📐 WebAV尺寸设置详情:')
+      console.log('  - 视频原始尺寸:', { width: videoWidth, height: videoHeight })
+      console.log('  - WebAV画布尺寸:', { width: this.canvasWidth, height: this.canvasHeight })
+      console.log('  - 视频宽高比:', (videoWidth / videoHeight).toFixed(3))
+      console.log('  - 画布宽高比:', (this.canvasWidth / this.canvasHeight).toFixed(3))
 
-      // 计算视频和画布的宽高比
-      const videoAspect = videoWidth / videoHeight
-      const canvasAspect = canvasWidth / canvasHeight
+      // 直接使用视频原始尺寸作为基础尺寸（缩放1.0时的尺寸）
+      const displayWidth = videoWidth
+      const displayHeight = videoHeight
 
-      let displayWidth, displayHeight
-
-      if (videoAspect > canvasAspect) {
-        // 视频比画布宽，以画布宽度为准
-        displayWidth = Math.min(canvasWidth * 0.9, videoWidth)
-        displayHeight = displayWidth / videoAspect
-      } else {
-        // 视频比画布高，以画布高度为准
-        displayHeight = Math.min(canvasHeight * 0.9, videoHeight)
-        displayWidth = displayHeight * videoAspect
-      }
-
-      // 设置sprite的尺寸
+      // 设置sprite的尺寸为原始尺寸
       sprite.rect.w = displayWidth
       sprite.rect.h = displayHeight
 
-      // 居中显示
-      sprite.rect.x = (canvasWidth - displayWidth) / 2
-      sprite.rect.y = (canvasHeight - displayHeight) / 2
+      // WebAV使用画布中心为原点的坐标系统，所以位置(0,0)应该在画布中心
+      // 当用户设置位置为(0,0)时，视频中心应该在画布中心
+      sprite.rect.x = this.canvasWidth / 2 - displayWidth / 2
+      sprite.rect.y = this.canvasHeight / 2 - displayHeight / 2
 
-      // 保存基础尺寸，用于变换计算
+      // 保存基础尺寸和基础位置（画布中心对应的左上角坐标）
       this.baseVideoSize = {
         width: displayWidth,
         height: displayHeight,
-        x: sprite.rect.x,
+        x: sprite.rect.x,  // 基础位置：视频左上角在画布中心时的坐标
         y: sprite.rect.y
       }
 
-      console.log('计算后的显示尺寸:', {
+      console.log('  - Sprite设置结果:')
+      console.log('    * 尺寸 (w×h):', displayWidth, '×', displayHeight)
+      console.log('    * 位置 (x,y):', sprite.rect.x.toFixed(1), ',', sprite.rect.y.toFixed(1))
+      console.log('    * 是否超出画布:', {
+        width: displayWidth > this.canvasWidth ? '超出' : '适合',
+        height: displayHeight > this.canvasHeight ? '超出' : '适合'
+      })
+      console.log('    * 缩放1.0时的实际显示尺寸:', {
         width: displayWidth,
         height: displayHeight,
-        x: sprite.rect.x,
-        y: sprite.rect.y,
-        aspectRatio: displayWidth / displayHeight
+        aspectRatio: (displayWidth / displayHeight).toFixed(3)
       })
 
     } catch (error) {
@@ -272,8 +310,8 @@ export class WebAVRenderer {
       // 使用默认尺寸
       sprite.rect.w = 640
       sprite.rect.h = 360
-      sprite.rect.x = (800 - 640) / 2
-      sprite.rect.y = (450 - 360) / 2
+      sprite.rect.x = (this.canvasWidth - 640) / 2
+      sprite.rect.y = (this.canvasHeight - 360) / 2
     }
   }
 
@@ -287,21 +325,21 @@ export class WebAVRenderer {
       // 获取基础尺寸（由setVideoSize设置的正确比例）
       const baseWidth = this.baseVideoSize?.width || sprite.rect.w
       const baseHeight = this.baseVideoSize?.height || sprite.rect.h
-      const baseX = this.baseVideoSize?.x || sprite.rect.x
-      const baseY = this.baseVideoSize?.y || sprite.rect.y
-
-      // 应用位置变换（相对于画布中心）
-      const canvasWidth = 800
-      const canvasHeight = 450
-      const centerX = canvasWidth / 2
-      const centerY = canvasHeight / 2
-
-      sprite.rect.x = baseX + transform.x
-      sprite.rect.y = baseY + transform.y
 
       // 应用缩放（基于基础尺寸）
-      sprite.rect.w = baseWidth * transform.scaleX
-      sprite.rect.h = baseHeight * transform.scaleY
+      const scaledWidth = baseWidth * transform.scaleX
+      const scaledHeight = baseHeight * transform.scaleY
+      sprite.rect.w = scaledWidth
+      sprite.rect.h = scaledHeight
+
+      // 应用位置变换（以画布中心为原点）
+      // 用户的(0,0)对应画布中心，视频中心应该在画布中心
+      const centerX = this.canvasWidth / 2
+      const centerY = this.canvasHeight / 2
+
+      // 计算视频左上角的位置：画布中心 + 用户偏移 - 视频尺寸的一半
+      sprite.rect.x = centerX + transform.x - scaledWidth / 2
+      sprite.rect.y = centerY + transform.y - scaledHeight / 2
 
       // 设置旋转（WebAV使用弧度）
       sprite.rect.angle = (transform.rotation * Math.PI) / 180
@@ -312,13 +350,26 @@ export class WebAVRenderer {
       // 设置层级
       sprite.zIndex = clip.zIndex
 
-      console.log('WebAV: 变换属性已应用', {
-        transform: transform,
-        position: { x: sprite.rect.x, y: sprite.rect.y },
-        size: { w: sprite.rect.w, h: sprite.rect.h },
-        rotation: sprite.rect.angle,
+      console.log('🔄 WebAV变换属性已应用:')
+      console.log('  - 用户设置的变换:', {
+        scaleX: transform.scaleX,
+        scaleY: transform.scaleY,
+        x: transform.x,
+        y: transform.y,
+        rotation: transform.rotation,
+        opacity: transform.opacity
+      })
+      console.log('  - Sprite最终状态:', {
+        position: { x: sprite.rect.x.toFixed(1), y: sprite.rect.y.toFixed(1) },
+        size: { w: sprite.rect.w.toFixed(1), h: sprite.rect.h.toFixed(1) },
+        rotation: (sprite.rect.angle * 180 / Math.PI).toFixed(1) + '°',
         opacity: sprite.opacity,
         zIndex: sprite.zIndex
+      })
+      console.log('  - 实际显示尺寸 (考虑缩放):', {
+        width: sprite.rect.w,
+        height: sprite.rect.h,
+        aspectRatio: (sprite.rect.w / sprite.rect.h).toFixed(3)
       })
     } catch (error) {
       console.error('WebAV: 应用变换属性失败:', error)
@@ -413,13 +464,23 @@ export class WebAVRenderer {
       }
     }
 
-    // 计算相对于基础位置的偏移
-    const x = sprite.rect.x - this.baseVideoSize.x
-    const y = sprite.rect.y - this.baseVideoSize.y
-
-    // 计算相对于基础尺寸的缩放
+    // 计算缩放
     const scaleX = sprite.rect.w / this.baseVideoSize.width
     const scaleY = sprite.rect.h / this.baseVideoSize.height
+
+    // 计算位置偏移（以画布中心为原点）
+    // sprite.rect.x/y 是视频左上角的位置
+    // 我们需要计算视频中心相对于画布中心的偏移
+    const centerX = this.canvasWidth / 2
+    const centerY = this.canvasHeight / 2
+
+    // 视频中心位置 = 视频左上角 + 视频尺寸的一半
+    const videoCenterX = sprite.rect.x + sprite.rect.w / 2
+    const videoCenterY = sprite.rect.y + sprite.rect.h / 2
+
+    // 相对于画布中心的偏移
+    const x = videoCenterX - centerX
+    const y = videoCenterY - centerY
 
     // 将弧度转换为角度
     const rotation = (sprite.rect.angle * 180) / Math.PI
@@ -453,6 +514,10 @@ export class WebAVRenderer {
   async resize(width: number, height: number) {
     if (this.isDestroyed) return
 
+    console.log('🔄 WebAV画布resize调用:')
+    console.log('  - 请求的尺寸:', { width, height })
+    console.log('  - 当前内部尺寸:', { width: this.canvasWidth, height: this.canvasHeight })
+
     // 查找canvas容器
     const canvasWrapper = this.container.querySelector('div')
     const canvasContainer = canvasWrapper?.querySelector('div')
@@ -460,7 +525,19 @@ export class WebAVRenderer {
     if (canvasContainer) {
       // 更新canvas容器尺寸，保持宽高比
       this.updateCanvasSize(canvasContainer as HTMLElement)
+
+      // 输出更新后的实际尺寸
+      const actualCanvas = canvasContainer.querySelector('canvas')
+      if (actualCanvas) {
+        console.log('  - 更新后的Canvas尺寸:', {
+          width: actualCanvas.width,
+          height: actualCanvas.height,
+          clientWidth: actualCanvas.clientWidth,
+          clientHeight: actualCanvas.clientHeight
+        })
+      }
     } else {
+      console.log('  - 容器未找到，重新初始化WebAV')
       // 如果找不到容器，重新初始化
       if (this.avCanvas) {
         this.avCanvas.destroy()
@@ -503,6 +580,53 @@ export class WebAVRenderer {
    */
   getAVCanvas(): AVCanvas | null {
     return this.avCanvas
+  }
+
+  /**
+   * 获取WebAV的详细状态信息
+   */
+  getDetailedStatus() {
+    if (!this.avCanvas || this.isDestroyed) {
+      return {
+        status: 'destroyed',
+        message: 'WebAV渲染器已销毁或未初始化'
+      }
+    }
+
+    const canvasElement = this.container.querySelector('canvas')
+
+    return {
+      status: 'active',
+      canvas: {
+        configured: { width: this.canvasWidth, height: this.canvasHeight },
+        actual: canvasElement ? {
+          width: canvasElement.width,
+          height: canvasElement.height,
+          clientWidth: canvasElement.clientWidth,
+          clientHeight: canvasElement.clientHeight,
+          style: {
+            width: canvasElement.style.width,
+            height: canvasElement.style.height
+          }
+        } : null
+      },
+      currentSprite: this.currentSprite ? {
+        rect: {
+          x: this.currentSprite.rect.x,
+          y: this.currentSprite.rect.y,
+          w: this.currentSprite.rect.w,
+          h: this.currentSprite.rect.h,
+          angle: this.currentSprite.rect.angle
+        },
+        opacity: this.currentSprite.opacity,
+        zIndex: this.currentSprite.zIndex
+      } : null,
+      currentClip: this.currentClip ? {
+        meta: this.currentClip.meta,
+        duration: this.currentClip.meta.duration / 1e6 + '秒'
+      } : null,
+      baseVideoSize: this.baseVideoSize
+    }
   }
 
   /**

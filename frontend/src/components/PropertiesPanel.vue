@@ -1009,14 +1009,38 @@ const getCurrentResolution = () => {
     selectedClip.value.transform.scaleY
   )
 
-  return { width: Math.round(width), height: Math.round(height) }
+  const result = { width: Math.round(width), height: Math.round(height) }
+
+  console.log('📊 属性面板分辨率计算:')
+  console.log('  - 片段ID:', selectedClip.value.id)
+  console.log('  - 当前缩放:', {
+    scaleX: selectedClip.value.transform.scaleX,
+    scaleY: selectedClip.value.transform.scaleY
+  })
+  console.log('  - 计算出的显示尺寸:', { width, height })
+  console.log('  - 四舍五入后的分辨率:', result)
+
+  return result
 }
 
 // 更新分辨率显示
 const updateResolutionDisplay = () => {
   const resolution = getCurrentResolution()
+
+  console.log('🔄 更新属性面板分辨率显示:')
+  console.log('  - 计算的分辨率:', resolution)
+  console.log('  - 更新前的输入框值:', {
+    width: tempResolutionWidth.value,
+    height: tempResolutionHeight.value
+  })
+
   tempResolutionWidth.value = resolution.width.toString()
   tempResolutionHeight.value = resolution.height.toString()
+
+  console.log('  - 更新后的输入框值:', {
+    width: tempResolutionWidth.value,
+    height: tempResolutionHeight.value
+  })
 }
 
 // 确认分辨率输入
@@ -1032,13 +1056,12 @@ const confirmResolutionFromInput = () => {
     return
   }
 
-  // 获取适应缩放比例
-  const { fitScale } = videoStore.getVideoFitScale(selectedClip.value.id)
+  // 直接使用视频原始分辨率作为基础
   const originalResolution = videoStore.getVideoOriginalResolution(selectedClip.value.id)
 
-  // 计算基础尺寸（考虑适应缩放）
-  const baseWidth = originalResolution.width * fitScale
-  const baseHeight = originalResolution.height * fitScale
+  // 计算基础尺寸（直接使用原始分辨率）
+  const baseWidth = originalResolution.width
+  const baseHeight = originalResolution.height
 
   const newScaleX = newWidth / baseWidth
   const newScaleY = newHeight / baseHeight

@@ -309,6 +309,10 @@ const initRenderer = async () => {
   try {
     console.log('初始化WebAV渲染器...')
     renderer = new WebAVRenderer(canvasContainer.value)
+
+    // 设置画布尺寸为当前视频分辨率
+    renderer.setCanvasSize(canvasWidth.value, canvasHeight.value)
+
     await renderer.initAVCanvas()
     console.log('WebAV渲染器初始化成功')
   } catch (error) {
@@ -366,7 +370,11 @@ onUnmounted(() => {
 // 监听画布尺寸变化
 watch([canvasWidth, canvasHeight], () => {
   nextTick(() => {
-    renderer?.resize(canvasWidth.value, canvasHeight.value)
+    if (renderer) {
+      // 更新渲染器的画布尺寸
+      renderer.setCanvasSize(canvasWidth.value, canvasHeight.value)
+      renderer.resize(canvasWidth.value, canvasHeight.value)
+    }
   })
 })
 
@@ -403,6 +411,19 @@ const debugStatus = () => {
   console.log('WebAV渲染器状态:', !!renderer)
   console.log('AVCanvas状态:', renderer?.getAVCanvas() ? '已初始化' : '未初始化')
   console.log('错误信息:', errorMessage.value || '无')
+
+  // 输出WebAV的详细状态信息
+  if (renderer) {
+    console.log('📊 WebAV详细状态:')
+    const detailedStatus = renderer.getDetailedStatus()
+    console.log(detailedStatus)
+
+    // 输出当前设置的画布分辨率
+    console.log('🎯 当前画布分辨率设置:')
+    console.log('  - 项目分辨率:', { width: canvasWidth.value, height: canvasHeight.value })
+    console.log('  - 视频分辨率设置:', videoStore.videoResolution)
+  }
+
   console.groupEnd()
 }
 </script>

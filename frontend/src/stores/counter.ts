@@ -741,6 +741,16 @@ export const useVideoStore = defineStore('video', () => {
 
   // 获取视频原始分辨率
   function getVideoOriginalResolution(clipId: string): { width: number; height: number } {
+    // 首先尝试从clip属性中获取原始分辨率（WebAV方式）
+    const clip = clips.value.find(c => c.id === clipId)
+    if (clip && clip.originalWidth && clip.originalHeight) {
+      return {
+        width: clip.originalWidth,
+        height: clip.originalHeight,
+      }
+    }
+
+    // 回退到videoElement方式（兼容旧的实现）
     const videoElement = videoElementsMap.get(clipId)
     if (videoElement && videoElement.videoWidth > 0 && videoElement.videoHeight > 0) {
       return {
@@ -748,6 +758,7 @@ export const useVideoStore = defineStore('video', () => {
         height: videoElement.videoHeight,
       }
     }
+
     // 默认分辨率
     return { width: 1920, height: 1080 }
   }
@@ -790,22 +801,39 @@ export const useVideoStore = defineStore('video', () => {
     return result
   }
 
-  // 计算视频片段的实际显示尺寸（考虑适应缩放）
+  // 计算视频片段的实际显示尺寸（基于原始分辨率）
   function getVideoDisplaySize(clipId: string, userScaleX: number, userScaleY: number): { width: number; height: number } {
-    const videoElement = videoElementsMap.get(clipId)
-    if (!videoElement || videoElement.videoWidth === 0 || videoElement.videoHeight === 0) {
-      return { width: videoResolution.value.width, height: videoResolution.value.height }
+    // 首先尝试从clip属性中获取原始分辨率（WebAV方式）
+    const clip = clips.value.find(c => c.id === clipId)
+    let baseWidth: number, baseHeight: number
+
+    if (clip && clip.originalWidth && clip.originalHeight) {
+      // 使用clip中保存的原始分辨率（来自WebAV的updateClipOriginalResolution）
+      baseWidth = clip.originalWidth
+      baseHeight = clip.originalHeight
+      console.log('📏 getVideoDisplaySize: 使用clip中的原始分辨率')
+    } else {
+      // 回退到videoElement方式（兼容旧的实现）
+      const videoElement = videoElementsMap.get(clipId)
+      if (videoElement && videoElement.videoWidth > 0 && videoElement.videoHeight > 0) {
+        baseWidth = videoElement.videoWidth
+        baseHeight = videoElement.videoHeight
+        console.log('📏 getVideoDisplaySize: 使用videoElement的分辨率')
+      } else {
+        console.log('⚠️ getVideoDisplaySize: 无法获取视频分辨率，使用默认值:', { clipId, hasClip: !!clip, hasElement: !!videoElement })
+        return { width: videoResolution.value.width, height: videoResolution.value.height }
+      }
     }
-
-    const { fitScale } = getVideoFitScale(clipId)
-
-    // 基础尺寸：视频原始尺寸 * 适应缩放
-    const baseWidth = videoElement.videoWidth * fitScale
-    const baseHeight = videoElement.videoHeight * fitScale
 
     // 应用用户缩放
     const displayWidth = baseWidth * userScaleX
     const displayHeight = baseHeight * userScaleY
+
+    console.log('📏 getVideoDisplaySize 计算:')
+    console.log('  - 片段ID:', clipId)
+    console.log('  - 视频原始尺寸:', { width: baseWidth, height: baseHeight })
+    console.log('  - 用户缩放:', { scaleX: userScaleX, scaleY: userScaleY })
+    console.log('  - 计算结果:', { width: displayWidth, height: displayHeight })
 
     return { width: displayWidth, height: displayHeight }
   }
