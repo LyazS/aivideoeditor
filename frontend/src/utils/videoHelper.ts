@@ -21,20 +21,13 @@ export const createVideoElement = (file: File): Promise<HTMLVideoElement> => {
       if (!resolved && video.readyState >= 2) {
         resolved = true
         cleanup()
-        console.log('Video element created successfully:', {
-          readyState: video.readyState,
-          dimensions: { width: video.videoWidth, height: video.videoHeight },
-          duration: video.duration
-        })
+
         resolve(video)
       }
     }
 
     const onLoadedMetadata = () => {
-      console.log('Video metadata loaded:', {
-        dimensions: { width: video.videoWidth, height: video.videoHeight },
-        duration: video.duration
-      })
+      // Metadata loaded
     }
 
     const onError = (e: Event) => {
@@ -52,7 +45,6 @@ export const createVideoElement = (file: File): Promise<HTMLVideoElement> => {
     video.addEventListener('error', onError)
 
     video.src = URL.createObjectURL(file)
-    console.log('Created video element for file:', file.name, 'URL:', video.src)
   })
 }
 
@@ -77,22 +69,13 @@ export const createVideoElementFromURL = (url: string): Promise<HTMLVideoElement
       if (!resolved && video.readyState >= 2) {
         resolved = true
         cleanup()
-        console.log('Video element created from URL successfully:', {
-          readyState: video.readyState,
-          dimensions: { width: video.videoWidth, height: video.videoHeight },
-          duration: video.duration,
-          url: url
-        })
+
         resolve(video)
       }
     }
 
     const onLoadedMetadata = () => {
-      console.log('Video metadata loaded from URL:', {
-        dimensions: { width: video.videoWidth, height: video.videoHeight },
-        duration: video.duration,
-        url: url
-      })
+      // Metadata loaded from URL
     }
 
     const onError = (e: Event) => {
@@ -109,19 +92,7 @@ export const createVideoElementFromURL = (url: string): Promise<HTMLVideoElement
     video.addEventListener('error', onError)
 
     video.src = url
-    console.log('Created video element from URL:', url)
   })
 }
 
-// 设置视频到指定时间
-export const loadVideoAtTime = (video: HTMLVideoElement, time: number): Promise<void> => {
-  return new Promise((resolve) => {
-    const onSeeked = () => {
-      video.removeEventListener('seeked', onSeeked)
-      resolve()
-    }
-    
-    video.addEventListener('seeked', onSeeked)
-    video.currentTime = time
-  })
-}
+

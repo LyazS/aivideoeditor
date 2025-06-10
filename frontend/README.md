@@ -1,39 +1,37 @@
-# frontend
+# AI 视频编辑器 - 前端
 
-This template should help get you started developing with Vue 3 in Vite.
+基于 Vue 3 + TypeScript + WebAV SDK 的视频编辑器前端应用。
 
-## Recommended IDE Setup
+## 开发环境
 
-[VSCode](https://code.visualstudio.com/) + [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur).
+### 推荐 IDE 配置
+- [VSCode](https://code.visualstudio.com/) + [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar)
 
-## Type Support for `.vue` Imports in TS
-
-TypeScript cannot handle type information for `.vue` imports by default, so we replace the `tsc` CLI with `vue-tsc` for type checking. In editors, we need [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) to make the TypeScript language service aware of `.vue` types.
-
-## Customize configuration
-
-See [Vite Configuration Reference](https://vite.dev/config/).
-
-## Project Setup
-
+### 项目设置
 ```sh
 npm install
 ```
 
-### Compile and Hot-Reload for Development
-
+### 开发服务器
 ```sh
 npm run dev
 ```
 
-### Type-Check, Compile and Minify for Production
-
+### 生产构建
 ```sh
 npm run build
 ```
 
-### Lint with [ESLint](https://eslint.org/)
-
+### 代码检查
 ```sh
 npm run lint
 ```
+
+## 技术栈
+- Vue 3 (Composition API)
+- TypeScript
+- Vite
+- Pinia (状态管理)
+- WebAV SDK (视频处理)
+
+更多详细信息请参考项目根目录的 [README.md](../README.md)

@@ -1,6 +1,5 @@
 import { ref, computed } from 'vue'
 import { defineStore } from 'pinia'
-import type { VideoRenderInfo } from '@/types/video'
 
 export interface VideoTransform {
   x: number // X轴位置 (像素，相对于画布中心)
@@ -217,54 +216,30 @@ export const useVideoStore = defineStore('video', () => {
   }
 
   function splitClipAtTime(clipId: string, splitTime: number) {
-    console.group('🔪 视频片段裁剪调试')
-
     const clipIndex = clips.value.findIndex((c) => c.id === clipId)
     if (clipIndex === -1) {
-      console.error('❌ 找不到要裁剪的片段:', clipId)
-      console.groupEnd()
+      console.error('找不到要裁剪的片段:', clipId)
       return
     }
 
     const originalClip = clips.value[clipIndex]
-    console.log('📹 原始片段信息:')
-    console.log('  - 名称:', originalClip.name)
-    console.log('  - 时间轴位置:', originalClip.timelinePosition)
-    console.log('  - 时间轴时长:', originalClip.duration)
-    console.log('  - 视频开始时间:', originalClip.startTime)
-    console.log('  - 视频结束时间:', originalClip.endTime)
-    console.log('  - 播放速度:', originalClip.playbackRate)
-    console.log('  - 原始时长:', originalClip.originalDuration)
 
     // 检查分割时间是否在片段范围内
     if (
       splitTime <= originalClip.timelinePosition ||
       splitTime >= originalClip.timelinePosition + originalClip.duration
     ) {
-      console.error('❌ 分割时间不在片段范围内')
-      console.log('  - 分割时间:', splitTime)
-      console.log('  - 片段开始:', originalClip.timelinePosition)
-      console.log('  - 片段结束:', originalClip.timelinePosition + originalClip.duration)
-      console.groupEnd()
+      console.error('分割时间不在片段范围内')
       return
     }
 
     // 计算分割点在片段内的相对时间
     const relativeTimelineTime = splitTime - originalClip.timelinePosition
-    console.log('📍 分割点计算:')
-    console.log('  - 分割时间:', splitTime)
-    console.log('  - 片段内相对时间:', relativeTimelineTime)
 
     // 计算在原始视频中的分割点时间
-    const playbackRate = originalClip.playbackRate || 1.0
     const videoContentDuration = originalClip.endTime - originalClip.startTime
     const relativeVideoTime = (relativeTimelineTime / originalClip.duration) * videoContentDuration
     const splitVideoTime = originalClip.startTime + relativeVideoTime
-
-    console.log('🎬 视频时间计算:')
-    console.log('  - 视频内容时长:', videoContentDuration)
-    console.log('  - 相对视频时间:', relativeVideoTime)
-    console.log('  - 分割点视频时间:', splitVideoTime)
 
     // 创建第一个片段（从开始到分割点）
     const firstClip: VideoClip = {
@@ -291,27 +266,11 @@ export const useVideoStore = defineStore('video', () => {
       zIndex: originalClip.zIndex,
     }
 
-    console.log('✂️ 第一个片段:')
-    console.log('  - 时间轴位置:', firstClip.timelinePosition)
-    console.log('  - 时间轴时长:', firstClip.duration)
-    console.log('  - 视频开始时间:', firstClip.startTime)
-    console.log('  - 视频结束时间:', firstClip.endTime)
-    console.log('  - 播放速度:', firstClip.playbackRate)
-
-    console.log('✂️ 第二个片段:')
-    console.log('  - 时间轴位置:', secondClip.timelinePosition)
-    console.log('  - 时间轴时长:', secondClip.duration)
-    console.log('  - 视频开始时间:', secondClip.startTime)
-    console.log('  - 视频结束时间:', secondClip.endTime)
-    console.log('  - 播放速度:', secondClip.playbackRate)
-
     // 替换原片段为两个新片段
     clips.value.splice(clipIndex, 1, firstClip, secondClip)
-    console.log('✅ 裁剪完成，已替换原片段')
 
     // 清除选中状态
     selectedClipId.value = null
-    console.groupEnd()
   }
 
   // 检测两个片段是否重叠
@@ -351,7 +310,7 @@ export const useVideoStore = defineStore('video', () => {
   }
 
   // 寻找最近的可用空隙（只在同一轨道内）
-  function findNearestGap(movingClip: VideoClip, overlappingClips: VideoClip[]): number {
+  function findNearestGap(movingClip: VideoClip, _overlappingClips: VideoClip[]): number {
     const allClips = clips.value.filter(
       (c) => c.id !== movingClip.id && c.trackId === movingClip.trackId,
     )
@@ -593,13 +552,7 @@ export const useVideoStore = defineStore('video', () => {
     const minZoom = minZoomLevel.value
     const clampedZoom = Math.max(minZoom, Math.min(newZoomLevel, maxZoom))
 
-    // 如果达到最小缩放级别，提供调试信息
-    if (newZoomLevel < minZoom && contentEndTime.value > 0) {
-      console.log(`🔍 已达到最小缩放级别 (${minZoom.toFixed(3)})`)
-      console.log(`📏 当前视频总长度: ${contentEndTime.value.toFixed(1)}秒`)
-      console.log(`👁️ 最大可见范围限制: ${maxVisibleDuration.value.toFixed(1)}秒`)
-      console.log(`🎯 当前可见范围: ${visibleDuration.value.toFixed(1)}秒`)
-    }
+
 
     zoomLevel.value = clampedZoom
 
@@ -680,7 +633,6 @@ export const useVideoStore = defineStore('video', () => {
     videoResolution.value = resolution
     // 清理适应缩放缓存，因为分辨率变化会影响所有视频的适应缩放
     fitScaleCache.clear()
-    console.log('视频分辨率已设置为:', resolution)
   }
 
   // 更新片段播放速度
@@ -709,35 +661,11 @@ export const useVideoStore = defineStore('video', () => {
     if (clip) {
       clip.originalWidth = width
       clip.originalHeight = height
-      console.log(`片段 ${clip.name} 原始分辨率已更新: ${width}x${height}`)
     }
   }
 
-  // 视频元素引用映射（用于获取原始分辨率）
+  // 视频元素引用映射（用于获取原始分辨率，兼容旧系统）
   const videoElementsMap = new Map<string, HTMLVideoElement>()
-
-  // 视频渲染信息映射
-  const videoRenderInfoMap = new Map<string, VideoRenderInfo>()
-
-  // 设置视频元素引用
-  function setVideoElement(clipId: string, videoElement: HTMLVideoElement | null) {
-    if (videoElement) {
-      videoElementsMap.set(clipId, videoElement)
-      // 更新渲染信息
-      const renderInfo = videoRenderInfoMap.get(clipId) || { isLoaded: false }
-      renderInfo.videoElement = videoElement
-      renderInfo.isLoaded = true
-      videoRenderInfoMap.set(clipId, renderInfo)
-    } else {
-      videoElementsMap.delete(clipId)
-      videoRenderInfoMap.delete(clipId)
-    }
-  }
-
-  // 获取视频渲染信息
-  function getVideoRenderInfo(clipId: string): VideoRenderInfo | null {
-    return videoRenderInfoMap.get(clipId) || null
-  }
 
   // 获取视频原始分辨率
   function getVideoOriginalResolution(clipId: string): { width: number; height: number } {
@@ -811,16 +739,14 @@ export const useVideoStore = defineStore('video', () => {
       // 使用clip中保存的原始分辨率（来自WebAV的updateClipOriginalResolution）
       baseWidth = clip.originalWidth
       baseHeight = clip.originalHeight
-      console.log('📏 getVideoDisplaySize: 使用clip中的原始分辨率')
     } else {
       // 回退到videoElement方式（兼容旧的实现）
       const videoElement = videoElementsMap.get(clipId)
       if (videoElement && videoElement.videoWidth > 0 && videoElement.videoHeight > 0) {
         baseWidth = videoElement.videoWidth
         baseHeight = videoElement.videoHeight
-        console.log('📏 getVideoDisplaySize: 使用videoElement的分辨率')
       } else {
-        console.log('⚠️ getVideoDisplaySize: 无法获取视频分辨率，使用默认值:', { clipId, hasClip: !!clip, hasElement: !!videoElement })
+        console.warn('无法获取视频分辨率，使用默认值:', clipId)
         return { width: videoResolution.value.width, height: videoResolution.value.height }
       }
     }
@@ -828,12 +754,6 @@ export const useVideoStore = defineStore('video', () => {
     // 应用用户缩放
     const displayWidth = baseWidth * userScaleX
     const displayHeight = baseHeight * userScaleY
-
-    console.log('📏 getVideoDisplaySize 计算:')
-    console.log('  - 片段ID:', clipId)
-    console.log('  - 视频原始尺寸:', { width: baseWidth, height: baseHeight })
-    console.log('  - 用户缩放:', { scaleX: userScaleX, scaleY: userScaleY })
-    console.log('  - 计算结果:', { width: displayWidth, height: displayHeight })
 
     return { width: displayWidth, height: displayHeight }
   }
@@ -924,8 +844,6 @@ export const useVideoStore = defineStore('video', () => {
     videoResolution,
     setVideoResolution,
     // 视频元素管理
-    setVideoElement,
-    getVideoRenderInfo,
     getVideoOriginalResolution,
     getVideoFitScale,
     getVideoDisplaySize,

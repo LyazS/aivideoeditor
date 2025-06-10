@@ -419,7 +419,7 @@ function confirmSelection() {
 
   showResolutionModal.value = false
   showCustomResolution.value = false
-  console.log('确认选择分辨率:', currentResolution.value)
+
 }
 
 function cancelSelection() {

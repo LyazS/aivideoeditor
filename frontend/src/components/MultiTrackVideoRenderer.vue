@@ -67,8 +67,6 @@ let animationId: number | null = null
 
 // 检查浏览器兼容性
 const checkBrowserSupport = () => {
-  console.log('检查浏览器兼容性...')
-
   // 检查 WebCodecs API 支持
   if (typeof VideoDecoder === 'undefined' || typeof VideoEncoder === 'undefined') {
     console.warn('WebCodecs API 不支持')
@@ -83,7 +81,6 @@ const checkBrowserSupport = () => {
     return false
   }
 
-  console.log('浏览器兼容性检查通过')
   return true
 }
 
@@ -115,27 +112,19 @@ const activeClipsCount = computed(() => isFirstClipActive.value ? 1 : 0)
 watch(() => firstClip.value, async (newClip, oldClip) => {
   if (!isSupported.value) return
 
-  console.log('First clip changed:', {
-    newClip: newClip ? { id: newClip.id, name: newClip.name, trackId: newClip.trackId, timelinePosition: newClip.timelinePosition } : null,
-    oldClip: oldClip ? { id: oldClip.id, name: oldClip.name } : null
-  })
-
   // 如果有新的第一个片段且与之前不同，加载它
   if (newClip && (!oldClip || newClip.id !== oldClip.id)) {
-    console.log('Loading new first clip with WebAV:', newClip.id)
     await loadVideoClip(newClip)
 
     // 如果当前时间不在片段范围内，跳转到片段开始时间
     if (videoStore.currentTime < newClip.timelinePosition ||
         videoStore.currentTime >= newClip.timelinePosition + newClip.duration) {
-      console.log('Jumping to clip start time:', newClip.timelinePosition)
       videoStore.setCurrentTime(newClip.timelinePosition)
     }
   }
 
   // 如果没有第一个片段了，清理视频
   if (!newClip && renderer) {
-    console.log('No first clip, cleaning up WebAV renderer')
     renderer.clear()
   }
 }, { deep: true, immediate: true })
@@ -147,7 +136,6 @@ watch(() => firstClip.value ? {
   zIndex: firstClip.value.zIndex
 } : null, (newProps) => {
   if (newProps && renderer && firstClip.value) {
-    console.log('First clip properties changed, updating WebAV:', newProps)
     renderer.updateClipProperties(firstClip.value)
   }
 }, { deep: true })
@@ -157,7 +145,6 @@ watch(() => videoStore.selectedClipId, (selectedClipId) => {
   if (renderer && firstClip.value) {
     // 如果选中的是当前显示的片段，在WebAV中选中它
     const shouldSelect = selectedClipId === firstClip.value.id
-    console.log('时间轴选中状态变化，同步到WebAV:', { selectedClipId, firstClipId: firstClip.value.id, shouldSelect })
     renderer.setCurrentSpriteSelected(shouldSelect)
   }
 })
@@ -171,12 +158,7 @@ watch(() => videoStore.currentTime, () => {
     const playbackRate = firstClip.value.playbackRate || 1
     const targetVideoTime = (firstClip.value.startTime + clipRelativeTime * playbackRate) * 1e6 // 转换为微秒
 
-    console.log('WebAV预览帧:', {
-      currentTime,
-      clipRelativeTime,
-      playbackRate,
-      targetVideoTime: targetVideoTime / 1e6
-    })
+
 
     renderer.previewFrame(Math.max(0, targetVideoTime))
   }
@@ -199,15 +181,7 @@ watch(() => videoStore.isPlaying, async (isPlaying) => {
     const startTime = videoStartTime * 1e6
     const endTime = videoEndTime * 1e6
 
-    console.log('WebAV播放参数:', {
-      currentTime,
-      clipRelativeTime,
-      playbackRate,
-      videoStartTime,
-      videoEndTime,
-      startTimeMicros: startTime,
-      endTimeMicros: endTime
-    })
+
 
     await renderer.play({ start: Math.max(0, startTime), end: endTime })
   } else {
@@ -225,11 +199,8 @@ const loadVideoClip = async (clip: VideoClip) => {
   try {
     isLoading.value = true
     errorMessage.value = ''
-    console.log('WebAV: Loading video clip:', clip.name)
-
     // 设置属性变化回调，实现从WebAV到属性面板的同步
     renderer.setPropsChangeCallback((transform) => {
-      console.log('WebAV属性变化，同步到store:', transform)
       if (firstClip.value) {
         videoStore.updateClipTransform(firstClip.value.id, transform)
       }
@@ -237,13 +208,11 @@ const loadVideoClip = async (clip: VideoClip) => {
 
     // 设置sprite选中状态变化回调，实现从WebAV到时间轴的选中同步
     renderer.setSpriteSelectCallback((clipId) => {
-      console.log('WebAV选中状态变化，同步到时间轴:', clipId)
       videoStore.selectClip(clipId)
     })
 
     // 设置视频元数据回调，保存原始分辨率信息
     renderer.setVideoMetaCallback((clipId, width, height) => {
-      console.log('WebAV视频元数据获取，保存原始分辨率:', { clipId, width, height })
       videoStore.updateClipOriginalResolution(clipId, width, height)
     })
 
@@ -268,19 +237,14 @@ const loadVideoClip = async (clip: VideoClip) => {
       // 监听播放状态
       avCanvas.on('playing', () => {
         // WebAV播放状态已在watch中处理
-        console.log('WebAV: 播放开始')
       })
 
       avCanvas.on('paused', () => {
         // WebAV暂停状态已在watch中处理
-        console.log('WebAV: 播放暂停')
       })
 
       eventListenersSet = true
-      console.log('WebAV: 事件监听器已设置')
     }
-
-    console.log('WebAV: Video clip loaded successfully')
   } catch (error) {
     console.error('WebAV: Failed to load video clip:', error)
     if (error instanceof Error) {
@@ -307,14 +271,12 @@ const initRenderer = async () => {
   if (!canvasContainer.value || !isSupported.value) return
 
   try {
-    console.log('初始化WebAV渲染器...')
     renderer = new WebAVRenderer(canvasContainer.value)
 
     // 设置画布尺寸为当前视频分辨率
     renderer.setCanvasSize(canvasWidth.value, canvasHeight.value)
 
     await renderer.initAVCanvas()
-    console.log('WebAV渲染器初始化成功')
   } catch (error) {
     console.error('WebAV渲染器初始化失败:', error)
     errorMessage.value = '渲染器初始化失败，请刷新页面重试'
@@ -335,8 +297,6 @@ const cleanup = () => {
 
 // 生命周期
 onMounted(() => {
-  console.log('WebAV MultiTrackVideoRenderer mounted')
-
   // 检查浏览器兼容性
   checkBrowserSupport()
 
@@ -354,9 +314,7 @@ onMounted(() => {
 
 // 加载现有的第一个视频片段
 const loadExistingClips = async () => {
-  console.log('Loading existing clips:', videoStore.clips.length)
   if (firstClip.value && renderer) {
-    console.log('Loading first clip with WebAV:', firstClip.value.id, firstClip.value.name)
     await loadVideoClip(firstClip.value)
   }
 }

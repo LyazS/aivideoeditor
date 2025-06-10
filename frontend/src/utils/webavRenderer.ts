@@ -29,18 +29,8 @@ export class WebAVRenderer {
    * 设置画布尺寸
    */
   setCanvasSize(width: number, height: number) {
-    const oldWidth = this.canvasWidth
-    const oldHeight = this.canvasHeight
     this.canvasWidth = width
     this.canvasHeight = height
-
-    console.log('📏 WebAV画布尺寸更新:')
-    console.log('  - 旧尺寸:', { width: oldWidth, height: oldHeight })
-    console.log('  - 新尺寸:', { width, height })
-    console.log('  - 宽高比变化:', {
-      old: (oldWidth / oldHeight).toFixed(3),
-      new: (width / height).toFixed(3)
-    })
   }
 
   /**
@@ -87,38 +77,20 @@ export class WebAVRenderer {
         bgColor: '#000000',
       })
 
-      // 输出WebAV画布的实际尺寸信息
-      console.log('🎬 WebAV画布初始化完成:')
-      console.log('  - 设置的画布尺寸:', { width: this.canvasWidth, height: this.canvasHeight })
-      console.log('  - AVCanvas实例:', this.avCanvas)
 
-      // 获取实际的canvas元素尺寸
-      const actualCanvas = canvasContainer.querySelector('canvas')
-      if (actualCanvas) {
-        console.log('  - 实际Canvas元素尺寸:', {
-          width: actualCanvas.width,
-          height: actualCanvas.height,
-          clientWidth: actualCanvas.clientWidth,
-          clientHeight: actualCanvas.clientHeight
-        })
-      }
 
       // 监听sprite选中状态变化
       this.avCanvas.on('activeSpriteChange', (activeSprite) => {
         if (this.onSpriteSelectCallback) {
           // 如果有活跃的sprite且是当前的sprite，选中对应的clip
           if (activeSprite === this.currentSprite && this.currentClipId) {
-            console.log('WebAV: Sprite被选中，同步选中时间轴片段:', this.currentClipId)
             this.onSpriteSelectCallback(this.currentClipId)
           } else if (!activeSprite) {
             // 如果没有活跃的sprite，取消选中
-            console.log('WebAV: Sprite取消选中，同步取消时间轴选中')
             this.onSpriteSelectCallback(null)
           }
         }
       })
-
-      console.log('WebAV AVCanvas 初始化成功')
     } catch (error) {
       console.error('WebAV AVCanvas 初始化失败:', error)
       throw error
@@ -167,7 +139,6 @@ export class WebAVRenderer {
    */
   async setVideo(videoElement: HTMLVideoElement | null) {
     // 这个方法保留是为了兼容性，实际使用loadVideoClip方法
-    console.log('WebAV渲染器: setVideo方法被调用，但WebAV使用不同的加载方式')
   }
 
   /**
@@ -181,7 +152,6 @@ export class WebAVRenderer {
     }
 
     try {
-      console.log('WebAV渲染器: 开始加载视频片段', clip.name)
 
       // 清理之前的sprite
       if (this.currentSprite) {
@@ -208,14 +178,6 @@ export class WebAVRenderer {
 
       // 等待MP4Clip准备完成
       await mp4Clip.ready
-      console.log('WebAV MP4Clip 准备完成:', mp4Clip.meta)
-
-      // 输出详细的视频信息
-      console.log('🎥 视频文件详细信息:')
-      console.log('  - 视频原始尺寸:', { width: mp4Clip.meta.width, height: mp4Clip.meta.height })
-      console.log('  - 视频时长:', mp4Clip.meta.duration / 1e6, '秒')
-      console.log('  - 视频比特率:', mp4Clip.meta.bitrate)
-      console.log('  - 完整meta信息:', mp4Clip.meta)
 
       // 调用视频元数据回调，保存原始分辨率
       if (this.onVideoMetaCallback) {
@@ -237,8 +199,6 @@ export class WebAVRenderer {
       // 监听sprite属性变化，同步回属性面板
       sprite.on('propsChange', (changedProps) => {
         if (this.onPropsChangeCallback && this.baseVideoSize) {
-          console.log('WebAV: Sprite属性变化', changedProps)
-
           // 将WebAV的sprite属性转换为我们的VideoTransform格式
           const transform = this.convertSpriteToTransform(sprite)
           this.onPropsChangeCallback(transform)
@@ -249,8 +209,6 @@ export class WebAVRenderer {
       this.currentClip = mp4Clip
       this.currentSprite = sprite
       this.currentClipId = clip.id
-
-      console.log('WebAV视频片段加载完成')
     } catch (error) {
       console.error('WebAV加载视频片段失败:', error)
       throw error
@@ -265,11 +223,7 @@ export class WebAVRenderer {
       const videoWidth = mp4Clip.meta.width
       const videoHeight = mp4Clip.meta.height
 
-      console.log('📐 WebAV尺寸设置详情:')
-      console.log('  - 视频原始尺寸:', { width: videoWidth, height: videoHeight })
-      console.log('  - WebAV画布尺寸:', { width: this.canvasWidth, height: this.canvasHeight })
-      console.log('  - 视频宽高比:', (videoWidth / videoHeight).toFixed(3))
-      console.log('  - 画布宽高比:', (this.canvasWidth / this.canvasHeight).toFixed(3))
+
 
       // 直接使用视频原始尺寸作为基础尺寸（缩放1.0时的尺寸）
       const displayWidth = videoWidth
@@ -292,18 +246,7 @@ export class WebAVRenderer {
         y: sprite.rect.y
       }
 
-      console.log('  - Sprite设置结果:')
-      console.log('    * 尺寸 (w×h):', displayWidth, '×', displayHeight)
-      console.log('    * 位置 (x,y):', sprite.rect.x.toFixed(1), ',', sprite.rect.y.toFixed(1))
-      console.log('    * 是否超出画布:', {
-        width: displayWidth > this.canvasWidth ? '超出' : '适合',
-        height: displayHeight > this.canvasHeight ? '超出' : '适合'
-      })
-      console.log('    * 缩放1.0时的实际显示尺寸:', {
-        width: displayWidth,
-        height: displayHeight,
-        aspectRatio: (displayWidth / displayHeight).toFixed(3)
-      })
+
 
     } catch (error) {
       console.error('WebAV: 设置视频尺寸失败:', error)
@@ -350,27 +293,7 @@ export class WebAVRenderer {
       // 设置层级
       sprite.zIndex = clip.zIndex
 
-      console.log('🔄 WebAV变换属性已应用:')
-      console.log('  - 用户设置的变换:', {
-        scaleX: transform.scaleX,
-        scaleY: transform.scaleY,
-        x: transform.x,
-        y: transform.y,
-        rotation: transform.rotation,
-        opacity: transform.opacity
-      })
-      console.log('  - Sprite最终状态:', {
-        position: { x: sprite.rect.x.toFixed(1), y: sprite.rect.y.toFixed(1) },
-        size: { w: sprite.rect.w.toFixed(1), h: sprite.rect.h.toFixed(1) },
-        rotation: (sprite.rect.angle * 180 / Math.PI).toFixed(1) + '°',
-        opacity: sprite.opacity,
-        zIndex: sprite.zIndex
-      })
-      console.log('  - 实际显示尺寸 (考虑缩放):', {
-        width: sprite.rect.w,
-        height: sprite.rect.h,
-        aspectRatio: (sprite.rect.w / sprite.rect.h).toFixed(3)
-      })
+
     } catch (error) {
       console.error('WebAV: 应用变换属性失败:', error)
     }
@@ -440,11 +363,9 @@ export class WebAVRenderer {
     if (selected && this.currentSprite) {
       // 选中当前sprite
       this.avCanvas.activeSprite = this.currentSprite
-      console.log('WebAV: 设置当前sprite为选中状态')
     } else {
       // 取消选中
       this.avCanvas.activeSprite = null
-      console.log('WebAV: 取消sprite选中状态')
     }
   }
 
@@ -514,9 +435,7 @@ export class WebAVRenderer {
   async resize(width: number, height: number) {
     if (this.isDestroyed) return
 
-    console.log('🔄 WebAV画布resize调用:')
-    console.log('  - 请求的尺寸:', { width, height })
-    console.log('  - 当前内部尺寸:', { width: this.canvasWidth, height: this.canvasHeight })
+
 
     // 查找canvas容器
     const canvasWrapper = this.container.querySelector('div')
@@ -526,18 +445,7 @@ export class WebAVRenderer {
       // 更新canvas容器尺寸，保持宽高比
       this.updateCanvasSize(canvasContainer as HTMLElement)
 
-      // 输出更新后的实际尺寸
-      const actualCanvas = canvasContainer.querySelector('canvas')
-      if (actualCanvas) {
-        console.log('  - 更新后的Canvas尺寸:', {
-          width: actualCanvas.width,
-          height: actualCanvas.height,
-          clientWidth: actualCanvas.clientWidth,
-          clientHeight: actualCanvas.clientHeight
-        })
-      }
     } else {
-      console.log('  - 容器未找到，重新初始化WebAV')
       // 如果找不到容器，重新初始化
       if (this.avCanvas) {
         this.avCanvas.destroy()
@@ -651,6 +559,6 @@ export class WebAVRenderer {
       this.avCanvas = null
     }
     
-    console.log('WebAV渲染器已销毁')
+
   }
 }

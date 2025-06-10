@@ -290,17 +290,14 @@ function handleDragOver(event: DragEvent) {
 
 async function handleDrop(event: DragEvent) {
   event.preventDefault()
-  console.log('时间轴接收到拖拽事件')
 
   // 检查是否是从素材库拖拽的素材
   const mediaItemData = event.dataTransfer?.getData('application/media-item')
-  console.log('拖拽数据:', mediaItemData)
 
   if (mediaItemData) {
     // 处理素材库拖拽
     try {
       const mediaItem = JSON.parse(mediaItemData)
-      console.log('解析的素材数据:', mediaItem)
 
       // 获取目标轨道ID
       const targetElement = event.target as HTMLElement
@@ -308,7 +305,6 @@ async function handleDrop(event: DragEvent) {
       const targetTrackId = trackContent
         ? parseInt(trackContent.getAttribute('data-track-id') || '1')
         : 1
-      console.log('目标轨道ID:', targetTrackId)
 
       // 计算拖拽位置对应的时间（考虑缩放和滚动偏移量）
       const trackContentRect = trackContent?.getBoundingClientRect()
@@ -319,7 +315,6 @@ async function handleDrop(event: DragEvent) {
 
       const dropX = event.clientX - trackContentRect.left
       const dropTime = videoStore.pixelToTime(dropX, timelineWidth.value)
-      console.log('拖拽位置:', dropX, '对应时间:', dropTime)
 
       // 如果拖拽位置超出当前时间轴长度，动态扩展时间轴
       videoStore.expandTimelineIfNeeded(dropTime + 10) // 预留10秒缓冲
@@ -331,7 +326,6 @@ async function handleDrop(event: DragEvent) {
       alert('拖拽数据格式错误')
     }
   } else {
-    console.log('没有检测到素材库拖拽数据')
     // 不再支持直接拖拽文件
     alert('请先将视频文件导入到素材库，然后从素材库拖拽到时间轴')
   }
@@ -343,7 +337,6 @@ async function createVideoClipFromMediaItem(
   startTime: number,
   trackId: number = 1,
 ): Promise<void> {
-  console.log('创建视频片段从素材库:', mediaItem)
 
   // 创建一个虚拟的 File 对象，用于兼容现有的 VideoClip 接口
   // 注意：这里我们主要使用 URL，File 对象主要用于显示文件信息
@@ -375,7 +368,6 @@ async function createVideoClipFromMediaItem(
     zIndex: videoStore.clips.length,
   }
 
-  console.log('添加片段到时间轴:', clip)
   videoStore.addClip(clip)
 }
 
