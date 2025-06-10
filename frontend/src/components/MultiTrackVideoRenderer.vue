@@ -26,7 +26,7 @@
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useVideoStore } from '@/stores/counter'
 import { SingleVideoRenderer } from '@/utils/multiTrackRenderer'
-import { createVideoElement, createVideoElementFromURL, loadVideoAtTime } from '@/utils/ffmpegHelper'
+import { createVideoElement, createVideoElementFromURL, loadVideoAtTime } from '@/utils/videoHelper'
 
 const videoStore = useVideoStore()
 
