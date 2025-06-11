@@ -691,73 +691,6 @@ export const useVideoStore = defineStore('video', () => {
     return { width: 1920, height: 1080 }
   }
 
-  // 缓存适应缩放比例，避免重复计算
-  const fitScaleCache = new Map<string, { scaleX: number; scaleY: number; fitScale: number; cacheKey: string }>()
-
-  // 计算视频片段在画布中的适应缩放比例
-  function getVideoFitScale(clipId: string): { scaleX: number; scaleY: number; fitScale: number } {
-    const videoElement = videoElementsMap.get(clipId)
-    if (!videoElement || videoElement.videoWidth === 0 || videoElement.videoHeight === 0) {
-      return { scaleX: 1, scaleY: 1, fitScale: 1 }
-    }
-
-    // 创建缓存键
-    const cacheKey = `${videoElement.videoWidth}x${videoElement.videoHeight}_${videoResolution.value.width}x${videoResolution.value.height}`
-
-    // 检查缓存
-    const cached = fitScaleCache.get(clipId)
-    if (cached && cached.cacheKey === cacheKey) {
-      return { scaleX: cached.scaleX, scaleY: cached.scaleY, fitScale: cached.fitScale }
-    }
-
-    const videoWidth = videoElement.videoWidth
-    const videoHeight = videoElement.videoHeight
-    const canvasWidth = videoResolution.value.width
-    const canvasHeight = videoResolution.value.height
-
-    // 计算适应画布的缩放比例
-    const scaleX = canvasWidth / videoWidth
-    const scaleY = canvasHeight / videoHeight
-
-    // 选择较小的缩放比例以确保视频完全适应画布
-    const fitScale = Math.min(scaleX, scaleY)
-
-    // 缓存结果
-    const result = { scaleX, scaleY, fitScale }
-    fitScaleCache.set(clipId, { ...result, cacheKey })
-
-    return result
-  }
-
-  // 计算视频片段的实际显示尺寸（基于原始分辨率）
-  function getVideoDisplaySize(clipId: string, userScaleX: number, userScaleY: number): { width: number; height: number } {
-    // 首先尝试从clip属性中获取原始分辨率（WebAV方式）
-    const clip = clips.value.find(c => c.id === clipId)
-    let baseWidth: number, baseHeight: number
-
-    if (clip && clip.originalWidth && clip.originalHeight) {
-      // 使用clip中保存的原始分辨率（来自WebAV的updateClipOriginalResolution）
-      baseWidth = clip.originalWidth
-      baseHeight = clip.originalHeight
-    } else {
-      // 回退到videoElement方式（兼容旧的实现）
-      const videoElement = videoElementsMap.get(clipId)
-      if (videoElement && videoElement.videoWidth > 0 && videoElement.videoHeight > 0) {
-        baseWidth = videoElement.videoWidth
-        baseHeight = videoElement.videoHeight
-      } else {
-        console.warn('无法获取视频分辨率，使用默认值:', clipId)
-        return { width: videoResolution.value.width, height: videoResolution.value.height }
-      }
-    }
-
-    // 应用用户缩放
-    const displayWidth = baseWidth * userScaleX
-    const displayHeight = baseHeight * userScaleY
-
-    return { width: displayWidth, height: displayHeight }
-  }
-
   // 更新片段层级
   function updateClipZIndex(clipId: string, zIndex: number) {
     const clip = clips.value.find((c) => c.id === clipId)
@@ -845,7 +778,5 @@ export const useVideoStore = defineStore('video', () => {
     setVideoResolution,
     // 视频元素管理
     getVideoOriginalResolution,
-    getVideoFitScale,
-    getVideoDisplaySize,
   }
 })

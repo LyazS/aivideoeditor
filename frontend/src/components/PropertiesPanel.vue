@@ -86,6 +86,14 @@
                   <div class="speed-divider" style="left: 60%"></div>
                   <div class="speed-divider" style="left: 80%"></div>
                 </div>
+                <!-- 分段标签 -->
+                <div class="speed-labels">
+                  <span class="speed-label" style="left: 10%">0.1-1x</span>
+                  <span class="speed-label" style="left: 30%">1-2x</span>
+                  <span class="speed-label" style="left: 50%">2-5x</span>
+                  <span class="speed-label" style="left: 70%">5-10x</span>
+                  <span class="speed-label" style="left: 90%">10-100x</span>
+                </div>
               </div>
               <input
                 v-model.number="speedInputValue"
@@ -302,102 +310,6 @@
               </div>
             </div>
           </div>
-        </div>
-
-        <!-- 布局控制 -->
-        <div class="property-section">
-          <h4>布局控制</h4>
-
-          <!-- 水平对齐 -->
-          <div class="property-item">
-            <label>水平对齐</label>
-            <div class="alignment-controls">
-              <button
-                @click="alignHorizontal('left')"
-                class="align-btn"
-                title="左对齐"
-              >
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                  <rect x="2" y="4" width="8" height="2"/>
-                  <rect x="2" y="7" width="6" height="2"/>
-                  <rect x="2" y="10" width="10" height="2"/>
-                  <line x1="1" y1="2" x2="1" y2="14" stroke="currentColor" stroke-width="1"/>
-                </svg>
-              </button>
-              <button
-                @click="alignHorizontal('center')"
-                class="align-btn"
-                title="水平居中"
-              >
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                  <rect x="4" y="4" width="8" height="2"/>
-                  <rect x="5" y="7" width="6" height="2"/>
-                  <rect x="3" y="10" width="10" height="2"/>
-                  <line x1="8" y1="2" x2="8" y2="14" stroke="currentColor" stroke-width="1"/>
-                </svg>
-              </button>
-              <button
-                @click="alignHorizontal('right')"
-                class="align-btn"
-                title="右对齐"
-              >
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                  <rect x="6" y="4" width="8" height="2"/>
-                  <rect x="8" y="7" width="6" height="2"/>
-                  <rect x="4" y="10" width="10" height="2"/>
-                  <line x1="15" y1="2" x2="15" y2="14" stroke="currentColor" stroke-width="1"/>
-                </svg>
-              </button>
-            </div>
-          </div>
-
-          <!-- 垂直对齐 -->
-          <div class="property-item">
-            <label>垂直对齐</label>
-            <div class="alignment-controls">
-              <button
-                @click="alignVertical('top')"
-                class="align-btn"
-                title="顶对齐"
-              >
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                  <rect x="4" y="2" width="2" height="8"/>
-                  <rect x="7" y="2" width="2" height="6"/>
-                  <rect x="10" y="2" width="2" height="10"/>
-                  <line x1="2" y1="1" x2="14" y2="1" stroke="currentColor" stroke-width="1"/>
-                </svg>
-              </button>
-              <button
-                @click="alignVertical('middle')"
-                class="align-btn"
-                title="垂直居中"
-              >
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                  <rect x="4" y="4" width="2" height="8"/>
-                  <rect x="7" y="5" width="2" height="6"/>
-                  <rect x="10" y="3" width="2" height="10"/>
-                  <line x1="2" y1="8" x2="14" y2="8" stroke="currentColor" stroke-width="1"/>
-                </svg>
-              </button>
-              <button
-                @click="alignVertical('bottom')"
-                class="align-btn"
-                title="底对齐"
-              >
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                  <rect x="4" y="6" width="2" height="8"/>
-                  <rect x="7" y="8" width="2" height="6"/>
-                  <rect x="10" y="4" width="2" height="10"/>
-                  <line x1="2" y1="15" x2="14" y2="15" stroke="currentColor" stroke-width="1"/>
-                </svg>
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <!-- 变换属性 -->
-        <div class="property-section">
-          <h4>变换</h4>
 
           <div class="property-item">
             <label>旋转</label>
@@ -1002,25 +914,13 @@ const formatFileSize = (bytes: number): string => {
 const getCurrentResolution = () => {
   if (!selectedClip.value) return { width: 1920, height: 1080 }
 
-  // 使用新的显示尺寸计算方法
-  const { width, height } = videoStore.getVideoDisplaySize(
-    selectedClip.value.id,
-    selectedClip.value.transform.scaleX,
-    selectedClip.value.transform.scaleY
-  )
+  // 从 store 获取视频原始分辨率
+  const originalResolution = videoStore.getVideoOriginalResolution(selectedClip.value.id)
 
-  const result = { width: Math.round(width), height: Math.round(height) }
+  const scaledWidth = Math.round(originalResolution.width * selectedClip.value.transform.scaleX)
+  const scaledHeight = Math.round(originalResolution.height * selectedClip.value.transform.scaleY)
 
-  console.log('📊 属性面板分辨率计算:')
-  console.log('  - 片段ID:', selectedClip.value.id)
-  console.log('  - 当前缩放:', {
-    scaleX: selectedClip.value.transform.scaleX,
-    scaleY: selectedClip.value.transform.scaleY
-  })
-  console.log('  - 计算出的显示尺寸:', { width, height })
-  console.log('  - 四舍五入后的分辨率:', result)
-
-  return result
+  return { width: scaledWidth, height: scaledHeight }
 }
 
 // 更新分辨率显示
@@ -1056,15 +956,11 @@ const confirmResolutionFromInput = () => {
     return
   }
 
-  // 直接使用视频原始分辨率作为基础
+  // 从 store 获取视频原始分辨率
   const originalResolution = videoStore.getVideoOriginalResolution(selectedClip.value.id)
 
-  // 计算基础尺寸（直接使用原始分辨率）
-  const baseWidth = originalResolution.width
-  const baseHeight = originalResolution.height
-
-  const newScaleX = newWidth / baseWidth
-  const newScaleY = newHeight / baseHeight
+  const newScaleX = newWidth / originalResolution.width
+  const newScaleY = newHeight / originalResolution.height
 
   // 限制缩放范围
   const clampedScaleX = Math.max(0.1, Math.min(10, newScaleX))
@@ -1093,72 +989,6 @@ const confirmResolutionFromInput = () => {
   // 重新计算并显示实际分辨率
   updateResolutionDisplay()
 }
-
-// 水平对齐功能
-const alignHorizontal = (alignment: 'left' | 'center' | 'right') => {
-  if (!selectedClip.value) return
-
-  const canvasWidth = videoStore.videoResolution.width
-  const { width: videoWidth } = videoStore.getVideoDisplaySize(
-    selectedClip.value.id,
-    selectedClip.value.transform.scaleX,
-    selectedClip.value.transform.scaleY
-  )
-
-  let newX = 0
-  switch (alignment) {
-    case 'left':
-      // 左对齐：视频左边缘贴画布左边缘
-      newX = -canvasWidth / 2 + videoWidth / 2
-      break
-    case 'center':
-      // 水平居中：视频中心对齐画布中心
-      newX = 0
-      break
-    case 'right':
-      // 右对齐：视频右边缘贴画布右边缘
-      newX = canvasWidth / 2 - videoWidth / 2
-      break
-  }
-
-  transformX.value = newX
-  tempTransformX.value = newX.toString()
-  updateTransform()
-}
-
-// 垂直对齐功能
-const alignVertical = (alignment: 'top' | 'middle' | 'bottom') => {
-  if (!selectedClip.value) return
-
-  const canvasHeight = videoStore.videoResolution.height
-  const { height: videoHeight } = videoStore.getVideoDisplaySize(
-    selectedClip.value.id,
-    selectedClip.value.transform.scaleX,
-    selectedClip.value.transform.scaleY
-  )
-
-  let newY = 0
-  switch (alignment) {
-    case 'top':
-      // 顶对齐：视频顶边缘贴画布顶边缘
-      newY = -canvasHeight / 2 + videoHeight / 2
-      break
-    case 'middle':
-      // 垂直居中：视频中心对齐画布中心
-      newY = 0
-      break
-    case 'bottom':
-      // 底对齐：视频底边缘贴画布底边缘
-      newY = canvasHeight / 2 - videoHeight / 2
-      break
-  }
-
-  transformY.value = newY
-  tempTransformY.value = newY.toString()
-  updateTransform()
-}
-
-
 </script>
 
 <style scoped>
@@ -1644,17 +1474,15 @@ const alignVertical = (alignment: 'top' | 'middle' | 'bottom') => {
 
 .resolution-input-group {
   display: flex;
-  flex-direction: row;
+  flex-direction: column;
   align-items: center;
   gap: 2px;
 }
 
-.resolution-input-group .resolution-label {
-  font-size: 12px;
+.resolution-label {
+  font-size: 10px;
   color: #ccc;
   margin: 0;
-  min-width: 20px !important;
-  text-align: left;
 }
 
 .resolution-input {
@@ -1713,44 +1541,5 @@ const alignVertical = (alignment: 'top' | 'middle' | 'bottom') => {
 
 ::-webkit-scrollbar-corner {
   background: #1a1a1a;
-}
-
-/* 对齐控制样式 */
-.alignment-controls {
-  display: flex;
-  gap: 4px;
-  flex: 1;
-}
-
-.align-btn {
-  background: #555;
-  border: 1px solid #666;
-  border-radius: 4px;
-  color: #ccc;
-  padding: 4px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s;
-  flex: 1;
-  min-width: 28px;
-  height: 24px;
-}
-
-.align-btn:hover {
-  background: #666;
-  color: #fff;
-  border-color: #777;
-}
-
-.align-btn:active {
-  background: #777;
-  transform: translateY(1px);
-}
-
-.align-btn svg {
-  width: 14px;
-  height: 14px;
 }
 </style>
