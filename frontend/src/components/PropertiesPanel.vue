@@ -5,7 +5,7 @@
     </div>
 
     <div class="panel-content">
-      <div v-if="!selectedClip" class="empty-state">
+      <div v-if="!selectedTimelineItem" class="empty-state">
         <svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor">
           <path
             d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4M11,16.5L18,9.5L16.5,8L11,13.5L7.5,10L6,11.5L11,16.5Z"
@@ -30,11 +30,11 @@
           </div>
           <div class="property-item">
             <label>时长</label>
-            <span class="property-value">{{ formatDuration(selectedClip.duration) }}</span>
+            <span class="property-value">{{ formatDuration(timelineDuration) }}</span>
           </div>
           <div class="property-item">
             <label>位置</label>
-            <span class="property-value">{{ formatDuration(selectedClip.timelinePosition) }}</span>
+            <span class="property-value">{{ formatDuration(selectedTimelineItem?.timelinePosition || 0) }}</span>
           </div>
         </div>
 
@@ -477,14 +477,28 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, nextTick } from 'vue'
-import { useVideoStore, type VideoClip } from '../stores/counter'
+import { useVideoStore, type TimelineItem } from '../stores/counter'
 
 const videoStore = useVideoStore()
 
-// 选中的片段
-const selectedClip = computed(() => {
-  if (!videoStore.selectedClipId) return null
-  return videoStore.clips.find((clip) => clip.id === videoStore.selectedClipId) || null
+// 选中的时间轴项目
+const selectedTimelineItem = computed(() => {
+  if (!videoStore.selectedTimelineItemId) return null
+  return videoStore.getTimelineItem(videoStore.selectedTimelineItemId) || null
+})
+
+// 选中项目对应的素材
+const selectedMediaItem = computed(() => {
+  if (!selectedTimelineItem.value) return null
+  return videoStore.getMediaItem(selectedTimelineItem.value.mediaItemId) || null
+})
+
+// 时间轴时长
+const timelineDuration = computed(() => {
+  if (!selectedTimelineItem.value) return 0
+  const sprite = selectedTimelineItem.value.customSprite
+  const timeRange = sprite.getTimeRange()
+  return (timeRange.timelineEndTime - timeRange.timelineStartTime) / 1000000 // 转换为秒
 })
 
 // 可编辑的属性
@@ -539,39 +553,40 @@ const tempResolutionHeight = ref('1080')
 const isUpdatingFromExternal = ref(false)
 
 // 更新本地状态的函数
-const updateLocalState = (clip: VideoClip | null) => {
-  if (clip) {
-    clipName.value = clip.name
-    playbackRate.value = clip.playbackRate || 1
-    targetDuration.value = clip.duration
-    speedInputValue.value = clip.playbackRate || 1
+const updateLocalState = (timelineItem: TimelineItem | null, mediaItem: any | null) => {
+  if (timelineItem && mediaItem) {
+    clipName.value = mediaItem.name
+    const sprite = timelineItem.customSprite
+    playbackRate.value = sprite.getPlaybackSpeed() || 1
+    const timeRange = sprite.getTimeRange()
+    targetDuration.value = (timeRange.timelineEndTime - timeRange.timelineStartTime) / 1000000 // 转换为秒
+    speedInputValue.value = sprite.getPlaybackSpeed() || 1
 
     // 根据当前播放速度更新归一化值
-    normalizedSpeed.value = speedToNormalized(clip.playbackRate || 1)
+    normalizedSpeed.value = speedToNormalized(sprite.getPlaybackSpeed() || 1)
 
-    // 更新变换属性
-    transformX.value = clip.transform.x
-    transformY.value = clip.transform.y
-    scaleX.value = clip.transform.scaleX
-    scaleY.value = clip.transform.scaleY
-    rotation.value = clip.transform.rotation
-    opacity.value = clip.transform.opacity
-    zIndex.value = clip.zIndex
+    // TODO: 重新实现变换属性管理
+    // 暂时使用默认值
+    transformX.value = 0
+    transformY.value = 0
+    scaleX.value = 1
+    scaleY.value = 1
+    rotation.value = 0
+    opacity.value = 1
+    zIndex.value = 0
 
     // 更新等比缩放相关属性
-    // 保持用户设置的等比缩放状态，不要自动修改
-    // 只更新uniformScale的值
-    uniformScale.value = proportionalScale.value ? clip.transform.scaleX : 1
+    uniformScale.value = 1
 
     // 更新临时输入值
-    tempTransformX.value = transformX.value.toString()
-    tempTransformY.value = transformY.value.toString()
-    tempUniformScale.value = uniformScale.value.toFixed(2)
-    tempScaleX.value = scaleX.value.toFixed(2)
-    tempScaleY.value = scaleY.value.toFixed(2)
-    tempRotation.value = rotation.value.toFixed(1)
-    tempOpacity.value = opacity.value.toFixed(2)
-    tempZIndex.value = zIndex.value.toString()
+    tempTransformX.value = '0'
+    tempTransformY.value = '0'
+    tempUniformScale.value = '1.00'
+    tempScaleX.value = '1.00'
+    tempScaleY.value = '1.00'
+    tempRotation.value = '0.0'
+    tempOpacity.value = '1.00'
+    tempZIndex.value = '0'
 
     // 更新分辨率显示
     updateResolutionDisplay()
@@ -609,91 +624,66 @@ const updateLocalState = (clip: VideoClip | null) => {
   }
 }
 
-// 监听选中片段变化，更新本地状态
-watch(selectedClip, updateLocalState, { immediate: true })
+// 监听选中时间轴项目变化，更新本地状态
+watch([selectedTimelineItem, selectedMediaItem], ([timelineItem, mediaItem]) => {
+  updateLocalState(timelineItem, mediaItem)
+}, { immediate: true })
 
-// 监听选中片段的变换属性变化
-watch(
-  () => selectedClip.value?.transform,
-  (newTransform) => {
-    if (newTransform && selectedClip.value && !isUpdatingFromExternal.value) {
-      isUpdatingFromExternal.value = true
-
-      // 只更新变换相关的属性，避免重复更新其他属性
-      transformX.value = newTransform.x
-      transformY.value = newTransform.y
-      scaleX.value = newTransform.scaleX
-      scaleY.value = newTransform.scaleY
-      rotation.value = newTransform.rotation
-      opacity.value = newTransform.opacity
-
-      // 不要自动修改等比缩放状态，保持用户的选择
-      // 只更新uniformScale的值（如果当前是等比缩放模式）
-      if (proportionalScale.value) {
-        uniformScale.value = newTransform.scaleX // 使用X轴缩放作为统一缩放值
-      }
-
-      // 更新临时输入值
-      tempTransformX.value = transformX.value.toString()
-      tempTransformY.value = transformY.value.toString()
-      tempUniformScale.value = uniformScale.value.toFixed(2)
-      tempScaleX.value = scaleX.value.toFixed(2)
-      tempScaleY.value = scaleY.value.toFixed(2)
-      tempRotation.value = rotation.value.toFixed(1)
-      tempOpacity.value = opacity.value.toFixed(2)
-
-      // 更新分辨率显示
-      updateResolutionDisplay()
-
-      // 下一个tick后重置标志
-      nextTick(() => {
-        isUpdatingFromExternal.value = false
-      })
-    }
-  },
-  { deep: true },
-)
-
-// 监听选中片段的zIndex变化
-watch(
-  () => selectedClip.value?.zIndex,
-  (newZIndex) => {
-    if (newZIndex !== undefined) {
-      zIndex.value = newZIndex
-      tempZIndex.value = zIndex.value.toString()
-    }
-  },
-)
+// TODO: 重新实现变换属性监听
+// 暂时禁用复杂的变换监听逻辑
 
 // 更新片段名称
 const updateClipName = () => {
-  if (selectedClip.value && clipName.value.trim()) {
-    videoStore.updateClipName(selectedClip.value.id, clipName.value.trim())
+  if (selectedMediaItem.value && clipName.value.trim()) {
+    videoStore.updateMediaItemName(selectedMediaItem.value.id, clipName.value.trim())
   }
 }
 
 // 更新播放速度
 const updatePlaybackRate = () => {
-  if (selectedClip.value) {
-    videoStore.updateClipPlaybackRate(selectedClip.value.id, playbackRate.value)
+  if (selectedTimelineItem.value) {
+    videoStore.updateTimelineItemPlaybackRate(selectedTimelineItem.value.id, playbackRate.value)
     // 同步更新目标时长和输入框值
-    targetDuration.value = selectedClip.value.originalDuration / playbackRate.value
+    const sprite = selectedTimelineItem.value.customSprite
+    const timeRange = sprite.getTimeRange()
+    targetDuration.value = (timeRange.timelineEndTime - timeRange.timelineStartTime) / 1000000
     speedInputValue.value = playbackRate.value
+
+    // 强制触发Vue组件重新渲染
+    videoStore.forceUpdateCounter++
   }
 }
 
 // 更新目标时长
 const updateTargetDuration = () => {
-  if (selectedClip.value && targetDuration.value > 0) {
-    const newPlaybackRate = selectedClip.value.originalDuration / targetDuration.value
+  if (selectedTimelineItem.value && selectedMediaItem.value && targetDuration.value > 0) {
+    const sprite = selectedTimelineItem.value.customSprite
+    const timeRange = sprite.getTimeRange()
+
+    // 计算新的播放速度：原始时长 / 目标时长
+    const newPlaybackRate = selectedMediaItem.value.duration / targetDuration.value
     // 确保播放速度在合理范围内（0.1-100x）
     const clampedRate = Math.max(0.1, Math.min(100, newPlaybackRate))
+
+    // 更新播放速度
     playbackRate.value = clampedRate
-    // 更新归一化值
-    normalizedSpeed.value = speedToNormalized(clampedRate)
-    videoStore.updateClipPlaybackRate(selectedClip.value.id, clampedRate)
+    speedInputValue.value = clampedRate
+
+    // 更新CustomVisibleSprite的时间范围
+    const newTimelineEndTime = timeRange.timelineStartTime + (targetDuration.value * 1000000)
+    sprite.setTimeRange({
+      clipStartTime: timeRange.clipStartTime,
+      clipEndTime: timeRange.clipEndTime,
+      timelineStartTime: timeRange.timelineStartTime,
+      timelineEndTime: newTimelineEndTime
+    })
+
     // 重新计算实际时长（可能因为范围限制而有所调整）
-    targetDuration.value = selectedClip.value.originalDuration / clampedRate
+    const actualDuration = selectedMediaItem.value.duration / clampedRate
+    targetDuration.value = actualDuration
+
+    // 强制触发Vue组件重新渲染
+    videoStore.forceUpdateCounter++
   }
 }
 
@@ -752,16 +742,8 @@ const speedToNormalized = (speed: number) => {
 
 // 更新变换属性
 const updateTransform = () => {
-  if (selectedClip.value) {
-    videoStore.updateClipTransform(selectedClip.value.id, {
-      x: transformX.value,
-      y: transformY.value,
-      scaleX: scaleX.value,
-      scaleY: scaleY.value,
-      rotation: rotation.value,
-      opacity: opacity.value,
-    })
-  }
+  // TODO: 重新实现变换属性更新
+  console.log('TODO: 更新变换属性')
 }
 
 // 切换等比缩放
@@ -946,9 +928,8 @@ const confirmZIndexFromInput = () => {
 
 // 更新层级
 const updateZIndex = () => {
-  if (selectedClip.value) {
-    videoStore.updateClipZIndex(selectedClip.value.id, zIndex.value)
-  }
+  // TODO: 重新实现层级更新
+  console.log('TODO: 更新层级')
 }
 
 
@@ -965,16 +946,8 @@ const formatDuration = (seconds: number): string => {
 
 // 计算当前分辨率
 const getCurrentResolution = () => {
-  if (!selectedClip.value) return { width: 1920, height: 1080 }
-
-  // 使用新的显示尺寸计算方法
-  const { width, height } = videoStore.getVideoDisplaySize(
-    selectedClip.value.id,
-    selectedClip.value.transform.scaleX,
-    selectedClip.value.transform.scaleY
-  )
-
-  return { width: Math.round(width), height: Math.round(height) }
+  // TODO: 重新实现分辨率计算
+  return { width: 1920, height: 1080 }
 }
 
 // 更新分辨率显示
@@ -986,118 +959,19 @@ const updateResolutionDisplay = () => {
 
 // 确认分辨率输入
 const confirmResolutionFromInput = () => {
-  if (!selectedClip.value) return
-
-  const newWidth = parseInt(tempResolutionWidth.value)
-  const newHeight = parseInt(tempResolutionHeight.value)
-
-  if (isNaN(newWidth) || isNaN(newHeight) || newWidth <= 0 || newHeight <= 0) {
-    // 如果输入无效，恢复到当前值
-    updateResolutionDisplay()
-    return
-  }
-
-  // 获取适应缩放比例
-  const { fitScale } = videoStore.getVideoFitScale(selectedClip.value.id)
-  const originalResolution = videoStore.getVideoOriginalResolution(selectedClip.value.id)
-
-  // 计算基础尺寸（考虑适应缩放）
-  const baseWidth = originalResolution.width * fitScale
-  const baseHeight = originalResolution.height * fitScale
-
-  const newScaleX = newWidth / baseWidth
-  const newScaleY = newHeight / baseHeight
-
-  // 限制缩放范围
-  const clampedScaleX = Math.max(0.1, Math.min(10, newScaleX))
-  const clampedScaleY = Math.max(0.1, Math.min(10, newScaleY))
-
-  // 更新缩放值
-  scaleX.value = clampedScaleX
-  scaleY.value = clampedScaleY
-
-  // 如果是等比缩放模式，使用平均值
-  if (proportionalScale.value) {
-    const avgScale = (clampedScaleX + clampedScaleY) / 2
-    scaleX.value = avgScale
-    scaleY.value = avgScale
-    uniformScale.value = avgScale
-    tempUniformScale.value = avgScale.toFixed(2)
-  }
-
-  // 更新临时缩放值
-  tempScaleX.value = scaleX.value.toFixed(2)
-  tempScaleY.value = scaleY.value.toFixed(2)
-
-  // 应用变换
-  updateTransform()
-
-  // 重新计算并显示实际分辨率
+  // TODO: 重新实现分辨率输入确认
+  console.log('TODO: 确认分辨率输入')
   updateResolutionDisplay()
+
 }
 
-// 水平对齐功能
+// TODO: 重新实现对齐功能
 const alignHorizontal = (alignment: 'left' | 'center' | 'right') => {
-  if (!selectedClip.value) return
-
-  const canvasWidth = videoStore.videoResolution.width
-  const { width: videoWidth } = videoStore.getVideoDisplaySize(
-    selectedClip.value.id,
-    selectedClip.value.transform.scaleX,
-    selectedClip.value.transform.scaleY
-  )
-
-  let newX = 0
-  switch (alignment) {
-    case 'left':
-      // 左对齐：视频左边缘贴画布左边缘
-      newX = -canvasWidth / 2 + videoWidth / 2
-      break
-    case 'center':
-      // 水平居中：视频中心对齐画布中心
-      newX = 0
-      break
-    case 'right':
-      // 右对齐：视频右边缘贴画布右边缘
-      newX = canvasWidth / 2 - videoWidth / 2
-      break
-  }
-
-  transformX.value = newX
-  tempTransformX.value = newX.toString()
-  updateTransform()
+  console.log('TODO: 实现水平对齐:', alignment)
 }
 
-// 垂直对齐功能
 const alignVertical = (alignment: 'top' | 'middle' | 'bottom') => {
-  if (!selectedClip.value) return
-
-  const canvasHeight = videoStore.videoResolution.height
-  const { height: videoHeight } = videoStore.getVideoDisplaySize(
-    selectedClip.value.id,
-    selectedClip.value.transform.scaleX,
-    selectedClip.value.transform.scaleY
-  )
-
-  let newY = 0
-  switch (alignment) {
-    case 'top':
-      // 顶对齐：视频顶边缘贴画布顶边缘
-      newY = -canvasHeight / 2 + videoHeight / 2
-      break
-    case 'middle':
-      // 垂直居中：视频中心对齐画布中心
-      newY = 0
-      break
-    case 'bottom':
-      // 底对齐：视频底边缘贴画布底边缘
-      newY = canvasHeight / 2 - videoHeight / 2
-      break
-  }
-
-  transformY.value = newY
-  tempTransformY.value = newY.toString()
-  updateTransform()
+  console.log('TODO: 实现垂直对齐:', alignment)
 }
 
 

@@ -1,6 +1,6 @@
 <template>
   <!-- 工具栏 -->
-  <div v-if="clips.length > 0" class="clip-management-toolbar">
+  <div v-if="timelineItems.length > 0" class="clip-management-toolbar">
     <div class="toolbar-section">
       <span class="toolbar-label">片段管理:</span>
       <button class="toolbar-btn" @click="autoArrange" title="自动排列片段，消除重叠">
@@ -10,7 +10,7 @@
         自动排列
       </button>
       <button
-        v-if="videoStore.selectedClipId"
+        v-if="videoStore.selectedTimelineItemId"
         class="toolbar-btn split-btn"
         @click="splitSelectedClip"
         title="在当前时间位置裁剪选中的片段"
@@ -24,7 +24,7 @@
         裁剪
       </button>
       <button
-        v-if="videoStore.selectedClipId"
+        v-if="videoStore.selectedTimelineItemId"
         class="toolbar-btn delete-btn"
         @click="deleteSelectedClip"
         title="删除选中的片段"
@@ -60,30 +60,30 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useVideoStore, type VideoClip } from '../stores/counter'
+import { useVideoStore, type TimelineItem } from '../stores/counter'
 
 const videoStore = useVideoStore()
 
-const clips = computed(() => videoStore.clips)
+const timelineItems = computed(() => videoStore.timelineItems)
 
-// 计算重叠片段数量（只计算同轨道内的重叠）
+// 计算重叠时间轴项目数量（只计算同轨道内的重叠）
 const overlappingCount = computed(() => {
   let count = 0
-  const tracks = new Map<number, VideoClip[]>()
+  const tracks = new Map<number, TimelineItem[]>()
 
   // 按轨道分组
-  videoStore.clips.forEach((clip) => {
-    if (!tracks.has(clip.trackId)) {
-      tracks.set(clip.trackId, [])
+  videoStore.timelineItems.forEach((item) => {
+    if (!tracks.has(item.trackId)) {
+      tracks.set(item.trackId, [])
     }
-    tracks.get(clip.trackId)!.push(clip)
+    tracks.get(item.trackId)!.push(item)
   })
 
   // 检查每个轨道内的重叠
-  tracks.forEach((trackClips) => {
-    for (let i = 0; i < trackClips.length; i++) {
-      for (let j = i + 1; j < trackClips.length; j++) {
-        if (videoStore.isOverlapping(trackClips[i], trackClips[j])) {
+  tracks.forEach((trackItems) => {
+    for (let i = 0; i < trackItems.length; i++) {
+      for (let j = i + 1; j < trackItems.length; j++) {
+        if (isTimelineItemsOverlapping(trackItems[i], trackItems[j])) {
           count++
         }
       }
@@ -93,23 +93,38 @@ const overlappingCount = computed(() => {
   return count
 })
 
+// 检测两个时间轴项目是否重叠
+function isTimelineItemsOverlapping(item1: TimelineItem, item2: TimelineItem): boolean {
+  const sprite1 = item1.customSprite
+  const sprite2 = item2.customSprite
+  const range1 = sprite1.getTimeRange()
+  const range2 = sprite2.getTimeRange()
+
+  const item1Start = range1.timelineStartTime / 1000000 // 转换为秒
+  const item1End = range1.timelineEndTime / 1000000
+  const item2Start = range2.timelineStartTime / 1000000
+  const item2End = range2.timelineEndTime / 1000000
+
+  return !(item1End <= item2Start || item2End <= item1Start)
+}
+
 function splitSelectedClip() {
-  if (videoStore.selectedClipId) {
-    console.log('🔪 开始裁剪片段:', videoStore.selectedClipId)
+  if (videoStore.selectedTimelineItemId) {
+    console.log('🔪 开始裁剪时间轴项目:', videoStore.selectedTimelineItemId)
     console.log('📍 裁剪时间位置:', videoStore.currentTime)
-    videoStore.splitClipAtTime(videoStore.selectedClipId, videoStore.currentTime)
+    videoStore.splitTimelineItemAtTime(videoStore.selectedTimelineItemId, videoStore.currentTime)
   }
 }
 
 function deleteSelectedClip() {
-  if (videoStore.selectedClipId) {
-    console.log('🗑️ 删除片段:', videoStore.selectedClipId)
-    videoStore.removeClip(videoStore.selectedClipId)
+  if (videoStore.selectedTimelineItemId) {
+    console.log('🗑️ 删除时间轴项目:', videoStore.selectedTimelineItemId)
+    videoStore.removeTimelineItem(videoStore.selectedTimelineItemId)
   }
 }
 
 function autoArrange() {
-  videoStore.autoArrangeClips()
+  videoStore.autoArrangeTimelineItems()
 }
 
 function debugTimeline() {
@@ -124,55 +139,39 @@ function debugTimeline() {
   console.log('播放速度:', videoStore.playbackRate + 'x')
   console.groupEnd()
 
-  // 视频片段信息
-  console.group('🎞️ 视频片段信息 (' + clips.value.length + ' 个)')
-  clips.value.forEach((clip, index) => {
-    console.group(`片段 ${index + 1}: ${clip.name}`)
-    console.log('ID:', clip.id)
-    console.log('文件名:', clip.name)
-    console.log('时长 (秒):', clip.duration.toFixed(2))
-    console.log('时间轴位置 (秒):', clip.timelinePosition.toFixed(2))
-    console.log('结束位置 (秒):', (clip.timelinePosition + clip.duration).toFixed(2))
-    console.log('文件大小:', formatFileSize(clip.file.size))
-    console.log('文件类型:', clip.file.type)
+  // 素材信息
+  console.group('📁 素材信息 (' + videoStore.mediaItems.length + ' 个)')
+  videoStore.mediaItems.forEach((item, index) => {
+    console.group(`素材 ${index + 1}: ${item.name}`)
+    console.log('ID:', item.id)
+    console.log('文件名:', item.name)
+    console.log('时长 (秒):', item.duration.toFixed(2))
+    console.log('文件大小:', formatFileSize(item.file.size))
+    console.log('文件类型:', item.file.type)
     console.groupEnd()
   })
   console.groupEnd()
 
-  // 重叠检测
-  const overlaps = videoStore.getOverlappingClips()
-  console.group('⚠️ 重叠检测 (' + overlaps.length + ' 个重叠)')
-  if (overlaps.length > 0) {
-    overlaps.forEach((overlap, index) => {
-      console.group(`重叠 ${index + 1}`)
-      console.log('片段1:', overlap.clip1.name)
-      console.log(
-        '片段1范围:',
-        `${overlap.clip1.timelinePosition.toFixed(2)}s - ${(overlap.clip1.timelinePosition + overlap.clip1.duration).toFixed(2)}s`,
-      )
-      console.log('片段2:', overlap.clip2.name)
-      console.log(
-        '片段2范围:',
-        `${overlap.clip2.timelinePosition.toFixed(2)}s - ${(overlap.clip2.timelinePosition + overlap.clip2.duration).toFixed(2)}s`,
-      )
+  // 时间轴项目信息
+  console.group('🎞️ 时间轴项目信息 (' + timelineItems.value.length + ' 个)')
+  timelineItems.value.forEach((item, index) => {
+    const mediaItem = videoStore.getMediaItem(item.mediaItemId)
+    const sprite = item.customSprite
+    const timeRange = sprite.getTimeRange()
 
-      // 计算重叠区域
-      const overlapStart = Math.max(overlap.clip1.timelinePosition, overlap.clip2.timelinePosition)
-      const overlapEnd = Math.min(
-        overlap.clip1.timelinePosition + overlap.clip1.duration,
-        overlap.clip2.timelinePosition + overlap.clip2.duration,
-      )
-      console.log(
-        '重叠区域:',
-        `${overlapStart.toFixed(2)}s - ${overlapEnd.toFixed(2)}s (${(overlapEnd - overlapStart).toFixed(2)}s)`,
-      )
-      console.groupEnd()
-    })
-  } else {
-    console.log('✅ 没有检测到重叠')
-  }
+    console.group(`时间轴项目 ${index + 1}: ${mediaItem?.name || 'Unknown'}`)
+    console.log('ID:', item.id)
+    console.log('素材ID:', item.mediaItemId)
+    console.log('轨道ID:', item.trackId)
+    console.log('时间轴位置 (秒):', item.timelinePosition.toFixed(2))
+    console.log('时间轴开始 (秒):', (timeRange.timelineStartTime / 1000000).toFixed(2))
+    console.log('时间轴结束 (秒):', (timeRange.timelineEndTime / 1000000).toFixed(2))
+    console.log('播放速度:', sprite.getPlaybackSpeed())
+    console.groupEnd()
+  })
   console.groupEnd()
 
+  console.log('✅ 调试信息输出完成')
   console.groupEnd()
 }
 

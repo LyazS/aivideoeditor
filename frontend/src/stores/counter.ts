@@ -1,32 +1,26 @@
-import { ref, computed, markRaw, toRaw } from 'vue'
+import { ref, computed, markRaw } from 'vue'
 import { defineStore } from 'pinia'
 import { AVCanvas } from '@webav/av-canvas'
-import { MP4Clip } from '@webav/av-cliper'
 import { CustomVisibleSprite } from '../utils/customVisibleSprite'
 
-export interface VideoTransform {
-  x: number // X轴位置 (像素，相对于画布中心)
-  y: number // Y轴位置 (像素，相对于画布中心)
-  scaleX: number // X轴缩放 (1.0 = 100%)
-  scaleY: number // Y轴缩放 (1.0 = 100%)
-  rotation: number // 旋转角度 (度)
-  opacity: number // 透明度 (0-1)
-}
-
-export interface VideoClip {
+// 素材层：包装MP4Clip和原始文件信息
+export interface MediaItem {
   id: string
+  name: string
   file: File
   url: string
-  duration: number // 在时间轴上的显示时长（可以通过拉伸调整）
-  originalDuration: number // 原始视频文件的完整时长
-  startTime: number // 视频内容的开始时间（通常是0）
-  endTime: number // 视频内容的结束时间（通常等于originalDuration）
+  duration: number
+  type: string
+  mp4Clip: any // 使用any类型避免markRaw的类型问题
+}
+
+// 时间轴层：包装CustomVisibleSprite和时间轴位置信息
+export interface TimelineItem {
+  id: string
+  mediaItemId: string // 引用MediaItem的ID
+  trackId: number
   timelinePosition: number
-  name: string
-  playbackRate?: number // 播放速度倍率（自动计算：originalDuration / duration）
-  trackId: number // 所属轨道ID
-  transform: VideoTransform // 视频变换属性
-  zIndex: number // 层级顺序
+  customSprite: any // 使用any类型避免markRaw的类型问题
 }
 
 export interface VideoResolution {
@@ -46,7 +40,10 @@ export interface Track {
 }
 
 export const useVideoStore = defineStore('video', () => {
-  const clips = ref<VideoClip[]>([])
+  // 新的两层数据结构
+  const mediaItems = ref<MediaItem[]>([]) // 素材库
+  const timelineItems = ref<TimelineItem[]>([]) // 时间轴
+
   const tracks = ref<Track[]>([
     { id: 1, name: '轨道 1', isVisible: true, isMuted: false, height: 80 },
     { id: 2, name: '轨道 2', isVisible: true, isMuted: false, height: 80 },
@@ -54,9 +51,8 @@ export const useVideoStore = defineStore('video', () => {
   const currentTime = ref(0)
   const isPlaying = ref(false)
   const timelineDuration = ref(300) // 默认300秒时间轴，确保有足够的刻度线空间
-  const currentClip = ref<VideoClip | null>(null)
+  const selectedTimelineItemId = ref<string | null>(null) // 当前选中的时间轴项ID
   const playbackRate = ref(1) // 播放速度
-  const selectedClipId = ref<string | null>(null) // 当前选中的片段ID
 
   // 编辑设置
   const proportionalScale = ref(true) // 等比缩放设置
@@ -84,8 +80,6 @@ export const useVideoStore = defineStore('video', () => {
   // ==================== WebAV 相关状态 ====================
   // WebAV核心对象 - 使用markRaw避免Vue响应式包装
   const avCanvas = ref<AVCanvas | null>(null)
-  const mp4Clips = ref<Map<string, MP4Clip>>(new Map())
-  const customSprites = ref<Map<string, CustomVisibleSprite>>(new Map())
   const isWebAVReady = ref(false)
   const webAVError = ref<string | null>(null)
 
@@ -102,35 +96,18 @@ export const useVideoStore = defineStore('video', () => {
     webAVError.value = error
   }
 
-  function addMP4Clip(clipId: string, mp4Clip: MP4Clip) {
-    mp4Clips.value.set(clipId, markRaw(mp4Clip))
-  }
-
-  function removeMP4Clip(clipId: string) {
-    mp4Clips.value.delete(clipId)
-  }
-
-  function addCustomSprite(clipId: string, sprite: CustomVisibleSprite) {
-    customSprites.value.set(clipId, markRaw(sprite))
-  }
-
-  function removeCustomSprite(clipId: string) {
-    customSprites.value.delete(clipId)
-  }
-
-  function getMP4Clip(clipId: string): MP4Clip | undefined {
-    const clip = mp4Clips.value.get(clipId)
-    return clip ? toRaw(clip) : undefined
-  }
-
-  function getCustomSprite(clipId: string): CustomVisibleSprite | undefined {
-    const sprite = customSprites.value.get(clipId)
-    return sprite ? toRaw(sprite) : undefined
-  }
-
   const totalDuration = computed(() => {
-    if (clips.value.length === 0) return timelineDuration.value
-    const maxEndTime = Math.max(...clips.value.map((clip) => clip.timelinePosition + clip.duration))
+    // 依赖强制更新计数器，确保在sprite内部状态变化时重新计算
+    forceUpdateCounter.value
+
+    if (timelineItems.value.length === 0) return timelineDuration.value
+    const maxEndTime = Math.max(...timelineItems.value.map((item) => {
+      // 从CustomVisibleSprite获取时间信息
+      const sprite = item.customSprite
+      const timeRange = sprite.getTimeRange()
+      const timelineEndTime = timeRange.timelineEndTime / 1000000 // 转换为秒
+      return timelineEndTime
+    }))
     return Math.max(maxEndTime, timelineDuration.value)
   })
 
@@ -185,251 +162,211 @@ export const useVideoStore = defineStore('video', () => {
 
   // 计算实际内容的结束时间（最后一个视频片段的结束时间）
   const contentEndTime = computed(() => {
-    if (clips.value.length === 0) return 0
-    return Math.max(...clips.value.map((clip) => clip.timelinePosition + clip.duration))
+    if (timelineItems.value.length === 0) return 0
+    return Math.max(...timelineItems.value.map((item) => {
+      const sprite = item.customSprite
+      const timeRange = sprite.getTimeRange()
+      return timeRange.timelineEndTime / 1000000 // 转换为秒
+    }))
   })
 
-  function addClip(clip: VideoClip) {
-    // 如果没有指定轨道，默认分配到第一个轨道
-    if (!clip.trackId) {
-      clip.trackId = 1
-    }
-    // 检查并调整新片段的位置以避免重叠（只在同一轨道内检查）
-    const adjustedPosition = resolveOverlap(clip.id, clip.timelinePosition, clip.trackId)
-    clip.timelinePosition = adjustedPosition
-    clips.value.push(clip)
+  // ==================== 素材管理方法 ====================
+  function addMediaItem(mediaItem: MediaItem) {
+    mediaItems.value.push(mediaItem)
   }
 
-  function removeClip(clipId: string) {
-    const index = clips.value.findIndex((clip) => clip.id === clipId)
+  function removeMediaItem(mediaItemId: string) {
+    const index = mediaItems.value.findIndex((item) => item.id === mediaItemId)
     if (index > -1) {
-      clips.value.splice(index, 1)
+      // 先移除所有相关的时间轴项目
+      timelineItems.value = timelineItems.value.filter(item => item.mediaItemId !== mediaItemId)
+      // 再移除素材项目
+      mediaItems.value.splice(index, 1)
     }
   }
 
-  function updateClipPosition(clipId: string, newPosition: number, newTrackId?: number) {
-    const clip = clips.value.find((c) => c.id === clipId)
-    if (clip) {
+  function getMediaItem(mediaItemId: string): MediaItem | undefined {
+    return mediaItems.value.find(item => item.id === mediaItemId)
+  }
+
+  // ==================== 时间轴管理方法 ====================
+  function addTimelineItem(timelineItem: TimelineItem) {
+    // 如果没有指定轨道，默认分配到第一个轨道
+    if (!timelineItem.trackId) {
+      timelineItem.trackId = 1
+    }
+    timelineItems.value.push(timelineItem)
+  }
+
+  function removeTimelineItem(timelineItemId: string) {
+    const index = timelineItems.value.findIndex((item) => item.id === timelineItemId)
+    if (index > -1) {
+      timelineItems.value.splice(index, 1)
+    }
+  }
+
+  function getTimelineItem(timelineItemId: string): TimelineItem | undefined {
+    return timelineItems.value.find(item => item.id === timelineItemId)
+  }
+
+  function getTimelineItemsForTrack(trackId: number): TimelineItem[] {
+    return timelineItems.value.filter(item => item.trackId === trackId)
+  }
+
+  // ==================== 素材名称管理 ====================
+  function updateMediaItemName(mediaItemId: string, newName: string) {
+    const mediaItem = getMediaItem(mediaItemId)
+    if (mediaItem && newName.trim()) {
+      mediaItem.name = newName.trim()
+      console.log(`素材名称已更新: ${mediaItemId} -> ${newName}`)
+    }
+  }
+
+  function updateTimelineItemPosition(timelineItemId: string, newPosition: number, newTrackId?: number) {
+    const item = timelineItems.value.find((item) => item.id === timelineItemId)
+    if (item) {
       // 如果指定了新轨道，更新轨道ID
       if (newTrackId !== undefined) {
-        clip.trackId = newTrackId
+        item.trackId = newTrackId
       }
-      // 检查并处理重叠（只在同一轨道内检查）
-      const adjustedPosition = resolveOverlap(clipId, newPosition, clip.trackId)
-      clip.timelinePosition = adjustedPosition
+      // 更新时间轴位置
+      item.timelinePosition = newPosition
+      // 更新CustomVisibleSprite的时间轴位置
+      const sprite = item.customSprite
+      const currentTimeRange = sprite.getTimeRange()
+      const duration = currentTimeRange.timelineEndTime - currentTimeRange.timelineStartTime
+      sprite.setTimeRange({
+        timelineStartTime: newPosition * 1000000, // 转换为微秒
+        timelineEndTime: newPosition * 1000000 + duration
+      })
     }
   }
 
-  function updateClipDuration(clipId: string, newDuration: number, timelinePosition?: number) {
-    const clip = clips.value.find((c) => c.id === clipId)
-    if (clip) {
-      // 确保最小时长（0.01秒）和最大时长限制
-      const minDuration = 0.01
-      const maxDuration = clip.originalDuration * 100 // 最多可以拉伸到100倍长度（0.01倍速）
-      const validDuration = Math.max(minDuration, Math.min(newDuration, maxDuration))
-
-      clip.duration = validDuration
-      // 计算播放速度倍率
-      clip.playbackRate = clip.originalDuration / validDuration
-
-      // 如果提供了新的时间轴位置，也更新它
-      if (timelinePosition !== undefined) {
-        const adjustedPosition = resolveOverlap(clipId, timelinePosition, clip.trackId)
-        clip.timelinePosition = adjustedPosition
-      }
-    }
+  function selectTimelineItem(timelineItemId: string | null) {
+    selectedTimelineItemId.value = timelineItemId
   }
 
-  function selectClip(clipId: string | null) {
-    selectedClipId.value = clipId
-  }
+  function splitTimelineItemAtTime(timelineItemId: string, splitTime: number) {
+    console.group('🔪 时间轴项目分割调试')
 
-  function splitClipAtTime(clipId: string, splitTime: number) {
-    console.group('🔪 视频片段裁剪调试')
-
-    const clipIndex = clips.value.findIndex((c) => c.id === clipId)
-    if (clipIndex === -1) {
-      console.error('❌ 找不到要裁剪的片段:', clipId)
+    const itemIndex = timelineItems.value.findIndex((item) => item.id === timelineItemId)
+    if (itemIndex === -1) {
+      console.error('❌ 找不到要分割的时间轴项目:', timelineItemId)
       console.groupEnd()
       return
     }
 
-    const originalClip = clips.value[clipIndex]
-    console.log('📹 原始片段信息:')
-    console.log('  - 名称:', originalClip.name)
-    console.log('  - 时间轴位置:', originalClip.timelinePosition)
-    console.log('  - 时间轴时长:', originalClip.duration)
-    console.log('  - 视频开始时间:', originalClip.startTime)
-    console.log('  - 视频结束时间:', originalClip.endTime)
-    console.log('  - 播放速度:', originalClip.playbackRate)
-    console.log('  - 原始时长:', originalClip.originalDuration)
+    const originalItem = timelineItems.value[itemIndex]
+    const sprite = originalItem.customSprite
+    const timeRange = sprite.getTimeRange()
+    const mediaItem = getMediaItem(originalItem.mediaItemId)
 
-    // 检查分割时间是否在片段范围内
-    if (
-      splitTime <= originalClip.timelinePosition ||
-      splitTime >= originalClip.timelinePosition + originalClip.duration
-    ) {
-      console.error('❌ 分割时间不在片段范围内')
-      console.log('  - 分割时间:', splitTime)
-      console.log('  - 片段开始:', originalClip.timelinePosition)
-      console.log('  - 片段结束:', originalClip.timelinePosition + originalClip.duration)
+    if (!mediaItem) {
+      console.error('❌ 找不到对应的素材项目')
       console.groupEnd()
       return
     }
 
-    // 计算分割点在片段内的相对时间
-    const relativeTimelineTime = splitTime - originalClip.timelinePosition
-    console.log('📍 分割点计算:')
+    const timelineStartTime = timeRange.timelineStartTime / 1000000 // 转换为秒
+    const timelineEndTime = timeRange.timelineEndTime / 1000000 // 转换为秒
+
+    console.log('📹 原始时间轴项目信息:')
+    console.log('  - 时间轴开始:', timelineStartTime)
+    console.log('  - 时间轴结束:', timelineEndTime)
     console.log('  - 分割时间:', splitTime)
-    console.log('  - 片段内相对时间:', relativeTimelineTime)
 
-    // 计算在原始视频中的分割点时间
-    const videoContentDuration = originalClip.endTime - originalClip.startTime
-    const relativeVideoTime = (relativeTimelineTime / originalClip.duration) * videoContentDuration
-    const splitVideoTime = originalClip.startTime + relativeVideoTime
-
-    console.log('🎬 视频时间计算:')
-    console.log('  - 视频内容时长:', videoContentDuration)
-    console.log('  - 相对视频时间:', relativeVideoTime)
-    console.log('  - 分割点视频时间:', splitVideoTime)
-
-    // 创建第一个片段（从开始到分割点）
-    const firstClip: VideoClip = {
-      ...originalClip,
-      id: Date.now().toString() + Math.random().toString(36).substring(2, 11),
-      duration: relativeTimelineTime,
-      endTime: splitVideoTime,
-      playbackRate: videoContentDuration / originalClip.duration, // 保持原有播放速度
-      trackId: originalClip.trackId, // 保持原轨道
-      transform: { ...originalClip.transform }, // 复制变换属性
-      zIndex: originalClip.zIndex,
+    // 检查分割时间是否在项目范围内
+    if (splitTime <= timelineStartTime || splitTime >= timelineEndTime) {
+      console.error('❌ 分割时间不在项目范围内')
+      console.groupEnd()
+      return
     }
 
-    // 创建第二个片段（从分割点到结束）
-    const secondClip: VideoClip = {
-      ...originalClip,
-      id: Date.now().toString() + Math.random().toString(36).substring(2, 11),
-      timelinePosition: splitTime,
-      duration: originalClip.duration - relativeTimelineTime,
-      startTime: splitVideoTime,
-      playbackRate: videoContentDuration / originalClip.duration, // 保持原有播放速度
-      trackId: originalClip.trackId, // 保持原轨道
-      transform: { ...originalClip.transform }, // 复制变换属性
-      zIndex: originalClip.zIndex,
-    }
+    // 计算分割点在素材中的相对位置
+    const timelineDuration = timelineEndTime - timelineStartTime
+    const relativeTimelineTime = splitTime - timelineStartTime
+    const relativeRatio = relativeTimelineTime / timelineDuration
 
-    console.log('✂️ 第一个片段:')
-    console.log('  - 时间轴位置:', firstClip.timelinePosition)
-    console.log('  - 时间轴时长:', firstClip.duration)
-    console.log('  - 视频开始时间:', firstClip.startTime)
-    console.log('  - 视频结束时间:', firstClip.endTime)
-    console.log('  - 播放速度:', firstClip.playbackRate)
+    const clipStartTime = timeRange.clipStartTime / 1000000 // 转换为秒
+    const clipEndTime = timeRange.clipEndTime / 1000000 // 转换为秒
+    const clipDuration = clipEndTime - clipStartTime
+    const splitClipTime = clipStartTime + (clipDuration * relativeRatio)
 
-    console.log('✂️ 第二个片段:')
-    console.log('  - 时间轴位置:', secondClip.timelinePosition)
-    console.log('  - 时间轴时长:', secondClip.duration)
-    console.log('  - 视频开始时间:', secondClip.startTime)
-    console.log('  - 视频结束时间:', secondClip.endTime)
-    console.log('  - 播放速度:', secondClip.playbackRate)
+    console.log('🎬 素材时间计算:')
+    console.log('  - 素材开始时间:', clipStartTime)
+    console.log('  - 素材结束时间:', clipEndTime)
+    console.log('  - 分割点素材时间:', splitClipTime)
 
-    // 替换原片段为两个新片段
-    clips.value.splice(clipIndex, 1, firstClip, secondClip)
-    console.log('✅ 裁剪完成，已替换原片段')
+    try {
+      // 创建第一个片段的CustomVisibleSprite
+      const firstSprite = new (sprite.constructor as any)(mediaItem.mp4Clip)
+      firstSprite.setTimeRange({
+        clipStartTime: clipStartTime * 1000000,
+        clipEndTime: splitClipTime * 1000000,
+        timelineStartTime: timelineStartTime * 1000000,
+        timelineEndTime: splitTime * 1000000
+      })
 
-    // 清除选中状态
-    selectedClipId.value = null
-    console.groupEnd()
-  }
+      // 创建第二个片段的CustomVisibleSprite
+      const secondSprite = new (sprite.constructor as any)(mediaItem.mp4Clip)
+      secondSprite.setTimeRange({
+        clipStartTime: splitClipTime * 1000000,
+        clipEndTime: clipEndTime * 1000000,
+        timelineStartTime: splitTime * 1000000,
+        timelineEndTime: timelineEndTime * 1000000
+      })
 
-  // 检测两个片段是否重叠
-  function isOverlapping(clip1: VideoClip, clip2: VideoClip): boolean {
-    const clip1Start = clip1.timelinePosition
-    const clip1End = clip1.timelinePosition + clip1.duration
-    const clip2Start = clip2.timelinePosition
-    const clip2End = clip2.timelinePosition + clip2.duration
-
-    return !(clip1End <= clip2Start || clip2End <= clip1Start)
-  }
-
-  // 解决重叠问题（只在同一轨道内检查）
-  function resolveOverlap(movingClipId: string, newPosition: number, trackId: number): number {
-    const movingClip = clips.value.find((c) => c.id === movingClipId)
-    if (!movingClip) return newPosition
-
-    // 创建临时片段用于检测
-    const tempClip: VideoClip = {
-      ...movingClip,
-      timelinePosition: newPosition,
-      trackId: trackId,
-    }
-
-    // 找到所有与移动片段重叠的同轨道其他片段
-    const overlappingClips = clips.value.filter(
-      (clip) =>
-        clip.id !== movingClipId && clip.trackId === trackId && isOverlapping(tempClip, clip),
-    )
-
-    if (overlappingClips.length === 0) {
-      return newPosition // 没有重叠，直接返回
-    }
-
-    // 策略1: 自动吸附到最近的空隙
-    return findNearestGap(tempClip)
-  }
-
-  // 寻找最近的可用空隙（只在同一轨道内）
-  function findNearestGap(movingClip: VideoClip): number {
-    const allClips = clips.value.filter(
-      (c) => c.id !== movingClip.id && c.trackId === movingClip.trackId,
-    )
-
-    // 按时间位置排序
-    allClips.sort((a, b) => a.timelinePosition - b.timelinePosition)
-
-    // 尝试在每个片段之前和之后放置
-    const possiblePositions: number[] = [0] // 开始位置
-
-    for (const clip of allClips) {
-      // 片段之前的位置
-      const beforePosition = clip.timelinePosition - movingClip.duration
-      if (beforePosition >= 0) {
-        possiblePositions.push(beforePosition)
+      // 添加到WebAV画布
+      const canvas = avCanvas.value
+      if (canvas) {
+        canvas.addSprite(firstSprite)
+        canvas.addSprite(secondSprite)
       }
 
-      // 片段之后的位置
-      const afterPosition = clip.timelinePosition + clip.duration
-      possiblePositions.push(afterPosition)
-    }
-
-    // 找到最接近原始位置且不重叠的位置
-    const originalPosition = movingClip.timelinePosition
-    let bestPosition = 0
-    let minDistance = Infinity
-
-    for (const pos of possiblePositions) {
-      if (pos + movingClip.duration <= totalDuration.value) {
-        const tempClip: VideoClip = { ...movingClip, timelinePosition: pos }
-        const hasOverlap = allClips.some((clip) => isOverlapping(tempClip, clip))
-
-        if (!hasOverlap) {
-          const distance = Math.abs(pos - originalPosition)
-          if (distance < minDistance) {
-            minDistance = distance
-            bestPosition = pos
-          }
-        }
+      // 创建新的TimelineItem
+      const firstItem: TimelineItem = {
+        id: Date.now().toString() + Math.random().toString(36).substring(2, 11),
+        mediaItemId: originalItem.mediaItemId,
+        trackId: originalItem.trackId,
+        timelinePosition: timelineStartTime,
+        customSprite: markRaw(firstSprite)
       }
-    }
 
-    return bestPosition
+      const secondItem: TimelineItem = {
+        id: Date.now().toString() + Math.random().toString(36).substring(2, 11),
+        mediaItemId: originalItem.mediaItemId,
+        trackId: originalItem.trackId,
+        timelinePosition: splitTime,
+        customSprite: markRaw(secondSprite)
+      }
+
+      // 从WebAV画布移除原始sprite
+      if (canvas) {
+        canvas.removeSprite(sprite)
+      }
+
+      // 替换原项目为两个新项目
+      timelineItems.value.splice(itemIndex, 1, firstItem, secondItem)
+
+      console.log('✅ 分割完成')
+      console.groupEnd()
+
+      // 清除选中状态
+      selectedTimelineItemId.value = null
+    } catch (error) {
+      console.error('❌ 分割过程中出错:', error)
+      console.groupEnd()
+    }
   }
 
-  function getClipAtTime(time: number): VideoClip | null {
-    return (
-      clips.value.find(
-        (clip) => time >= clip.timelinePosition && time < clip.timelinePosition + clip.duration,
-      ) || null
-    )
+  function getTimelineItemAtTime(time: number): TimelineItem | null {
+    return timelineItems.value.find((item) => {
+      const sprite = item.customSprite
+      const timeRange = sprite.getTimeRange()
+      const startTime = timeRange.timelineStartTime / 1000000 // 转换为秒
+      const endTime = timeRange.timelineEndTime / 1000000 // 转换为秒
+      return time >= startTime && time < endTime
+    }) || null
   }
 
   // 将时间对齐到帧边界
@@ -441,7 +378,9 @@ export const useVideoStore = defineStore('video', () => {
   function setCurrentTime(time: number, forceAlign: boolean = true) {
     const finalTime = forceAlign ? alignTimeToFrame(time) : time
     currentTime.value = finalTime
-    currentClip.value = getClipAtTime(finalTime)
+    // 更新当前选中的时间轴项目
+    const currentItem = getTimelineItemAtTime(finalTime)
+    selectedTimelineItemId.value = currentItem?.id || null
   }
 
   function startTimeUpdate() {
@@ -523,42 +462,52 @@ export const useVideoStore = defineStore('video', () => {
     setCurrentTime(newTime)
   }
 
-  // 获取所有重叠的片段对
-  function getOverlappingClips(): Array<{ clip1: VideoClip; clip2: VideoClip }> {
-    const overlaps: Array<{ clip1: VideoClip; clip2: VideoClip }> = []
+  // 强制更新计数器，用于触发Vue组件重新渲染
+  const forceUpdateCounter = ref(0)
 
-    for (let i = 0; i < clips.value.length; i++) {
-      for (let j = i + 1; j < clips.value.length; j++) {
-        if (isOverlapping(clips.value[i], clips.value[j])) {
-          overlaps.push({ clip1: clips.value[i], clip2: clips.value[j] })
-        }
-      }
-    }
-
-    return overlaps
-  }
-
-  // 自动整理所有片段，消除重叠（按轨道分组处理）
-  function autoArrangeClips() {
+  function autoArrangeTimelineItems() {
     // 按轨道分组，然后在每个轨道内按时间位置排序
-    const trackGroups = new Map<number, VideoClip[]>()
+    const trackGroups = new Map<number, TimelineItem[]>()
 
-    clips.value.forEach((clip) => {
-      if (!trackGroups.has(clip.trackId)) {
-        trackGroups.set(clip.trackId, [])
+    timelineItems.value.forEach((item) => {
+      if (!trackGroups.has(item.trackId)) {
+        trackGroups.set(item.trackId, [])
       }
-      trackGroups.get(clip.trackId)!.push(clip)
+      trackGroups.get(item.trackId)!.push(item)
     })
 
-    // 在每个轨道内重新排列片段
-    trackGroups.forEach((trackClips) => {
-      const sortedClips = trackClips.sort((a, b) => a.timelinePosition - b.timelinePosition)
+    // 在每个轨道内重新排列项目
+    trackGroups.forEach((trackItems) => {
+      // 按时间轴开始时间排序
+      const sortedItems = trackItems.sort((a, b) => {
+        const rangeA = a.customSprite.getTimeRange()
+        const rangeB = b.customSprite.getTimeRange()
+        return rangeA.timelineStartTime - rangeB.timelineStartTime
+      })
+
       let currentPosition = 0
-      for (const clip of sortedClips) {
-        clip.timelinePosition = currentPosition
-        currentPosition += clip.duration
+      for (const item of sortedItems) {
+        const sprite = item.customSprite
+        const timeRange = sprite.getTimeRange()
+        const duration = (timeRange.timelineEndTime - timeRange.timelineStartTime) / 1000000 // 转换为秒
+
+        // 更新时间轴位置
+        sprite.setTimeRange({
+          clipStartTime: timeRange.clipStartTime,
+          clipEndTime: timeRange.clipEndTime,
+          timelineStartTime: currentPosition * 1000000, // 转换为微秒
+          timelineEndTime: (currentPosition + duration) * 1000000
+        })
+
+        item.timelinePosition = currentPosition
+        currentPosition += duration
       }
     })
+
+    // 强制触发Vue组件重新渲染
+    forceUpdateCounter.value++
+
+    console.log('✅ 时间轴项目自动整理完成')
   }
 
   // 轨道管理方法
@@ -579,10 +528,10 @@ export const useVideoStore = defineStore('video', () => {
     // 不能删除最后一个轨道
     if (tracks.value.length <= 1) return
 
-    // 将该轨道的所有片段移动到第一个轨道
-    clips.value.forEach((clip) => {
-      if (clip.trackId === trackId) {
-        clip.trackId = tracks.value[0].id
+    // 将该轨道的所有时间轴项目移动到第一个轨道
+    timelineItems.value.forEach((item) => {
+      if (item.trackId === trackId) {
+        item.trackId = tracks.value[0].id
       }
     })
 
@@ -694,37 +643,19 @@ export const useVideoStore = defineStore('video', () => {
     return time * pixelsPerSecond - scrollOffset.value
   }
 
-  // 更新片段名称
-  function updateClipName(clipId: string, newName: string) {
-    const clip = clips.value.find((c) => c.id === clipId)
-    if (clip) {
-      clip.name = newName
-    }
-  }
-
   // 设置视频分辨率
   function setVideoResolution(resolution: VideoResolution) {
     videoResolution.value = resolution
     console.log('视频分辨率已设置为:', resolution)
   }
 
-  // 更新片段播放速度
-  function updateClipPlaybackRate(clipId: string, newRate: number) {
-    const clip = clips.value.find((c) => c.id === clipId)
-    if (clip) {
+  // 更新时间轴项目播放速度
+  function updateTimelineItemPlaybackRate(timelineItemId: string, newRate: number) {
+    const item = timelineItems.value.find((item) => item.id === timelineItemId)
+    if (item) {
       // 确保播放速度在合理范围内（扩展到0.1-100倍）
       const clampedRate = Math.max(0.1, Math.min(100, newRate))
-      clip.playbackRate = clampedRate
-      // 根据新的播放速度重新计算时间轴显示时长
-      clip.duration = clip.originalDuration / clampedRate
-    }
-  }
-
-  // 更新片段变换属性
-  function updateClipTransform(clipId: string, transform: Partial<VideoTransform>) {
-    const clip = clips.value.find((c) => c.id === clipId)
-    if (clip) {
-      clip.transform = { ...clip.transform, ...transform }
+      item.customSprite.setPlaybackSpeed(clampedRate)
     }
   }
 
@@ -795,25 +726,18 @@ export const useVideoStore = defineStore('video', () => {
     return { width: displayWidth, height: displayHeight }
   }
 
-  // 更新片段层级
-  function updateClipZIndex(clipId: string, zIndex: number) {
-    const clip = clips.value.find((c) => c.id === clipId)
-    if (clip) {
-      clip.zIndex = zIndex
-    }
-  }
-
   return {
-    clips,
+    // 新的两层数据结构
+    mediaItems,
+    timelineItems,
     tracks,
     currentTime,
     isPlaying,
     timelineDuration,
-    currentClip,
     totalDuration,
     contentEndTime,
     playbackRate,
-    selectedClipId,
+    selectedTimelineItemId,
     // 编辑设置
     proportionalScale,
     // 音量状态
@@ -828,18 +752,25 @@ export const useVideoStore = defineStore('video', () => {
     maxVisibleDuration,
     getMaxZoomLevel,
     getMaxScrollOffset,
-    // 原有方法
-    addClip,
-    removeClip,
-    updateClipPosition,
-    updateClipDuration,
-    updateClipName,
-    updateClipPlaybackRate,
-    updateClipTransform,
-    updateClipZIndex,
-    selectClip,
-    splitClipAtTime,
-    getClipAtTime,
+    // 强制更新计数器
+    forceUpdateCounter,
+    // 素材管理方法
+    addMediaItem,
+    removeMediaItem,
+    getMediaItem,
+    updateMediaItemName,
+    // 时间轴管理方法
+    addTimelineItem,
+    removeTimelineItem,
+    getTimelineItem,
+    getTimelineItemsForTrack,
+    updateTimelineItemPosition,
+    selectTimelineItem,
+    splitTimelineItemAtTime,
+    getTimelineItemAtTime,
+    updateTimelineItemPlaybackRate,
+    autoArrangeTimelineItems,
+    // 播放控制方法
     setCurrentTime,
     play,
     pause,
@@ -854,9 +785,6 @@ export const useVideoStore = defineStore('video', () => {
     nextFrame,
     startTimeUpdate,
     stopTimeUpdate,
-    isOverlapping,
-    getOverlappingClips,
-    autoArrangeClips,
     // 轨道管理方法
     addTrack,
     removeTrack,
@@ -886,18 +814,10 @@ export const useVideoStore = defineStore('video', () => {
     getVideoDisplaySize,
     // WebAV 相关状态和方法
     avCanvas,
-    mp4Clips,
-    customSprites,
     isWebAVReady,
     webAVError,
     setAVCanvas,
     setWebAVReady,
     setWebAVError,
-    addMP4Clip,
-    removeMP4Clip,
-    addCustomSprite,
-    removeCustomSprite,
-    getMP4Clip,
-    getCustomSprite,
   }
 })

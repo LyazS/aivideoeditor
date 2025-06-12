@@ -1,4 +1,4 @@
-import { ref, markRaw, toRaw } from 'vue'
+import { ref, markRaw } from 'vue'
 import { AVCanvas } from '@webav/av-canvas'
 import { MP4Clip } from '@webav/av-cliper'
 import { CustomVisibleSprite } from '../utils/customVisibleSprite'
@@ -94,22 +94,19 @@ export function useWebAVControls() {
   /**
    * 创建MP4Clip
    * @param file 视频文件
-   * @param clipId 片段ID
    */
-  const createMP4Clip = async (file: File, clipId: string): Promise<MP4Clip> => {
+  const createMP4Clip = async (file: File): Promise<MP4Clip> => {
     try {
       console.log(`Creating MP4Clip for: ${file.name}`)
-      
+
       // 创建MP4Clip
       const response = new Response(file)
       const mp4Clip = markRaw(new MP4Clip(response.body!))
-      
+
       // 等待MP4Clip准备完成
       await mp4Clip.ready
-      
-      // 存储MP4Clip
-      globalMP4Clips.value.set(clipId, mp4Clip)
-      
+
+      // 不再存储到全局Map中，因为现在MP4Clip直接存储在MediaItem中
       console.log(`MP4Clip created successfully for: ${file.name}`)
       return mp4Clip
     } catch (err) {
@@ -146,7 +143,7 @@ export function useWebAVControls() {
       await mp4Clip.ready
 
       // 创建CustomVisibleSprite
-      const sprite = markRaw(new CustomVisibleSprite(toRaw(mp4Clip)))
+      const sprite = markRaw(new CustomVisibleSprite(mp4Clip))
 
       // 设置时间范围（转换为微秒）
       const durationMicroseconds = mp4Clip.meta.duration
@@ -207,7 +204,7 @@ export function useWebAVControls() {
 
       const sprite = globalCustomSprites.value.get(clipId)
       if (sprite) {
-        globalAVCanvas.removeSprite(toRaw(sprite))
+        globalAVCanvas.removeSprite(sprite)
         globalCustomSprites.value.delete(clipId)
         console.log(`Sprite removed for clip: ${clipId}`)
       }
@@ -223,13 +220,26 @@ export function useWebAVControls() {
     if (!globalAVCanvas) return
 
     const start = (startTime || videoStore.currentTime) * 1000000 // 转换为微秒
-    const end = endTime ? endTime * 1000000 : undefined
 
-    globalAVCanvas.play({
+    // 构建播放参数
+    const playOptions: any = {
       start,
-      end,
       playbackRate: videoStore.playbackRate
-    })
+    }
+
+    // 只有明确指定了结束时间才添加end参数
+    if (endTime !== undefined) {
+      const end = endTime * 1000000
+      // 确保结束时间大于开始时间
+      if (end > start) {
+        playOptions.end = end
+      } else {
+        console.warn('结束时间必须大于开始时间，忽略end参数')
+      }
+    }
+
+    console.log('WebAV play options:', playOptions)
+    globalAVCanvas.play(playOptions)
   }
 
   /**

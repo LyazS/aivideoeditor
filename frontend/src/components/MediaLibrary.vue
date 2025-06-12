@@ -17,7 +17,7 @@
       @dragleave="handleDragLeave"
       @drop="handleDrop"
     >
-      <div v-if="mediaItems.length === 0" class="empty-state">
+      <div v-if="videoStore.mediaItems.length === 0" class="empty-state">
         <svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor">
           <path
             d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"
@@ -30,7 +30,7 @@
       <!-- 素材列表 -->
       <div v-else class="media-list">
         <div
-          v-for="item in mediaItems"
+          v-for="item in videoStore.mediaItems"
           :key="item.id"
           class="media-item"
           :draggable="true"
@@ -84,26 +84,16 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, markRaw } from 'vue'
 import { useVideoStore } from '../stores/counter'
 import { useWebAVControls } from '../composables/useWebAVControls'
 
-export interface MediaItem {
-  id: string
-  file: File
-  url: string
-  name: string
-  duration: number
-  type: string
-}
+import type { MediaItem } from '../stores/counter'
 
 const videoStore = useVideoStore()
 const webAVControls = useWebAVControls()
 const fileInput = ref<HTMLInputElement>()
 const isDragOver = ref(false)
-
-// 素材列表
-const mediaItems = ref<MediaItem[]>([])
 
 // 触发文件选择
 const triggerFileInput = () => {
@@ -164,23 +154,25 @@ const addMediaItem = async (file: File): Promise<void> => {
     const video = document.createElement('video')
 
     video.onloadedmetadata = async () => {
-      const mediaItem: MediaItem = {
-        id: Date.now().toString() + Math.random().toString(36).substring(2, 11),
-        file,
-        url,
-        name: file.name,
-        duration: video.duration,
-        type: file.type,
-      }
-
       try {
-        // 创建MP4Clip并存储到store
+        // 创建MP4Clip
         console.log(`Creating MP4Clip for: ${file.name}`)
-        await webAVControls.createMP4Clip(file, mediaItem.id)
+        const mp4Clip = await webAVControls.createMP4Clip(file)
         console.log(`MP4Clip created successfully for: ${file.name}`)
 
-        // 添加到素材列表
-        mediaItems.value.push(mediaItem)
+        // 创建MediaItem
+        const mediaItem: MediaItem = {
+          id: Date.now().toString() + Math.random().toString(36).substring(2, 11),
+          file,
+          url,
+          name: file.name,
+          duration: video.duration,
+          type: file.type,
+          mp4Clip: markRaw(mp4Clip) // 使用markRaw避免Vue响应式包装
+        }
+
+        // 添加到store
+        videoStore.addMediaItem(mediaItem)
         resolve()
       } catch (error) {
         console.error('Failed to create MP4Clip:', error)
@@ -201,20 +193,15 @@ const addMediaItem = async (file: File): Promise<void> => {
 
 // 移除素材项
 const removeMediaItem = (id: string) => {
-  const index = mediaItems.value.findIndex((item) => item.id === id)
-  if (index !== -1) {
-    const item = mediaItems.value[index]
-
+  const item = videoStore.getMediaItem(id)
+  if (item) {
     // 清理URL
     URL.revokeObjectURL(item.url)
 
-    // 从store中移除MP4Clip
-    videoStore.removeMP4Clip(id)
+    // 从store中移除MediaItem（会自动移除相关的TimelineItem）
+    videoStore.removeMediaItem(id)
 
-    // 从素材列表中移除
-    mediaItems.value.splice(index, 1)
-
-    console.log(`Removed media item and MP4Clip: ${item.name}`)
+    console.log(`Removed media item: ${item.name}`)
   }
 }
 
