@@ -95,8 +95,8 @@ const overlappingCount = computed(() => {
 
 // 检测两个时间轴项目是否重叠
 function isTimelineItemsOverlapping(item1: TimelineItem, item2: TimelineItem): boolean {
-  const sprite1 = item1.customSprite
-  const sprite2 = item2.customSprite
+  const sprite1 = item1.sprite
+  const sprite2 = item2.sprite
   const range1 = sprite1.getTimeRange()
   const range2 = sprite2.getTimeRange()
 
@@ -156,7 +156,7 @@ function debugTimeline() {
   console.group('🎞️ 时间轴项目信息 (' + timelineItems.value.length + ' 个)')
   timelineItems.value.forEach((item, index) => {
     const mediaItem = videoStore.getMediaItem(item.mediaItemId)
-    const sprite = item.customSprite
+    const sprite = item.sprite
     const timeRange = sprite.getTimeRange()
 
     console.group(`时间轴项目 ${index + 1}: ${mediaItem?.name || 'Unknown'}`)

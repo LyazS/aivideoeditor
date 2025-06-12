@@ -80,7 +80,7 @@ const mediaItem = computed(() => {
 
 // 获取时间轴时长
 const timelineDuration = computed(() => {
-  const sprite = props.timelineItem.customSprite
+  const sprite = props.timelineItem.sprite
   const timeRange = sprite.getTimeRange()
 
   // 依赖强制更新计数器，确保在sprite内部状态变化时重新计算
@@ -94,7 +94,7 @@ const playbackSpeed = computed(() => {
   // 依赖强制更新计数器，确保在sprite内部状态变化时重新计算
   videoStore.forceUpdateCounter
 
-  return props.timelineItem.customSprite.getPlaybackSpeed() || 1
+  return props.timelineItem.sprite.getPlaybackSpeed() || 1
 })
 
 const thumbnailVideo = ref<HTMLVideoElement>()
@@ -119,7 +119,7 @@ const tempResizePosition = ref(0) // 临时调整位置
 // 计算片段样式
 const clipStyle = computed(() => {
   const videoStore = useVideoStore()
-  const sprite = props.timelineItem.customSprite
+  const sprite = props.timelineItem.sprite
   const timeRange = sprite.getTimeRange()
 
   // 依赖强制更新计数器，确保在sprite内部状态变化时重新计算
@@ -151,7 +151,7 @@ const clipStyle = computed(() => {
 
 // 判断是否应该显示详细信息（当片段足够宽时）
 const showDetails = computed(() => {
-  const sprite = props.timelineItem.customSprite
+  const sprite = props.timelineItem.sprite
   const timeRange = sprite.getTimeRange()
 
   // 依赖强制更新计数器，确保在sprite内部状态变化时重新计算
@@ -177,7 +177,7 @@ const showDetails = computed(() => {
 // 检查当前时间轴项目是否与同轨道的其他项目重叠
 const isOverlapping = computed(() => {
   const currentItem = props.timelineItem
-  const currentSprite = currentItem.customSprite
+  const currentSprite = currentItem.sprite
   const currentRange = currentSprite.getTimeRange()
   const currentStart = currentRange.timelineStartTime / 1000000 // 转换为秒
   const currentEnd = currentRange.timelineEndTime / 1000000
@@ -190,7 +190,7 @@ const isOverlapping = computed(() => {
       return false // 跳过自己和不同轨道的项目
     }
 
-    const otherSprite = otherItem.customSprite
+    const otherSprite = otherItem.sprite
     const otherRange = otherSprite.getTimeRange()
     const otherStart = otherRange.timelineStartTime / 1000000
     const otherEnd = otherRange.timelineEndTime / 1000000
@@ -321,7 +321,7 @@ function startResize(direction: 'left' | 'right', event: MouseEvent) {
   resizeDirection.value = direction
   resizeStartX.value = event.clientX
 
-  const sprite = props.timelineItem.customSprite
+  const sprite = props.timelineItem.sprite
   const timeRange = sprite.getTimeRange()
 
   resizeStartDuration.value = (timeRange.timelineEndTime - timeRange.timelineStartTime) / 1000000 // 转换为秒
@@ -379,7 +379,7 @@ function handleResize(event: MouseEvent) {
 function stopResize() {
   if (isResizing.value) {
     // 更新CustomVisibleSprite的时间范围
-    const sprite = props.timelineItem.customSprite
+    const sprite = props.timelineItem.sprite
     const mediaItem = videoStore.getMediaItem(props.timelineItem.mediaItemId)
 
     if (mediaItem) {

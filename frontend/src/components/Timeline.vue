@@ -411,7 +411,7 @@ async function createVideoClipFromMediaItem(
       mediaItemId: mediaItem.id,
       trackId: trackId,
       timelinePosition: Math.max(0, startTime),
-      customSprite: markRaw(sprite) // 使用markRaw避免Vue响应式包装
+      sprite: markRaw(sprite) // 使用markRaw避免Vue响应式包装
     }
 
     // 添加到store
@@ -436,7 +436,7 @@ function handleTimelineItemRemove(timelineItemId: string) {
       // 从WebAV画布移除CustomVisibleSprite
       const avCanvas = webAVControls.getAVCanvas()
       if (avCanvas) {
-        avCanvas.removeSprite(item.customSprite)
+        avCanvas.removeSprite(item.sprite)
       }
 
       // 从store中移除TimelineItem

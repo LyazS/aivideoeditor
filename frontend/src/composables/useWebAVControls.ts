@@ -1,13 +1,10 @@
-import { ref, markRaw } from 'vue'
+import { ref, markRaw, type Raw } from 'vue'
 import { AVCanvas } from '@webav/av-canvas'
 import { MP4Clip } from '@webav/av-cliper'
-import { CustomVisibleSprite } from '../utils/customVisibleSprite'
 import { useVideoStore } from '../stores/counter'
 
 // 全局WebAV状态 - 确保单例模式
 let globalAVCanvas: AVCanvas | null = null
-const globalMP4Clips = ref<Map<string, MP4Clip>>(new Map())
-const globalCustomSprites = ref<Map<string, CustomVisibleSprite>>(new Map())
 const globalError = ref<string | null>(null)
 
 /**
@@ -95,7 +92,7 @@ export function useWebAVControls() {
    * 创建MP4Clip
    * @param file 视频文件
    */
-  const createMP4Clip = async (file: File): Promise<MP4Clip> => {
+  const createMP4Clip = async (file: File): Promise<Raw<MP4Clip>> => {
     try {
       console.log(`Creating MP4Clip for: ${file.name}`)
 
@@ -116,102 +113,6 @@ export function useWebAVControls() {
     }
   }
 
-  /**
-   * 创建CustomVisibleSprite并添加到画布
-   * @param clipId 片段ID
-   * @param timelinePosition 时间轴位置（秒）
-   * @param duration 持续时间（秒）
-   */
-  const createAndAddSprite = async (
-    clipId: string,
-    timelinePosition: number,
-    duration: number
-  ): Promise<CustomVisibleSprite> => {
-    try {
-      if (!globalAVCanvas) {
-        throw new Error('AVCanvas未初始化')
-      }
-
-      const mp4Clip = globalMP4Clips.value.get(clipId)
-      if (!mp4Clip) {
-        throw new Error(`未找到MP4Clip: ${clipId}`)
-      }
-
-      console.log(`Creating CustomVisibleSprite for clip: ${clipId}`)
-
-      // 等待MP4Clip的meta信息完全加载
-      await mp4Clip.ready
-
-      // 创建CustomVisibleSprite
-      const sprite = markRaw(new CustomVisibleSprite(mp4Clip))
-
-      // 设置时间范围（转换为微秒）
-      const durationMicroseconds = mp4Clip.meta.duration
-      const timelinePositionMicroseconds = timelinePosition * 1000000
-      const durationInMicroseconds = duration * 1000000
-
-      sprite.setTimeRange({
-        clipStartTime: 0,
-        clipEndTime: Math.min(durationInMicroseconds, durationMicroseconds),
-        timelineStartTime: timelinePositionMicroseconds,
-        timelineEndTime: timelinePositionMicroseconds + durationInMicroseconds
-      })
-
-      console.log('Sprite created, initial rect:', sprite.rect)
-
-      // 先添加到canvas，让WebAV初始化sprite
-      await globalAVCanvas.addSprite(sprite)
-
-      console.log('Sprite added to canvas, rect after add:', sprite.rect)
-
-      // 等待一下让sprite完全初始化
-      await new Promise((resolve) => setTimeout(resolve, 200))
-
-      // 现在设置sprite的位置和大小
-      try {
-        if (sprite.rect) {
-          sprite.rect.x = (1920 - 640) / 2 // 居中
-          sprite.rect.y = (1080 - 360) / 2 // 居中
-          sprite.rect.w = Math.min(640, mp4Clip.meta.width)
-          sprite.rect.h = Math.min(360, mp4Clip.meta.height)
-          console.log('Sprite rect updated to:', sprite.rect)
-        } else {
-          console.warn('Sprite rect is still undefined after adding to canvas')
-        }
-      } catch (err) {
-        console.warn('Failed to set sprite rect:', err)
-      }
-
-      // 存储sprite
-      globalCustomSprites.value.set(clipId, sprite)
-
-      console.log(`CustomVisibleSprite created and added for clip: ${clipId}`)
-      return sprite
-    } catch (err) {
-      const errorMessage = `创建CustomVisibleSprite失败: ${(err as Error).message}`
-      console.error('CustomVisibleSprite creation error:', err)
-      throw new Error(errorMessage)
-    }
-  }
-
-  /**
-   * 移除精灵
-   * @param clipId 片段ID
-   */
-  const removeSprite = (clipId: string): void => {
-    try {
-      if (!globalAVCanvas) return
-
-      const sprite = globalCustomSprites.value.get(clipId)
-      if (sprite) {
-        globalAVCanvas.removeSprite(sprite)
-        globalCustomSprites.value.delete(clipId)
-        console.log(`Sprite removed for clip: ${clipId}`)
-      }
-    } catch (err) {
-      console.error('Remove sprite error:', err)
-    }
-  }
 
   /**
    * 播放控制
@@ -278,9 +179,7 @@ export function useWebAVControls() {
       globalAVCanvas = null
     }
 
-    // 清理存储的对象
-    globalMP4Clips.value.clear()
-    globalCustomSprites.value.clear()
+    // 清理错误状态
     globalError.value = null
   }
 
@@ -294,14 +193,10 @@ export function useWebAVControls() {
   return {
     // 状态
     error: globalError,
-    mp4Clips: globalMP4Clips,
-    customSprites: globalCustomSprites,
 
     // 方法
     initializeCanvas,
     createMP4Clip,
-    createAndAddSprite,
-    removeSprite,
     play,
     pause,
     seekTo,

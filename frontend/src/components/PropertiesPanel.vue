@@ -496,7 +496,7 @@ const selectedMediaItem = computed(() => {
 // 时间轴时长
 const timelineDuration = computed(() => {
   if (!selectedTimelineItem.value) return 0
-  const sprite = selectedTimelineItem.value.customSprite
+  const sprite = selectedTimelineItem.value.sprite
   const timeRange = sprite.getTimeRange()
   return (timeRange.timelineEndTime - timeRange.timelineStartTime) / 1000000 // 转换为秒
 })
@@ -556,7 +556,7 @@ const isUpdatingFromExternal = ref(false)
 const updateLocalState = (timelineItem: TimelineItem | null, mediaItem: any | null) => {
   if (timelineItem && mediaItem) {
     clipName.value = mediaItem.name
-    const sprite = timelineItem.customSprite
+    const sprite = timelineItem.sprite
     playbackRate.value = sprite.getPlaybackSpeed() || 1
     const timeRange = sprite.getTimeRange()
     targetDuration.value = (timeRange.timelineEndTime - timeRange.timelineStartTime) / 1000000 // 转换为秒
@@ -644,7 +644,7 @@ const updatePlaybackRate = () => {
   if (selectedTimelineItem.value) {
     videoStore.updateTimelineItemPlaybackRate(selectedTimelineItem.value.id, playbackRate.value)
     // 同步更新目标时长和输入框值
-    const sprite = selectedTimelineItem.value.customSprite
+    const sprite = selectedTimelineItem.value.sprite
     const timeRange = sprite.getTimeRange()
     targetDuration.value = (timeRange.timelineEndTime - timeRange.timelineStartTime) / 1000000
     speedInputValue.value = playbackRate.value
@@ -657,7 +657,7 @@ const updatePlaybackRate = () => {
 // 更新目标时长
 const updateTargetDuration = () => {
   if (selectedTimelineItem.value && selectedMediaItem.value && targetDuration.value > 0) {
-    const sprite = selectedTimelineItem.value.customSprite
+    const sprite = selectedTimelineItem.value.sprite
     const timeRange = sprite.getTimeRange()
 
     // 计算新的播放速度：原始时长 / 目标时长

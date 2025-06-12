@@ -1,6 +1,7 @@
-import { ref, computed, markRaw } from 'vue'
+import { ref, computed, markRaw, type Raw } from 'vue'
 import { defineStore } from 'pinia'
 import { AVCanvas } from '@webav/av-canvas'
+import { MP4Clip } from '@webav/av-cliper'
 import { CustomVisibleSprite } from '../utils/customVisibleSprite'
 
 // 素材层：包装MP4Clip和原始文件信息
@@ -11,7 +12,7 @@ export interface MediaItem {
   url: string
   duration: number
   type: string
-  mp4Clip: any // 使用any类型避免markRaw的类型问题
+  mp4Clip: Raw<MP4Clip>
 }
 
 // 时间轴层：包装CustomVisibleSprite和时间轴位置信息
@@ -20,7 +21,7 @@ export interface TimelineItem {
   mediaItemId: string // 引用MediaItem的ID
   trackId: number
   timelinePosition: number
-  customSprite: any // 使用any类型避免markRaw的类型问题
+  sprite: Raw<CustomVisibleSprite>
 }
 
 export interface VideoResolution {
@@ -103,7 +104,7 @@ export const useVideoStore = defineStore('video', () => {
     if (timelineItems.value.length === 0) return timelineDuration.value
     const maxEndTime = Math.max(...timelineItems.value.map((item) => {
       // 从CustomVisibleSprite获取时间信息
-      const sprite = item.customSprite
+      const sprite = item.sprite
       const timeRange = sprite.getTimeRange()
       const timelineEndTime = timeRange.timelineEndTime / 1000000 // 转换为秒
       return timelineEndTime
@@ -164,7 +165,7 @@ export const useVideoStore = defineStore('video', () => {
   const contentEndTime = computed(() => {
     if (timelineItems.value.length === 0) return 0
     return Math.max(...timelineItems.value.map((item) => {
-      const sprite = item.customSprite
+      const sprite = item.sprite
       const timeRange = sprite.getTimeRange()
       return timeRange.timelineEndTime / 1000000 // 转换为秒
     }))
@@ -232,7 +233,7 @@ export const useVideoStore = defineStore('video', () => {
       // 更新时间轴位置
       item.timelinePosition = newPosition
       // 更新CustomVisibleSprite的时间轴位置
-      const sprite = item.customSprite
+      const sprite = item.sprite
       const currentTimeRange = sprite.getTimeRange()
       const duration = currentTimeRange.timelineEndTime - currentTimeRange.timelineStartTime
       sprite.setTimeRange({
@@ -257,7 +258,7 @@ export const useVideoStore = defineStore('video', () => {
     }
 
     const originalItem = timelineItems.value[itemIndex]
-    const sprite = originalItem.customSprite
+    const sprite = originalItem.sprite
     const timeRange = sprite.getTimeRange()
     const mediaItem = getMediaItem(originalItem.mediaItemId)
 
@@ -329,7 +330,7 @@ export const useVideoStore = defineStore('video', () => {
         mediaItemId: originalItem.mediaItemId,
         trackId: originalItem.trackId,
         timelinePosition: timelineStartTime,
-        customSprite: markRaw(firstSprite)
+        sprite: markRaw(firstSprite)
       }
 
       const secondItem: TimelineItem = {
@@ -337,7 +338,7 @@ export const useVideoStore = defineStore('video', () => {
         mediaItemId: originalItem.mediaItemId,
         trackId: originalItem.trackId,
         timelinePosition: splitTime,
-        customSprite: markRaw(secondSprite)
+        sprite: markRaw(secondSprite)
       }
 
       // 从WebAV画布移除原始sprite
@@ -361,7 +362,7 @@ export const useVideoStore = defineStore('video', () => {
 
   function getTimelineItemAtTime(time: number): TimelineItem | null {
     return timelineItems.value.find((item) => {
-      const sprite = item.customSprite
+      const sprite = item.sprite
       const timeRange = sprite.getTimeRange()
       const startTime = timeRange.timelineStartTime / 1000000 // 转换为秒
       const endTime = timeRange.timelineEndTime / 1000000 // 转换为秒
@@ -480,14 +481,14 @@ export const useVideoStore = defineStore('video', () => {
     trackGroups.forEach((trackItems) => {
       // 按时间轴开始时间排序
       const sortedItems = trackItems.sort((a, b) => {
-        const rangeA = a.customSprite.getTimeRange()
-        const rangeB = b.customSprite.getTimeRange()
+        const rangeA = a.sprite.getTimeRange()
+        const rangeB = b.sprite.getTimeRange()
         return rangeA.timelineStartTime - rangeB.timelineStartTime
       })
 
       let currentPosition = 0
       for (const item of sortedItems) {
-        const sprite = item.customSprite
+        const sprite = item.sprite
         const timeRange = sprite.getTimeRange()
         const duration = (timeRange.timelineEndTime - timeRange.timelineStartTime) / 1000000 // 转换为秒
 
@@ -655,7 +656,7 @@ export const useVideoStore = defineStore('video', () => {
     if (item) {
       // 确保播放速度在合理范围内（扩展到0.1-100倍）
       const clampedRate = Math.max(0.1, Math.min(100, newRate))
-      item.customSprite.setPlaybackSpeed(clampedRate)
+      item.sprite.setPlaybackSpeed(clampedRate)
     }
   }
 
