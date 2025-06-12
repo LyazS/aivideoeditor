@@ -379,9 +379,7 @@ export const useVideoStore = defineStore('video', () => {
   function setCurrentTime(time: number, forceAlign: boolean = true) {
     const finalTime = forceAlign ? alignTimeToFrame(time) : time
     currentTime.value = finalTime
-    // 更新当前选中的时间轴项目
-    const currentItem = getTimelineItemAtTime(finalTime)
-    selectedTimelineItemId.value = currentItem?.id || null
+    // 移除自动选中逻辑 - 播放时不自动选中clip
   }
 
   function startTimeUpdate() {
