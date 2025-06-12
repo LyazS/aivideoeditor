@@ -8,7 +8,6 @@ import { useVideoStore } from '../stores/counter'
 let globalAVCanvas: AVCanvas | null = null
 const globalMP4Clips = ref<Map<string, MP4Clip>>(new Map())
 const globalCustomSprites = ref<Map<string, CustomVisibleSprite>>(new Map())
-const globalIsCanvasReady = ref(false)
 const globalError = ref<string | null>(null)
 
 /**
@@ -47,7 +46,6 @@ export function useWebAVControls() {
       // 设置事件监听器
       setupEventListeners()
 
-      globalIsCanvasReady.value = true
       globalError.value = null
 
       // 预览第一帧
@@ -203,13 +201,13 @@ export function useWebAVControls() {
    * 移除精灵
    * @param clipId 片段ID
    */
-  const removeSprite = async (clipId: string): Promise<void> => {
+  const removeSprite = (clipId: string): void => {
     try {
       if (!globalAVCanvas) return
 
       const sprite = globalCustomSprites.value.get(clipId)
       if (sprite) {
-        await globalAVCanvas.removeSprite(toRaw(sprite))
+        globalAVCanvas.removeSprite(toRaw(sprite))
         globalCustomSprites.value.delete(clipId)
         console.log(`Sprite removed for clip: ${clipId}`)
       }
@@ -222,7 +220,7 @@ export function useWebAVControls() {
    * 播放控制
    */
   const play = (startTime?: number, endTime?: number): void => {
-    if (!globalAVCanvas || !globalIsCanvasReady.value) return
+    if (!globalAVCanvas) return
 
     const start = (startTime || videoStore.currentTime) * 1000000 // 转换为微秒
     const end = endTime ? endTime * 1000000 : undefined
@@ -238,7 +236,7 @@ export function useWebAVControls() {
    * 暂停播放
    */
   const pause = (): void => {
-    if (!globalAVCanvas || !globalIsCanvasReady.value) return
+    if (!globalAVCanvas) return
     globalAVCanvas.pause()
   }
 
@@ -247,7 +245,7 @@ export function useWebAVControls() {
    * @param time 时间（秒）
    */
   const seekTo = (time: number): void => {
-    if (!globalAVCanvas || !globalIsCanvasReady.value) return
+    if (!globalAVCanvas) return
 
     const timeMicroseconds = time * 1000000
     globalAVCanvas.previewFrame(timeMicroseconds)
@@ -257,7 +255,7 @@ export function useWebAVControls() {
    * 获取当前帧截图
    */
   const captureFrame = (): string | null => {
-    if (!globalAVCanvas || !globalIsCanvasReady.value) return null
+    if (!globalAVCanvas) return null
     return globalAVCanvas.captureImage()
   }
 
@@ -273,7 +271,6 @@ export function useWebAVControls() {
     // 清理存储的对象
     globalMP4Clips.value.clear()
     globalCustomSprites.value.clear()
-    globalIsCanvasReady.value = false
     globalError.value = null
   }
 
@@ -286,7 +283,6 @@ export function useWebAVControls() {
 
   return {
     // 状态
-    isCanvasReady: globalIsCanvasReady,
     error: globalError,
     mp4Clips: globalMP4Clips,
     customSprites: globalCustomSprites,
@@ -309,7 +305,7 @@ export function useWebAVControls() {
  * 检查WebAV是否已经初始化
  */
 export function isWebAVReady(): boolean {
-  return globalIsCanvasReady.value && globalAVCanvas !== null
+  return globalAVCanvas !== null
 }
 
 /**

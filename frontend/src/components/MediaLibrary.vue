@@ -84,7 +84,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 import { useVideoStore } from '../stores/counter'
 import { useWebAVControls } from '../composables/useWebAVControls'
 

@@ -148,6 +148,11 @@ import { useWebAVControls, waitForWebAVReady } from '../composables/useWebAVCont
 import VideoClip from './VideoClip.vue'
 import TimeScale from './TimeScale.vue'
 
+// Component name for Vue DevTools
+defineOptions({
+  name: 'TimelineEditor'
+})
+
 const videoStore = useVideoStore()
 const webAVControls = useWebAVControls()
 const timelineBody = ref<HTMLElement>()
@@ -190,7 +195,7 @@ function toggleMute(trackId: number) {
   videoStore.toggleTrackMute(trackId)
 }
 
-async function startRename(track: any) {
+async function startRename(track: { id: number; name: string }) {
   editingTrackId.value = track.id
   editingTrackName.value = track.name
   await nextTick()
@@ -341,7 +346,17 @@ async function handleDrop(event: DragEvent) {
 
 // 从素材库项创建视频片段
 async function createVideoClipFromMediaItem(
-  mediaItem: any,
+  mediaItem: {
+    id: string
+    url: string
+    name: string
+    duration: number
+    fileInfo: {
+      name: string
+      type: string
+      lastModified: number
+    }
+  },
   startTime: number,
   trackId: number = 1,
 ): Promise<void> {
@@ -414,10 +429,10 @@ function handleClipTimingUpdate(clipId: string, newDuration: number, timelinePos
   videoStore.updateClipDuration(clipId, newDuration, timelinePosition)
 }
 
-async function handleClipRemove(clipId: string) {
+function handleClipRemove(clipId: string) {
   try {
     // 移除对应的CustomVisibleSprite
-    await webAVControls.removeSprite(clipId)
+    webAVControls.removeSprite(clipId)
 
     // 从store中移除CustomSprite引用
     videoStore.removeCustomSprite(clipId)

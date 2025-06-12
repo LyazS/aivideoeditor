@@ -16,23 +16,13 @@
     <div v-if="error" class="error-message">
       {{ error }}
     </div>
-
-    <!-- 加载状态 -->
-    <div v-if="!isCanvasReady && !error" class="loading-message">
-      正在初始化WebAV渲染器...
-    </div>
-
-    <!-- 成功状态指示器（调试用） -->
-    <div v-if="isCanvasReady" class="success-indicator">
-      WebAV已就绪
-    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useVideoStore } from '../stores/counter'
-import { useWebAVControls } from '../composables/useWebAVControls'
+import { useWebAVControls, isWebAVReady } from '../composables/useWebAVControls'
 
 const videoStore = useVideoStore()
 const webAVControls = useWebAVControls()
@@ -41,7 +31,6 @@ const webAVControls = useWebAVControls()
 const canvasContainer = ref<HTMLElement>()
 
 // 计算属性
-const isCanvasReady = computed(() => webAVControls.isCanvasReady.value)
 const error = computed(() => webAVControls.error.value)
 
 // 画布尺寸
@@ -49,29 +38,30 @@ const canvasWidth = computed(() => videoStore.videoResolution.width)
 const canvasHeight = computed(() => videoStore.videoResolution.height)
 
 /**
- * 初始化WebAV画布
+ * 初始化WebAV画布到当前容器
  */
-const initializeWebAV = async (): Promise<void> => {
+const initializeWebAVCanvas = async (): Promise<void> => {
   if (!canvasContainer.value) {
     console.error('Canvas container not found')
     return
   }
 
-  try {
-    console.log('Initializing WebAV renderer...')
+  // 检查是否已经初始化
+  const existingCanvas = webAVControls.getAVCanvas()
+  if (existingCanvas) {
+    return
+  }
 
+  try {
     await webAVControls.initializeCanvas(canvasContainer.value, {
       width: canvasWidth.value,
       height: canvasHeight.value,
       bgColor: '#000000'
     })
 
-    console.log('WebAV renderer initialized successfully')
-
-    // 通知其他组件WebAV已经准备好
-    window.dispatchEvent(new CustomEvent('webav-ready'))
+    console.log('WebAV画布初始化成功')
   } catch (err) {
-    console.error('Failed to initialize WebAV renderer:', err)
+    console.error('初始化WebAV canvas失败:', err)
   }
 }
 
@@ -106,7 +96,7 @@ watch(
   () => videoStore.currentTime,
   (currentTime) => {
     // 只有当不是播放状态时才手动跳转（避免播放时的冲突）
-    if (!videoStore.isPlaying && isCanvasReady.value) {
+    if (!videoStore.isPlaying && isWebAVReady()) {
       webAVControls.seekTo(currentTime)
     }
   }
@@ -114,25 +104,20 @@ watch(
 
 // 生命周期
 onMounted(async () => {
-  console.log('WebAVRenderer mounted')
-
-  // 立即初始化，不延迟
-  await initializeWebAV()
+  // 初始化WebAV画布到容器
+  await initializeWebAVCanvas()
 })
 
 onUnmounted(() => {
-  console.log('WebAVRenderer unmounted')
-  
-  // 清理WebAV资源
-  webAVControls.destroy()
+  // 注意：不要在这里销毁WebAV，因为它是全局单例
+  // webAVControls.destroy()
 })
 
 // 暴露方法给父组件
 defineExpose({
-  initializeWebAV,
+  initializeWebAVCanvas,
   getAVCanvas: webAVControls.getAVCanvas,
-  captureFrame: webAVControls.captureFrame,
-  isReady: isCanvasReady
+  captureFrame: webAVControls.captureFrame
 })
 </script>
 

@@ -60,7 +60,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useVideoStore } from '../stores/counter'
+import { useVideoStore, type VideoClip } from '../stores/counter'
 
 const videoStore = useVideoStore()
 
@@ -69,7 +69,7 @@ const clips = computed(() => videoStore.clips)
 // 计算重叠片段数量（只计算同轨道内的重叠）
 const overlappingCount = computed(() => {
   let count = 0
-  const tracks = new Map<number, any[]>()
+  const tracks = new Map<number, VideoClip[]>()
 
   // 按轨道分组
   videoStore.clips.forEach((clip) => {

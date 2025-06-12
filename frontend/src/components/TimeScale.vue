@@ -101,8 +101,6 @@ const timeMarks = computed((): TimeMark[] => {
   const endTime = Math.min(calculatedEndTime, videoStore.maxVisibleDuration)
 
   // 生成刻度标记（基于可见范围，不受当前内容长度限制）
-  const startMark = Math.floor(startTime / minorInterval) * minorInterval
-  const endMark = Math.ceil(endTime / minorInterval) * minorInterval
 
   // 计算刻度线的最小像素间距，确保不会过于密集
   const minPixelSpacing = 15 // 最小15像素间距

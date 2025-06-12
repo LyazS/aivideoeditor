@@ -284,7 +284,6 @@ export const useVideoStore = defineStore('video', () => {
     console.log('  - 片段内相对时间:', relativeTimelineTime)
 
     // 计算在原始视频中的分割点时间
-    const playbackRate = originalClip.playbackRate || 1.0
     const videoContentDuration = originalClip.endTime - originalClip.startTime
     const relativeVideoTime = (relativeTimelineTime / originalClip.duration) * videoContentDuration
     const splitVideoTime = originalClip.startTime + relativeVideoTime
@@ -375,11 +374,11 @@ export const useVideoStore = defineStore('video', () => {
     }
 
     // 策略1: 自动吸附到最近的空隙
-    return findNearestGap(tempClip, overlappingClips)
+    return findNearestGap(tempClip)
   }
 
   // 寻找最近的可用空隙（只在同一轨道内）
-  function findNearestGap(movingClip: VideoClip, overlappingClips: VideoClip[]): number {
+  function findNearestGap(movingClip: VideoClip): number {
     const allClips = clips.value.filter(
       (c) => c.id !== movingClip.id && c.trackId === movingClip.trackId,
     )
