@@ -54,12 +54,12 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import type { VideoClip } from '../stores/counter'
+import type { VideoClip, Track } from '../stores/counter'
 import { useVideoStore } from '../stores/counter'
 
 interface Props {
   clip: VideoClip
-  track?: any
+  track?: Track
   timelineWidth: number
   totalDuration: number
 }

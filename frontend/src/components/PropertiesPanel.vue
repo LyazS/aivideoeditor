@@ -477,7 +477,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, nextTick } from 'vue'
-import { useVideoStore } from '../stores/counter'
+import { useVideoStore, type VideoClip } from '../stores/counter'
 
 const videoStore = useVideoStore()
 
@@ -539,7 +539,7 @@ const tempResolutionHeight = ref('1080')
 const isUpdatingFromExternal = ref(false)
 
 // 更新本地状态的函数
-const updateLocalState = (clip: any) => {
+const updateLocalState = (clip: VideoClip | null) => {
   if (clip) {
     clipName.value = clip.name
     playbackRate.value = clip.playbackRate || 1
@@ -748,16 +748,7 @@ const speedToNormalized = (speed: number) => {
   return 20 // 默认值对应1x
 }
 
-// 格式化倍速显示值
-const formatSpeedValue = (rate: number) => {
-  if (rate >= 10) {
-    return `${Math.round(rate)}x`
-  } else if (rate >= 1) {
-    return `${rate.toFixed(1)}x`
-  } else {
-    return `${rate.toFixed(2)}x`
-  }
-}
+
 
 // 更新变换属性
 const updateTransform = () => {
@@ -960,14 +951,7 @@ const updateZIndex = () => {
   }
 }
 
-// 删除片段
-const removeClip = () => {
-  if (selectedClip.value) {
-    if (confirm('确定要删除这个视频片段吗？')) {
-      videoStore.removeClip(selectedClip.value.id)
-    }
-  }
-}
+
 
 // 格式化时长
 const formatDuration = (seconds: number): string => {
@@ -977,14 +961,7 @@ const formatDuration = (seconds: number): string => {
   return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}.${ms.toString().padStart(3, '0')}`
 }
 
-// 格式化文件大小
-const formatFileSize = (bytes: number): string => {
-  if (bytes === 0) return '0 B'
-  const k = 1024
-  const sizes = ['B', 'KB', 'MB', 'GB']
-  const i = Math.floor(Math.log(bytes) / Math.log(k))
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i]
-}
+
 
 // 计算当前分辨率
 const getCurrentResolution = () => {

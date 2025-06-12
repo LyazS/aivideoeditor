@@ -41,32 +41,60 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { computed } from 'vue'
 import { useVideoStore } from '../stores/counter'
+import { useWebAVControls, isWebAVReady } from '../composables/useWebAVControls'
 
 const videoStore = useVideoStore()
+const webAVControls = useWebAVControls()
 
 const isPlaying = computed(() => videoStore.isPlaying)
-const totalDuration = computed(() => videoStore.totalDuration)
-const contentEndTime = computed(() => videoStore.contentEndTime)
 const playbackRate = computed(() => videoStore.playbackRate)
 
+// WebAV作为播放状态的主控
 function togglePlayPause() {
+  if (!isWebAVReady()) {
+    console.warn('WebAV canvas not ready')
+    return
+  }
+
   if (isPlaying.value) {
-    videoStore.pause()
+    // 通过WebAV暂停，WebAV会触发事件更新store状态
+    webAVControls.pause()
   } else {
-    videoStore.play()
+    // 通过WebAV播放，WebAV会触发事件更新store状态
+    webAVControls.play()
   }
 }
 
 function stop() {
-  videoStore.stop()
+  if (!isWebAVReady()) {
+    console.warn('WebAV canvas not ready')
+    return
+  }
+
+  // 暂停播放并跳转到开始位置
+  webAVControls.pause()
+  webAVControls.seekTo(0)
+
+  // 更新store状态
+  videoStore.setCurrentTime(0)
 }
 
 function handleSpeedChange(event: Event) {
   const target = event.target as HTMLSelectElement
   const newRate = parseFloat(target.value)
+
+  // 更新store中的播放速度
   videoStore.setPlaybackRate(newRate)
+
+  // 如果正在播放，重新开始播放以应用新的播放速度
+  if (isPlaying.value && isWebAVReady()) {
+    webAVControls.pause()
+    setTimeout(() => {
+      webAVControls.play()
+    }, 50)
+  }
 }
 </script>
 

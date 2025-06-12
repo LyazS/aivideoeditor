@@ -84,8 +84,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 import { useVideoStore } from '../stores/counter'
+import { useWebAVControls } from '../composables/useWebAVControls'
 
 export interface MediaItem {
   id: string
@@ -97,6 +98,7 @@ export interface MediaItem {
 }
 
 const videoStore = useVideoStore()
+const webAVControls = useWebAVControls()
 const fileInput = ref<HTMLInputElement>()
 const isDragOver = ref(false)
 
@@ -157,11 +159,11 @@ const processFiles = async (files: File[]) => {
 
 // 添加素材项
 const addMediaItem = async (file: File): Promise<void> => {
-  return new Promise((resolve) => {
+  return new Promise(async (resolve) => {
     const url = URL.createObjectURL(file)
     const video = document.createElement('video')
 
-    video.onloadedmetadata = () => {
+    video.onloadedmetadata = async () => {
       const mediaItem: MediaItem = {
         id: Date.now().toString() + Math.random().toString(36).substring(2, 11),
         file,
@@ -171,8 +173,20 @@ const addMediaItem = async (file: File): Promise<void> => {
         type: file.type,
       }
 
-      mediaItems.value.push(mediaItem)
-      resolve()
+      try {
+        // 创建MP4Clip并存储到store
+        console.log(`Creating MP4Clip for: ${file.name}`)
+        await webAVControls.createMP4Clip(file, mediaItem.id)
+        console.log(`MP4Clip created successfully for: ${file.name}`)
+
+        // 添加到素材列表
+        mediaItems.value.push(mediaItem)
+        resolve()
+      } catch (error) {
+        console.error('Failed to create MP4Clip:', error)
+        URL.revokeObjectURL(url)
+        resolve()
+      }
     }
 
     video.onerror = () => {
@@ -190,8 +204,17 @@ const removeMediaItem = (id: string) => {
   const index = mediaItems.value.findIndex((item) => item.id === id)
   if (index !== -1) {
     const item = mediaItems.value[index]
+
+    // 清理URL
     URL.revokeObjectURL(item.url)
+
+    // 从store中移除MP4Clip
+    videoStore.removeMP4Clip(id)
+
+    // 从素材列表中移除
     mediaItems.value.splice(index, 1)
+
+    console.log(`Removed media item and MP4Clip: ${item.name}`)
   }
 }
 

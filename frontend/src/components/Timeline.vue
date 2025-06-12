@@ -144,10 +144,17 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { useVideoStore, type VideoClip as VideoClipType } from '../stores/counter'
+import { useWebAVControls, waitForWebAVReady } from '../composables/useWebAVControls'
 import VideoClip from './VideoClip.vue'
 import TimeScale from './TimeScale.vue'
 
+// Component name for Vue DevTools
+defineOptions({
+  name: 'TimelineEditor'
+})
+
 const videoStore = useVideoStore()
+const webAVControls = useWebAVControls()
 const timelineBody = ref<HTMLElement>()
 const timelineWidth = ref(800)
 
@@ -188,7 +195,7 @@ function toggleMute(trackId: number) {
   videoStore.toggleTrackMute(trackId)
 }
 
-async function startRename(track: any) {
+async function startRename(track: { id: number; name: string }) {
   editingTrackId.value = track.id
   editingTrackName.value = track.name
   await nextTick()
@@ -339,44 +346,79 @@ async function handleDrop(event: DragEvent) {
 
 // 从素材库项创建视频片段
 async function createVideoClipFromMediaItem(
-  mediaItem: any,
+  mediaItem: {
+    id: string
+    url: string
+    name: string
+    duration: number
+    fileInfo: {
+      name: string
+      type: string
+      lastModified: number
+    }
+  },
   startTime: number,
   trackId: number = 1,
 ): Promise<void> {
   console.log('创建视频片段从素材库:', mediaItem)
 
-  // 创建一个虚拟的 File 对象，用于兼容现有的 VideoClip 接口
-  // 注意：这里我们主要使用 URL，File 对象主要用于显示文件信息
-  const virtualFile = new File([], mediaItem.fileInfo.name, {
-    type: mediaItem.fileInfo.type,
-    lastModified: mediaItem.fileInfo.lastModified,
-  })
+  try {
+    // 创建一个虚拟的 File 对象，用于兼容现有的 VideoClip 接口
+    const virtualFile = new File([], mediaItem.fileInfo.name, {
+      type: mediaItem.fileInfo.type,
+      lastModified: mediaItem.fileInfo.lastModified,
+    })
 
-  const clip: VideoClipType = {
-    id: Date.now().toString() + Math.random().toString(36).substring(2, 11),
-    file: virtualFile,
-    url: mediaItem.url, // 使用现有的 URL
-    duration: mediaItem.duration, // 初始时间轴显示时长等于原始时长
-    originalDuration: mediaItem.duration,
-    startTime: 0,
-    endTime: mediaItem.duration,
-    timelinePosition: Math.max(0, startTime),
-    name: mediaItem.name,
-    playbackRate: 1.0, // 初始播放速度为正常速度
-    trackId: trackId, // 指定轨道
-    transform: {
-      x: 0,
-      y: 0,
-      scaleX: 1.0,
-      scaleY: 1.0,
-      rotation: 0,
-      opacity: 1.0,
-    },
-    zIndex: videoStore.clips.length,
+    const clipId = Date.now().toString() + Math.random().toString(36).substring(2, 11)
+
+    // 创建VideoClip数据结构
+    const clip: VideoClipType = {
+      id: clipId,
+      file: virtualFile,
+      url: mediaItem.url,
+      duration: mediaItem.duration,
+      originalDuration: mediaItem.duration,
+      startTime: 0,
+      endTime: mediaItem.duration,
+      timelinePosition: Math.max(0, startTime),
+      name: mediaItem.name,
+      playbackRate: 1.0,
+      trackId: trackId,
+      transform: {
+        x: 0,
+        y: 0,
+        scaleX: 1.0,
+        scaleY: 1.0,
+        rotation: 0,
+        opacity: 1.0,
+      },
+      zIndex: videoStore.clips.length,
+    }
+
+    // 添加片段到store
+    console.log('添加片段到时间轴:', clip)
+    videoStore.addClip(clip)
+
+    // 等待WebAV初始化完成
+    console.log('等待WebAV初始化完成...')
+    const isReady = await waitForWebAVReady(10000) // 等待最多10秒
+    if (!isReady) {
+      throw new Error('WebAV初始化超时，请稍后重试')
+    }
+
+    // 创建CustomVisibleSprite并添加到WebAV画布
+    console.log('创建CustomVisibleSprite for clip:', clipId)
+    await webAVControls.createAndAddSprite(
+      mediaItem.id, // 使用mediaItem的ID来获取MP4Clip
+      startTime,
+      mediaItem.duration
+    )
+
+    console.log('视频片段和CustomVisibleSprite创建完成')
+  } catch (error) {
+    console.error('创建视频片段失败:', error)
+    alert(`创建视频片段失败: ${(error as Error).message}`)
   }
-
-  console.log('添加片段到时间轴:', clip)
-  videoStore.addClip(clip)
 }
 
 function handleClipPositionUpdate(clipId: string, newPosition: number, newTrackId?: number) {
@@ -388,7 +430,22 @@ function handleClipTimingUpdate(clipId: string, newDuration: number, timelinePos
 }
 
 function handleClipRemove(clipId: string) {
-  videoStore.removeClip(clipId)
+  try {
+    // 移除对应的CustomVisibleSprite
+    webAVControls.removeSprite(clipId)
+
+    // 从store中移除CustomSprite引用
+    videoStore.removeCustomSprite(clipId)
+
+    // 移除VideoClip
+    videoStore.removeClip(clipId)
+
+    console.log(`Removed clip and sprite: ${clipId}`)
+  } catch (error) {
+    console.error('Failed to remove clip:', error)
+    // 即使WebAV移除失败，也要移除VideoClip
+    videoStore.removeClip(clipId)
+  }
 }
 
 function handleTimelineClick(event: MouseEvent) {

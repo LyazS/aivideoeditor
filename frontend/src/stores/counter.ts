@@ -1,5 +1,8 @@
-import { ref, computed } from 'vue'
+import { ref, computed, markRaw, toRaw } from 'vue'
 import { defineStore } from 'pinia'
+import { AVCanvas } from '@webav/av-canvas'
+import { MP4Clip } from '@webav/av-cliper'
+import { CustomVisibleSprite } from '../utils/customVisibleSprite'
 
 export interface VideoTransform {
   x: number // X轴位置 (像素，相对于画布中心)
@@ -77,6 +80,53 @@ export const useVideoStore = defineStore('video', () => {
 
   // 全局时间控制器
   let timeUpdateInterval: number | null = null
+
+  // ==================== WebAV 相关状态 ====================
+  // WebAV核心对象 - 使用markRaw避免Vue响应式包装
+  const avCanvas = ref<AVCanvas | null>(null)
+  const mp4Clips = ref<Map<string, MP4Clip>>(new Map())
+  const customSprites = ref<Map<string, CustomVisibleSprite>>(new Map())
+  const isWebAVReady = ref(false)
+  const webAVError = ref<string | null>(null)
+
+  // WebAV相关方法
+  function setAVCanvas(canvas: AVCanvas | null) {
+    avCanvas.value = canvas ? markRaw(canvas) : null
+  }
+
+  function setWebAVReady(ready: boolean) {
+    isWebAVReady.value = ready
+  }
+
+  function setWebAVError(error: string | null) {
+    webAVError.value = error
+  }
+
+  function addMP4Clip(clipId: string, mp4Clip: MP4Clip) {
+    mp4Clips.value.set(clipId, markRaw(mp4Clip))
+  }
+
+  function removeMP4Clip(clipId: string) {
+    mp4Clips.value.delete(clipId)
+  }
+
+  function addCustomSprite(clipId: string, sprite: CustomVisibleSprite) {
+    customSprites.value.set(clipId, markRaw(sprite))
+  }
+
+  function removeCustomSprite(clipId: string) {
+    customSprites.value.delete(clipId)
+  }
+
+  function getMP4Clip(clipId: string): MP4Clip | undefined {
+    const clip = mp4Clips.value.get(clipId)
+    return clip ? toRaw(clip) : undefined
+  }
+
+  function getCustomSprite(clipId: string): CustomVisibleSprite | undefined {
+    const sprite = customSprites.value.get(clipId)
+    return sprite ? toRaw(sprite) : undefined
+  }
 
   const totalDuration = computed(() => {
     if (clips.value.length === 0) return timelineDuration.value
@@ -234,7 +284,6 @@ export const useVideoStore = defineStore('video', () => {
     console.log('  - 片段内相对时间:', relativeTimelineTime)
 
     // 计算在原始视频中的分割点时间
-    const playbackRate = originalClip.playbackRate || 1.0
     const videoContentDuration = originalClip.endTime - originalClip.startTime
     const relativeVideoTime = (relativeTimelineTime / originalClip.duration) * videoContentDuration
     const splitVideoTime = originalClip.startTime + relativeVideoTime
@@ -325,11 +374,11 @@ export const useVideoStore = defineStore('video', () => {
     }
 
     // 策略1: 自动吸附到最近的空隙
-    return findNearestGap(tempClip, overlappingClips)
+    return findNearestGap(tempClip)
   }
 
   // 寻找最近的可用空隙（只在同一轨道内）
-  function findNearestGap(movingClip: VideoClip, overlappingClips: VideoClip[]): number {
+  function findNearestGap(movingClip: VideoClip): number {
     const allClips = clips.value.filter(
       (c) => c.id !== movingClip.id && c.trackId === movingClip.trackId,
     )
@@ -835,5 +884,20 @@ export const useVideoStore = defineStore('video', () => {
     getVideoOriginalResolution,
     getVideoFitScale,
     getVideoDisplaySize,
+    // WebAV 相关状态和方法
+    avCanvas,
+    mp4Clips,
+    customSprites,
+    isWebAVReady,
+    webAVError,
+    setAVCanvas,
+    setWebAVReady,
+    setWebAVError,
+    addMP4Clip,
+    removeMP4Clip,
+    addCustomSprite,
+    removeCustomSprite,
+    getMP4Clip,
+    getCustomSprite,
   }
 })
