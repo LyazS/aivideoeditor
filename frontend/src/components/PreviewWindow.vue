@@ -1,14 +1,14 @@
 <template>
   <div class="preview-window">
     <div class="video-container">
-      <!-- Canvas渲染器 -->
-      <CanvasVideoRenderer />
+      <!-- WebAV渲染器 -->
+      <WebAVRenderer />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import CanvasVideoRenderer from './CanvasVideoRenderer.vue'
+import WebAVRenderer from './WebAVRenderer.vue'
 </script>
 
 <style scoped>
