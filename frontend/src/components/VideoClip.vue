@@ -460,10 +460,20 @@ function removeClip() {
   hideContextMenu()
 }
 
-function duplicateClip() {
-  // TODO: 实现时间轴项目复制功能
+async function duplicateClip() {
   console.log('Duplicate timeline item:', props.timelineItem.id)
   hideContextMenu()
+
+  try {
+    const newItemId = await videoStore.duplicateTimelineItem(props.timelineItem.id)
+    if (newItemId) {
+      console.log('✅ 时间轴项目复制成功，新项目ID:', newItemId)
+    } else {
+      console.error('❌ 时间轴项目复制失败')
+    }
+  } catch (error) {
+    console.error('❌ 复制时间轴项目时出错:', error)
+  }
 }
 
 onMounted(() => {

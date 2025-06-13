@@ -473,6 +473,113 @@ export const useVideoStore = defineStore('video', () => {
     // 注意：当sprite为null时，保留时间轴选择状态
   }
 
+  async function duplicateTimelineItem(timelineItemId: string): Promise<string | null> {
+    console.group('📋 时间轴项目复制调试')
+
+    const originalItem = timelineItems.value.find((item) => item.id === timelineItemId)
+    if (!originalItem) {
+      console.error('❌ 找不到要复制的时间轴项目:', timelineItemId)
+      console.groupEnd()
+      return null
+    }
+
+    const sprite = originalItem.sprite
+    const timeRange = sprite.getTimeRange()
+    const mediaItem = getMediaItem(originalItem.mediaItemId)
+
+    if (!mediaItem) {
+      console.error('❌ 找不到对应的素材项目')
+      console.groupEnd()
+      return null
+    }
+
+    console.log(`📋 复制时间轴项目: ${mediaItem.name} (ID: ${timelineItemId})`)
+
+    try {
+      // 克隆MP4Clip
+      const webAVControls = useWebAVControls()
+      const clonedClip = await webAVControls.cloneMP4Clip(mediaItem.mp4Clip)
+
+      // 创建新的CustomVisibleSprite
+      const newSprite = new (sprite.constructor as any)(clonedClip)
+
+      // 复制时间范围设置
+      newSprite.setTimeRange({
+        clipStartTime: timeRange.clipStartTime,
+        clipEndTime: timeRange.clipEndTime,
+        timelineStartTime: timeRange.timelineStartTime,
+        timelineEndTime: timeRange.timelineEndTime
+      })
+
+      // 复制原始sprite的变换属性
+      const originalRect = sprite.rect
+      newSprite.rect.x = originalRect.x
+      newSprite.rect.y = originalRect.y
+      newSprite.rect.w = originalRect.w
+      newSprite.rect.h = originalRect.h
+      newSprite.zIndex = sprite.zIndex
+      newSprite.opacity = sprite.opacity
+
+      console.log(`📋 复制原始sprite属性:`, {
+        position: { x: originalRect.x, y: originalRect.y },
+        size: { w: originalRect.w, h: originalRect.h },
+        zIndex: sprite.zIndex,
+        opacity: sprite.opacity
+      })
+
+      // 添加到WebAV画布
+      const canvas = avCanvas.value
+      if (canvas) {
+        canvas.addSprite(newSprite)
+      }
+
+      // 创建新的TimelineItem，放置在原项目的右侧
+      const duration = (timeRange.timelineEndTime - timeRange.timelineStartTime) / 1000000 // 转换为秒
+      const newTimelinePosition = timeRange.timelineStartTime / 1000000 + duration // 紧接着原项目
+
+      const newItem: TimelineItem = {
+        id: Date.now().toString() + Math.random().toString(36).substring(2, 11),
+        mediaItemId: originalItem.mediaItemId,
+        trackId: originalItem.trackId,
+        timelinePosition: newTimelinePosition,
+        sprite: markRaw(newSprite)
+      }
+
+      // 更新新sprite的时间轴位置
+      newSprite.setTimeRange({
+        clipStartTime: timeRange.clipStartTime,
+        clipEndTime: timeRange.clipEndTime,
+        timelineStartTime: newTimelinePosition * 1000000,
+        timelineEndTime: (newTimelinePosition + duration) * 1000000
+      })
+
+      // 添加到时间轴
+      timelineItems.value.push(newItem)
+
+      console.log('✅ 复制完成')
+      console.groupEnd()
+
+      // 打印复制后的调试信息
+      printDebugInfo('复制时间轴项目', {
+        originalItemId: timelineItemId,
+        newItemId: newItem.id,
+        mediaItemId: originalItem.mediaItemId,
+        mediaItemName: mediaItem?.name || '未知',
+        trackId: originalItem.trackId,
+        newPosition: newTimelinePosition
+      })
+
+      // 选中新创建的项目
+      selectedTimelineItemId.value = newItem.id
+
+      return newItem.id
+    } catch (error) {
+      console.error('❌ 复制过程中出错:', error)
+      console.groupEnd()
+      return null
+    }
+  }
+
   async function splitTimelineItemAtTime(timelineItemId: string, splitTime: number) {
     console.group('🔪 时间轴项目分割调试')
 
@@ -539,6 +646,22 @@ export const useVideoStore = defineStore('video', () => {
         timelineEndTime: splitTime * 1000000
       })
 
+      // 复制原始sprite的变换属性到第一个片段
+      const originalRect = sprite.rect
+      firstSprite.rect.x = originalRect.x
+      firstSprite.rect.y = originalRect.y
+      firstSprite.rect.w = originalRect.w
+      firstSprite.rect.h = originalRect.h
+      firstSprite.zIndex = sprite.zIndex
+      firstSprite.opacity = sprite.opacity
+
+      console.log(`📋 复制原始sprite属性到第一个片段:`, {
+        position: { x: originalRect.x, y: originalRect.y },
+        size: { w: originalRect.w, h: originalRect.h },
+        zIndex: sprite.zIndex,
+        opacity: sprite.opacity
+      })
+
       // 创建第二个片段的CustomVisibleSprite
       const secondSprite = new (sprite.constructor as any)(secondClonedClip)
       secondSprite.setTimeRange({
@@ -546,6 +669,21 @@ export const useVideoStore = defineStore('video', () => {
         clipEndTime: clipEndTime * 1000000,
         timelineStartTime: splitTime * 1000000,
         timelineEndTime: timelineEndTime * 1000000
+      })
+
+      // 复制原始sprite的变换属性到第二个片段
+      secondSprite.rect.x = originalRect.x
+      secondSprite.rect.y = originalRect.y
+      secondSprite.rect.w = originalRect.w
+      secondSprite.rect.h = originalRect.h
+      secondSprite.zIndex = sprite.zIndex
+      secondSprite.opacity = sprite.opacity
+
+      console.log(`📋 复制原始sprite属性到第二个片段:`, {
+        position: { x: originalRect.x, y: originalRect.y },
+        size: { w: originalRect.w, h: originalRect.h },
+        zIndex: sprite.zIndex,
+        opacity: sprite.opacity
       })
 
       // 添加到WebAV画布
@@ -1012,6 +1150,7 @@ export const useVideoStore = defineStore('video', () => {
     selectAVCanvasSprite,
     findTimelineItemBySprite,
     handleAVCanvasSpriteChange,
+    duplicateTimelineItem,
     splitTimelineItemAtTime,
     getTimelineItemAtTime,
     updateTimelineItemPlaybackRate,
