@@ -1,11 +1,23 @@
 import { ref, markRaw, type Raw } from 'vue'
 import { AVCanvas } from '@webav/av-canvas'
 import { MP4Clip } from '@webav/av-cliper'
+import { CustomVisibleSprite } from '../utils/customVisibleSprite'
 import { useVideoStore } from '../stores/videostore'
 
 // 全局WebAV状态 - 确保单例模式
 let globalAVCanvas: AVCanvas | null = null
 const globalError = ref<string | null>(null)
+
+// 画布重新创建时的内容备份
+interface CanvasBackup {
+  sprites: Array<{
+    sprite: Raw<CustomVisibleSprite>
+    clip: MP4Clip
+    timelineItemId: string
+  }>
+  currentTime: number
+  isPlaying: boolean
+}
 
 /**
  * WebAV控制器 - 管理AVCanvas和相关操作
@@ -217,6 +229,145 @@ export function useWebAVControls() {
     return globalAVCanvas
   }
 
+  /**
+   * 销毁当前画布并备份内容
+   */
+  const destroyCanvas = async (): Promise<CanvasBackup | null> => {
+    if (!globalAVCanvas) {
+      console.log('没有画布需要销毁')
+      return null
+    }
+
+    console.log('开始销毁画布并备份内容...')
+
+    // 备份当前状态
+    const backup: CanvasBackup = {
+      sprites: [],
+      currentTime: videoStore.currentTime,
+      isPlaying: videoStore.isPlaying
+    }
+
+    // 备份所有sprites
+    const timelineItems = videoStore.timelineItems
+    for (const item of timelineItems) {
+      if (item.sprite) {
+        const clip = item.sprite.getClip()
+        if (clip) {
+          backup.sprites.push({
+            sprite: item.sprite,
+            clip: clip as MP4Clip,
+            timelineItemId: item.id
+          })
+        }
+      }
+    }
+
+    console.log(`备份了 ${backup.sprites.length} 个sprites`)
+
+    try {
+      // 暂停播放
+      if (videoStore.isPlaying) {
+        globalAVCanvas.pause()
+      }
+
+      // 清理画布
+      globalAVCanvas.destroy()
+      globalAVCanvas = null
+
+      // 清理store中的引用
+      videoStore.setAVCanvas(null)
+      videoStore.setWebAVReady(false)
+
+      console.log('画布销毁完成')
+      return backup
+    } catch (error) {
+      console.error('销毁画布时出错:', error)
+      return backup
+    }
+  }
+
+  /**
+   * 重新创建画布并恢复内容
+   */
+  const recreateCanvas = async (
+    container: HTMLElement,
+    options: {
+      width: number
+      height: number
+      bgColor: string
+    },
+    backup?: CanvasBackup | null
+  ): Promise<void> => {
+    console.log('开始重新创建画布...')
+
+    try {
+      // 重新初始化画布
+      await initializeCanvas(container, options)
+
+      // 如果有备份内容，恢复sprites
+      if (backup && backup.sprites.length > 0) {
+        console.log(`开始恢复 ${backup.sprites.length} 个sprites...`)
+
+        const avCanvas = getAVCanvas()
+        if (!avCanvas) {
+          throw new Error('画布重新创建失败')
+        }
+
+        // 恢复每个sprite
+        for (const spriteBackup of backup.sprites) {
+          try {
+            // 克隆MP4Clip
+            const clonedClip = await cloneMP4Clip(spriteBackup.clip)
+
+            // 创建新的CustomVisibleSprite
+            const newSprite = new CustomVisibleSprite(clonedClip)
+
+            // 恢复时间范围设置
+            const originalTimeRange = spriteBackup.sprite.getTimeRange()
+            newSprite.setTimeRange(originalTimeRange)
+
+            // 恢复变换属性
+            const originalRect = spriteBackup.sprite.rect
+            newSprite.rect.x = originalRect.x
+            newSprite.rect.y = originalRect.y
+            newSprite.rect.w = originalRect.w
+            newSprite.rect.h = originalRect.h
+            newSprite.zIndex = spriteBackup.sprite.zIndex
+            newSprite.opacity = spriteBackup.sprite.opacity
+
+            // 添加到画布
+            await avCanvas.addSprite(newSprite)
+
+            // 更新store中的引用
+            videoStore.updateTimelineItemSprite(spriteBackup.timelineItemId, markRaw(newSprite))
+
+            console.log(`恢复sprite成功: ${spriteBackup.timelineItemId}`)
+          } catch (error) {
+            console.error(`恢复sprite失败: ${spriteBackup.timelineItemId}`, error)
+          }
+        }
+
+        // 恢复播放状态
+        if (backup.isPlaying) {
+          // 延迟一点再播放，确保所有sprite都已添加
+          setTimeout(() => {
+            play(backup.currentTime)
+          }, 100)
+        } else {
+          // 跳转到备份的时间位置
+          seekTo(backup.currentTime)
+        }
+
+        console.log('内容恢复完成')
+      }
+
+      console.log('画布重新创建完成')
+    } catch (error) {
+      console.error('重新创建画布失败:', error)
+      throw error
+    }
+  }
+
   return {
     // 状态
     error: globalError,
@@ -230,7 +381,9 @@ export function useWebAVControls() {
     seekTo,
     captureFrame,
     destroy,
-    getAVCanvas
+    getAVCanvas,
+    destroyCanvas,
+    recreateCanvas
   }
 }
 

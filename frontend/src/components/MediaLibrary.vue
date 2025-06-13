@@ -174,6 +174,10 @@ const addMediaItem = async (file: File): Promise<void> => {
         }
 
         console.log(`📋 创建MediaItem: ${mediaItem.name} (时长: ${mediaItem.duration.toFixed(2)}s, ID: ${mediaItem.id})`)
+        console.log(`📐 视频原始分辨率: ${video.videoWidth}x${video.videoHeight}`)
+
+        // 设置视频元素到store中，用于获取原始分辨率
+        videoStore.setVideoElement(mediaItem.id, video)
 
         // 添加到store
         videoStore.addMediaItem(mediaItem)

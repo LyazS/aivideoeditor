@@ -1,13 +1,10 @@
 <template>
-  <div class="webav-renderer">
+  <div class="webav-renderer" ref="rendererContainer">
     <!-- WebAV画布容器 -->
-    <div 
-      ref="canvasContainer" 
+    <div
+      ref="canvasContainer"
       class="canvas-container"
-      :style="{ 
-        width: canvasWidth + 'px', 
-        height: canvasHeight + 'px' 
-      }"
+      :style="canvasContainerStyle"
     >
       <!-- WebAV会在这里创建canvas元素 -->
     </div>
@@ -20,7 +17,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useVideoStore } from '../stores/videostore'
 import { useWebAVControls, isWebAVReady } from '../composables/useWebAVControls'
 
@@ -29,13 +26,48 @@ const webAVControls = useWebAVControls()
 
 // 组件引用
 const canvasContainer = ref<HTMLElement>()
+const rendererContainer = ref<HTMLElement>()
 
 // 计算属性
 const error = computed(() => webAVControls.error.value)
 
-// 画布尺寸
+// 画布原始尺寸（基于视频分辨率）
 const canvasWidth = computed(() => videoStore.videoResolution.width)
 const canvasHeight = computed(() => videoStore.videoResolution.height)
+
+// 容器尺寸
+const containerWidth = ref(800)
+const containerHeight = ref(600)
+
+// 计算画布显示尺寸（保持比例，适应容器）
+const canvasDisplaySize = computed(() => {
+  const aspectRatio = canvasWidth.value / canvasHeight.value
+  const containerAspectRatio = containerWidth.value / containerHeight.value
+
+  let displayWidth: number
+  let displayHeight: number
+
+  if (aspectRatio > containerAspectRatio) {
+    // 画布更宽，以宽度为准
+    displayWidth = Math.min(containerWidth.value * 0.95, canvasWidth.value) // 留5%边距
+    displayHeight = displayWidth / aspectRatio
+  } else {
+    // 画布更高，以高度为准
+    displayHeight = Math.min(containerHeight.value * 0.95, canvasHeight.value) // 留5%边距
+    displayWidth = displayHeight * aspectRatio
+  }
+
+  return {
+    width: Math.round(displayWidth),
+    height: Math.round(displayHeight)
+  }
+})
+
+// 画布容器样式
+const canvasContainerStyle = computed(() => ({
+  width: canvasDisplaySize.value.width + 'px',
+  height: canvasDisplaySize.value.height + 'px'
+}))
 
 /**
  * 初始化WebAV画布到当前容器
@@ -67,13 +99,62 @@ const initializeWebAVCanvas = async (): Promise<void> => {
 }
 
 /**
- * 监听分辨率变化
+ * 重新创建画布（当尺寸变化时）
+ */
+const recreateCanvasWithNewSize = async (newResolution: any): Promise<void> => {
+  if (!canvasContainer.value) {
+    console.error('Canvas container not found')
+    return
+  }
+
+  try {
+    console.log('开始销毁旧画布并备份内容...')
+
+    // 销毁旧画布并备份内容
+    const backup = await webAVControls.destroyCanvas()
+
+    console.log('开始重新创建画布...')
+
+    // 重新创建画布
+    await webAVControls.recreateCanvas(canvasContainer.value, {
+      width: newResolution.width,
+      height: newResolution.height,
+      bgColor: '#000000'
+    }, backup)
+
+    console.log('画布重新创建完成')
+  } catch (err) {
+    console.error('重新创建画布失败:', err)
+    // 如果重新创建失败，尝试简单的重新初始化
+    try {
+      await webAVControls.initializeCanvas(canvasContainer.value, {
+        width: newResolution.width,
+        height: newResolution.height,
+        bgColor: '#000000'
+      })
+      console.log('使用简单初始化作为备用方案')
+    } catch (fallbackErr) {
+      console.error('备用初始化也失败:', fallbackErr)
+    }
+  }
+}
+
+/**
+ * 监听分辨率变化并重新创建画布
  */
 watch(
   () => videoStore.videoResolution,
-  (newResolution) => {
+  async (newResolution, oldResolution) => {
     console.log('Video resolution changed:', newResolution)
-    // 如果需要，可以在这里重新初始化画布
+
+    // 检查是否真的需要重新创建画布
+    if (!oldResolution ||
+        newResolution.width !== oldResolution.width ||
+        newResolution.height !== oldResolution.height) {
+
+      console.log('画布尺寸发生变化，开始重新创建画布...')
+      await recreateCanvasWithNewSize(newResolution)
+    }
   },
   { deep: true }
 )
@@ -103,13 +184,70 @@ watch(
   }
 )
 
+/**
+ * 更新容器尺寸
+ */
+const updateContainerSize = (): void => {
+  if (!rendererContainer.value) return
+
+  const rect = rendererContainer.value.getBoundingClientRect()
+  containerWidth.value = rect.width
+  containerHeight.value = rect.height
+
+  console.log('Container size updated:', {
+    width: containerWidth.value,
+    height: containerHeight.value,
+    canvasDisplay: canvasDisplaySize.value
+  })
+}
+
+/**
+ * 设置ResizeObserver监听容器尺寸变化
+ */
+const setupResizeObserver = (): void => {
+  if (!rendererContainer.value) return
+
+  const resizeObserver = new ResizeObserver((entries) => {
+    for (const entry of entries) {
+      const { width, height } = entry.contentRect
+      containerWidth.value = width
+      containerHeight.value = height
+    }
+  })
+
+  resizeObserver.observe(rendererContainer.value)
+
+  // 保存observer引用以便清理
+  ;(rendererContainer.value as any)._resizeObserver = resizeObserver
+}
+
+/**
+ * 清理ResizeObserver
+ */
+const cleanupResizeObserver = (): void => {
+  if (rendererContainer.value && (rendererContainer.value as any)._resizeObserver) {
+    ;(rendererContainer.value as any)._resizeObserver.disconnect()
+    delete (rendererContainer.value as any)._resizeObserver
+  }
+}
+
 // 生命周期
 onMounted(async () => {
+  // 初始化容器尺寸
+  await nextTick()
+  updateContainerSize()
+
+  // 设置尺寸监听
+  setupResizeObserver()
+
   // 初始化WebAV画布到容器
   await initializeWebAVCanvas()
 })
 
 onUnmounted(() => {
+  // 清理ResizeObserver
+  cleanupResizeObserver()
+
   // 注意：不要在这里销毁WebAV，因为它是全局单例
   // webAVControls.destroy()
 })
@@ -117,6 +255,7 @@ onUnmounted(() => {
 // 暴露方法给父组件
 defineExpose({
   initializeWebAVCanvas,
+  recreateCanvasWithNewSize,
   getAVCanvas: webAVControls.getAVCanvas,
   captureFrame: webAVControls.captureFrame
 })
@@ -133,6 +272,8 @@ defineExpose({
   border-radius: 4px;
   overflow: hidden;
   position: relative;
+  /* 确保容器可以被ResizeObserver正确监听 */
+  box-sizing: border-box;
 }
 
 .canvas-container {
@@ -141,6 +282,9 @@ defineExpose({
   border-radius: 4px;
   overflow: hidden;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  /* 画布容器会根据计算的尺寸动态调整 */
+  flex-shrink: 0;
+  box-sizing: border-box;
 }
 
 /* WebAV会在canvas-container中创建canvas元素，我们为其设置样式 */

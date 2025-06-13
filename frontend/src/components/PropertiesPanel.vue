@@ -117,6 +117,7 @@
                     :min="-videoStore.videoResolution.width"
                     :max="videoStore.videoResolution.width"
                     class="property-input position-input-field"
+                    placeholder="中心为0"
                   />
                   <div class="number-controls">
                     <button @click="adjustTransformX(1)" class="number-btn number-btn-up">▲</button>
@@ -138,6 +139,7 @@
                     :min="-videoStore.videoResolution.height"
                     :max="videoStore.videoResolution.height"
                     class="property-input position-input-field"
+                    placeholder="中心为0"
                   />
                   <div class="number-controls">
                     <button @click="adjustTransformY(1)" class="number-btn number-btn-up">▲</button>
@@ -552,6 +554,32 @@ const tempResolutionHeight = ref('1080')
 // 标志：是否正在程序更新（避免用户输入时的冲突）
 const isUpdatingFromExternal = ref(false)
 
+// 坐标转换函数：从WebAV坐标系（左上角原点）转换为项目坐标系（中心原点）
+const webavToProjectCoords = (webavX: number, webavY: number, spriteWidth: number, spriteHeight: number) => {
+  const canvasWidth = videoStore.videoResolution.width
+  const canvasHeight = videoStore.videoResolution.height
+
+  // WebAV坐标系：左上角为(0,0)，向右向下为正
+  // 项目坐标系：中心为(0,0)，向右向下为正
+  const projectX = webavX + spriteWidth / 2 - canvasWidth / 2
+  const projectY = webavY + spriteHeight / 2 - canvasHeight / 2
+
+  return { x: projectX, y: projectY }
+}
+
+// 坐标转换函数：从项目坐标系（中心原点）转换为WebAV坐标系（左上角原点）
+const projectToWebavCoords = (projectX: number, projectY: number, spriteWidth: number, spriteHeight: number) => {
+  const canvasWidth = videoStore.videoResolution.width
+  const canvasHeight = videoStore.videoResolution.height
+
+  // 项目坐标系：中心为(0,0)，向右向下为正
+  // WebAV坐标系：左上角为(0,0)，向右向下为正
+  const webavX = projectX - spriteWidth / 2 + canvasWidth / 2
+  const webavY = projectY - spriteHeight / 2 + canvasHeight / 2
+
+  return { x: webavX, y: webavY }
+}
+
 // 更新本地状态的函数
 const updateLocalState = (timelineItem: TimelineItem | null, mediaItem: any | null) => {
   if (timelineItem && mediaItem) {
@@ -565,28 +593,58 @@ const updateLocalState = (timelineItem: TimelineItem | null, mediaItem: any | nu
     // 根据当前播放速度更新归一化值
     normalizedSpeed.value = speedToNormalized(sprite.getPlaybackSpeed() || 1)
 
-    // TODO: 重新实现变换属性管理
-    // 暂时使用默认值
-    transformX.value = 0
-    transformY.value = 0
-    scaleX.value = 1
-    scaleY.value = 1
-    rotation.value = 0
-    opacity.value = 1
-    zIndex.value = 0
+    // 从CustomVisibleSprite读取实际的变换属性
+    const rect = sprite.rect
+    const webavX = rect.x || 0
+    const webavY = rect.y || 0
+
+    // 获取视频的原始分辨率
+    let originalVideoWidth = videoStore.videoResolution.width
+    let originalVideoHeight = videoStore.videoResolution.height
+
+    if (mediaItem) {
+      // 尝试从MP4Clip获取原始分辨率
+      const originalResolution = videoStore.getVideoOriginalResolution(mediaItem.id)
+      originalVideoWidth = originalResolution.width
+      originalVideoHeight = originalResolution.height
+    }
+
+    // 计算缩放值（基于视频原始分辨率）
+    // 当缩放系数为1.0时，应该显示为视频的原始分辨率
+    const spriteWidth = rect.w || originalVideoWidth
+    const spriteHeight = rect.h || originalVideoHeight
+    scaleX.value = spriteWidth / originalVideoWidth
+    scaleY.value = spriteHeight / originalVideoHeight
+
+    // 转换坐标系：从WebAV坐标系转换为项目坐标系（中心原点）
+    const projectCoords = webavToProjectCoords(webavX, webavY, spriteWidth, spriteHeight)
+    transformX.value = Math.round(projectCoords.x)
+    transformY.value = Math.round(projectCoords.y)
+
+    // 其他变换属性
+    rotation.value = 0 // WebAV的VisibleSprite暂不支持旋转，保持为0
+    opacity.value = sprite.opacity !== undefined ? sprite.opacity : 1
+    zIndex.value = sprite.zIndex || 0
 
     // 更新等比缩放相关属性
-    uniformScale.value = 1
+    if (Math.abs(scaleX.value - scaleY.value) < 0.01) {
+      // 如果X和Y缩放值接近，认为是等比缩放
+      proportionalScale.value = true
+      uniformScale.value = scaleX.value
+    } else {
+      proportionalScale.value = false
+      uniformScale.value = scaleX.value
+    }
 
     // 更新临时输入值
-    tempTransformX.value = '0'
-    tempTransformY.value = '0'
-    tempUniformScale.value = '1.00'
-    tempScaleX.value = '1.00'
-    tempScaleY.value = '1.00'
-    tempRotation.value = '0.0'
-    tempOpacity.value = '1.00'
-    tempZIndex.value = '0'
+    tempTransformX.value = transformX.value.toString()
+    tempTransformY.value = transformY.value.toString()
+    tempUniformScale.value = uniformScale.value.toFixed(2)
+    tempScaleX.value = scaleX.value.toFixed(2)
+    tempScaleY.value = scaleY.value.toFixed(2)
+    tempRotation.value = rotation.value.toFixed(1)
+    tempOpacity.value = opacity.value.toFixed(2)
+    tempZIndex.value = zIndex.value.toString()
 
     // 更新分辨率显示
     updateResolutionDisplay()
@@ -606,7 +664,7 @@ const updateLocalState = (timelineItem: TimelineItem | null, mediaItem: any | nu
     opacity.value = 1
     zIndex.value = 0
 
-    // 重置等比缩放属性
+    // 重置等比缩放属性（默认开启等比缩放）
     proportionalScale.value = true
     uniformScale.value = 1
 
@@ -742,8 +800,57 @@ const speedToNormalized = (speed: number) => {
 
 // 更新变换属性
 const updateTransform = () => {
-  // TODO: 重新实现变换属性更新
-  console.log('TODO: 更新变换属性')
+  if (!selectedTimelineItem.value) return
+
+  const sprite = selectedTimelineItem.value.sprite
+
+  try {
+    // 获取视频的原始分辨率
+    const mediaItem = videoStore.getMediaItem(selectedTimelineItem.value.mediaItemId)
+    let originalVideoWidth = videoStore.videoResolution.width
+    let originalVideoHeight = videoStore.videoResolution.height
+
+    if (mediaItem) {
+      const originalResolution = videoStore.getVideoOriginalResolution(mediaItem.id)
+      originalVideoWidth = originalResolution.width
+      originalVideoHeight = originalResolution.height
+    }
+
+    // 更新尺寸（基于视频原始分辨率和缩放值计算实际尺寸）
+    // 当缩放系数为1.0时，显示为视频的原始分辨率
+    const spriteWidth = originalVideoWidth * scaleX.value
+    const spriteHeight = originalVideoHeight * scaleY.value
+    sprite.rect.w = spriteWidth
+    sprite.rect.h = spriteHeight
+
+    // 转换坐标系：从项目坐标系（中心原点）转换为WebAV坐标系（左上角原点）
+    const webavCoords = projectToWebavCoords(transformX.value, transformY.value, spriteWidth, spriteHeight)
+    sprite.rect.x = webavCoords.x
+    sprite.rect.y = webavCoords.y
+
+    // 更新透明度
+    sprite.opacity = opacity.value
+
+    // 更新层级
+    sprite.zIndex = zIndex.value
+
+    // 注意：WebAV的VisibleSprite暂不支持旋转，rotation属性暂时不应用
+
+    // 强制触发Vue组件重新渲染
+    videoStore.forceUpdateCounter++
+
+    console.log('✅ 变换属性已更新:', {
+      projectPosition: { x: transformX.value, y: transformY.value },
+      webavPosition: { x: webavCoords.x, y: webavCoords.y },
+      originalVideoSize: { w: originalVideoWidth, h: originalVideoHeight },
+      actualSize: { w: spriteWidth, h: spriteHeight },
+      scale: { x: scaleX.value, y: scaleY.value },
+      opacity: opacity.value,
+      zIndex: zIndex.value
+    })
+  } catch (error) {
+    console.error('更新变换属性失败:', error)
+  }
 }
 
 // 切换等比缩放
@@ -859,6 +966,7 @@ const confirmScaleYFromInput = () => {
 const confirmTransformXFromInput = () => {
   const value = parseInt(tempTransformX.value)
   if (!isNaN(value)) {
+    // 项目坐标系：中心为原点，允许的范围是 -canvasWidth 到 +canvasWidth
     transformX.value = Math.max(
       -videoStore.videoResolution.width,
       Math.min(videoStore.videoResolution.width, value),
@@ -875,6 +983,7 @@ const confirmTransformXFromInput = () => {
 const confirmTransformYFromInput = () => {
   const value = parseInt(tempTransformY.value)
   if (!isNaN(value)) {
+    // 项目坐标系：中心为原点，允许的范围是 -canvasHeight 到 +canvasHeight
     transformY.value = Math.max(
       -videoStore.videoResolution.height,
       Math.min(videoStore.videoResolution.height, value),
@@ -928,8 +1037,21 @@ const confirmZIndexFromInput = () => {
 
 // 更新层级
 const updateZIndex = () => {
-  // TODO: 重新实现层级更新
-  console.log('TODO: 更新层级')
+  if (!selectedTimelineItem.value) return
+
+  const sprite = selectedTimelineItem.value.sprite
+
+  try {
+    // 更新层级
+    sprite.zIndex = zIndex.value
+
+    // 强制触发Vue组件重新渲染
+    videoStore.forceUpdateCounter++
+
+    console.log('✅ 层级已更新:', zIndex.value)
+  } catch (error) {
+    console.error('更新层级失败:', error)
+  }
 }
 
 
@@ -965,13 +1087,73 @@ const confirmResolutionFromInput = () => {
 
 }
 
-// TODO: 重新实现对齐功能
+// 实现对齐功能（基于项目坐标系：中心为原点）
 const alignHorizontal = (alignment: 'left' | 'center' | 'right') => {
-  console.log('TODO: 实现水平对齐:', alignment)
+  if (!selectedTimelineItem.value) return
+
+  const sprite = selectedTimelineItem.value.sprite
+  const canvasWidth = videoStore.videoResolution.width
+  const spriteWidth = sprite.rect.w || canvasWidth
+
+  try {
+    let newProjectX = 0
+    switch (alignment) {
+      case 'left':
+        // 左对齐：sprite左边缘贴画布左边缘
+        newProjectX = -canvasWidth / 2 + spriteWidth / 2
+        break
+      case 'center':
+        // 居中：sprite中心对齐画布中心
+        newProjectX = 0
+        break
+      case 'right':
+        // 右对齐：sprite右边缘贴画布右边缘
+        newProjectX = canvasWidth / 2 - spriteWidth / 2
+        break
+    }
+
+    transformX.value = Math.round(newProjectX)
+    tempTransformX.value = transformX.value.toString()
+    updateTransform()
+
+    console.log('✅ 水平对齐完成:', alignment, '项目坐标X:', transformX.value)
+  } catch (error) {
+    console.error('水平对齐失败:', error)
+  }
 }
 
 const alignVertical = (alignment: 'top' | 'middle' | 'bottom') => {
-  console.log('TODO: 实现垂直对齐:', alignment)
+  if (!selectedTimelineItem.value) return
+
+  const sprite = selectedTimelineItem.value.sprite
+  const canvasHeight = videoStore.videoResolution.height
+  const spriteHeight = sprite.rect.h || canvasHeight
+
+  try {
+    let newProjectY = 0
+    switch (alignment) {
+      case 'top':
+        // 顶对齐：sprite上边缘贴画布上边缘
+        newProjectY = -canvasHeight / 2 + spriteHeight / 2
+        break
+      case 'middle':
+        // 居中：sprite中心对齐画布中心
+        newProjectY = 0
+        break
+      case 'bottom':
+        // 底对齐：sprite下边缘贴画布下边缘
+        newProjectY = canvasHeight / 2 - spriteHeight / 2
+        break
+    }
+
+    transformY.value = Math.round(newProjectY)
+    tempTransformY.value = transformY.value.toString()
+    updateTransform()
+
+    console.log('✅ 垂直对齐完成:', alignment, '项目坐标Y:', transformY.value)
+  } catch (error) {
+    console.error('垂直对齐失败:', error)
+  }
 }
 
 

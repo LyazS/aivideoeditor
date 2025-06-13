@@ -385,6 +385,32 @@ export const useVideoStore = defineStore('video', () => {
     }
   }
 
+  function updateTimelineItemSprite(timelineItemId: string, newSprite: Raw<CustomVisibleSprite>) {
+    const item = timelineItems.value.find((item) => item.id === timelineItemId)
+    if (item) {
+      const mediaItem = getMediaItem(item.mediaItemId)
+
+      // 清理旧的sprite资源
+      try {
+        if (item.sprite && typeof item.sprite.destroy === 'function') {
+          item.sprite.destroy()
+        }
+      } catch (error) {
+        console.warn('清理旧sprite资源时出错:', error)
+      }
+
+      // 更新sprite引用
+      item.sprite = newSprite
+
+      printDebugInfo('更新时间轴项目sprite', {
+        timelineItemId,
+        mediaItemName: mediaItem?.name || '未知',
+        trackId: item.trackId,
+        position: item.timelinePosition
+      })
+    }
+  }
+
   function selectTimelineItem(timelineItemId: string | null) {
     selectedTimelineItemId.value = timelineItemId
 
@@ -981,6 +1007,7 @@ export const useVideoStore = defineStore('video', () => {
     getTimelineItem,
     getTimelineItemsForTrack,
     updateTimelineItemPosition,
+    updateTimelineItemSprite,
     selectTimelineItem,
     selectAVCanvasSprite,
     findTimelineItemBySprite,

@@ -387,6 +387,29 @@ async function createVideoClipFromMediaItem(
     const clonedMP4Clip = await webAVControls.cloneMP4Clip(storeMediaItem.mp4Clip)
     const sprite = new CustomVisibleSprite(clonedMP4Clip)
 
+    // 获取视频的原始分辨率
+    const originalResolution = videoStore.getVideoOriginalResolution(mediaItem.id)
+    console.log('视频原始分辨率:', originalResolution)
+
+    // 设置初始尺寸为视频原始分辨率（缩放系数1.0）
+    // sprite.rect.w/h 是在画布上的实际显示像素尺寸
+    sprite.rect.w = originalResolution.width
+    sprite.rect.h = originalResolution.height
+
+    // 设置初始位置为画布中心
+    // 使用WebAV坐标系（左上角原点），让视频居中显示
+    const canvasWidth = videoStore.videoResolution.width
+    const canvasHeight = videoStore.videoResolution.height
+    sprite.rect.x = (canvasWidth - originalResolution.width) / 2
+    sprite.rect.y = (canvasHeight - originalResolution.height) / 2
+
+    console.log('初始化sprite尺寸和位置:', {
+      原始分辨率: originalResolution,
+      显示尺寸: { w: sprite.rect.w, h: sprite.rect.h },
+      WebAV位置: { x: sprite.rect.x, y: sprite.rect.y },
+      画布尺寸: { w: canvasWidth, h: canvasHeight }
+    })
+
     // 设置时间范围 - 添加调试信息
     const timeRangeConfig = {
       clipStartTime: 0,
