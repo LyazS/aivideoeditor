@@ -36,6 +36,13 @@
             <label>位置</label>
             <span class="property-value">{{ formatDuration(selectedTimelineItem?.timelinePosition || 0) }}</span>
           </div>
+
+          <!-- 调试按钮 -->
+          <div class="property-item">
+            <button @click="debugTimelineItems" class="debug-button">
+              🐛 调试：打印TimelineItems数据
+            </button>
+          </div>
         </div>
 
         <!-- 播放设置 -->
@@ -67,8 +74,8 @@
               <!-- 分段倍速滑块 -->
               <div class="segmented-speed-container">
                 <input
-                  v-model.number="normalizedSpeed"
-                  @input="updateNormalizedSpeed"
+                  :value="normalizedSpeed"
+                  @input="(e) => updateNormalizedSpeed((e.target as HTMLInputElement).valueAsNumber)"
                   type="range"
                   min="0"
                   max="100"
@@ -84,10 +91,10 @@
                 </div>
               </div>
               <input
-                v-model.number="speedInputValue"
-                @input="updateSpeedFromInput"
-                @blur="updateSpeedFromInput"
-                @keyup.enter="updateSpeedFromInput"
+                :value="speedInputValue"
+                @input="(e) => updateSpeedFromInput((e.target as HTMLInputElement).valueAsNumber)"
+                @blur="(e) => updateSpeedFromInput((e.target as HTMLInputElement).valueAsNumber)"
+                @keyup.enter="(e) => updateSpeedFromInput((e.target as HTMLInputElement).valueAsNumber)"
                 type="number"
                 step="0.1"
                 min="0.1"
@@ -109,7 +116,7 @@
                 <span class="position-label">X</span>
                 <div class="number-input-wrapper">
                   <input
-                    v-model="tempTransformX"
+                    :value="tempTransformXInput"
                     @blur="confirmTransformXFromInput"
                     @keyup.enter="confirmTransformXFromInput"
                     type="number"
@@ -131,7 +138,7 @@
                 <span class="position-label">Y</span>
                 <div class="number-input-wrapper">
                   <input
-                    v-model="tempTransformY"
+                    :value="tempTransformYInput"
                     @blur="confirmTransformYFromInput"
                     @keyup.enter="confirmTransformYFromInput"
                     type="number"
@@ -168,8 +175,8 @@
             <label>缩放</label>
             <div class="scale-controls">
               <input
-                v-model.number="uniformScale"
-                @input="updateUniformScale"
+                :value="uniformScale"
+                @input="(e) => updateUniformScale((e.target as HTMLInputElement).valueAsNumber)"
                 type="range"
                 min="0.1"
                 max="10"
@@ -178,7 +185,7 @@
               />
               <div class="number-input-wrapper">
                 <input
-                  v-model="tempUniformScale"
+                  :value="tempUniformScaleInput"
                   @blur="confirmUniformScaleFromInput"
                   @keyup.enter="confirmUniformScaleFromInput"
                   type="number"
@@ -205,8 +212,8 @@
               <label>X缩放</label>
               <div class="scale-controls">
                 <input
-                  v-model.number="scaleX"
-                  @input="updateTransform"
+                  :value="scaleX"
+                  @input="(e) => adjustScaleX((e.target as HTMLInputElement).valueAsNumber - scaleX)"
                   type="range"
                   min="0.1"
                   max="10"
@@ -215,7 +222,7 @@
                 />
                 <div class="number-input-wrapper">
                   <input
-                    v-model="tempScaleX"
+                    :value="tempScaleXInput"
                     @blur="confirmScaleXFromInput"
                     @keyup.enter="confirmScaleXFromInput"
                     type="number"
@@ -237,8 +244,8 @@
               <label>Y缩放</label>
               <div class="scale-controls">
                 <input
-                  v-model.number="scaleY"
-                  @input="updateTransform"
+                  :value="scaleY"
+                  @input="(e) => adjustScaleY((e.target as HTMLInputElement).valueAsNumber - scaleY)"
                   type="range"
                   min="0.1"
                   max="10"
@@ -247,7 +254,7 @@
                 />
                 <div class="number-input-wrapper">
                   <input
-                    v-model="tempScaleY"
+                    :value="tempScaleYInput"
                     @blur="confirmScaleYFromInput"
                     @keyup.enter="confirmScaleYFromInput"
                     type="number"
@@ -401,8 +408,8 @@
             <label>旋转</label>
             <div class="rotation-controls">
               <input
-                v-model.number="rotation"
-                @input="updateTransform"
+                :value="rotation"
+                @input="(e) => adjustRotation((e.target as HTMLInputElement).valueAsNumber - rotation)"
                 type="range"
                 min="-180"
                 max="180"
@@ -411,7 +418,7 @@
               />
               <div class="number-input-wrapper">
                 <input
-                  v-model="tempRotation"
+                  :value="tempRotationInput"
                   @blur="confirmRotationFromInput"
                   @keyup.enter="confirmRotationFromInput"
                   type="number"
@@ -431,8 +438,8 @@
             <label>透明度</label>
             <div class="opacity-controls">
               <input
-                v-model.number="opacity"
-                @input="updateTransform"
+                :value="opacity"
+                @input="(e) => adjustOpacity((e.target as HTMLInputElement).valueAsNumber - opacity)"
                 type="range"
                 min="0"
                 max="1"
@@ -441,7 +448,7 @@
               />
               <div class="number-input-wrapper">
                 <input
-                  v-model="tempOpacity"
+                  :value="tempOpacityInput"
                   @blur="confirmOpacityFromInput"
                   @keyup.enter="confirmOpacityFromInput"
                   type="number"
@@ -462,7 +469,7 @@
           <div class="property-item">
             <label>层级</label>
             <input
-              v-model="tempZIndex"
+              :value="tempZIndexInput"
               @blur="confirmZIndexFromInput"
               @keyup.enter="confirmZIndexFromInput"
               type="number"
@@ -480,6 +487,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick } from 'vue'
 import { useVideoStore, type TimelineItem } from '../stores/videostore'
+import { webavToProjectCoords } from '../utils/coordinateTransform'
 
 const videoStore = useVideoStore()
 
@@ -504,11 +512,7 @@ const timelineDuration = computed(() => {
 })
 
 // 可编辑的属性
-const clipName = ref('')
-const playbackRate = ref(1)
 const targetDuration = ref(0)
-const normalizedSpeed = ref(20) // 0-100的归一化值，默认20对应1x
-const speedInputValue = ref(1) // 倍速输入框的值
 
 // 倍速分段配置
 const speedSegments = [
@@ -519,14 +523,22 @@ const speedSegments = [
   { min: 10, max: 100, normalizedStart: 80, normalizedEnd: 100 }, // 80-100%: 10-100x
 ]
 
-// 变换属性
-const transformX = ref(0)
-const transformY = ref(0)
-const scaleX = ref(1)
-const scaleY = ref(1)
-const rotation = ref(0)
-const opacity = ref(1)
-const zIndex = ref(0)
+// 变换属性 - 基于TimelineItem的响应式计算属性
+const transformX = computed(() => selectedTimelineItem.value?.position.x || 0)
+const transformY = computed(() => selectedTimelineItem.value?.position.y || 0)
+const scaleX = computed(() => {
+  if (!selectedTimelineItem.value || !selectedMediaItem.value) return 1
+  const originalResolution = videoStore.getVideoOriginalResolution(selectedMediaItem.value.id)
+  return selectedTimelineItem.value.size.width / originalResolution.width
+})
+const scaleY = computed(() => {
+  if (!selectedTimelineItem.value || !selectedMediaItem.value) return 1
+  const originalResolution = videoStore.getVideoOriginalResolution(selectedMediaItem.value.id)
+  return selectedTimelineItem.value.size.height / originalResolution.height
+})
+const rotation = computed(() => selectedTimelineItem.value?.rotation || 0)
+const opacity = computed(() => selectedTimelineItem.value?.opacity || 1)
+const zIndex = computed(() => selectedTimelineItem.value?.zIndex || 0)
 
 // 等比缩放相关
 const proportionalScale = computed({
@@ -535,157 +547,38 @@ const proportionalScale = computed({
     videoStore.proportionalScale = value
   },
 })
-const uniformScale = ref(1) // 统一缩放值
-
-// 临时输入值（用于延迟更新）
-const tempTransformX = ref('0')
-const tempTransformY = ref('0')
-const tempUniformScale = ref('1.00')
-const tempScaleX = ref('1.00')
-const tempScaleY = ref('1.00')
-const tempRotation = ref('0.0')
-const tempOpacity = ref('1.00')
-const tempZIndex = ref('0')
 
 // 分辨率相关
 const tempResolutionWidth = ref('1920')
 const tempResolutionHeight = ref('1080')
 
-// 标志：是否正在程序更新（避免用户输入时的冲突）
-const isUpdatingFromExternal = ref(false)
 
-// 坐标转换函数：从WebAV坐标系（左上角原点）转换为项目坐标系（中心原点）
-const webavToProjectCoords = (webavX: number, webavY: number, spriteWidth: number, spriteHeight: number) => {
-  const canvasWidth = videoStore.videoResolution.width
-  const canvasHeight = videoStore.videoResolution.height
 
-  // WebAV坐标系：左上角为(0,0)，向右向下为正
-  // 项目坐标系：中心为(0,0)，向右向下为正
-  const projectX = webavX + spriteWidth / 2 - canvasWidth / 2
-  const projectY = webavY + spriteHeight / 2 - canvasHeight / 2
 
-  return { x: projectX, y: projectY }
-}
 
-// 坐标转换函数：从项目坐标系（中心原点）转换为WebAV坐标系（左上角原点）
-const projectToWebavCoords = (projectX: number, projectY: number, spriteWidth: number, spriteHeight: number) => {
-  const canvasWidth = videoStore.videoResolution.width
-  const canvasHeight = videoStore.videoResolution.height
+// 等比缩放相关
+const uniformScale = computed(() => scaleX.value) // 使用X缩放值作为统一缩放值
 
-  // 项目坐标系：中心为(0,0)，向右向下为正
-  // WebAV坐标系：左上角为(0,0)，向右向下为正
-  const webavX = projectX - spriteWidth / 2 + canvasWidth / 2
-  const webavY = projectY - spriteHeight / 2 + canvasHeight / 2
-
-  return { x: webavX, y: webavY }
-}
-
-// 更新本地状态的函数
-const updateLocalState = (timelineItem: TimelineItem | null, mediaItem: any | null) => {
-  if (timelineItem && mediaItem) {
-    clipName.value = mediaItem.name
-    const sprite = timelineItem.sprite
-    playbackRate.value = sprite.getPlaybackSpeed() || 1
-    const timeRange = sprite.getTimeRange()
-    targetDuration.value = (timeRange.timelineEndTime - timeRange.timelineStartTime) / 1000000 // 转换为秒
-    speedInputValue.value = sprite.getPlaybackSpeed() || 1
-
-    // 根据当前播放速度更新归一化值
-    normalizedSpeed.value = speedToNormalized(sprite.getPlaybackSpeed() || 1)
-
-    // 从CustomVisibleSprite读取实际的变换属性
-    const rect = sprite.rect
-    const webavX = rect.x || 0
-    const webavY = rect.y || 0
-
-    // 获取视频的原始分辨率
-    let originalVideoWidth = videoStore.videoResolution.width
-    let originalVideoHeight = videoStore.videoResolution.height
-
-    if (mediaItem) {
-      // 尝试从MP4Clip获取原始分辨率
-      const originalResolution = videoStore.getVideoOriginalResolution(mediaItem.id)
-      originalVideoWidth = originalResolution.width
-      originalVideoHeight = originalResolution.height
+// 其他响应式属性
+const clipName = computed({
+  get: () => selectedMediaItem.value?.name || '',
+  set: (value) => {
+    if (selectedMediaItem.value && value.trim()) {
+      videoStore.updateMediaItemName(selectedMediaItem.value.id, value.trim())
     }
-
-    // 计算缩放值（基于视频原始分辨率）
-    // 当缩放系数为1.0时，应该显示为视频的原始分辨率
-    const spriteWidth = rect.w || originalVideoWidth
-    const spriteHeight = rect.h || originalVideoHeight
-    scaleX.value = spriteWidth / originalVideoWidth
-    scaleY.value = spriteHeight / originalVideoHeight
-
-    // 转换坐标系：从WebAV坐标系转换为项目坐标系（中心原点）
-    const projectCoords = webavToProjectCoords(webavX, webavY, spriteWidth, spriteHeight)
-    transformX.value = Math.round(projectCoords.x)
-    transformY.value = Math.round(projectCoords.y)
-
-    // 其他变换属性
-    rotation.value = 0 // WebAV的VisibleSprite暂不支持旋转，保持为0
-    opacity.value = sprite.opacity !== undefined ? sprite.opacity : 1
-    zIndex.value = sprite.zIndex || 0
-
-    // 更新等比缩放相关属性
-    if (Math.abs(scaleX.value - scaleY.value) < 0.01) {
-      // 如果X和Y缩放值接近，认为是等比缩放
-      proportionalScale.value = true
-      uniformScale.value = scaleX.value
-    } else {
-      proportionalScale.value = false
-      uniformScale.value = scaleX.value
-    }
-
-    // 更新临时输入值
-    tempTransformX.value = transformX.value.toString()
-    tempTransformY.value = transformY.value.toString()
-    tempUniformScale.value = uniformScale.value.toFixed(2)
-    tempScaleX.value = scaleX.value.toFixed(2)
-    tempScaleY.value = scaleY.value.toFixed(2)
-    tempRotation.value = rotation.value.toFixed(1)
-    tempOpacity.value = opacity.value.toFixed(2)
-    tempZIndex.value = zIndex.value.toString()
-
-    // 更新分辨率显示
-    updateResolutionDisplay()
-  } else {
-    clipName.value = ''
-    playbackRate.value = 1
-    targetDuration.value = 0
-    normalizedSpeed.value = 20
-    speedInputValue.value = 1
-
-    // 重置变换属性
-    transformX.value = 0
-    transformY.value = 0
-    scaleX.value = 1
-    scaleY.value = 1
-    rotation.value = 0
-    opacity.value = 1
-    zIndex.value = 0
-
-    // 重置等比缩放属性（默认开启等比缩放）
-    proportionalScale.value = true
-    uniformScale.value = 1
-
-    // 重置临时输入值
-    tempTransformX.value = '0'
-    tempTransformY.value = '0'
-    tempUniformScale.value = '1.00'
-    tempScaleX.value = '1.00'
-    tempScaleY.value = '1.00'
-    tempRotation.value = '0.0'
-    tempOpacity.value = '1.00'
-    tempZIndex.value = '0'
-    tempResolutionWidth.value = '1920'
-    tempResolutionHeight.value = '1080'
   }
-}
+})
 
-// 监听选中时间轴项目变化，更新本地状态
-watch([selectedTimelineItem, selectedMediaItem], ([timelineItem, mediaItem]) => {
-  updateLocalState(timelineItem, mediaItem)
-}, { immediate: true })
+const playbackRate = computed(() => {
+  if (!selectedTimelineItem.value) return 1
+  return selectedTimelineItem.value.sprite.getPlaybackSpeed() || 1
+})
+
+const normalizedSpeed = computed(() => {
+  return speedToNormalized(playbackRate.value)
+})
+
+const speedInputValue = computed(() => playbackRate.value)
 
 // TODO: 重新实现变换属性监听
 // 暂时禁用复杂的变换监听逻辑
@@ -698,17 +591,14 @@ const updateClipName = () => {
 }
 
 // 更新播放速度
-const updatePlaybackRate = () => {
+const updatePlaybackRate = (newRate?: number) => {
   if (selectedTimelineItem.value) {
-    videoStore.updateTimelineItemPlaybackRate(selectedTimelineItem.value.id, playbackRate.value)
-    // 同步更新目标时长和输入框值
+    const rate = newRate || playbackRate.value
+    videoStore.updateTimelineItemPlaybackRate(selectedTimelineItem.value.id, rate)
+    // 同步更新目标时长
     const sprite = selectedTimelineItem.value.sprite
     const timeRange = sprite.getTimeRange()
     targetDuration.value = (timeRange.timelineEndTime - timeRange.timelineStartTime) / 1000000
-    speedInputValue.value = playbackRate.value
-
-    // 强制触发Vue组件重新渲染
-    videoStore.forceUpdateCounter++
   }
 }
 
@@ -723,10 +613,6 @@ const updateTargetDuration = () => {
     // 确保播放速度在合理范围内（0.1-100x）
     const clampedRate = Math.max(0.1, Math.min(100, newPlaybackRate))
 
-    // 更新播放速度
-    playbackRate.value = clampedRate
-    speedInputValue.value = clampedRate
-
     // 更新CustomVisibleSprite的时间范围
     const newTimelineEndTime = timeRange.timelineStartTime + (targetDuration.value * 1000000)
     sprite.setTimeRange({
@@ -739,30 +625,21 @@ const updateTargetDuration = () => {
     // 重新计算实际时长（可能因为范围限制而有所调整）
     const actualDuration = selectedMediaItem.value.duration / clampedRate
     targetDuration.value = actualDuration
-
-    // 强制触发Vue组件重新渲染
-    videoStore.forceUpdateCounter++
   }
 }
 
 // 更新归一化速度
-const updateNormalizedSpeed = () => {
-  const actualSpeed = normalizedToSpeed(normalizedSpeed.value)
-  playbackRate.value = actualSpeed
-  speedInputValue.value = actualSpeed
-  updatePlaybackRate()
+const updateNormalizedSpeed = (newNormalizedSpeed: number) => {
+  const actualSpeed = normalizedToSpeed(newNormalizedSpeed)
+  updatePlaybackRate(actualSpeed)
 }
 
 // 从输入框更新倍速
-const updateSpeedFromInput = () => {
-  if (speedInputValue.value && speedInputValue.value > 0) {
+const updateSpeedFromInput = (newSpeed: number) => {
+  if (newSpeed && newSpeed > 0) {
     // 确保倍速在合理范围内
-    const clampedSpeed = Math.max(0.1, Math.min(100, speedInputValue.value))
-    playbackRate.value = clampedSpeed
-    speedInputValue.value = clampedSpeed
-    // 更新归一化值和滑块位置
-    normalizedSpeed.value = speedToNormalized(clampedSpeed)
-    updatePlaybackRate()
+    const clampedSpeed = Math.max(0.1, Math.min(100, newSpeed))
+    updatePlaybackRate(clampedSpeed)
   }
 }
 
@@ -798,56 +675,32 @@ const speedToNormalized = (speed: number) => {
 
 
 
-// 更新变换属性
-const updateTransform = () => {
+// 更新变换属性 - 使用新的双向同步机制
+const updateTransform = (transform?: {
+  position?: { x: number; y: number }
+  size?: { width: number; height: number }
+  rotation?: number
+  opacity?: number
+  zIndex?: number
+}) => {
   if (!selectedTimelineItem.value) return
 
-  const sprite = selectedTimelineItem.value.sprite
-
   try {
-    // 获取视频的原始分辨率
-    const mediaItem = videoStore.getMediaItem(selectedTimelineItem.value.mediaItemId)
-    let originalVideoWidth = videoStore.videoResolution.width
-    let originalVideoHeight = videoStore.videoResolution.height
-
-    if (mediaItem) {
-      const originalResolution = videoStore.getVideoOriginalResolution(mediaItem.id)
-      originalVideoWidth = originalResolution.width
-      originalVideoHeight = originalResolution.height
-    }
-
-    // 更新尺寸（基于视频原始分辨率和缩放值计算实际尺寸）
-    // 当缩放系数为1.0时，显示为视频的原始分辨率
-    const spriteWidth = originalVideoWidth * scaleX.value
-    const spriteHeight = originalVideoHeight * scaleY.value
-    sprite.rect.w = spriteWidth
-    sprite.rect.h = spriteHeight
-
-    // 转换坐标系：从项目坐标系（中心原点）转换为WebAV坐标系（左上角原点）
-    const webavCoords = projectToWebavCoords(transformX.value, transformY.value, spriteWidth, spriteHeight)
-    sprite.rect.x = webavCoords.x
-    sprite.rect.y = webavCoords.y
-
-    // 更新透明度
-    sprite.opacity = opacity.value
-
-    // 更新层级
-    sprite.zIndex = zIndex.value
-
-    // 注意：WebAV的VisibleSprite暂不支持旋转，rotation属性暂时不应用
-
-    // 强制触发Vue组件重新渲染
-    videoStore.forceUpdateCounter++
-
-    console.log('✅ 变换属性已更新:', {
-      projectPosition: { x: transformX.value, y: transformY.value },
-      webavPosition: { x: webavCoords.x, y: webavCoords.y },
-      originalVideoSize: { w: originalVideoWidth, h: originalVideoHeight },
-      actualSize: { w: spriteWidth, h: spriteHeight },
-      scale: { x: scaleX.value, y: scaleY.value },
+    // 如果没有提供transform参数，使用当前的响应式值
+    const finalTransform = transform || {
+      position: { x: transformX.value, y: transformY.value },
+      size: {
+        width: selectedTimelineItem.value.size.width,
+        height: selectedTimelineItem.value.size.height
+      },
+      rotation: rotation.value,
       opacity: opacity.value,
       zIndex: zIndex.value
-    })
+    }
+
+    // 使用videoStore的updateTimelineItemTransform方法
+    // 这会触发propsChange事件，自动同步到TimelineItem，然后更新属性面板显示
+    videoStore.updateTimelineItemTransform(selectedTimelineItem.value.id, finalTransform)
   } catch (error) {
     console.error('更新变换属性失败:', error)
   }
@@ -855,203 +708,351 @@ const updateTransform = () => {
 
 // 切换等比缩放
 const toggleProportionalScale = () => {
-  if (proportionalScale.value) {
-    // 开启等比缩放时，使用当前X缩放值作为统一缩放值
-    uniformScale.value = scaleX.value
-    scaleY.value = scaleX.value
-    updateTransform()
-  } else {
-    // 关闭等比缩放时，保持当前的缩放值
-    uniformScale.value = scaleX.value
+  if (proportionalScale.value && selectedTimelineItem.value && selectedMediaItem.value) {
+    // 开启等比缩放时，使用当前X缩放值作为统一缩放值，同时更新Y缩放
+    const originalResolution = videoStore.getVideoOriginalResolution(selectedMediaItem.value.id)
+    const newSize = {
+      width: originalResolution.width * scaleX.value,
+      height: originalResolution.height * scaleX.value // 使用X缩放值保持等比
+    }
+    updateTransform({ size: newSize })
   }
 }
 
 // 更新统一缩放
-const updateUniformScale = () => {
-  if (proportionalScale.value) {
-    scaleX.value = uniformScale.value
-    scaleY.value = uniformScale.value
-    updateTransform()
+const updateUniformScale = (newScale: number) => {
+  if (proportionalScale.value && selectedTimelineItem.value && selectedMediaItem.value) {
+    const originalResolution = videoStore.getVideoOriginalResolution(selectedMediaItem.value.id)
+    const newSize = {
+      width: originalResolution.width * newScale,
+      height: originalResolution.height * newScale
+    }
+    updateTransform({ size: newSize })
   }
 }
 
 // 调整位置数值的方法
 const adjustTransformX = (delta: number) => {
-  transformX.value += delta
-  tempTransformX.value = transformX.value.toString()
-  updateTransform()
+  const newPosition = {
+    x: transformX.value + delta,
+    y: transformY.value
+  }
+  updateTransform({ position: newPosition })
 }
 
 const adjustTransformY = (delta: number) => {
-  transformY.value += delta
-  tempTransformY.value = transformY.value.toString()
-  updateTransform()
+  const newPosition = {
+    x: transformX.value,
+    y: transformY.value + delta
+  }
+  updateTransform({ position: newPosition })
 }
 
 // 调整统一缩放数值的方法
 const adjustUniformScale = (delta: number) => {
-  uniformScale.value = Math.max(0.1, Math.min(10, uniformScale.value + delta))
-  tempUniformScale.value = uniformScale.value.toFixed(2)
-  updateUniformScale()
+  const newScale = Math.max(0.1, Math.min(10, uniformScale.value + delta))
+  updateUniformScale(newScale)
 }
 
 // 调整X缩放数值的方法
 const adjustScaleX = (delta: number) => {
-  scaleX.value = Math.max(0.1, Math.min(10, scaleX.value + delta))
-  tempScaleX.value = scaleX.value.toFixed(2)
-  updateTransform()
+  if (!selectedTimelineItem.value || !selectedMediaItem.value) return
+  const originalResolution = videoStore.getVideoOriginalResolution(selectedMediaItem.value.id)
+  const newScaleX = Math.max(0.1, Math.min(10, scaleX.value + delta))
+  const newSize = {
+    width: originalResolution.width * newScaleX,
+    height: selectedTimelineItem.value.size.height // 保持Y尺寸不变
+  }
+  updateTransform({ size: newSize })
 }
 
 // 调整Y缩放数值的方法
 const adjustScaleY = (delta: number) => {
-  scaleY.value = Math.max(0.1, Math.min(10, scaleY.value + delta))
-  tempScaleY.value = scaleY.value.toFixed(2)
-  updateTransform()
+  if (!selectedTimelineItem.value || !selectedMediaItem.value) return
+  const originalResolution = videoStore.getVideoOriginalResolution(selectedMediaItem.value.id)
+  const newScaleY = Math.max(0.1, Math.min(10, scaleY.value + delta))
+  const newSize = {
+    width: selectedTimelineItem.value.size.width, // 保持X尺寸不变
+    height: originalResolution.height * newScaleY
+  }
+  updateTransform({ size: newSize })
 }
 
 // 调整旋转数值的方法
 const adjustRotation = (delta: number) => {
-  rotation.value = Math.max(-180, Math.min(180, rotation.value + delta))
-  tempRotation.value = rotation.value.toFixed(1)
-  updateTransform()
+  const newRotation = Math.max(-180, Math.min(180, rotation.value + delta))
+  updateTransform({ rotation: newRotation })
 }
 
 // 调整透明度数值的方法
 const adjustOpacity = (delta: number) => {
-  opacity.value = Math.max(0, Math.min(1, opacity.value + delta))
-  tempOpacity.value = opacity.value.toFixed(2)
-  updateTransform()
+  const newOpacity = Math.max(0, Math.min(1, opacity.value + delta))
+  updateTransform({ opacity: newOpacity })
 }
 
+// 临时输入值的computed（用于单向绑定显示）
+const tempTransformXInput = computed(() => transformX.value.toString())
+const tempTransformYInput = computed(() => transformY.value.toString())
+const tempUniformScaleInput = computed(() => uniformScale.value.toFixed(2))
+const tempScaleXInput = computed(() => scaleX.value.toFixed(2))
+const tempScaleYInput = computed(() => scaleY.value.toFixed(2))
+const tempRotationInput = computed(() => rotation.value.toFixed(1))
+const tempOpacityInput = computed(() => opacity.value.toFixed(2))
+const tempZIndexInput = computed(() => zIndex.value.toString())
+
 // 确认统一缩放输入（失焦或回车时）
-const confirmUniformScaleFromInput = () => {
-  const value = parseFloat(tempUniformScale.value)
+const confirmUniformScaleFromInput = (event: Event) => {
+  const input = event.target as HTMLInputElement
+  const value = parseFloat(input.value)
   if (!isNaN(value)) {
-    uniformScale.value = Math.max(0.1, Math.min(10, value))
-    tempUniformScale.value = uniformScale.value.toFixed(2)
-    updateUniformScale()
-  } else {
-    // 如果输入无效，恢复到当前值
-    tempUniformScale.value = uniformScale.value.toFixed(2)
+    const clampedValue = Math.max(0.1, Math.min(10, value))
+    updateUniformScale(clampedValue)
   }
+  // 如果输入无效，computed会自动恢复到当前正确值
 }
 
 // 确认X缩放输入（失焦或回车时）
-const confirmScaleXFromInput = () => {
-  const value = parseFloat(tempScaleX.value)
-  if (!isNaN(value)) {
-    scaleX.value = Math.max(0.1, Math.min(10, value))
-    tempScaleX.value = scaleX.value.toFixed(2)
-    updateTransform()
-  } else {
-    // 如果输入无效，恢复到当前值
-    tempScaleX.value = scaleX.value.toFixed(2)
+const confirmScaleXFromInput = (event: Event) => {
+  const input = event.target as HTMLInputElement
+  const value = parseFloat(input.value)
+  if (!isNaN(value) && selectedTimelineItem.value && selectedMediaItem.value) {
+    const clampedValue = Math.max(0.1, Math.min(10, value))
+    const originalResolution = videoStore.getVideoOriginalResolution(selectedMediaItem.value.id)
+    const newSize = {
+      width: originalResolution.width * clampedValue,
+      height: selectedTimelineItem.value.size.height // 保持Y尺寸不变
+    }
+    updateTransform({ size: newSize })
   }
+  // 如果输入无效，computed会自动恢复到当前正确值
 }
 
 // 确认Y缩放输入（失焦或回车时）
-const confirmScaleYFromInput = () => {
-  const value = parseFloat(tempScaleY.value)
-  if (!isNaN(value)) {
-    scaleY.value = Math.max(0.1, Math.min(10, value))
-    tempScaleY.value = scaleY.value.toFixed(2)
-    updateTransform()
-  } else {
-    // 如果输入无效，恢复到当前值
-    tempScaleY.value = scaleY.value.toFixed(2)
+const confirmScaleYFromInput = (event: Event) => {
+  const input = event.target as HTMLInputElement
+  const value = parseFloat(input.value)
+  if (!isNaN(value) && selectedTimelineItem.value && selectedMediaItem.value) {
+    const clampedValue = Math.max(0.1, Math.min(10, value))
+    const originalResolution = videoStore.getVideoOriginalResolution(selectedMediaItem.value.id)
+    const newSize = {
+      width: selectedTimelineItem.value.size.width, // 保持X尺寸不变
+      height: originalResolution.height * clampedValue
+    }
+    updateTransform({ size: newSize })
   }
+  // 如果输入无效，computed会自动恢复到当前正确值
 }
 
 // 确认位置X输入（失焦或回车时）
-const confirmTransformXFromInput = () => {
-  const value = parseInt(tempTransformX.value)
+const confirmTransformXFromInput = (event: Event) => {
+  const input = event.target as HTMLInputElement
+  const value = parseInt(input.value)
   if (!isNaN(value)) {
     // 项目坐标系：中心为原点，允许的范围是 -canvasWidth 到 +canvasWidth
-    transformX.value = Math.max(
+    const clampedValue = Math.max(
       -videoStore.videoResolution.width,
       Math.min(videoStore.videoResolution.width, value),
     )
-    tempTransformX.value = transformX.value.toString()
-    updateTransform()
-  } else {
-    // 如果输入无效，恢复到当前值
-    tempTransformX.value = transformX.value.toString()
+    const newPosition = {
+      x: clampedValue,
+      y: transformY.value
+    }
+    updateTransform({ position: newPosition })
   }
+  // 如果输入无效，computed会自动恢复到当前正确值
 }
 
 // 确认位置Y输入（失焦或回车时）
-const confirmTransformYFromInput = () => {
-  const value = parseInt(tempTransformY.value)
+const confirmTransformYFromInput = (event: Event) => {
+  const input = event.target as HTMLInputElement
+  const value = parseInt(input.value)
   if (!isNaN(value)) {
     // 项目坐标系：中心为原点，允许的范围是 -canvasHeight 到 +canvasHeight
-    transformY.value = Math.max(
+    const clampedValue = Math.max(
       -videoStore.videoResolution.height,
       Math.min(videoStore.videoResolution.height, value),
     )
-    tempTransformY.value = transformY.value.toString()
-    updateTransform()
-  } else {
-    // 如果输入无效，恢复到当前值
-    tempTransformY.value = transformY.value.toString()
+    const newPosition = {
+      x: transformX.value,
+      y: clampedValue
+    }
+    updateTransform({ position: newPosition })
   }
+  // 如果输入无效，computed会自动恢复到当前正确值
 }
 
 // 确认旋转输入（失焦或回车时）
-const confirmRotationFromInput = () => {
-  const value = parseFloat(tempRotation.value)
+const confirmRotationFromInput = (event: Event) => {
+  const input = event.target as HTMLInputElement
+  const value = parseFloat(input.value)
   if (!isNaN(value)) {
-    rotation.value = Math.max(-180, Math.min(180, value))
-    tempRotation.value = rotation.value.toFixed(1)
-    updateTransform()
-  } else {
-    // 如果输入无效，恢复到当前值
-    tempRotation.value = rotation.value.toFixed(1)
+    const clampedValue = Math.max(-180, Math.min(180, value))
+    updateTransform({ rotation: clampedValue })
   }
+  // 如果输入无效，computed会自动恢复到当前正确值
 }
 
 // 确认透明度输入（失焦或回车时）
-const confirmOpacityFromInput = () => {
-  const value = parseFloat(tempOpacity.value)
+const confirmOpacityFromInput = (event: Event) => {
+  const input = event.target as HTMLInputElement
+  const value = parseFloat(input.value)
   if (!isNaN(value)) {
-    opacity.value = Math.max(0, Math.min(1, value))
-    tempOpacity.value = opacity.value.toFixed(2)
-    updateTransform()
-  } else {
-    // 如果输入无效，恢复到当前值
-    tempOpacity.value = opacity.value.toFixed(2)
+    const clampedValue = Math.max(0, Math.min(1, value))
+    updateTransform({ opacity: clampedValue })
   }
+  // 如果输入无效，computed会自动恢复到当前正确值
 }
 
 // 确认层级输入（失焦或回车时）
-const confirmZIndexFromInput = () => {
-  const value = parseInt(tempZIndex.value)
+const confirmZIndexFromInput = (event: Event) => {
+  const input = event.target as HTMLInputElement
+  const value = parseInt(input.value)
   if (!isNaN(value) && value >= 0) {
-    zIndex.value = value
-    tempZIndex.value = zIndex.value.toString()
-    updateZIndex()
-  } else {
-    // 如果输入无效，恢复到当前值
-    tempZIndex.value = zIndex.value.toString()
+    updateTransform({ zIndex: value })
   }
+  // 如果输入无效，computed会自动恢复到当前正确值
 }
 
-// 更新层级
-const updateZIndex = () => {
-  if (!selectedTimelineItem.value) return
+// ==================== 调试函数 ====================
 
-  const sprite = selectedTimelineItem.value.sprite
+/**
+ * 调试函数：打印TimelineItems的详细数据
+ */
+const debugTimelineItems = () => {
+  console.group('🐛 TimelineItems 调试数据')
 
-  try {
-    // 更新层级
-    sprite.zIndex = zIndex.value
+  console.log('📊 总体信息:')
+  console.log(`- TimelineItems 数量: ${videoStore.timelineItems.length}`)
+  console.log(`- 当前选中项目ID: ${videoStore.selectedTimelineItemId}`)
 
-    // 强制触发Vue组件重新渲染
-    videoStore.forceUpdateCounter++
-
-    console.log('✅ 层级已更新:', zIndex.value)
-  } catch (error) {
-    console.error('更新层级失败:', error)
+  if (videoStore.timelineItems.length === 0) {
+    console.log('⚠️ 没有TimelineItems数据')
+    console.groupEnd()
+    return
   }
+
+  console.log('\n📋 TimelineItems 详细数据:')
+  videoStore.timelineItems.forEach((item, index) => {
+    console.group(`📹 TimelineItem [${index}] - ID: ${item.id}`)
+
+    // 基本信息
+    console.log('🔍 基本信息:')
+    console.log(`  - ID: ${item.id}`)
+    console.log(`  - MediaItem ID: ${item.mediaItemId}`)
+    console.log(`  - Track ID: ${item.trackId}`)
+    console.log(`  - Timeline Position: ${item.timelinePosition}s`)
+
+    // 位置和尺寸信息
+    console.log('📐 位置和尺寸:')
+    console.log(`  - Position: { x: ${item.position.x}, y: ${item.position.y} }`)
+    console.log(`  - Size: { width: ${item.size.width}, height: ${item.size.height} }`)
+    console.log(`  - Rotation: ${item.rotation} 弧度`)
+    console.log(`  - Opacity: ${item.opacity}`)
+    console.log(`  - Z-Index: ${item.zIndex}`)
+
+    // Sprite信息
+    console.log('🎬 Sprite 信息:')
+    const sprite = item.sprite
+    if (sprite) {
+      const rect = sprite.rect
+      const timeRange = sprite.getTimeRange()
+
+      console.log(`  - WebAV Rect: { x: ${rect.x}, y: ${rect.y}, w: ${rect.w}, h: ${rect.h} }`)
+      console.log(`  - WebAV Opacity: ${sprite.opacity}`)
+      console.log(`  - WebAV Z-Index: ${sprite.zIndex}`)
+      console.log(`  - Time Range:`)
+      console.log(`    - Clip: ${timeRange.clipStartTime / 1000000}s - ${timeRange.clipEndTime / 1000000}s`)
+      console.log(`    - Timeline: ${timeRange.timelineStartTime / 1000000}s - ${timeRange.timelineEndTime / 1000000}s`)
+      console.log(`  - Playback Speed: ${sprite.getPlaybackSpeed()}x`)
+
+      // 坐标系转换验证
+      console.log('🔄 坐标系转换验证:')
+      const convertedCoords = webavToProjectCoords(
+        rect.x,
+        rect.y,
+        rect.w,
+        rect.h,
+        videoStore.videoResolution.width,
+        videoStore.videoResolution.height
+      )
+
+      console.log(`  - WebAV坐标: { x: ${rect.x}, y: ${rect.y} }`)
+      console.log(`  - 转换为项目坐标: { x: ${Math.round(convertedCoords.x)}, y: ${Math.round(convertedCoords.y)} }`)
+      console.log(`  - TimelineItem坐标: { x: ${item.position.x}, y: ${item.position.y} }`)
+
+      const xDiff = Math.abs(item.position.x - Math.round(convertedCoords.x))
+      const yDiff = Math.abs(item.position.y - Math.round(convertedCoords.y))
+      const isConsistent = xDiff < 2 && yDiff < 2
+
+      console.log(`  - 坐标差异: X=${xDiff}px, Y=${yDiff}px`)
+      console.log(`  - 数据同步状态: ${isConsistent ? '✅ 同步' : '❌ 不同步'}`)
+    } else {
+      console.warn('  ⚠️ Sprite 为空!')
+    }
+
+    // 对应的MediaItem信息
+    const mediaItem = videoStore.getMediaItem(item.mediaItemId)
+    if (mediaItem) {
+      console.log('📁 对应的MediaItem:')
+      console.log(`  - Name: ${mediaItem.name}`)
+      console.log(`  - Duration: ${mediaItem.duration}s`)
+      console.log(`  - Type: ${mediaItem.type}`)
+    } else {
+      console.warn('  ⚠️ 找不到对应的MediaItem!')
+    }
+
+    console.groupEnd()
+  })
+
+  // 当前选中项目的特别信息
+  if (selectedTimelineItem.value) {
+    console.group('🎯 当前选中项目详情')
+    const item = selectedTimelineItem.value
+    console.log('📊 响应式计算属性值:')
+    console.log(`  - transformX: ${transformX.value}`)
+    console.log(`  - transformY: ${transformY.value}`)
+    console.log(`  - scaleX: ${scaleX.value}`)
+    console.log(`  - scaleY: ${scaleY.value}`)
+    console.log(`  - rotation: ${rotation.value}`)
+    console.log(`  - opacity: ${opacity.value}`)
+    console.log(`  - zIndex: ${zIndex.value}`)
+
+    console.log('🔄 数据同步状态:')
+    const sprite = item.sprite
+    if (sprite) {
+      const rect = sprite.rect
+
+      // 将WebAV坐标系转换为项目坐标系进行对比
+      const convertedCoords = webavToProjectCoords(
+        rect.x ?? 0,
+        rect.y ?? 0,
+        rect.w ?? item.size.width,
+        rect.h ?? item.size.height,
+        videoStore.videoResolution.width,
+        videoStore.videoResolution.height
+      )
+
+      console.log(`  - TimelineItem Position: { x: ${item.position.x}, y: ${item.position.y} }`)
+      console.log(`  - WebAV Sprite Rect: { x: ${rect.x}, y: ${rect.y} }`)
+      console.log(`  - 转换后的项目坐标: { x: ${Math.round(convertedCoords.x)}, y: ${Math.round(convertedCoords.y)} }`)
+
+      // 检查坐标系转换后的一致性
+      const xDiff = Math.abs(item.position.x - Math.round(convertedCoords.x))
+      const yDiff = Math.abs(item.position.y - Math.round(convertedCoords.y))
+      const isConsistent = xDiff < 2 && yDiff < 2 // 允许1-2像素的误差
+
+      console.log(`  - X坐标差异: ${xDiff}px`)
+      console.log(`  - Y坐标差异: ${yDiff}px`)
+      console.log(`  - 坐标系转换是否一致: ${isConsistent ? '✅' : '❌'}`)
+
+      if (!isConsistent) {
+        console.warn(`  ⚠️ 数据不同步！TimelineItem和Sprite的坐标存在较大差异`)
+      }
+    }
+    console.groupEnd()
+  }
+
+  console.groupEnd()
 }
 
 
@@ -1112,11 +1113,13 @@ const alignHorizontal = (alignment: 'left' | 'center' | 'right') => {
         break
     }
 
-    transformX.value = Math.round(newProjectX)
-    tempTransformX.value = transformX.value.toString()
-    updateTransform()
+    const newPosition = {
+      x: Math.round(newProjectX),
+      y: transformY.value
+    }
+    updateTransform({ position: newPosition })
 
-    console.log('✅ 水平对齐完成:', alignment, '项目坐标X:', transformX.value)
+    console.log('✅ 水平对齐完成:', alignment, '项目坐标X:', newPosition.x)
   } catch (error) {
     console.error('水平对齐失败:', error)
   }
@@ -1146,11 +1149,13 @@ const alignVertical = (alignment: 'top' | 'middle' | 'bottom') => {
         break
     }
 
-    transformY.value = Math.round(newProjectY)
-    tempTransformY.value = transformY.value.toString()
-    updateTransform()
+    const newPosition = {
+      x: transformX.value,
+      y: Math.round(newProjectY)
+    }
+    updateTransform({ position: newPosition })
 
-    console.log('✅ 垂直对齐完成:', alignment, '项目坐标Y:', transformY.value)
+    console.log('✅ 垂直对齐完成:', alignment, '项目坐标Y:', newPosition.y)
   } catch (error) {
     console.error('垂直对齐失败:', error)
   }
@@ -1686,6 +1691,32 @@ const alignVertical = (alignment: 'top' | 'middle' | 'bottom') => {
   color: #ccc;
   font-weight: bold;
   margin: 0 4px;
+}
+
+/* 调试按钮样式 */
+.debug-button {
+  width: 100%;
+  padding: 8px 12px;
+  background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(255, 107, 107, 0.3);
+}
+
+.debug-button:hover {
+  background: linear-gradient(135deg, #ff5252, #e55100);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(255, 107, 107, 0.4);
+}
+
+.debug-button:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(255, 107, 107, 0.3);
 }
 
 /* 自定义滚动条样式 */

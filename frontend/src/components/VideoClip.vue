@@ -85,17 +85,11 @@ const timelineDuration = computed(() => {
   const sprite = props.timelineItem.sprite
   const timeRange = sprite.getTimeRange()
 
-  // 依赖强制更新计数器，确保在sprite内部状态变化时重新计算
-  videoStore.forceUpdateCounter
-
   return (timeRange.timelineEndTime - timeRange.timelineStartTime) / 1000000 // 转换为秒
 })
 
 // 获取播放速度
 const playbackSpeed = computed(() => {
-  // 依赖强制更新计数器，确保在sprite内部状态变化时重新计算
-  videoStore.forceUpdateCounter
-
   return props.timelineItem.sprite.getPlaybackSpeed() || 1
 })
 
@@ -123,9 +117,6 @@ const clipStyle = computed(() => {
   const videoStore = useVideoStore()
   const sprite = props.timelineItem.sprite
   const timeRange = sprite.getTimeRange()
-
-  // 依赖强制更新计数器，确保在sprite内部状态变化时重新计算
-  videoStore.forceUpdateCounter
 
   // 在拖拽或调整大小时使用临时值，否则使用实际值
   const position = isDragging.value
@@ -156,9 +147,6 @@ const showDetails = computed(() => {
   const sprite = props.timelineItem.sprite
   const timeRange = sprite.getTimeRange()
 
-  // 依赖强制更新计数器，确保在sprite内部状态变化时重新计算
-  videoStore.forceUpdateCounter
-
   // 在拖拽或调整大小时使用临时值，否则使用实际值
   const position = isDragging.value
     ? tempPosition.value
@@ -183,9 +171,6 @@ const isOverlapping = computed(() => {
   const currentRange = currentSprite.getTimeRange()
   const currentStart = currentRange.timelineStartTime / 1000000 // 转换为秒
   const currentEnd = currentRange.timelineEndTime / 1000000
-
-  // 依赖强制更新计数器，确保在sprite内部状态变化时重新计算
-  videoStore.forceUpdateCounter
 
   return videoStore.timelineItems.some((otherItem) => {
     if (otherItem.id === currentItem.id || otherItem.trackId !== currentItem.trackId) {

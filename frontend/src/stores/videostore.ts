@@ -1,9 +1,10 @@
-import { ref, computed, markRaw, type Raw } from 'vue'
+import { ref, computed, markRaw, reactive, type Raw } from 'vue'
 import { defineStore } from 'pinia'
 import { AVCanvas } from '@webav/av-canvas'
 import { MP4Clip } from '@webav/av-cliper'
 import { CustomVisibleSprite } from '../utils/customVisibleSprite'
 import { useWebAVControls } from '../composables/useWebAVControls'
+import { webavToProjectCoords, projectToWebavCoords } from '../utils/coordinateTransform'
 
 // 素材层：包装MP4Clip和原始文件信息
 export interface MediaItem {
@@ -23,6 +24,19 @@ export interface TimelineItem {
   trackId: number
   timelinePosition: number
   sprite: Raw<CustomVisibleSprite>
+  // Sprite位置和大小属性（响应式）
+  position: {
+    x: number
+    y: number
+  }
+  size: {
+    width: number
+    height: number
+  }
+  // 其他sprite属性（响应式）
+  rotation: number // 旋转角度（弧度）
+  zIndex: number
+  opacity: number
 }
 
 export interface VideoResolution {
@@ -77,6 +91,9 @@ export const useVideoStore = defineStore('video', () => {
     aspectRatio: '16:9',
   })
 
+  // 强制更新计数器，用于触发响应式更新
+  const forceUpdateCounter = ref(0)
+
   // 全局时间控制器
   let timeUpdateInterval: number | null = null
 
@@ -100,9 +117,6 @@ export const useVideoStore = defineStore('video', () => {
   }
 
   const totalDuration = computed(() => {
-    // 依赖强制更新计数器，确保在sprite内部状态变化时重新计算
-    forceUpdateCounter.value
-
     if (timelineItems.value.length === 0) return timelineDuration.value
     const maxEndTime = Math.max(...timelineItems.value.map((item) => {
       // 从CustomVisibleSprite获取时间信息
@@ -172,6 +186,69 @@ export const useVideoStore = defineStore('video', () => {
       return timeRange.timelineEndTime / 1000000 // 转换为秒
     }))
   })
+
+
+
+  // ==================== 双向数据同步函数 ====================
+
+  /**
+   * 获取 TimelineItem 属性的值（兼容新旧数据结构）
+   */
+  function getTimelineItemValue(value: any): number {
+    return typeof value === 'object' && value !== null && 'value' in value ? value.value : value
+  }
+
+  /**
+   * 为TimelineItem设置双向数据同步
+   * @param timelineItem TimelineItem实例
+   */
+  function setupBidirectionalSync(timelineItem: TimelineItem) {
+    const sprite = timelineItem.sprite
+
+    // 直接使用WebAV原生的propsChange事件监听器
+    // 设置VisibleSprite → TimelineItem 的同步
+    sprite.on('propsChange', (changedProps: any) => {
+      if (changedProps.rect) {
+        const rect = changedProps.rect
+
+        // 更新位置（坐标系转换）
+        // 如果rect.x/rect.y为undefined，说明位置没有变化，使用sprite的当前值
+        const currentRect = sprite.rect
+        const projectCoords = webavToProjectCoords(
+          rect.x !== undefined ? rect.x : currentRect.x,
+          rect.y !== undefined ? rect.y : currentRect.y,
+          rect.w !== undefined ? rect.w : timelineItem.size.width,
+          rect.h !== undefined ? rect.h : timelineItem.size.height,
+          videoResolution.value.width,
+          videoResolution.value.height
+        )
+        timelineItem.position.x = Math.round(projectCoords.x)
+        timelineItem.position.y = Math.round(projectCoords.y)
+
+        // 更新尺寸
+        if (rect.w !== undefined) timelineItem.size.width = rect.w
+        if (rect.h !== undefined) timelineItem.size.height = rect.h
+
+        // 更新旋转角度
+        if (rect.angle !== undefined) timelineItem.rotation = rect.angle
+
+        console.log('🔄 VisibleSprite → TimelineItem 同步:', {
+          webavCoords: { x: rect.x, y: rect.y },
+          projectCoords: { x: timelineItem.position.x, y: timelineItem.position.y },
+          size: { w: timelineItem.size.width, h: timelineItem.size.height },
+          rotation: timelineItem.rotation
+        })
+      }
+
+      // 同步其他属性
+      if (changedProps.opacity !== undefined) {
+        timelineItem.opacity = changedProps.opacity
+      }
+      if (changedProps.zIndex !== undefined) {
+        timelineItem.zIndex = changedProps.zIndex
+      }
+    })
+  }
 
   // ==================== 调试信息函数 ====================
   function printDebugInfo(operation: string, details?: any) {
@@ -283,6 +360,10 @@ export const useVideoStore = defineStore('video', () => {
     if (!timelineItem.trackId) {
       timelineItem.trackId = 1
     }
+
+    // 设置双向数据同步
+    setupBidirectionalSync(timelineItem)
+
     timelineItems.value.push(timelineItem)
 
     const mediaItem = getMediaItem(timelineItem.mediaItemId)
@@ -517,12 +598,14 @@ export const useVideoStore = defineStore('video', () => {
       newSprite.rect.y = originalRect.y
       newSprite.rect.w = originalRect.w
       newSprite.rect.h = originalRect.h
+      newSprite.rect.angle = originalRect.angle // 复制旋转角度
       newSprite.zIndex = sprite.zIndex
       newSprite.opacity = sprite.opacity
 
       console.log(`📋 复制原始sprite属性:`, {
         position: { x: originalRect.x, y: originalRect.y },
         size: { w: originalRect.w, h: originalRect.h },
+        rotation: originalRect.angle,
         zIndex: sprite.zIndex,
         opacity: sprite.opacity
       })
@@ -537,13 +620,25 @@ export const useVideoStore = defineStore('video', () => {
       const duration = (timeRange.timelineEndTime - timeRange.timelineStartTime) / 1000000 // 转换为秒
       const newTimelinePosition = timeRange.timelineStartTime / 1000000 + duration // 紧接着原项目
 
-      const newItem: TimelineItem = {
+      const newItem: TimelineItem = reactive({
         id: Date.now().toString() + Math.random().toString(36).substring(2, 11),
         mediaItemId: originalItem.mediaItemId,
         trackId: originalItem.trackId,
         timelinePosition: newTimelinePosition,
-        sprite: markRaw(newSprite)
-      }
+        sprite: markRaw(newSprite),
+        // 复制原始项目的sprite属性
+        position: {
+          x: getTimelineItemValue(originalItem.position.x),
+          y: getTimelineItemValue(originalItem.position.y)
+        },
+        size: {
+          width: getTimelineItemValue(originalItem.size.width),
+          height: getTimelineItemValue(originalItem.size.height)
+        },
+        rotation: getTimelineItemValue(originalItem.rotation),
+        zIndex: getTimelineItemValue(originalItem.zIndex),
+        opacity: getTimelineItemValue(originalItem.opacity)
+      })
 
       // 更新新sprite的时间轴位置
       newSprite.setTimeRange({
@@ -555,6 +650,9 @@ export const useVideoStore = defineStore('video', () => {
 
       // 添加到时间轴
       timelineItems.value.push(newItem)
+
+      // 🔄 为新创建的TimelineItem设置双向数据同步
+      setupBidirectionalSync(newItem)
 
       console.log('✅ 复制完成')
       console.groupEnd()
@@ -652,12 +750,14 @@ export const useVideoStore = defineStore('video', () => {
       firstSprite.rect.y = originalRect.y
       firstSprite.rect.w = originalRect.w
       firstSprite.rect.h = originalRect.h
+      firstSprite.rect.angle = originalRect.angle // 复制旋转角度
       firstSprite.zIndex = sprite.zIndex
       firstSprite.opacity = sprite.opacity
 
       console.log(`📋 复制原始sprite属性到第一个片段:`, {
         position: { x: originalRect.x, y: originalRect.y },
         size: { w: originalRect.w, h: originalRect.h },
+        rotation: originalRect.angle,
         zIndex: sprite.zIndex,
         opacity: sprite.opacity
       })
@@ -676,12 +776,14 @@ export const useVideoStore = defineStore('video', () => {
       secondSprite.rect.y = originalRect.y
       secondSprite.rect.w = originalRect.w
       secondSprite.rect.h = originalRect.h
+      secondSprite.rect.angle = originalRect.angle // 复制旋转角度
       secondSprite.zIndex = sprite.zIndex
       secondSprite.opacity = sprite.opacity
 
       console.log(`📋 复制原始sprite属性到第二个片段:`, {
         position: { x: originalRect.x, y: originalRect.y },
         size: { w: originalRect.w, h: originalRect.h },
+        rotation: originalRect.angle,
         zIndex: sprite.zIndex,
         opacity: sprite.opacity
       })
@@ -694,21 +796,45 @@ export const useVideoStore = defineStore('video', () => {
       }
 
       // 创建新的TimelineItem
-      const firstItem: TimelineItem = {
+      const firstItem: TimelineItem = reactive({
         id: Date.now().toString() + Math.random().toString(36).substring(2, 11),
         mediaItemId: originalItem.mediaItemId,
         trackId: originalItem.trackId,
         timelinePosition: timelineStartTime,
-        sprite: markRaw(firstSprite)
-      }
+        sprite: markRaw(firstSprite),
+        // 复制原始项目的sprite属性
+        position: {
+          x: getTimelineItemValue(originalItem.position.x),
+          y: getTimelineItemValue(originalItem.position.y)
+        },
+        size: {
+          width: getTimelineItemValue(originalItem.size.width),
+          height: getTimelineItemValue(originalItem.size.height)
+        },
+        rotation: getTimelineItemValue(originalItem.rotation),
+        zIndex: getTimelineItemValue(originalItem.zIndex),
+        opacity: getTimelineItemValue(originalItem.opacity)
+      })
 
-      const secondItem: TimelineItem = {
+      const secondItem: TimelineItem = reactive({
         id: Date.now().toString() + Math.random().toString(36).substring(2, 11),
         mediaItemId: originalItem.mediaItemId,
         trackId: originalItem.trackId,
         timelinePosition: splitTime,
-        sprite: markRaw(secondSprite)
-      }
+        sprite: markRaw(secondSprite),
+        // 复制原始项目的sprite属性
+        position: {
+          x: getTimelineItemValue(originalItem.position.x),
+          y: getTimelineItemValue(originalItem.position.y)
+        },
+        size: {
+          width: getTimelineItemValue(originalItem.size.width),
+          height: getTimelineItemValue(originalItem.size.height)
+        },
+        rotation: getTimelineItemValue(originalItem.rotation),
+        zIndex: getTimelineItemValue(originalItem.zIndex),
+        opacity: getTimelineItemValue(originalItem.opacity)
+      })
 
       // 从WebAV画布移除原始sprite
       if (canvas) {
@@ -717,6 +843,10 @@ export const useVideoStore = defineStore('video', () => {
 
       // 替换原项目为两个新项目
       timelineItems.value.splice(itemIndex, 1, firstItem, secondItem)
+
+      // 🔄 为新创建的两个TimelineItem设置双向数据同步
+      setupBidirectionalSync(firstItem)
+      setupBidirectionalSync(secondItem)
 
       console.log('✅ 分割完成')
       console.groupEnd()
@@ -841,9 +971,6 @@ export const useVideoStore = defineStore('video', () => {
     setCurrentTime(newTime)
   }
 
-  // 强制更新计数器，用于触发Vue组件重新渲染
-  const forceUpdateCounter = ref(0)
-
   function autoArrangeTimelineItems() {
     // 按轨道分组，然后在每个轨道内按时间位置排序
     const trackGroups = new Map<number, TimelineItem[]>()
@@ -882,9 +1009,6 @@ export const useVideoStore = defineStore('video', () => {
         currentPosition += duration
       }
     })
-
-    // 强制触发Vue组件重新渲染
-    forceUpdateCounter.value++
 
     console.log('✅ 时间轴项目自动整理完成')
   }
@@ -1038,6 +1162,92 @@ export const useVideoStore = defineStore('video', () => {
     }
   }
 
+  // ==================== 属性面板更新方法 ====================
+
+  /**
+   * 更新TimelineItem的VisibleSprite变换属性
+   * 这会触发propsChange事件，自动同步到TimelineItem，然后更新属性面板显示
+   */
+  function updateTimelineItemTransform(timelineItemId: string, transform: {
+    position?: { x: number; y: number }
+    size?: { width: number; height: number }
+    rotation?: number
+    opacity?: number
+    zIndex?: number
+  }) {
+    const item = timelineItems.value.find((item) => item.id === timelineItemId)
+    if (!item) return
+
+    const sprite = item.sprite
+
+    try {
+      // 更新尺寸时使用中心缩放
+      if (transform.size) {
+        // 获取当前中心位置（项目坐标系）
+        const currentCenterX = getTimelineItemValue(item.position.x)
+        const currentCenterY = getTimelineItemValue(item.position.y)
+        const newWidth = transform.size.width
+        const newHeight = transform.size.height
+
+        // 中心缩放：保持中心位置不变，更新尺寸
+        sprite.rect.w = newWidth
+        sprite.rect.h = newHeight
+
+        // 根据新尺寸重新计算WebAV坐标（保持中心位置不变）
+        const webavCoords = projectToWebavCoords(
+          currentCenterX,
+          currentCenterY,
+          newWidth,
+          newHeight,
+          videoResolution.value.width,
+          videoResolution.value.height
+        )
+        sprite.rect.x = webavCoords.x
+        sprite.rect.y = webavCoords.y
+
+        console.log('🎯 中心缩放:', {
+          newSize: { width: newWidth, height: newHeight },
+          centerPosition: { x: currentCenterX, y: currentCenterY },
+          webavCoords: { x: webavCoords.x, y: webavCoords.y }
+        })
+      }
+
+      // 更新位置（需要坐标系转换）
+      if (transform.position) {
+        const webavCoords = projectToWebavCoords(
+          transform.position.x,
+          transform.position.y,
+          getTimelineItemValue(item.size.width),
+          getTimelineItemValue(item.size.height),
+          videoResolution.value.width,
+          videoResolution.value.height
+        )
+        sprite.rect.x = webavCoords.x
+        sprite.rect.y = webavCoords.y
+      }
+
+      // 更新其他属性
+      if (transform.opacity !== undefined) {
+        sprite.opacity = transform.opacity
+      }
+      if (transform.zIndex !== undefined) {
+        sprite.zIndex = transform.zIndex
+      }
+      // 更新旋转角度（WebAV的rect.angle支持旋转）
+      if (transform.rotation !== undefined) {
+        sprite.rect.angle = transform.rotation
+      }
+
+      console.log('✅ 属性面板 → VisibleSprite 更新完成:', {
+        timelineItemId,
+        transform,
+        webavRect: { x: sprite.rect.x, y: sprite.rect.y, w: sprite.rect.w, h: sprite.rect.h, angle: sprite.rect.angle }
+      })
+    } catch (error) {
+      console.error('更新VisibleSprite变换属性失败:', error)
+    }
+  }
+
   // 视频元素引用映射（用于获取原始分辨率）
   const videoElementsMap = new Map<string, HTMLVideoElement>()
 
@@ -1132,8 +1342,6 @@ export const useVideoStore = defineStore('video', () => {
     maxVisibleDuration,
     getMaxZoomLevel,
     getMaxScrollOffset,
-    // 强制更新计数器
-    forceUpdateCounter,
     // 素材管理方法
     addMediaItem,
     removeMediaItem,
@@ -1154,6 +1362,7 @@ export const useVideoStore = defineStore('video', () => {
     splitTimelineItemAtTime,
     getTimelineItemAtTime,
     updateTimelineItemPlaybackRate,
+    updateTimelineItemTransform,
     autoArrangeTimelineItems,
     // 播放控制方法
     setCurrentTime,

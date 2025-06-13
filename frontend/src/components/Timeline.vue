@@ -141,10 +141,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, nextTick, markRaw } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick, markRaw, reactive } from 'vue'
 import { useVideoStore, type TimelineItem } from '../stores/videostore'
 import { useWebAVControls, waitForWebAVReady, isWebAVReady } from '../composables/useWebAVControls'
 import { CustomVisibleSprite } from '../utils/customVisibleSprite'
+import { webavToProjectCoords } from '../utils/coordinateTransform'
 import VideoClip from './VideoClip.vue'
 import TimeScale from './TimeScale.vue'
 
@@ -155,6 +156,9 @@ defineOptions({
 
 const videoStore = useVideoStore()
 const webAVControls = useWebAVControls()
+
+
+
 const timelineBody = ref<HTMLElement>()
 const timelineWidth = ref(800)
 
@@ -436,13 +440,43 @@ async function createVideoClipFromMediaItem(
 
     // 创建TimelineItem - 使用markRaw包装CustomVisibleSprite
     const timelineItemId = Date.now().toString() + Math.random().toString(36).substring(2, 11)
-    const timelineItem: TimelineItem = {
+
+    // 将WebAV坐标系转换为项目坐标系（中心原点）
+    const projectCoords = webavToProjectCoords(
+      sprite.rect.x,
+      sprite.rect.y,
+      sprite.rect.w,
+      sprite.rect.h,
+      videoStore.videoResolution.width,
+      videoStore.videoResolution.height
+    )
+
+    const timelineItem: TimelineItem = reactive({
       id: timelineItemId,
       mediaItemId: mediaItem.id,
       trackId: trackId,
       timelinePosition: Math.max(0, startTime),
-      sprite: markRaw(sprite) // 使用markRaw避免Vue响应式包装
-    }
+      sprite: markRaw(sprite), // 使用markRaw避免Vue响应式包装
+      // Sprite位置和大小属性（使用项目坐标系）
+      position: {
+        x: Math.round(projectCoords.x),
+        y: Math.round(projectCoords.y)
+      },
+      size: {
+        width: sprite.rect.w,
+        height: sprite.rect.h
+      },
+      // 其他sprite属性
+      rotation: sprite.rect.angle || 0, // 从sprite获取旋转角度，默认为0
+      zIndex: sprite.zIndex,
+      opacity: sprite.opacity
+    })
+
+    console.log('🔄 坐标系转换:', {
+      WebAV坐标: { x: sprite.rect.x, y: sprite.rect.y },
+      项目坐标: { x: timelineItem.position.x, y: timelineItem.position.y },
+      尺寸: { w: sprite.rect.w, h: sprite.rect.h }
+    })
 
     // 添加到store
     console.log(`📝 添加时间轴项目: ${mediaItem.name} -> 轨道${trackId}, 位置${Math.max(0, startTime).toFixed(2)}s`)
