@@ -173,18 +173,103 @@ export const useVideoStore = defineStore('video', () => {
     }))
   })
 
+  // ==================== 调试信息函数 ====================
+  function printDebugInfo(operation: string, details?: any) {
+    const timestamp = new Date().toLocaleTimeString()
+    console.group(`🎬 [${timestamp}] ${operation}`)
+
+    if (details) {
+      console.log('📋 操作详情:', details)
+    }
+
+    console.log('📚 素材库状态 (mediaItems):')
+    console.table(mediaItems.value.map(item => ({
+      id: item.id,
+      name: item.name,
+      duration: `${item.duration.toFixed(2)}s`,
+      type: item.type,
+      hasMP4Clip: !!item.mp4Clip
+    })))
+
+    console.log('🎞️ 时间轴状态 (timelineItems):')
+    console.table(timelineItems.value.map(item => ({
+      id: item.id,
+      mediaItemId: item.mediaItemId,
+      trackId: item.trackId,
+      position: `${item.timelinePosition.toFixed(2)}s`,
+      hasSprite: !!item.sprite
+    })))
+
+    console.log('📊 统计信息:')
+    console.log(`- 素材库项目数: ${mediaItems.value.length}`)
+    console.log(`- 时间轴项目数: ${timelineItems.value.length}`)
+    console.log(`- 轨道数: ${tracks.value.length}`)
+
+    // 检查引用关系
+    const orphanedTimelineItems = timelineItems.value.filter(timelineItem =>
+      !mediaItems.value.find(mediaItem => mediaItem.id === timelineItem.mediaItemId)
+    )
+    if (orphanedTimelineItems.length > 0) {
+      console.warn('⚠️ 发现孤立的时间轴项目 (没有对应的素材库项目):', orphanedTimelineItems)
+    }
+
+    console.groupEnd()
+  }
+
   // ==================== 素材管理方法 ====================
   function addMediaItem(mediaItem: MediaItem) {
     mediaItems.value.push(mediaItem)
+    printDebugInfo('添加素材到素材库', {
+      mediaItemId: mediaItem.id,
+      name: mediaItem.name,
+      duration: mediaItem.duration,
+      type: mediaItem.type
+    })
   }
 
   function removeMediaItem(mediaItemId: string) {
     const index = mediaItems.value.findIndex((item) => item.id === mediaItemId)
     if (index > -1) {
-      // 先移除所有相关的时间轴项目
+      const mediaItem = mediaItems.value[index]
+      const relatedTimelineItems = timelineItems.value.filter(item => item.mediaItemId === mediaItemId)
+
+      // 先正确地移除所有相关的时间轴项目（包括WebAV画布清理）
+      relatedTimelineItems.forEach(timelineItem => {
+        console.log(`🧹 清理时间轴项目: ${timelineItem.id}`)
+
+        // 清理sprite资源
+        try {
+          if (timelineItem.sprite && typeof timelineItem.sprite.destroy === 'function') {
+            timelineItem.sprite.destroy()
+          }
+        } catch (error) {
+          console.warn('清理sprite资源时出错:', error)
+        }
+
+        // 从WebAV画布移除
+        try {
+          const canvas = avCanvas.value
+          if (canvas) {
+            canvas.removeSprite(timelineItem.sprite)
+            console.log(`✅ 从WebAV画布移除sprite: ${timelineItem.id}`)
+          }
+        } catch (error) {
+          console.warn('从WebAV画布移除sprite时出错:', error)
+        }
+      })
+
+      // 从时间轴数组中移除相关项目
       timelineItems.value = timelineItems.value.filter(item => item.mediaItemId !== mediaItemId)
+
       // 再移除素材项目
       mediaItems.value.splice(index, 1)
+
+      printDebugInfo('从素材库删除素材', {
+        mediaItemId,
+        mediaItemName: mediaItem.name,
+        removedTimelineItemsCount: relatedTimelineItems.length,
+        removedTimelineItemIds: relatedTimelineItems.map(item => item.id)
+      })
     }
   }
 
@@ -199,12 +284,22 @@ export const useVideoStore = defineStore('video', () => {
       timelineItem.trackId = 1
     }
     timelineItems.value.push(timelineItem)
+
+    const mediaItem = getMediaItem(timelineItem.mediaItemId)
+    printDebugInfo('添加素材到时间轴', {
+      timelineItemId: timelineItem.id,
+      mediaItemId: timelineItem.mediaItemId,
+      mediaItemName: mediaItem?.name || '未知',
+      trackId: timelineItem.trackId,
+      position: timelineItem.timelinePosition
+    })
   }
 
   function removeTimelineItem(timelineItemId: string) {
     const index = timelineItems.value.findIndex((item) => item.id === timelineItemId)
     if (index > -1) {
       const item = timelineItems.value[index]
+      const mediaItem = getMediaItem(item.mediaItemId)
 
       // 清理sprite资源
       try {
@@ -227,6 +322,14 @@ export const useVideoStore = defineStore('video', () => {
 
       // 从数组中移除
       timelineItems.value.splice(index, 1)
+
+      printDebugInfo('从时间轴删除素材', {
+        timelineItemId,
+        mediaItemId: item.mediaItemId,
+        mediaItemName: mediaItem?.name || '未知',
+        trackId: item.trackId,
+        position: item.timelinePosition
+      })
     }
   }
 
@@ -250,6 +353,10 @@ export const useVideoStore = defineStore('video', () => {
   function updateTimelineItemPosition(timelineItemId: string, newPosition: number, newTrackId?: number) {
     const item = timelineItems.value.find((item) => item.id === timelineItemId)
     if (item) {
+      const oldPosition = item.timelinePosition
+      const oldTrackId = item.trackId
+      const mediaItem = getMediaItem(item.mediaItemId)
+
       // 如果指定了新轨道，更新轨道ID
       if (newTrackId !== undefined) {
         item.trackId = newTrackId
@@ -263,6 +370,17 @@ export const useVideoStore = defineStore('video', () => {
       sprite.setTimeRange({
         timelineStartTime: newPosition * 1000000, // 转换为微秒
         timelineEndTime: newPosition * 1000000 + duration
+      })
+
+      printDebugInfo('更新时间轴项目位置', {
+        timelineItemId,
+        mediaItemName: mediaItem?.name || '未知',
+        oldPosition,
+        newPosition,
+        oldTrackId,
+        newTrackId: item.trackId,
+        positionChanged: oldPosition !== newPosition,
+        trackChanged: oldTrackId !== item.trackId
       })
     }
   }
@@ -438,6 +556,17 @@ export const useVideoStore = defineStore('video', () => {
 
       console.log('✅ 分割完成')
       console.groupEnd()
+
+      // 打印分割后的调试信息
+      printDebugInfo('分割时间轴项目', {
+        originalItemId: timelineItemId,
+        splitTime,
+        firstItemId: firstItem.id,
+        secondItemId: secondItem.id,
+        mediaItemId: originalItem.mediaItemId,
+        mediaItemName: mediaItem?.name || '未知',
+        trackId: originalItem.trackId
+      })
 
       // 清除选中状态
       selectedTimelineItemId.value = null

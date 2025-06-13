@@ -326,7 +326,8 @@ async function handleDrop(event: DragEvent) {
 
       const dropX = event.clientX - trackContentRect.left
       const dropTime = videoStore.pixelToTime(dropX, timelineWidth.value)
-      console.log('拖拽位置:', dropX, '对应时间:', dropTime)
+      console.log(`🎯 拖拽素材到时间轴: ${mediaItem.name}`)
+      console.log(`📍 拖拽位置: ${dropX}px, 对应时间: ${dropTime.toFixed(2)}s, 目标轨道: ${targetTrackId}`)
 
       // 如果拖拽位置超出当前时间轴长度，动态扩展时间轴
       videoStore.expandTimelineIfNeeded(dropTime + 10) // 预留10秒缓冲
@@ -416,10 +417,10 @@ async function createVideoClipFromMediaItem(
     }
 
     // 添加到store
-    console.log('添加时间轴项目:', timelineItem)
+    console.log(`📝 添加时间轴项目: ${mediaItem.name} -> 轨道${trackId}, 位置${Math.max(0, startTime).toFixed(2)}s`)
     videoStore.addTimelineItem(timelineItem)
 
-    console.log('时间轴项目创建完成')
+    console.log(`✅ 时间轴项目创建完成: ${timelineItem.id}`)
   } catch (error) {
     console.error('创建时间轴项目失败:', error)
     alert(`创建时间轴项目失败: ${(error as Error).message}`)
@@ -434,6 +435,9 @@ function handleTimelineItemRemove(timelineItemId: string) {
   try {
     const item = videoStore.getTimelineItem(timelineItemId)
     if (item) {
+      const mediaItem = videoStore.getMediaItem(item.mediaItemId)
+      console.log(`🗑️ 准备从时间轴删除项目: ${mediaItem?.name || '未知'} (ID: ${timelineItemId})`)
+
       // 从WebAV画布移除CustomVisibleSprite
       const avCanvas = webAVControls.getAVCanvas()
       if (avCanvas) {
@@ -443,10 +447,10 @@ function handleTimelineItemRemove(timelineItemId: string) {
       // 从store中移除TimelineItem
       videoStore.removeTimelineItem(timelineItemId)
 
-      console.log(`Removed timeline item: ${timelineItemId}`)
+      console.log(`✅ 时间轴项目删除完成: ${timelineItemId}`)
     }
   } catch (error) {
-    console.error('Failed to remove timeline item:', error)
+    console.error('❌ Failed to remove timeline item:', error)
     // 即使WebAV移除失败，也要移除TimelineItem
     videoStore.removeTimelineItem(timelineItemId)
   }

@@ -80,7 +80,12 @@
         <div class="clip-management-toolbar">
           <ClipManagementToolbar />
         </div>
-        <Timeline />
+        <!-- 只有WebAV初始化完成后才显示Timeline -->
+        <Timeline v-if="videoStore.isWebAVReady" />
+        <div v-else class="timeline-loading">
+          <div class="loading-spinner"></div>
+          <p>正在初始化WebAV引擎...</p>
+        </div>
       </div>
     </div>
 
@@ -635,6 +640,30 @@ onUnmounted(() => {
   flex-direction: column;
   overflow: hidden;
   min-height: 20%; /* 最小高度 */
+}
+
+.timeline-loading {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #ccc;
+  gap: 12px;
+}
+
+.timeline-loading .loading-spinner {
+  width: 30px;
+  height: 30px;
+  border: 3px solid #333;
+  border-top: 3px solid #ff4444;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.timeline-loading p {
+  font-size: 14px;
+  margin: 0;
 }
 
 .clip-management-toolbar {

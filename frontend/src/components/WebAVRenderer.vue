@@ -49,6 +49,7 @@ const initializeWebAVCanvas = async (): Promise<void> => {
   // 检查是否已经初始化
   const existingCanvas = webAVControls.getAVCanvas()
   if (existingCanvas) {
+    console.log('WebAV Canvas已存在')
     return
   }
 

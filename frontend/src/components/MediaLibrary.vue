@@ -150,15 +150,17 @@ const processFiles = async (files: File[]) => {
 // 添加素材项
 const addMediaItem = async (file: File): Promise<void> => {
   return new Promise(async (resolve) => {
+    console.log(`📁 开始处理上传文件: ${file.name} (大小: ${(file.size / 1024 / 1024).toFixed(2)}MB)`)
+
     const url = URL.createObjectURL(file)
     const video = document.createElement('video')
 
     video.onloadedmetadata = async () => {
       try {
         // 创建MP4Clip
-        console.log(`Creating MP4Clip for: ${file.name}`)
+        console.log(`🎬 Creating MP4Clip for: ${file.name}`)
         const mp4Clip = await webAVControls.createMP4Clip(file)
-        console.log(`MP4Clip created successfully for: ${file.name}`)
+        console.log(`✅ MP4Clip created successfully for: ${file.name}`)
 
         // 创建MediaItem
         const mediaItem: MediaItem = {
@@ -171,11 +173,13 @@ const addMediaItem = async (file: File): Promise<void> => {
           mp4Clip: markRaw(mp4Clip) // 使用markRaw避免Vue响应式包装
         }
 
+        console.log(`📋 创建MediaItem: ${mediaItem.name} (时长: ${mediaItem.duration.toFixed(2)}s, ID: ${mediaItem.id})`)
+
         // 添加到store
         videoStore.addMediaItem(mediaItem)
         resolve()
       } catch (error) {
-        console.error('Failed to create MP4Clip:', error)
+        console.error('❌ Failed to create MP4Clip:', error)
         URL.revokeObjectURL(url)
         resolve()
       }
@@ -195,13 +199,15 @@ const addMediaItem = async (file: File): Promise<void> => {
 const removeMediaItem = (id: string) => {
   const item = videoStore.getMediaItem(id)
   if (item) {
+    console.log(`🗑️ 准备删除素材库项目: ${item.name} (ID: ${id})`)
+
     // 清理URL
     URL.revokeObjectURL(item.url)
 
     // 从store中移除MediaItem（会自动移除相关的TimelineItem）
     videoStore.removeMediaItem(id)
 
-    console.log(`Removed media item: ${item.name}`)
+    console.log(`✅ 素材库项目删除完成: ${item.name}`)
   }
 }
 

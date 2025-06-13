@@ -51,6 +51,9 @@ export function useWebAVControls() {
       // 预览第一帧
       globalAVCanvas.previewFrame(0)
 
+      // 标记WebAV为就绪状态
+      videoStore.setWebAVReady(true)
+
       console.log('WebAV Canvas initialized successfully')
     } catch (err) {
       const errorMessage = `初始化WebAV画布失败: ${(err as Error).message}`

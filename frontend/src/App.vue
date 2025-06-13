@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import AppInitializer from './components/AppInitializer.vue'
+import VideoPreviewEngine from './components/VideoPreviewEngine.vue'
 </script>
 
 <template>
   <div id="app">
-    <AppInitializer />
+    <VideoPreviewEngine />
   </div>
 </template>
 
