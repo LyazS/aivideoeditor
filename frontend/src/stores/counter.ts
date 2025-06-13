@@ -3,6 +3,7 @@ import { defineStore } from 'pinia'
 import { AVCanvas } from '@webav/av-canvas'
 import { MP4Clip } from '@webav/av-cliper'
 import { CustomVisibleSprite } from '../utils/customVisibleSprite'
+import { useWebAVControls } from '../composables/useWebAVControls'
 
 // 素材层：包装MP4Clip和原始文件信息
 export interface MediaItem {
@@ -53,6 +54,7 @@ export const useVideoStore = defineStore('video', () => {
   const isPlaying = ref(false)
   const timelineDuration = ref(300) // 默认300秒时间轴，确保有足够的刻度线空间
   const selectedTimelineItemId = ref<string | null>(null) // 当前选中的时间轴项ID
+  const selectedAVCanvasSprite = ref<Raw<CustomVisibleSprite> | null>(null) // 当前在AVCanvas中选中的sprite
   const playbackRate = ref(1) // 播放速度
 
   // 编辑设置
@@ -202,6 +204,28 @@ export const useVideoStore = defineStore('video', () => {
   function removeTimelineItem(timelineItemId: string) {
     const index = timelineItems.value.findIndex((item) => item.id === timelineItemId)
     if (index > -1) {
+      const item = timelineItems.value[index]
+
+      // 清理sprite资源
+      try {
+        if (item.sprite && typeof item.sprite.destroy === 'function') {
+          item.sprite.destroy()
+        }
+      } catch (error) {
+        console.warn('清理sprite资源时出错:', error)
+      }
+
+      // 从WebAV画布移除
+      try {
+        const canvas = avCanvas.value
+        if (canvas) {
+          canvas.removeSprite(item.sprite)
+        }
+      } catch (error) {
+        console.warn('从WebAV画布移除sprite时出错:', error)
+      }
+
+      // 从数组中移除
       timelineItems.value.splice(index, 1)
     }
   }
@@ -245,9 +269,67 @@ export const useVideoStore = defineStore('video', () => {
 
   function selectTimelineItem(timelineItemId: string | null) {
     selectedTimelineItemId.value = timelineItemId
+
+    // 同步选择AVCanvas中的sprite
+    if (timelineItemId) {
+      const timelineItem = getTimelineItem(timelineItemId)
+      if (timelineItem) {
+        selectAVCanvasSprite(timelineItem.sprite, false) // false表示不触发反向同步
+      }
+    } else {
+      // 取消时间轴选择时，同步取消AVCanvas选择
+      selectAVCanvasSprite(null, false)
+    }
   }
 
-  function splitTimelineItemAtTime(timelineItemId: string, splitTime: number) {
+  function selectAVCanvasSprite(sprite: Raw<CustomVisibleSprite> | null, syncToTimeline: boolean = true) {
+    selectedAVCanvasSprite.value = sprite
+
+    // 获取AVCanvas实例并设置活动sprite
+    const canvas = avCanvas.value
+    if (canvas) {
+      try {
+        // 直接设置activeSprite属性
+        canvas.activeSprite = sprite
+      } catch (error) {
+        console.warn('设置AVCanvas活动sprite失败:', error)
+      }
+    }
+
+    // 同步到时间轴选择（如果需要）
+    if (syncToTimeline) {
+      if (sprite) {
+        // 根据sprite查找对应的timelineItem
+        const timelineItem = findTimelineItemBySprite(sprite)
+        if (timelineItem) {
+          selectedTimelineItemId.value = timelineItem.id
+        }
+      }
+      // 注意：当sprite为null时，我们不自动取消时间轴选择，
+      // 因为用户要求"取消avcanvas选中片段的时候，要保留时间轴的选中状态"
+    }
+  }
+
+  function findTimelineItemBySprite(sprite: Raw<CustomVisibleSprite>): TimelineItem | null {
+    return timelineItems.value.find(item => item.sprite === sprite) || null
+  }
+
+  // 处理来自AVCanvas的sprite选择变化
+  function handleAVCanvasSpriteChange(sprite: Raw<CustomVisibleSprite> | null) {
+    // 更新AVCanvas选择状态，但不触发反向同步（避免循环）
+    selectedAVCanvasSprite.value = sprite
+
+    // 同步到时间轴选择
+    if (sprite) {
+      const timelineItem = findTimelineItemBySprite(sprite)
+      if (timelineItem) {
+        selectedTimelineItemId.value = timelineItem.id
+      }
+    }
+    // 注意：当sprite为null时，保留时间轴选择状态
+  }
+
+  async function splitTimelineItemAtTime(timelineItemId: string, splitTime: number) {
     console.group('🔪 时间轴项目分割调试')
 
     const itemIndex = timelineItems.value.findIndex((item) => item.id === timelineItemId)
@@ -299,8 +381,13 @@ export const useVideoStore = defineStore('video', () => {
     console.log('  - 分割点素材时间:', splitClipTime)
 
     try {
+      // 为每个分割片段克隆MP4Clip
+      const webAVControls = useWebAVControls()
+      const firstClonedClip = await webAVControls.cloneMP4Clip(mediaItem.mp4Clip)
+      const secondClonedClip = await webAVControls.cloneMP4Clip(mediaItem.mp4Clip)
+
       // 创建第一个片段的CustomVisibleSprite
-      const firstSprite = new (sprite.constructor as any)(mediaItem.mp4Clip)
+      const firstSprite = new (sprite.constructor as any)(firstClonedClip)
       firstSprite.setTimeRange({
         clipStartTime: clipStartTime * 1000000,
         clipEndTime: splitClipTime * 1000000,
@@ -309,7 +396,7 @@ export const useVideoStore = defineStore('video', () => {
       })
 
       // 创建第二个片段的CustomVisibleSprite
-      const secondSprite = new (sprite.constructor as any)(mediaItem.mp4Clip)
+      const secondSprite = new (sprite.constructor as any)(secondClonedClip)
       secondSprite.setTimeRange({
         clipStartTime: splitClipTime * 1000000,
         clipEndTime: clipEndTime * 1000000,
@@ -737,6 +824,7 @@ export const useVideoStore = defineStore('video', () => {
     contentEndTime,
     playbackRate,
     selectedTimelineItemId,
+    selectedAVCanvasSprite,
     // 编辑设置
     proportionalScale,
     // 音量状态
@@ -765,6 +853,9 @@ export const useVideoStore = defineStore('video', () => {
     getTimelineItemsForTrack,
     updateTimelineItemPosition,
     selectTimelineItem,
+    selectAVCanvasSprite,
+    findTimelineItemBySprite,
+    handleAVCanvasSpriteChange,
     splitTimelineItemAtTime,
     getTimelineItemAtTime,
     updateTimelineItemPlaybackRate,

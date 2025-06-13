@@ -40,6 +40,9 @@ export function useWebAVControls() {
       // 创建AVCanvas实例 - 使用markRaw避免响应式包装
       globalAVCanvas = markRaw(new AVCanvas(container, options))
 
+      // 将AVCanvas实例设置到store中
+      videoStore.setAVCanvas(globalAVCanvas)
+
       // 设置事件监听器
       setupEventListeners()
 
@@ -84,7 +87,8 @@ export function useWebAVControls() {
     // 活动精灵变化事件
     globalAVCanvas.on('activeSpriteChange', (sprite) => {
       console.log('WebAV: Active sprite changed', sprite)
-      // 可以在这里处理选中状态的变化
+      // 处理选中状态的变化 - 同步到时间轴选择
+      videoStore.handleAVCanvasSpriteChange(sprite as any)
     })
   }
 
@@ -109,6 +113,26 @@ export function useWebAVControls() {
     } catch (err) {
       const errorMessage = `创建MP4Clip失败: ${(err as Error).message}`
       console.error('MP4Clip creation error:', err)
+      throw new Error(errorMessage)
+    }
+  }
+
+  /**
+   * 克隆MP4Clip实例
+   * @param originalClip 原始MP4Clip
+   */
+  const cloneMP4Clip = async (originalClip: Raw<MP4Clip>): Promise<Raw<MP4Clip>> => {
+    try {
+      console.log('Cloning MP4Clip...')
+
+      // 使用WebAV内置的clone方法
+      const clonedClip = await originalClip.clone()
+
+      console.log('MP4Clip cloned successfully')
+      return markRaw(clonedClip)
+    } catch (err) {
+      const errorMessage = `克隆MP4Clip失败: ${(err as Error).message}`
+      console.error('MP4Clip clone error:', err)
       throw new Error(errorMessage)
     }
   }
@@ -197,6 +221,7 @@ export function useWebAVControls() {
     // 方法
     initializeCanvas,
     createMP4Clip,
+    cloneMP4Clip,
     play,
     pause,
     seekTo,

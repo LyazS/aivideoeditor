@@ -108,11 +108,11 @@ function isTimelineItemsOverlapping(item1: TimelineItem, item2: TimelineItem): b
   return !(item1End <= item2Start || item2End <= item1Start)
 }
 
-function splitSelectedClip() {
+async function splitSelectedClip() {
   if (videoStore.selectedTimelineItemId) {
     console.log('🔪 开始裁剪时间轴项目:', videoStore.selectedTimelineItemId)
     console.log('📍 裁剪时间位置:', videoStore.currentTime)
-    videoStore.splitTimelineItemAtTime(videoStore.selectedTimelineItemId, videoStore.currentTime)
+    await videoStore.splitTimelineItemAtTime(videoStore.selectedTimelineItemId, videoStore.currentTime)
   }
 }
 

@@ -310,4 +310,28 @@ export class CustomVisibleSprite extends VisibleSprite {
       playbackRate: playbackRate
     }
   }
+
+  /**
+   * 销毁sprite并清理资源
+   */
+  public destroy(): void {
+    try {
+      // 获取并清理MP4Clip资源
+      const clip = this.getClip()
+      if (clip && typeof clip.destroy === 'function') {
+        clip.destroy()
+      }
+    } catch (error) {
+      console.warn('清理MP4Clip资源时出错:', error)
+    }
+
+    // 调用父类销毁方法（如果存在）
+    try {
+      if (super.destroy && typeof super.destroy === 'function') {
+        super.destroy()
+      }
+    } catch (error) {
+      console.warn('调用父类destroy方法时出错:', error)
+    }
+  }
 }

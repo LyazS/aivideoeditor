@@ -376,9 +376,10 @@ async function createVideoClipFromMediaItem(
       throw new Error('找不到对应的素材项目')
     }
 
-    // 创建CustomVisibleSprite
-    console.log('创建CustomVisibleSprite for mediaItem:', mediaItem.id)
-    const sprite = new CustomVisibleSprite(storeMediaItem.mp4Clip)
+    // 克隆MP4Clip并创建CustomVisibleSprite
+    console.log('克隆MP4Clip并创建CustomVisibleSprite for mediaItem:', mediaItem.id)
+    const clonedMP4Clip = await webAVControls.cloneMP4Clip(storeMediaItem.mp4Clip)
+    const sprite = new CustomVisibleSprite(clonedMP4Clip)
 
     // 设置时间范围 - 添加调试信息
     const timeRangeConfig = {
