@@ -1,7 +1,7 @@
 import { ref, markRaw, type Raw } from 'vue'
 import { AVCanvas } from '@webav/av-canvas'
 import { MP4Clip } from '@webav/av-cliper'
-import { useVideoStore } from '../stores/counter'
+import { useVideoStore } from '../stores/videostore'
 
 // 全局WebAV状态 - 确保单例模式
 let globalAVCanvas: AVCanvas | null = null

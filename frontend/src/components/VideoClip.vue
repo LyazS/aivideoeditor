@@ -54,8 +54,8 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import type { TimelineItem, Track } from '../stores/counter'
-import { useVideoStore } from '../stores/counter'
+import type { TimelineItem, Track } from '../stores/videostore'
+import { useVideoStore } from '../stores/videostore'
 
 interface Props {
   timelineItem: TimelineItem

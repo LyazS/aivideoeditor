@@ -189,7 +189,7 @@ frontend/src/
 │   ├── TimeScale.vue          # 时间刻度
 │   └── PlaybackControls.vue   # 播放控制
 ├── stores/
-│   └── counter.ts             # 视频状态管理
+│   └── videostore.ts          # 视频状态管理
 └── App.vue                    # 应用入口
 ```
 

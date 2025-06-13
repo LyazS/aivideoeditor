@@ -29,7 +29,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { useVideoStore } from '../stores/counter'
+import { useVideoStore } from '../stores/videostore'
 
 const videoStore = useVideoStore()
 const scaleContainer = ref<HTMLElement>()

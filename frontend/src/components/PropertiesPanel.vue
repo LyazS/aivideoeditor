@@ -477,7 +477,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, nextTick } from 'vue'
-import { useVideoStore, type TimelineItem } from '../stores/counter'
+import { useVideoStore, type TimelineItem } from '../stores/videostore'
 
 const videoStore = useVideoStore()
 

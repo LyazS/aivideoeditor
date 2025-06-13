@@ -85,10 +85,10 @@
 
 <script setup lang="ts">
 import { ref, markRaw } from 'vue'
-import { useVideoStore } from '../stores/counter'
+import { useVideoStore } from '../stores/videostore'
 import { useWebAVControls } from '../composables/useWebAVControls'
 
-import type { MediaItem } from '../stores/counter'
+import type { MediaItem } from '../stores/videostore'
 
 const videoStore = useVideoStore()
 const webAVControls = useWebAVControls()

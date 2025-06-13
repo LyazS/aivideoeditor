@@ -142,7 +142,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, nextTick, markRaw } from 'vue'
-import { useVideoStore, type TimelineItem } from '../stores/counter'
+import { useVideoStore, type TimelineItem } from '../stores/videostore'
 import { useWebAVControls, waitForWebAVReady } from '../composables/useWebAVControls'
 import { CustomVisibleSprite } from '../utils/customVisibleSprite'
 import VideoClip from './VideoClip.vue'

@@ -19,7 +19,7 @@
 
 ## 修改的文件
 
-### 1. `frontend/src/stores/counter.ts`
+### 1. `frontend/src/stores/videostore.ts`
 
 添加了两个新函数：
 

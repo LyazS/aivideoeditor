@@ -21,7 +21,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
-import { useVideoStore } from '../stores/counter'
+import { useVideoStore } from '../stores/videostore'
 import { useWebAVControls, isWebAVReady } from '../composables/useWebAVControls'
 
 const videoStore = useVideoStore()
