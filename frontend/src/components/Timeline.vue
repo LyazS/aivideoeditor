@@ -143,7 +143,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, nextTick, markRaw } from 'vue'
 import { useVideoStore, type TimelineItem } from '../stores/videostore'
-import { useWebAVControls, waitForWebAVReady } from '../composables/useWebAVControls'
+import { useWebAVControls, waitForWebAVReady, isWebAVReady } from '../composables/useWebAVControls'
 import { CustomVisibleSprite } from '../utils/customVisibleSprite'
 import VideoClip from './VideoClip.vue'
 import TimeScale from './TimeScale.vue'
@@ -298,6 +298,11 @@ function handleDragOver(event: DragEvent) {
 async function handleDrop(event: DragEvent) {
   event.preventDefault()
   console.log('时间轴接收到拖拽事件')
+
+  // 暂停播放以便进行编辑
+  if (isWebAVReady() && videoStore.isPlaying) {
+    webAVControls.pause()
+  }
 
   // 检查是否是从素材库拖拽的素材
   const mediaItemData = event.dataTransfer?.getData('application/media-item')

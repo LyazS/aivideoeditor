@@ -30,8 +30,10 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useVideoStore } from '../stores/videostore'
+import { useWebAVControls, isWebAVReady } from '../composables/useWebAVControls'
 
 const videoStore = useVideoStore()
+const webAVControls = useWebAVControls()
 const scaleContainer = ref<HTMLElement>()
 const containerWidth = ref(800)
 
@@ -189,6 +191,11 @@ function handleClick(event: MouseEvent) {
   if (isDraggingPlayhead.value) return
   if (!scaleContainer.value) return
 
+  // 暂停播放以便进行时间跳转
+  if (isWebAVReady() && videoStore.isPlaying) {
+    webAVControls.pause()
+  }
+
   const rect = scaleContainer.value.getBoundingClientRect()
   const clickX = event.clientX - rect.left
   const newTime = videoStore.pixelToTime(clickX, containerWidth.value)
@@ -203,6 +210,11 @@ function handleClick(event: MouseEvent) {
 function startDragPlayhead(event: MouseEvent) {
   event.preventDefault()
   event.stopPropagation()
+
+  // 暂停播放以便进行播放头拖拽
+  if (isWebAVReady() && videoStore.isPlaying) {
+    webAVControls.pause()
+  }
 
   isDraggingPlayhead.value = true
 

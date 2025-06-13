@@ -56,6 +56,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import type { TimelineItem, Track } from '../stores/videostore'
 import { useVideoStore } from '../stores/videostore'
+import { useWebAVControls, isWebAVReady } from '../composables/useWebAVControls'
 
 interface Props {
   timelineItem: TimelineItem
@@ -72,6 +73,7 @@ interface Emits {
 const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
 const videoStore = useVideoStore()
+const webAVControls = useWebAVControls()
 
 // 获取对应的MediaItem
 const mediaItem = computed(() => {
@@ -252,6 +254,11 @@ function selectClip(event: MouseEvent) {
 function startDrag(event: MouseEvent) {
   if (isResizing.value) return
 
+  // 暂停播放以便进行编辑
+  if (isWebAVReady() && videoStore.isPlaying) {
+    webAVControls.pause()
+  }
+
   // 选中当前片段
   videoStore.selectTimelineItem(props.timelineItem.id)
 
@@ -317,6 +324,11 @@ function stopDrag() {
 }
 
 function startResize(direction: 'left' | 'right', event: MouseEvent) {
+  // 暂停播放以便进行编辑
+  if (isWebAVReady() && videoStore.isPlaying) {
+    webAVControls.pause()
+  }
+
   isResizing.value = true
   resizeDirection.value = direction
   resizeStartX.value = event.clientX
