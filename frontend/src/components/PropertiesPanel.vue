@@ -195,10 +195,10 @@
                   class="scale-input-box"
                 />
                 <div class="number-controls">
-                  <button @click="adjustUniformScale(0.1)" class="number-btn number-btn-up">
+                  <button @click="updateUniformScale(uniformScale + 0.1)" class="number-btn number-btn-up">
                     ▲
                   </button>
-                  <button @click="adjustUniformScale(-0.1)" class="number-btn number-btn-down">
+                  <button @click="updateUniformScale(uniformScale - 0.1)" class="number-btn number-btn-down">
                     ▼
                   </button>
                 </div>
@@ -213,7 +213,7 @@
               <div class="scale-controls">
                 <input
                   :value="scaleX"
-                  @input="(e) => adjustScaleX((e.target as HTMLInputElement).valueAsNumber - scaleX)"
+                  @input="(e) => setScaleX((e.target as HTMLInputElement).valueAsNumber)"
                   type="range"
                   min="0.1"
                   max="10"
@@ -232,8 +232,8 @@
                     class="scale-input-box"
                   />
                   <div class="number-controls">
-                    <button @click="adjustScaleX(0.1)" class="number-btn number-btn-up">▲</button>
-                    <button @click="adjustScaleX(-0.1)" class="number-btn number-btn-down">
+                    <button @click="setScaleX(scaleX + 0.1)" class="number-btn number-btn-up">▲</button>
+                    <button @click="setScaleX(scaleX - 0.1)" class="number-btn number-btn-down">
                       ▼
                     </button>
                   </div>
@@ -245,7 +245,7 @@
               <div class="scale-controls">
                 <input
                   :value="scaleY"
-                  @input="(e) => adjustScaleY((e.target as HTMLInputElement).valueAsNumber - scaleY)"
+                  @input="(e) => setScaleY((e.target as HTMLInputElement).valueAsNumber)"
                   type="range"
                   min="0.1"
                   max="10"
@@ -264,8 +264,8 @@
                     class="scale-input-box"
                   />
                   <div class="number-controls">
-                    <button @click="adjustScaleY(0.1)" class="number-btn number-btn-up">▲</button>
-                    <button @click="adjustScaleY(-0.1)" class="number-btn number-btn-down">
+                    <button @click="setScaleY(scaleY + 0.1)" class="number-btn number-btn-up">▲</button>
+                    <button @click="setScaleY(scaleY - 0.1)" class="number-btn number-btn-down">
                       ▼
                     </button>
                   </div>
@@ -409,7 +409,7 @@
             <div class="rotation-controls">
               <input
                 :value="rotation"
-                @input="(e) => adjustRotation((e.target as HTMLInputElement).valueAsNumber - rotation)"
+                @input="(e) => setRotation((e.target as HTMLInputElement).valueAsNumber)"
                 type="range"
                 min="-180"
                 max="180"
@@ -422,14 +422,12 @@
                   @blur="confirmRotationFromInput"
                   @keyup.enter="confirmRotationFromInput"
                   type="number"
-                  min="-180"
-                  max="180"
                   step="0.1"
                   class="scale-input-box"
                 />
                 <div class="number-controls">
-                  <button @click="adjustRotation(1)" class="number-btn number-btn-up">▲</button>
-                  <button @click="adjustRotation(-1)" class="number-btn number-btn-down">▼</button>
+                  <button @click="setRotation(rotation + 1)" class="number-btn number-btn-up">▲</button>
+                  <button @click="setRotation(rotation - 1)" class="number-btn number-btn-down">▼</button>
                 </div>
               </div>
             </div>
@@ -439,7 +437,7 @@
             <div class="opacity-controls">
               <input
                 :value="opacity"
-                @input="(e) => adjustOpacity((e.target as HTMLInputElement).valueAsNumber - opacity)"
+                @input="(e) => setOpacity((e.target as HTMLInputElement).valueAsNumber)"
                 type="range"
                 min="0"
                 max="1"
@@ -458,8 +456,8 @@
                   class="scale-input-box"
                 />
                 <div class="number-controls">
-                  <button @click="adjustOpacity(0.01)" class="number-btn number-btn-up">▲</button>
-                  <button @click="adjustOpacity(-0.01)" class="number-btn number-btn-down">
+                  <button @click="setOpacity(opacity + 0.01)" class="number-btn number-btn-up">▲</button>
+                  <button @click="setOpacity(opacity - 0.01)" class="number-btn number-btn-down">
                     ▼
                   </button>
                 </div>
@@ -488,6 +486,7 @@
 import { ref, computed, watch, nextTick } from 'vue'
 import { useVideoStore, type TimelineItem } from '../stores/videostore'
 import { webavToProjectCoords } from '../utils/coordinateTransform'
+import { uiDegreesToWebAVRadians, webAVRadiansToUIDegrees } from '../utils/rotationTransform'
 
 const videoStore = useVideoStore()
 
@@ -536,7 +535,10 @@ const scaleY = computed(() => {
   const originalResolution = videoStore.getVideoOriginalResolution(selectedMediaItem.value.id)
   return selectedTimelineItem.value.size.height / originalResolution.height
 })
-const rotation = computed(() => selectedTimelineItem.value?.rotation || 0)
+const rotation = computed(() => {
+  const radians = selectedTimelineItem.value?.rotation || 0
+  return webAVRadiansToUIDegrees(radians)
+})
 const opacity = computed(() => selectedTimelineItem.value?.opacity || 1)
 const zIndex = computed(() => selectedTimelineItem.value?.zIndex || 0)
 
@@ -748,17 +750,11 @@ const adjustTransformY = (delta: number) => {
   updateTransform({ position: newPosition })
 }
 
-// 调整统一缩放数值的方法
-const adjustUniformScale = (delta: number) => {
-  const newScale = Math.max(0.1, Math.min(10, uniformScale.value + delta))
-  updateUniformScale(newScale)
-}
-
-// 调整X缩放数值的方法
-const adjustScaleX = (delta: number) => {
+// 设置X缩放绝对值的方法
+const setScaleX = (value: number) => {
   if (!selectedTimelineItem.value || !selectedMediaItem.value) return
   const originalResolution = videoStore.getVideoOriginalResolution(selectedMediaItem.value.id)
-  const newScaleX = Math.max(0.1, Math.min(10, scaleX.value + delta))
+  const newScaleX = Math.max(0.1, Math.min(10, value))
   const newSize = {
     width: originalResolution.width * newScaleX,
     height: selectedTimelineItem.value.size.height // 保持Y尺寸不变
@@ -766,11 +762,11 @@ const adjustScaleX = (delta: number) => {
   updateTransform({ size: newSize })
 }
 
-// 调整Y缩放数值的方法
-const adjustScaleY = (delta: number) => {
+// 设置Y缩放绝对值的方法
+const setScaleY = (value: number) => {
   if (!selectedTimelineItem.value || !selectedMediaItem.value) return
   const originalResolution = videoStore.getVideoOriginalResolution(selectedMediaItem.value.id)
-  const newScaleY = Math.max(0.1, Math.min(10, scaleY.value + delta))
+  const newScaleY = Math.max(0.1, Math.min(10, value))
   const newSize = {
     width: selectedTimelineItem.value.size.width, // 保持X尺寸不变
     height: originalResolution.height * newScaleY
@@ -778,15 +774,15 @@ const adjustScaleY = (delta: number) => {
   updateTransform({ size: newSize })
 }
 
-// 调整旋转数值的方法
-const adjustRotation = (delta: number) => {
-  const newRotation = Math.max(-180, Math.min(180, rotation.value + delta))
-  updateTransform({ rotation: newRotation })
+// 设置旋转绝对值的方法（输入角度，转换为弧度）
+const setRotation = (value: number) => {
+  const newRotationRadians = uiDegreesToWebAVRadians(value)
+  updateTransform({ rotation: newRotationRadians })
 }
 
-// 调整透明度数值的方法
-const adjustOpacity = (delta: number) => {
-  const newOpacity = Math.max(0, Math.min(1, opacity.value + delta))
+// 设置透明度绝对值的方法
+const setOpacity = (value: number) => {
+  const newOpacity = Math.max(0, Math.min(1, value))
   updateTransform({ opacity: newOpacity })
 }
 
@@ -886,8 +882,7 @@ const confirmRotationFromInput = (event: Event) => {
   const input = event.target as HTMLInputElement
   const value = parseFloat(input.value)
   if (!isNaN(value)) {
-    const clampedValue = Math.max(-180, Math.min(180, value))
-    updateTransform({ rotation: clampedValue })
+    setRotation(value)
   }
   // 如果输入无效，computed会自动恢复到当前正确值
 }

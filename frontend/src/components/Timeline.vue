@@ -467,7 +467,7 @@ async function createVideoClipFromMediaItem(
         height: sprite.rect.h
       },
       // 其他sprite属性
-      rotation: sprite.rect.angle || 0, // 从sprite获取旋转角度，默认为0
+      rotation: sprite.rect.angle || 0, // 从sprite获取旋转角度（弧度），默认为0
       zIndex: sprite.zIndex,
       opacity: sprite.opacity
     })
