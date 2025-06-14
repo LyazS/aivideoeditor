@@ -82,15 +82,16 @@ const mediaItem = computed(() => {
 
 // 获取时间轴时长
 const timelineDuration = computed(() => {
-  const sprite = props.timelineItem.sprite
-  const timeRange = sprite.getTimeRange()
+  // 直接从timelineItem.timeRange获取，与videostore的同步机制保持一致
+  const timeRange = props.timelineItem.timeRange
 
   return (timeRange.timelineEndTime - timeRange.timelineStartTime) / 1000000 // 转换为秒
 })
 
 // 获取播放速度
 const playbackSpeed = computed(() => {
-  return props.timelineItem.sprite.getPlaybackSpeed() || 1
+  // 直接从timelineItem.timeRange获取，与videostore的同步机制保持一致
+  return props.timelineItem.timeRange.playbackRate || 1
 })
 
 const thumbnailVideo = ref<HTMLVideoElement>()
@@ -115,8 +116,8 @@ const tempResizePosition = ref(0) // 临时调整位置
 // 计算片段样式
 const clipStyle = computed(() => {
   const videoStore = useVideoStore()
-  const sprite = props.timelineItem.sprite
-  const timeRange = sprite.getTimeRange()
+  // 直接从timelineItem.timeRange获取，与videostore的同步机制保持一致
+  const timeRange = props.timelineItem.timeRange
 
   // 在拖拽或调整大小时使用临时值，否则使用实际值
   const position = isDragging.value
@@ -144,8 +145,8 @@ const clipStyle = computed(() => {
 
 // 判断是否应该显示详细信息（当片段足够宽时）
 const showDetails = computed(() => {
-  const sprite = props.timelineItem.sprite
-  const timeRange = sprite.getTimeRange()
+  // 直接从timelineItem.timeRange获取，与videostore的同步机制保持一致
+  const timeRange = props.timelineItem.timeRange
 
   // 在拖拽或调整大小时使用临时值，否则使用实际值
   const position = isDragging.value
@@ -167,8 +168,8 @@ const showDetails = computed(() => {
 // 检查当前时间轴项目是否与同轨道的其他项目重叠
 const isOverlapping = computed(() => {
   const currentItem = props.timelineItem
-  const currentSprite = currentItem.sprite
-  const currentRange = currentSprite.getTimeRange()
+  // 直接从timelineItem.timeRange获取，与videostore的同步机制保持一致
+  const currentRange = currentItem.timeRange
   const currentStart = currentRange.timelineStartTime / 1000000 // 转换为秒
   const currentEnd = currentRange.timelineEndTime / 1000000
 
@@ -177,8 +178,8 @@ const isOverlapping = computed(() => {
       return false // 跳过自己和不同轨道的项目
     }
 
-    const otherSprite = otherItem.sprite
-    const otherRange = otherSprite.getTimeRange()
+    // 同样从timelineItem.timeRange获取其他项目的时间范围
+    const otherRange = otherItem.timeRange
     const otherStart = otherRange.timelineStartTime / 1000000
     const otherEnd = otherRange.timelineEndTime / 1000000
 
@@ -250,8 +251,8 @@ function startDrag(event: MouseEvent) {
   isDragging.value = true
   dragStartX.value = event.clientX
   dragStartY.value = event.clientY
-  dragStartPosition.value = props.timelineItem.timelinePosition
-  tempPosition.value = props.timelineItem.timelinePosition // 初始化临时位置
+  dragStartPosition.value = props.timelineItem.timeRange.timelineStartTime / 1000000 // 转换为秒
+  tempPosition.value = props.timelineItem.timeRange.timelineStartTime / 1000000 // 初始化临时位置
   tempTrackId.value = props.timelineItem.trackId // 初始化临时轨道ID
 
   document.addEventListener('mousemove', handleDrag)
@@ -318,8 +319,8 @@ function startResize(direction: 'left' | 'right', event: MouseEvent) {
   resizeDirection.value = direction
   resizeStartX.value = event.clientX
 
-  const sprite = props.timelineItem.sprite
-  const timeRange = sprite.getTimeRange()
+  // 直接从timelineItem.timeRange获取，与videostore的同步机制保持一致
+  const timeRange = props.timelineItem.timeRange
 
   resizeStartDuration.value = (timeRange.timelineEndTime - timeRange.timelineStartTime) / 1000000 // 转换为秒
   resizeStartPosition.value = timeRange.timelineStartTime / 1000000 // 转换为秒
@@ -403,6 +404,7 @@ function stopResize() {
         duration: tempDuration.value
       })
 
+      // 更新CustomVisibleSprite的时间范围
       sprite.setTimeRange({
         clipStartTime: 0,
         clipEndTime: mediaItem.duration * 1000000,
@@ -410,8 +412,8 @@ function stopResize() {
         timelineEndTime: newTimelineEndTime
       })
 
-      // 直接更新TimelineItem的位置，不调用updateTimelineItemPosition避免重复设置时间范围
-      props.timelineItem.timelinePosition = tempResizePosition.value
+      // 从sprite获取更新后的完整timeRange（包含自动计算的effectiveDuration）
+      props.timelineItem.timeRange = sprite.getTimeRange()
     }
   }
 

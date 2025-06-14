@@ -455,7 +455,7 @@ async function createVideoClipFromMediaItem(
       id: timelineItemId,
       mediaItemId: mediaItem.id,
       trackId: trackId,
-      timelinePosition: Math.max(0, startTime),
+      timeRange: sprite.getTimeRange(), // 从sprite获取完整的timeRange（已经通过setTimeRange设置）
       sprite: markRaw(sprite), // 使用markRaw避免Vue响应式包装
       // Sprite位置和大小属性（使用项目坐标系）
       position: {

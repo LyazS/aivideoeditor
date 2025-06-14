@@ -160,17 +160,17 @@ function debugTimeline() {
   console.group('🎞️ 时间轴项目信息 (' + timelineItems.value.length + ' 个)')
   timelineItems.value.forEach((item, index) => {
     const mediaItem = videoStore.getMediaItem(item.mediaItemId)
-    const sprite = item.sprite
-    const timeRange = sprite.getTimeRange()
+    // 直接从timelineItem.timeRange获取，与videostore的同步机制保持一致
+    const timeRange = item.timeRange
 
     console.group(`时间轴项目 ${index + 1}: ${mediaItem?.name || 'Unknown'}`)
     console.log('ID:', item.id)
     console.log('素材ID:', item.mediaItemId)
     console.log('轨道ID:', item.trackId)
-    console.log('时间轴位置 (秒):', item.timelinePosition.toFixed(2))
+    console.log('时间轴位置 (秒):', (timeRange.timelineStartTime / 1000000).toFixed(2))
     console.log('时间轴开始 (秒):', (timeRange.timelineStartTime / 1000000).toFixed(2))
     console.log('时间轴结束 (秒):', (timeRange.timelineEndTime / 1000000).toFixed(2))
-    console.log('播放速度:', sprite.getPlaybackSpeed())
+    console.log('播放速度:', timeRange.playbackRate)
     console.groupEnd()
   })
   console.groupEnd()

@@ -34,7 +34,7 @@
           </div>
           <div class="property-item">
             <label>位置</label>
-            <span class="property-value">{{ formatDuration(selectedTimelineItem?.timelinePosition || 0) }}</span>
+            <span class="property-value">{{ formatDuration((selectedTimelineItem?.timeRange.timelineStartTime || 0) / 1000000) }}</span>
           </div>
 
           <!-- 调试按钮 -->
@@ -54,9 +54,9 @@
             <label>目标时长</label>
             <div class="duration-controls">
               <input
-                v-model.number="targetDuration"
-                @blur="updateTargetDuration"
-                @keyup.enter="updateTargetDuration"
+                :value="tempTargetDurationInput"
+                @blur="confirmTargetDurationFromInput"
+                @keyup.enter="confirmTargetDurationFromInput"
                 type="number"
                 step="0.1"
                 min="0.1"
@@ -505,13 +505,18 @@ const selectedMediaItem = computed(() => {
 // 时间轴时长
 const timelineDuration = computed(() => {
   if (!selectedTimelineItem.value) return 0
-  const sprite = selectedTimelineItem.value.sprite
-  const timeRange = sprite.getTimeRange()
+  // 直接从timelineItem.timeRange获取，与videostore的同步机制保持一致
+  const timeRange = selectedTimelineItem.value.timeRange
   return (timeRange.timelineEndTime - timeRange.timelineStartTime) / 1000000 // 转换为秒
 })
 
-// 可编辑的属性
-const targetDuration = ref(0)
+// 目标时长 - 响应式计算属性
+const targetDuration = computed(() => {
+  if (!selectedTimelineItem.value) return 0
+  // 直接从timelineItem.timeRange获取，与videostore的同步机制保持一致
+  const timeRange = selectedTimelineItem.value.timeRange
+  return (timeRange.timelineEndTime - timeRange.timelineStartTime) / 1000000 // 转换为秒
+})
 
 // 倍速分段配置
 const speedSegments = [
@@ -573,7 +578,9 @@ const clipName = computed({
 
 const playbackRate = computed(() => {
   if (!selectedTimelineItem.value) return 1
-  return selectedTimelineItem.value.sprite.getPlaybackSpeed() || 1
+
+  // 直接从TimeRange中获取播放速度属性
+  return selectedTimelineItem.value.timeRange.playbackRate
 })
 
 const normalizedSpeed = computed(() => {
@@ -597,26 +604,26 @@ const updatePlaybackRate = (newRate?: number) => {
   if (selectedTimelineItem.value) {
     const rate = newRate || playbackRate.value
     videoStore.updateTimelineItemPlaybackRate(selectedTimelineItem.value.id, rate)
-    // 同步更新目标时长
-    const sprite = selectedTimelineItem.value.sprite
-    const timeRange = sprite.getTimeRange()
-    targetDuration.value = (timeRange.timelineEndTime - timeRange.timelineStartTime) / 1000000
+    // targetDuration 现在是 computed 属性，会自动更新
   }
 }
 
-// 更新目标时长
-const updateTargetDuration = () => {
-  if (selectedTimelineItem.value && selectedMediaItem.value && targetDuration.value > 0) {
+// 确认目标时长输入（失焦或回车时）
+const confirmTargetDurationFromInput = (event: Event) => {
+  const input = event.target as HTMLInputElement
+  const newTargetDuration = parseFloat(input.value)
+
+  if (!isNaN(newTargetDuration) && newTargetDuration > 0 && selectedTimelineItem.value && selectedMediaItem.value) {
     const sprite = selectedTimelineItem.value.sprite
-    const timeRange = sprite.getTimeRange()
+    const timeRange = selectedTimelineItem.value.timeRange
 
     // 计算新的播放速度：原始时长 / 目标时长
-    const newPlaybackRate = selectedMediaItem.value.duration / targetDuration.value
+    const newPlaybackRate = selectedMediaItem.value.duration / newTargetDuration
     // 确保播放速度在合理范围内（0.1-100x）
     const clampedRate = Math.max(0.1, Math.min(100, newPlaybackRate))
 
     // 更新CustomVisibleSprite的时间范围
-    const newTimelineEndTime = timeRange.timelineStartTime + (targetDuration.value * 1000000)
+    const newTimelineEndTime = timeRange.timelineStartTime + (newTargetDuration * 1000000)
     sprite.setTimeRange({
       clipStartTime: timeRange.clipStartTime,
       clipEndTime: timeRange.clipEndTime,
@@ -624,10 +631,17 @@ const updateTargetDuration = () => {
       timelineEndTime: newTimelineEndTime
     })
 
-    // 重新计算实际时长（可能因为范围限制而有所调整）
-    const actualDuration = selectedMediaItem.value.duration / clampedRate
-    targetDuration.value = actualDuration
+    // 从sprite获取更新后的完整timeRange（包含自动计算的effectiveDuration）
+    selectedTimelineItem.value.timeRange = sprite.getTimeRange()
+
+    console.log('🎯 目标时长更新:', {
+      inputValue: newTargetDuration,
+      newPlaybackRate: clampedRate,
+      updatedTimeRange: selectedTimelineItem.value.timeRange,
+      actualTargetDuration: targetDuration.value // computed 会自动计算新值
+    })
   }
+  // 如果输入无效，computed会自动恢复到当前正确值
 }
 
 // 更新归一化速度
@@ -795,6 +809,7 @@ const tempScaleYInput = computed(() => scaleY.value.toFixed(2))
 const tempRotationInput = computed(() => rotation.value.toFixed(1))
 const tempOpacityInput = computed(() => opacity.value.toFixed(2))
 const tempZIndexInput = computed(() => zIndex.value.toString())
+const tempTargetDurationInput = computed(() => targetDuration.value.toFixed(1))
 
 // 确认统一缩放输入（失焦或回车时）
 const confirmUniformScaleFromInput = (event: Event) => {
@@ -935,7 +950,9 @@ const debugTimelineItems = () => {
     console.log(`  - ID: ${item.id}`)
     console.log(`  - MediaItem ID: ${item.mediaItemId}`)
     console.log(`  - Track ID: ${item.trackId}`)
-    console.log(`  - Timeline Position: ${item.timelinePosition}s`)
+    console.log(`  - Time Range:`)
+    console.log(`    - Clip: ${(item.timeRange.clipStartTime / 1000000).toFixed(2)}s - ${(item.timeRange.clipEndTime / 1000000).toFixed(2)}s`)
+    console.log(`    - Timeline: ${(item.timeRange.timelineStartTime / 1000000).toFixed(2)}s - ${(item.timeRange.timelineEndTime / 1000000).toFixed(2)}s`)
 
     // 位置和尺寸信息
     console.log('📐 位置和尺寸:')
@@ -958,7 +975,7 @@ const debugTimelineItems = () => {
       console.log(`  - Time Range:`)
       console.log(`    - Clip: ${timeRange.clipStartTime / 1000000}s - ${timeRange.clipEndTime / 1000000}s`)
       console.log(`    - Timeline: ${timeRange.timelineStartTime / 1000000}s - ${timeRange.timelineEndTime / 1000000}s`)
-      console.log(`  - Playback Speed: ${sprite.getPlaybackSpeed()}x`)
+      console.log(`  - Playback Speed: ${item.timeRange.playbackRate}x`)
 
       // 坐标系转换验证
       console.log('🔄 坐标系转换验证:')

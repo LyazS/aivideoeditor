@@ -2,7 +2,7 @@ import { ref, computed, markRaw, reactive, type Raw } from 'vue'
 import { defineStore } from 'pinia'
 import { AVCanvas } from '@webav/av-canvas'
 import { MP4Clip } from '@webav/av-cliper'
-import { CustomVisibleSprite } from '../utils/customVisibleSprite'
+import { CustomVisibleSprite, type TimeRange } from '../utils/customVisibleSprite'
 import { useWebAVControls } from '../composables/useWebAVControls'
 import { webavToProjectCoords, projectToWebavCoords } from '../utils/coordinateTransform'
 
@@ -22,7 +22,7 @@ export interface TimelineItem {
   id: string
   mediaItemId: string // 引用MediaItem的ID
   trackId: number
-  timelinePosition: number
+  timeRange: TimeRange // 时间范围信息（包含clipStartTime, clipEndTime, timelineStartTime, timelineEndTime, effectiveDuration）
   sprite: Raw<CustomVisibleSprite>
   // Sprite位置和大小属性（响应式）
   position: {
@@ -199,6 +199,43 @@ export const useVideoStore = defineStore('video', () => {
   }
 
   /**
+   * 同步TimelineItem和sprite的timeRange
+   * 确保两者的时间范围信息保持一致
+   * @param timelineItem TimelineItem实例
+   * @param newTimeRange 新的时间范围（可选，如果不提供则从sprite获取）
+   */
+  function syncTimelineItemTimeRange(timelineItem: TimelineItem, newTimeRange?: Partial<TimeRange>) {
+    const sprite = timelineItem.sprite
+
+    if (newTimeRange) {
+      // 如果提供了新的时间范围，同时更新sprite和TimelineItem
+      const completeTimeRange = {
+        ...sprite.getTimeRange(),
+        ...newTimeRange
+      }
+
+      // sprite.setTimeRange会在内部自动计算effectiveDuration
+      sprite.setTimeRange(completeTimeRange)
+      // 从sprite获取更新后的完整timeRange（包含自动计算的effectiveDuration）
+      timelineItem.timeRange = sprite.getTimeRange()
+
+      console.log('🔄 同步timeRange (提供新值):', {
+        timelineItemId: timelineItem.id,
+        timeRange: completeTimeRange
+      })
+    } else {
+      // 如果没有提供新值，从sprite同步到TimelineItem
+      const spriteTimeRange = sprite.getTimeRange()
+      timelineItem.timeRange = spriteTimeRange
+
+      console.log('🔄 同步timeRange (从sprite获取):', {
+        timelineItemId: timelineItem.id,
+        timeRange: spriteTimeRange
+      })
+    }
+  }
+
+  /**
    * 为TimelineItem设置双向数据同步
    * @param timelineItem TimelineItem实例
    */
@@ -240,13 +277,13 @@ export const useVideoStore = defineStore('video', () => {
         })
       }
 
-      // 同步其他属性
-      if (changedProps.opacity !== undefined) {
-        timelineItem.opacity = changedProps.opacity
-      }
+      // 同步zIndex属性（propsChange事件包含此属性）
       if (changedProps.zIndex !== undefined) {
         timelineItem.zIndex = changedProps.zIndex
+        console.log('🔄 VisibleSprite → TimelineItem 同步 zIndex:', changedProps.zIndex)
       }
+
+      // 注意：opacity属性没有propsChange回调，需要在直接设置sprite.opacity的地方手动同步
     })
   }
 
@@ -273,7 +310,7 @@ export const useVideoStore = defineStore('video', () => {
       id: item.id,
       mediaItemId: item.mediaItemId,
       trackId: item.trackId,
-      position: `${item.timelinePosition.toFixed(2)}s`,
+      position: `${(item.timeRange.timelineStartTime / 1000000).toFixed(2)}s`,
       hasSprite: !!item.sprite
     })))
 
@@ -372,7 +409,7 @@ export const useVideoStore = defineStore('video', () => {
       mediaItemId: timelineItem.mediaItemId,
       mediaItemName: mediaItem?.name || '未知',
       trackId: timelineItem.trackId,
-      position: timelineItem.timelinePosition
+      position: timelineItem.timeRange.timelineStartTime / 1000000
     })
   }
 
@@ -409,7 +446,7 @@ export const useVideoStore = defineStore('video', () => {
         mediaItemId: item.mediaItemId,
         mediaItemName: mediaItem?.name || '未知',
         trackId: item.trackId,
-        position: item.timelinePosition
+        position: item.timeRange.timelineStartTime / 1000000
       })
     }
   }
@@ -434,7 +471,7 @@ export const useVideoStore = defineStore('video', () => {
   function updateTimelineItemPosition(timelineItemId: string, newPosition: number, newTrackId?: number) {
     const item = timelineItems.value.find((item) => item.id === timelineItemId)
     if (item) {
-      const oldPosition = item.timelinePosition
+      const oldPosition = item.timeRange.timelineStartTime / 1000000
       const oldTrackId = item.trackId
       const mediaItem = getMediaItem(item.mediaItemId)
 
@@ -442,13 +479,14 @@ export const useVideoStore = defineStore('video', () => {
       if (newTrackId !== undefined) {
         item.trackId = newTrackId
       }
+
       // 更新时间轴位置
-      item.timelinePosition = newPosition
-      // 更新CustomVisibleSprite的时间轴位置
       const sprite = item.sprite
       const currentTimeRange = sprite.getTimeRange()
       const duration = currentTimeRange.timelineEndTime - currentTimeRange.timelineStartTime
-      sprite.setTimeRange({
+
+      // 使用同步函数更新timeRange
+      syncTimelineItemTimeRange(item, {
         timelineStartTime: newPosition * 1000000, // 转换为微秒
         timelineEndTime: newPosition * 1000000 + duration
       })
@@ -487,7 +525,7 @@ export const useVideoStore = defineStore('video', () => {
         timelineItemId,
         mediaItemName: mediaItem?.name || '未知',
         trackId: item.trackId,
-        position: item.timelinePosition
+        position: item.timeRange.timelineStartTime / 1000000
       })
     }
   }
@@ -624,7 +662,7 @@ export const useVideoStore = defineStore('video', () => {
         id: Date.now().toString() + Math.random().toString(36).substring(2, 11),
         mediaItemId: originalItem.mediaItemId,
         trackId: originalItem.trackId,
-        timelinePosition: newTimelinePosition,
+        timeRange: newSprite.getTimeRange(), // 从sprite获取完整的timeRange（包含自动计算的effectiveDuration）
         sprite: markRaw(newSprite),
         // 复制原始项目的sprite属性
         position: {
@@ -800,7 +838,7 @@ export const useVideoStore = defineStore('video', () => {
         id: Date.now().toString() + Math.random().toString(36).substring(2, 11),
         mediaItemId: originalItem.mediaItemId,
         trackId: originalItem.trackId,
-        timelinePosition: timelineStartTime,
+        timeRange: firstSprite.getTimeRange(), // 从sprite获取完整的timeRange
         sprite: markRaw(firstSprite),
         // 复制原始项目的sprite属性
         position: {
@@ -820,7 +858,7 @@ export const useVideoStore = defineStore('video', () => {
         id: Date.now().toString() + Math.random().toString(36).substring(2, 11),
         mediaItemId: originalItem.mediaItemId,
         trackId: originalItem.trackId,
-        timelinePosition: splitTime,
+        timeRange: secondSprite.getTimeRange(), // 从sprite获取完整的timeRange
         sprite: markRaw(secondSprite),
         // 复制原始项目的sprite属性
         position: {
@@ -1004,8 +1042,8 @@ export const useVideoStore = defineStore('video', () => {
           timelineStartTime: currentPosition * 1000000, // 转换为微秒
           timelineEndTime: (currentPosition + duration) * 1000000
         })
-
-        item.timelinePosition = currentPosition
+        // 从sprite获取更新后的完整timeRange（包含自动计算的effectiveDuration）
+        item.timeRange = sprite.getTimeRange()
         currentPosition += duration
       }
     })
@@ -1158,7 +1196,22 @@ export const useVideoStore = defineStore('video', () => {
     if (item) {
       // 确保播放速度在合理范围内（扩展到0.1-100倍）
       const clampedRate = Math.max(0.1, Math.min(100, newRate))
+
+      // 更新sprite的播放速度（这会自动更新sprite内部的timeRange）
       item.sprite.setPlaybackSpeed(clampedRate)
+
+      // 使用同步函数更新TimelineItem的timeRange
+      syncTimelineItemTimeRange(item)
+
+      console.log('🎬 播放速度更新:', {
+        timelineItemId,
+        newRate: clampedRate,
+        timeRange: {
+          clipDuration: (item.timeRange.clipEndTime - item.timeRange.clipStartTime) / 1000000,
+          timelineDuration: (item.timeRange.timelineEndTime - item.timeRange.timelineStartTime) / 1000000,
+          effectiveDuration: item.timeRange.effectiveDuration / 1000000
+        }
+      })
     }
   }
 
@@ -1229,9 +1282,12 @@ export const useVideoStore = defineStore('video', () => {
       // 更新其他属性
       if (transform.opacity !== undefined) {
         sprite.opacity = transform.opacity
+        // 🔧 手动同步opacity到timelineItem（因为opacity没有propsChange回调）
+        item.opacity = transform.opacity
       }
       if (transform.zIndex !== undefined) {
         sprite.zIndex = transform.zIndex
+        // zIndex有propsChange回调，会自动同步到timelineItem
       }
       // 更新旋转角度（WebAV的rect.angle支持旋转）
       if (transform.rotation !== undefined) {

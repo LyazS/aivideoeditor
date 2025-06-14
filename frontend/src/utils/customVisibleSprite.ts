@@ -14,6 +14,8 @@ export interface TimeRange {
   timelineEndTime: number
   /** 有效播放时长（微秒） - 在时间轴上占用的时长，如果与素材内部时长不同则表示变速 */
   effectiveDuration: number
+  /** 播放速度倍率 - 1.0为正常速度，2.0为2倍速，0.5为0.5倍速 */
+  playbackRate: number
 }
 
 /**
@@ -34,7 +36,8 @@ export class CustomVisibleSprite extends VisibleSprite {
     clipEndTime: 0,
     timelineStartTime: 0,
     timelineEndTime: 0,
-    effectiveDuration: 0
+    effectiveDuration: 0,
+    playbackRate: 1.0
   }
 
   /**
@@ -183,7 +186,8 @@ export class CustomVisibleSprite extends VisibleSprite {
       clipEndTime: 0,
       timelineStartTime: 0,
       timelineEndTime: 0,
-      effectiveDuration: 0
+      effectiveDuration: 0,
+      playbackRate: 1.0
     }
     this.#updateVisibleSpriteTime()
   }
@@ -208,7 +212,8 @@ export class CustomVisibleSprite extends VisibleSprite {
       const newTimelineDuration = clipDuration / speed
       const newTimelineEndTime = timelineStartTime + newTimelineDuration
 
-      // 更新时间范围
+      // 通过设置时间范围来实现播放速度调整
+      // playbackRate 会在 #updateVisibleSpriteTime() 中根据时间范围自动计算
       this.#timeRange.timelineEndTime = newTimelineEndTime
       this.#updateVisibleSpriteTime()
     }
@@ -219,7 +224,7 @@ export class CustomVisibleSprite extends VisibleSprite {
    * @returns 播放速度倍率
    */
   public getPlaybackSpeed(): number {
-    return this.time.playbackRate || 1.0
+    return this.#timeRange.playbackRate
   }
 
   /**
@@ -302,13 +307,16 @@ export class CustomVisibleSprite extends VisibleSprite {
     // 设置 VisibleSprite.time 属性
     // offset: 在时间轴上的播放开始位置（微秒）
     // duration: 在时间轴上占用的时长（微秒）
-    // playbackRate: 素材播放的速度
+    // playbackRate: 素材播放的速度（根据时间范围计算）
     // 配合 preFrame/render 中的 adjustedTime = time + this.#startOffset 实现从指定位置开始播放
     this.time = {
       offset: timelineStartTime,
       duration: duration,
       playbackRate: playbackRate
     }
+
+    // 将计算出的播放速度同步回TimeRange中（从this.time获取）
+    this.#timeRange.playbackRate = this.time.playbackRate
   }
 
   /**
