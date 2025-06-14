@@ -37,12 +37,7 @@
             <span class="property-value">{{ formatDuration((selectedTimelineItem?.timeRange.timelineStartTime || 0) / 1000000) }}</span>
           </div>
 
-          <!-- 调试按钮 -->
-          <div class="property-item">
-            <button @click="debugTimelineItems" class="debug-button">
-              🐛 调试：打印TimelineItems数据
-            </button>
-          </div>
+
         </div>
 
         <!-- 播放设置 -->
@@ -53,15 +48,15 @@
           <div class="property-item">
             <label>目标时长</label>
             <div class="duration-controls">
-              <input
-                :value="tempTargetDurationInput"
-                @blur="confirmTargetDurationFromInput"
-                @keyup.enter="confirmTargetDurationFromInput"
-                type="number"
-                step="0.1"
-                min="0.1"
-                class="property-input number-input"
+              <NumberInput
+                :model-value="targetDuration"
+                @change="updateTargetDuration"
+                :min="0.1"
+                :step="0.1"
+                :precision="1"
+                :show-controls="false"
                 placeholder="秒"
+                :input-style="propertyInputStyle"
               />
               <span class="duration-unit">秒</span>
             </div>
@@ -114,47 +109,29 @@
             <div class="position-controls">
               <div class="position-input-group">
                 <span class="position-label">X</span>
-                <div class="number-input-wrapper">
-                  <input
-                    :value="tempTransformXInput"
-                    @blur="confirmTransformXFromInput"
-                    @keyup.enter="confirmTransformXFromInput"
-                    type="number"
-                    step="1"
-                    :min="-videoStore.videoResolution.width"
-                    :max="videoStore.videoResolution.width"
-                    class="property-input position-input-field"
-                    placeholder="中心为0"
-                  />
-                  <div class="number-controls">
-                    <button @click="adjustTransformX(1)" class="number-btn number-btn-up">▲</button>
-                    <button @click="adjustTransformX(-1)" class="number-btn number-btn-down">
-                      ▼
-                    </button>
-                  </div>
-                </div>
+                <NumberInput
+                  :model-value="transformX"
+                  @change="(value) => updateTransform({ position: { x: value, y: transformY } })"
+                  :min="-videoStore.videoResolution.width"
+                  :max="videoStore.videoResolution.width"
+                  :step="1"
+                  :precision="0"
+                  placeholder="中心为0"
+                  :input-style="positionInputStyle"
+                />
               </div>
               <div class="position-input-group">
                 <span class="position-label">Y</span>
-                <div class="number-input-wrapper">
-                  <input
-                    :value="tempTransformYInput"
-                    @blur="confirmTransformYFromInput"
-                    @keyup.enter="confirmTransformYFromInput"
-                    type="number"
-                    step="1"
-                    :min="-videoStore.videoResolution.height"
-                    :max="videoStore.videoResolution.height"
-                    class="property-input position-input-field"
-                    placeholder="中心为0"
-                  />
-                  <div class="number-controls">
-                    <button @click="adjustTransformY(1)" class="number-btn number-btn-up">▲</button>
-                    <button @click="adjustTransformY(-1)" class="number-btn number-btn-down">
-                      ▼
-                    </button>
-                  </div>
-                </div>
+                <NumberInput
+                  :model-value="transformY"
+                  @change="(value) => updateTransform({ position: { x: transformX, y: value } })"
+                  :min="-videoStore.videoResolution.height"
+                  :max="videoStore.videoResolution.height"
+                  :step="1"
+                  :precision="0"
+                  placeholder="中心为0"
+                  :input-style="positionInputStyle"
+                />
               </div>
             </div>
           </div>
@@ -183,26 +160,15 @@
                 step="0.01"
                 class="scale-slider"
               />
-              <div class="number-input-wrapper">
-                <input
-                  :value="tempUniformScaleInput"
-                  @blur="confirmUniformScaleFromInput"
-                  @keyup.enter="confirmUniformScaleFromInput"
-                  type="number"
-                  min="0.1"
-                  max="10"
-                  step="0.01"
-                  class="scale-input-box"
-                />
-                <div class="number-controls">
-                  <button @click="updateUniformScale(uniformScale + 0.1)" class="number-btn number-btn-up">
-                    ▲
-                  </button>
-                  <button @click="updateUniformScale(uniformScale - 0.1)" class="number-btn number-btn-down">
-                    ▼
-                  </button>
-                </div>
-              </div>
+              <NumberInput
+                :model-value="uniformScale"
+                @change="updateUniformScale"
+                :min="0.1"
+                :max="10"
+                :step="0.1"
+                :precision="2"
+                :input-style="scaleInputStyle"
+              />
             </div>
           </div>
 
@@ -220,24 +186,15 @@
                   step="0.01"
                   class="scale-slider"
                 />
-                <div class="number-input-wrapper">
-                  <input
-                    :value="tempScaleXInput"
-                    @blur="confirmScaleXFromInput"
-                    @keyup.enter="confirmScaleXFromInput"
-                    type="number"
-                    min="0.1"
-                    max="10"
-                    step="0.01"
-                    class="scale-input-box"
-                  />
-                  <div class="number-controls">
-                    <button @click="setScaleX(scaleX + 0.1)" class="number-btn number-btn-up">▲</button>
-                    <button @click="setScaleX(scaleX - 0.1)" class="number-btn number-btn-down">
-                      ▼
-                    </button>
-                  </div>
-                </div>
+                <NumberInput
+                  :model-value="scaleX"
+                  @change="setScaleX"
+                  :min="0.1"
+                  :max="10"
+                  :step="0.1"
+                  :precision="2"
+                  :input-style="scaleInputStyle"
+                />
               </div>
             </div>
             <div class="property-item">
@@ -252,24 +209,15 @@
                   step="0.01"
                   class="scale-slider"
                 />
-                <div class="number-input-wrapper">
-                  <input
-                    :value="tempScaleYInput"
-                    @blur="confirmScaleYFromInput"
-                    @keyup.enter="confirmScaleYFromInput"
-                    type="number"
-                    min="0.1"
-                    max="10"
-                    step="0.01"
-                    class="scale-input-box"
-                  />
-                  <div class="number-controls">
-                    <button @click="setScaleY(scaleY + 0.1)" class="number-btn number-btn-up">▲</button>
-                    <button @click="setScaleY(scaleY - 0.1)" class="number-btn number-btn-down">
-                      ▼
-                    </button>
-                  </div>
-                </div>
+                <NumberInput
+                  :model-value="scaleY"
+                  @change="setScaleY"
+                  :min="0.1"
+                  :max="10"
+                  :step="0.1"
+                  :precision="2"
+                  :input-style="scaleInputStyle"
+                />
               </div>
             </div>
           </template>
@@ -416,20 +364,13 @@
                 step="0.1"
                 class="rotation-slider"
               />
-              <div class="number-input-wrapper">
-                <input
-                  :value="tempRotationInput"
-                  @blur="confirmRotationFromInput"
-                  @keyup.enter="confirmRotationFromInput"
-                  type="number"
-                  step="0.1"
-                  class="scale-input-box"
-                />
-                <div class="number-controls">
-                  <button @click="setRotation(rotation + 1)" class="number-btn number-btn-up">▲</button>
-                  <button @click="setRotation(rotation - 1)" class="number-btn number-btn-down">▼</button>
-                </div>
-              </div>
+              <NumberInput
+                :model-value="rotation"
+                @change="setRotation"
+                :step="1"
+                :precision="1"
+                :input-style="scaleInputStyle"
+              />
             </div>
           </div>
           <div class="property-item">
@@ -444,36 +385,26 @@
                 step="0.01"
                 class="opacity-slider"
               />
-              <div class="number-input-wrapper">
-                <input
-                  :value="tempOpacityInput"
-                  @blur="confirmOpacityFromInput"
-                  @keyup.enter="confirmOpacityFromInput"
-                  type="number"
-                  min="0"
-                  max="1"
-                  step="0.01"
-                  class="scale-input-box"
-                />
-                <div class="number-controls">
-                  <button @click="setOpacity(opacity + 0.01)" class="number-btn number-btn-up">▲</button>
-                  <button @click="setOpacity(opacity - 0.01)" class="number-btn number-btn-down">
-                    ▼
-                  </button>
-                </div>
-              </div>
+              <NumberInput
+                :model-value="opacity"
+                @change="setOpacity"
+                :min="0"
+                :max="1"
+                :step="0.01"
+                :precision="2"
+                :input-style="scaleInputStyle"
+              />
             </div>
           </div>
           <div class="property-item">
             <label>层级</label>
-            <input
-              :value="tempZIndexInput"
-              @blur="confirmZIndexFromInput"
-              @keyup.enter="confirmZIndexFromInput"
-              type="number"
-              min="0"
-              step="1"
-              class="property-input number-input"
+            <NumberInput
+              :model-value="zIndex"
+              @change="(value) => updateTransform({ zIndex: value })"
+              :min="0"
+              :step="1"
+              :precision="0"
+              :input-style="scaleInputStyle"
             />
           </div>
         </div>
@@ -483,10 +414,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, nextTick } from 'vue'
-import { useVideoStore, type TimelineItem } from '../stores/videostore'
-import { webavToProjectCoords } from '../utils/coordinateTransform'
+import { ref, computed } from 'vue'
+import { useVideoStore } from '../stores/videostore'
+
 import { uiDegreesToWebAVRadians, webAVRadiansToUIDegrees } from '../utils/rotationTransform'
+import NumberInput from './NumberInput.vue'
 
 const videoStore = useVideoStore()
 
@@ -510,13 +442,8 @@ const timelineDuration = computed(() => {
   return (timeRange.timelineEndTime - timeRange.timelineStartTime) / 1000000 // 转换为秒
 })
 
-// 目标时长 - 响应式计算属性
-const targetDuration = computed(() => {
-  if (!selectedTimelineItem.value) return 0
-  // 直接从timelineItem.timeRange获取，与videostore的同步机制保持一致
-  const timeRange = selectedTimelineItem.value.timeRange
-  return (timeRange.timelineEndTime - timeRange.timelineStartTime) / 1000000 // 转换为秒
-})
+// 目标时长 - 与timelineDuration相同，直接使用timelineDuration
+const targetDuration = computed(() => timelineDuration.value)
 
 // 倍速分段配置
 const speedSegments = [
@@ -559,10 +486,6 @@ const proportionalScale = computed({
 const tempResolutionWidth = ref('1920')
 const tempResolutionHeight = ref('1080')
 
-
-
-
-
 // 等比缩放相关
 const uniformScale = computed(() => scaleX.value) // 使用X缩放值作为统一缩放值
 
@@ -589,8 +512,32 @@ const normalizedSpeed = computed(() => {
 
 const speedInputValue = computed(() => playbackRate.value)
 
-// TODO: 重新实现变换属性监听
-// 暂时禁用复杂的变换监听逻辑
+// NumberInput 样式定义
+const propertyInputStyle = {
+  maxWidth: '80px',
+  textAlign: 'right' as const
+}
+
+const positionInputStyle = {
+  maxWidth: '60px',
+  textAlign: 'center' as const,
+  flex: '1',
+  borderRadius: '0',
+  borderRight: 'none'
+}
+
+const scaleInputStyle = {
+  background: '#444',
+  border: '1px solid #666',
+  borderRadius: '0',
+  borderRight: 'none',
+  color: '#fff',
+  fontSize: '11px',
+  padding: '2px 4px',
+  width: '78px',
+  textAlign: 'center' as const,
+  flex: '0 0 auto'
+}
 
 // 更新片段名称
 const updateClipName = () => {
@@ -608,11 +555,8 @@ const updatePlaybackRate = (newRate?: number) => {
   }
 }
 
-// 确认目标时长输入（失焦或回车时）
-const confirmTargetDurationFromInput = (event: Event) => {
-  const input = event.target as HTMLInputElement
-  const newTargetDuration = parseFloat(input.value)
-
+// 更新目标时长
+const updateTargetDuration = (newTargetDuration: number) => {
   if (!isNaN(newTargetDuration) && newTargetDuration > 0 && selectedTimelineItem.value && selectedMediaItem.value) {
     const sprite = selectedTimelineItem.value.sprite
     const timeRange = selectedTimelineItem.value.timeRange
@@ -641,7 +585,6 @@ const confirmTargetDurationFromInput = (event: Event) => {
       actualTargetDuration: targetDuration.value // computed 会自动计算新值
     })
   }
-  // 如果输入无效，computed会自动恢复到当前正确值
 }
 
 // 更新归一化速度
@@ -688,8 +631,6 @@ const speedToNormalized = (speed: number) => {
   }
   return 20 // 默认值对应1x
 }
-
-
 
 // 更新变换属性 - 使用新的双向同步机制
 const updateTransform = (transform?: {
@@ -747,23 +688,6 @@ const updateUniformScale = (newScale: number) => {
   }
 }
 
-// 调整位置数值的方法
-const adjustTransformX = (delta: number) => {
-  const newPosition = {
-    x: transformX.value + delta,
-    y: transformY.value
-  }
-  updateTransform({ position: newPosition })
-}
-
-const adjustTransformY = (delta: number) => {
-  const newPosition = {
-    x: transformX.value,
-    y: transformY.value + delta
-  }
-  updateTransform({ position: newPosition })
-}
-
 // 设置X缩放绝对值的方法
 const setScaleX = (value: number) => {
   if (!selectedTimelineItem.value || !selectedMediaItem.value) return
@@ -800,275 +724,6 @@ const setOpacity = (value: number) => {
   updateTransform({ opacity: newOpacity })
 }
 
-// 临时输入值的computed（用于单向绑定显示）
-const tempTransformXInput = computed(() => transformX.value.toString())
-const tempTransformYInput = computed(() => transformY.value.toString())
-const tempUniformScaleInput = computed(() => uniformScale.value.toFixed(2))
-const tempScaleXInput = computed(() => scaleX.value.toFixed(2))
-const tempScaleYInput = computed(() => scaleY.value.toFixed(2))
-const tempRotationInput = computed(() => rotation.value.toFixed(1))
-const tempOpacityInput = computed(() => opacity.value.toFixed(2))
-const tempZIndexInput = computed(() => zIndex.value.toString())
-const tempTargetDurationInput = computed(() => targetDuration.value.toFixed(1))
-
-// 确认统一缩放输入（失焦或回车时）
-const confirmUniformScaleFromInput = (event: Event) => {
-  const input = event.target as HTMLInputElement
-  const value = parseFloat(input.value)
-  if (!isNaN(value)) {
-    const clampedValue = Math.max(0.1, Math.min(10, value))
-    updateUniformScale(clampedValue)
-  }
-  // 如果输入无效，computed会自动恢复到当前正确值
-}
-
-// 确认X缩放输入（失焦或回车时）
-const confirmScaleXFromInput = (event: Event) => {
-  const input = event.target as HTMLInputElement
-  const value = parseFloat(input.value)
-  if (!isNaN(value) && selectedTimelineItem.value && selectedMediaItem.value) {
-    const clampedValue = Math.max(0.1, Math.min(10, value))
-    const originalResolution = videoStore.getVideoOriginalResolution(selectedMediaItem.value.id)
-    const newSize = {
-      width: originalResolution.width * clampedValue,
-      height: selectedTimelineItem.value.size.height // 保持Y尺寸不变
-    }
-    updateTransform({ size: newSize })
-  }
-  // 如果输入无效，computed会自动恢复到当前正确值
-}
-
-// 确认Y缩放输入（失焦或回车时）
-const confirmScaleYFromInput = (event: Event) => {
-  const input = event.target as HTMLInputElement
-  const value = parseFloat(input.value)
-  if (!isNaN(value) && selectedTimelineItem.value && selectedMediaItem.value) {
-    const clampedValue = Math.max(0.1, Math.min(10, value))
-    const originalResolution = videoStore.getVideoOriginalResolution(selectedMediaItem.value.id)
-    const newSize = {
-      width: selectedTimelineItem.value.size.width, // 保持X尺寸不变
-      height: originalResolution.height * clampedValue
-    }
-    updateTransform({ size: newSize })
-  }
-  // 如果输入无效，computed会自动恢复到当前正确值
-}
-
-// 确认位置X输入（失焦或回车时）
-const confirmTransformXFromInput = (event: Event) => {
-  const input = event.target as HTMLInputElement
-  const value = parseInt(input.value)
-  if (!isNaN(value)) {
-    // 项目坐标系：中心为原点，允许的范围是 -canvasWidth 到 +canvasWidth
-    const clampedValue = Math.max(
-      -videoStore.videoResolution.width,
-      Math.min(videoStore.videoResolution.width, value),
-    )
-    const newPosition = {
-      x: clampedValue,
-      y: transformY.value
-    }
-    updateTransform({ position: newPosition })
-  }
-  // 如果输入无效，computed会自动恢复到当前正确值
-}
-
-// 确认位置Y输入（失焦或回车时）
-const confirmTransformYFromInput = (event: Event) => {
-  const input = event.target as HTMLInputElement
-  const value = parseInt(input.value)
-  if (!isNaN(value)) {
-    // 项目坐标系：中心为原点，允许的范围是 -canvasHeight 到 +canvasHeight
-    const clampedValue = Math.max(
-      -videoStore.videoResolution.height,
-      Math.min(videoStore.videoResolution.height, value),
-    )
-    const newPosition = {
-      x: transformX.value,
-      y: clampedValue
-    }
-    updateTransform({ position: newPosition })
-  }
-  // 如果输入无效，computed会自动恢复到当前正确值
-}
-
-// 确认旋转输入（失焦或回车时）
-const confirmRotationFromInput = (event: Event) => {
-  const input = event.target as HTMLInputElement
-  const value = parseFloat(input.value)
-  if (!isNaN(value)) {
-    setRotation(value)
-  }
-  // 如果输入无效，computed会自动恢复到当前正确值
-}
-
-// 确认透明度输入（失焦或回车时）
-const confirmOpacityFromInput = (event: Event) => {
-  const input = event.target as HTMLInputElement
-  const value = parseFloat(input.value)
-  if (!isNaN(value)) {
-    const clampedValue = Math.max(0, Math.min(1, value))
-    updateTransform({ opacity: clampedValue })
-  }
-  // 如果输入无效，computed会自动恢复到当前正确值
-}
-
-// 确认层级输入（失焦或回车时）
-const confirmZIndexFromInput = (event: Event) => {
-  const input = event.target as HTMLInputElement
-  const value = parseInt(input.value)
-  if (!isNaN(value) && value >= 0) {
-    updateTransform({ zIndex: value })
-  }
-  // 如果输入无效，computed会自动恢复到当前正确值
-}
-
-// ==================== 调试函数 ====================
-
-/**
- * 调试函数：打印TimelineItems的详细数据
- */
-const debugTimelineItems = () => {
-  console.group('🐛 TimelineItems 调试数据')
-
-  console.log('📊 总体信息:')
-  console.log(`- TimelineItems 数量: ${videoStore.timelineItems.length}`)
-  console.log(`- 当前选中项目ID: ${videoStore.selectedTimelineItemId}`)
-
-  if (videoStore.timelineItems.length === 0) {
-    console.log('⚠️ 没有TimelineItems数据')
-    console.groupEnd()
-    return
-  }
-
-  console.log('\n📋 TimelineItems 详细数据:')
-  videoStore.timelineItems.forEach((item, index) => {
-    console.group(`📹 TimelineItem [${index}] - ID: ${item.id}`)
-
-    // 基本信息
-    console.log('🔍 基本信息:')
-    console.log(`  - ID: ${item.id}`)
-    console.log(`  - MediaItem ID: ${item.mediaItemId}`)
-    console.log(`  - Track ID: ${item.trackId}`)
-    console.log(`  - Time Range:`)
-    console.log(`    - Clip: ${(item.timeRange.clipStartTime / 1000000).toFixed(2)}s - ${(item.timeRange.clipEndTime / 1000000).toFixed(2)}s`)
-    console.log(`    - Timeline: ${(item.timeRange.timelineStartTime / 1000000).toFixed(2)}s - ${(item.timeRange.timelineEndTime / 1000000).toFixed(2)}s`)
-
-    // 位置和尺寸信息
-    console.log('📐 位置和尺寸:')
-    console.log(`  - Position: { x: ${item.position.x}, y: ${item.position.y} }`)
-    console.log(`  - Size: { width: ${item.size.width}, height: ${item.size.height} }`)
-    console.log(`  - Rotation: ${item.rotation} 弧度`)
-    console.log(`  - Opacity: ${item.opacity}`)
-    console.log(`  - Z-Index: ${item.zIndex}`)
-
-    // Sprite信息
-    console.log('🎬 Sprite 信息:')
-    const sprite = item.sprite
-    if (sprite) {
-      const rect = sprite.rect
-      const timeRange = sprite.getTimeRange()
-
-      console.log(`  - WebAV Rect: { x: ${rect.x}, y: ${rect.y}, w: ${rect.w}, h: ${rect.h} }`)
-      console.log(`  - WebAV Opacity: ${sprite.opacity}`)
-      console.log(`  - WebAV Z-Index: ${sprite.zIndex}`)
-      console.log(`  - Time Range:`)
-      console.log(`    - Clip: ${timeRange.clipStartTime / 1000000}s - ${timeRange.clipEndTime / 1000000}s`)
-      console.log(`    - Timeline: ${timeRange.timelineStartTime / 1000000}s - ${timeRange.timelineEndTime / 1000000}s`)
-      console.log(`  - Playback Speed: ${item.timeRange.playbackRate}x`)
-
-      // 坐标系转换验证
-      console.log('🔄 坐标系转换验证:')
-      const convertedCoords = webavToProjectCoords(
-        rect.x,
-        rect.y,
-        rect.w,
-        rect.h,
-        videoStore.videoResolution.width,
-        videoStore.videoResolution.height
-      )
-
-      console.log(`  - WebAV坐标: { x: ${rect.x}, y: ${rect.y} }`)
-      console.log(`  - 转换为项目坐标: { x: ${Math.round(convertedCoords.x)}, y: ${Math.round(convertedCoords.y)} }`)
-      console.log(`  - TimelineItem坐标: { x: ${item.position.x}, y: ${item.position.y} }`)
-
-      const xDiff = Math.abs(item.position.x - Math.round(convertedCoords.x))
-      const yDiff = Math.abs(item.position.y - Math.round(convertedCoords.y))
-      const isConsistent = xDiff < 2 && yDiff < 2
-
-      console.log(`  - 坐标差异: X=${xDiff}px, Y=${yDiff}px`)
-      console.log(`  - 数据同步状态: ${isConsistent ? '✅ 同步' : '❌ 不同步'}`)
-    } else {
-      console.warn('  ⚠️ Sprite 为空!')
-    }
-
-    // 对应的MediaItem信息
-    const mediaItem = videoStore.getMediaItem(item.mediaItemId)
-    if (mediaItem) {
-      console.log('📁 对应的MediaItem:')
-      console.log(`  - Name: ${mediaItem.name}`)
-      console.log(`  - Duration: ${mediaItem.duration}s`)
-      console.log(`  - Type: ${mediaItem.type}`)
-    } else {
-      console.warn('  ⚠️ 找不到对应的MediaItem!')
-    }
-
-    console.groupEnd()
-  })
-
-  // 当前选中项目的特别信息
-  if (selectedTimelineItem.value) {
-    console.group('🎯 当前选中项目详情')
-    const item = selectedTimelineItem.value
-    console.log('📊 响应式计算属性值:')
-    console.log(`  - transformX: ${transformX.value}`)
-    console.log(`  - transformY: ${transformY.value}`)
-    console.log(`  - scaleX: ${scaleX.value}`)
-    console.log(`  - scaleY: ${scaleY.value}`)
-    console.log(`  - rotation: ${rotation.value}`)
-    console.log(`  - opacity: ${opacity.value}`)
-    console.log(`  - zIndex: ${zIndex.value}`)
-
-    console.log('🔄 数据同步状态:')
-    const sprite = item.sprite
-    if (sprite) {
-      const rect = sprite.rect
-
-      // 将WebAV坐标系转换为项目坐标系进行对比
-      const convertedCoords = webavToProjectCoords(
-        rect.x ?? 0,
-        rect.y ?? 0,
-        rect.w ?? item.size.width,
-        rect.h ?? item.size.height,
-        videoStore.videoResolution.width,
-        videoStore.videoResolution.height
-      )
-
-      console.log(`  - TimelineItem Position: { x: ${item.position.x}, y: ${item.position.y} }`)
-      console.log(`  - WebAV Sprite Rect: { x: ${rect.x}, y: ${rect.y} }`)
-      console.log(`  - 转换后的项目坐标: { x: ${Math.round(convertedCoords.x)}, y: ${Math.round(convertedCoords.y)} }`)
-
-      // 检查坐标系转换后的一致性
-      const xDiff = Math.abs(item.position.x - Math.round(convertedCoords.x))
-      const yDiff = Math.abs(item.position.y - Math.round(convertedCoords.y))
-      const isConsistent = xDiff < 2 && yDiff < 2 // 允许1-2像素的误差
-
-      console.log(`  - X坐标差异: ${xDiff}px`)
-      console.log(`  - Y坐标差异: ${yDiff}px`)
-      console.log(`  - 坐标系转换是否一致: ${isConsistent ? '✅' : '❌'}`)
-
-      if (!isConsistent) {
-        console.warn(`  ⚠️ 数据不同步！TimelineItem和Sprite的坐标存在较大差异`)
-      }
-    }
-    console.groupEnd()
-  }
-
-  console.groupEnd()
-}
-
-
-
 // 格式化时长
 const formatDuration = (seconds: number): string => {
   const mins = Math.floor(seconds / 60)
@@ -1077,27 +732,10 @@ const formatDuration = (seconds: number): string => {
   return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}.${ms.toString().padStart(3, '0')}`
 }
 
-
-
-// 计算当前分辨率
-const getCurrentResolution = () => {
-  // TODO: 重新实现分辨率计算
-  return { width: 1920, height: 1080 }
-}
-
-// 更新分辨率显示
-const updateResolutionDisplay = () => {
-  const resolution = getCurrentResolution()
-  tempResolutionWidth.value = resolution.width.toString()
-  tempResolutionHeight.value = resolution.height.toString()
-}
-
 // 确认分辨率输入
 const confirmResolutionFromInput = () => {
-  // TODO: 重新实现分辨率输入确认
-  console.log('TODO: 确认分辨率输入')
-  updateResolutionDisplay()
-
+  // 分辨率输入确认功能暂未实现
+  console.log('分辨率输入确认功能暂未实现')
 }
 
 // 实现对齐功能（基于项目坐标系：中心为原点）
@@ -1368,26 +1006,6 @@ const alignVertical = (alignment: 'top' | 'middle' | 'bottom') => {
   transform: translateX(-50%);
 }
 
-/* 分段标签 */
-.speed-labels {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
-  height: 16px;
-  pointer-events: none;
-  z-index: 1;
-}
-
-.speed-label {
-  position: absolute;
-  font-size: 9px;
-  color: #999;
-  transform: translateX(-50%);
-  white-space: nowrap;
-  margin-top: 2px;
-}
-
 /* 倍速输入框 */
 .speed-input {
   background: #444;
@@ -1413,10 +1031,7 @@ const alignVertical = (alignment: 'top' | 'middle' | 'bottom') => {
   margin: 0;
 }
 
-.number-input {
-  max-width: 80px;
-  text-align: right;
-}
+
 
 /* 位置控制样式 */
 .position-controls {
@@ -1440,79 +1055,7 @@ const alignVertical = (alignment: 'top' | 'middle' | 'bottom') => {
   text-align: center;
 }
 
-/* 数字输入框包装器 */
-.number-input-wrapper {
-  display: flex;
-  align-items: stretch;
-  position: relative;
-  flex: 1;
-  min-width: 0;
-  border-radius: 3px;
-  overflow: hidden;
-}
 
-.position-input-field {
-  max-width: 60px;
-  text-align: center;
-  flex: 1;
-  border-radius: 0; /* 移除圆角，由包装器控制 */
-  border-right: none; /* 移除右边框，与按钮连接 */
-}
-
-/* 隐藏默认的数字输入框上下箭头 */
-.position-input-field::-webkit-outer-spin-button,
-.position-input-field::-webkit-inner-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
-}
-
-.position-input-field[type='number'] {
-  -moz-appearance: textfield;
-}
-
-/* 自定义数字控制按钮 */
-.number-controls {
-  display: flex;
-  flex-direction: column;
-  width: 18px;
-  flex-shrink: 0;
-}
-
-.number-btn {
-  background: #555;
-  border: 1px solid #666;
-  border-left: none;
-  color: #fff;
-  cursor: pointer;
-  font-size: 8px;
-  line-height: 1;
-  padding: 0;
-  width: 100%;
-  height: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background-color 0.2s;
-  flex: 1;
-}
-
-.number-btn:hover {
-  background: #666;
-}
-
-.number-btn:active {
-  background: #777;
-}
-
-.number-btn-up {
-  border-radius: 0;
-  border-bottom: 0.5px solid #444;
-}
-
-.number-btn-down {
-  border-radius: 0;
-  border-top: 0.5px solid #444;
-}
 
 /* 复选框样式 */
 .checkbox-input {
@@ -1522,35 +1065,7 @@ const alignVertical = (alignment: 'top' | 'middle' | 'bottom') => {
   cursor: pointer;
 }
 
-/* 缩放输入框样式 */
-.scale-input-box {
-  background: #444;
-  border: 1px solid #666;
-  border-radius: 0; /* 移除圆角，由包装器控制 */
-  border-right: none; /* 移除右边框，与按钮连接 */
-  color: #fff;
-  font-size: 11px;
-  padding: 2px 4px;
-  width: 60px; /* 固定宽度 */
-  text-align: center;
-  flex: 0 0 auto;
-}
 
-.scale-input-box:focus {
-  outline: none;
-  border-color: #4caf50;
-}
-
-/* 隐藏所有数字输入框的默认箭头 */
-.scale-input-box::-webkit-outer-spin-button,
-.scale-input-box::-webkit-inner-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
-}
-
-.scale-input-box[type='number'] {
-  -moz-appearance: textfield;
-}
 
 .scale-controls,
 .rotation-controls,
@@ -1559,14 +1074,6 @@ const alignVertical = (alignment: 'top' | 'middle' | 'bottom') => {
   align-items: center;
   gap: 6px;
   flex: 1;
-}
-
-/* 让数字输入框包装器在这些控件中保持固定宽度，滑杆占满剩余空间 */
-.scale-controls .number-input-wrapper,
-.rotation-controls .number-input-wrapper,
-.opacity-controls .number-input-wrapper {
-  flex: 0 0 auto;
-  width: 80px; /* 固定宽度 */
 }
 
 .scale-slider,
@@ -1600,48 +1107,6 @@ const alignVertical = (alignment: 'top' | 'middle' | 'bottom') => {
   border-radius: 50%;
   cursor: pointer;
   border: none;
-}
-
-.scale-value,
-.rotation-value,
-.opacity-value {
-  font-size: 11px;
-  color: #fff;
-  min-width: 40px;
-  text-align: right;
-}
-
-.action-buttons {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.action-btn {
-  background: #555;
-  border: none;
-  border-radius: 4px;
-  color: white;
-  padding: 8px 12px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  font-size: 12px;
-  transition: background-color 0.2s;
-}
-
-.action-btn:hover {
-  background: #666;
-}
-
-.action-btn.danger {
-  background: #f44336;
-}
-
-.action-btn.danger:hover {
-  background: #d32f2f;
 }
 
 /* 分辨率控件样式 */
@@ -1703,32 +1168,6 @@ const alignVertical = (alignment: 'top' | 'middle' | 'bottom') => {
   color: #ccc;
   font-weight: bold;
   margin: 0 4px;
-}
-
-/* 调试按钮样式 */
-.debug-button {
-  width: 100%;
-  padding: 8px 12px;
-  background: linear-gradient(135deg, #ff6b6b, #ee5a24);
-  color: white;
-  border: none;
-  border-radius: 6px;
-  font-size: 12px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: 0 2px 4px rgba(255, 107, 107, 0.3);
-}
-
-.debug-button:hover {
-  background: linear-gradient(135deg, #ff5252, #e55100);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(255, 107, 107, 0.4);
-}
-
-.debug-button:active {
-  transform: translateY(0);
-  box-shadow: 0 2px 4px rgba(255, 107, 107, 0.3);
 }
 
 /* 自定义滚动条样式 */
