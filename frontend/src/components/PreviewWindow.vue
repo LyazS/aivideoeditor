@@ -1,14 +1,14 @@
 <template>
   <div class="preview-window">
     <div class="video-container">
-      <!-- 多轨道视频渲染器 -->
-      <MultiTrackVideoRenderer />
+      <!-- WebAV渲染器 -->
+      <WebAVRenderer />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import MultiTrackVideoRenderer from './MultiTrackVideoRenderer.vue'
+import WebAVRenderer from './WebAVRenderer.vue'
 </script>
 
 <style scoped>

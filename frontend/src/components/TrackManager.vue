@@ -100,7 +100,7 @@
 
 <script setup lang="ts">
 import { ref, computed, nextTick } from 'vue'
-import { useVideoStore } from '../stores/counter'
+import { useVideoStore } from '../stores/videostore'
 
 const videoStore = useVideoStore()
 
@@ -134,7 +134,7 @@ function toggleMute(trackId: number) {
   videoStore.toggleTrackMute(trackId)
 }
 
-async function startRename(track: any) {
+async function startRename(track: { id: number; name: string }) {
   editingTrackId.value = track.id
   editingTrackName.value = track.name
   await nextTick()

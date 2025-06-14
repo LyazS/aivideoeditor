@@ -29,9 +29,11 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { useVideoStore } from '../stores/counter'
+import { useVideoStore } from '../stores/videostore'
+import { useWebAVControls, isWebAVReady } from '../composables/useWebAVControls'
 
 const videoStore = useVideoStore()
+const webAVControls = useWebAVControls()
 const scaleContainer = ref<HTMLElement>()
 const containerWidth = ref(800)
 
@@ -101,8 +103,6 @@ const timeMarks = computed((): TimeMark[] => {
   const endTime = Math.min(calculatedEndTime, videoStore.maxVisibleDuration)
 
   // 生成刻度标记（基于可见范围，不受当前内容长度限制）
-  const startMark = Math.floor(startTime / minorInterval) * minorInterval
-  const endMark = Math.ceil(endTime / minorInterval) * minorInterval
 
   // 计算刻度线的最小像素间距，确保不会过于密集
   const minPixelSpacing = 15 // 最小15像素间距
@@ -191,6 +191,11 @@ function handleClick(event: MouseEvent) {
   if (isDraggingPlayhead.value) return
   if (!scaleContainer.value) return
 
+  // 暂停播放以便进行时间跳转
+  if (isWebAVReady() && videoStore.isPlaying) {
+    webAVControls.pause()
+  }
+
   const rect = scaleContainer.value.getBoundingClientRect()
   const clickX = event.clientX - rect.left
   const newTime = videoStore.pixelToTime(clickX, containerWidth.value)
@@ -205,6 +210,11 @@ function handleClick(event: MouseEvent) {
 function startDragPlayhead(event: MouseEvent) {
   event.preventDefault()
   event.stopPropagation()
+
+  // 暂停播放以便进行播放头拖拽
+  if (isWebAVReady() && videoStore.isPlaying) {
+    webAVControls.pause()
+  }
 
   isDraggingPlayhead.value = true
 

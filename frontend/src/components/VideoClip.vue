@@ -17,7 +17,7 @@
       <div v-if="showDetails" class="clip-thumbnail">
         <video
           ref="thumbnailVideo"
-          :src="clip.url"
+          :src="mediaItem?.url"
           @loadedmetadata="generateThumbnail"
           muted
           preload="metadata"
@@ -27,16 +27,16 @@
 
       <!-- 详细信息 - 只在片段足够宽时显示 -->
       <div v-if="showDetails" class="clip-info">
-        <div class="clip-name">{{ clip.name }}</div>
-        <div class="clip-duration">{{ formatDuration(clip.duration) }}</div>
-        <div class="clip-speed" v-if="clip.playbackRate && clip.playbackRate !== 1">
-          {{ formatSpeed(clip.playbackRate) }}
+        <div class="clip-name">{{ mediaItem?.name || 'Unknown' }}</div>
+        <div class="clip-duration">{{ formatDuration(timelineDuration) }}</div>
+        <div class="clip-speed" v-if="playbackSpeed !== 1">
+          {{ formatSpeed(playbackSpeed) }}
         </div>
       </div>
 
       <!-- 简化显示 - 片段较窄时只显示时长 -->
       <div v-if="!showDetails" class="clip-simple">
-        <div class="simple-duration">{{ formatDuration(clip.duration) }}</div>
+        <div class="simple-duration">{{ formatDuration(timelineDuration) }}</div>
       </div>
 
       <!-- 调整手柄 -->
@@ -54,25 +54,45 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import type { VideoClip } from '../stores/counter'
-import { useVideoStore } from '../stores/counter'
+import type { TimelineItem, Track } from '../stores/videostore'
+import { useVideoStore } from '../stores/videostore'
+import { useWebAVControls, isWebAVReady } from '../composables/useWebAVControls'
 
 interface Props {
-  clip: VideoClip
-  track?: any
+  timelineItem: TimelineItem
+  track?: Track
   timelineWidth: number
   totalDuration: number
 }
 
 interface Emits {
-  (e: 'update-position', clipId: string, newPosition: number, newTrackId?: number): void
-  (e: 'update-timing', clipId: string, newDuration: number, timelinePosition?: number): void
-  (e: 'remove', clipId: string): void
+  (e: 'update-position', timelineItemId: string, newPosition: number, newTrackId?: number): void
+  (e: 'remove', timelineItemId: string): void
 }
 
 const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
 const videoStore = useVideoStore()
+const webAVControls = useWebAVControls()
+
+// 获取对应的MediaItem
+const mediaItem = computed(() => {
+  return videoStore.getMediaItem(props.timelineItem.mediaItemId)
+})
+
+// 获取时间轴时长
+const timelineDuration = computed(() => {
+  // 直接从timelineItem.timeRange获取，与videostore的同步机制保持一致
+  const timeRange = props.timelineItem.timeRange
+
+  return (timeRange.timelineEndTime - timeRange.timelineStartTime) / 1000000 // 转换为秒
+})
+
+// 获取播放速度
+const playbackSpeed = computed(() => {
+  // 直接从timelineItem.timeRange获取，与videostore的同步机制保持一致
+  return props.timelineItem.timeRange.playbackRate || 1
+})
 
 const thumbnailVideo = ref<HTMLVideoElement>()
 const thumbnailCanvas = ref<HTMLCanvasElement>()
@@ -96,14 +116,18 @@ const tempResizePosition = ref(0) // 临时调整位置
 // 计算片段样式
 const clipStyle = computed(() => {
   const videoStore = useVideoStore()
+  // 直接从timelineItem.timeRange获取，与videostore的同步机制保持一致
+  const timeRange = props.timelineItem.timeRange
 
   // 在拖拽或调整大小时使用临时值，否则使用实际值
   const position = isDragging.value
     ? tempPosition.value
     : isResizing.value
       ? tempResizePosition.value
-      : props.clip.timelinePosition
-  const duration = isResizing.value ? tempDuration.value : props.clip.duration
+      : timeRange.timelineStartTime / 1000000 // 转换为秒
+  const duration = isResizing.value
+    ? tempDuration.value
+    : (timeRange.timelineEndTime - timeRange.timelineStartTime) / 1000000 // 转换为秒
 
   const left = videoStore.timeToPixel(position, props.timelineWidth)
   const endTime = position + duration
@@ -121,13 +145,18 @@ const clipStyle = computed(() => {
 
 // 判断是否应该显示详细信息（当片段足够宽时）
 const showDetails = computed(() => {
+  // 直接从timelineItem.timeRange获取，与videostore的同步机制保持一致
+  const timeRange = props.timelineItem.timeRange
+
   // 在拖拽或调整大小时使用临时值，否则使用实际值
   const position = isDragging.value
     ? tempPosition.value
     : isResizing.value
       ? tempResizePosition.value
-      : props.clip.timelinePosition
-  const duration = isResizing.value ? tempDuration.value : props.clip.duration
+      : timeRange.timelineStartTime / 1000000 // 转换为秒
+  const duration = isResizing.value
+    ? tempDuration.value
+    : (timeRange.timelineEndTime - timeRange.timelineStartTime) / 1000000 // 转换为秒
 
   const endTime = position + duration
   const left = videoStore.timeToPixel(position, props.timelineWidth)
@@ -136,19 +165,32 @@ const showDetails = computed(() => {
   return width >= 100 // 宽度大于100px时显示详细信息
 })
 
-// 检查当前片段是否与同轨道的其他片段重叠
+// 检查当前时间轴项目是否与同轨道的其他项目重叠
 const isOverlapping = computed(() => {
-  return videoStore.clips.some(
-    (otherClip) =>
-      otherClip.id !== props.clip.id &&
-      otherClip.trackId === props.clip.trackId &&
-      videoStore.isOverlapping(props.clip, otherClip),
-  )
+  const currentItem = props.timelineItem
+  // 直接从timelineItem.timeRange获取，与videostore的同步机制保持一致
+  const currentRange = currentItem.timeRange
+  const currentStart = currentRange.timelineStartTime / 1000000 // 转换为秒
+  const currentEnd = currentRange.timelineEndTime / 1000000
+
+  return videoStore.timelineItems.some((otherItem) => {
+    if (otherItem.id === currentItem.id || otherItem.trackId !== currentItem.trackId) {
+      return false // 跳过自己和不同轨道的项目
+    }
+
+    // 同样从timelineItem.timeRange获取其他项目的时间范围
+    const otherRange = otherItem.timeRange
+    const otherStart = otherRange.timelineStartTime / 1000000
+    const otherEnd = otherRange.timelineEndTime / 1000000
+
+    // 检查是否重叠
+    return !(currentEnd <= otherStart || otherEnd <= currentStart)
+  })
 })
 
 // 检查当前片段是否被选中
 const isSelected = computed(() => {
-  return videoStore.selectedClipId === props.clip.id
+  return videoStore.selectedTimelineItemId === props.timelineItem.id
 })
 
 function formatDuration(seconds: number): string {
@@ -191,22 +233,27 @@ function selectClip(event: MouseEvent) {
   // 如果正在拖拽或调整大小，不处理选中
   if (isDragging.value || isResizing.value) return
 
-  videoStore.selectClip(props.clip.id)
+  videoStore.selectTimelineItem(props.timelineItem.id)
   event.stopPropagation()
 }
 
 function startDrag(event: MouseEvent) {
   if (isResizing.value) return
 
+  // 暂停播放以便进行编辑
+  if (isWebAVReady() && videoStore.isPlaying) {
+    webAVControls.pause()
+  }
+
   // 选中当前片段
-  videoStore.selectClip(props.clip.id)
+  videoStore.selectTimelineItem(props.timelineItem.id)
 
   isDragging.value = true
   dragStartX.value = event.clientX
   dragStartY.value = event.clientY
-  dragStartPosition.value = props.clip.timelinePosition
-  tempPosition.value = props.clip.timelinePosition // 初始化临时位置
-  tempTrackId.value = props.clip.trackId // 初始化临时轨道ID
+  dragStartPosition.value = props.timelineItem.timeRange.timelineStartTime / 1000000 // 转换为秒
+  tempPosition.value = props.timelineItem.timeRange.timelineStartTime / 1000000 // 初始化临时位置
+  tempTrackId.value = props.timelineItem.trackId // 初始化临时轨道ID
 
   document.addEventListener('mousemove', handleDrag)
   document.addEventListener('mouseup', stopDrag)
@@ -226,7 +273,7 @@ function handleDrag(event: MouseEvent) {
   const newTime = videoStore.pixelToTime(newPixel, props.timelineWidth)
 
   const newPosition = Math.max(0, newTime)
-  const maxPosition = props.totalDuration - props.clip.duration
+  const maxPosition = props.totalDuration - timelineDuration.value
 
   // 计算新的轨道ID（基于Y坐标变化）
   const newTrackId = getTrackIdFromDelta(deltaY)
@@ -239,9 +286,9 @@ function handleDrag(event: MouseEvent) {
 // 根据Y坐标变化确定目标轨道
 function getTrackIdFromDelta(deltaY: number): number {
   const tracks = videoStore.tracks
-  const currentTrackIndex = tracks.findIndex((t) => t.id === props.clip.trackId)
+  const currentTrackIndex = tracks.findIndex((t) => t.id === props.timelineItem.trackId)
 
-  if (currentTrackIndex === -1) return props.clip.trackId
+  if (currentTrackIndex === -1) return props.timelineItem.trackId
 
   // 计算轨道变化（每80px为一个轨道高度）
   const trackChange = Math.round(deltaY / 80)
@@ -253,8 +300,8 @@ function getTrackIdFromDelta(deltaY: number): number {
 function stopDrag() {
   if (isDragging.value) {
     // 只在拖拽结束时更新 store，避免拖拽过程中的频繁更新
-    const newTrackId = tempTrackId.value !== props.clip.trackId ? tempTrackId.value : undefined
-    emit('update-position', props.clip.id, tempPosition.value, newTrackId)
+    const newTrackId = tempTrackId.value !== props.timelineItem.trackId ? tempTrackId.value : undefined
+    emit('update-position', props.timelineItem.id, tempPosition.value, newTrackId)
   }
 
   isDragging.value = false
@@ -263,15 +310,24 @@ function stopDrag() {
 }
 
 function startResize(direction: 'left' | 'right', event: MouseEvent) {
+  // 暂停播放以便进行编辑
+  if (isWebAVReady() && videoStore.isPlaying) {
+    webAVControls.pause()
+  }
+
   isResizing.value = true
   resizeDirection.value = direction
   resizeStartX.value = event.clientX
-  resizeStartDuration.value = props.clip.duration
-  resizeStartPosition.value = props.clip.timelinePosition
+
+  // 直接从timelineItem.timeRange获取，与videostore的同步机制保持一致
+  const timeRange = props.timelineItem.timeRange
+
+  resizeStartDuration.value = (timeRange.timelineEndTime - timeRange.timelineStartTime) / 1000000 // 转换为秒
+  resizeStartPosition.value = timeRange.timelineStartTime / 1000000 // 转换为秒
 
   // 初始化临时值
-  tempDuration.value = props.clip.duration
-  tempResizePosition.value = props.clip.timelinePosition
+  tempDuration.value = resizeStartDuration.value
+  tempResizePosition.value = resizeStartPosition.value
 
   document.addEventListener('mousemove', handleResize)
   document.addEventListener('mouseup', stopResize)
@@ -283,12 +339,15 @@ function handleResize(event: MouseEvent) {
   if (!isResizing.value || !resizeDirection.value) return
 
   const deltaX = event.clientX - resizeStartX.value
+  const mediaItem = videoStore.getMediaItem(props.timelineItem.mediaItemId)
+
+  if (!mediaItem) return
 
   let newDuration = resizeStartDuration.value
   let newTimelinePosition = resizeStartPosition.value
 
   if (resizeDirection.value === 'left') {
-    // 拖拽左边把柄：调整时长和时间轴位置
+    // 拖拽左边把柄：调整开始时间和时长
     const currentLeftPixel = videoStore.timeToPixel(resizeStartPosition.value, props.timelineWidth)
     const newLeftPixel = currentLeftPixel + deltaX
     const newLeftTime = videoStore.pixelToTime(newLeftPixel, props.timelineWidth)
@@ -305,9 +364,9 @@ function handleResize(event: MouseEvent) {
     newDuration = newRightTime - resizeStartPosition.value
   }
 
-  // 确保最小时长（0.01秒）和最大时长
+  // 确保最小时长（0.01秒）和最大时长（原始素材时长的10倍）
   const minDuration = 0.01
-  const maxDuration = props.clip.originalDuration * 100 // 最多可以拉伸到100倍长度
+  const maxDuration = mediaItem.duration * 10
   newDuration = Math.max(minDuration, Math.min(newDuration, maxDuration))
 
   // 只更新临时值，不触发 store 更新
@@ -317,8 +376,45 @@ function handleResize(event: MouseEvent) {
 
 function stopResize() {
   if (isResizing.value) {
-    // 只在调整结束时更新 store，避免调整过程中的频繁更新
-    emit('update-timing', props.clip.id, tempDuration.value, tempResizePosition.value)
+    // 更新CustomVisibleSprite的时间范围
+    const sprite = props.timelineItem.sprite
+    const mediaItem = videoStore.getMediaItem(props.timelineItem.mediaItemId)
+
+    if (mediaItem) {
+      // 计算新的时间范围
+      const newTimelineStartTime = tempResizePosition.value * 1000000 // 转换为微秒
+      const newTimelineEndTime = (tempResizePosition.value + tempDuration.value) * 1000000 // 转换为微秒
+
+      // 验证时间范围的有效性
+      if (newTimelineEndTime <= newTimelineStartTime) {
+        console.error('❌ 无效的时间范围:', {
+          start: newTimelineStartTime,
+          end: newTimelineEndTime,
+          duration: tempDuration.value,
+          position: tempResizePosition.value
+        })
+        return
+      }
+
+      console.log('🔧 调整大小 - 设置时间范围:', {
+        clipStartTime: 0,
+        clipEndTime: mediaItem.duration * 1000000,
+        timelineStartTime: newTimelineStartTime,
+        timelineEndTime: newTimelineEndTime,
+        duration: tempDuration.value
+      })
+
+      // 更新CustomVisibleSprite的时间范围
+      sprite.setTimeRange({
+        clipStartTime: 0,
+        clipEndTime: mediaItem.duration * 1000000,
+        timelineStartTime: newTimelineStartTime,
+        timelineEndTime: newTimelineEndTime
+      })
+
+      // 从sprite获取更新后的完整timeRange（包含自动计算的effectiveDuration）
+      props.timelineItem.timeRange = sprite.getTimeRange()
+    }
   }
 
   isResizing.value = false
@@ -347,14 +443,24 @@ function hideContextMenu() {
 }
 
 function removeClip() {
-  emit('remove', props.clip.id)
+  emit('remove', props.timelineItem.id)
   hideContextMenu()
 }
 
-function duplicateClip() {
-  // TODO: 实现片段复制功能
-  console.log('Duplicate clip:', props.clip.id)
+async function duplicateClip() {
+  console.log('Duplicate timeline item:', props.timelineItem.id)
   hideContextMenu()
+
+  try {
+    const newItemId = await videoStore.duplicateTimelineItem(props.timelineItem.id)
+    if (newItemId) {
+      console.log('✅ 时间轴项目复制成功，新项目ID:', newItemId)
+    } else {
+      console.error('❌ 时间轴项目复制失败')
+    }
+  } catch (error) {
+    console.error('❌ 复制时间轴项目时出错:', error)
+  }
 }
 
 onMounted(() => {
