@@ -84,6 +84,14 @@
                   <div class="speed-divider" style="left: 60%"></div>
                   <div class="speed-divider" style="left: 80%"></div>
                 </div>
+                <!-- 分段标签 -->
+                <div class="speed-labels">
+                  <span class="speed-label" style="left: 10%">0.1-1x</span>
+                  <span class="speed-label" style="left: 30%">1-2x</span>
+                  <span class="speed-label" style="left: 50%">2-5x</span>
+                  <span class="speed-label" style="left: 70%">5-10x</span>
+                  <span class="speed-label" style="left: 90%">10-100x</span>
+                </div>
               </div>
               <input
                 :value="speedInputValue"
@@ -1130,44 +1138,5 @@ const alignVertical = (alignment: 'top' | 'middle' | 'bottom') => {
 
 ::-webkit-scrollbar-corner {
   background: #1a1a1a;
-}
-
-/* 对齐控制样式 */
-.alignment-controls {
-  display: flex;
-  gap: 4px;
-  flex: 1;
-}
-
-.align-btn {
-  background: #555;
-  border: 1px solid #666;
-  border-radius: 4px;
-  color: #ccc;
-  padding: 4px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s;
-  flex: 1;
-  min-width: 28px;
-  height: 24px;
-}
-
-.align-btn:hover {
-  background: #666;
-  color: #fff;
-  border-color: #777;
-}
-
-.align-btn:active {
-  background: #777;
-  transform: translateY(1px);
-}
-
-.align-btn svg {
-  width: 14px;
-  height: 14px;
 }
 </style>
