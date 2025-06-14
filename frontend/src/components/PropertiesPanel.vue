@@ -155,17 +155,17 @@
                 :value="uniformScale"
                 @input="(e) => updateUniformScale((e.target as HTMLInputElement).valueAsNumber)"
                 type="range"
-                min="0.1"
-                max="10"
+                min="0.01"
+                max="5"
                 step="0.01"
                 class="scale-slider"
               />
               <NumberInput
                 :model-value="uniformScale"
                 @change="updateUniformScale"
-                :min="0.1"
-                :max="10"
-                :step="0.1"
+                :min="0.01"
+                :max="5"
+                :step="0.01"
                 :precision="2"
                 :input-style="scaleInputStyle"
               />
@@ -181,17 +181,17 @@
                   :value="scaleX"
                   @input="(e) => setScaleX((e.target as HTMLInputElement).valueAsNumber)"
                   type="range"
-                  min="0.1"
-                  max="10"
+                  min="0.01"
+                  max="5"
                   step="0.01"
                   class="scale-slider"
                 />
                 <NumberInput
                   :model-value="scaleX"
                   @change="setScaleX"
-                  :min="0.1"
-                  :max="10"
-                  :step="0.1"
+                  :min="0.01"
+                  :max="5"
+                  :step="0.01"
                   :precision="2"
                   :input-style="scaleInputStyle"
                 />
@@ -204,17 +204,17 @@
                   :value="scaleY"
                   @input="(e) => setScaleY((e.target as HTMLInputElement).valueAsNumber)"
                   type="range"
-                  min="0.1"
-                  max="10"
+                  min="0.01"
+                  max="5"
                   step="0.01"
                   class="scale-slider"
                 />
                 <NumberInput
                   :model-value="scaleY"
                   @change="setScaleY"
-                  :min="0.1"
-                  :max="10"
-                  :step="0.1"
+                  :min="0.01"
+                  :max="5"
+                  :step="0.01"
                   :precision="2"
                   :input-style="scaleInputStyle"
                 />
@@ -222,37 +222,11 @@
             </div>
           </template>
 
-          <!-- 分辨率控制 -->
+          <!-- 分辨率显示 -->
           <div class="property-item">
             <label>分辨率</label>
-            <div class="resolution-controls">
-              <div class="resolution-inputs">
-                <div class="resolution-input-group">
-                  <label class="resolution-label">宽</label>
-                  <input
-                    v-model="tempResolutionWidth"
-                    @blur="confirmResolutionFromInput"
-                    @keyup.enter="confirmResolutionFromInput"
-                    type="number"
-                    min="1"
-                    max="7680"
-                    class="resolution-input"
-                  />
-                </div>
-                <span class="resolution-separator">×</span>
-                <div class="resolution-input-group">
-                  <label class="resolution-label">高</label>
-                  <input
-                    v-model="tempResolutionHeight"
-                    @blur="confirmResolutionFromInput"
-                    @keyup.enter="confirmResolutionFromInput"
-                    type="number"
-                    min="1"
-                    max="4320"
-                    class="resolution-input"
-                  />
-                </div>
-              </div>
+            <div class="resolution-display">
+              {{ currentResolution.width }} × {{ currentResolution.height }}
             </div>
           </div>
         </div>
@@ -414,7 +388,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { computed } from 'vue'
 import { useVideoStore } from '../stores/videostore'
 
 import { uiDegreesToWebAVRadians, webAVRadiansToUIDegrees } from '../utils/rotationTransform'
@@ -482,9 +456,17 @@ const proportionalScale = computed({
   },
 })
 
-// 分辨率相关
-const tempResolutionWidth = ref('1920')
-const tempResolutionHeight = ref('1080')
+// 分辨率相关 - 显示当前选中视频缩放后的分辨率
+const currentResolution = computed(() => {
+  if (!selectedTimelineItem.value) {
+    return { width: 0, height: 0 }
+  }
+  // 直接使用TimelineItem中的size属性，这是缩放后的实际尺寸
+  return {
+    width: Math.round(selectedTimelineItem.value.size.width),
+    height: Math.round(selectedTimelineItem.value.size.height)
+  }
+})
 
 // 等比缩放相关
 const uniformScale = computed(() => scaleX.value) // 使用X缩放值作为统一缩放值
@@ -692,7 +674,7 @@ const updateUniformScale = (newScale: number) => {
 const setScaleX = (value: number) => {
   if (!selectedTimelineItem.value || !selectedMediaItem.value) return
   const originalResolution = videoStore.getVideoOriginalResolution(selectedMediaItem.value.id)
-  const newScaleX = Math.max(0.1, Math.min(10, value))
+  const newScaleX = Math.max(0.01, Math.min(5, value))
   const newSize = {
     width: originalResolution.width * newScaleX,
     height: selectedTimelineItem.value.size.height // 保持Y尺寸不变
@@ -704,7 +686,7 @@ const setScaleX = (value: number) => {
 const setScaleY = (value: number) => {
   if (!selectedTimelineItem.value || !selectedMediaItem.value) return
   const originalResolution = videoStore.getVideoOriginalResolution(selectedMediaItem.value.id)
-  const newScaleY = Math.max(0.1, Math.min(10, value))
+  const newScaleY = Math.max(0.01, Math.min(5, value))
   const newSize = {
     width: selectedTimelineItem.value.size.width, // 保持X尺寸不变
     height: originalResolution.height * newScaleY
@@ -732,11 +714,7 @@ const formatDuration = (seconds: number): string => {
   return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}.${ms.toString().padStart(3, '0')}`
 }
 
-// 确认分辨率输入
-const confirmResolutionFromInput = () => {
-  // 分辨率输入确认功能暂未实现
-  console.log('分辨率输入确认功能暂未实现')
-}
+
 
 // 实现对齐功能（基于项目坐标系：中心为原点）
 const alignHorizontal = (alignment: 'left' | 'center' | 'right') => {
@@ -1109,65 +1087,16 @@ const alignVertical = (alignment: 'top' | 'middle' | 'bottom') => {
   border: none;
 }
 
-/* 分辨率控件样式 */
-.resolution-controls {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.resolution-inputs {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.resolution-input-group {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 2px;
-}
-
-.resolution-input-group .resolution-label {
-  font-size: 12px;
-  color: #ccc;
-  margin: 0;
-  min-width: 20px !important;
-  text-align: left;
-}
-
-.resolution-input {
+/* 分辨率显示样式 */
+.resolution-display {
   background: #444;
   border: 1px solid #666;
   border-radius: 4px;
   color: #fff;
-  font-size: 11px;
-  padding: 4px 6px;
-  width: 60px;
+  font-size: 12px;
+  padding: 6px 8px;
   text-align: center;
-}
-
-.resolution-input:focus {
-  outline: none;
-  border-color: #4caf50;
-}
-
-.resolution-input::-webkit-outer-spin-button,
-.resolution-input::-webkit-inner-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
-}
-
-.resolution-input[type='number'] {
-  -moz-appearance: textfield;
-}
-
-.resolution-separator {
-  font-size: 14px;
-  color: #ccc;
-  font-weight: bold;
-  margin: 0 4px;
+  font-family: monospace;
 }
 
 /* 自定义滚动条样式 */
