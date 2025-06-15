@@ -42,7 +42,7 @@ interface Props {
   /** 单位文本 */
   unit?: string
   /** 输入框自定义样式 */
-  inputStyle?: Record<string, any>
+  inputStyle?: Record<string, string | number>
   /** 是否实时更新（input事件），否则只在确认时更新 */
   realtime?: boolean
 }

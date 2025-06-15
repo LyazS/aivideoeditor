@@ -18,8 +18,13 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
-import { useVideoStore } from '../stores/videostore'
+import { useVideoStore, type VideoResolution } from '../stores/videostore'
 import { useWebAVControls, isWebAVReady } from '../composables/useWebAVControls'
+
+// 扩展HTMLElement类型以包含自定义属性
+interface ExtendedHTMLElement extends HTMLElement {
+  _resizeObserver?: ResizeObserver
+}
 
 const videoStore = useVideoStore()
 const webAVControls = useWebAVControls()
@@ -101,7 +106,7 @@ const initializeWebAVCanvas = async (): Promise<void> => {
 /**
  * 重新创建画布（当尺寸变化时）
  */
-const recreateCanvasWithNewSize = async (newResolution: any): Promise<void> => {
+const recreateCanvasWithNewSize = async (newResolution: VideoResolution): Promise<void> => {
   if (!canvasContainer.value) {
     console.error('Canvas container not found')
     return
@@ -218,16 +223,17 @@ const setupResizeObserver = (): void => {
   resizeObserver.observe(rendererContainer.value)
 
   // 保存observer引用以便清理
-  ;(rendererContainer.value as any)._resizeObserver = resizeObserver
+  ;(rendererContainer.value as ExtendedHTMLElement)._resizeObserver = resizeObserver
 }
 
 /**
  * 清理ResizeObserver
  */
 const cleanupResizeObserver = (): void => {
-  if (rendererContainer.value && (rendererContainer.value as any)._resizeObserver) {
-    ;(rendererContainer.value as any)._resizeObserver.disconnect()
-    delete (rendererContainer.value as any)._resizeObserver
+  const container = rendererContainer.value as ExtendedHTMLElement | null
+  if (container && container._resizeObserver) {
+    container._resizeObserver.disconnect()
+    delete container._resizeObserver
   }
 }
 

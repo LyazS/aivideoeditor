@@ -4,6 +4,13 @@ import { MP4Clip } from '@webav/av-cliper'
 import { CustomVisibleSprite } from '../utils/customVisibleSprite'
 import { useVideoStore } from '../stores/videostore'
 
+// 定义播放选项接口
+interface PlayOptions {
+  start: number
+  playbackRate: number
+  end?: number
+}
+
 // 全局WebAV状态 - 确保单例模式
 let globalAVCanvas: AVCanvas | null = null
 const globalError = ref<string | null>(null)
@@ -100,10 +107,10 @@ export function useWebAVControls() {
     })
 
     // 活动精灵变化事件
-    globalAVCanvas.on('activeSpriteChange', (sprite) => {
+    globalAVCanvas.on('activeSpriteChange', (sprite: CustomVisibleSprite | null) => {
       console.log('WebAV: Active sprite changed', sprite)
       // 处理选中状态的变化 - 同步到时间轴选择
-      videoStore.handleAVCanvasSpriteChange(sprite as any)
+      videoStore.handleAVCanvasSpriteChange(sprite)
     })
   }
 
@@ -162,7 +169,7 @@ export function useWebAVControls() {
     const start = (startTime || videoStore.currentTime) * 1000000 // 转换为微秒
 
     // 构建播放参数
-    const playOptions: any = {
+    const playOptions: PlayOptions = {
       start,
       playbackRate: videoStore.playbackRate
     }

@@ -1,10 +1,18 @@
 import { ref, computed, markRaw, reactive, type Raw } from 'vue'
 import { defineStore } from 'pinia'
 import { AVCanvas } from '@webav/av-canvas'
-import { MP4Clip } from '@webav/av-cliper'
+import { MP4Clip, type Rect } from '@webav/av-cliper'
 import { CustomVisibleSprite, type TimeRange } from '../utils/customVisibleSprite'
 import { useWebAVControls } from '../composables/useWebAVControls'
 import { webavToProjectCoords, projectToWebavCoords } from '../utils/coordinateTransform'
+
+// 定义WebAV属性变化事件的类型
+interface PropsChangeEvent {
+  rect?: Partial<Rect>
+  zIndex?: number
+}
+
+
 
 // 素材层：包装MP4Clip和原始文件信息
 export interface MediaItem {
@@ -181,12 +189,7 @@ export const useVideoStore = defineStore('video', () => {
 
   // ==================== 双向数据同步函数 ====================
 
-  /**
-   * 获取 TimelineItem 属性的值（兼容新旧数据结构）
-   */
-  function getTimelineItemValue(value: any): number {
-    return typeof value === 'object' && value !== null && 'value' in value ? value.value : value
-  }
+
 
   /**
    * 同步TimelineItem和sprite的timeRange
@@ -234,7 +237,7 @@ export const useVideoStore = defineStore('video', () => {
 
     // 直接使用WebAV原生的propsChange事件监听器
     // 设置VisibleSprite → TimelineItem 的同步
-    sprite.on('propsChange', (changedProps: any) => {
+    sprite.on('propsChange', (changedProps: PropsChangeEvent) => {
       if (changedProps.rect) {
         const rect = changedProps.rect
 
@@ -278,7 +281,7 @@ export const useVideoStore = defineStore('video', () => {
   }
 
   // ==================== 调试信息函数 ====================
-  function printDebugInfo(operation: string, details?: any) {
+  function printDebugInfo(operation: string, details?: unknown) {
     const timestamp = new Date().toLocaleTimeString()
     console.group(`🎬 [${timestamp}] ${operation}`)
 
@@ -610,7 +613,7 @@ export const useVideoStore = defineStore('video', () => {
       const clonedClip = await webAVControls.cloneMP4Clip(mediaItem.mp4Clip)
 
       // 创建新的CustomVisibleSprite
-      const newSprite = new (sprite.constructor as any)(clonedClip)
+      const newSprite = new CustomVisibleSprite(clonedClip)
 
       // 复制时间范围设置
       newSprite.setTimeRange({
@@ -656,16 +659,16 @@ export const useVideoStore = defineStore('video', () => {
         sprite: markRaw(newSprite),
         // 复制原始项目的sprite属性
         position: {
-          x: getTimelineItemValue(originalItem.position.x),
-          y: getTimelineItemValue(originalItem.position.y)
+          x: originalItem.position.x,
+          y: originalItem.position.y
         },
         size: {
-          width: getTimelineItemValue(originalItem.size.width),
-          height: getTimelineItemValue(originalItem.size.height)
+          width: originalItem.size.width,
+          height: originalItem.size.height
         },
-        rotation: getTimelineItemValue(originalItem.rotation),
-        zIndex: getTimelineItemValue(originalItem.zIndex),
-        opacity: getTimelineItemValue(originalItem.opacity)
+        rotation: originalItem.rotation,
+        zIndex: originalItem.zIndex,
+        opacity: originalItem.opacity
       })
 
       // 更新新sprite的时间轴位置
@@ -764,7 +767,7 @@ export const useVideoStore = defineStore('video', () => {
       const secondClonedClip = await webAVControls.cloneMP4Clip(mediaItem.mp4Clip)
 
       // 创建第一个片段的CustomVisibleSprite
-      const firstSprite = new (sprite.constructor as any)(firstClonedClip)
+      const firstSprite = new CustomVisibleSprite(firstClonedClip)
       firstSprite.setTimeRange({
         clipStartTime: clipStartTime * 1000000,
         clipEndTime: splitClipTime * 1000000,
@@ -791,7 +794,7 @@ export const useVideoStore = defineStore('video', () => {
       })
 
       // 创建第二个片段的CustomVisibleSprite
-      const secondSprite = new (sprite.constructor as any)(secondClonedClip)
+      const secondSprite = new CustomVisibleSprite(secondClonedClip)
       secondSprite.setTimeRange({
         clipStartTime: splitClipTime * 1000000,
         clipEndTime: clipEndTime * 1000000,
@@ -832,16 +835,16 @@ export const useVideoStore = defineStore('video', () => {
         sprite: markRaw(firstSprite),
         // 复制原始项目的sprite属性
         position: {
-          x: getTimelineItemValue(originalItem.position.x),
-          y: getTimelineItemValue(originalItem.position.y)
+          x: originalItem.position.x,
+          y: originalItem.position.y
         },
         size: {
-          width: getTimelineItemValue(originalItem.size.width),
-          height: getTimelineItemValue(originalItem.size.height)
+          width: originalItem.size.width,
+          height: originalItem.size.height
         },
-        rotation: getTimelineItemValue(originalItem.rotation),
-        zIndex: getTimelineItemValue(originalItem.zIndex),
-        opacity: getTimelineItemValue(originalItem.opacity)
+        rotation: originalItem.rotation,
+        zIndex: originalItem.zIndex,
+        opacity: originalItem.opacity
       })
 
       const secondItem: TimelineItem = reactive({
@@ -852,16 +855,16 @@ export const useVideoStore = defineStore('video', () => {
         sprite: markRaw(secondSprite),
         // 复制原始项目的sprite属性
         position: {
-          x: getTimelineItemValue(originalItem.position.x),
-          y: getTimelineItemValue(originalItem.position.y)
+          x: originalItem.position.x,
+          y: originalItem.position.y
         },
         size: {
-          width: getTimelineItemValue(originalItem.size.width),
-          height: getTimelineItemValue(originalItem.size.height)
+          width: originalItem.size.width,
+          height: originalItem.size.height
         },
-        rotation: getTimelineItemValue(originalItem.rotation),
-        zIndex: getTimelineItemValue(originalItem.zIndex),
-        opacity: getTimelineItemValue(originalItem.opacity)
+        rotation: originalItem.rotation,
+        zIndex: originalItem.zIndex,
+        opacity: originalItem.opacity
       })
 
       // 从WebAV画布移除原始sprite
@@ -1147,8 +1150,8 @@ export const useVideoStore = defineStore('video', () => {
       // 更新尺寸时使用中心缩放
       if (transform.size) {
         // 获取当前中心位置（项目坐标系）
-        const currentCenterX = getTimelineItemValue(item.position.x)
-        const currentCenterY = getTimelineItemValue(item.position.y)
+        const currentCenterX = item.position.x
+        const currentCenterY = item.position.y
         const newWidth = transform.size.width
         const newHeight = transform.size.height
 
@@ -1180,8 +1183,8 @@ export const useVideoStore = defineStore('video', () => {
         const webavCoords = projectToWebavCoords(
           transform.position.x,
           transform.position.y,
-          getTimelineItemValue(item.size.width),
-          getTimelineItemValue(item.size.height),
+          item.size.width,
+          item.size.height,
           videoResolution.value.width,
           videoResolution.value.height
         )
