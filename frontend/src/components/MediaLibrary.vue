@@ -87,8 +87,7 @@
 import { ref, markRaw } from 'vue'
 import { useVideoStore } from '../stores/videostore'
 import { useWebAVControls } from '../composables/useWebAVControls'
-
-import type { MediaItem } from '../stores/videostore'
+import type { MediaItem } from '../types/videoStore'
 
 const videoStore = useVideoStore()
 const webAVControls = useWebAVControls()
