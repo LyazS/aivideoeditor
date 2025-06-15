@@ -13,6 +13,7 @@ import {
   getTimelineItemAtTime,
   autoArrangeTimelineItems
 } from './utils/storeUtils'
+import { createMediaModule } from './modules/mediaModule'
 import type {
   PropsChangeEvent,
   MediaItem,
@@ -22,8 +23,10 @@ import type {
 } from '../types/videoTypes'
 
 export const useVideoStore = defineStore('video', () => {
+  // 创建媒体管理模块
+  const mediaModule = createMediaModule()
+
   // 新的两层数据结构
-  const mediaItems = ref<MediaItem[]>([]) // 素材库
   const timelineItems = ref<TimelineItem[]>([]) // 时间轴
 
   const tracks = ref<Track[]>([
@@ -235,64 +238,23 @@ export const useVideoStore = defineStore('video', () => {
 
 
   // ==================== 素材管理方法 ====================
+  // 使用媒体模块的方法，但需要包装以提供额外的依赖
   function addMediaItem(mediaItem: MediaItem) {
-    mediaItems.value.push(mediaItem)
-    printDebugInfo('添加素材到素材库', {
-      mediaItemId: mediaItem.id,
-      name: mediaItem.name,
-      duration: mediaItem.duration,
-      type: mediaItem.type
-    }, mediaItems, timelineItems, tracks)
+    mediaModule.addMediaItem(mediaItem, timelineItems, tracks)
   }
 
   function removeMediaItem(mediaItemId: string) {
-    const index = mediaItems.value.findIndex((item) => item.id === mediaItemId)
-    if (index > -1) {
-      const mediaItem = mediaItems.value[index]
-      const relatedTimelineItems = timelineItems.value.filter(item => item.mediaItemId === mediaItemId)
-
-      // 先正确地移除所有相关的时间轴项目（包括WebAV画布清理）
-      relatedTimelineItems.forEach(timelineItem => {
-        console.log(`🧹 清理时间轴项目: ${timelineItem.id}`)
-
-        // 清理sprite资源
-        try {
-          if (timelineItem.sprite && typeof timelineItem.sprite.destroy === 'function') {
-            timelineItem.sprite.destroy()
-          }
-        } catch (error) {
-          console.warn('清理sprite资源时出错:', error)
-        }
-
-        // 从WebAV画布移除
-        try {
-          const canvas = avCanvas.value
-          if (canvas) {
-            canvas.removeSprite(timelineItem.sprite)
-            console.log(`✅ 从WebAV画布移除sprite: ${timelineItem.id}`)
-          }
-        } catch (error) {
-          console.warn('从WebAV画布移除sprite时出错:', error)
-        }
-      })
-
-      // 从时间轴数组中移除相关项目
-      timelineItems.value = timelineItems.value.filter(item => item.mediaItemId !== mediaItemId)
-
-      // 再移除素材项目
-      mediaItems.value.splice(index, 1)
-
-      printDebugInfo('从素材库删除素材', {
-        mediaItemId,
-        mediaItemName: mediaItem.name,
-        removedTimelineItemsCount: relatedTimelineItems.length,
-        removedTimelineItemIds: relatedTimelineItems.map(item => item.id)
-      }, mediaItems, timelineItems, tracks)
-    }
+    mediaModule.removeMediaItem(
+      mediaItemId,
+      timelineItems,
+      tracks,
+      avCanvas.value,
+      () => {} // 清理回调，目前为空
+    )
   }
 
   function getMediaItem(mediaItemId: string): MediaItem | undefined {
-    return mediaItems.value.find(item => item.id === mediaItemId)
+    return mediaModule.getMediaItem(mediaItemId)
   }
 
   // ==================== 时间轴管理方法 ====================
@@ -314,7 +276,7 @@ export const useVideoStore = defineStore('video', () => {
       mediaItemName: mediaItem?.name || '未知',
       trackId: timelineItem.trackId,
       position: timelineItem.timeRange.timelineStartTime / 1000000
-    }, mediaItems, timelineItems, tracks)
+    }, mediaModule.mediaItems, timelineItems, tracks)
   }
 
   function removeTimelineItem(timelineItemId: string) {
@@ -351,7 +313,7 @@ export const useVideoStore = defineStore('video', () => {
         mediaItemName: mediaItem?.name || '未知',
         trackId: item.trackId,
         position: item.timeRange.timelineStartTime / 1000000
-      }, mediaItems, timelineItems, tracks)
+      }, mediaModule.mediaItems, timelineItems, tracks)
     }
   }
 
@@ -365,11 +327,7 @@ export const useVideoStore = defineStore('video', () => {
 
   // ==================== 素材名称管理 ====================
   function updateMediaItemName(mediaItemId: string, newName: string) {
-    const mediaItem = getMediaItem(mediaItemId)
-    if (mediaItem && newName.trim()) {
-      mediaItem.name = newName.trim()
-      console.log(`素材名称已更新: ${mediaItemId} -> ${newName}`)
-    }
+    mediaModule.updateMediaItemName(mediaItemId, newName)
   }
 
   function updateTimelineItemPosition(timelineItemId: string, newPosition: number, newTrackId?: number) {
@@ -404,7 +362,7 @@ export const useVideoStore = defineStore('video', () => {
         newTrackId: item.trackId,
         positionChanged: oldPosition !== newPosition,
         trackChanged: oldTrackId !== item.trackId
-      }, mediaItems, timelineItems, tracks)
+      }, mediaModule.mediaItems, timelineItems, tracks)
     }
   }
 
@@ -430,7 +388,7 @@ export const useVideoStore = defineStore('video', () => {
         mediaItemName: mediaItem?.name || '未知',
         trackId: item.trackId,
         position: item.timeRange.timelineStartTime / 1000000
-      }, mediaItems, timelineItems, tracks)
+      }, mediaModule.mediaItems, timelineItems, tracks)
     }
   }
 
@@ -607,7 +565,7 @@ export const useVideoStore = defineStore('video', () => {
         mediaItemName: mediaItem?.name || '未知',
         trackId: originalItem.trackId,
         newPosition: newTimelinePosition
-      }, mediaItems, timelineItems, tracks)
+      }, mediaModule.mediaItems, timelineItems, tracks)
 
       // 选中新创建的项目
       selectedTimelineItemId.value = newItem.id
@@ -802,7 +760,7 @@ export const useVideoStore = defineStore('video', () => {
         mediaItemId: originalItem.mediaItemId,
         mediaItemName: mediaItem?.name || '未知',
         trackId: originalItem.trackId
-      }, mediaItems, timelineItems, tracks)
+      }, mediaModule.mediaItems, timelineItems, tracks)
 
       // 清除选中状态
       selectedTimelineItemId.value = null
@@ -1066,76 +1024,19 @@ export const useVideoStore = defineStore('video', () => {
     }
   }
 
-  // 视频元素引用映射（用于获取原始分辨率）
-  const videoElementsMap = new Map<string, HTMLVideoElement>()
-
-  // 设置视频元素引用
+  // ==================== 视频元素管理方法 ====================
+  // 使用媒体模块的视频元素管理方法
   function setVideoElement(clipId: string, videoElement: HTMLVideoElement | null) {
-    if (videoElement) {
-      videoElementsMap.set(clipId, videoElement)
-    } else {
-      videoElementsMap.delete(clipId)
-    }
+    mediaModule.setVideoElement(clipId, videoElement)
   }
 
-  // 获取视频原始分辨率
   function getVideoOriginalResolution(clipId: string): { width: number; height: number } {
-    const videoElement = videoElementsMap.get(clipId)
-    if (videoElement && videoElement.videoWidth > 0 && videoElement.videoHeight > 0) {
-      return {
-        width: videoElement.videoWidth,
-        height: videoElement.videoHeight,
-      }
-    }
-    // 默认分辨率
-    return { width: 1920, height: 1080 }
-  }
-
-  // 计算视频片段在画布中的适应缩放比例
-  function getVideoFitScale(clipId: string): { scaleX: number; scaleY: number; fitScale: number } {
-    const videoElement = videoElementsMap.get(clipId)
-    if (!videoElement || videoElement.videoWidth === 0 || videoElement.videoHeight === 0) {
-      return { scaleX: 1, scaleY: 1, fitScale: 1 }
-    }
-
-    const videoWidth = videoElement.videoWidth
-    const videoHeight = videoElement.videoHeight
-    const canvasWidth = videoResolution.value.width
-    const canvasHeight = videoResolution.value.height
-
-    // 计算适应画布的缩放比例
-    const scaleX = canvasWidth / videoWidth
-    const scaleY = canvasHeight / videoHeight
-
-    // 选择较小的缩放比例以确保视频完全适应画布
-    const fitScale = Math.min(scaleX, scaleY)
-
-    return { scaleX, scaleY, fitScale }
-  }
-
-  // 计算视频片段的实际显示尺寸（考虑适应缩放）
-  function getVideoDisplaySize(clipId: string, userScaleX: number, userScaleY: number): { width: number; height: number } {
-    const videoElement = videoElementsMap.get(clipId)
-    if (!videoElement || videoElement.videoWidth === 0 || videoElement.videoHeight === 0) {
-      return { width: videoResolution.value.width, height: videoResolution.value.height }
-    }
-
-    const { fitScale } = getVideoFitScale(clipId)
-
-    // 基础尺寸：视频原始尺寸 * 适应缩放
-    const baseWidth = videoElement.videoWidth * fitScale
-    const baseHeight = videoElement.videoHeight * fitScale
-
-    // 应用用户缩放
-    const displayWidth = baseWidth * userScaleX
-    const displayHeight = baseHeight * userScaleY
-
-    return { width: displayWidth, height: displayHeight }
+    return mediaModule.getVideoOriginalResolution(clipId)
   }
 
   return {
     // 新的两层数据结构
-    mediaItems,
+    mediaItems: mediaModule.mediaItems,
     timelineItems,
     tracks,
     currentTime,
@@ -1207,8 +1108,6 @@ export const useVideoStore = defineStore('video', () => {
     // 视频元素管理
     setVideoElement,
     getVideoOriginalResolution,
-    getVideoFitScale,
-    getVideoDisplaySize,
     // WebAV 相关状态和方法
     avCanvas,
     isWebAVReady,
