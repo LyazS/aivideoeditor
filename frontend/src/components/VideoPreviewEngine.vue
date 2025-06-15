@@ -185,7 +185,7 @@ import PlaybackControls from './PlaybackControls.vue'
 import ClipManagementToolbar from './ClipManagementToolbar.vue'
 import MediaLibrary from './MediaLibrary.vue'
 import PropertiesPanel from './PropertiesPanel.vue'
-import { useVideoStore } from '../stores/videostore'
+import { useVideoStore } from '../stores/videoStore'
 
 const videoStore = useVideoStore()
 

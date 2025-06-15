@@ -60,7 +60,8 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useVideoStore, type TimelineItem } from '../stores/videostore'
+import { useVideoStore } from '../stores/videoStore'
+import type { TimelineItem } from '../types/videoStore'
 
 const videoStore = useVideoStore()
 

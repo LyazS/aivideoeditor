@@ -100,7 +100,7 @@
 
 <script setup lang="ts">
 import { ref, computed, nextTick } from 'vue'
-import { useVideoStore } from '../stores/videostore'
+import { useVideoStore } from '../stores/videoStore'
 
 const videoStore = useVideoStore()
 

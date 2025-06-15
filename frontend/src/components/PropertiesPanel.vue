@@ -389,7 +389,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useVideoStore } from '../stores/videostore'
+import { useVideoStore } from '../stores/videoStore'
 
 import { uiDegreesToWebAVRadians, webAVRadiansToUIDegrees } from '../utils/rotationTransform'
 import NumberInput from './NumberInput.vue'

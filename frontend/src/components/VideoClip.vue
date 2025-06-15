@@ -54,7 +54,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { useVideoStore } from '../stores/videostore'
+import { useVideoStore } from '../stores/videoStore'
 import { useWebAVControls, isWebAVReady } from '../composables/useWebAVControls'
 import type { TimelineItem, Track } from '../types/videoStore'
 

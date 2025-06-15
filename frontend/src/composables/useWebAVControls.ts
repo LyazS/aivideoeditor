@@ -2,7 +2,7 @@ import { ref, markRaw, type Raw } from 'vue'
 import { AVCanvas } from '@webav/av-canvas'
 import { MP4Clip } from '@webav/av-cliper'
 import { CustomVisibleSprite } from '../utils/customVisibleSprite'
-import { useVideoStore } from '../stores/videostore'
+import { useVideoStore } from '../stores/videoStore'
 
 // 定义播放选项接口
 interface PlayOptions {
@@ -107,10 +107,11 @@ export function useWebAVControls() {
     })
 
     // 活动精灵变化事件
-    globalAVCanvas.on('activeSpriteChange', (sprite: CustomVisibleSprite | null) => {
+    globalAVCanvas.on('activeSpriteChange', (sprite) => {
       console.log('WebAV: Active sprite changed', sprite)
       // 处理选中状态的变化 - 同步到时间轴选择
-      videoStore.handleAVCanvasSpriteChange(sprite)
+      // 类型断言：我们知道这里的sprite是CustomVisibleSprite或null
+      videoStore.handleAVCanvasSpriteChange(sprite as CustomVisibleSprite | null)
     })
   }
 
