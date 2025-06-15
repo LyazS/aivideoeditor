@@ -1,12 +1,12 @@
 <template>
   <div class="webav-renderer" ref="rendererContainer">
-    <!-- WebAV画布容器 -->
+    <!-- WebAV画布容器 - 程序化创建并插入 -->
     <div
-      ref="canvasContainer"
-      class="canvas-container"
+      ref="canvasContainerWrapper"
+      class="canvas-container-wrapper"
       :style="canvasContainerStyle"
     >
-      <!-- WebAV会在这里创建canvas元素 -->
+      <!-- WebAV画布容器会被程序化插入到这里 -->
     </div>
 
     <!-- 错误提示 -->
@@ -31,7 +31,7 @@ const videoStore = useVideoStore()
 const webAVControls = useWebAVControls()
 
 // 组件引用
-const canvasContainer = ref<HTMLElement>()
+const canvasContainerWrapper = ref<HTMLElement>()
 const rendererContainer = ref<HTMLElement>()
 
 // 计算属性
@@ -79,20 +79,39 @@ const canvasContainerStyle = computed(() => ({
  * 初始化WebAV画布到当前容器
  */
 const initializeWebAVCanvas = async (): Promise<void> => {
-  if (!canvasContainer.value) {
-    console.error('Canvas container not found')
+  if (!canvasContainerWrapper.value) {
+    console.error('Canvas container wrapper not found')
     return
   }
 
   // 检查是否已经初始化
   const existingCanvas = webAVControls.getAVCanvas()
   if (existingCanvas) {
-    console.log('WebAV Canvas已存在')
+    console.log('WebAV Canvas已存在，将容器插入到wrapper中')
+    const existingContainer = webAVControls.getCanvasContainer()
+    if (existingContainer && !canvasContainerWrapper.value.contains(existingContainer)) {
+      canvasContainerWrapper.value.appendChild(existingContainer)
+    }
     return
   }
 
   try {
-    await webAVControls.initializeCanvas(canvasContainer.value, {
+    // 程序化创建画布容器
+    const canvasContainer = webAVControls.createCanvasContainer({
+      width: canvasDisplaySize.value.width,
+      height: canvasDisplaySize.value.height,
+      className: 'webav-canvas-container',
+      style: {
+        borderRadius: 'var(--border-radius-medium)',
+        boxShadow: 'var(--shadow-lg)'
+      }
+    })
+
+    // 将容器插入到wrapper中
+    canvasContainerWrapper.value.appendChild(canvasContainer)
+
+    // 初始化WebAV画布
+    await webAVControls.initializeCanvas(canvasContainer, {
       width: canvasWidth.value,
       height: canvasHeight.value,
       bgColor: '#000000'
@@ -108,8 +127,8 @@ const initializeWebAVCanvas = async (): Promise<void> => {
  * 重新创建画布（当尺寸变化时）
  */
 const recreateCanvasWithNewSize = async (newResolution: VideoResolution): Promise<void> => {
-  if (!canvasContainer.value) {
-    console.error('Canvas container not found')
+  if (!canvasContainerWrapper.value) {
+    console.error('Canvas container wrapper not found')
     return
   }
 
@@ -121,8 +140,25 @@ const recreateCanvasWithNewSize = async (newResolution: VideoResolution): Promis
 
     console.log('开始重新创建画布...')
 
+    // 清空wrapper中的旧容器
+    canvasContainerWrapper.value.innerHTML = ''
+
+    // 程序化创建新的画布容器
+    const newCanvasContainer = webAVControls.createCanvasContainer({
+      width: canvasDisplaySize.value.width,
+      height: canvasDisplaySize.value.height,
+      className: 'webav-canvas-container',
+      style: {
+        borderRadius: 'var(--border-radius-medium)',
+        boxShadow: 'var(--shadow-lg)'
+      }
+    })
+
+    // 将新容器插入到wrapper中
+    canvasContainerWrapper.value.appendChild(newCanvasContainer)
+
     // 重新创建画布
-    await webAVControls.recreateCanvas(canvasContainer.value, {
+    await webAVControls.recreateCanvas(newCanvasContainer, {
       width: newResolution.width,
       height: newResolution.height,
       bgColor: '#000000'
@@ -133,11 +169,7 @@ const recreateCanvasWithNewSize = async (newResolution: VideoResolution): Promis
     console.error('重新创建画布失败:', err)
     // 如果重新创建失败，尝试简单的重新初始化
     try {
-      await webAVControls.initializeCanvas(canvasContainer.value, {
-        width: newResolution.width,
-        height: newResolution.height,
-        bgColor: '#000000'
-      })
+      await initializeWebAVCanvas()
       console.log('使用简单初始化作为备用方案')
     } catch (fallbackErr) {
       console.error('备用初始化也失败:', fallbackErr)
@@ -282,7 +314,17 @@ defineExpose({
   box-sizing: border-box;
 }
 
-.canvas-container {
+.canvas-container-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+
+/* 程序化创建的WebAV画布容器样式 */
+.canvas-container-wrapper :deep(.webav-canvas-container) {
   position: relative;
   background-color: #000;
   border-radius: var(--border-radius-medium);
@@ -293,7 +335,7 @@ defineExpose({
 }
 
 /* WebAV会在canvas-container中创建canvas元素，我们为其设置样式 */
-.canvas-container :deep(canvas) {
+.canvas-container-wrapper :deep(canvas) {
   display: block;
   width: 100%;
   height: 100%;
@@ -352,7 +394,7 @@ defineExpose({
 
 /* 响应式设计 */
 @media (max-width: 768px) {
-  .canvas-container {
+  .canvas-container-wrapper :deep(.webav-canvas-container) {
     max-width: 100%;
     max-height: 100%;
   }

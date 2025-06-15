@@ -1070,6 +1070,7 @@ export const useVideoStore = defineStore('video', () => {
     getTimelineItemsForTrack,
     updateTimelineItemPosition,
     updateTimelineItemSprite,
+    setupBidirectionalSync,
     selectTimelineItem,
     selectAVCanvasSprite,
     findTimelineItemBySprite,

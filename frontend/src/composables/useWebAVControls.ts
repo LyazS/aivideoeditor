@@ -13,6 +13,7 @@ interface PlayOptions {
 
 // 全局WebAV状态 - 确保单例模式
 let globalAVCanvas: AVCanvas | null = null
+let globalCanvasContainer: HTMLElement | null = null
 const globalError = ref<string | null>(null)
 
 // 画布重新创建时的内容备份
@@ -34,19 +35,65 @@ export function useWebAVControls() {
   const videoStore = useVideoStore()
 
   /**
+   * 程序化创建画布容器DOM元素
+   * @param options 容器配置选项
+   */
+  const createCanvasContainer = (options: {
+    width: number
+    height: number
+    className?: string
+    style?: Partial<CSSStyleDeclaration>
+  }): HTMLElement => {
+    const container = document.createElement('div')
+
+    // 设置基本属性
+    container.className = options.className || 'webav-canvas-container'
+    container.style.width = `${options.width}px`
+    container.style.height = `${options.height}px`
+    container.style.position = 'relative'
+    container.style.backgroundColor = '#000'
+    container.style.borderRadius = '8px'
+    container.style.overflow = 'hidden'
+
+    // 应用自定义样式
+    if (options.style) {
+      Object.assign(container.style, options.style)
+    }
+
+    // 保存全局引用
+    globalCanvasContainer = container
+
+    console.log('Canvas container created programmatically')
+    return container
+  }
+
+  /**
    * 初始化AVCanvas
-   * @param container 容器元素
+   * @param container 容器元素（可选，如果不提供则使用全局容器）
    * @param options 配置选项
    */
   const initializeCanvas = async (
-    container: HTMLElement,
-    options: {
+    container?: HTMLElement,
+    options?: {
       width: number
       height: number
       bgColor: string
     }
   ): Promise<void> => {
     try {
+      // 确定使用的容器
+      const targetContainer = container || globalCanvasContainer
+      if (!targetContainer) {
+        throw new Error('No container available for WebAV Canvas initialization')
+      }
+
+      // 确定使用的配置选项
+      const targetOptions = options || {
+        width: 1920,
+        height: 1080,
+        bgColor: '#000000'
+      }
+
       // 如果已经初始化过，先销毁旧的实例
       if (globalAVCanvas) {
         console.log('Destroying existing WebAV Canvas...')
@@ -57,7 +104,7 @@ export function useWebAVControls() {
       console.log('Initializing WebAV Canvas...')
 
       // 创建AVCanvas实例 - 使用markRaw避免响应式包装
-      globalAVCanvas = markRaw(new AVCanvas(container, options))
+      globalAVCanvas = markRaw(new AVCanvas(targetContainer, targetOptions))
 
       // 将AVCanvas实例设置到store中
       videoStore.setAVCanvas(globalAVCanvas)
@@ -238,6 +285,13 @@ export function useWebAVControls() {
   }
 
   /**
+   * 获取画布容器DOM元素
+   */
+  const getCanvasContainer = (): HTMLElement | null => {
+    return globalCanvasContainer
+  }
+
+  /**
    * 销毁当前画布并备份内容
    */
   const destroyCanvas = async (): Promise<CanvasBackup | null> => {
@@ -349,6 +403,13 @@ export function useWebAVControls() {
             // 更新store中的引用
             videoStore.updateTimelineItemSprite(spriteBackup.timelineItemId, markRaw(newSprite))
 
+            // 🔄 重新设置双向数据同步 - 这是关键步骤！
+            const timelineItem = videoStore.getTimelineItem(spriteBackup.timelineItemId)
+            if (timelineItem) {
+              videoStore.setupBidirectionalSync(timelineItem)
+              console.log(`重新设置双向数据同步: ${spriteBackup.timelineItemId}`)
+            }
+
             console.log(`恢复sprite成功: ${spriteBackup.timelineItemId}`)
           } catch (error) {
             console.error(`恢复sprite失败: ${spriteBackup.timelineItemId}`, error)
@@ -381,6 +442,7 @@ export function useWebAVControls() {
     error: globalError,
 
     // 方法
+    createCanvasContainer,
     initializeCanvas,
     createMP4Clip,
     cloneMP4Clip,
@@ -390,6 +452,7 @@ export function useWebAVControls() {
     captureFrame,
     destroy,
     getAVCanvas,
+    getCanvasContainer,
     destroyCanvas,
     recreateCanvas
   }
