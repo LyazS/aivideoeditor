@@ -146,7 +146,7 @@ import { useVideoStore } from '../stores/videoStore'
 import { useWebAVControls, waitForWebAVReady, isWebAVReady } from '../composables/useWebAVControls'
 import { CustomVisibleSprite } from '../utils/customVisibleSprite'
 import { webavToProjectCoords } from '../utils/coordinateTransform'
-import type { TimelineItem } from '../types/videoStore'
+import type { TimelineItem } from '../types/videoTypes'
 import VideoClip from './VideoClip.vue'
 import TimeScale from './TimeScale.vue'
 

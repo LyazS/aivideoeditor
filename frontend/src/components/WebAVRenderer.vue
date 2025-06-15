@@ -19,7 +19,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useVideoStore } from '../stores/videoStore'
-import type { VideoResolution } from '../types/videoStore'
+import type { VideoResolution } from '../types/videoTypes'
 import { useWebAVControls, isWebAVReady } from '../composables/useWebAVControls'
 
 // 扩展HTMLElement类型以包含自定义属性

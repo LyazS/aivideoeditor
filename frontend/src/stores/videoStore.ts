@@ -10,7 +10,7 @@ import type {
   TimelineItem,
   VideoResolution,
   Track
-} from '../types/videoStore'
+} from '../types/videoTypes'
 
 export const useVideoStore = defineStore('video', () => {
   // 新的两层数据结构
