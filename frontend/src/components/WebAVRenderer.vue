@@ -268,21 +268,19 @@ defineExpose({
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: #1a1a1a;
-  border-radius: 4px;
+  background-color: var(--color-bg-primary);
+  border-radius: var(--border-radius-medium);
   overflow: hidden;
   position: relative;
-  /* 确保容器可以被ResizeObserver正确监听 */
   box-sizing: border-box;
 }
 
 .canvas-container {
   position: relative;
   background-color: #000;
-  border-radius: 4px;
+  border-radius: var(--border-radius-medium);
   overflow: hidden;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-  /* 画布容器会根据计算的尺寸动态调整 */
+  box-shadow: var(--shadow-lg);
   flex-shrink: 0;
   box-sizing: border-box;
 }
@@ -301,10 +299,10 @@ defineExpose({
   left: 50%;
   transform: translate(-50%, -50%);
   background-color: rgba(244, 67, 54, 0.9);
-  color: white;
-  padding: 16px 24px;
-  border-radius: 8px;
-  font-size: 14px;
+  color: var(--color-text-primary);
+  padding: var(--spacing-xl) var(--spacing-xxl);
+  border-radius: var(--border-radius-xlarge);
+  font-size: var(--font-size-lg);
   text-align: center;
   max-width: 80%;
   word-wrap: break-word;
@@ -317,10 +315,10 @@ defineExpose({
   left: 50%;
   transform: translate(-50%, -50%);
   background-color: rgba(0, 0, 0, 0.8);
-  color: white;
-  padding: 16px 24px;
-  border-radius: 8px;
-  font-size: 14px;
+  color: var(--color-text-primary);
+  padding: var(--spacing-xl) var(--spacing-xxl);
+  border-radius: var(--border-radius-xlarge);
+  font-size: var(--font-size-lg);
   text-align: center;
   z-index: 10;
 }
@@ -330,10 +328,10 @@ defineExpose({
   top: 10px;
   right: 10px;
   background-color: rgba(76, 175, 80, 0.9);
-  color: white;
-  padding: 8px 12px;
-  border-radius: 4px;
-  font-size: 12px;
+  color: var(--color-text-primary);
+  padding: var(--spacing-md) var(--spacing-lg);
+  border-radius: var(--border-radius-medium);
+  font-size: var(--font-size-base);
   z-index: 10;
   animation: fadeInOut 3s ease-in-out;
 }

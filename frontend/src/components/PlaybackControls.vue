@@ -102,73 +102,73 @@ function handleSpeedChange(event: Event) {
 .playback-controls {
   display: flex;
   align-items: center;
-  gap: 8px; /* 进一步减小间距以适应压缩 */
-  padding: 0 8px; /* 减小内边距以适应压缩 */
-  background-color: #2a2a2a;
-  border-radius: 6px;
+  gap: var(--spacing-md);
+  padding: 0 var(--spacing-md);
+  background-color: var(--color-bg-secondary);
+  border-radius: var(--border-radius-large);
   height: 100%;
-  min-height: 50px; /* 确保最小高度 */
-  min-width: 200px; /* 设置最小宽度 */
-  overflow: hidden; /* 防止内容溢出 */
-  justify-content: center; /* 居中对齐 */
+  min-height: 50px;
+  min-width: 200px;
+  overflow: hidden;
+  justify-content: center;
 }
 
 .control-buttons {
   display: flex;
   align-items: center;
-  gap: 4px; /* 进一步减小按钮间距 */
-  flex-shrink: 0; /* 防止按钮被压缩 */
+  gap: var(--spacing-xs);
+  flex-shrink: 0;
 }
 
 .control-btn {
   background: none;
   border: none;
-  color: #ccc;
+  color: var(--color-text-secondary);
   cursor: pointer;
-  padding: 4px; /* 进一步减小按钮内边距 */
-  border-radius: 4px;
+  padding: var(--spacing-xs);
+  border-radius: var(--border-radius-medium);
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s;
-  flex-shrink: 0; /* 防止按钮被压缩 */
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
 }
 
 .control-btn:hover {
-  background-color: #444;
-  color: white;
+  background-color: var(--color-bg-quaternary);
+  color: var(--color-text-primary);
 }
 
 .control-btn.primary {
   background: none;
-  color: #ccc;
-  padding: 8px; /* 进一步减小主按钮内边距 */
+  color: var(--color-text-secondary);
+  padding: var(--spacing-md);
 }
 
 .control-btn.primary:hover {
-  background-color: #444;
-  color: white;
+  background-color: var(--color-bg-quaternary);
+  color: var(--color-text-primary);
 }
 
 .speed-section {
   display: flex;
   align-items: center;
-  flex-shrink: 0; /* 防止速度选择器被压缩 */
+  flex-shrink: 0;
 }
 
 .speed-select {
-  background-color: #2a2a2a;
-  color: white;
-  border: 1px solid #555;
-  border-radius: 4px;
-  padding: 4px 8px; /* 增加内边距 */
-  font-size: 13px; /* 增加字体大小 */
+  background-color: var(--color-bg-secondary);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border-primary);
+  border-radius: var(--border-radius-medium);
+  padding: var(--spacing-xs) var(--spacing-md);
+  font-size: var(--font-size-md);
   cursor: pointer;
-  min-width: 65px; /* 增加最小宽度 */
+  min-width: 65px;
 }
 
 .speed-select:focus {
   outline: none;
-  border-color: #ff4444;
+  border-color: var(--color-accent-warning);
 }
 </style>

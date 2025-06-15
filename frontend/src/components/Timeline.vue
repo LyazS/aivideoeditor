@@ -589,8 +589,8 @@ onUnmounted(() => {
 <style scoped>
 .timeline {
   flex: 1;
-  background-color: #2a2a2a;
-  border-radius: 4px;
+  background-color: var(--color-bg-secondary);
+  border-radius: var(--border-radius-medium);
   overflow: hidden;
   position: relative;
   display: flex;
@@ -600,14 +600,14 @@ onUnmounted(() => {
 .timeline-header {
   display: flex;
   flex-shrink: 0;
-  border-bottom: 1px solid #555;
+  border-bottom: 1px solid var(--color-border-primary);
 }
 
 .track-manager-header {
   width: 200px;
-  padding: 12px;
-  background-color: #333;
-  border-right: 1px solid #555;
+  padding: var(--spacing-lg);
+  background-color: var(--color-bg-tertiary);
+  border-right: 1px solid var(--color-border-primary);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -616,68 +616,68 @@ onUnmounted(() => {
 
 .track-manager-header h3 {
   margin: 0;
-  font-size: 14px;
-  color: #fff;
+  font-size: var(--font-size-lg);
+  color: var(--color-text-primary);
 }
 
 .add-track-btn {
-  background: #4caf50;
+  background: var(--color-accent-primary);
   border: none;
-  border-radius: 4px;
-  color: white;
-  padding: 4px;
+  border-radius: var(--border-radius-medium);
+  color: var(--color-text-primary);
+  padding: var(--spacing-xs);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background-color 0.2s;
+  transition: background-color var(--transition-fast);
 }
 
 .add-track-btn:hover {
-  background: #45a049;
+  background: var(--color-accent-primary-hover);
 }
 
 .timeline-scale {
   flex: 1;
-  background-color: #1a1a1a;
+  background-color: var(--color-bg-primary);
 }
 
 .timeline-body {
   flex: 1;
-  overflow-y: auto; /* 允许垂直滚动 */
-  overflow-x: hidden; /* 隐藏水平滚动条，因为我们有自定义的水平滚动 */
+  overflow-y: auto;
+  overflow-x: hidden;
   position: relative;
 }
 
 .track-row {
   display: flex;
-  border-bottom: 1px solid #555;
+  border-bottom: 1px solid var(--color-border-primary);
   min-height: 80px;
 }
 
 .track-controls {
   width: 200px;
-  background-color: #333;
-  border-right: 1px solid #555;
-  padding: 8px 12px;
+  background-color: var(--color-bg-tertiary);
+  border-right: 1px solid var(--color-border-primary);
+  padding: var(--spacing-md) var(--spacing-lg);
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--spacing-md);
   justify-content: center;
   flex-shrink: 0;
   position: relative;
-  z-index: 10; /* 确保轨道操作区域在视频片段上方 */
+  z-index: 10;
 }
 
 .track-content {
   flex: 1;
   position: relative;
-  background-color: #2a2a2a;
-  overflow: hidden; /* 防止视频片段溢出到轨道操作区域 */
+  background-color: var(--color-bg-secondary);
+  overflow: hidden;
 }
 
 .track-content:hover {
-  background-color: #333;
+  background-color: var(--color-bg-tertiary);
 }
 
 .track-name {
@@ -685,69 +685,36 @@ onUnmounted(() => {
 }
 
 .track-name-text {
-  font-size: 12px;
-  color: #fff;
+  font-size: var(--font-size-base);
+  color: var(--color-text-primary);
   cursor: pointer;
   display: block;
-  padding: 2px 4px;
+  padding: 2px var(--spacing-xs);
   border-radius: 2px;
-  transition: background-color 0.2s;
+  transition: background-color var(--transition-fast);
 }
 
 .track-name-text:hover {
-  background-color: #444;
+  background-color: var(--color-bg-quaternary);
 }
 
 .track-name-input {
-  background: #444;
-  border: 1px solid #666;
+  background: var(--color-bg-quaternary);
+  border: 1px solid var(--color-border-secondary);
   border-radius: 2px;
-  color: #fff;
-  font-size: 12px;
-  padding: 2px 4px;
+  color: var(--color-text-primary);
+  font-size: var(--font-size-base);
+  padding: 2px var(--spacing-xs);
   width: 100%;
 }
 
 .track-buttons {
   display: flex;
-  gap: 4px;
+  gap: var(--spacing-xs);
   justify-content: flex-start;
 }
 
-.track-btn {
-  background: #555;
-  border: none;
-  border-radius: 3px;
-  color: #ccc;
-  padding: 4px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s;
-  width: 24px;
-  height: 24px;
-}
-
-.track-btn:hover {
-  background: #666;
-  color: #fff;
-}
-
-.track-btn.active {
-  background: #4caf50;
-  color: #fff;
-}
-
-.track-btn.delete-btn {
-  background: #f44336;
-  color: white; /* 确保删除按钮图标是白色 */
-}
-
-.track-btn.delete-btn:hover {
-  background: #d32f2f;
-  color: white; /* 确保悬停时图标也是白色 */
-}
+/* 使用通用的 track-btn 样式 */
 
 .timeline-grid {
   position: absolute;
@@ -756,7 +723,7 @@ onUnmounted(() => {
   right: 0;
   bottom: 0;
   pointer-events: none;
-  z-index: 0; /* 确保网格线在视频片段下方 */
+  z-index: 0;
 }
 
 .grid-line {
@@ -764,38 +731,13 @@ onUnmounted(() => {
   top: 0;
   bottom: 0;
   width: 1px;
-  background-color: #444;
+  background-color: var(--color-bg-quaternary);
   opacity: 0.5;
 }
 
 .grid-line.frame-line {
-  background-color: #666;
+  background-color: var(--color-border-secondary);
   opacity: 0.3;
   width: 1px;
-}
-
-/* 自定义滚动条样式 */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-
-::-webkit-scrollbar-track {
-  background: #1a1a1a;
-  border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb {
-  background: #555;
-  border-radius: 4px;
-  border: 1px solid #333;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: #666;
-}
-
-::-webkit-scrollbar-corner {
-  background: #1a1a1a;
 }
 </style>

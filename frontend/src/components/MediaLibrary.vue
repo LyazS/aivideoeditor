@@ -279,9 +279,9 @@ const formatFileSize = (bytes: number): string => {
 }
 
 .library-header {
-  padding: 8px 12px;
-  background-color: #333;
-  border-bottom: 1px solid #555;
+  padding: var(--spacing-md) var(--spacing-lg);
+  background-color: var(--color-bg-tertiary);
+  border-bottom: 1px solid var(--color-border-primary);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -290,83 +290,61 @@ const formatFileSize = (bytes: number): string => {
 
 .library-header h3 {
   margin: 0;
-  font-size: 14px;
-  color: #fff;
+  font-size: var(--font-size-lg);
+  color: var(--color-text-primary);
 }
 
 .import-btn {
-  background: #4caf50;
+  background: var(--color-accent-primary);
   border: none;
-  border-radius: 4px;
-  color: white;
-  padding: 6px;
+  border-radius: var(--border-radius-medium);
+  color: var(--color-text-primary);
+  padding: var(--spacing-sm);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background-color 0.2s;
+  transition: background-color var(--transition-fast);
 }
 
 .import-btn:hover {
-  background: #45a049;
+  background: var(--color-accent-primary-hover);
 }
 
 .drop-zone {
   flex: 1;
-  padding: 16px;
-  transition: background-color 0.2s;
+  padding: var(--spacing-xl);
+  transition: background-color var(--transition-fast);
   overflow-y: auto;
 }
 
 .drop-zone.drag-over {
-  background-color: #3a3a3a;
-  border: 2px dashed #4caf50;
+  background-color: var(--color-bg-hover);
+  border: 2px dashed var(--color-accent-primary);
 }
 
-.empty-state {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  color: #888;
-  text-align: center;
-}
-
-.empty-state svg {
-  margin-bottom: 16px;
-  opacity: 0.6;
-}
-
-.empty-state p {
-  margin: 4px 0;
-}
-
-.hint {
-  font-size: 12px;
-  opacity: 0.7;
-}
+/* 使用通用的 empty-state 和 hint 样式 */
 
 .media-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--spacing-md);
 }
 
 .media-item {
-  background-color: #333;
-  border-radius: 6px;
-  padding: 8px;
+  background-color: var(--color-bg-tertiary);
+  border-radius: var(--border-radius-large);
+  padding: var(--spacing-md);
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--spacing-lg);
   cursor: grab;
-  transition: background-color 0.2s;
+  transition: background-color var(--transition-fast);
   position: relative;
 }
 
 .media-item:hover {
-  background-color: #3a3a3a;
+  background-color: var(--color-bg-hover);
 }
 
 .media-item:active {
@@ -377,7 +355,7 @@ const formatFileSize = (bytes: number): string => {
   width: 60px;
   height: 34px;
   background-color: #000;
-  border-radius: 4px;
+  border-radius: var(--border-radius-medium);
   position: relative;
   overflow: hidden;
   flex-shrink: 0;
@@ -394,9 +372,9 @@ const formatFileSize = (bytes: number): string => {
   bottom: 2px;
   right: 2px;
   background-color: rgba(0, 0, 0, 0.8);
-  color: white;
-  font-size: 10px;
-  padding: 1px 4px;
+  color: var(--color-text-primary);
+  font-size: var(--font-size-xs);
+  padding: 1px var(--spacing-xs);
   border-radius: 2px;
   font-family: monospace;
 }
@@ -407,8 +385,8 @@ const formatFileSize = (bytes: number): string => {
 }
 
 .media-name {
-  font-size: 12px;
-  color: #fff;
+  font-size: var(--font-size-base);
+  color: var(--color-text-primary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -416,8 +394,8 @@ const formatFileSize = (bytes: number): string => {
 }
 
 .media-details {
-  font-size: 10px;
-  color: #888;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
 }
 
 .remove-btn {

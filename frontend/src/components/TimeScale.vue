@@ -308,8 +308,8 @@ onUnmounted(() => {
 <style scoped>
 .time-scale {
   height: 40px;
-  background-color: #1a1a1a;
-  border-bottom: 1px solid #444;
+  background-color: var(--color-bg-primary);
+  border-bottom: 1px solid var(--color-bg-quaternary);
   position: relative;
   overflow: hidden;
 }
@@ -330,13 +330,13 @@ onUnmounted(() => {
 
 .mark-line {
   width: 1px;
-  background-color: #666;
+  background-color: var(--color-border-secondary);
   height: 20px;
   margin-top: 20px;
 }
 
 .mark-line.major {
-  background-color: #999;
+  background-color: var(--color-text-hint);
   height: 30px;
   margin-top: 10px;
 }

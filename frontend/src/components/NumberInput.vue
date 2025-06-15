@@ -150,33 +150,15 @@ const handleDecrement = () => {
 </script>
 
 <style scoped>
+/* 使用通用样式，只保留组件特定的样式 */
 .number-input-container {
-  display: flex;
   align-items: stretch;
   position: relative;
-  border-radius: 3px;
-  overflow: hidden;
-}
-
-.number-input {
-  background: #444;
-  border: 1px solid #666;
-  color: #fff;
-  font-size: 12px;
-  padding: 4px 6px;
-  flex: 1;
-  min-width: 0;
-  border-radius: 3px;
 }
 
 .with-controls .number-input {
-  border-radius: 3px 0 0 3px;
+  border-radius: var(--border-radius-small) 0 0 var(--border-radius-small);
   border-right: none;
-}
-
-.number-input:focus {
-  outline: none;
-  border-color: #4caf50;
 }
 
 /* 隐藏默认的数字输入框箭头 */
@@ -190,55 +172,18 @@ const handleDecrement = () => {
   -moz-appearance: textfield;
 }
 
-/* 控制按钮 */
-.number-controls {
-  display: flex;
-  flex-direction: column;
-  width: 18px;
-  flex-shrink: 0;
-}
-
-.number-btn {
-  background: #555;
-  border: 1px solid #666;
-  border-left: none;
-  color: #fff;
-  cursor: pointer;
-  font-size: 8px;
-  line-height: 1;
-  padding: 0;
-  width: 100%;
-  height: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background-color 0.2s;
-  flex: 1;
-}
-
-.number-btn:hover {
-  background: #666;
-}
-
-.number-btn:active {
-  background: #777;
-}
-
 .number-btn-up {
-  border-radius: 0 3px 0 0;
-  border-bottom: 0.5px solid #444;
+  border-radius: 0 var(--border-radius-small) 0 0;
+  border-bottom: 0.5px solid var(--color-bg-quaternary);
 }
 
 .number-btn-down {
-  border-radius: 0 0 3px 0;
-  border-top: 0.5px solid #444;
+  border-radius: 0 0 var(--border-radius-small) 0;
+  border-top: 0.5px solid var(--color-bg-quaternary);
 }
 
 /* 单位文本 */
 .number-unit {
-  font-size: 12px;
-  color: #999;
-  margin-left: 6px;
   white-space: nowrap;
   align-self: center;
 }

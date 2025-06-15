@@ -15,15 +15,14 @@ import WebAVRenderer from './WebAVRenderer.vue'
 .preview-window {
   width: 100%;
   flex: 1;
-  background-color: #2a2a2a; /* 改为灰色背景 */
-  border-radius: 8px;
+  background-color: var(--color-bg-secondary);
+  border-radius: var(--border-radius-xlarge);
   overflow: hidden;
   position: relative;
   display: flex;
   flex-direction: column;
-  border: 2px solid #2a2a2a;
+  border: 2px solid var(--color-bg-secondary);
   box-sizing: border-box;
-  /* 允许极大压缩，适应任何大小 */
   min-width: 150px;
   min-height: 100px;
 }

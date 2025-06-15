@@ -19,11 +19,11 @@
 
         <!-- 左侧分割器 -->
         <div
-          class="vertical-splitter left-splitter"
+          class="splitter vertical left-splitter"
           @mousedown="startLeftResize"
           :class="{ dragging: isLeftDragging }"
         >
-          <div class="vertical-splitter-handle"></div>
+          <div class="splitter-handle"></div>
         </div>
 
         <!-- 中间：预览窗口和控制面板 -->
@@ -56,11 +56,11 @@
 
         <!-- 右侧分割器 -->
         <div
-          class="vertical-splitter right-splitter"
+          class="splitter vertical right-splitter"
           @mousedown="startRightResize"
           :class="{ dragging: isRightDragging }"
         >
-          <div class="vertical-splitter-handle"></div>
+          <div class="splitter-handle"></div>
         </div>
 
         <!-- 右侧：属性面板 -->
@@ -70,7 +70,7 @@
       </div>
 
       <!-- 可拖动的分割器 -->
-      <div class="resizable-splitter" @mousedown="startResize" :class="{ dragging: isDragging }">
+      <div class="splitter horizontal" @mousedown="startResize" :class="{ dragging: isDragging }">
         <div class="splitter-handle"></div>
       </div>
 
@@ -482,23 +482,23 @@ onUnmounted(() => {
   height: 100vh;
   display: flex;
   flex-direction: column;
-  background-color: #1a1a1a;
-  color: white;
+  background-color: var(--color-bg-primary);
+  color: var(--color-text-primary);
 }
 
 .status-bar-container {
-  padding: 6px 6px 0 6px;
+  padding: var(--spacing-sm) var(--spacing-sm) 0 var(--spacing-sm);
   flex-shrink: 0;
 }
 
 .status-bar {
   height: 30px;
-  background-color: #2a2a2a;
-  border-radius: 4px;
+  background-color: var(--color-bg-secondary);
+  border-radius: var(--border-radius-medium);
   display: flex;
   align-items: center;
   flex-shrink: 0;
-  padding: 0 12px;
+  padding: 0 var(--spacing-lg);
 }
 
 .status-content {
@@ -508,8 +508,8 @@ onUnmounted(() => {
 }
 
 .app-title {
-  font-size: 13px;
-  color: #ccc;
+  font-size: var(--font-size-md);
+  color: var(--color-text-secondary);
   font-weight: 500;
   letter-spacing: 0.5px;
 }
@@ -518,64 +518,29 @@ onUnmounted(() => {
   flex: 1;
   display: flex;
   flex-direction: column;
-  padding: 6px;
-  height: calc(100vh - 48px); /* 减去padding和状态栏容器高度 */
+  padding: var(--spacing-sm);
+  height: calc(100vh - 48px);
   overflow: hidden;
 }
 
 .preview-section {
-  /* 三列布局容器 */
   width: 100%;
   height: 100%;
   display: flex;
   flex-direction: row;
   overflow: hidden;
-  min-height: 20%; /* 最小高度 */
+  min-height: 20%;
 }
 
 .media-library-panel {
   flex-shrink: 0;
-  background-color: #2a2a2a;
-  border-radius: 4px;
+  background-color: var(--color-bg-secondary);
+  border-radius: var(--border-radius-medium);
   min-width: 100px;
   max-width: 600px;
 }
 
-.vertical-splitter {
-  width: 8px;
-  background-color: transparent;
-  cursor: ew-resize;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-  transition: background-color 0.2s ease;
-  flex-shrink: 0;
-}
-
-.vertical-splitter:hover {
-  background-color: transparent;
-}
-
-.vertical-splitter.dragging {
-  background-color: transparent;
-}
-
-.vertical-splitter-handle {
-  width: 4px;
-  height: 40px;
-  background-color: #666;
-  border-radius: 2px;
-  transition: background-color 0.2s ease;
-}
-
-.vertical-splitter:hover .vertical-splitter-handle {
-  background-color: #888;
-}
-
-.vertical-splitter.dragging .vertical-splitter-handle {
-  background-color: #fff;
-}
+/* 使用通用的 splitter 样式 */
 
 .preview-center {
   flex: 1;
@@ -583,63 +548,29 @@ onUnmounted(() => {
   flex-direction: column;
   align-items: center;
   gap: 10px;
-  min-width: 200px; /* 减小最小宽度，允许更多压缩 */
+  min-width: 200px;
   overflow: hidden;
-  background-color: #1a1a1a;
+  background-color: var(--color-bg-primary);
 }
 
 .properties-panel-container {
   flex-shrink: 0;
-  background-color: #2a2a2a;
-  border-radius: 4px;
+  background-color: var(--color-bg-secondary);
+  border-radius: var(--border-radius-medium);
   min-width: 100px;
   max-width: 600px;
 }
 
-.resizable-splitter {
-  height: 8px;
-  background-color: transparent;
-  cursor: ns-resize;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-  transition: background-color 0.2s ease;
-  flex-shrink: 0;
-}
-
-.resizable-splitter:hover {
-  background-color: transparent;
-}
-
-.resizable-splitter.dragging {
-  background-color: transparent;
-}
-
-.splitter-handle {
-  width: 40px;
-  height: 4px;
-  background-color: #666;
-  border-radius: 2px;
-  transition: background-color 0.2s ease;
-}
-
-.resizable-splitter:hover .splitter-handle {
-  background-color: #888;
-}
-
-.resizable-splitter.dragging .splitter-handle {
-  background-color: #fff;
-}
+/* 使用通用的 splitter 样式 */
 
 .timeline-section {
-  background-color: #2a2a2a;
-  border-radius: 4px;
-  padding: 4px;
+  background-color: var(--color-bg-secondary);
+  border-radius: var(--border-radius-medium);
+  padding: var(--spacing-xs);
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  min-height: 20%; /* 最小高度 */
+  min-height: 20%;
 }
 
 .timeline-loading {
@@ -648,21 +579,21 @@ onUnmounted(() => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  color: #ccc;
-  gap: 12px;
+  color: var(--color-text-secondary);
+  gap: var(--spacing-lg);
 }
 
 .timeline-loading .loading-spinner {
   width: 30px;
   height: 30px;
-  border: 3px solid #333;
-  border-top: 3px solid #ff4444;
+  border: 3px solid var(--color-bg-tertiary);
+  border-top: 3px solid var(--color-accent-warning);
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }
 
 .timeline-loading p {
-  font-size: 14px;
+  font-size: var(--font-size-lg);
   margin: 0;
 }
 
@@ -672,61 +603,60 @@ onUnmounted(() => {
 }
 
 .controls-section {
-  /* 可压缩的控制面板 */
   height: 50px;
   width: 100%;
-  background-color: #2a2a2a;
-  border-radius: 6px;
+  background-color: var(--color-bg-secondary);
+  border-radius: var(--border-radius-large);
   display: flex;
   align-items: center;
-  padding: 0 8px; /* 减小内边距以适应压缩 */
+  padding: 0 var(--spacing-md);
   flex-shrink: 0;
-  min-width: 200px; /* 设置最小宽度 */
-  overflow: hidden; /* 防止内容溢出 */
+  min-width: 200px;
+  overflow: hidden;
 }
 
 .time-display {
-  color: #ccc;
-  font-size: 12px;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-base);
   font-family: monospace;
-  flex-shrink: 0; /* 防止时间显示被压缩 */
-  min-width: 80px; /* 确保有足够空间显示时间 */
+  flex-shrink: 0;
+  min-width: 80px;
 }
 
 .center-controls {
-  flex: 1; /* 占据中间剩余空间 */
+  flex: 1;
   display: flex;
-  justify-content: center; /* 中间对齐 */
-  background-color: #2a2a2a;
+  justify-content: center;
+  background-color: var(--color-bg-secondary);
 }
 
 .right-controls {
-  min-width: 80px; /* 与左侧时间显示对称 */
+  min-width: 80px;
   flex-shrink: 0;
   display: flex;
   justify-content: flex-end;
   align-items: center;
-  gap: 4px;
+  gap: var(--spacing-xs);
 }
 
 .aspect-ratio-btn {
   background: none;
-  border: 1px solid #555;
-  color: #ccc;
+  border: 1px solid var(--color-border-primary);
+  color: var(--color-text-secondary);
   cursor: pointer;
-  padding: 4px 8px;
-  border-radius: 4px;
+  padding: var(--spacing-xs) var(--spacing-md);
+  border-radius: var(--border-radius-medium);
   display: flex;
   align-items: center;
-  gap: 4px;
-  font-size: 11px;
-  transition: all 0.2s;
+  gap: var(--spacing-xs);
+  font-size: var(--font-size-sm);
+  transition: all var(--transition-fast);
 }
 
 .aspect-ratio-btn:hover {
-  background-color: #444;
-  border-color: #666;
-  color: white;
+  background-color: var(--color-bg-quaternary);
+  border-color: var(--color-border-secondary);
+  color: var(--color-text-primary);
 }
 
 .aspect-ratio-text {
@@ -955,28 +885,5 @@ onUnmounted(() => {
   background-color: #ff6666;
 }
 
-/* 自定义滚动条样式 */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-
-::-webkit-scrollbar-track {
-  background: #1a1a1a;
-  border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb {
-  background: #555;
-  border-radius: 4px;
-  border: 1px solid #333;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: #666;
-}
-
-::-webkit-scrollbar-corner {
-  background: #1a1a1a;
-}
+/* 滚动条样式已在全局样式中定义 */
 </style>

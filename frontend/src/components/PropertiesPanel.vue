@@ -796,124 +796,48 @@ const alignVertical = (alignment: 'top' | 'middle' | 'bottom') => {
 .properties-panel {
   width: 100%;
   height: 100%;
-  background-color: #2a2a2a;
-  border-radius: 4px;
+  background-color: var(--color-bg-secondary);
+  border-radius: var(--border-radius-medium);
   display: flex;
   flex-direction: column;
   overflow: hidden;
 }
 
-.panel-header {
-  padding: 8px 12px;
-  background-color: #333;
-  border-bottom: 1px solid #555;
-  flex-shrink: 0;
-}
-
-.panel-header h3 {
-  margin: 0;
-  font-size: 14px;
-  color: #fff;
-}
-
-.panel-content {
-  flex: 1;
-  overflow-y: auto;
-}
-
-.empty-state {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  color: #888;
-  text-align: center;
-  padding: 20px;
-}
-
-.empty-state svg {
-  margin-bottom: 16px;
-  opacity: 0.6;
-}
-
-.empty-state p {
-  margin: 4px 0;
-}
-
-.hint {
-  font-size: 12px;
-  opacity: 0.7;
-}
+/* 使用通用的 panel-header, panel-content, empty-state, hint 样式 */
 
 .properties-content {
-  padding: 8px 12px;
+  padding: var(--spacing-md) var(--spacing-lg);
 }
 
-.property-section {
-  margin-bottom: 12px;
-}
-
-.property-section h4 {
-  margin: 0 0 8px 0;
-  font-size: 12px;
-  color: #ccc;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  border-bottom: 1px solid #444;
-  padding-bottom: 3px;
-}
-
-.property-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 6px;
-  gap: 6px;
-}
-
-.property-item label {
-  font-size: 12px;
-  color: #aaa;
-  flex-shrink: 0;
-  min-width: 60px;
-}
-
-.property-value {
-  font-size: 12px;
-  color: #fff;
-  text-align: right;
-  word-break: break-all;
-  flex: 1;
-}
+/* 使用通用的 property-section, property-item 样式 */
 
 .property-input {
-  background: #444;
-  border: 1px solid #666;
-  border-radius: 3px;
-  color: #fff;
-  font-size: 12px;
-  padding: 4px 6px;
+  background: var(--color-bg-quaternary);
+  border: 1px solid var(--color-border-secondary);
+  border-radius: var(--border-radius-small);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-base);
+  padding: var(--spacing-xs) var(--spacing-sm);
   flex: 1;
   min-width: 0;
 }
 
 .property-input:focus {
   outline: none;
-  border-color: #4caf50;
+  border-color: var(--color-border-focus);
 }
 
 /* 时长控制样式 */
 .duration-controls {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--spacing-md);
   flex: 1;
 }
 
 .duration-unit {
-  font-size: 12px;
-  color: #999;
+  font-size: var(--font-size-base);
+  color: var(--color-text-hint);
   min-width: 20px;
 }
 
@@ -921,7 +845,7 @@ const alignVertical = (alignment: 'top' | 'middle' | 'bottom') => {
 .speed-controls {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--spacing-md);
   flex: 1;
 }
 
@@ -937,7 +861,7 @@ const alignVertical = (alignment: 'top' | 'middle' | 'bottom') => {
 .segmented-speed-slider {
   width: 100%;
   height: 4px;
-  background: #444;
+  background: var(--color-bg-quaternary);
   border-radius: 2px;
   outline: none;
   cursor: pointer;
@@ -950,7 +874,7 @@ const alignVertical = (alignment: 'top' | 'middle' | 'bottom') => {
   -webkit-appearance: none;
   width: 16px;
   height: 16px;
-  background: #ffffff;
+  background: var(--color-text-primary);
   border-radius: 50%;
   cursor: pointer;
 }
@@ -958,7 +882,7 @@ const alignVertical = (alignment: 'top' | 'middle' | 'bottom') => {
 .segmented-speed-slider::-moz-range-thumb {
   width: 16px;
   height: 16px;
-  background: #ffffff;
+  background: var(--color-text-primary);
   border-radius: 50%;
   border: none;
   cursor: pointer;
@@ -980,19 +904,19 @@ const alignVertical = (alignment: 'top' | 'middle' | 'bottom') => {
   position: absolute;
   width: 1px;
   height: 100%;
-  background: #666;
+  background: var(--color-border-secondary);
   transform: translateX(-50%);
 }
 
 /* 倍速输入框 */
 .speed-input {
-  background: #444;
-  border: 1px solid #666;
-  border-radius: 3px;
-  color: #fff;
-  font-size: 12px;
+  background: var(--color-bg-quaternary);
+  border: 1px solid var(--color-border-secondary);
+  border-radius: var(--border-radius-small);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-base);
   font-weight: 600;
-  padding: 4px 6px;
+  padding: var(--spacing-xs) var(--spacing-sm);
   min-width: 50px;
   max-width: 60px;
   text-align: center;
@@ -1000,7 +924,7 @@ const alignVertical = (alignment: 'top' | 'middle' | 'bottom') => {
 
 .speed-input:focus {
   outline: none;
-  border-color: #ffffff;
+  border-color: var(--color-text-primary);
 }
 
 .speed-input::-webkit-outer-spin-button,
@@ -1015,51 +939,48 @@ const alignVertical = (alignment: 'top' | 'middle' | 'bottom') => {
 .position-controls {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--spacing-md);
   flex: 1;
 }
 
 .position-input-group {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--spacing-xs);
   flex: 1;
 }
 
 .position-label {
-  font-size: 11px;
-  color: #999;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-hint);
   min-width: 12px;
   text-align: center;
 }
-
-
 
 /* 复选框样式 */
 .checkbox-input {
   width: 16px;
   height: 16px;
-  accent-color: #ffffff;
+  accent-color: var(--color-text-primary);
   cursor: pointer;
 }
-
-
 
 .scale-controls,
 .rotation-controls,
 .opacity-controls {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--spacing-sm);
   flex: 1;
 }
 
+/* 使用通用的 slider 样式 */
 .scale-slider,
 .rotation-slider,
 .opacity-slider {
   flex: 1;
   height: 4px;
-  background: #444;
+  background: var(--color-bg-quaternary);
   border-radius: 2px;
   outline: none;
   -webkit-appearance: none;
@@ -1071,7 +992,7 @@ const alignVertical = (alignment: 'top' | 'middle' | 'bottom') => {
   -webkit-appearance: none;
   width: 12px;
   height: 12px;
-  background: #2196f3;
+  background: var(--color-accent-secondary);
   border-radius: 50%;
   cursor: pointer;
 }
@@ -1081,7 +1002,7 @@ const alignVertical = (alignment: 'top' | 'middle' | 'bottom') => {
 .opacity-slider::-moz-range-thumb {
   width: 12px;
   height: 12px;
-  background: #2196f3;
+  background: var(--color-accent-secondary);
   border-radius: 50%;
   cursor: pointer;
   border: none;
@@ -1089,77 +1010,22 @@ const alignVertical = (alignment: 'top' | 'middle' | 'bottom') => {
 
 /* 分辨率显示样式 */
 .resolution-display {
-  background: #444;
-  border: 1px solid #666;
-  border-radius: 4px;
-  color: #fff;
-  font-size: 12px;
-  padding: 6px 8px;
+  background: var(--color-bg-quaternary);
+  border: 1px solid var(--color-border-secondary);
+  border-radius: var(--border-radius-medium);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-base);
+  padding: var(--spacing-sm) var(--spacing-md);
   text-align: center;
   font-family: monospace;
-}
-
-/* 自定义滚动条样式 */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-
-::-webkit-scrollbar-track {
-  background: #1a1a1a;
-  border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb {
-  background: #555;
-  border-radius: 4px;
-  border: 1px solid #333;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: #666;
-}
-
-::-webkit-scrollbar-corner {
-  background: #1a1a1a;
 }
 
 /* 对齐控制样式 */
 .alignment-controls {
   display: flex;
-  gap: 4px;
+  gap: var(--spacing-xs);
   flex: 1;
 }
 
-.align-btn {
-  background: #555;
-  border: 1px solid #666;
-  border-radius: 4px;
-  color: #ccc;
-  padding: 4px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s;
-  flex: 1;
-  min-width: 28px;
-  height: 24px;
-}
-
-.align-btn:hover {
-  background: #666;
-  color: #fff;
-  border-color: #777;
-}
-
-.align-btn:active {
-  background: #777;
-  transform: translateY(1px);
-}
-
-.align-btn svg {
-  width: 14px;
-  height: 14px;
-}
+/* 使用通用的 align-btn 样式 */
 </style>
