@@ -74,10 +74,6 @@ export const useVideoStore = defineStore('video', () => {
   // 编辑设置
   const proportionalScale = ref(true) // 等比缩放设置
 
-  // 音量控制
-  const volume = ref(1) // 音量 0-1
-  const isMuted = ref(false) // 是否静音
-
   // 时间轴缩放和滚动状态
   const zoomLevel = ref(1) // 缩放级别，1为默认，大于1为放大，小于1为缩小
   const scrollOffset = ref(0) // 水平滚动偏移量（像素）
@@ -90,12 +86,6 @@ export const useVideoStore = defineStore('video', () => {
     height: 1080,
     aspectRatio: '16:9',
   })
-
-  // 强制更新计数器，用于触发响应式更新
-  const forceUpdateCounter = ref(0)
-
-  // 全局时间控制器
-  let timeUpdateInterval: number | null = null
 
   // ==================== WebAV 相关状态 ====================
   // WebAV核心对象 - 使用markRaw避免Vue响应式包装
@@ -930,84 +920,15 @@ export const useVideoStore = defineStore('video', () => {
     // 移除自动选中逻辑 - 播放时不自动选中clip
   }
 
-  function startTimeUpdate() {
-    if (timeUpdateInterval) return
 
-    timeUpdateInterval = setInterval(() => {
-      if (isPlaying.value) {
-        const newTime = currentTime.value + 0.05 * playbackRate.value // 每50ms更新一次
-        // 如果有视频片段，播放到最后一个片段结束；如果没有片段，播放到时间轴结束
-        const endTime = contentEndTime.value > 0 ? contentEndTime.value : totalDuration.value
-        if (newTime >= endTime) {
-          stop()
-        } else {
-          setCurrentTime(newTime)
-        }
-      }
-    }, 50) // 50ms间隔，确保流畅播放
-  }
-
-  function stopTimeUpdate() {
-    if (timeUpdateInterval) {
-      clearInterval(timeUpdateInterval)
-      timeUpdateInterval = null
-    }
-  }
-
-  function play() {
-    isPlaying.value = true
-    startTimeUpdate()
-  }
-
-  function pause() {
-    isPlaying.value = false
-    stopTimeUpdate()
-  }
-
-  function stop() {
-    isPlaying.value = false
-    currentTime.value = 0
-    stopTimeUpdate()
-  }
 
   function setPlaybackRate(rate: number) {
     playbackRate.value = rate
   }
 
-  // 音量控制方法
-  function setVolume(newVolume: number) {
-    volume.value = Math.max(0, Math.min(1, newVolume)) // 确保音量在0-1范围内
-    if (volume.value > 0) {
-      isMuted.value = false
-    }
-  }
 
-  function toggleMute() {
-    isMuted.value = !isMuted.value
-  }
 
-  function mute() {
-    isMuted.value = true
-  }
 
-  function unmute() {
-    isMuted.value = false
-  }
-
-  // 前一帧控制
-  function previousFrame() {
-    const frameDuration = 1 / frameRate.value
-    const newTime = Math.max(0, currentTime.value - frameDuration)
-    setCurrentTime(newTime)
-  }
-
-  // 后一帧控制
-  function nextFrame() {
-    const frameDuration = 1 / frameRate.value
-    const endTime = contentEndTime.value > 0 ? contentEndTime.value : totalDuration.value
-    const newTime = Math.min(endTime, currentTime.value + frameDuration)
-    setCurrentTime(newTime)
-  }
 
   function autoArrangeTimelineItems() {
     // 按轨道分组，然后在每个轨道内按时间位置排序
@@ -1155,15 +1076,9 @@ export const useVideoStore = defineStore('video', () => {
     setScrollOffset(scrollOffset.value + amount, timelineWidth)
   }
 
-  // 计算用于刻度线显示的虚拟时间轴长度
-  function getVirtualTimelineDuration(timelineWidth: number): number {
-    // 当缩小时间轴时，计算可见范围的结束时间
-    const pixelsPerSecond = (timelineWidth * zoomLevel.value) / totalDuration.value
-    const visibleEndTime = scrollOffset.value / pixelsPerSecond + timelineWidth / pixelsPerSecond
 
-    // 返回当前内容长度和可见范围结束时间的较大值，确保刻度线能够扩展
-    return Math.max(totalDuration.value, visibleEndTime + 60) // 额外添加60秒缓冲
-  }
+
+
 
   // 将时间转换为像素位置（考虑缩放和滚动）
   function timeToPixel(time: number, timelineWidth: number): number {
@@ -1177,12 +1092,7 @@ export const useVideoStore = defineStore('video', () => {
     return (pixel + scrollOffset.value) / pixelsPerSecond
   }
 
-  // 专门用于刻度线计算的时间到像素转换（使用虚拟时间轴长度）
-  function timeToPixelForScale(time: number, timelineWidth: number): number {
-    const virtualDuration = getVirtualTimelineDuration(timelineWidth)
-    const pixelsPerSecond = (timelineWidth * zoomLevel.value) / virtualDuration
-    return time * pixelsPerSecond - scrollOffset.value
-  }
+
 
   // 设置视频分辨率
   function setVideoResolution(resolution: VideoResolution) {
@@ -1386,9 +1296,6 @@ export const useVideoStore = defineStore('video', () => {
     selectedAVCanvasSprite,
     // 编辑设置
     proportionalScale,
-    // 音量状态
-    volume,
-    isMuted,
     // 缩放和滚动状态
     zoomLevel,
     scrollOffset,
@@ -1422,19 +1329,7 @@ export const useVideoStore = defineStore('video', () => {
     autoArrangeTimelineItems,
     // 播放控制方法
     setCurrentTime,
-    play,
-    pause,
-    stop,
     setPlaybackRate,
-    // 音量控制方法
-    setVolume,
-    toggleMute,
-    mute,
-    unmute,
-    previousFrame,
-    nextFrame,
-    startTimeUpdate,
-    stopTimeUpdate,
     // 轨道管理方法
     addTrack,
     removeTrack,
@@ -1452,8 +1347,6 @@ export const useVideoStore = defineStore('video', () => {
     pixelToTime,
     alignTimeToFrame,
     expandTimelineIfNeeded,
-    getVirtualTimelineDuration,
-    timeToPixelForScale,
     // 分辨率相关
     videoResolution,
     setVideoResolution,
