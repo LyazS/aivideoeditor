@@ -21,6 +21,7 @@ import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useVideoStore } from '../stores/videoStore'
 import type { VideoResolution } from '../types/videoTypes'
 import { useWebAVControls, isWebAVReady } from '../composables/useWebAVControls'
+import { logRendererState, logComponentLifecycle, createPerformanceTimer, debugError } from '../utils/webavDebug'
 
 // 扩展HTMLElement类型以包含自定义属性
 interface ExtendedHTMLElement extends HTMLElement {
@@ -79,23 +80,43 @@ const canvasContainerStyle = computed(() => ({
  * 初始化WebAV画布到当前容器
  */
 const initializeWebAVCanvas = async (): Promise<void> => {
+  const rendererTimer = createPerformanceTimer('WebAV Renderer Initialization')
+
+  logRendererState({
+    hasWrapper: !!canvasContainerWrapper.value,
+    wrapperSize: canvasContainerWrapper.value ?
+      `${canvasContainerWrapper.value.clientWidth}x${canvasContainerWrapper.value.clientHeight}` : 'undefined',
+    canvasDisplaySize: canvasDisplaySize.value,
+    canvasOriginalSize: { width: canvasWidth.value, height: canvasHeight.value }
+  })
+
   if (!canvasContainerWrapper.value) {
-    console.error('Canvas container wrapper not found')
+    console.error('❌ [WebAV Renderer] Canvas container wrapper not found')
     return
   }
 
   // 检查是否已经初始化
   const existingCanvas = webAVControls.getAVCanvas()
   if (existingCanvas) {
-    console.log('WebAV Canvas已存在，将容器插入到wrapper中')
+    console.log('♻️ [WebAV Renderer] WebAV Canvas already exists, reusing existing instance')
     const existingContainer = webAVControls.getCanvasContainer()
     if (existingContainer && !canvasContainerWrapper.value.contains(existingContainer)) {
       canvasContainerWrapper.value.appendChild(existingContainer)
+      console.log('✅ [WebAV Renderer] Existing container attached successfully')
+    } else {
+      console.log('✅ [WebAV Renderer] Existing container already in wrapper')
     }
+
+    const totalTime = rendererTimer.end()
+    console.log('🎬 [WebAV Renderer] Renderer initialization completed (reused existing):', {
+      totalTime: `${totalTime.toFixed(2)}ms`
+    })
     return
   }
 
   try {
+    console.log('🏗️ [WebAV Renderer] Creating new WebAV canvas setup...')
+
     // 程序化创建画布容器
     const canvasContainer = webAVControls.createCanvasContainer({
       width: canvasDisplaySize.value.width,
@@ -109,6 +130,7 @@ const initializeWebAVCanvas = async (): Promise<void> => {
 
     // 将容器插入到wrapper中
     canvasContainerWrapper.value.appendChild(canvasContainer)
+    console.log('✅ [WebAV Renderer] Canvas container appended to wrapper')
 
     // 初始化WebAV画布
     await webAVControls.initializeCanvas(canvasContainer, {
@@ -117,9 +139,18 @@ const initializeWebAVCanvas = async (): Promise<void> => {
       bgColor: '#000000'
     })
 
-    console.log('WebAV画布初始化成功')
+    const totalTime = rendererTimer.end()
+    console.log('🎉 [WebAV Renderer] WebAV canvas initialization completed successfully!', {
+      totalTime: `${totalTime.toFixed(2)}ms`,
+      containerSize: `${canvasDisplaySize.value.width}x${canvasDisplaySize.value.height}`,
+      canvasSize: `${canvasWidth.value}x${canvasHeight.value}`
+    })
   } catch (err) {
-    console.error('初始化WebAV canvas失败:', err)
+    const totalTime = rendererTimer.end()
+    debugError('WebAV Renderer canvas initialization failed', err as Error, {
+      totalTime: `${totalTime.toFixed(2)}ms`,
+      wrapperState: !!canvasContainerWrapper.value
+    })
   }
 }
 
@@ -192,6 +223,28 @@ watch(
 
       console.log('画布尺寸发生变化，开始重新创建画布...')
       await recreateCanvasWithNewSize(newResolution)
+    }
+  },
+  { deep: true }
+)
+
+/**
+ * 监听画布显示尺寸变化，同步更新实际的画布容器
+ */
+watch(
+  canvasDisplaySize,
+  (newSize) => {
+    // 更新实际的WebAV画布容器尺寸
+    const canvasContainer = webAVControls.getCanvasContainer()
+    if (canvasContainer) {
+      canvasContainer.style.width = `${newSize.width}px`
+      canvasContainer.style.height = `${newSize.height}px`
+
+      console.log('Canvas container size updated:', {
+        newSize,
+        containerElement: canvasContainer.tagName,
+        actualSize: `${canvasContainer.clientWidth}x${canvasContainer.clientHeight}`
+      })
     }
   },
   { deep: true }
@@ -272,23 +325,49 @@ const cleanupResizeObserver = (): void => {
 
 // 生命周期
 onMounted(async () => {
-  // 初始化容器尺寸
-  await nextTick()
-  updateContainerSize()
+  const mountTimer = createPerformanceTimer('WebAV Renderer Mount')
+  logComponentLifecycle('WebAV Renderer', 'mounted', 'starting...')
 
-  // 设置尺寸监听
-  setupResizeObserver()
+  try {
+    // 初始化容器尺寸
+    await nextTick()
+    updateContainerSize()
+    console.log('✅ [WebAV Renderer] Container size updated')
 
-  // 初始化WebAV画布到容器
-  await initializeWebAVCanvas()
+    // 设置尺寸监听
+    setupResizeObserver()
+    console.log('✅ [WebAV Renderer] Resize observer setup completed')
+
+    // 初始化WebAV画布到容器
+    await initializeWebAVCanvas()
+    console.log('✅ [WebAV Renderer] WebAV canvas initialization completed')
+
+    const totalMountTime = mountTimer.end()
+    logComponentLifecycle('WebAV Renderer', 'mounted', {
+      totalMountTime: `${totalMountTime.toFixed(2)}ms`,
+      containerSize: containerWidth.value + 'x' + containerHeight.value,
+      canvasDisplaySize: canvasDisplaySize.value,
+      isWebAVReady: videoStore.isWebAVReady
+    })
+  } catch (err) {
+    const totalMountTime = mountTimer.end()
+    debugError('WebAV Renderer component mount failed', err as Error, {
+      totalMountTime: `${totalMountTime.toFixed(2)}ms`
+    })
+  }
 })
 
 onUnmounted(() => {
+  logComponentLifecycle('WebAV Renderer', 'unmounted', 'starting cleanup...')
+
   // 清理ResizeObserver
   cleanupResizeObserver()
+  console.log('✅ [WebAV Renderer] Resize observer cleaned up')
 
   // 注意：不要在这里销毁WebAV，因为它是全局单例
   // webAVControls.destroy()
+
+  logComponentLifecycle('WebAV Renderer', 'unmounted', 'completed successfully')
 })
 
 // 暴露方法给父组件

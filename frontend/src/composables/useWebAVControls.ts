@@ -3,6 +3,23 @@ import { AVCanvas } from '@webav/av-canvas'
 import { MP4Clip } from '@webav/av-cliper'
 import { CustomVisibleSprite } from '../utils/customVisibleSprite'
 import { useVideoStore } from '../stores/videoStore'
+import {
+  logWebAVInitStart,
+  logWebAVInitStep,
+  logWebAVInitSuccess,
+  logWebAVInitError,
+  logContainerCreation,
+  logContainerCreated,
+  logCanvasDestroyStart,
+  logCanvasBackup,
+  logCanvasDestroyComplete,
+  logCanvasRecreateStart,
+  logSpriteRestore,
+  logCoordinateTransform,
+  logCanvasRecreateComplete,
+  createPerformanceTimer,
+  debugError
+} from '../utils/webavDebug'
 
 // 定义播放选项接口
 interface PlayOptions {
@@ -44,6 +61,13 @@ export function useWebAVControls() {
     className?: string
     style?: Partial<CSSStyleDeclaration>
   }): HTMLElement => {
+    logContainerCreation({
+      size: `${options.width}x${options.height}`,
+      className: options.className || 'default',
+      hasCustomStyles: !!options.style,
+      customStylesCount: options.style ? Object.keys(options.style).length : 0
+    })
+
     const container = document.createElement('div')
 
     // 设置基本属性
@@ -63,7 +87,12 @@ export function useWebAVControls() {
     // 保存全局引用
     globalCanvasContainer = container
 
-    console.log('Canvas container created programmatically')
+    logContainerCreated({
+      element: container.tagName,
+      className: container.className,
+      finalSize: `${container.style.width} x ${container.style.height}`,
+      isGlobalReference: globalCanvasContainer === container
+    })
     return container
   }
 
@@ -80,51 +109,106 @@ export function useWebAVControls() {
       bgColor: string
     }
   ): Promise<void> => {
+    const timer = createPerformanceTimer('WebAV Canvas Initialization')
+
+    logWebAVInitStart({
+      hasContainer: !!container,
+      containerType: container?.tagName || 'undefined',
+      containerSize: container ? `${container.clientWidth}x${container.clientHeight}` : 'undefined',
+      options: options || 'using defaults'
+    })
+
     try {
       // 确定使用的容器
+      logWebAVInitStep(1, 'Determining target container')
       const targetContainer = container || globalCanvasContainer
       if (!targetContainer) {
         throw new Error('No container available for WebAV Canvas initialization')
       }
+      logWebAVInitStep(1, 'Target container determined', {
+        element: targetContainer.tagName,
+        id: targetContainer.id || 'no-id',
+        className: targetContainer.className || 'no-class',
+        size: `${targetContainer.clientWidth}x${targetContainer.clientHeight}`,
+        isInDOM: document.contains(targetContainer)
+      })
 
       // 确定使用的配置选项
+      logWebAVInitStep(2, 'Determining canvas options')
       const targetOptions = options || {
         width: 1920,
         height: 1080,
         bgColor: '#000000'
       }
+      logWebAVInitStep(2, 'Canvas options determined', targetOptions)
 
       // 如果已经初始化过，先销毁旧的实例
       if (globalAVCanvas) {
-        console.log('Destroying existing WebAV Canvas...')
+        logWebAVInitStep(3, 'Destroying existing WebAV Canvas instance', {
+          canvasExists: true,
+          canvasType: typeof globalAVCanvas
+        })
         globalAVCanvas.destroy()
         globalAVCanvas = null
+        logWebAVInitStep(3, 'Existing canvas destroyed successfully')
+      } else {
+        logWebAVInitStep(3, 'No existing canvas to destroy')
       }
 
-      console.log('Initializing WebAV Canvas...')
+      logWebAVInitStep(4, 'Creating new AVCanvas instance')
+      const canvasTimer = createPerformanceTimer('AVCanvas Creation')
 
       // 创建AVCanvas实例 - 使用markRaw避免响应式包装
       globalAVCanvas = markRaw(new AVCanvas(targetContainer, targetOptions))
 
+      const canvasCreationTime = canvasTimer.end()
+      logWebAVInitStep(4, 'AVCanvas instance created successfully', {
+        creationTime: `${canvasCreationTime.toFixed(2)}ms`,
+        canvasSize: `${targetOptions.width}x${targetOptions.height}`,
+        backgroundColor: targetOptions.bgColor
+      })
+
+      logWebAVInitStep(5, 'Setting AVCanvas to store')
       // 将AVCanvas实例设置到store中
       videoStore.setAVCanvas(globalAVCanvas)
+      logWebAVInitStep(5, 'AVCanvas set to store successfully')
 
+      logWebAVInitStep(6, 'Setting up event listeners')
       // 设置事件监听器
       setupEventListeners()
+      logWebAVInitStep(6, 'Event listeners setup completed')
 
+      logWebAVInitStep(7, 'Clearing error state')
       globalError.value = null
+      logWebAVInitStep(7, 'Error state cleared')
 
+      logWebAVInitStep(8, 'Previewing first frame')
       // 预览第一帧
       globalAVCanvas.previewFrame(0)
+      logWebAVInitStep(8, 'First frame preview completed')
 
+      logWebAVInitStep(9, 'Marking WebAV as ready')
       // 标记WebAV为就绪状态
       videoStore.setWebAVReady(true)
+      logWebAVInitStep(9, 'WebAV marked as ready in store')
 
-      console.log('WebAV Canvas initialized successfully')
+      const totalInitTime = timer.end()
+      logWebAVInitSuccess(totalInitTime, {
+        canvasReady: true,
+        storeReady: videoStore.isWebAVReady
+      })
     } catch (err) {
+      const totalInitTime = timer.end()
       const errorMessage = `初始化WebAV画布失败: ${(err as Error).message}`
       globalError.value = errorMessage
-      console.error('WebAV Canvas initialization error:', err)
+
+      logWebAVInitError(err as Error, totalInitTime, {
+        containerAvailable: !!container || !!globalCanvasContainer,
+        storeState: {
+          isWebAVReady: videoStore.isWebAVReady,
+          hasAVCanvas: !!videoStore.avCanvas
+        }
+      })
       throw new Error(errorMessage)
     }
   }
@@ -133,16 +217,17 @@ export function useWebAVControls() {
    * 设置WebAV事件监听器
    */
   const setupEventListeners = (): void => {
-    if (!globalAVCanvas) return
+    if (!globalAVCanvas) {
+      console.error('❌ [WebAV Events] Cannot setup listeners: globalAVCanvas is null')
+      return
+    }
 
     // 播放状态变化事件
     globalAVCanvas.on('playing', () => {
-      console.log('WebAV: Playing started')
       videoStore.isPlaying = true
     })
 
     globalAVCanvas.on('paused', () => {
-      console.log('WebAV: Playing paused')
       videoStore.isPlaying = false
     })
 
@@ -155,11 +240,12 @@ export function useWebAVControls() {
 
     // 活动精灵变化事件
     globalAVCanvas.on('activeSpriteChange', (sprite) => {
-      console.log('WebAV: Active sprite changed', sprite)
       // 处理选中状态的变化 - 同步到时间轴选择
       // 类型断言：我们知道这里的sprite是CustomVisibleSprite或null
       videoStore.handleAVCanvasSpriteChange(sprite as CustomVisibleSprite | null)
     })
+
+    console.log('✅ [WebAV Events] All event listeners registered successfully')
   }
 
   /**
@@ -295,12 +381,19 @@ export function useWebAVControls() {
    * 销毁当前画布并备份内容
    */
   const destroyCanvas = async (): Promise<CanvasBackup | null> => {
+    const destroyTimer = createPerformanceTimer('Canvas Destroy')
+
     if (!globalAVCanvas) {
-      console.log('没有画布需要销毁')
+      console.log('⚠️ [Canvas Rebuild] No canvas to destroy')
       return null
     }
 
-    console.log('开始销毁画布并备份内容...')
+    logCanvasDestroyStart({
+      hasCanvas: !!globalAVCanvas,
+      isPlaying: videoStore.isPlaying,
+      currentTime: videoStore.currentTime,
+      timelineItemsCount: videoStore.timelineItems.length
+    })
 
     // 备份当前状态
     const backup: CanvasBackup = {
@@ -324,7 +417,11 @@ export function useWebAVControls() {
       }
     }
 
-    console.log(`备份了 ${backup.sprites.length} 个sprites`)
+    logCanvasBackup(backup.sprites.length, {
+      sprites: backup.sprites.length,
+      isPlaying: backup.isPlaying,
+      currentTime: backup.currentTime
+    })
 
     try {
       // 暂停播放
@@ -340,10 +437,15 @@ export function useWebAVControls() {
       videoStore.setAVCanvas(null)
       videoStore.setWebAVReady(false)
 
-      console.log('画布销毁完成')
+      const destroyTime = destroyTimer.end()
+      logCanvasDestroyComplete(destroyTime, backup.sprites.length)
       return backup
     } catch (error) {
-      console.error('销毁画布时出错:', error)
+      const destroyTime = destroyTimer.end()
+      debugError('Canvas destruction failed', error as Error, {
+        destroyTime: `${destroyTime.toFixed(2)}ms`,
+        backupSprites: backup.sprites.length
+      })
       return backup
     }
   }
@@ -360,7 +462,14 @@ export function useWebAVControls() {
     },
     backup?: CanvasBackup | null
   ): Promise<void> => {
-    console.log('开始重新创建画布...')
+    const recreateTimer = createPerformanceTimer('Canvas Recreate')
+
+    logCanvasRecreateStart({
+      containerSize: `${container.clientWidth}x${container.clientHeight}`,
+      canvasOptions: options,
+      hasBackup: !!backup,
+      backupSprites: backup?.sprites.length || 0
+    })
 
     try {
       // 重新初始化画布
@@ -368,18 +477,20 @@ export function useWebAVControls() {
 
       // 如果有备份内容，恢复sprites
       if (backup && backup.sprites.length > 0) {
-        console.log(`开始恢复 ${backup.sprites.length} 个sprites...`)
-
         const avCanvas = getAVCanvas()
         if (!avCanvas) {
-          throw new Error('画布重新创建失败')
+          throw new Error('Canvas recreation failed - no canvas available')
         }
 
         // 恢复每个sprite
+        let restoredCount = 0
         for (const spriteBackup of backup.sprites) {
           try {
+            logSpriteRestore(spriteBackup.timelineItemId, `Restoring sprite ${restoredCount + 1}/${backup.sprites.length}`)
+
             // 克隆MP4Clip
             const clonedClip = await cloneMP4Clip(spriteBackup.clip)
+            logSpriteRestore(spriteBackup.timelineItemId, 'MP4Clip cloned')
 
             // 创建新的CustomVisibleSprite
             const newSprite = new CustomVisibleSprite(clonedClip)
@@ -387,6 +498,7 @@ export function useWebAVControls() {
             // 恢复时间范围设置
             const originalTimeRange = spriteBackup.sprite.getTimeRange()
             newSprite.setTimeRange(originalTimeRange)
+            logSpriteRestore(spriteBackup.timelineItemId, 'Time range restored', originalTimeRange)
 
             // 恢复变换属性 - 需要处理新旧画布分辨率不同的情况
             const restoredTimelineItem = videoStore.getTimelineItem(spriteBackup.timelineItemId)
@@ -408,41 +520,53 @@ export function useWebAVControls() {
               newSprite.rect.w = restoredTimelineItem.size.width
               newSprite.rect.h = restoredTimelineItem.size.height
 
-              console.log(`🔄 坐标转换 (${spriteBackup.timelineItemId}):`, {
-                项目坐标: { x: restoredTimelineItem.position.x, y: restoredTimelineItem.position.y },
-                新画布尺寸: { width: options.width, height: options.height },
-                新WebAV坐标: { x: newWebavCoords.x, y: newWebavCoords.y }
+              logCoordinateTransform(spriteBackup.timelineItemId, {
+                projectCoords: { x: restoredTimelineItem.position.x, y: restoredTimelineItem.position.y },
+                newCanvasSize: { width: options.width, height: options.height },
+                newWebAVCoords: { x: newWebavCoords.x, y: newWebavCoords.y },
+                size: { w: restoredTimelineItem.size.width, h: restoredTimelineItem.size.height }
               })
             } else {
               // 如果找不到TimelineItem，使用原始坐标作为备用方案
-              console.warn(`找不到TimelineItem: ${spriteBackup.timelineItemId}，使用原始坐标`)
               const originalRect = spriteBackup.sprite.rect
               newSprite.rect.x = originalRect.x
               newSprite.rect.y = originalRect.y
               newSprite.rect.w = originalRect.w
               newSprite.rect.h = originalRect.h
+
+              logCoordinateTransform(spriteBackup.timelineItemId, {
+                warning: 'TimelineItem not found, using original coordinates',
+                originalCoords: { x: originalRect.x, y: originalRect.y, w: originalRect.w, h: originalRect.h }
+              })
             }
 
             // 恢复其他属性
             newSprite.zIndex = spriteBackup.sprite.zIndex
             newSprite.opacity = spriteBackup.sprite.opacity
+            logSpriteRestore(spriteBackup.timelineItemId, 'Properties restored', {
+              zIndex: newSprite.zIndex,
+              opacity: newSprite.opacity
+            })
 
             // 添加到画布
             await avCanvas.addSprite(newSprite)
+            logSpriteRestore(spriteBackup.timelineItemId, 'Added to canvas')
 
             // 更新store中的引用
             videoStore.updateTimelineItemSprite(spriteBackup.timelineItemId, markRaw(newSprite))
+            logSpriteRestore(spriteBackup.timelineItemId, 'Store reference updated')
 
             // 🔄 重新设置双向数据同步 - 这是关键步骤！
             const syncTimelineItem = videoStore.getTimelineItem(spriteBackup.timelineItemId)
             if (syncTimelineItem) {
               videoStore.setupBidirectionalSync(syncTimelineItem)
-              console.log(`重新设置双向数据同步: ${spriteBackup.timelineItemId}`)
+              logSpriteRestore(spriteBackup.timelineItemId, 'Bidirectional sync reestablished')
             }
 
-            console.log(`恢复sprite成功: ${spriteBackup.timelineItemId}`)
+            restoredCount++
+            logSpriteRestore(spriteBackup.timelineItemId, `Restoration completed (${restoredCount}/${backup.sprites.length})`)
           } catch (error) {
-            console.error(`恢复sprite失败: ${spriteBackup.timelineItemId}`, error)
+            debugError(`Failed to restore sprite: ${spriteBackup.timelineItemId}`, error as Error)
           }
         }
 
@@ -453,16 +577,26 @@ export function useWebAVControls() {
             play(backup.currentTime)
           }, 100)
         } else {
-          // 跳转到备份的时间位置
           seekTo(backup.currentTime)
         }
-
-        console.log('内容恢复完成')
       }
 
-      console.log('画布重新创建完成')
+      const totalRecreateTime = recreateTimer.end()
+      logCanvasRecreateComplete(totalRecreateTime, {
+        canvasSize: `${options.width}x${options.height}`,
+        restoredSprites: backup?.sprites.length || 0,
+        finalState: {
+          isPlaying: backup?.isPlaying || false,
+          currentTime: backup?.currentTime || 0
+        }
+      })
     } catch (error) {
-      console.error('重新创建画布失败:', error)
+      const totalRecreateTime = recreateTimer.end()
+      debugError('Canvas recreation failed', error as Error, {
+        totalTime: `${totalRecreateTime.toFixed(2)}ms`,
+        canvasOptions: options,
+        backupSprites: backup?.sprites.length || 0
+      })
       throw error
     }
   }

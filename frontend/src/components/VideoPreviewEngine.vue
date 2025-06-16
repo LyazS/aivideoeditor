@@ -178,7 +178,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onUnmounted } from 'vue'
+import { ref, computed, watch, onUnmounted, onMounted } from 'vue'
 import PreviewWindow from './PreviewWindow.vue'
 import Timeline from './Timeline.vue'
 import PlaybackControls from './PlaybackControls.vue'
@@ -186,8 +186,25 @@ import ClipManagementToolbar from './ClipManagementToolbar.vue'
 import MediaLibrary from './MediaLibrary.vue'
 import PropertiesPanel from './PropertiesPanel.vue'
 import { useVideoStore } from '../stores/videoStore'
+import { logWebAVReadyStateChange, logComponentLifecycle } from '../utils/webavDebug'
 
 const videoStore = useVideoStore()
+
+// 添加WebAV就绪状态监听
+watch(
+  () => videoStore.isWebAVReady,
+  (isReady, wasReady) => {
+    logWebAVReadyStateChange(isReady, wasReady)
+  },
+  { immediate: true }
+)
+
+onMounted(() => {
+  logComponentLifecycle('VideoPreviewEngine', 'mounted', {
+    isWebAVReady: videoStore.isWebAVReady,
+    hasAVCanvas: !!videoStore.avCanvas
+  })
+})
 
 // 响应式数据
 const previewHeight = ref(60) // 默认预览窗口占60%

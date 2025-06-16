@@ -64,14 +64,17 @@ export const useVideoStore = defineStore('video', () => {
 
   // WebAV相关方法
   function setAVCanvas(canvas: AVCanvas | null) {
+    console.log('🏪 [VideoStore] setAVCanvas:', { hasCanvas: !!canvas, canvasType: canvas?.constructor.name, previousState: !!avCanvas.value })
     avCanvas.value = canvas ? markRaw(canvas) : null
   }
 
   function setWebAVReady(ready: boolean) {
+    console.log('🏪 [VideoStore] setWebAVReady:', { ready, previousReady: isWebAVReady.value, stateChange: ready !== isWebAVReady.value })
     isWebAVReady.value = ready
   }
 
   function setWebAVError(error: string | null) {
+    console.log('🏪 [VideoStore] setWebAVError:', { error, hasError: !!error, previousError: webAVError.value })
     webAVError.value = error
   }
 
