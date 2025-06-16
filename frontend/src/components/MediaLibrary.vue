@@ -55,7 +55,8 @@
               class="thumbnail-image"
               @load="onThumbnailLoaded"
             />
-            <div class="duration-badge">
+            <!-- 只有视频才显示时长标签 -->
+            <div v-if="item.mediaType === 'video'" class="duration-badge">
               {{ formatDuration(item.duration) }}
             </div>
             <!-- 解析中状态覆盖层 -->
