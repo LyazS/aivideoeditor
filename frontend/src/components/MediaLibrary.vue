@@ -39,22 +39,17 @@
           @dragend="handleItemDragEnd"
         >
           <div class="media-thumbnail">
-            <!-- 视频缩略图 -->
-            <video
-              v-if="item.mediaType === 'video'"
-              :src="item.url"
-              class="thumbnail-video"
-              preload="metadata"
-              muted
-              @loadedmetadata="onThumbnailLoaded"
-            />
-            <!-- 图片缩略图 -->
+            <!-- WebAV生成的缩略图 -->
             <img
-              v-else-if="item.mediaType === 'image'"
-              :src="item.url"
+              v-if="item.thumbnailUrl"
+              :src="item.thumbnailUrl"
               class="thumbnail-image"
-              @load="onThumbnailLoaded"
+              alt="缩略图"
             />
+            <!-- 缩略图生成中的占位符 -->
+            <div v-else class="thumbnail-placeholder">
+              <div class="loading-spinner"></div>
+            </div>
             <!-- 只有视频才显示时长标签 -->
             <div v-if="item.mediaType === 'video'" class="duration-badge">
               {{ formatDuration(item.duration) }}
@@ -104,6 +99,7 @@ import { ref, markRaw } from 'vue'
 import { useVideoStore } from '../stores/videoStore'
 import { useWebAVControls } from '../composables/useWebAVControls'
 import type { MediaItem } from '../types/videoTypes'
+import { generateVideoThumbnail, generateImageThumbnail, canvasToBlob } from '../utils/thumbnailGenerator'
 
 const videoStore = useVideoStore()
 const webAVControls = useWebAVControls()
@@ -217,11 +213,23 @@ const addVideoItem = async (file: File, url: string, mediaItemId: string, resolv
       const mp4Clip = await webAVControls.createMP4Clip(file)
       console.log(`✅ MP4Clip created successfully for: ${file.name}`)
 
+      // 生成缩略图
+      console.log(`🖼️ 生成视频缩略图: ${file.name}`)
+      let thumbnailUrl: string | undefined
+      try {
+        const thumbnailCanvas = await generateVideoThumbnail(mp4Clip)
+        thumbnailUrl = await canvasToBlob(thumbnailCanvas)
+        console.log(`✅ 视频缩略图生成成功: ${file.name}`)
+      } catch (error) {
+        console.error(`❌ 视频缩略图生成失败: ${file.name}`, error)
+      }
+
       // 更新MediaItem为完成状态
       const readyMediaItem: MediaItem = {
         ...parsingMediaItem,
         mp4Clip: markRaw(mp4Clip), // 使用markRaw避免Vue响应式包装
         isReady: true, // 标记为准备好
+        thumbnailUrl, // 添加缩略图URL
       }
 
       console.log(
@@ -287,11 +295,23 @@ const addImageItem = async (file: File, url: string, mediaItemId: string, resolv
       const imgClip = await webAVControls.createImgClip(file)
       console.log(`✅ ImgClip created successfully for: ${file.name}`)
 
+      // 生成缩略图
+      console.log(`🖼️ 生成图片缩略图: ${file.name}`)
+      let thumbnailUrl: string | undefined
+      try {
+        const thumbnailCanvas = await generateImageThumbnail(imgClip)
+        thumbnailUrl = await canvasToBlob(thumbnailCanvas)
+        console.log(`✅ 图片缩略图生成成功: ${file.name}`)
+      } catch (error) {
+        console.error(`❌ 图片缩略图生成失败: ${file.name}`, error)
+      }
+
       // 更新MediaItem为完成状态
       const readyMediaItem: MediaItem = {
         ...parsingMediaItem,
         imgClip: markRaw(imgClip), // 使用markRaw避免Vue响应式包装
         isReady: true, // 标记为准备好
+        thumbnailUrl, // 添加缩略图URL
       }
 
       console.log(
@@ -337,6 +357,11 @@ const removeMediaItem = (id: string) => {
     // 清理URL
     URL.revokeObjectURL(item.url)
 
+    // 清理缩略图URL
+    if (item.thumbnailUrl) {
+      URL.revokeObjectURL(item.thumbnailUrl)
+    }
+
     // 从store中移除MediaItem（会自动移除相关的TimelineItem）
     videoStore.removeMediaItem(id)
 
@@ -380,12 +405,7 @@ const handleItemDragEnd = () => {
   // 拖拽结束处理
 }
 
-// 缩略图加载完成
-const onThumbnailLoaded = (event: Event) => {
-  const video = event.target as HTMLVideoElement
-  // 跳转到视频中间位置作为缩略图
-  video.currentTime = video.duration / 2
-}
+
 
 // 格式化时长
 const formatDuration = (seconds: number): string => {
@@ -509,11 +529,33 @@ const formatFileSize = (bytes: number): string => {
   flex-shrink: 0;
 }
 
-.thumbnail-video,
 .thumbnail-image {
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+.thumbnail-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(0, 0, 0, 0.3);
+}
+
+.loading-spinner {
+  width: 12px;
+  height: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-top: 1px solid #fff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 
 .duration-badge {

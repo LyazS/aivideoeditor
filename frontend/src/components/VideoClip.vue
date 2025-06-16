@@ -19,21 +19,19 @@
     <div class="clip-content">
       <!-- 缩略图 - 总是显示 -->
       <div v-if="showDetails" class="clip-thumbnail">
-        <!-- 视频缩略图 -->
-        <template v-if="mediaItem?.mediaType === 'video'">
-          <video
-            ref="thumbnailVideo"
-            :src="mediaItem?.url"
-            @loadedmetadata="generateThumbnail"
-            muted
-            preload="metadata"
-          />
-          <canvas ref="thumbnailCanvas" class="thumbnail-canvas"></canvas>
-        </template>
-        <!-- 图片缩略图 -->
-        <template v-else-if="mediaItem?.mediaType === 'image'">
-          <img :src="mediaItem?.url" class="thumbnail-image" @load="onImageLoad" />
-        </template>
+        <!-- WebAV生成的缩略图 -->
+        <canvas
+          ref="thumbnailCanvas"
+          class="thumbnail-canvas"
+          v-show="thumbnailGenerated"
+        ></canvas>
+        <!-- 缩略图加载中的占位符 -->
+        <div
+          v-show="!thumbnailGenerated"
+          class="thumbnail-placeholder"
+        >
+          <div class="loading-spinner"></div>
+        </div>
       </div>
 
       <!-- 详细信息 - 只在片段足够宽时显示 -->
@@ -98,6 +96,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useVideoStore } from '../stores/videoStore'
 import { useWebAVControls, isWebAVReady } from '../composables/useWebAVControls'
 import type { TimelineItem, Track } from '../types/videoTypes'
+import { generateVideoThumbnail, generateImageThumbnail } from '../utils/thumbnailGenerator'
 
 interface Props {
   timelineItem: TimelineItem
@@ -141,8 +140,8 @@ const playbackSpeed = computed(() => {
   return 'playbackRate' in timeRange ? timeRange.playbackRate || 1 : 1
 })
 
-const thumbnailVideo = ref<HTMLVideoElement>()
 const thumbnailCanvas = ref<HTMLCanvasElement>()
+const thumbnailGenerated = ref(false)
 const showMenu = ref(false)
 const menuStyle = ref({})
 
@@ -262,30 +261,48 @@ function formatSpeed(rate: number): string {
   return '正常速度'
 }
 
-function generateThumbnail() {
-  if (!thumbnailVideo.value || !thumbnailCanvas.value) return
+/**
+ * 使用WebAV生成缩略图
+ */
+async function generateThumbnail() {
+  if (!thumbnailCanvas.value || !mediaItem.value) return
 
-  const video = thumbnailVideo.value
-  const canvas = thumbnailCanvas.value
-  const ctx = canvas.getContext('2d')
+  try {
+    thumbnailGenerated.value = false
+    let canvas: HTMLCanvasElement
 
-  if (!ctx) return
+    if (mediaItem.value.mediaType === 'video') {
+      // 生成视频缩略图
+      if (!mediaItem.value.mp4Clip) {
+        console.error('MP4Clip未准备好')
+        return
+      }
+      canvas = await generateVideoThumbnail(mediaItem.value.mp4Clip)
+    } else if (mediaItem.value.mediaType === 'image') {
+      // 生成图片缩略图
+      if (!mediaItem.value.imgClip) {
+        console.error('ImgClip未准备好')
+        return
+      }
+      canvas = await generateImageThumbnail(mediaItem.value.imgClip)
+    } else {
+      console.error('不支持的媒体类型:', mediaItem.value.mediaType)
+      return
+    }
 
-  // 设置画布尺寸
-  canvas.width = 60
-  canvas.height = 40
+    // 将生成的canvas内容复制到组件的canvas中
+    const targetCanvas = thumbnailCanvas.value
+    const targetCtx = targetCanvas.getContext('2d')
 
-  // 跳转到视频中间帧
-  video.currentTime = video.duration / 2
-
-  video.onseeked = () => {
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+    if (targetCtx) {
+      targetCanvas.width = canvas.width
+      targetCanvas.height = canvas.height
+      targetCtx.drawImage(canvas, 0, 0)
+      thumbnailGenerated.value = true
+    }
+  } catch (error) {
+    console.error('生成缩略图失败:', error)
   }
-}
-
-function onImageLoad() {
-  // 图片加载完成，不需要特殊处理
-  console.log('图片缩略图加载完成')
 }
 
 function selectClip(event: MouseEvent) {
@@ -579,9 +596,8 @@ function hideTooltip() {
 }
 
 onMounted(() => {
-  if (thumbnailVideo.value) {
-    thumbnailVideo.value.load()
-  }
+  // 组件挂载后生成缩略图
+  generateThumbnail()
 })
 
 onUnmounted(() => {
@@ -663,15 +679,33 @@ onUnmounted(() => {
   flex-shrink: 0;
 }
 
-.thumbnail-canvas,
-.thumbnail-image {
+.thumbnail-canvas {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
 
-.clip-thumbnail video {
-  display: none;
+.thumbnail-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(0, 0, 0, 0.3);
+}
+
+.loading-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top: 2px solid #fff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 
 .clip-info {

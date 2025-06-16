@@ -21,6 +21,7 @@ export interface MediaItem {
   mp4Clip: Raw<MP4Clip> | null // 视频文件解析中时为null，解析完成后为MP4Clip实例
   imgClip: Raw<ImgClip> | null // 图片文件解析中时为null，解析完成后为ImgClip实例
   isReady: boolean // 是否解析完成
+  thumbnailUrl?: string // WebAV生成的缩略图URL
 }
 
 // 时间轴层：包装CustomVisibleSprite/ImageVisibleSprite和时间轴位置信息
