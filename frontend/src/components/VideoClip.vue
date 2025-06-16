@@ -8,6 +8,7 @@
       resizing: isResizing,
     }"
     :style="clipStyle"
+    :data-media-type="mediaItem?.mediaType"
     @mousedown="startDrag"
     @click="selectClip"
     @contextmenu="showContextMenu"
@@ -15,21 +16,32 @@
     <div class="clip-content">
       <!-- 缩略图 - 总是显示 -->
       <div v-if="showDetails" class="clip-thumbnail">
-        <video
-          ref="thumbnailVideo"
-          :src="mediaItem?.url"
-          @loadedmetadata="generateThumbnail"
-          muted
-          preload="metadata"
-        />
-        <canvas ref="thumbnailCanvas" class="thumbnail-canvas"></canvas>
+        <!-- 视频缩略图 -->
+        <template v-if="mediaItem?.mediaType === 'video'">
+          <video
+            ref="thumbnailVideo"
+            :src="mediaItem?.url"
+            @loadedmetadata="generateThumbnail"
+            muted
+            preload="metadata"
+          />
+          <canvas ref="thumbnailCanvas" class="thumbnail-canvas"></canvas>
+        </template>
+        <!-- 图片缩略图 -->
+        <template v-else-if="mediaItem?.mediaType === 'image'">
+          <img
+            :src="mediaItem?.url"
+            class="thumbnail-image"
+            @load="onImageLoad"
+          />
+        </template>
       </div>
 
       <!-- 详细信息 - 只在片段足够宽时显示 -->
       <div v-if="showDetails" class="clip-info">
         <div class="clip-name">{{ mediaItem?.name || 'Unknown' }}</div>
         <div class="clip-duration">{{ formatDuration(timelineDuration) }}</div>
-        <div class="clip-speed" v-if="Math.abs(playbackSpeed - 1) > 0.001">
+        <div class="clip-speed" v-if="mediaItem?.mediaType === 'video' && Math.abs(playbackSpeed - 1) > 0.001">
           {{ formatSpeed(playbackSpeed) }}
         </div>
       </div>
@@ -88,8 +100,12 @@ const timelineDuration = computed(() => {
   return (timeRange.timelineEndTime - timeRange.timelineStartTime) / 1000000 // 转换为秒
 })
 
-// 获取播放速度
+// 获取播放速度（仅对视频有效）
 const playbackSpeed = computed(() => {
+  // 图片没有播放速度概念，直接返回1
+  if (mediaItem.value?.mediaType === 'image') {
+    return 1
+  }
   // 直接从timelineItem.timeRange获取，与videostore的同步机制保持一致
   return props.timelineItem.timeRange.playbackRate || 1
 })
@@ -230,6 +246,11 @@ function generateThumbnail() {
   video.onseeked = () => {
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
   }
+}
+
+function onImageLoad() {
+  // 图片加载完成，不需要特殊处理
+  console.log('图片缩略图加载完成')
 }
 
 function selectClip(event: MouseEvent) {
@@ -401,22 +422,31 @@ function stopResize() {
       }
 
       console.log('🔧 调整大小 - 设置时间范围:', {
-        clipStartTime: 0,
-        clipEndTime: mediaItem.duration * 1000000,
+        mediaType: mediaItem.mediaType,
         timelineStartTime: newTimelineStartTime,
         timelineEndTime: newTimelineEndTime,
         duration: tempDuration.value,
       })
 
-      // 更新CustomVisibleSprite的时间范围
-      sprite.setTimeRange({
-        clipStartTime: 0,
-        clipEndTime: mediaItem.duration * 1000000,
-        timelineStartTime: newTimelineStartTime,
-        timelineEndTime: newTimelineEndTime,
-      })
+      // 根据媒体类型更新sprite的时间范围
+      if (mediaItem.mediaType === 'video') {
+        // 视频使用CustomVisibleSprite的setTimeRange方法
+        sprite.setTimeRange({
+          clipStartTime: 0,
+          clipEndTime: mediaItem.duration * 1000000,
+          timelineStartTime: newTimelineStartTime,
+          timelineEndTime: newTimelineEndTime,
+        })
+      } else if (mediaItem.mediaType === 'image') {
+        // 图片使用ImageVisibleSprite的setTimeRange方法
+        sprite.setTimeRange({
+          timelineStartTime: newTimelineStartTime,
+          timelineEndTime: newTimelineEndTime,
+          displayDuration: newTimelineEndTime - newTimelineStartTime,
+        })
+      }
 
-      // 从sprite获取更新后的完整timeRange（包含自动计算的effectiveDuration）
+      // 从sprite获取更新后的完整timeRange
       props.timelineItem.timeRange = sprite.getTimeRange()
     }
   }
@@ -494,6 +524,11 @@ onUnmounted(() => {
   transition: all 0.2s;
 }
 
+/* 图片片段使用不同的背景色 */
+.video-clip[data-media-type="image"] {
+  background: linear-gradient(135deg, #e2a04a, #bd7a35);
+}
+
 /* 在拖拽或调整大小时禁用过渡效果，避免延迟 */
 .video-clip.dragging,
 .video-clip.resizing {
@@ -547,7 +582,8 @@ onUnmounted(() => {
   flex-shrink: 0;
 }
 
-.thumbnail-canvas {
+.thumbnail-canvas,
+.thumbnail-image {
   width: 100%;
   height: 100%;
   object-fit: cover;

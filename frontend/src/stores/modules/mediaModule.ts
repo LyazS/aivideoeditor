@@ -15,6 +15,9 @@ export function createMediaModule() {
   // 视频元素引用映射（用于获取原始分辨率）
   const videoElementsMap = new Map<string, HTMLVideoElement>()
 
+  // 图片元素引用映射（用于获取原始分辨率）
+  const imageElementsMap = new Map<string, HTMLImageElement>()
+
   // ==================== 媒体项目管理方法 ====================
 
   /**
@@ -180,6 +183,38 @@ export function createMediaModule() {
     return { width: 1920, height: 1080 }
   }
 
+  // ==================== 图片元素管理方法 ====================
+
+  /**
+   * 设置图片元素引用
+   * @param clipId 图片片段ID
+   * @param imageElement 图片元素或null
+   */
+  function setImageElement(clipId: string, imageElement: HTMLImageElement | null) {
+    if (imageElement) {
+      imageElementsMap.set(clipId, imageElement)
+    } else {
+      imageElementsMap.delete(clipId)
+    }
+  }
+
+  /**
+   * 获取图片原始分辨率
+   * @param clipId 图片片段ID
+   * @returns 图片分辨率对象
+   */
+  function getImageOriginalResolution(clipId: string): { width: number; height: number } {
+    const imageElement = imageElementsMap.get(clipId)
+    if (imageElement && imageElement.naturalWidth > 0 && imageElement.naturalHeight > 0) {
+      return {
+        width: imageElement.naturalWidth,
+        height: imageElement.naturalHeight,
+      }
+    }
+    // 默认分辨率
+    return { width: 1920, height: 1080 }
+  }
+
   // ==================== 导出接口 ====================
 
   return {
@@ -196,6 +231,10 @@ export function createMediaModule() {
     // 视频元素管理方法
     setVideoElement,
     getVideoOriginalResolution,
+
+    // 图片元素管理方法
+    setImageElement,
+    getImageOriginalResolution,
   }
 }
 

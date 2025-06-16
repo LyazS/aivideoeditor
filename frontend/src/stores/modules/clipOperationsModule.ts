@@ -1,5 +1,6 @@
 import { reactive, markRaw, type Raw, type Ref } from 'vue'
 import { CustomVisibleSprite } from '../../utils/VideoVisibleSprite'
+import { ImageVisibleSprite } from '../../utils/ImageVisibleSprite'
 import { useWebAVControls } from '../../composables/useWebAVControls'
 import { printDebugInfo, syncTimeRange } from '../utils/storeUtils'
 import type { TimelineItem, MediaItem } from '../../types/videoTypes'
@@ -54,26 +55,43 @@ export function createClipOperationsModule(
 
     try {
       // 检查素材是否已经解析完成
-      if (!mediaItem.isReady || !mediaItem.mp4Clip) {
+      if (!mediaItem.isReady || (!mediaItem.mp4Clip && !mediaItem.imgClip)) {
         console.error('❌ 素材还在解析中，无法复制')
         console.groupEnd()
         return null
       }
 
-      // 克隆MP4Clip
+      // 根据媒体类型克隆对应的Clip
       const webAVControls = useWebAVControls()
-      const clonedClip = await webAVControls.cloneMP4Clip(mediaItem.mp4Clip)
+      let newSprite: CustomVisibleSprite | ImageVisibleSprite
 
-      // 创建新的CustomVisibleSprite
-      const newSprite = new CustomVisibleSprite(clonedClip)
+      if (mediaItem.mediaType === 'video' && mediaItem.mp4Clip) {
+        const clonedClip = await webAVControls.cloneMP4Clip(mediaItem.mp4Clip)
+        newSprite = new CustomVisibleSprite(clonedClip)
+      } else if (mediaItem.mediaType === 'image' && mediaItem.imgClip) {
+        const clonedClip = await webAVControls.cloneImgClip(mediaItem.imgClip)
+        newSprite = new ImageVisibleSprite(clonedClip)
+      } else {
+        console.error('❌ 不支持的媒体类型或缺少对应的clip')
+        console.groupEnd()
+        return null
+      }
 
-      // 复制时间范围设置
-      newSprite.setTimeRange({
-        clipStartTime: timeRange.clipStartTime,
-        clipEndTime: timeRange.clipEndTime,
-        timelineStartTime: timeRange.timelineStartTime,
-        timelineEndTime: timeRange.timelineEndTime,
-      })
+      // 根据媒体类型复制时间范围设置
+      if (mediaItem.mediaType === 'video') {
+        (newSprite as CustomVisibleSprite).setTimeRange({
+          clipStartTime: timeRange.clipStartTime,
+          clipEndTime: timeRange.clipEndTime,
+          timelineStartTime: timeRange.timelineStartTime,
+          timelineEndTime: timeRange.timelineEndTime,
+        })
+      } else if (mediaItem.mediaType === 'image') {
+        (newSprite as ImageVisibleSprite).setTimeRange({
+          timelineStartTime: timeRange.timelineStartTime,
+          timelineEndTime: timeRange.timelineEndTime,
+          displayDuration: timeRange.timelineEndTime - timeRange.timelineStartTime,
+        })
+      }
 
       // 复制原始sprite的变换属性
       const originalRect = sprite.rect
@@ -107,6 +125,7 @@ export function createClipOperationsModule(
         id: Date.now().toString() + Math.random().toString(36).substring(2, 11),
         mediaItemId: originalItem.mediaItemId,
         trackId: originalItem.trackId,
+        mediaType: originalItem.mediaType,
         timeRange: newSprite.getTimeRange(), // 从sprite获取完整的timeRange（包含自动计算的effectiveDuration）
         sprite: markRaw(newSprite),
         // 复制原始项目的sprite属性
@@ -123,13 +142,21 @@ export function createClipOperationsModule(
         opacity: originalItem.opacity,
       })
 
-      // 更新新sprite的时间轴位置
-      newSprite.setTimeRange({
-        clipStartTime: timeRange.clipStartTime,
-        clipEndTime: timeRange.clipEndTime,
-        timelineStartTime: newTimelinePosition * 1000000,
-        timelineEndTime: (newTimelinePosition + duration) * 1000000,
-      })
+      // 根据媒体类型更新新sprite的时间轴位置
+      if (mediaItem.mediaType === 'video') {
+        (newSprite as CustomVisibleSprite).setTimeRange({
+          clipStartTime: timeRange.clipStartTime,
+          clipEndTime: timeRange.clipEndTime,
+          timelineStartTime: newTimelinePosition * 1000000,
+          timelineEndTime: (newTimelinePosition + duration) * 1000000,
+        })
+      } else if (mediaItem.mediaType === 'image') {
+        (newSprite as ImageVisibleSprite).setTimeRange({
+          timelineStartTime: newTimelinePosition * 1000000,
+          timelineEndTime: (newTimelinePosition + duration) * 1000000,
+          displayDuration: duration * 1000000,
+        })
+      }
 
       // 添加到时间轴
       timelineModule.timelineItems.value.push(newItem)
@@ -221,6 +248,13 @@ export function createClipOperationsModule(
 
     if (!mediaItem) {
       console.error('❌ 找不到对应的素材项目')
+      console.groupEnd()
+      return
+    }
+
+    // 检查是否为视频类型（图片不支持分割）
+    if (mediaItem.mediaType !== 'video') {
+      console.error('❌ 只有视频片段支持分割操作')
       console.groupEnd()
       return
     }
@@ -333,6 +367,7 @@ export function createClipOperationsModule(
         id: Date.now().toString() + Math.random().toString(36).substring(2, 11),
         mediaItemId: originalItem.mediaItemId,
         trackId: originalItem.trackId,
+        mediaType: originalItem.mediaType,
         timeRange: firstSprite.getTimeRange(), // 从sprite获取完整的timeRange
         sprite: markRaw(firstSprite),
         // 复制原始项目的sprite属性
@@ -353,6 +388,7 @@ export function createClipOperationsModule(
         id: Date.now().toString() + Math.random().toString(36).substring(2, 11),
         mediaItemId: originalItem.mediaItemId,
         trackId: originalItem.trackId,
+        mediaType: originalItem.mediaType,
         timeRange: secondSprite.getTimeRange(), // 从sprite获取完整的timeRange
         sprite: markRaw(secondSprite),
         // 复制原始项目的sprite属性

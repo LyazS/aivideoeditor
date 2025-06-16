@@ -1,7 +1,8 @@
 import { ref, markRaw, type Raw } from 'vue'
 import { AVCanvas } from '@webav/av-canvas'
-import { MP4Clip } from '@webav/av-cliper'
+import { MP4Clip, ImgClip } from '@webav/av-cliper'
 import { CustomVisibleSprite } from '../utils/VideoVisibleSprite'
+import { ImageVisibleSprite } from '../utils/ImageVisibleSprite'
 import { useVideoStore } from '../stores/videoStore'
 import {
   logWebAVInitStart,
@@ -36,8 +37,9 @@ const globalError = ref<string | null>(null)
 // 画布重新创建时的内容备份
 interface CanvasBackup {
   sprites: Array<{
-    sprite: Raw<CustomVisibleSprite>
-    clip: MP4Clip
+    sprite: Raw<CustomVisibleSprite | ImageVisibleSprite>
+    clip: MP4Clip | ImgClip
+    mediaType: 'video' | 'image'
     timelineItemId: string
   }>
   currentTime: number
@@ -274,6 +276,30 @@ export function useWebAVControls() {
   }
 
   /**
+   * 创建ImgClip
+   * @param file 图片文件
+   */
+  const createImgClip = async (file: File): Promise<Raw<ImgClip>> => {
+    try {
+      console.log(`Creating ImgClip for: ${file.name}`)
+
+      // 创建ImgClip
+      const response = new Response(file)
+      const imgClip = markRaw(new ImgClip(response.body!))
+
+      // 等待ImgClip准备完成
+      await imgClip.ready
+
+      console.log(`ImgClip created successfully for: ${file.name}`)
+      return imgClip
+    } catch (err) {
+      const errorMessage = `创建ImgClip失败: ${(err as Error).message}`
+      console.error('ImgClip creation error:', err)
+      throw new Error(errorMessage)
+    }
+  }
+
+  /**
    * 克隆MP4Clip实例
    * @param originalClip 原始MP4Clip
    */
@@ -289,6 +315,26 @@ export function useWebAVControls() {
     } catch (err) {
       const errorMessage = `克隆MP4Clip失败: ${(err as Error).message}`
       console.error('MP4Clip clone error:', err)
+      throw new Error(errorMessage)
+    }
+  }
+
+  /**
+   * 克隆ImgClip实例
+   * @param originalClip 原始ImgClip
+   */
+  const cloneImgClip = async (originalClip: Raw<ImgClip>): Promise<Raw<ImgClip>> => {
+    try {
+      console.log('Cloning ImgClip...')
+
+      // 使用WebAV内置的clone方法
+      const clonedClip = await originalClip.clone()
+
+      console.log('ImgClip cloned successfully')
+      return markRaw(clonedClip)
+    } catch (err) {
+      const errorMessage = `克隆ImgClip失败: ${(err as Error).message}`
+      console.error('ImgClip clone error:', err)
       throw new Error(errorMessage)
     }
   }
@@ -405,13 +451,24 @@ export function useWebAVControls() {
     const timelineItems = videoStore.timelineItems
     for (const item of timelineItems) {
       if (item.sprite) {
-        const clip = item.sprite.getClip()
-        if (clip) {
-          backup.sprites.push({
-            sprite: item.sprite,
-            clip: clip as MP4Clip,
-            timelineItemId: item.id,
-          })
+        // 从MediaItem获取原始的clip，而不是从sprite获取
+        const mediaItem = videoStore.getMediaItem(item.mediaItemId)
+        if (mediaItem) {
+          let clip: MP4Clip | ImgClip | null = null
+          if (item.mediaType === 'video' && mediaItem.mp4Clip) {
+            clip = mediaItem.mp4Clip
+          } else if (item.mediaType === 'image' && mediaItem.imgClip) {
+            clip = mediaItem.imgClip
+          }
+
+          if (clip) {
+            backup.sprites.push({
+              sprite: item.sprite,
+              clip: clip,
+              mediaType: item.mediaType,
+              timelineItemId: item.id,
+            })
+          }
         }
       }
     }
@@ -490,12 +547,17 @@ export function useWebAVControls() {
               `Restoring sprite ${restoredCount + 1}/${backup.sprites.length}`,
             )
 
-            // 克隆MP4Clip
-            const clonedClip = await cloneMP4Clip(spriteBackup.clip)
-            logSpriteRestore(spriteBackup.timelineItemId, 'MP4Clip cloned')
-
-            // 创建新的CustomVisibleSprite
-            const newSprite = new CustomVisibleSprite(clonedClip)
+            // 根据媒体类型克隆对应的Clip
+            let newSprite: CustomVisibleSprite | ImageVisibleSprite
+            if (spriteBackup.mediaType === 'video') {
+              const clonedClip = await cloneMP4Clip(spriteBackup.clip as MP4Clip)
+              logSpriteRestore(spriteBackup.timelineItemId, 'MP4Clip cloned')
+              newSprite = new CustomVisibleSprite(clonedClip)
+            } else {
+              const clonedClip = await cloneImgClip(spriteBackup.clip as ImgClip)
+              logSpriteRestore(spriteBackup.timelineItemId, 'ImgClip cloned')
+              newSprite = new ImageVisibleSprite(clonedClip)
+            }
 
             // 恢复时间范围设置
             const originalTimeRange = spriteBackup.sprite.getTimeRange()
@@ -633,7 +695,9 @@ export function useWebAVControls() {
     createCanvasContainer,
     initializeCanvas,
     createMP4Clip,
+    createImgClip,
     cloneMP4Clip,
+    cloneImgClip,
     play,
     pause,
     seekTo,

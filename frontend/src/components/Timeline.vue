@@ -157,6 +157,7 @@ import { ref, computed, onMounted, onUnmounted, nextTick, markRaw, reactive } fr
 import { useVideoStore } from '../stores/videoStore'
 import { useWebAVControls, waitForWebAVReady, isWebAVReady } from '../composables/useWebAVControls'
 import { CustomVisibleSprite } from '../utils/VideoVisibleSprite'
+import { ImageVisibleSprite } from '../utils/ImageVisibleSprite'
 import { webavToProjectCoords } from '../utils/coordinateTransform'
 import type { TimelineItem } from '../types/videoTypes'
 import VideoClip from './VideoClip.vue'
@@ -358,8 +359,8 @@ async function handleDrop(event: DragEvent) {
       // 如果拖拽位置超出当前时间轴长度，动态扩展时间轴
       videoStore.expandTimelineIfNeeded(dropTime + 10) // 预留10秒缓冲
 
-      // 从素材库项创建视频片段
-      await createVideoClipFromMediaItem(mediaItem, dropTime, targetTrackId)
+      // 从素材库项创建媒体片段（视频或图片）
+      await createMediaClipFromMediaItem(mediaItem, dropTime, targetTrackId)
     } catch (error) {
       console.error('Failed to parse media item data:', error)
       alert('拖拽数据格式错误')
@@ -367,17 +368,18 @@ async function handleDrop(event: DragEvent) {
   } else {
     console.log('没有检测到素材库拖拽数据')
     // 不再支持直接拖拽文件
-    alert('请先将视频文件导入到素材库，然后从素材库拖拽到时间轴')
+    alert('请先将视频或图片文件导入到素材库，然后从素材库拖拽到时间轴')
   }
 }
 
 // 从素材库项创建时间轴项目
-async function createVideoClipFromMediaItem(
+async function createMediaClipFromMediaItem(
   mediaItem: {
     id: string
     url: string
     name: string
     duration: number
+    mediaType: 'video' | 'image'
     fileInfo: {
       name: string
       type: string
@@ -404,18 +406,41 @@ async function createVideoClipFromMediaItem(
     }
 
     // 检查素材是否已经解析完成
-    if (!storeMediaItem.isReady || !storeMediaItem.mp4Clip) {
+    if (!storeMediaItem.isReady) {
       throw new Error('素材还在解析中，请稍后再试')
     }
 
-    // 克隆MP4Clip并创建CustomVisibleSprite
-    console.log('克隆MP4Clip并创建CustomVisibleSprite for mediaItem:', mediaItem.id)
-    const clonedMP4Clip = await webAVControls.cloneMP4Clip(storeMediaItem.mp4Clip)
-    const sprite = new CustomVisibleSprite(clonedMP4Clip)
+    let sprite: CustomVisibleSprite | ImageVisibleSprite
 
-    // 获取视频的原始分辨率
-    const originalResolution = videoStore.getVideoOriginalResolution(mediaItem.id)
-    console.log('视频原始分辨率:', originalResolution)
+    if (mediaItem.mediaType === 'video') {
+      // 处理视频
+      if (!storeMediaItem.mp4Clip) {
+        throw new Error('视频素材解析失败')
+      }
+      console.log('克隆MP4Clip并创建CustomVisibleSprite for mediaItem:', mediaItem.id)
+      const clonedMP4Clip = await webAVControls.cloneMP4Clip(storeMediaItem.mp4Clip)
+      sprite = new CustomVisibleSprite(clonedMP4Clip)
+    } else if (mediaItem.mediaType === 'image') {
+      // 处理图片
+      if (!storeMediaItem.imgClip) {
+        throw new Error('图片素材解析失败')
+      }
+      console.log('克隆ImgClip并创建ImageVisibleSprite for mediaItem:', mediaItem.id)
+      const clonedImgClip = await webAVControls.cloneImgClip(storeMediaItem.imgClip)
+      sprite = new ImageVisibleSprite(clonedImgClip)
+    } else {
+      throw new Error('不支持的媒体类型')
+    }
+
+    // 获取媒体的原始分辨率
+    let originalResolution: { width: number; height: number }
+    if (mediaItem.mediaType === 'video') {
+      originalResolution = videoStore.getVideoOriginalResolution(mediaItem.id)
+      console.log('视频原始分辨率:', originalResolution)
+    } else {
+      originalResolution = videoStore.getImageOriginalResolution(mediaItem.id)
+      console.log('图片原始分辨率:', originalResolution)
+    }
 
     // 设置初始尺寸为视频原始分辨率（缩放系数1.0）
     // sprite.rect.w/h 是在画布上的实际显示像素尺寸
@@ -436,22 +461,40 @@ async function createVideoClipFromMediaItem(
       画布尺寸: { w: canvasWidth, h: canvasHeight },
     })
 
-    // 设置时间范围 - 添加调试信息
-    const timeRangeConfig = {
-      clipStartTime: 0,
-      clipEndTime: mediaItem.duration * 1000000, // 转换为微秒
-      timelineStartTime: startTime * 1000000, // 转换为微秒
-      timelineEndTime: (startTime + mediaItem.duration) * 1000000, // 转换为微秒
+    // 设置时间范围 - 根据媒体类型使用不同的方法
+    if (mediaItem.mediaType === 'video') {
+      const timeRangeConfig = {
+        clipStartTime: 0,
+        clipEndTime: mediaItem.duration * 1000000, // 转换为微秒
+        timelineStartTime: startTime * 1000000, // 转换为微秒
+        timelineEndTime: (startTime + mediaItem.duration) * 1000000, // 转换为微秒
+      }
+
+      console.log('设置视频时间范围:', {
+        ...timeRangeConfig,
+        clipDuration: mediaItem.duration,
+        startTime,
+        endTime: startTime + mediaItem.duration,
+      })
+
+      ;(sprite as CustomVisibleSprite).setTimeRange(timeRangeConfig)
+    } else {
+      // 图片使用不同的时间范围设置
+      const imageTimeRangeConfig = {
+        timelineStartTime: startTime * 1000000, // 转换为微秒
+        timelineEndTime: (startTime + mediaItem.duration) * 1000000, // 转换为微秒
+        displayDuration: mediaItem.duration * 1000000, // 转换为微秒
+      }
+
+      console.log('设置图片时间范围:', {
+        ...imageTimeRangeConfig,
+        displayDuration: mediaItem.duration,
+        startTime,
+        endTime: startTime + mediaItem.duration,
+      })
+
+      ;(sprite as ImageVisibleSprite).setTimeRange(imageTimeRangeConfig)
     }
-
-    console.log('设置时间范围:', {
-      ...timeRangeConfig,
-      clipDuration: mediaItem.duration,
-      startTime,
-      endTime: startTime + mediaItem.duration,
-    })
-
-    sprite.setTimeRange(timeRangeConfig)
 
     // 添加到WebAV画布
     const avCanvas = webAVControls.getAVCanvas()
@@ -477,6 +520,7 @@ async function createVideoClipFromMediaItem(
       id: timelineItemId,
       mediaItemId: mediaItem.id,
       trackId: trackId,
+      mediaType: mediaItem.mediaType,
       timeRange: sprite.getTimeRange(), // 从sprite获取完整的timeRange（已经通过setTimeRange设置）
       sprite: markRaw(sprite), // 使用markRaw避免Vue响应式包装
       // Sprite位置和大小属性（使用项目坐标系）

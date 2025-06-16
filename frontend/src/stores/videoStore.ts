@@ -110,6 +110,16 @@ export const useVideoStore = defineStore('video', () => {
     return mediaModule.getVideoOriginalResolution(clipId)
   }
 
+  // ==================== 图片元素管理方法 ====================
+  // 使用媒体模块的图片元素管理方法
+  function setImageElement(clipId: string, imageElement: HTMLImageElement | null) {
+    mediaModule.setImageElement(clipId, imageElement)
+  }
+
+  function getImageOriginalResolution(clipId: string): { width: number; height: number } {
+    return mediaModule.getImageOriginalResolution(clipId)
+  }
+
   return {
     // 新的两层数据结构
     mediaItems: mediaModule.mediaItems,
@@ -244,6 +254,9 @@ export const useVideoStore = defineStore('video', () => {
     // 视频元素管理
     setVideoElement,
     getVideoOriginalResolution,
+    // 图片元素管理
+    setImageElement,
+    getImageOriginalResolution,
     // WebAV 相关状态和方法
     avCanvas: webavModule.avCanvas,
     isWebAVReady: webavModule.isWebAVReady,

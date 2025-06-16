@@ -40,8 +40,8 @@
           </div>
         </div>
 
-        <!-- 播放设置 -->
-        <div class="property-section">
+        <!-- 播放设置 - 仅对视频显示 -->
+        <div v-if="selectedTimelineItem?.mediaType === 'video'" class="property-section">
           <h4>播放设置</h4>
 
           <!-- 精确时长控制 -->
@@ -411,12 +411,16 @@ const transformX = computed(() => selectedTimelineItem.value?.position.x || 0)
 const transformY = computed(() => selectedTimelineItem.value?.position.y || 0)
 const scaleX = computed(() => {
   if (!selectedTimelineItem.value || !selectedMediaItem.value) return 1
-  const originalResolution = videoStore.getVideoOriginalResolution(selectedMediaItem.value.id)
+  const originalResolution = selectedMediaItem.value.mediaType === 'video'
+    ? videoStore.getVideoOriginalResolution(selectedMediaItem.value.id)
+    : videoStore.getImageOriginalResolution(selectedMediaItem.value.id)
   return selectedTimelineItem.value.size.width / originalResolution.width
 })
 const scaleY = computed(() => {
   if (!selectedTimelineItem.value || !selectedMediaItem.value) return 1
-  const originalResolution = videoStore.getVideoOriginalResolution(selectedMediaItem.value.id)
+  const originalResolution = selectedMediaItem.value.mediaType === 'video'
+    ? videoStore.getVideoOriginalResolution(selectedMediaItem.value.id)
+    : videoStore.getImageOriginalResolution(selectedMediaItem.value.id)
   return selectedTimelineItem.value.size.height / originalResolution.height
 })
 const rotation = computed(() => {
@@ -462,8 +466,13 @@ const clipName = computed({
 const playbackRate = computed(() => {
   if (!selectedTimelineItem.value) return 1
 
-  // 直接从TimeRange中获取播放速度属性
-  return selectedTimelineItem.value.timeRange.playbackRate
+  // 图片类型没有播放速度概念，返回1
+  if (selectedTimelineItem.value.mediaType === 'image') {
+    return 1
+  }
+
+  // 直接从TimeRange中获取播放速度属性（仅对视频有效）
+  return selectedTimelineItem.value.timeRange.playbackRate || 1
 })
 
 const normalizedSpeed = computed(() => {
@@ -511,9 +520,9 @@ const updateClipName = () => {
   }
 }
 
-// 更新播放速度
+// 更新播放速度（仅对视频有效）
 const updatePlaybackRate = (newRate?: number) => {
-  if (selectedTimelineItem.value) {
+  if (selectedTimelineItem.value && selectedTimelineItem.value.mediaType === 'video') {
     const rate = newRate || playbackRate.value
     videoStore.updateTimelineItemPlaybackRate(selectedTimelineItem.value.id, rate)
     // targetDuration 现在是 computed 属性，会自动更新
@@ -531,29 +540,43 @@ const updateTargetDuration = (newTargetDuration: number) => {
     const sprite = selectedTimelineItem.value.sprite
     const timeRange = selectedTimelineItem.value.timeRange
 
-    // 计算新的播放速度：原始时长 / 目标时长
-    const newPlaybackRate = selectedMediaItem.value.duration / newTargetDuration
-    // 确保播放速度在合理范围内（0.1-100x）
-    const clampedRate = Math.max(0.1, Math.min(100, newPlaybackRate))
+    // 对于视频，计算新的播放速度：原始时长 / 目标时长
+    if (selectedTimelineItem.value.mediaType === 'video') {
+      const newPlaybackRate = selectedMediaItem.value.duration / newTargetDuration
+      // 确保播放速度在合理范围内（0.1-100x）
+      const clampedRate = Math.max(0.1, Math.min(100, newPlaybackRate))
 
-    // 更新CustomVisibleSprite的时间范围
-    const newTimelineEndTime = timeRange.timelineStartTime + newTargetDuration * 1000000
-    sprite.setTimeRange({
-      clipStartTime: timeRange.clipStartTime,
-      clipEndTime: timeRange.clipEndTime,
-      timelineStartTime: timeRange.timelineStartTime,
-      timelineEndTime: newTimelineEndTime,
-    })
+      // 更新CustomVisibleSprite的时间范围
+      const newTimelineEndTime = timeRange.timelineStartTime + newTargetDuration * 1000000
+      sprite.setTimeRange({
+        clipStartTime: timeRange.clipStartTime,
+        clipEndTime: timeRange.clipEndTime,
+        timelineStartTime: timeRange.timelineStartTime,
+        timelineEndTime: newTimelineEndTime,
+      })
 
-    // 从sprite获取更新后的完整timeRange（包含自动计算的effectiveDuration）
+      console.log('🎯 视频目标时长更新:', {
+        inputValue: newTargetDuration,
+        newPlaybackRate: clampedRate,
+        updatedTimeRange: sprite.getTimeRange(),
+      })
+    } else if (selectedTimelineItem.value.mediaType === 'image') {
+      // 对于图片，直接更新显示时长
+      const newTimelineEndTime = timeRange.timelineStartTime + newTargetDuration * 1000000
+      sprite.setTimeRange({
+        timelineStartTime: timeRange.timelineStartTime,
+        timelineEndTime: newTimelineEndTime,
+        displayDuration: newTargetDuration * 1000000,
+      })
+
+      console.log('🎯 图片目标时长更新:', {
+        inputValue: newTargetDuration,
+        updatedTimeRange: sprite.getTimeRange(),
+      })
+    }
+
+    // 从sprite获取更新后的完整timeRange
     selectedTimelineItem.value.timeRange = sprite.getTimeRange()
-
-    console.log('🎯 目标时长更新:', {
-      inputValue: newTargetDuration,
-      newPlaybackRate: clampedRate,
-      updatedTimeRange: selectedTimelineItem.value.timeRange,
-      actualTargetDuration: targetDuration.value, // computed 会自动计算新值
-    })
   }
 }
 
@@ -637,7 +660,9 @@ const updateTransform = (transform?: {
 const toggleProportionalScale = () => {
   if (proportionalScale.value && selectedTimelineItem.value && selectedMediaItem.value) {
     // 开启等比缩放时，使用当前X缩放值作为统一缩放值，同时更新Y缩放
-    const originalResolution = videoStore.getVideoOriginalResolution(selectedMediaItem.value.id)
+    const originalResolution = selectedMediaItem.value.mediaType === 'video'
+      ? videoStore.getVideoOriginalResolution(selectedMediaItem.value.id)
+      : videoStore.getImageOriginalResolution(selectedMediaItem.value.id)
     const newSize = {
       width: originalResolution.width * scaleX.value,
       height: originalResolution.height * scaleX.value, // 使用X缩放值保持等比
@@ -649,7 +674,9 @@ const toggleProportionalScale = () => {
 // 更新统一缩放
 const updateUniformScale = (newScale: number) => {
   if (proportionalScale.value && selectedTimelineItem.value && selectedMediaItem.value) {
-    const originalResolution = videoStore.getVideoOriginalResolution(selectedMediaItem.value.id)
+    const originalResolution = selectedMediaItem.value.mediaType === 'video'
+      ? videoStore.getVideoOriginalResolution(selectedMediaItem.value.id)
+      : videoStore.getImageOriginalResolution(selectedMediaItem.value.id)
     const newSize = {
       width: originalResolution.width * newScale,
       height: originalResolution.height * newScale,
@@ -661,7 +688,9 @@ const updateUniformScale = (newScale: number) => {
 // 设置X缩放绝对值的方法
 const setScaleX = (value: number) => {
   if (!selectedTimelineItem.value || !selectedMediaItem.value) return
-  const originalResolution = videoStore.getVideoOriginalResolution(selectedMediaItem.value.id)
+  const originalResolution = selectedMediaItem.value.mediaType === 'video'
+    ? videoStore.getVideoOriginalResolution(selectedMediaItem.value.id)
+    : videoStore.getImageOriginalResolution(selectedMediaItem.value.id)
   const newScaleX = Math.max(0.01, Math.min(5, value))
   const newSize = {
     width: originalResolution.width * newScaleX,
@@ -673,7 +702,9 @@ const setScaleX = (value: number) => {
 // 设置Y缩放绝对值的方法
 const setScaleY = (value: number) => {
   if (!selectedTimelineItem.value || !selectedMediaItem.value) return
-  const originalResolution = videoStore.getVideoOriginalResolution(selectedMediaItem.value.id)
+  const originalResolution = selectedMediaItem.value.mediaType === 'video'
+    ? videoStore.getVideoOriginalResolution(selectedMediaItem.value.id)
+    : videoStore.getImageOriginalResolution(selectedMediaItem.value.id)
   const newScaleY = Math.max(0.01, Math.min(5, value))
   const newSize = {
     width: selectedTimelineItem.value.size.width, // 保持X尺寸不变
