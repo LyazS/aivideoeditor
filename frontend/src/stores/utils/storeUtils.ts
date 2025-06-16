@@ -1,5 +1,6 @@
 import type { Ref } from 'vue'
-import type { MediaItem, TimelineItem } from '../../types/videoTypes'
+import type { MediaItem, TimelineItem, Track } from '../../types/videoTypes'
+import type { TimeRange } from '../../utils/customVisibleSprite'
 
 // ==================== 调试信息工具 ====================
 
@@ -188,4 +189,329 @@ export function autoArrangeTimelineItems(timelineItems: Ref<TimelineItem[]>) {
   })
 
   console.log('✅ 时间轴项目自动整理完成')
+}
+
+// ==================== 缩放计算工具 ====================
+
+/**
+ * 计算最大缩放级别
+ * @param timelineWidth 时间轴宽度（像素）
+ * @param frameRate 帧率
+ * @param totalDuration 总时长（秒）
+ * @returns 最大缩放级别
+ */
+export function getMaxZoomLevel(timelineWidth: number, frameRate: number, totalDuration: number): number {
+  // 最大缩放级别：一帧占用容器宽度的1/20（即5%）
+  const targetFrameWidth = timelineWidth / 20 // 一帧占1/20横幅
+  const frameDuration = 1 / frameRate // 一帧的时长（秒）
+  const requiredPixelsPerSecond = targetFrameWidth / frameDuration
+  const maxZoom = (requiredPixelsPerSecond * totalDuration) / timelineWidth
+
+  return Math.max(maxZoom, 100) // 确保至少有100倍缩放
+}
+
+/**
+ * 计算最小缩放级别
+ * @param totalDuration 总时长（秒）
+ * @param maxVisibleDuration 最大可见时长（秒）
+ * @returns 最小缩放级别
+ */
+export function getMinZoomLevel(totalDuration: number, maxVisibleDuration: number): number {
+  // 基于最大可见范围计算最小缩放级别
+  return totalDuration / maxVisibleDuration
+}
+
+/**
+ * 计算最大滚动偏移量
+ * @param timelineWidth 时间轴宽度（像素）
+ * @param zoomLevel 缩放级别
+ * @param totalDuration 总时长（秒）
+ * @param maxVisibleDuration 最大可见时长（秒）
+ * @returns 最大滚动偏移量（像素）
+ */
+export function getMaxScrollOffset(
+  timelineWidth: number,
+  zoomLevel: number,
+  totalDuration: number,
+  maxVisibleDuration: number
+): number {
+  // 基于最大可见范围计算滚动限制，而不是基于totalDuration
+  const effectiveDuration = Math.min(totalDuration, maxVisibleDuration)
+  const pixelsPerSecond = (timelineWidth * zoomLevel) / totalDuration
+  const maxScrollableTime = Math.max(0, effectiveDuration - timelineWidth / pixelsPerSecond)
+  return maxScrollableTime * pixelsPerSecond
+}
+
+// ==================== 时长计算工具 ====================
+
+/**
+ * 计算内容结束时间（最后一个视频片段的结束时间）
+ * @param timelineItems 时间轴项目数组
+ * @returns 内容结束时间（秒）
+ */
+export function calculateContentEndTime(timelineItems: TimelineItem[]): number {
+  if (timelineItems.length === 0) return 0
+  return Math.max(...timelineItems.map((item) => {
+    const sprite = item.sprite
+    const timeRange = sprite.getTimeRange()
+    return timeRange.timelineEndTime / 1000000 // 转换为秒
+  }))
+}
+
+/**
+ * 计算总时长
+ * @param timelineItems 时间轴项目数组
+ * @param timelineDuration 基础时间轴时长（秒）
+ * @returns 总时长（秒）
+ */
+export function calculateTotalDuration(timelineItems: TimelineItem[], timelineDuration: number): number {
+  if (timelineItems.length === 0) return timelineDuration
+  const maxEndTime = Math.max(...timelineItems.map((item) => {
+    const sprite = item.sprite
+    const timeRange = sprite.getTimeRange()
+    const timelineEndTime = timeRange.timelineEndTime / 1000000 // 转换为秒
+    return timelineEndTime
+  }))
+  return Math.max(maxEndTime, timelineDuration)
+}
+
+/**
+ * 计算最大可见时长
+ * @param contentEndTime 内容结束时间（秒）
+ * @param defaultDuration 默认时长（秒）
+ * @returns 最大可见时长（秒）
+ */
+export function calculateMaxVisibleDuration(contentEndTime: number, defaultDuration: number = 300): number {
+  if (contentEndTime === 0) {
+    return defaultDuration // 没有视频时使用默认值
+  }
+  // 最大可见范围：视频内容长度的4倍
+  return contentEndTime * 4
+}
+
+// ==================== 时间范围工具 ====================
+
+/**
+ * 同步TimelineItem和sprite的timeRange
+ * 确保两者的时间范围信息保持一致
+ * @param timelineItem TimelineItem实例
+ * @param newTimeRange 新的时间范围（可选，如果不提供则从sprite获取）
+ */
+export function syncTimeRange(timelineItem: TimelineItem, newTimeRange?: Partial<TimeRange>): void {
+  const sprite = timelineItem.sprite
+
+  if (newTimeRange) {
+    // 如果提供了新的时间范围，同时更新sprite和TimelineItem
+    const completeTimeRange = {
+      ...sprite.getTimeRange(),
+      ...newTimeRange
+    }
+
+    // sprite.setTimeRange会在内部自动计算effectiveDuration
+    sprite.setTimeRange(completeTimeRange)
+    // 从sprite获取更新后的完整timeRange（包含自动计算的effectiveDuration）
+    timelineItem.timeRange = sprite.getTimeRange()
+
+    console.log('🔄 同步timeRange (提供新值):', {
+      timelineItemId: timelineItem.id,
+      timeRange: completeTimeRange
+    })
+  } else {
+    // 如果没有提供新值，从sprite同步到TimelineItem
+    const spriteTimeRange = sprite.getTimeRange()
+    timelineItem.timeRange = spriteTimeRange
+
+    console.log('🔄 同步timeRange (从sprite获取):', {
+      timelineItemId: timelineItem.id,
+      timeRange: spriteTimeRange
+    })
+  }
+}
+
+/**
+ * 验证时间范围是否有效
+ * @param timeRange 时间范围
+ * @returns 是否有效
+ */
+export function validateTimeRange(timeRange: TimeRange): boolean {
+  return (
+    timeRange.clipStartTime >= 0 &&
+    timeRange.clipEndTime > timeRange.clipStartTime &&
+    timeRange.timelineStartTime >= 0 &&
+    timeRange.timelineEndTime > timeRange.timelineStartTime
+  )
+}
+
+/**
+ * 计算时间范围重叠
+ * @param range1 时间范围1
+ * @param range2 时间范围2
+ * @returns 重叠时长（秒）
+ */
+export function calculateTimeRangeOverlap(range1: TimeRange, range2: TimeRange): number {
+  const start1 = range1.timelineStartTime / 1000000 // 转换为秒
+  const end1 = range1.timelineEndTime / 1000000
+  const start2 = range2.timelineStartTime / 1000000
+  const end2 = range2.timelineEndTime / 1000000
+
+  const overlapStart = Math.max(start1, start2)
+  const overlapEnd = Math.min(end1, end2)
+
+  return Math.max(0, overlapEnd - overlapStart)
+}
+
+// ==================== 查找和过滤工具 ====================
+
+/**
+ * 根据轨道ID查找时间轴项目
+ * @param trackId 轨道ID
+ * @param timelineItems 时间轴项目数组
+ * @returns 该轨道的所有项目
+ */
+export function getTimelineItemsByTrack(trackId: number, timelineItems: TimelineItem[]): TimelineItem[] {
+  return timelineItems.filter(item => item.trackId === trackId)
+}
+
+/**
+ * 查找孤立的时间轴项目（没有对应媒体项目）
+ * @param timelineItems 时间轴项目数组
+ * @param mediaItems 媒体项目数组
+ * @returns 孤立的时间轴项目
+ */
+export function findOrphanedTimelineItems(timelineItems: TimelineItem[], mediaItems: MediaItem[]): TimelineItem[] {
+  return timelineItems.filter(timelineItem =>
+    !mediaItems.find(mediaItem => mediaItem.id === timelineItem.mediaItemId)
+  )
+}
+
+/**
+ * 根据sprite查找时间轴项目
+ * @param sprite CustomVisibleSprite实例
+ * @param timelineItems 时间轴项目数组
+ * @returns 对应的时间轴项目或null
+ */
+export function findTimelineItemBySprite(sprite: any, timelineItems: TimelineItem[]): TimelineItem | null {
+  return timelineItems.find(item => item.sprite === sprite) || null
+}
+
+/**
+ * 根据时间查找所有重叠的时间轴项目
+ * @param time 时间（秒）
+ * @param timelineItems 时间轴项目数组
+ * @returns 重叠的时间轴项目数组
+ */
+export function getTimelineItemsAtTime(time: number, timelineItems: TimelineItem[]): TimelineItem[] {
+  return timelineItems.filter((item) => {
+    const sprite = item.sprite
+    const timeRange = sprite.getTimeRange()
+    const startTime = timeRange.timelineStartTime / 1000000 // 转换为秒
+    const endTime = timeRange.timelineEndTime / 1000000 // 转换为秒
+    return time >= startTime && time < endTime
+  })
+}
+
+/**
+ * 根据轨道和时间查找时间轴项目
+ * @param trackId 轨道ID
+ * @param time 时间（秒）
+ * @param timelineItems 时间轴项目数组
+ * @returns 找到的时间轴项目或null
+ */
+export function getTimelineItemAtTrackAndTime(trackId: number, time: number, timelineItems: TimelineItem[]): TimelineItem | null {
+  return timelineItems.find((item) => {
+    if (item.trackId !== trackId) return false
+    const sprite = item.sprite
+    const timeRange = sprite.getTimeRange()
+    const startTime = timeRange.timelineStartTime / 1000000 // 转换为秒
+    const endTime = timeRange.timelineEndTime / 1000000 // 转换为秒
+    return time >= startTime && time < endTime
+  }) || null
+}
+
+// ==================== 验证和清理工具 ====================
+
+/**
+ * 验证数据完整性
+ * @param mediaItems 媒体项目数组
+ * @param timelineItems 时间轴项目数组
+ * @param tracks 轨道数组
+ * @returns 验证结果
+ */
+export function validateDataIntegrity(
+  mediaItems: MediaItem[],
+  timelineItems: TimelineItem[],
+  tracks: Track[]
+): {
+  isValid: boolean;
+  errors: string[];
+  warnings: string[];
+} {
+  const errors: string[] = []
+  const warnings: string[] = []
+
+  // 检查孤立的时间轴项目
+  const orphanedItems = findOrphanedTimelineItems(timelineItems, mediaItems)
+  if (orphanedItems.length > 0) {
+    errors.push(`发现 ${orphanedItems.length} 个孤立的时间轴项目（没有对应的媒体项目）`)
+  }
+
+  // 检查无效的轨道引用
+  const trackIds = new Set(tracks.map(track => track.id))
+  const invalidTrackItems = timelineItems.filter(item => !trackIds.has(item.trackId))
+  if (invalidTrackItems.length > 0) {
+    errors.push(`发现 ${invalidTrackItems.length} 个时间轴项目引用了不存在的轨道`)
+  }
+
+  // 检查时间范围有效性
+  const invalidTimeRangeItems = timelineItems.filter(item => !validateTimeRange(item.timeRange))
+  if (invalidTimeRangeItems.length > 0) {
+    warnings.push(`发现 ${invalidTimeRangeItems.length} 个时间轴项目的时间范围无效`)
+  }
+
+  // 检查重叠项目（同一轨道内）
+  const trackGroups = new Map<number, TimelineItem[]>()
+  timelineItems.forEach(item => {
+    if (!trackGroups.has(item.trackId)) {
+      trackGroups.set(item.trackId, [])
+    }
+    trackGroups.get(item.trackId)!.push(item)
+  })
+
+  trackGroups.forEach((trackItems, trackId) => {
+    for (let i = 0; i < trackItems.length; i++) {
+      for (let j = i + 1; j < trackItems.length; j++) {
+        const overlap = calculateTimeRangeOverlap(trackItems[i].timeRange, trackItems[j].timeRange)
+        if (overlap > 0) {
+          warnings.push(`轨道 ${trackId} 中发现重叠项目，重叠时长 ${overlap.toFixed(2)} 秒`)
+        }
+      }
+    }
+  })
+
+  return {
+    isValid: errors.length === 0,
+    errors,
+    warnings
+  }
+}
+
+/**
+ * 清理无效的引用
+ * @param timelineItems 时间轴项目数组的ref
+ * @param mediaItems 媒体项目数组
+ * @returns 清理的项目数量
+ */
+export function cleanupInvalidReferences(timelineItems: Ref<TimelineItem[]>, mediaItems: MediaItem[]): number {
+  const orphanedItems = findOrphanedTimelineItems(timelineItems.value, mediaItems)
+
+  if (orphanedItems.length > 0) {
+    // 移除孤立的时间轴项目
+    timelineItems.value = timelineItems.value.filter(item =>
+      !orphanedItems.some(orphaned => orphaned.id === item.id)
+    )
+
+    console.warn(`🧹 清理了 ${orphanedItems.length} 个孤立的时间轴项目`)
+  }
+
+  return orphanedItems.length
 }

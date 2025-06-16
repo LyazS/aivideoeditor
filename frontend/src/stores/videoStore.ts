@@ -1,7 +1,7 @@
 import { ref, computed, markRaw, reactive, type Raw } from 'vue'
 import { defineStore } from 'pinia'
 import { AVCanvas } from '@webav/av-canvas'
-import { CustomVisibleSprite, type TimeRange } from '../utils/customVisibleSprite'
+import { CustomVisibleSprite } from '../utils/customVisibleSprite'
 import { useWebAVControls } from '../composables/useWebAVControls'
 import { webavToProjectCoords, projectToWebavCoords } from '../utils/coordinateTransform'
 import {
@@ -11,9 +11,24 @@ import {
   pixelToTime,
   expandTimelineIfNeeded,
   getTimelineItemAtTime,
-  autoArrangeTimelineItems
+  autoArrangeTimelineItems,
+  getMaxZoomLevel,
+  getMinZoomLevel,
+  getMaxScrollOffset,
+  calculateContentEndTime,
+  calculateTotalDuration,
+  calculateMaxVisibleDuration,
+  syncTimeRange,
+  findTimelineItemBySprite,
+  getTimelineItemsByTrack
 } from './utils/storeUtils'
 import { createMediaModule } from './modules/mediaModule'
+import { createConfigModule } from './modules/configModule'
+import { createTrackModule } from './modules/trackModule'
+import { createPlaybackModule } from './modules/playbackModule'
+import { createWebAVModule } from './modules/webavModule'
+import { createViewportModule } from './modules/viewportModule'
+import { createSelectionModule } from './modules/selectionModule'
 import type {
   PropsChangeEvent,
   MediaItem,
@@ -26,122 +41,35 @@ export const useVideoStore = defineStore('video', () => {
   // 创建媒体管理模块
   const mediaModule = createMediaModule()
 
+  // 创建配置管理模块
+  const configModule = createConfigModule()
+
+  // 创建轨道管理模块
+  const trackModule = createTrackModule()
+
+  // 创建播放控制模块
+  const playbackModule = createPlaybackModule(configModule.frameRate)
+
+  // 创建WebAV集成模块
+  const webavModule = createWebAVModule()
+
   // 新的两层数据结构
   const timelineItems = ref<TimelineItem[]>([]) // 时间轴
 
-  const tracks = ref<Track[]>([
-    { id: 1, name: '轨道 1', isVisible: true, isMuted: false, height: 80 },
-    { id: 2, name: '轨道 2', isVisible: true, isMuted: false, height: 80 },
-  ])
-  const currentTime = ref(0)
-  const isPlaying = ref(false)
-  const timelineDuration = ref(300) // 默认300秒时间轴，确保有足够的刻度线空间
-  const selectedTimelineItemId = ref<string | null>(null) // 当前选中的时间轴项ID
-  const selectedAVCanvasSprite = ref<Raw<CustomVisibleSprite> | null>(null) // 当前在AVCanvas中选中的sprite
-  const playbackRate = ref(1) // 播放速度
 
-  // 编辑设置
-  const proportionalScale = ref(true) // 等比缩放设置
 
-  // 时间轴缩放和滚动状态
-  const zoomLevel = ref(1) // 缩放级别，1为默认，大于1为放大，小于1为缩小
-  const scrollOffset = ref(0) // 水平滚动偏移量（像素）
-  const frameRate = ref(30) // 假设视频帧率为30fps
 
-  // 视频分辨率设置
-  const videoResolution = ref<VideoResolution>({
-    name: '1080p',
-    width: 1920,
-    height: 1080,
-    aspectRatio: '16:9',
+
+  const totalDuration = computed(() => {
+    return calculateTotalDuration(timelineItems.value, configModule.timelineDuration.value)
   })
 
-  // ==================== WebAV 相关状态 ====================
-  // WebAV核心对象 - 使用markRaw避免Vue响应式包装
-  const avCanvas = ref<AVCanvas | null>(null)
-  const isWebAVReady = ref(false)
-  const webAVError = ref<string | null>(null)
+  // 创建视口管理模块（需要在totalDuration之后创建）
+  const viewportModule = createViewportModule(timelineItems, totalDuration, configModule.timelineDuration)
 
-  // WebAV相关方法
-  function setAVCanvas(canvas: AVCanvas | null) {
-    console.log('🏪 [VideoStore] setAVCanvas:', { hasCanvas: !!canvas, canvasType: canvas?.constructor.name, previousState: !!avCanvas.value })
-    avCanvas.value = canvas ? markRaw(canvas) : null
-  }
+  // 创建选择管理模块（需要在webavModule之后创建）
+  const selectionModule = createSelectionModule(timelineItems, webavModule.avCanvas)
 
-  function setWebAVReady(ready: boolean) {
-    console.log('🏪 [VideoStore] setWebAVReady:', { ready, previousReady: isWebAVReady.value, stateChange: ready !== isWebAVReady.value })
-    isWebAVReady.value = ready
-  }
-
-  function setWebAVError(error: string | null) {
-    console.log('🏪 [VideoStore] setWebAVError:', { error, hasError: !!error, previousError: webAVError.value })
-    webAVError.value = error
-  }
-
-  const totalDuration = computed(() => {
-    if (timelineItems.value.length === 0) return timelineDuration.value
-    const maxEndTime = Math.max(...timelineItems.value.map((item) => {
-      // 从CustomVisibleSprite获取时间信息
-      const sprite = item.sprite
-      const timeRange = sprite.getTimeRange()
-      const timelineEndTime = timeRange.timelineEndTime / 1000000 // 转换为秒
-      return timelineEndTime
-    }))
-    return Math.max(maxEndTime, timelineDuration.value)
-  })
-
-
-
-  // 计算最大允许的可见时间范围（基于视频内容长度）
-  const maxVisibleDuration = computed(() => {
-    if (contentEndTime.value === 0) {
-      return 300 // 没有视频时使用默认值300秒
-    }
-    // 最大可见范围：视频内容长度的4倍
-    return contentEndTime.value * 4
-  })
-
-  // 缩放相关计算属性
-  const minZoomLevel = computed(() => {
-    // 基于最大可见范围计算最小缩放级别
-    return totalDuration.value / maxVisibleDuration.value
-  })
-
-  // 当前可见时间范围（受最大可见范围限制）
-  const visibleDuration = computed(() => {
-    const calculatedDuration = totalDuration.value / zoomLevel.value
-    return Math.min(calculatedDuration, maxVisibleDuration.value)
-  })
-
-  // 计算最大缩放级别的函数（需要时间轴宽度参数）
-  function getMaxZoomLevel(timelineWidth: number): number {
-    // 最大缩放级别：一帧占用容器宽度的1/20（即5%）
-    const targetFrameWidth = timelineWidth / 20 // 一帧占1/20横幅
-    const frameDuration = 1 / frameRate.value // 一帧的时长（秒）
-    const requiredPixelsPerSecond = targetFrameWidth / frameDuration
-    const maxZoom = (requiredPixelsPerSecond * totalDuration.value) / timelineWidth
-
-    return Math.max(maxZoom, 100) // 确保至少有100倍缩放
-  }
-
-  // 计算最大滚动偏移量的函数（需要时间轴宽度参数）
-  function getMaxScrollOffset(timelineWidth: number): number {
-    // 基于最大可见范围计算滚动限制，而不是基于totalDuration
-    const effectiveDuration = Math.min(totalDuration.value, maxVisibleDuration.value)
-    const pixelsPerSecond = (timelineWidth * zoomLevel.value) / totalDuration.value
-    const maxScrollableTime = Math.max(0, effectiveDuration - timelineWidth / pixelsPerSecond)
-    return maxScrollableTime * pixelsPerSecond
-  }
-
-  // 计算实际内容的结束时间（最后一个视频片段的结束时间）
-  const contentEndTime = computed(() => {
-    if (timelineItems.value.length === 0) return 0
-    return Math.max(...timelineItems.value.map((item) => {
-      const sprite = item.sprite
-      const timeRange = sprite.getTimeRange()
-      return timeRange.timelineEndTime / 1000000 // 转换为秒
-    }))
-  })
 
 
 
@@ -149,42 +77,7 @@ export const useVideoStore = defineStore('video', () => {
 
 
 
-  /**
-   * 同步TimelineItem和sprite的timeRange
-   * 确保两者的时间范围信息保持一致
-   * @param timelineItem TimelineItem实例
-   * @param newTimeRange 新的时间范围（可选，如果不提供则从sprite获取）
-   */
-  function syncTimelineItemTimeRange(timelineItem: TimelineItem, newTimeRange?: Partial<TimeRange>) {
-    const sprite = timelineItem.sprite
 
-    if (newTimeRange) {
-      // 如果提供了新的时间范围，同时更新sprite和TimelineItem
-      const completeTimeRange = {
-        ...sprite.getTimeRange(),
-        ...newTimeRange
-      }
-
-      // sprite.setTimeRange会在内部自动计算effectiveDuration
-      sprite.setTimeRange(completeTimeRange)
-      // 从sprite获取更新后的完整timeRange（包含自动计算的effectiveDuration）
-      timelineItem.timeRange = sprite.getTimeRange()
-
-      console.log('🔄 同步timeRange (提供新值):', {
-        timelineItemId: timelineItem.id,
-        timeRange: completeTimeRange
-      })
-    } else {
-      // 如果没有提供新值，从sprite同步到TimelineItem
-      const spriteTimeRange = sprite.getTimeRange()
-      timelineItem.timeRange = spriteTimeRange
-
-      console.log('🔄 同步timeRange (从sprite获取):', {
-        timelineItemId: timelineItem.id,
-        timeRange: spriteTimeRange
-      })
-    }
-  }
 
   /**
    * 为TimelineItem设置双向数据同步
@@ -207,8 +100,8 @@ export const useVideoStore = defineStore('video', () => {
           rect.y !== undefined ? rect.y : currentRect.y,
           rect.w !== undefined ? rect.w : timelineItem.size.width,
           rect.h !== undefined ? rect.h : timelineItem.size.height,
-          videoResolution.value.width,
-          videoResolution.value.height
+          configModule.videoResolution.value.width,
+          configModule.videoResolution.value.height
         )
         timelineItem.position.x = Math.round(projectCoords.x)
         timelineItem.position.y = Math.round(projectCoords.y)
@@ -243,15 +136,15 @@ export const useVideoStore = defineStore('video', () => {
   // ==================== 素材管理方法 ====================
   // 使用媒体模块的方法，但需要包装以提供额外的依赖
   function addMediaItem(mediaItem: MediaItem) {
-    mediaModule.addMediaItem(mediaItem, timelineItems, tracks)
+    mediaModule.addMediaItem(mediaItem, timelineItems, trackModule.tracks)
   }
 
   function removeMediaItem(mediaItemId: string) {
     mediaModule.removeMediaItem(
       mediaItemId,
       timelineItems,
-      tracks,
-      avCanvas.value,
+      trackModule.tracks,
+      webavModule.avCanvas.value,
       () => {} // 清理回调，目前为空
     )
   }
@@ -279,7 +172,7 @@ export const useVideoStore = defineStore('video', () => {
       mediaItemName: mediaItem?.name || '未知',
       trackId: timelineItem.trackId,
       position: timelineItem.timeRange.timelineStartTime / 1000000
-    }, mediaModule.mediaItems, timelineItems, tracks)
+    }, mediaModule.mediaItems, timelineItems, trackModule.tracks)
   }
 
   function removeTimelineItem(timelineItemId: string) {
@@ -299,7 +192,7 @@ export const useVideoStore = defineStore('video', () => {
 
       // 从WebAV画布移除
       try {
-        const canvas = avCanvas.value
+        const canvas = webavModule.avCanvas.value
         if (canvas) {
           canvas.removeSprite(item.sprite)
         }
@@ -316,7 +209,7 @@ export const useVideoStore = defineStore('video', () => {
         mediaItemName: mediaItem?.name || '未知',
         trackId: item.trackId,
         position: item.timeRange.timelineStartTime / 1000000
-      }, mediaModule.mediaItems, timelineItems, tracks)
+      }, mediaModule.mediaItems, timelineItems, trackModule.tracks)
     }
   }
 
@@ -324,9 +217,7 @@ export const useVideoStore = defineStore('video', () => {
     return timelineItems.value.find(item => item.id === timelineItemId)
   }
 
-  function getTimelineItemsForTrack(trackId: number): TimelineItem[] {
-    return timelineItems.value.filter(item => item.trackId === trackId)
-  }
+
 
   // ==================== 素材名称管理 ====================
   function updateMediaItemName(mediaItemId: string, newName: string) {
@@ -351,7 +242,7 @@ export const useVideoStore = defineStore('video', () => {
       const duration = currentTimeRange.timelineEndTime - currentTimeRange.timelineStartTime
 
       // 使用同步函数更新timeRange
-      syncTimelineItemTimeRange(item, {
+      syncTimeRange(item, {
         timelineStartTime: newPosition * 1000000, // 转换为微秒
         timelineEndTime: newPosition * 1000000 + duration
       })
@@ -365,7 +256,7 @@ export const useVideoStore = defineStore('video', () => {
         newTrackId: item.trackId,
         positionChanged: oldPosition !== newPosition,
         trackChanged: oldTrackId !== item.trackId
-      }, mediaModule.mediaItems, timelineItems, tracks)
+      }, mediaModule.mediaItems, timelineItems, trackModule.tracks)
     }
   }
 
@@ -391,71 +282,11 @@ export const useVideoStore = defineStore('video', () => {
         mediaItemName: mediaItem?.name || '未知',
         trackId: item.trackId,
         position: item.timeRange.timelineStartTime / 1000000
-      }, mediaModule.mediaItems, timelineItems, tracks)
+      }, mediaModule.mediaItems, timelineItems, trackModule.tracks)
     }
   }
 
-  function selectTimelineItem(timelineItemId: string | null) {
-    selectedTimelineItemId.value = timelineItemId
 
-    // 同步选择AVCanvas中的sprite
-    if (timelineItemId) {
-      const timelineItem = getTimelineItem(timelineItemId)
-      if (timelineItem) {
-        selectAVCanvasSprite(timelineItem.sprite, false) // false表示不触发反向同步
-      }
-    } else {
-      // 取消时间轴选择时，同步取消AVCanvas选择
-      selectAVCanvasSprite(null, false)
-    }
-  }
-
-  function selectAVCanvasSprite(sprite: Raw<CustomVisibleSprite> | null, syncToTimeline: boolean = true) {
-    selectedAVCanvasSprite.value = sprite
-
-    // 获取AVCanvas实例并设置活动sprite
-    const canvas = avCanvas.value
-    if (canvas) {
-      try {
-        // 直接设置activeSprite属性
-        canvas.activeSprite = sprite
-      } catch (error) {
-        console.warn('设置AVCanvas活动sprite失败:', error)
-      }
-    }
-
-    // 同步到时间轴选择（如果需要）
-    if (syncToTimeline) {
-      if (sprite) {
-        // 根据sprite查找对应的timelineItem
-        const timelineItem = findTimelineItemBySprite(sprite)
-        if (timelineItem) {
-          selectedTimelineItemId.value = timelineItem.id
-        }
-      }
-      // 注意：当sprite为null时，我们不自动取消时间轴选择，
-      // 因为用户要求"取消avcanvas选中片段的时候，要保留时间轴的选中状态"
-    }
-  }
-
-  function findTimelineItemBySprite(sprite: Raw<CustomVisibleSprite>): TimelineItem | null {
-    return timelineItems.value.find(item => item.sprite === sprite) || null
-  }
-
-  // 处理来自AVCanvas的sprite选择变化
-  function handleAVCanvasSpriteChange(sprite: Raw<CustomVisibleSprite> | null) {
-    // 更新AVCanvas选择状态，但不触发反向同步（避免循环）
-    selectedAVCanvasSprite.value = sprite
-
-    // 同步到时间轴选择
-    if (sprite) {
-      const timelineItem = findTimelineItemBySprite(sprite)
-      if (timelineItem) {
-        selectedTimelineItemId.value = timelineItem.id
-      }
-    }
-    // 注意：当sprite为null时，保留时间轴选择状态
-  }
 
   async function duplicateTimelineItem(timelineItemId: string): Promise<string | null> {
     console.group('📋 时间轴项目复制调试')
@@ -514,7 +345,7 @@ export const useVideoStore = defineStore('video', () => {
       })
 
       // 添加到WebAV画布
-      const canvas = avCanvas.value
+      const canvas = webavModule.avCanvas.value
       if (canvas) {
         canvas.addSprite(newSprite)
       }
@@ -568,10 +399,10 @@ export const useVideoStore = defineStore('video', () => {
         mediaItemName: mediaItem?.name || '未知',
         trackId: originalItem.trackId,
         newPosition: newTimelinePosition
-      }, mediaModule.mediaItems, timelineItems, tracks)
+      }, mediaModule.mediaItems, timelineItems, trackModule.tracks)
 
       // 选中新创建的项目
-      selectedTimelineItemId.value = newItem.id
+      selectionModule.selectTimelineItem(newItem.id)
 
       return newItem.id
     } catch (error) {
@@ -692,7 +523,7 @@ export const useVideoStore = defineStore('video', () => {
       })
 
       // 添加到WebAV画布
-      const canvas = avCanvas.value
+      const canvas = webavModule.avCanvas.value
       if (canvas) {
         canvas.addSprite(firstSprite)
         canvas.addSprite(secondSprite)
@@ -763,10 +594,10 @@ export const useVideoStore = defineStore('video', () => {
         mediaItemId: originalItem.mediaItemId,
         mediaItemName: mediaItem?.name || '未知',
         trackId: originalItem.trackId
-      }, mediaModule.mediaItems, timelineItems, tracks)
+      }, mediaModule.mediaItems, timelineItems, trackModule.tracks)
 
       // 清除选中状态
-      selectedTimelineItemId.value = null
+      selectionModule.clearAllSelections()
     } catch (error) {
       console.error('❌ 分割过程中出错:', error)
       console.groupEnd()
@@ -777,127 +608,6 @@ export const useVideoStore = defineStore('video', () => {
 
 
 
-  function setCurrentTime(time: number, forceAlign: boolean = true) {
-    const finalTime = forceAlign ? alignTimeToFrame(time, frameRate.value) : time
-    currentTime.value = finalTime
-    // 移除自动选中逻辑 - 播放时不自动选中clip
-  }
-
-
-
-  function setPlaybackRate(rate: number) {
-    playbackRate.value = rate
-  }
-
-
-
-
-
-
-
-  // 轨道管理方法
-  function addTrack(name?: string): Track {
-    const newId = Math.max(...tracks.value.map((t) => t.id)) + 1
-    const newTrack: Track = {
-      id: newId,
-      name: name || `轨道 ${newId}`,
-      isVisible: true,
-      isMuted: false,
-      height: 80,
-    }
-    tracks.value.push(newTrack)
-    return newTrack
-  }
-
-  function removeTrack(trackId: number) {
-    // 不能删除最后一个轨道
-    if (tracks.value.length <= 1) return
-
-    // 将该轨道的所有时间轴项目移动到第一个轨道
-    timelineItems.value.forEach((item) => {
-      if (item.trackId === trackId) {
-        item.trackId = tracks.value[0].id
-      }
-    })
-
-    // 删除轨道
-    const index = tracks.value.findIndex((t) => t.id === trackId)
-    if (index > -1) {
-      tracks.value.splice(index, 1)
-    }
-  }
-
-  function toggleTrackVisibility(trackId: number) {
-    const track = tracks.value.find((t) => t.id === trackId)
-    if (track) {
-      track.isVisible = !track.isVisible
-    }
-  }
-
-  function toggleTrackMute(trackId: number) {
-    const track = tracks.value.find((t) => t.id === trackId)
-    if (track) {
-      track.isMuted = !track.isMuted
-    }
-  }
-
-  function renameTrack(trackId: number, newName: string) {
-    const track = tracks.value.find((t) => t.id === trackId)
-    if (track) {
-      track.name = newName
-    }
-  }
-
-  // 缩放和滚动方法
-  function setZoomLevel(newZoomLevel: number, timelineWidth: number = 800) {
-    const maxZoom = getMaxZoomLevel(timelineWidth)
-    const minZoom = minZoomLevel.value
-    const clampedZoom = Math.max(minZoom, Math.min(newZoomLevel, maxZoom))
-
-    // 如果达到最小缩放级别，提供调试信息
-    if (newZoomLevel < minZoom && contentEndTime.value > 0) {
-      console.log(`🔍 已达到最小缩放级别 (${minZoom.toFixed(3)})`)
-      console.log(`📏 当前视频总长度: ${contentEndTime.value.toFixed(1)}秒`)
-      console.log(`👁️ 最大可见范围限制: ${maxVisibleDuration.value.toFixed(1)}秒`)
-      console.log(`🎯 当前可见范围: ${visibleDuration.value.toFixed(1)}秒`)
-    }
-
-    zoomLevel.value = clampedZoom
-
-    // 调整滚动偏移量以保持在有效范围内
-    const maxOffset = getMaxScrollOffset(timelineWidth)
-    scrollOffset.value = Math.max(0, Math.min(scrollOffset.value, maxOffset))
-  }
-
-  function setScrollOffset(newOffset: number, timelineWidth: number = 800) {
-    const maxOffset = getMaxScrollOffset(timelineWidth)
-    scrollOffset.value = Math.max(0, Math.min(newOffset, maxOffset))
-  }
-
-  function zoomIn(factor: number = 1.2, timelineWidth: number = 800) {
-    setZoomLevel(zoomLevel.value * factor, timelineWidth)
-  }
-
-  function zoomOut(factor: number = 1.2, timelineWidth: number = 800) {
-    setZoomLevel(zoomLevel.value / factor, timelineWidth)
-
-    // 当缩小时间轴时，确保基础时间轴长度足够大以显示更多刻度线
-    const pixelsPerSecond = (timelineWidth * zoomLevel.value) / totalDuration.value
-    const visibleDuration = timelineWidth / pixelsPerSecond
-
-    // 如果可见时间范围超过当前时间轴长度，扩展时间轴
-    if (visibleDuration > timelineDuration.value) {
-      timelineDuration.value = Math.max(visibleDuration * 1.5, timelineDuration.value)
-    }
-  }
-
-  function scrollLeft(amount: number = 50, timelineWidth: number = 800) {
-    setScrollOffset(scrollOffset.value - amount, timelineWidth)
-  }
-
-  function scrollRight(amount: number = 50, timelineWidth: number = 800) {
-    setScrollOffset(scrollOffset.value + amount, timelineWidth)
-  }
 
 
 
@@ -907,11 +617,18 @@ export const useVideoStore = defineStore('video', () => {
 
 
 
-  // 设置视频分辨率
-  function setVideoResolution(resolution: VideoResolution) {
-    videoResolution.value = resolution
-    console.log('视频分辨率已设置为:', resolution)
-  }
+
+
+
+
+
+
+
+
+
+
+
+
 
   // 更新时间轴项目播放速度
   function updateTimelineItemPlaybackRate(timelineItemId: string, newRate: number) {
@@ -924,7 +641,7 @@ export const useVideoStore = defineStore('video', () => {
       item.sprite.setPlaybackSpeed(clampedRate)
 
       // 使用同步函数更新TimelineItem的timeRange
-      syncTimelineItemTimeRange(item)
+      syncTimeRange(item)
 
       console.log('🎬 播放速度更新:', {
         timelineItemId,
@@ -975,8 +692,8 @@ export const useVideoStore = defineStore('video', () => {
           currentCenterY,
           newWidth,
           newHeight,
-          videoResolution.value.width,
-          videoResolution.value.height
+          configModule.videoResolution.value.width,
+          configModule.videoResolution.value.height
         )
         sprite.rect.x = webavCoords.x
         sprite.rect.y = webavCoords.y
@@ -995,8 +712,8 @@ export const useVideoStore = defineStore('video', () => {
           transform.position.y,
           item.size.width,
           item.size.height,
-          videoResolution.value.width,
-          videoResolution.value.height
+          configModule.videoResolution.value.width,
+          configModule.videoResolution.value.height
         )
         sprite.rect.x = webavCoords.x
         sprite.rect.y = webavCoords.y
@@ -1041,26 +758,26 @@ export const useVideoStore = defineStore('video', () => {
     // 新的两层数据结构
     mediaItems: mediaModule.mediaItems,
     timelineItems,
-    tracks,
-    currentTime,
-    isPlaying,
-    timelineDuration,
+    tracks: trackModule.tracks,
+    currentTime: playbackModule.currentTime,
+    isPlaying: playbackModule.isPlaying,
+    timelineDuration: configModule.timelineDuration,
     totalDuration,
-    contentEndTime,
-    playbackRate,
-    selectedTimelineItemId,
-    selectedAVCanvasSprite,
+    contentEndTime: viewportModule.contentEndTime,
+    playbackRate: playbackModule.playbackRate,
+    selectedTimelineItemId: selectionModule.selectedTimelineItemId,
+    selectedAVCanvasSprite: selectionModule.selectedAVCanvasSprite,
     // 编辑设置
-    proportionalScale,
+    proportionalScale: configModule.proportionalScale,
     // 缩放和滚动状态
-    zoomLevel,
-    scrollOffset,
-    frameRate,
-    minZoomLevel,
-    visibleDuration,
-    maxVisibleDuration,
-    getMaxZoomLevel,
-    getMaxScrollOffset,
+    zoomLevel: viewportModule.zoomLevel,
+    scrollOffset: viewportModule.scrollOffset,
+    frameRate: configModule.frameRate,
+    minZoomLevel: viewportModule.minZoomLevel,
+    visibleDuration: viewportModule.visibleDuration,
+    maxVisibleDuration: viewportModule.maxVisibleDuration,
+    getMaxZoomLevel: (timelineWidth: number) => viewportModule.getMaxZoomLevelForTimeline(timelineWidth, configModule.frameRate.value),
+    getMaxScrollOffset: viewportModule.getMaxScrollOffsetForTimeline,
     // 素材管理方法
     addMediaItem,
     removeMediaItem,
@@ -1070,14 +787,22 @@ export const useVideoStore = defineStore('video', () => {
     addTimelineItem,
     removeTimelineItem,
     getTimelineItem,
-    getTimelineItemsForTrack,
+    getTimelineItemsForTrack: (trackId: number) => getTimelineItemsByTrack(trackId, timelineItems.value),
     updateTimelineItemPosition,
     updateTimelineItemSprite,
     setupBidirectionalSync,
-    selectTimelineItem,
-    selectAVCanvasSprite,
-    findTimelineItemBySprite,
-    handleAVCanvasSpriteChange,
+    // 选择管理方法
+    selectTimelineItem: selectionModule.selectTimelineItem,
+    selectAVCanvasSprite: selectionModule.selectAVCanvasSprite,
+    handleAVCanvasSpriteChange: selectionModule.handleAVCanvasSpriteChange,
+    clearAllSelections: selectionModule.clearAllSelections,
+    toggleTimelineItemSelection: selectionModule.toggleTimelineItemSelection,
+    isTimelineItemSelected: selectionModule.isTimelineItemSelected,
+    isSpriteSelected: selectionModule.isSpriteSelected,
+    getSelectedTimelineItem: selectionModule.getSelectedTimelineItem,
+    getSelectionSummary: selectionModule.getSelectionSummary,
+    resetSelectionToDefaults: selectionModule.resetToDefaults,
+    findTimelineItemBySprite: (sprite: Raw<CustomVisibleSprite>) => findTimelineItemBySprite(sprite, timelineItems.value),
     duplicateTimelineItem,
     splitTimelineItemAtTime,
     getTimelineItemAtTime: (time: number) => getTimelineItemAtTime(time, timelineItems.value),
@@ -1085,39 +810,77 @@ export const useVideoStore = defineStore('video', () => {
     updateTimelineItemTransform,
     autoArrangeTimelineItems: () => autoArrangeTimelineItems(timelineItems),
     // 播放控制方法
-    setCurrentTime,
-    setPlaybackRate,
+    setCurrentTime: playbackModule.setCurrentTime,
+    setPlaybackRate: playbackModule.setPlaybackRate,
+    seekTo: playbackModule.seekTo,
+    seekBy: playbackModule.seekBy,
+    nextFrame: playbackModule.nextFrame,
+    previousFrame: playbackModule.previousFrame,
+    setPlaying: playbackModule.setPlaying,
+    play: playbackModule.play,
+    pause: playbackModule.pause,
+    togglePlayPause: playbackModule.togglePlayPause,
+    stop: playbackModule.stop,
+    resetPlaybackRate: playbackModule.resetPlaybackRate,
+    formattedCurrentTime: playbackModule.formattedCurrentTime,
+    playbackRateText: playbackModule.playbackRateText,
+    getPlaybackSummary: playbackModule.getPlaybackSummary,
+    resetPlaybackToDefaults: playbackModule.resetToDefaults,
     // 轨道管理方法
-    addTrack,
-    removeTrack,
-    toggleTrackVisibility,
-    toggleTrackMute,
-    renameTrack,
+    addTrack: (name?: string) => trackModule.addTrack(name),
+    removeTrack: (trackId: number) => trackModule.removeTrack(trackId, timelineItems),
+    toggleTrackVisibility: trackModule.toggleTrackVisibility,
+    toggleTrackMute: trackModule.toggleTrackMute,
+    renameTrack: trackModule.renameTrack,
+    setTrackHeight: trackModule.setTrackHeight,
+    getTrack: trackModule.getTrack,
+    getTracksSummary: trackModule.getTracksSummary,
+    resetTracksToDefaults: trackModule.resetTracksToDefaults,
     // 缩放和滚动方法
-    setZoomLevel,
-    setScrollOffset,
-    zoomIn,
-    zoomOut,
-    scrollLeft,
-    scrollRight,
+    setZoomLevel: (newZoomLevel: number, timelineWidth: number = 800) =>
+      viewportModule.setZoomLevel(newZoomLevel, timelineWidth, configModule.frameRate.value),
+    setScrollOffset: viewportModule.setScrollOffset,
+    zoomIn: (factor: number = 1.2, timelineWidth: number = 800) =>
+      viewportModule.zoomIn(factor, timelineWidth, configModule.frameRate.value),
+    zoomOut: (factor: number = 1.2, timelineWidth: number = 800) =>
+      viewportModule.zoomOut(factor, timelineWidth, configModule.frameRate.value),
+    scrollLeft: viewportModule.scrollLeft,
+    scrollRight: viewportModule.scrollRight,
+    scrollToTime: viewportModule.scrollToTime,
+    resetViewport: viewportModule.resetViewport,
+    getViewportSummary: viewportModule.getViewportSummary,
     timeToPixel: (time: number, timelineWidth: number) =>
-      timeToPixel(time, timelineWidth, totalDuration.value, zoomLevel.value, scrollOffset.value),
+      timeToPixel(time, timelineWidth, totalDuration.value, viewportModule.zoomLevel.value, viewportModule.scrollOffset.value),
     pixelToTime: (pixel: number, timelineWidth: number) =>
-      pixelToTime(pixel, timelineWidth, totalDuration.value, zoomLevel.value, scrollOffset.value),
-    alignTimeToFrame: (time: number) => alignTimeToFrame(time, frameRate.value),
-    expandTimelineIfNeeded: (targetTime: number) => expandTimelineIfNeeded(targetTime, timelineDuration),
+      pixelToTime(pixel, timelineWidth, totalDuration.value, viewportModule.zoomLevel.value, viewportModule.scrollOffset.value),
+    alignTimeToFrame: (time: number) => alignTimeToFrame(time, configModule.frameRate.value),
+    expandTimelineIfNeeded: (targetTime: number) => expandTimelineIfNeeded(targetTime, configModule.timelineDuration),
     // 分辨率相关
-    videoResolution,
-    setVideoResolution,
+    videoResolution: configModule.videoResolution,
+    setVideoResolution: configModule.setVideoResolution,
+    // 配置管理
+    setTimelineDuration: configModule.setTimelineDuration,
+    setFrameRate: configModule.setFrameRate,
+    setProportionalScale: configModule.setProportionalScale,
+    getConfigSummary: configModule.getConfigSummary,
+    resetConfigToDefaults: configModule.resetToDefaults,
     // 视频元素管理
     setVideoElement,
     getVideoOriginalResolution,
     // WebAV 相关状态和方法
-    avCanvas,
-    isWebAVReady,
-    webAVError,
-    setAVCanvas,
-    setWebAVReady,
-    setWebAVError,
+    avCanvas: webavModule.avCanvas,
+    isWebAVReady: webavModule.isWebAVReady,
+    webAVError: webavModule.webAVError,
+    setAVCanvas: webavModule.setAVCanvas,
+    setWebAVReady: webavModule.setWebAVReady,
+    setWebAVError: webavModule.setWebAVError,
+    initializeWebAV: webavModule.initializeWebAV,
+    destroyWebAV: webavModule.destroyWebAV,
+    rebuildWebAV: webavModule.rebuildWebAV,
+    isWebAVAvailable: webavModule.isWebAVAvailable,
+    getWebAVSummary: webavModule.getWebAVSummary,
+    resetWebAVToDefaults: webavModule.resetToDefaults,
+    addSpriteToCanvas: webavModule.addSprite,
+    removeSpriteFromCanvas: webavModule.removeSprite,
   }
 })
