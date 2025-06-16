@@ -1,6 +1,6 @@
 import type { Ref } from 'vue'
 import type { MediaItem, TimelineItem, Track } from '../../types/videoTypes'
-import type { TimeRange } from '../../utils/VideoVisibleSprite'
+import type { VideoTimeRange } from '../../utils/VideoVisibleSprite'
 
 // ==================== 调试开关 ====================
 
@@ -446,7 +446,7 @@ export function calculateMaxVisibleDuration(
  * @param timelineItem TimelineItem实例
  * @param newTimeRange 新的时间范围（可选，如果不提供则从sprite获取）
  */
-export function syncTimeRange(timelineItem: TimelineItem, newTimeRange?: Partial<TimeRange>): void {
+export function syncTimeRange(timelineItem: TimelineItem, newTimeRange?: Partial<VideoTimeRange>): void {
   const sprite = timelineItem.sprite
 
   if (newTimeRange) {
@@ -482,7 +482,7 @@ export function syncTimeRange(timelineItem: TimelineItem, newTimeRange?: Partial
  * @param timeRange 时间范围
  * @returns 是否有效
  */
-export function validateTimeRange(timeRange: TimeRange): boolean {
+export function validateTimeRange(timeRange: VideoTimeRange): boolean {
   return (
     timeRange.clipStartTime >= 0 &&
     timeRange.clipEndTime > timeRange.clipStartTime &&
@@ -497,7 +497,7 @@ export function validateTimeRange(timeRange: TimeRange): boolean {
  * @param range2 时间范围2
  * @returns 重叠时长（秒）
  */
-export function calculateTimeRangeOverlap(range1: TimeRange, range2: TimeRange): number {
+export function calculateTimeRangeOverlap(range1: VideoTimeRange, range2: VideoTimeRange): number {
   const start1 = range1.timelineStartTime / 1000000 // 转换为秒
   const end1 = range1.timelineEndTime / 1000000
   const start2 = range2.timelineStartTime / 1000000

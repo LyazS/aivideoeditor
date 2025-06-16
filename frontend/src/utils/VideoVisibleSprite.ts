@@ -3,7 +3,7 @@ import { VisibleSprite, MP4Clip } from '@webav/av-cliper'
 /**
  * 时间范围接口定义
  */
-export interface TimeRange {
+export interface VideoTimeRange {
   /** 素材内部开始时间（微秒） - 从素材的哪个时间点开始播放 */
   clipStartTime: number
   /** 素材内部结束时间（微秒） - 播放到素材的哪个时间点结束 */
@@ -31,7 +31,7 @@ export class CustomVisibleSprite extends VisibleSprite {
   /**
    * 时间范围信息
    */
-  #timeRange: TimeRange = {
+  #timeRange: VideoTimeRange = {
     clipStartTime: 0,
     clipEndTime: 0,
     timelineStartTime: 0,
@@ -173,7 +173,7 @@ export class CustomVisibleSprite extends VisibleSprite {
    * 获取完整的时间范围信息
    * @returns 时间范围信息
    */
-  public getTimeRange(): TimeRange {
+  public getTimeRange(): VideoTimeRange {
     return { ...this.#timeRange }
   }
 

@@ -107,7 +107,9 @@ const playbackSpeed = computed(() => {
     return 1
   }
   // 直接从timelineItem.timeRange获取，与videostore的同步机制保持一致
-  return props.timelineItem.timeRange.playbackRate || 1
+  // 使用类型守卫确保timeRange有playbackRate属性（只有TimeRange接口有，ImageTimeRange没有）
+  const timeRange = props.timelineItem.timeRange
+  return 'playbackRate' in timeRange ? (timeRange.playbackRate || 1) : 1
 })
 
 const thumbnailVideo = ref<HTMLVideoElement>()
@@ -524,9 +526,9 @@ onUnmounted(() => {
   transition: all 0.2s;
 }
 
-/* 图片片段使用不同的背景色 */
+/* 图片片段使用与视频相同的背景色 */
 .video-clip[data-media-type="image"] {
-  background: linear-gradient(135deg, #e2a04a, #bd7a35);
+  background: linear-gradient(135deg, #4a90e2, #357abd);
 }
 
 /* 在拖拽或调整大小时禁用过渡效果，避免延迟 */
