@@ -388,12 +388,42 @@ export function useWebAVControls() {
             const originalTimeRange = spriteBackup.sprite.getTimeRange()
             newSprite.setTimeRange(originalTimeRange)
 
-            // 恢复变换属性
-            const originalRect = spriteBackup.sprite.rect
-            newSprite.rect.x = originalRect.x
-            newSprite.rect.y = originalRect.y
-            newSprite.rect.w = originalRect.w
-            newSprite.rect.h = originalRect.h
+            // 恢复变换属性 - 需要处理新旧画布分辨率不同的情况
+            const restoredTimelineItem = videoStore.getTimelineItem(spriteBackup.timelineItemId)
+            if (restoredTimelineItem) {
+              // 使用TimelineItem中存储的项目坐标系坐标来重新计算新画布分辨率下的WebAV坐标
+              const { projectToWebavCoords } = await import('../utils/coordinateTransform')
+              const newWebavCoords = projectToWebavCoords(
+                restoredTimelineItem.position.x,
+                restoredTimelineItem.position.y,
+                restoredTimelineItem.size.width,
+                restoredTimelineItem.size.height,
+                options.width,
+                options.height
+              )
+
+              // 设置新的WebAV坐标
+              newSprite.rect.x = newWebavCoords.x
+              newSprite.rect.y = newWebavCoords.y
+              newSprite.rect.w = restoredTimelineItem.size.width
+              newSprite.rect.h = restoredTimelineItem.size.height
+
+              console.log(`🔄 坐标转换 (${spriteBackup.timelineItemId}):`, {
+                项目坐标: { x: restoredTimelineItem.position.x, y: restoredTimelineItem.position.y },
+                新画布尺寸: { width: options.width, height: options.height },
+                新WebAV坐标: { x: newWebavCoords.x, y: newWebavCoords.y }
+              })
+            } else {
+              // 如果找不到TimelineItem，使用原始坐标作为备用方案
+              console.warn(`找不到TimelineItem: ${spriteBackup.timelineItemId}，使用原始坐标`)
+              const originalRect = spriteBackup.sprite.rect
+              newSprite.rect.x = originalRect.x
+              newSprite.rect.y = originalRect.y
+              newSprite.rect.w = originalRect.w
+              newSprite.rect.h = originalRect.h
+            }
+
+            // 恢复其他属性
             newSprite.zIndex = spriteBackup.sprite.zIndex
             newSprite.opacity = spriteBackup.sprite.opacity
 
@@ -404,9 +434,9 @@ export function useWebAVControls() {
             videoStore.updateTimelineItemSprite(spriteBackup.timelineItemId, markRaw(newSprite))
 
             // 🔄 重新设置双向数据同步 - 这是关键步骤！
-            const timelineItem = videoStore.getTimelineItem(spriteBackup.timelineItemId)
-            if (timelineItem) {
-              videoStore.setupBidirectionalSync(timelineItem)
+            const syncTimelineItem = videoStore.getTimelineItem(spriteBackup.timelineItemId)
+            if (syncTimelineItem) {
+              videoStore.setupBidirectionalSync(syncTimelineItem)
               console.log(`重新设置双向数据同步: ${spriteBackup.timelineItemId}`)
             }
 
