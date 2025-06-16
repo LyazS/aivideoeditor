@@ -1,5 +1,5 @@
 import { reactive, markRaw, type Raw, type Ref } from 'vue'
-import { CustomVisibleSprite } from '../../utils/customVisibleSprite'
+import { CustomVisibleSprite } from '../../utils/VideoVisibleSprite'
 import { useWebAVControls } from '../../composables/useWebAVControls'
 import { printDebugInfo, syncTimeRange } from '../utils/storeUtils'
 import type { TimelineItem, MediaItem } from '../../types/videoTypes'

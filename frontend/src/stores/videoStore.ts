@@ -1,6 +1,6 @@
 import { ref, computed, markRaw, reactive, type Raw } from 'vue'
 import { defineStore } from 'pinia'
-import { CustomVisibleSprite } from '../utils/customVisibleSprite'
+import { CustomVisibleSprite } from '../utils/VideoVisibleSprite'
 import {
   alignTimeToFrame,
   timeToPixel,

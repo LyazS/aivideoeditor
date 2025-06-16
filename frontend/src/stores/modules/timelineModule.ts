@@ -1,5 +1,5 @@
 import { ref, reactive, markRaw, type Raw, type Ref } from 'vue'
-import { CustomVisibleSprite } from '../../utils/customVisibleSprite'
+import { CustomVisibleSprite } from '../../utils/VideoVisibleSprite'
 import { webavToProjectCoords, projectToWebavCoords } from '../../utils/coordinateTransform'
 import { printDebugInfo, syncTimeRange } from '../utils/storeUtils'
 import type {

@@ -57,7 +57,7 @@ frontend/
 │   ├── composables/         # 组合式函数
 │   │   └── useWebAVControls.ts       # WebAV控制器
 │   ├── utils/               # 工具类
-│   │   ├── customVisibleSprite.ts    # 自定义视频精灵
+│   │   ├── VideoVisibleSprite.ts     # 自定义视频精灵
 │   │   ├── coordinateTransform.ts    # 坐标转换
 │   │   ├── rotationTransform.ts      # 旋转变换
 │   │   └── webavDebug.ts             # WebAV调试工具

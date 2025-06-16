@@ -1,6 +1,6 @@
 import type { Raw } from 'vue'
 import type { MP4Clip, Rect } from '@webav/av-cliper'
-import type { CustomVisibleSprite, TimeRange } from '../utils/customVisibleSprite'
+import type { CustomVisibleSprite, TimeRange } from '../utils/VideoVisibleSprite'
 
 // 定义WebAV属性变化事件的类型
 export interface PropsChangeEvent {

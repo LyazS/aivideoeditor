@@ -156,7 +156,7 @@
 import { ref, computed, onMounted, onUnmounted, nextTick, markRaw, reactive } from 'vue'
 import { useVideoStore } from '../stores/videoStore'
 import { useWebAVControls, waitForWebAVReady, isWebAVReady } from '../composables/useWebAVControls'
-import { CustomVisibleSprite } from '../utils/customVisibleSprite'
+import { CustomVisibleSprite } from '../utils/VideoVisibleSprite'
 import { webavToProjectCoords } from '../utils/coordinateTransform'
 import type { TimelineItem } from '../types/videoTypes'
 import VideoClip from './VideoClip.vue'

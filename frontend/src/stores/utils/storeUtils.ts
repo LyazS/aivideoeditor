@@ -1,6 +1,6 @@
 import type { Ref } from 'vue'
 import type { MediaItem, TimelineItem, Track } from '../../types/videoTypes'
-import type { TimeRange } from '../../utils/customVisibleSprite'
+import type { TimeRange } from '../../utils/VideoVisibleSprite'
 
 // ==================== 调试开关 ====================
 

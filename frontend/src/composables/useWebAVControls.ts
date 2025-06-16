@@ -1,7 +1,7 @@
 import { ref, markRaw, type Raw } from 'vue'
 import { AVCanvas } from '@webav/av-canvas'
 import { MP4Clip } from '@webav/av-cliper'
-import { CustomVisibleSprite } from '../utils/customVisibleSprite'
+import { CustomVisibleSprite } from '../utils/VideoVisibleSprite'
 import { useVideoStore } from '../stores/videoStore'
 import {
   logWebAVInitStart,
