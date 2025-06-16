@@ -553,9 +553,20 @@ export function useWebAVControls() {
             // 恢复其他属性
             newSprite.zIndex = spriteBackup.sprite.zIndex
             newSprite.opacity = spriteBackup.sprite.opacity
+
+            // 恢复旋转角度
+            if (restoredTimelineItem) {
+              // 使用TimelineItem中存储的旋转角度
+              newSprite.rect.angle = restoredTimelineItem.rotation
+            } else {
+              // 如果找不到TimelineItem，使用原始sprite的旋转角度作为备用方案
+              newSprite.rect.angle = spriteBackup.sprite.rect.angle || 0
+            }
+
             logSpriteRestore(spriteBackup.timelineItemId, 'Properties restored', {
               zIndex: newSprite.zIndex,
               opacity: newSprite.opacity,
+              rotation: newSprite.rect.angle,
             })
 
             // 添加到画布
