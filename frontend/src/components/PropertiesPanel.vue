@@ -715,13 +715,7 @@ const setOpacity = (value: number) => {
   updateTransform({ opacity: newOpacity })
 }
 
-// 格式化时长
-const formatDuration = (seconds: number): string => {
-  const mins = Math.floor(seconds / 60)
-  const secs = Math.floor(seconds % 60)
-  const ms = Math.floor((seconds % 1) * 1000)
-  return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}.${ms.toString().padStart(3, '0')}`
-}
+
 
 // 实现对齐功能（基于项目坐标系：中心为原点）
 const alignHorizontal = (alignment: 'left' | 'center' | 'right') => {

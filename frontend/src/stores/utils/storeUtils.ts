@@ -49,7 +49,7 @@ export function printDebugInfo(
   details: unknown,
   mediaItems: MediaItem[],
   timelineItems: TimelineItem[],
-  tracks: any[],
+  tracks: { id: number; name: string }[],
 ) {
   const timestamp = new Date().toLocaleTimeString()
   console.group(`🎬 [${timestamp}] ${operation}`)
@@ -546,7 +546,7 @@ export function findOrphanedTimelineItems(
  * @returns 对应的时间轴项目或null
  */
 export function findTimelineItemBySprite(
-  sprite: any,
+  sprite: unknown,
   timelineItems: TimelineItem[],
 ): TimelineItem | null {
   return timelineItems.find((item) => item.sprite === sprite) || null

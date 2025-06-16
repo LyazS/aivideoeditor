@@ -1,4 +1,4 @@
-import { reactive, markRaw, type Raw, type Ref } from 'vue'
+import { reactive, markRaw, type Ref } from 'vue'
 import { CustomVisibleSprite } from '../../utils/VideoVisibleSprite'
 import { ImageVisibleSprite } from '../../utils/ImageVisibleSprite'
 import { useWebAVControls } from '../../composables/useWebAVControls'
@@ -10,7 +10,7 @@ import type { TimelineItem, MediaItem } from '../../types/videoTypes'
  * 负责复杂的视频片段编辑操作，包括复制、分割、播放速度调整等
  */
 export function createClipOperationsModule(
-  webavModule: { avCanvas: { value: any } },
+  webavModule: { avCanvas: { value: { addSprite: (sprite: unknown) => void; removeSprite: (sprite: unknown) => void } | null } },
   mediaModule: {
     getMediaItem: (id: string) => MediaItem | undefined
     mediaItems: Ref<MediaItem[]>
@@ -20,7 +20,7 @@ export function createClipOperationsModule(
     setupBidirectionalSync: (item: TimelineItem) => void
   },
   selectionModule: { selectTimelineItem: (id: string) => void; clearAllSelections: () => void },
-  trackModule?: { tracks: Ref<any[]> },
+  trackModule?: { tracks: Ref<{ id: number; name: string }[]> },
 ) {
   // ==================== 视频片段操作方法 ====================
 

@@ -482,6 +482,7 @@ function stopResize() {
       }
 
       // 从sprite获取更新后的完整timeRange
+      // eslint-disable-next-line vue/no-mutating-props
       props.timelineItem.timeRange = sprite.getTimeRange()
     }
   }

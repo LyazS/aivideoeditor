@@ -174,7 +174,6 @@ const webAVControls = useWebAVControls()
 const timelineBody = ref<HTMLElement>()
 const timelineWidth = ref(800)
 
-const timelineItems = computed(() => videoStore.timelineItems)
 const tracks = computed(() => videoStore.tracks)
 
 // 编辑轨道名称相关
@@ -614,8 +613,6 @@ function handleWheel(event: WheelEvent) {
     // 获取鼠标在时间轴上的位置（减去轨道控制区域的200px）
     const mouseX = event.clientX - rect.left - 200
     const mouseTime = videoStore.pixelToTime(mouseX, timelineWidth.value)
-    const oldZoom = videoStore.zoomLevel
-    const oldScrollOffset = videoStore.scrollOffset
 
     // 缩放操作（精简调试信息）
 

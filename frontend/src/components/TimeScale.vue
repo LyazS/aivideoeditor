@@ -260,8 +260,6 @@ function handleWheel(event: WheelEvent) {
     // 获取鼠标在时间轴上的位置
     const mouseX = event.clientX - rect.left
     const mouseTime = videoStore.pixelToTime(mouseX, containerWidth.value)
-    const oldZoom = videoStore.zoomLevel
-    const oldScrollOffset = videoStore.scrollOffset
 
     // 缩放操作（精简调试信息）
 

@@ -1,4 +1,4 @@
-import { ref, computed, markRaw, reactive, type Raw } from 'vue'
+import { computed, type Raw } from 'vue'
 import { defineStore } from 'pinia'
 import { CustomVisibleSprite } from '../utils/VideoVisibleSprite'
 import {
