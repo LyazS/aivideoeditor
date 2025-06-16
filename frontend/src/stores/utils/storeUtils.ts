@@ -2,6 +2,38 @@ import type { Ref } from 'vue'
 import type { MediaItem, TimelineItem, Track } from '../../types/videoTypes'
 import type { TimeRange } from '../../utils/customVisibleSprite'
 
+// ==================== 调试开关 ====================
+
+// 声明全局调试开关类型
+declare global {
+  interface Window {
+    DEBUG_TIMELINE_CONVERSION?: boolean
+    DEBUG_TIMELINE_ZOOM?: boolean
+    enableTimelineDebug?: () => void
+    disableTimelineDebug?: () => void
+  }
+}
+
+// 设置全局调试开关（默认关闭，需要时可手动开启）
+window.DEBUG_TIMELINE_CONVERSION = false
+window.DEBUG_TIMELINE_ZOOM = false
+
+// 提供便捷的调试控制函数
+window.enableTimelineDebug = () => {
+  window.DEBUG_TIMELINE_CONVERSION = true
+  window.DEBUG_TIMELINE_ZOOM = true
+  console.log('🔧 时间轴调试模式已开启')
+  console.log('📝 可用调试开关:')
+  console.log('  - window.DEBUG_TIMELINE_CONVERSION: 坐标转换调试（会产生大量日志）')
+  console.log('  - window.DEBUG_TIMELINE_ZOOM: 缩放调试（已精简，只显示警告信息）')
+}
+
+window.disableTimelineDebug = () => {
+  window.DEBUG_TIMELINE_CONVERSION = false
+  window.DEBUG_TIMELINE_ZOOM = false
+  console.log('🔧 时间轴调试模式已关闭')
+}
+
 // ==================== 调试信息工具 ====================
 
 /**
@@ -94,7 +126,22 @@ export function timeToPixel(
   scrollOffset: number,
 ): number {
   const pixelsPerSecond = (timelineWidth * zoomLevel) / totalDuration
-  return time * pixelsPerSecond - scrollOffset
+  const pixelPosition = time * pixelsPerSecond - scrollOffset
+
+  // 只在调试模式下输出详细信息，避免过多日志
+  if (window.DEBUG_TIMELINE_CONVERSION) {
+    console.log('⏰➡️📐 [坐标转换] 时间转像素:', {
+      time: time.toFixed(3),
+      timelineWidth,
+      totalDuration: totalDuration.toFixed(2),
+      zoomLevel: zoomLevel.toFixed(3),
+      scrollOffset: scrollOffset.toFixed(2),
+      pixelsPerSecond: pixelsPerSecond.toFixed(2),
+      pixelPosition: pixelPosition.toFixed(2),
+    })
+  }
+
+  return pixelPosition
 }
 
 /**
@@ -114,7 +161,22 @@ export function pixelToTime(
   scrollOffset: number,
 ): number {
   const pixelsPerSecond = (timelineWidth * zoomLevel) / totalDuration
-  return (pixel + scrollOffset) / pixelsPerSecond
+  const time = (pixel + scrollOffset) / pixelsPerSecond
+
+  // 只在调试模式下输出详细信息，避免过多日志
+  if (window.DEBUG_TIMELINE_CONVERSION) {
+    console.log('📐➡️⏰ [坐标转换] 像素转时间:', {
+      pixel: pixel.toFixed(2),
+      timelineWidth,
+      totalDuration: totalDuration.toFixed(2),
+      zoomLevel: zoomLevel.toFixed(3),
+      scrollOffset: scrollOffset.toFixed(2),
+      pixelsPerSecond: pixelsPerSecond.toFixed(2),
+      time: time.toFixed(3),
+    })
+  }
+
+  return time
 }
 
 /**
@@ -218,9 +280,31 @@ export function getMaxZoomLevel(
   const targetFrameWidth = timelineWidth / 20 // 一帧占1/20横幅
   const frameDuration = 1 / frameRate // 一帧的时长（秒）
   const requiredPixelsPerSecond = targetFrameWidth / frameDuration
-  const maxZoom = (requiredPixelsPerSecond * totalDuration) / timelineWidth
+  const calculatedMaxZoom = (requiredPixelsPerSecond * totalDuration) / timelineWidth
+  const maxZoom = Math.max(calculatedMaxZoom, 100) // 确保至少有100倍缩放
 
-  return Math.max(maxZoom, 100) // 确保至少有100倍缩放
+  if (window.DEBUG_TIMELINE_ZOOM) {
+    console.group('🔬 [缩放计算] 计算最大缩放级别')
+
+    console.log('📐 最大缩放计算参数:', {
+      timelineWidth,
+      frameRate,
+      totalDuration: totalDuration.toFixed(2),
+      targetFrameWidth: targetFrameWidth.toFixed(2),
+      frameDuration: frameDuration.toFixed(4),
+    })
+
+    console.log('📊 最大缩放计算结果:', {
+      requiredPixelsPerSecond: requiredPixelsPerSecond.toFixed(2),
+      calculatedMaxZoom: calculatedMaxZoom.toFixed(3),
+      finalMaxZoom: maxZoom.toFixed(3),
+      limitedByMinimum: maxZoom === 100,
+    })
+
+    console.groupEnd()
+  }
+
+  return maxZoom
 }
 
 /**
@@ -231,7 +315,25 @@ export function getMaxZoomLevel(
  */
 export function getMinZoomLevel(totalDuration: number, maxVisibleDuration: number): number {
   // 基于最大可见范围计算最小缩放级别
-  return totalDuration / maxVisibleDuration
+  const minZoom = totalDuration / maxVisibleDuration
+
+  if (window.DEBUG_TIMELINE_ZOOM) {
+    console.group('🔍 [缩放计算] 计算最小缩放级别')
+
+    console.log('📐 最小缩放计算参数:', {
+      totalDuration: totalDuration.toFixed(2),
+      maxVisibleDuration: maxVisibleDuration.toFixed(2),
+    })
+
+    console.log('📊 最小缩放计算结果:', {
+      minZoom: minZoom.toFixed(3),
+      ratio: (totalDuration / maxVisibleDuration).toFixed(3),
+    })
+
+    console.groupEnd()
+  }
+
+  return minZoom
 }
 
 /**
@@ -248,11 +350,16 @@ export function getMaxScrollOffset(
   totalDuration: number,
   maxVisibleDuration: number,
 ): number {
-  // 基于最大可见范围计算滚动限制，而不是基于totalDuration
-  const effectiveDuration = Math.min(totalDuration, maxVisibleDuration)
+  // 使用最大可见范围作为滚动范围，允许滚动到内容结束时间*4的位置
+  const effectiveDuration = maxVisibleDuration
   const pixelsPerSecond = (timelineWidth * zoomLevel) / totalDuration
-  const maxScrollableTime = Math.max(0, effectiveDuration - timelineWidth / pixelsPerSecond)
-  return maxScrollableTime * pixelsPerSecond
+  const visibleDuration = timelineWidth / pixelsPerSecond
+  const maxScrollableTime = Math.max(0, effectiveDuration - visibleDuration)
+  const maxScrollOffset = maxScrollableTime * pixelsPerSecond
+
+  // 精简调试信息，只在需要时输出
+
+  return maxScrollOffset
 }
 
 // ==================== 时长计算工具 ====================

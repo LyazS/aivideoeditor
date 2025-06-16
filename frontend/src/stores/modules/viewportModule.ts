@@ -83,30 +83,24 @@ export function createViewportModule(
     const minZoom = minZoomLevel.value
     const clampedZoom = Math.max(minZoom, Math.min(newZoomLevel, maxZoom))
 
-    // 如果达到最小缩放级别，提供调试信息
+    // 只在达到缩放限制时输出警告信息
     if (newZoomLevel < minZoom && contentEndTime.value > 0) {
-      console.log(`🔍 已达到最小缩放级别 (${minZoom.toFixed(3)})`)
-      console.log(`📏 当前视频总长度: ${contentEndTime.value.toFixed(1)}秒`)
-      console.log(`👁️ 最大可见范围限制: ${maxVisibleDuration.value.toFixed(1)}秒`)
-      console.log(`🎯 当前可见范围: ${visibleDuration.value.toFixed(1)}秒`)
+      console.warn('⚠️ 已达到最小缩放级别限制')
+    }
+    if (newZoomLevel > maxZoom) {
+      console.warn('⚠️ 已达到最大缩放级别限制')
     }
 
     if (zoomLevel.value !== clampedZoom) {
-      const oldZoom = zoomLevel.value
       zoomLevel.value = clampedZoom
-
-      console.log('🔍 设置缩放级别:', {
-        requestedZoom: newZoomLevel,
-        oldZoom,
-        newZoom: clampedZoom,
-        minZoom,
-        maxZoom,
-        clamped: newZoomLevel !== clampedZoom,
-      })
 
       // 调整滚动偏移量以保持在有效范围内
       const maxOffset = getMaxScrollOffsetForTimeline(timelineWidth)
-      scrollOffset.value = Math.max(0, Math.min(scrollOffset.value, maxOffset))
+      const newScrollOffset = Math.max(0, Math.min(scrollOffset.value, maxOffset))
+
+      if (scrollOffset.value !== newScrollOffset) {
+        scrollOffset.value = newScrollOffset
+      }
     }
   }
 
@@ -120,16 +114,7 @@ export function createViewportModule(
     const clampedOffset = Math.max(0, Math.min(newOffset, maxOffset))
 
     if (scrollOffset.value !== clampedOffset) {
-      const oldOffset = scrollOffset.value
       scrollOffset.value = clampedOffset
-
-      console.log('📜 设置滚动偏移量:', {
-        requestedOffset: newOffset,
-        oldOffset,
-        newOffset: clampedOffset,
-        maxOffset,
-        clamped: newOffset !== clampedOffset,
-      })
     }
   }
 
@@ -141,7 +126,6 @@ export function createViewportModule(
    */
   function zoomIn(factor: number = 1.2, timelineWidth: number = 800, frameRate: number = 30) {
     setZoomLevel(zoomLevel.value * factor, timelineWidth, frameRate)
-    console.log('🔍➕ 放大时间轴:', { factor, newZoom: zoomLevel.value })
   }
 
   /**
@@ -159,17 +143,9 @@ export function createViewportModule(
 
     // 如果可见时间范围超过当前时间轴长度，扩展时间轴
     if (visibleDurationCalc > timelineDuration.value) {
-      const newDuration = Math.max(visibleDurationCalc * 1.5, timelineDuration.value)
-      console.log('📏 扩展时间轴长度:', {
-        oldDuration: timelineDuration.value,
-        newDuration,
-        visibleDuration: visibleDurationCalc,
-      })
       // 这里需要调用外部的设置方法，因为timelineDuration是从配置模块来的
       // 在主store中会处理这个逻辑
     }
-
-    console.log('🔍➖ 缩小时间轴:', { factor, newZoom: zoomLevel.value })
   }
 
   /**
@@ -179,7 +155,6 @@ export function createViewportModule(
    */
   function scrollLeft(amount: number = 50, timelineWidth: number = 800) {
     setScrollOffset(scrollOffset.value - amount, timelineWidth)
-    console.log('⬅️ 向左滚动:', { amount, newOffset: scrollOffset.value })
   }
 
   /**
@@ -189,7 +164,6 @@ export function createViewportModule(
    */
   function scrollRight(amount: number = 50, timelineWidth: number = 800) {
     setScrollOffset(scrollOffset.value + amount, timelineWidth)
-    console.log('➡️ 向右滚动:', { amount, newOffset: scrollOffset.value })
   }
 
   /**
@@ -201,7 +175,6 @@ export function createViewportModule(
     const pixelsPerSecond = (timelineWidth * zoomLevel.value) / totalDuration.value
     const targetOffset = time * pixelsPerSecond - timelineWidth / 2 // 居中显示
     setScrollOffset(targetOffset, timelineWidth)
-    console.log('🎯 滚动到时间:', { time, targetOffset, newOffset: scrollOffset.value })
   }
 
   /**
@@ -210,7 +183,6 @@ export function createViewportModule(
   function resetViewport() {
     zoomLevel.value = 1
     scrollOffset.value = 0
-    console.log('🔄 视口已重置为默认状态')
   }
 
   /**

@@ -544,11 +544,20 @@ function handleWheel(event: WheelEvent) {
     event.preventDefault()
     const zoomFactor = 1.1
     const rect = timelineBody.value?.getBoundingClientRect()
-    if (!rect) return
+    if (!rect) {
+      if (window.DEBUG_TIMELINE_ZOOM) {
+        console.error('❌ 无法获取时间轴主体边界')
+      }
+      return
+    }
 
     // 获取鼠标在时间轴上的位置（减去轨道控制区域的200px）
     const mouseX = event.clientX - rect.left - 200
     const mouseTime = videoStore.pixelToTime(mouseX, timelineWidth.value)
+    const oldZoom = videoStore.zoomLevel
+    const oldScrollOffset = videoStore.scrollOffset
+
+    // 缩放操作（精简调试信息）
 
     if (event.deltaY < 0) {
       // 向上滚动：放大
@@ -561,11 +570,14 @@ function handleWheel(event: WheelEvent) {
     // 调整滚动偏移量，使鼠标位置保持在相同的时间点
     const newMousePixel = videoStore.timeToPixel(mouseTime, timelineWidth.value)
     const offsetAdjustment = newMousePixel - mouseX
-    videoStore.setScrollOffset(videoStore.scrollOffset + offsetAdjustment, timelineWidth.value)
+    const newScrollOffset = videoStore.scrollOffset + offsetAdjustment
+
+    videoStore.setScrollOffset(newScrollOffset, timelineWidth.value)
   } else if (event.shiftKey) {
     // Shift + 滚轮：水平滚动
     event.preventDefault()
     const scrollAmount = 50
+
     if (event.deltaY < 0) {
       // 向上滚动：向左滚动
       videoStore.scrollLeft(scrollAmount, timelineWidth.value)
