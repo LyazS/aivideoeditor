@@ -180,6 +180,25 @@ export function createMediaModule() {
     return { width: 1920, height: 1080 }
   }
 
+  /**
+   * 获取媒体原始分辨率（支持视频和图片）
+   * @param mediaItemId 媒体项目ID
+   * @returns 媒体分辨率对象
+   */
+  function getMediaOriginalResolution(mediaItemId: string): { width: number; height: number } {
+    const mediaItem = getMediaItem(mediaItemId)
+    if (!mediaItem) {
+      return { width: 800, height: 600 } // 默认分辨率
+    }
+
+    if (mediaItem.mediaType === 'video') {
+      return getVideoOriginalResolution(mediaItemId)
+    } else {
+      // 图片使用存储的真实尺寸，如果没有则使用默认分辨率
+      return mediaItem.originalDimensions || { width: 800, height: 600 }
+    }
+  }
+
   // ==================== 导出接口 ====================
 
   return {
@@ -196,6 +215,7 @@ export function createMediaModule() {
     // 视频元素管理方法
     setVideoElement,
     getVideoOriginalResolution,
+    getMediaOriginalResolution,
   }
 }
 

@@ -24,7 +24,7 @@
           />
         </svg>
         <p>拖拽文件到此处导入</p>
-        <p class="hint">支持 MP4, WebM, AVI 等格式</p>
+        <p class="hint">支持 MP4, WebM, AVI 等视频格式和 JPG, PNG, GIF 等图片格式</p>
       </div>
 
       <!-- 素材列表 -->
@@ -82,7 +82,7 @@
       ref="fileInput"
       type="file"
       multiple
-      accept="video/*"
+      accept="video/*,image/*"
       style="display: none"
       @change="handleFileSelect"
     />
@@ -140,14 +140,16 @@ const handleDrop = (event: DragEvent) => {
 
 // 处理文件
 const processFiles = async (files: File[]) => {
-  const videoFiles = files.filter((file) => file.type.startsWith('video/'))
+  const mediaFiles = files.filter((file) =>
+    file.type.startsWith('video/') || file.type.startsWith('image/')
+  )
 
-  if (videoFiles.length === 0) {
-    alert('请选择视频文件')
+  if (mediaFiles.length === 0) {
+    alert('请选择视频或图片文件')
     return
   }
 
-  for (const file of videoFiles) {
+  for (const file of mediaFiles) {
     await addMediaItem(file)
   }
 }
@@ -160,21 +162,91 @@ const addMediaItem = async (file: File): Promise<void> => {
     )
 
     const url = URL.createObjectURL(file)
-    const video = document.createElement('video')
-
-    // 先创建一个解析中状态的MediaItem ID
     const mediaItemId = Date.now().toString() + Math.random().toString(36).substring(2, 11)
+    const isVideo = file.type.startsWith('video/')
+    const isImage = file.type.startsWith('image/')
 
-    video.onloadedmetadata = async () => {
+    if (isVideo) {
+      // 处理视频文件
+      const video = document.createElement('video')
+
+      video.onloadedmetadata = async () => {
+        try {
+          const parsingMediaItem: MediaItem = {
+            id: mediaItemId,
+            file,
+            url,
+            name: file.name,
+            duration: video.duration,
+            type: file.type,
+            mediaType: 'video',
+            mp4Clip: null, // 解析中时为null
+            imgClip: null,
+            isReady: false, // 标记为未准备好
+          }
+
+          console.log(`📋 创建解析中的MediaItem: ${parsingMediaItem.name} (ID: ${mediaItemId})`)
+
+          // 先添加解析中状态的素材到store
+          videoStore.addMediaItem(parsingMediaItem)
+
+          // 异步创建MP4Clip
+          console.log(`🎬 Creating MP4Clip for: ${file.name}`)
+          const mp4Clip = await webAVControls.createMP4Clip(file)
+          console.log(`✅ MP4Clip created successfully for: ${file.name}`)
+
+          // 更新MediaItem为完成状态
+          const readyMediaItem: MediaItem = {
+            ...parsingMediaItem,
+            mp4Clip: markRaw(mp4Clip), // 使用markRaw避免Vue响应式包装
+            isReady: true, // 标记为准备好
+          }
+
+          console.log(
+            `📋 更新MediaItem为完成状态: ${readyMediaItem.name} (时长: ${readyMediaItem.duration.toFixed(2)}s)`,
+          )
+          console.log(`📐 视频原始分辨率: ${video.videoWidth}x${video.videoHeight}`)
+
+          // 设置视频元素到store中，用于获取原始分辨率
+          videoStore.setVideoElement(mediaItemId, video)
+
+          // 更新store中的MediaItem
+          videoStore.updateMediaItem(readyMediaItem)
+          resolve()
+        } catch (error) {
+          console.error('❌ Failed to create MP4Clip:', error)
+          // 如果解析失败，从store中移除该项目
+          videoStore.removeMediaItem(mediaItemId)
+          URL.revokeObjectURL(url)
+          resolve()
+        }
+      }
+
+      video.onerror = () => {
+        console.error('Failed to load video:', file.name)
+        // 如果视频加载失败，也需要清理可能已经添加的解析中状态的素材
+        const existingItem = videoStore.getMediaItem(mediaItemId)
+        if (existingItem) {
+          videoStore.removeMediaItem(mediaItemId)
+        }
+        URL.revokeObjectURL(url)
+        resolve()
+      }
+
+      video.src = url
+    } else if (isImage) {
+      // 处理图片文件
       try {
         const parsingMediaItem: MediaItem = {
           id: mediaItemId,
           file,
           url,
           name: file.name,
-          duration: video.duration,
+          duration: 5, // 图片默认5秒时长
           type: file.type,
-          mp4Clip: null, // 解析中时为null
+          mediaType: 'image',
+          mp4Clip: null,
+          imgClip: null, // 解析中时为null
           isReady: false, // 标记为未准备好
         }
 
@@ -183,50 +255,38 @@ const addMediaItem = async (file: File): Promise<void> => {
         // 先添加解析中状态的素材到store
         videoStore.addMediaItem(parsingMediaItem)
 
-        // 异步创建MP4Clip
-        console.log(`🎬 Creating MP4Clip for: ${file.name}`)
-        const mp4Clip = await webAVControls.createMP4Clip(file)
-        console.log(`✅ MP4Clip created successfully for: ${file.name}`)
+        // 异步创建ImgClip并获取图片尺寸
+        console.log(`🖼️ Creating ImgClip for: ${file.name}`)
+        const { imgClip, dimensions } = await webAVControls.createImgClip(file)
+        console.log(`✅ ImgClip created successfully for: ${file.name}, dimensions: ${dimensions.width}x${dimensions.height}`)
 
         // 更新MediaItem为完成状态
         const readyMediaItem: MediaItem = {
           ...parsingMediaItem,
-          mp4Clip: markRaw(mp4Clip), // 使用markRaw避免Vue响应式包装
+          imgClip: markRaw(imgClip), // 使用markRaw避免Vue响应式包装
+          originalDimensions: dimensions, // 存储图片的真实尺寸
           isReady: true, // 标记为准备好
         }
 
         console.log(
-          `📋 更新MediaItem为完成状态: ${readyMediaItem.name} (时长: ${readyMediaItem.duration.toFixed(2)}s)`,
+          `📋 更新MediaItem为完成状态: ${readyMediaItem.name} (时长: ${readyMediaItem.duration.toFixed(2)}s, 尺寸: ${dimensions.width}x${dimensions.height})`,
         )
-        console.log(`📐 视频原始分辨率: ${video.videoWidth}x${video.videoHeight}`)
-
-        // 设置视频元素到store中，用于获取原始分辨率
-        videoStore.setVideoElement(mediaItemId, video)
 
         // 更新store中的MediaItem
         videoStore.updateMediaItem(readyMediaItem)
         resolve()
       } catch (error) {
-        console.error('❌ Failed to create MP4Clip:', error)
+        console.error('❌ Failed to create ImgClip:', error)
         // 如果解析失败，从store中移除该项目
         videoStore.removeMediaItem(mediaItemId)
         URL.revokeObjectURL(url)
         resolve()
       }
-    }
-
-    video.onerror = () => {
-      console.error('Failed to load video:', file.name)
-      // 如果视频加载失败，也需要清理可能已经添加的解析中状态的素材
-      const existingItem = videoStore.getMediaItem(mediaItemId)
-      if (existingItem) {
-        videoStore.removeMediaItem(mediaItemId)
-      }
+    } else {
+      console.error('Unsupported file type:', file.type)
       URL.revokeObjectURL(url)
       resolve()
     }
-
-    video.src = url
   })
 }
 

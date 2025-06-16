@@ -153,12 +153,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, nextTick, markRaw, reactive } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick, markRaw, reactive, type Raw } from 'vue'
 import { useVideoStore } from '../stores/videoStore'
 import { useWebAVControls, waitForWebAVReady, isWebAVReady } from '../composables/useWebAVControls'
 import { CustomVisibleSprite } from '../utils/customVisibleSprite'
 import { webavToProjectCoords } from '../utils/coordinateTransform'
 import type { TimelineItem } from '../types/videoTypes'
+import type { MP4Clip, ImgClip } from '@webav/av-cliper'
 import VideoClip from './VideoClip.vue'
 import TimeScale from './TimeScale.vue'
 
@@ -358,8 +359,8 @@ async function handleDrop(event: DragEvent) {
       // 如果拖拽位置超出当前时间轴长度，动态扩展时间轴
       videoStore.expandTimelineIfNeeded(dropTime + 10) // 预留10秒缓冲
 
-      // 从素材库项创建视频片段
-      await createVideoClipFromMediaItem(mediaItem, dropTime, targetTrackId)
+      // 从素材库项创建媒体片段（视频或图片）
+      await createMediaClipFromMediaItem(mediaItem, dropTime, targetTrackId)
     } catch (error) {
       console.error('Failed to parse media item data:', error)
       alert('拖拽数据格式错误')
@@ -372,7 +373,7 @@ async function handleDrop(event: DragEvent) {
 }
 
 // 从素材库项创建时间轴项目
-async function createVideoClipFromMediaItem(
+async function createMediaClipFromMediaItem(
   mediaItem: {
     id: string
     url: string
@@ -404,32 +405,54 @@ async function createVideoClipFromMediaItem(
     }
 
     // 检查素材是否已经解析完成
-    if (!storeMediaItem.isReady || !storeMediaItem.mp4Clip) {
+    if (!storeMediaItem.isReady) {
       throw new Error('素材还在解析中，请稍后再试')
     }
 
-    // 克隆MP4Clip并创建CustomVisibleSprite
-    console.log('克隆MP4Clip并创建CustomVisibleSprite for mediaItem:', mediaItem.id)
-    const clonedMP4Clip = await webAVControls.cloneMP4Clip(storeMediaItem.mp4Clip)
-    const sprite = new CustomVisibleSprite(clonedMP4Clip)
+    let sprite: CustomVisibleSprite
 
-    // 获取视频的原始分辨率
-    const originalResolution = videoStore.getVideoOriginalResolution(mediaItem.id)
-    console.log('视频原始分辨率:', originalResolution)
+    if (storeMediaItem.mediaType === 'video') {
+      // 处理视频素材
+      if (!storeMediaItem.mp4Clip) {
+        throw new Error('视频素材解析失败')
+      }
 
-    // 设置初始尺寸为视频原始分辨率（缩放系数1.0）
+      // 克隆MP4Clip并创建CustomVisibleSprite
+      console.log('克隆MP4Clip并创建CustomVisibleSprite for mediaItem:', mediaItem.id)
+      const clonedClip = await webAVControls.cloneMediaClip(storeMediaItem.mp4Clip, 'video', mediaItem.id)
+      sprite = new CustomVisibleSprite(clonedClip as Raw<MP4Clip>)
+    } else if (storeMediaItem.mediaType === 'image') {
+      // 处理图片素材
+      if (!storeMediaItem.imgClip) {
+        throw new Error('图片素材解析失败')
+      }
+
+      // 重新创建ImgClip并创建CustomVisibleSprite
+      console.log('重新创建ImgClip并创建CustomVisibleSprite for mediaItem:', mediaItem.id)
+      const processedClip = await webAVControls.cloneMediaClip(storeMediaItem.imgClip, 'image', mediaItem.id)
+      sprite = new CustomVisibleSprite(processedClip as Raw<ImgClip>)
+    } else {
+      throw new Error('不支持的媒体类型')
+    }
+
+    // 获取媒体的原始分辨率
+    const originalResolution = videoStore.getMediaOriginalResolution(mediaItem.id)
+    console.log(`${storeMediaItem.mediaType}原始分辨率:`, originalResolution)
+
+    // 设置初始尺寸为原始分辨率（缩放系数1.0）
     // sprite.rect.w/h 是在画布上的实际显示像素尺寸
     sprite.rect.w = originalResolution.width
     sprite.rect.h = originalResolution.height
 
     // 设置初始位置为画布中心
-    // 使用WebAV坐标系（左上角原点），让视频居中显示
+    // 使用WebAV坐标系（左上角原点），让媒体居中显示
     const canvasWidth = videoStore.videoResolution.width
     const canvasHeight = videoStore.videoResolution.height
     sprite.rect.x = (canvasWidth - originalResolution.width) / 2
     sprite.rect.y = (canvasHeight - originalResolution.height) / 2
 
     console.log('初始化sprite尺寸和位置:', {
+      媒体类型: storeMediaItem.mediaType,
       原始分辨率: originalResolution,
       显示尺寸: { w: sprite.rect.w, h: sprite.rect.h },
       WebAV位置: { x: sprite.rect.x, y: sprite.rect.y },

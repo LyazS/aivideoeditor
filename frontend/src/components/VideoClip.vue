@@ -15,14 +15,26 @@
     <div class="clip-content">
       <!-- 缩略图 - 总是显示 -->
       <div v-if="showDetails" class="clip-thumbnail">
-        <video
-          ref="thumbnailVideo"
-          :src="mediaItem?.url"
-          @loadedmetadata="generateThumbnail"
-          muted
-          preload="metadata"
-        />
-        <canvas ref="thumbnailCanvas" class="thumbnail-canvas"></canvas>
+        <!-- 视频缩略图 -->
+        <template v-if="mediaItem?.mediaType === 'video'">
+          <video
+            ref="thumbnailVideo"
+            :src="mediaItem?.url"
+            @loadedmetadata="generateThumbnail"
+            muted
+            preload="metadata"
+          />
+          <canvas ref="thumbnailCanvas" class="thumbnail-canvas"></canvas>
+        </template>
+
+        <!-- 图片缩略图 -->
+        <template v-else-if="mediaItem?.mediaType === 'image'">
+          <img
+            :src="mediaItem?.url"
+            class="thumbnail-image"
+            alt="图片缩略图"
+          />
+        </template>
       </div>
 
       <!-- 详细信息 - 只在片段足够宽时显示 -->
@@ -548,6 +560,12 @@ onUnmounted(() => {
 }
 
 .thumbnail-canvas {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.thumbnail-image {
   width: 100%;
   height: 100%;
   object-fit: cover;

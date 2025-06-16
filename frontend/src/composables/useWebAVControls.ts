@@ -1,6 +1,6 @@
 import { ref, markRaw, type Raw } from 'vue'
 import { AVCanvas } from '@webav/av-canvas'
-import { MP4Clip } from '@webav/av-cliper'
+import { MP4Clip, ImgClip } from '@webav/av-cliper'
 import { CustomVisibleSprite } from '../utils/customVisibleSprite'
 import { useVideoStore } from '../stores/videoStore'
 import {
@@ -37,7 +37,9 @@ const globalError = ref<string | null>(null)
 interface CanvasBackup {
   sprites: Array<{
     sprite: Raw<CustomVisibleSprite>
-    clip: MP4Clip
+    clip: MP4Clip | ImgClip
+    mediaType: 'video' | 'image'
+    mediaItemId: string
     timelineItemId: string
   }>
   currentTime: number
@@ -274,6 +276,45 @@ export function useWebAVControls() {
   }
 
   /**
+   * 创建ImgClip并获取图片尺寸
+   * @param file 图片文件
+   * @returns ImgClip实例和图片尺寸信息
+   */
+  const createImgClip = async (file: File): Promise<{
+    imgClip: Raw<ImgClip>
+    dimensions: { width: number; height: number }
+  }> => {
+    try {
+      console.log(`Creating ImgClip for: ${file.name}`)
+
+      // 创建ImgClip
+      const response = new Response(file)
+      const imgClip = markRaw(new ImgClip(response.body!))
+
+      // 等待ImgClip准备完成
+      await imgClip.ready
+
+      // 从ImgClip的meta信息中获取图片尺寸
+      const meta = await imgClip.meta
+      const dimensions = {
+        width: meta.width,
+        height: meta.height,
+      }
+
+      console.log(`ImgClip created successfully for: ${file.name}, dimensions: ${dimensions.width}x${dimensions.height}`)
+
+      return {
+        imgClip,
+        dimensions,
+      }
+    } catch (err) {
+      const errorMessage = `创建ImgClip失败: ${(err as Error).message}`
+      console.error('ImgClip creation error:', err)
+      throw new Error(errorMessage)
+    }
+  }
+
+  /**
    * 克隆MP4Clip实例
    * @param originalClip 原始MP4Clip
    */
@@ -289,6 +330,45 @@ export function useWebAVControls() {
     } catch (err) {
       const errorMessage = `克隆MP4Clip失败: ${(err as Error).message}`
       console.error('MP4Clip clone error:', err)
+      throw new Error(errorMessage)
+    }
+  }
+
+  /**
+   * 通用的媒体Clip克隆方法
+   * @param originalClip 原始Clip（MP4Clip或ImgClip）
+   * @param mediaType 媒体类型
+   * @param mediaItemId 媒体项目ID（用于重新创建ImgClip）
+   */
+  const cloneMediaClip = async (
+    originalClip: Raw<MP4Clip> | Raw<ImgClip>,
+    mediaType: 'video' | 'image',
+    mediaItemId?: string
+  ): Promise<Raw<MP4Clip> | Raw<ImgClip>> => {
+    try {
+      if (mediaType === 'video') {
+        console.log('Cloning MP4Clip...')
+        const clonedClip = await (originalClip as Raw<MP4Clip>).clone()
+        console.log('MP4Clip cloned successfully')
+        return markRaw(clonedClip)
+      } else {
+        console.log('Recreating ImgClip from original file...')
+        // 对于图片，从原始文件重新创建ImgClip
+        if (mediaItemId) {
+          const mediaItem = videoStore.getMediaItem(mediaItemId)
+          if (mediaItem && mediaItem.file) {
+            const { imgClip } = await createImgClip(mediaItem.file)
+            console.log('ImgClip recreated successfully')
+            return imgClip
+          }
+        }
+        // 如果无法重新创建，尝试重用原始的（可能会失败）
+        console.warn('Cannot recreate ImgClip, reusing original (may fail)')
+        return originalClip as Raw<ImgClip>
+      }
+    } catch (err) {
+      const errorMessage = `处理${mediaType === 'video' ? 'MP4Clip' : 'ImgClip'}失败: ${(err as Error).message}`
+      console.error('Media clip processing error:', err)
       throw new Error(errorMessage)
     }
   }
@@ -406,10 +486,13 @@ export function useWebAVControls() {
     for (const item of timelineItems) {
       if (item.sprite) {
         const clip = item.sprite.getClip()
-        if (clip) {
+        const mediaItem = videoStore.getMediaItem(item.mediaItemId)
+        if (clip && mediaItem) {
           backup.sprites.push({
             sprite: item.sprite,
-            clip: clip as MP4Clip,
+            clip: clip as MP4Clip | ImgClip,
+            mediaType: mediaItem.mediaType,
+            mediaItemId: item.mediaItemId,
             timelineItemId: item.id,
           })
         }
@@ -490,9 +573,9 @@ export function useWebAVControls() {
               `Restoring sprite ${restoredCount + 1}/${backup.sprites.length}`,
             )
 
-            // 克隆MP4Clip
-            const clonedClip = await cloneMP4Clip(spriteBackup.clip)
-            logSpriteRestore(spriteBackup.timelineItemId, 'MP4Clip cloned')
+            // 克隆媒体Clip
+            const clonedClip = await cloneMediaClip(spriteBackup.clip, spriteBackup.mediaType, spriteBackup.mediaItemId)
+            logSpriteRestore(spriteBackup.timelineItemId, `${spriteBackup.mediaType === 'video' ? 'MP4Clip' : 'ImgClip'} processed`)
 
             // 创建新的CustomVisibleSprite
             const newSprite = new CustomVisibleSprite(clonedClip)
@@ -553,9 +636,18 @@ export function useWebAVControls() {
             // 恢复其他属性
             newSprite.zIndex = spriteBackup.sprite.zIndex
             newSprite.opacity = spriteBackup.sprite.opacity
+
+            // 恢复旋转角度
+            if (restoredTimelineItem) {
+              newSprite.rect.angle = restoredTimelineItem.rotation
+            } else {
+              newSprite.rect.angle = spriteBackup.sprite.rect.angle || 0
+            }
+
             logSpriteRestore(spriteBackup.timelineItemId, 'Properties restored', {
               zIndex: newSprite.zIndex,
               opacity: newSprite.opacity,
+              rotation: newSprite.rect.angle,
             })
 
             // 添加到画布
@@ -622,7 +714,9 @@ export function useWebAVControls() {
     createCanvasContainer,
     initializeCanvas,
     createMP4Clip,
+    createImgClip,
     cloneMP4Clip,
+    cloneMediaClip,
     play,
     pause,
     seekTo,

@@ -62,8 +62,8 @@
             </div>
           </div>
 
-          <!-- 倍速控制 -->
-          <div class="property-item">
+          <!-- 倍速控制 - 只对视频显示 -->
+          <div v-if="showSpeedControls" class="property-item">
             <label>倍速</label>
             <div class="speed-controls">
               <!-- 分段倍速滑块 -->
@@ -386,6 +386,11 @@ const selectedMediaItem = computed(() => {
   return videoStore.getMediaItem(selectedTimelineItem.value.mediaItemId) || null
 })
 
+// 是否显示倍速控制（只对视频显示）
+const showSpeedControls = computed(() => {
+  return selectedMediaItem.value?.mediaType === 'video'
+})
+
 // 时间轴时长
 const timelineDuration = computed(() => {
   if (!selectedTimelineItem.value) return 0
@@ -411,12 +416,12 @@ const transformX = computed(() => selectedTimelineItem.value?.position.x || 0)
 const transformY = computed(() => selectedTimelineItem.value?.position.y || 0)
 const scaleX = computed(() => {
   if (!selectedTimelineItem.value || !selectedMediaItem.value) return 1
-  const originalResolution = videoStore.getVideoOriginalResolution(selectedMediaItem.value.id)
+  const originalResolution = videoStore.getMediaOriginalResolution(selectedMediaItem.value.id)
   return selectedTimelineItem.value.size.width / originalResolution.width
 })
 const scaleY = computed(() => {
   if (!selectedTimelineItem.value || !selectedMediaItem.value) return 1
-  const originalResolution = videoStore.getVideoOriginalResolution(selectedMediaItem.value.id)
+  const originalResolution = videoStore.getMediaOriginalResolution(selectedMediaItem.value.id)
   return selectedTimelineItem.value.size.height / originalResolution.height
 })
 const rotation = computed(() => {
@@ -637,7 +642,7 @@ const updateTransform = (transform?: {
 const toggleProportionalScale = () => {
   if (proportionalScale.value && selectedTimelineItem.value && selectedMediaItem.value) {
     // 开启等比缩放时，使用当前X缩放值作为统一缩放值，同时更新Y缩放
-    const originalResolution = videoStore.getVideoOriginalResolution(selectedMediaItem.value.id)
+    const originalResolution = videoStore.getMediaOriginalResolution(selectedMediaItem.value.id)
     const newSize = {
       width: originalResolution.width * scaleX.value,
       height: originalResolution.height * scaleX.value, // 使用X缩放值保持等比
@@ -649,7 +654,7 @@ const toggleProportionalScale = () => {
 // 更新统一缩放
 const updateUniformScale = (newScale: number) => {
   if (proportionalScale.value && selectedTimelineItem.value && selectedMediaItem.value) {
-    const originalResolution = videoStore.getVideoOriginalResolution(selectedMediaItem.value.id)
+    const originalResolution = videoStore.getMediaOriginalResolution(selectedMediaItem.value.id)
     const newSize = {
       width: originalResolution.width * newScale,
       height: originalResolution.height * newScale,
@@ -661,7 +666,7 @@ const updateUniformScale = (newScale: number) => {
 // 设置X缩放绝对值的方法
 const setScaleX = (value: number) => {
   if (!selectedTimelineItem.value || !selectedMediaItem.value) return
-  const originalResolution = videoStore.getVideoOriginalResolution(selectedMediaItem.value.id)
+  const originalResolution = videoStore.getMediaOriginalResolution(selectedMediaItem.value.id)
   const newScaleX = Math.max(0.01, Math.min(5, value))
   const newSize = {
     width: originalResolution.width * newScaleX,
@@ -673,7 +678,7 @@ const setScaleX = (value: number) => {
 // 设置Y缩放绝对值的方法
 const setScaleY = (value: number) => {
   if (!selectedTimelineItem.value || !selectedMediaItem.value) return
-  const originalResolution = videoStore.getVideoOriginalResolution(selectedMediaItem.value.id)
+  const originalResolution = videoStore.getMediaOriginalResolution(selectedMediaItem.value.id)
   const newScaleY = Math.max(0.01, Math.min(5, value))
   const newSize = {
     width: selectedTimelineItem.value.size.width, // 保持X尺寸不变

@@ -1,4 +1,4 @@
-import { VisibleSprite, MP4Clip } from '@webav/av-cliper'
+import { VisibleSprite, MP4Clip, ImgClip } from '@webav/av-cliper'
 
 /**
  * 时间范围接口定义
@@ -42,9 +42,9 @@ export class CustomVisibleSprite extends VisibleSprite {
 
   /**
    * 构造函数
-   * @param clip MP4Clip实例
+   * @param clip MP4Clip或ImgClip实例
    */
-  constructor(clip: MP4Clip) {
+  constructor(clip: MP4Clip | ImgClip) {
     // 调用父类构造函数
     super(clip)
   }

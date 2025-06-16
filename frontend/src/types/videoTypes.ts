@@ -1,5 +1,5 @@
 import type { Raw } from 'vue'
-import type { MP4Clip, Rect } from '@webav/av-cliper'
+import type { MP4Clip, ImgClip, Rect } from '@webav/av-cliper'
 import type { CustomVisibleSprite, TimeRange } from '../utils/customVisibleSprite'
 
 // 定义WebAV属性变化事件的类型
@@ -8,7 +8,7 @@ export interface PropsChangeEvent {
   zIndex?: number
 }
 
-// 素材层：包装MP4Clip和原始文件信息
+// 素材层：包装MP4Clip/ImgClip和原始文件信息
 export interface MediaItem {
   id: string
   name: string
@@ -16,7 +16,10 @@ export interface MediaItem {
   url: string
   duration: number
   type: string
-  mp4Clip: Raw<MP4Clip> | null // 解析中时为null，解析完成后为MP4Clip实例
+  mediaType: 'video' | 'image' // 媒体类型：视频或图片
+  mp4Clip: Raw<MP4Clip> | null // 视频解析中时为null，解析完成后为MP4Clip实例
+  imgClip: Raw<ImgClip> | null // 图片解析中时为null，解析完成后为ImgClip实例
+  originalDimensions?: { width: number; height: number } // 图片的原始尺寸
   isReady: boolean // 是否解析完成
 }
 

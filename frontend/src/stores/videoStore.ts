@@ -110,6 +110,10 @@ export const useVideoStore = defineStore('video', () => {
     return mediaModule.getVideoOriginalResolution(clipId)
   }
 
+  function getMediaOriginalResolution(mediaItemId: string): { width: number; height: number } {
+    return mediaModule.getMediaOriginalResolution(mediaItemId)
+  }
+
   return {
     // 新的两层数据结构
     mediaItems: mediaModule.mediaItems,
@@ -244,6 +248,7 @@ export const useVideoStore = defineStore('video', () => {
     // 视频元素管理
     setVideoElement,
     getVideoOriginalResolution,
+    getMediaOriginalResolution,
     // WebAV 相关状态和方法
     avCanvas: webavModule.avCanvas,
     isWebAVReady: webavModule.isWebAVReady,
