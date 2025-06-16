@@ -28,20 +28,10 @@
               class="property-input"
             />
           </div>
-          <div class="property-item">
-            <label>时长</label>
-            <span class="property-value">{{ formatDuration(timelineDuration) }}</span>
-          </div>
-          <div class="property-item">
-            <label>位置</label>
-            <span class="property-value">{{
-              formatDuration((selectedTimelineItem?.timeRange.timelineStartTime || 0) / 1000000)
-            }}</span>
-          </div>
         </div>
 
-        <!-- 播放设置 - 仅对视频显示 -->
-        <div v-if="selectedTimelineItem?.mediaType === 'video'" class="property-section">
+        <!-- 播放设置 - 视频和图片都显示 -->
+        <div v-if="selectedTimelineItem?.mediaType === 'video' || selectedTimelineItem?.mediaType === 'image'" class="property-section">
           <h4>播放设置</h4>
 
           <!-- 精确时长控制 -->
@@ -62,8 +52,8 @@
             </div>
           </div>
 
-          <!-- 倍速控制 -->
-          <div class="property-item">
+          <!-- 倍速控制 - 仅对视频显示 -->
+          <div v-if="selectedTimelineItem?.mediaType === 'video'" class="property-item">
             <label>倍速</label>
             <div class="speed-controls">
               <!-- 分段倍速滑块 -->

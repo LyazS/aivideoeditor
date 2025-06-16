@@ -12,6 +12,9 @@
     @mousedown="startDrag"
     @click="selectClip"
     @contextmenu="showContextMenu"
+    @mouseenter="showTooltip"
+    @mousemove="updateTooltipPosition"
+    @mouseleave="hideTooltip"
   >
     <div class="clip-content">
       <!-- 缩略图 - 总是显示 -->
@@ -61,6 +64,31 @@
     <div v-if="showMenu" class="context-menu" :style="menuStyle" @click.stop>
       <div class="menu-item" @click="removeClip">删除</div>
       <div class="menu-item" @click="duplicateClip">复制</div>
+    </div>
+
+    <!-- Tooltip -->
+    <div v-if="showTooltipFlag" class="clip-tooltip" :style="tooltipStyle">
+      <div class="tooltip-content">
+        <div class="tooltip-title">{{ mediaItem?.name || 'Unknown' }}</div>
+        <div class="tooltip-info">
+          <div class="tooltip-row">
+            <span class="tooltip-label">类型:</span>
+            <span class="tooltip-value">{{ mediaItem?.mediaType === 'video' ? '视频' : '图片' }}</span>
+          </div>
+          <div class="tooltip-row">
+            <span class="tooltip-label">时长:</span>
+            <span class="tooltip-value">{{ formatDuration(timelineDuration) }}</span>
+          </div>
+          <div class="tooltip-row">
+            <span class="tooltip-label">位置:</span>
+            <span class="tooltip-value">{{ formatDuration(props.timelineItem.timeRange.timelineStartTime / 1000000) }}</span>
+          </div>
+          <div v-if="mediaItem?.mediaType === 'video' && Math.abs(playbackSpeed - 1) > 0.001" class="tooltip-row">
+            <span class="tooltip-label">倍速:</span>
+            <span class="tooltip-value">{{ formatSpeed(playbackSpeed) }}</span>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -117,6 +145,10 @@ const thumbnailVideo = ref<HTMLVideoElement>()
 const thumbnailCanvas = ref<HTMLCanvasElement>()
 const showMenu = ref(false)
 const menuStyle = ref({})
+
+// Tooltip相关状态
+const showTooltipFlag = ref(false)
+const tooltipStyle = ref({})
 
 const isDragging = ref(false)
 const isResizing = ref(false)
@@ -500,6 +532,51 @@ async function duplicateClip() {
   }
 }
 
+// Tooltip相关方法
+function showTooltip(event: MouseEvent) {
+  // 如果正在拖拽或调整大小，不显示tooltip
+  if (isDragging.value || isResizing.value) return
+
+  showTooltipFlag.value = true
+
+  // 获取clip元素的位置信息
+  const clipElement = event.currentTarget as HTMLElement
+  const clipRect = clipElement.getBoundingClientRect()
+
+  // 将tooltip定位在鼠标位置的上方
+  tooltipStyle.value = {
+    position: 'fixed',
+    left: `${event.clientX}px`, // 使用鼠标的X坐标
+    bottom: `${window.innerHeight - clipRect.top + 10}px`, // 在clip上方10px
+    transform: 'translateX(-50%)', // 水平居中对齐鼠标位置
+    zIndex: 1001,
+  }
+}
+
+function updateTooltipPosition(event: MouseEvent) {
+  // 只有在tooltip显示时才更新位置
+  if (!showTooltipFlag.value) return
+  // 如果正在拖拽或调整大小，不更新tooltip位置
+  if (isDragging.value || isResizing.value) return
+
+  // 获取clip元素的位置信息
+  const clipElement = event.currentTarget as HTMLElement
+  const clipRect = clipElement.getBoundingClientRect()
+
+  // 更新tooltip位置，跟随鼠标的横向位置
+  tooltipStyle.value = {
+    position: 'fixed',
+    left: `${event.clientX}px`, // 使用鼠标的X坐标
+    bottom: `${window.innerHeight - clipRect.top + 10}px`, // 在clip上方10px
+    transform: 'translateX(-50%)', // 水平居中对齐鼠标位置
+    zIndex: 1001,
+  }
+}
+
+function hideTooltip() {
+  showTooltipFlag.value = false
+}
+
 onMounted(() => {
   if (thumbnailVideo.value) {
     thumbnailVideo.value.load()
@@ -692,5 +769,66 @@ onUnmounted(() => {
 
 .menu-item:hover {
   background-color: #444;
+}
+
+/* Tooltip样式 */
+.clip-tooltip {
+  position: fixed;
+  background-color: rgba(0, 0, 0, 0.9);
+  border: 1px solid #555;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  z-index: 1001;
+  pointer-events: none; /* 防止tooltip阻挡鼠标事件 */
+  max-width: 250px;
+  min-width: 180px;
+}
+
+.tooltip-content {
+  padding: 12px;
+}
+
+.tooltip-title {
+  font-size: 14px;
+  font-weight: bold;
+  color: white;
+  margin-bottom: 8px;
+  word-break: break-word;
+}
+
+.tooltip-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tooltip-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+}
+
+.tooltip-label {
+  color: rgba(255, 255, 255, 0.7);
+  font-weight: 500;
+  min-width: 40px;
+}
+
+.tooltip-value {
+  color: white;
+  font-weight: 600;
+  text-align: right;
+}
+
+/* 添加一个小箭头指向clip */
+.clip-tooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-top-color: rgba(0, 0, 0, 0.9);
 }
 </style>
