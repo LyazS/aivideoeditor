@@ -2,10 +2,7 @@ import { reactive, markRaw, type Raw, type Ref } from 'vue'
 import { CustomVisibleSprite } from '../../utils/customVisibleSprite'
 import { useWebAVControls } from '../../composables/useWebAVControls'
 import { printDebugInfo, syncTimeRange } from '../utils/storeUtils'
-import type { 
-  TimelineItem, 
-  MediaItem 
-} from '../../types/videoTypes'
+import type { TimelineItem, MediaItem } from '../../types/videoTypes'
 
 /**
  * 视频片段操作模块
@@ -14,17 +11,16 @@ import type {
 export function createClipOperationsModule(
   webavModule: { avCanvas: { value: any } },
   mediaModule: {
-    getMediaItem: (id: string) => MediaItem | undefined,
+    getMediaItem: (id: string) => MediaItem | undefined
     mediaItems: Ref<MediaItem[]>
   },
   timelineModule: {
-    timelineItems: Ref<TimelineItem[]>,
+    timelineItems: Ref<TimelineItem[]>
     setupBidirectionalSync: (item: TimelineItem) => void
   },
-  selectionModule: { selectTimelineItem: (id: string) => void, clearAllSelections: () => void },
-  trackModule?: { tracks: Ref<any[]> }
+  selectionModule: { selectTimelineItem: (id: string) => void; clearAllSelections: () => void },
+  trackModule?: { tracks: Ref<any[]> },
 ) {
-
   // ==================== 视频片段操作方法 ====================
 
   /**
@@ -35,7 +31,9 @@ export function createClipOperationsModule(
   async function duplicateTimelineItem(timelineItemId: string): Promise<string | null> {
     console.group('📋 时间轴项目复制调试')
 
-    const originalItem = timelineModule.timelineItems.value.find((item) => item.id === timelineItemId)
+    const originalItem = timelineModule.timelineItems.value.find(
+      (item) => item.id === timelineItemId,
+    )
     if (!originalItem) {
       console.error('❌ 找不到要复制的时间轴项目:', timelineItemId)
       console.groupEnd()
@@ -67,7 +65,7 @@ export function createClipOperationsModule(
         clipStartTime: timeRange.clipStartTime,
         clipEndTime: timeRange.clipEndTime,
         timelineStartTime: timeRange.timelineStartTime,
-        timelineEndTime: timeRange.timelineEndTime
+        timelineEndTime: timeRange.timelineEndTime,
       })
 
       // 复制原始sprite的变换属性
@@ -85,7 +83,7 @@ export function createClipOperationsModule(
         size: { w: originalRect.w, h: originalRect.h },
         rotation: originalRect.angle,
         zIndex: sprite.zIndex,
-        opacity: sprite.opacity
+        opacity: sprite.opacity,
       })
 
       // 添加到WebAV画布
@@ -107,15 +105,15 @@ export function createClipOperationsModule(
         // 复制原始项目的sprite属性
         position: {
           x: originalItem.position.x,
-          y: originalItem.position.y
+          y: originalItem.position.y,
         },
         size: {
           width: originalItem.size.width,
-          height: originalItem.size.height
+          height: originalItem.size.height,
         },
         rotation: originalItem.rotation,
         zIndex: originalItem.zIndex,
-        opacity: originalItem.opacity
+        opacity: originalItem.opacity,
       })
 
       // 更新新sprite的时间轴位置
@@ -123,7 +121,7 @@ export function createClipOperationsModule(
         clipStartTime: timeRange.clipStartTime,
         clipEndTime: timeRange.clipEndTime,
         timelineStartTime: newTimelinePosition * 1000000,
-        timelineEndTime: (newTimelinePosition + duration) * 1000000
+        timelineEndTime: (newTimelinePosition + duration) * 1000000,
       })
 
       // 添加到时间轴
@@ -136,14 +134,20 @@ export function createClipOperationsModule(
       console.groupEnd()
 
       // 打印复制后的调试信息
-      printDebugInfo('复制时间轴项目', {
-        originalItemId: timelineItemId,
-        newItemId: newItem.id,
-        mediaItemId: originalItem.mediaItemId,
-        mediaItemName: mediaItem?.name || '未知',
-        trackId: originalItem.trackId,
-        newPosition: newTimelinePosition
-      }, mediaModule.mediaItems.value, timelineModule.timelineItems.value, trackModule?.tracks.value || [])
+      printDebugInfo(
+        '复制时间轴项目',
+        {
+          originalItemId: timelineItemId,
+          newItemId: newItem.id,
+          mediaItemId: originalItem.mediaItemId,
+          mediaItemName: mediaItem?.name || '未知',
+          trackId: originalItem.trackId,
+          newPosition: newTimelinePosition,
+        },
+        mediaModule.mediaItems.value,
+        timelineModule.timelineItems.value,
+        trackModule?.tracks.value || [],
+      )
 
       // 选中新创建的项目
       selectionModule.selectTimelineItem(newItem.id)
@@ -178,9 +182,10 @@ export function createClipOperationsModule(
         newRate: clampedRate,
         timeRange: {
           clipDuration: (item.timeRange.clipEndTime - item.timeRange.clipStartTime) / 1000000,
-          timelineDuration: (item.timeRange.timelineEndTime - item.timeRange.timelineStartTime) / 1000000,
-          effectiveDuration: item.timeRange.effectiveDuration / 1000000
-        }
+          timelineDuration:
+            (item.timeRange.timelineEndTime - item.timeRange.timelineStartTime) / 1000000,
+          effectiveDuration: item.timeRange.effectiveDuration / 1000000,
+        },
       })
     }
   }
@@ -193,7 +198,9 @@ export function createClipOperationsModule(
   async function splitTimelineItemAtTime(timelineItemId: string, splitTime: number) {
     console.group('🔪 时间轴项目分割调试')
 
-    const itemIndex = timelineModule.timelineItems.value.findIndex((item) => item.id === timelineItemId)
+    const itemIndex = timelineModule.timelineItems.value.findIndex(
+      (item) => item.id === timelineItemId,
+    )
     if (itemIndex === -1) {
       console.error('❌ 找不到要分割的时间轴项目:', timelineItemId)
       console.groupEnd()
@@ -234,7 +241,7 @@ export function createClipOperationsModule(
     const clipStartTime = timeRange.clipStartTime / 1000000 // 转换为秒
     const clipEndTime = timeRange.clipEndTime / 1000000 // 转换为秒
     const clipDuration = clipEndTime - clipStartTime
-    const splitClipTime = clipStartTime + (clipDuration * relativeRatio)
+    const splitClipTime = clipStartTime + clipDuration * relativeRatio
 
     console.log('🎬 素材时间计算:')
     console.log('  - 素材开始时间:', clipStartTime)
@@ -253,7 +260,7 @@ export function createClipOperationsModule(
         clipStartTime: clipStartTime * 1000000,
         clipEndTime: splitClipTime * 1000000,
         timelineStartTime: timelineStartTime * 1000000,
-        timelineEndTime: splitTime * 1000000
+        timelineEndTime: splitTime * 1000000,
       })
 
       // 复制原始sprite的变换属性到第一个片段
@@ -271,7 +278,7 @@ export function createClipOperationsModule(
         size: { w: originalRect.w, h: originalRect.h },
         rotation: originalRect.angle,
         zIndex: sprite.zIndex,
-        opacity: sprite.opacity
+        opacity: sprite.opacity,
       })
 
       // 创建第二个片段的CustomVisibleSprite
@@ -280,7 +287,7 @@ export function createClipOperationsModule(
         clipStartTime: splitClipTime * 1000000,
         clipEndTime: clipEndTime * 1000000,
         timelineStartTime: splitTime * 1000000,
-        timelineEndTime: timelineEndTime * 1000000
+        timelineEndTime: timelineEndTime * 1000000,
       })
 
       // 复制原始sprite的变换属性到第二个片段
@@ -297,7 +304,7 @@ export function createClipOperationsModule(
         size: { w: originalRect.w, h: originalRect.h },
         rotation: originalRect.angle,
         zIndex: sprite.zIndex,
-        opacity: sprite.opacity
+        opacity: sprite.opacity,
       })
 
       // 添加到WebAV画布
@@ -317,15 +324,15 @@ export function createClipOperationsModule(
         // 复制原始项目的sprite属性
         position: {
           x: originalItem.position.x,
-          y: originalItem.position.y
+          y: originalItem.position.y,
         },
         size: {
           width: originalItem.size.width,
-          height: originalItem.size.height
+          height: originalItem.size.height,
         },
         rotation: originalItem.rotation,
         zIndex: originalItem.zIndex,
-        opacity: originalItem.opacity
+        opacity: originalItem.opacity,
       })
 
       const secondItem: TimelineItem = reactive({
@@ -337,15 +344,15 @@ export function createClipOperationsModule(
         // 复制原始项目的sprite属性
         position: {
           x: originalItem.position.x,
-          y: originalItem.position.y
+          y: originalItem.position.y,
         },
         size: {
           width: originalItem.size.width,
-          height: originalItem.size.height
+          height: originalItem.size.height,
         },
         rotation: originalItem.rotation,
         zIndex: originalItem.zIndex,
-        opacity: originalItem.opacity
+        opacity: originalItem.opacity,
       })
 
       // 从WebAV画布移除原始sprite
@@ -364,15 +371,21 @@ export function createClipOperationsModule(
       console.groupEnd()
 
       // 打印分割后的调试信息
-      printDebugInfo('分割时间轴项目', {
-        originalItemId: timelineItemId,
-        splitTime,
-        firstItemId: firstItem.id,
-        secondItemId: secondItem.id,
-        mediaItemId: originalItem.mediaItemId,
-        mediaItemName: mediaItem?.name || '未知',
-        trackId: originalItem.trackId
-      }, mediaModule.mediaItems.value, timelineModule.timelineItems.value, trackModule?.tracks.value || [])
+      printDebugInfo(
+        '分割时间轴项目',
+        {
+          originalItemId: timelineItemId,
+          splitTime,
+          firstItemId: firstItem.id,
+          secondItemId: secondItem.id,
+          mediaItemId: originalItem.mediaItemId,
+          mediaItemName: mediaItem?.name || '未知',
+          trackId: originalItem.trackId,
+        },
+        mediaModule.mediaItems.value,
+        timelineModule.timelineItems.value,
+        trackModule?.tracks.value || [],
+      )
 
       // 清除选中状态
       selectionModule.clearAllSelections()

@@ -8,10 +8,10 @@ import type { MediaItem, TimelineItem, Track, VideoResolution } from '../../type
  */
 export function createMediaModule() {
   // ==================== 状态定义 ====================
-  
+
   // 素材库
   const mediaItems = ref<MediaItem[]>([])
-  
+
   // 视频元素引用映射（用于获取原始分辨率）
   const videoElementsMap = new Map<string, HTMLVideoElement>()
 
@@ -26,15 +26,21 @@ export function createMediaModule() {
   function addMediaItem(
     mediaItem: MediaItem,
     timelineItems: Ref<TimelineItem[]>,
-    tracks: Ref<Track[]>
+    tracks: Ref<Track[]>,
   ) {
     mediaItems.value.push(mediaItem)
-    printDebugInfo('添加素材到素材库', {
-      mediaItemId: mediaItem.id,
-      name: mediaItem.name,
-      duration: mediaItem.duration,
-      type: mediaItem.type
-    }, mediaItems.value, timelineItems.value, tracks.value)
+    printDebugInfo(
+      '添加素材到素材库',
+      {
+        mediaItemId: mediaItem.id,
+        name: mediaItem.name,
+        duration: mediaItem.duration,
+        type: mediaItem.type,
+      },
+      mediaItems.value,
+      timelineItems.value,
+      tracks.value,
+    )
   }
 
   /**
@@ -51,15 +57,17 @@ export function createMediaModule() {
     timelineItems: Ref<TimelineItem[]>,
     tracks: Ref<Track[]>,
     avCanvas: any,
-    cleanupTimelineItem: (timelineItem: TimelineItem) => void
+    cleanupTimelineItem: (timelineItem: TimelineItem) => void,
   ) {
     const index = mediaItems.value.findIndex((item) => item.id === mediaItemId)
     if (index > -1) {
       const mediaItem = mediaItems.value[index]
-      const relatedTimelineItems = timelineItems.value.filter(item => item.mediaItemId === mediaItemId)
+      const relatedTimelineItems = timelineItems.value.filter(
+        (item) => item.mediaItemId === mediaItemId,
+      )
 
       // 先正确地移除所有相关的时间轴项目（包括WebAV画布清理）
-      relatedTimelineItems.forEach(timelineItem => {
+      relatedTimelineItems.forEach((timelineItem) => {
         console.log(`🧹 清理时间轴项目: ${timelineItem.id}`)
 
         // 清理sprite资源
@@ -86,17 +94,23 @@ export function createMediaModule() {
       })
 
       // 从时间轴数组中移除相关项目
-      timelineItems.value = timelineItems.value.filter(item => item.mediaItemId !== mediaItemId)
+      timelineItems.value = timelineItems.value.filter((item) => item.mediaItemId !== mediaItemId)
 
       // 再移除素材项目
       mediaItems.value.splice(index, 1)
 
-      printDebugInfo('从素材库删除素材', {
-        mediaItemId,
-        mediaItemName: mediaItem.name,
-        removedTimelineItemsCount: relatedTimelineItems.length,
-        removedTimelineItemIds: relatedTimelineItems.map(item => item.id)
-      }, mediaItems.value, timelineItems.value, tracks.value)
+      printDebugInfo(
+        '从素材库删除素材',
+        {
+          mediaItemId,
+          mediaItemName: mediaItem.name,
+          removedTimelineItemsCount: relatedTimelineItems.length,
+          removedTimelineItemIds: relatedTimelineItems.map((item) => item.id),
+        },
+        mediaItems.value,
+        timelineItems.value,
+        tracks.value,
+      )
     }
   }
 
@@ -106,7 +120,7 @@ export function createMediaModule() {
    * @returns 媒体项目或undefined
    */
   function getMediaItem(mediaItemId: string): MediaItem | undefined {
-    return mediaItems.value.find(item => item.id === mediaItemId)
+    return mediaItems.value.find((item) => item.id === mediaItemId)
   }
 
   /**
@@ -153,8 +167,6 @@ export function createMediaModule() {
     // 默认分辨率
     return { width: 1920, height: 1080 }
   }
-
-
 
   // ==================== 导出接口 ====================
 

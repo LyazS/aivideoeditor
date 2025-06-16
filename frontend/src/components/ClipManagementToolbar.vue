@@ -113,9 +113,14 @@ async function splitSelectedClip() {
   if (videoStore.selectedTimelineItemId) {
     const item = videoStore.getTimelineItem(videoStore.selectedTimelineItemId)
     const mediaItem = item ? videoStore.getMediaItem(item.mediaItemId) : null
-    console.log(`🔪 开始裁剪时间轴项目: ${mediaItem?.name || '未知'} (ID: ${videoStore.selectedTimelineItemId})`)
+    console.log(
+      `🔪 开始裁剪时间轴项目: ${mediaItem?.name || '未知'} (ID: ${videoStore.selectedTimelineItemId})`,
+    )
     console.log(`📍 裁剪时间位置: ${videoStore.currentTime.toFixed(2)}s`)
-    await videoStore.splitTimelineItemAtTime(videoStore.selectedTimelineItemId, videoStore.currentTime)
+    await videoStore.splitTimelineItemAtTime(
+      videoStore.selectedTimelineItemId,
+      videoStore.currentTime,
+    )
   }
 }
 
@@ -123,7 +128,9 @@ function deleteSelectedClip() {
   if (videoStore.selectedTimelineItemId) {
     const item = videoStore.getTimelineItem(videoStore.selectedTimelineItemId)
     const mediaItem = item ? videoStore.getMediaItem(item.mediaItemId) : null
-    console.log(`🗑️ 删除时间轴项目: ${mediaItem?.name || '未知'} (ID: ${videoStore.selectedTimelineItemId})`)
+    console.log(
+      `🗑️ 删除时间轴项目: ${mediaItem?.name || '未知'} (ID: ${videoStore.selectedTimelineItemId})`,
+    )
     videoStore.removeTimelineItem(videoStore.selectedTimelineItemId)
   }
 }

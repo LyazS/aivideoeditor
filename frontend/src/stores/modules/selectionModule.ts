@@ -9,12 +9,9 @@ type CustomVisibleSprite = any
  * 选择管理模块
  * 负责管理时间轴和AVCanvas的选择状态同步
  */
-export function createSelectionModule(
-  timelineItems: Ref<TimelineItem[]>,
-  avCanvas: Ref<any>
-) {
+export function createSelectionModule(timelineItems: Ref<TimelineItem[]>, avCanvas: Ref<any>) {
   // ==================== 状态定义 ====================
-  
+
   // 选择状态
   const selectedTimelineItemId = ref<string | null>(null) // 当前选中的时间轴项ID
   const selectedAVCanvasSprite = ref<Raw<CustomVisibleSprite> | null>(null) // 当前在AVCanvas中选中的sprite
@@ -32,7 +29,7 @@ export function createSelectionModule(
     console.log('🎯 选择时间轴项目:', {
       oldSelection,
       newSelection: timelineItemId,
-      selectionChanged: oldSelection !== timelineItemId
+      selectionChanged: oldSelection !== timelineItemId,
     })
 
     // 同步选择AVCanvas中的sprite
@@ -54,7 +51,10 @@ export function createSelectionModule(
    * @param sprite CustomVisibleSprite实例或null
    * @param syncToTimeline 是否同步到时间轴选择
    */
-  function selectAVCanvasSprite(sprite: Raw<CustomVisibleSprite> | null, syncToTimeline: boolean = true) {
+  function selectAVCanvasSprite(
+    sprite: Raw<CustomVisibleSprite> | null,
+    syncToTimeline: boolean = true,
+  ) {
     const oldSprite = selectedAVCanvasSprite.value
     selectedAVCanvasSprite.value = sprite
 
@@ -62,7 +62,7 @@ export function createSelectionModule(
       hasOldSprite: !!oldSprite,
       hasNewSprite: !!sprite,
       syncToTimeline,
-      selectionChanged: oldSprite !== sprite
+      selectionChanged: oldSprite !== sprite,
     })
 
     // 获取AVCanvas实例并设置活动sprite
@@ -103,7 +103,7 @@ export function createSelectionModule(
    */
   function handleAVCanvasSpriteChange(sprite: Raw<CustomVisibleSprite> | null) {
     console.log('📡 处理AVCanvas sprite选择变化:', { hasSprite: !!sprite })
-    
+
     // 更新AVCanvas选择状态，但不触发反向同步（避免循环）
     selectedAVCanvasSprite.value = sprite
 
@@ -178,16 +178,18 @@ export function createSelectionModule(
       hasTimelineSelection: !!selectedTimelineItemId.value,
       hasAVCanvasSelection: !!selectedAVCanvasSprite.value,
       selectedTimelineItemId: selectedTimelineItemId.value,
-      selectedTimelineItem: selectedItem ? {
-        id: selectedItem.id,
-        mediaItemId: selectedItem.mediaItemId,
-        trackId: selectedItem.trackId,
-        startTime: selectedItem.timeRange.timelineStartTime / 1000000,
-        endTime: selectedItem.timeRange.timelineEndTime / 1000000
-      } : null,
-      selectionsInSync: selectedItem ? 
-        selectedAVCanvasSprite.value === selectedItem.sprite : 
-        !selectedAVCanvasSprite.value
+      selectedTimelineItem: selectedItem
+        ? {
+            id: selectedItem.id,
+            mediaItemId: selectedItem.mediaItemId,
+            trackId: selectedItem.trackId,
+            startTime: selectedItem.timeRange.timelineStartTime / 1000000,
+            endTime: selectedItem.timeRange.timelineEndTime / 1000000,
+          }
+        : null,
+      selectionsInSync: selectedItem
+        ? selectedAVCanvasSprite.value === selectedItem.sprite
+        : !selectedAVCanvasSprite.value,
     }
   }
 
@@ -207,7 +209,7 @@ export function createSelectionModule(
    * @returns 时间轴项目或undefined
    */
   function getTimelineItem(timelineItemId: string): TimelineItem | undefined {
-    return timelineItems.value.find(item => item.id === timelineItemId)
+    return timelineItems.value.find((item) => item.id === timelineItemId)
   }
 
   // ==================== 导出接口 ====================

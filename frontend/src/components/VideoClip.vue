@@ -300,7 +300,8 @@ function getTrackIdFromDelta(deltaY: number): number {
 function stopDrag() {
   if (isDragging.value) {
     // 只在拖拽结束时更新 store，避免拖拽过程中的频繁更新
-    const newTrackId = tempTrackId.value !== props.timelineItem.trackId ? tempTrackId.value : undefined
+    const newTrackId =
+      tempTrackId.value !== props.timelineItem.trackId ? tempTrackId.value : undefined
     emit('update-position', props.timelineItem.id, tempPosition.value, newTrackId)
   }
 
@@ -391,7 +392,7 @@ function stopResize() {
           start: newTimelineStartTime,
           end: newTimelineEndTime,
           duration: tempDuration.value,
-          position: tempResizePosition.value
+          position: tempResizePosition.value,
         })
         return
       }
@@ -401,7 +402,7 @@ function stopResize() {
         clipEndTime: mediaItem.duration * 1000000,
         timelineStartTime: newTimelineStartTime,
         timelineEndTime: newTimelineEndTime,
-        duration: tempDuration.value
+        duration: tempDuration.value,
       })
 
       // 更新CustomVisibleSprite的时间范围
@@ -409,7 +410,7 @@ function stopResize() {
         clipStartTime: 0,
         clipEndTime: mediaItem.duration * 1000000,
         timelineStartTime: newTimelineStartTime,
-        timelineEndTime: newTimelineEndTime
+        timelineEndTime: newTimelineEndTime,
       })
 
       // 从sprite获取更新后的完整timeRange（包含自动计算的effectiveDuration）

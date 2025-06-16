@@ -34,10 +34,10 @@
           </div>
           <div class="property-item">
             <label>位置</label>
-            <span class="property-value">{{ formatDuration((selectedTimelineItem?.timeRange.timelineStartTime || 0) / 1000000) }}</span>
+            <span class="property-value">{{
+              formatDuration((selectedTimelineItem?.timeRange.timelineStartTime || 0) / 1000000)
+            }}</span>
           </div>
-
-
         </div>
 
         <!-- 播放设置 -->
@@ -70,7 +70,9 @@
               <div class="segmented-speed-container">
                 <input
                   :value="normalizedSpeed"
-                  @input="(e) => updateNormalizedSpeed((e.target as HTMLInputElement).valueAsNumber)"
+                  @input="
+                    (e) => updateNormalizedSpeed((e.target as HTMLInputElement).valueAsNumber)
+                  "
                   type="range"
                   min="0"
                   max="100"
@@ -89,7 +91,9 @@
                 :value="speedInputValue"
                 @input="(e) => updateSpeedFromInput((e.target as HTMLInputElement).valueAsNumber)"
                 @blur="(e) => updateSpeedFromInput((e.target as HTMLInputElement).valueAsNumber)"
-                @keyup.enter="(e) => updateSpeedFromInput((e.target as HTMLInputElement).valueAsNumber)"
+                @keyup.enter="
+                  (e) => updateSpeedFromInput((e.target as HTMLInputElement).valueAsNumber)
+                "
                 type="number"
                 step="0.1"
                 min="0.1"
@@ -239,40 +243,28 @@
           <div class="property-item">
             <label>水平对齐</label>
             <div class="alignment-controls">
-              <button
-                @click="alignHorizontal('left')"
-                class="align-btn"
-                title="左对齐"
-              >
+              <button @click="alignHorizontal('left')" class="align-btn" title="左对齐">
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                  <rect x="2" y="4" width="8" height="2"/>
-                  <rect x="2" y="7" width="6" height="2"/>
-                  <rect x="2" y="10" width="10" height="2"/>
-                  <line x1="1" y1="2" x2="1" y2="14" stroke="currentColor" stroke-width="1"/>
+                  <rect x="2" y="4" width="8" height="2" />
+                  <rect x="2" y="7" width="6" height="2" />
+                  <rect x="2" y="10" width="10" height="2" />
+                  <line x1="1" y1="2" x2="1" y2="14" stroke="currentColor" stroke-width="1" />
                 </svg>
               </button>
-              <button
-                @click="alignHorizontal('center')"
-                class="align-btn"
-                title="水平居中"
-              >
+              <button @click="alignHorizontal('center')" class="align-btn" title="水平居中">
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                  <rect x="4" y="4" width="8" height="2"/>
-                  <rect x="5" y="7" width="6" height="2"/>
-                  <rect x="3" y="10" width="10" height="2"/>
-                  <line x1="8" y1="2" x2="8" y2="14" stroke="currentColor" stroke-width="1"/>
+                  <rect x="4" y="4" width="8" height="2" />
+                  <rect x="5" y="7" width="6" height="2" />
+                  <rect x="3" y="10" width="10" height="2" />
+                  <line x1="8" y1="2" x2="8" y2="14" stroke="currentColor" stroke-width="1" />
                 </svg>
               </button>
-              <button
-                @click="alignHorizontal('right')"
-                class="align-btn"
-                title="右对齐"
-              >
+              <button @click="alignHorizontal('right')" class="align-btn" title="右对齐">
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                  <rect x="6" y="4" width="8" height="2"/>
-                  <rect x="8" y="7" width="6" height="2"/>
-                  <rect x="4" y="10" width="10" height="2"/>
-                  <line x1="15" y1="2" x2="15" y2="14" stroke="currentColor" stroke-width="1"/>
+                  <rect x="6" y="4" width="8" height="2" />
+                  <rect x="8" y="7" width="6" height="2" />
+                  <rect x="4" y="10" width="10" height="2" />
+                  <line x1="15" y1="2" x2="15" y2="14" stroke="currentColor" stroke-width="1" />
                 </svg>
               </button>
             </div>
@@ -282,40 +274,28 @@
           <div class="property-item">
             <label>垂直对齐</label>
             <div class="alignment-controls">
-              <button
-                @click="alignVertical('top')"
-                class="align-btn"
-                title="顶对齐"
-              >
+              <button @click="alignVertical('top')" class="align-btn" title="顶对齐">
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                  <rect x="4" y="2" width="2" height="8"/>
-                  <rect x="7" y="2" width="2" height="6"/>
-                  <rect x="10" y="2" width="2" height="10"/>
-                  <line x1="2" y1="1" x2="14" y2="1" stroke="currentColor" stroke-width="1"/>
+                  <rect x="4" y="2" width="2" height="8" />
+                  <rect x="7" y="2" width="2" height="6" />
+                  <rect x="10" y="2" width="2" height="10" />
+                  <line x1="2" y1="1" x2="14" y2="1" stroke="currentColor" stroke-width="1" />
                 </svg>
               </button>
-              <button
-                @click="alignVertical('middle')"
-                class="align-btn"
-                title="垂直居中"
-              >
+              <button @click="alignVertical('middle')" class="align-btn" title="垂直居中">
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                  <rect x="4" y="4" width="2" height="8"/>
-                  <rect x="7" y="5" width="2" height="6"/>
-                  <rect x="10" y="3" width="2" height="10"/>
-                  <line x1="2" y1="8" x2="14" y2="8" stroke="currentColor" stroke-width="1"/>
+                  <rect x="4" y="4" width="2" height="8" />
+                  <rect x="7" y="5" width="2" height="6" />
+                  <rect x="10" y="3" width="2" height="10" />
+                  <line x1="2" y1="8" x2="14" y2="8" stroke="currentColor" stroke-width="1" />
                 </svg>
               </button>
-              <button
-                @click="alignVertical('bottom')"
-                class="align-btn"
-                title="底对齐"
-              >
+              <button @click="alignVertical('bottom')" class="align-btn" title="底对齐">
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                  <rect x="4" y="6" width="2" height="8"/>
-                  <rect x="7" y="8" width="2" height="6"/>
-                  <rect x="10" y="4" width="2" height="10"/>
-                  <line x1="2" y1="15" x2="14" y2="15" stroke="currentColor" stroke-width="1"/>
+                  <rect x="4" y="6" width="2" height="8" />
+                  <rect x="7" y="8" width="2" height="6" />
+                  <rect x="10" y="4" width="2" height="10" />
+                  <line x1="2" y1="15" x2="14" y2="15" stroke="currentColor" stroke-width="1" />
                 </svg>
               </button>
             </div>
@@ -464,7 +444,7 @@ const currentResolution = computed(() => {
   // 直接使用TimelineItem中的size属性，这是缩放后的实际尺寸
   return {
     width: Math.round(selectedTimelineItem.value.size.width),
-    height: Math.round(selectedTimelineItem.value.size.height)
+    height: Math.round(selectedTimelineItem.value.size.height),
   }
 })
 
@@ -478,7 +458,7 @@ const clipName = computed({
     if (selectedMediaItem.value && value.trim()) {
       videoStore.updateMediaItemName(selectedMediaItem.value.id, value.trim())
     }
-  }
+  },
 })
 
 const playbackRate = computed(() => {
@@ -497,7 +477,7 @@ const speedInputValue = computed(() => playbackRate.value)
 // NumberInput 样式定义
 const propertyInputStyle = {
   maxWidth: '80px',
-  textAlign: 'right' as const
+  textAlign: 'right' as const,
 }
 
 const positionInputStyle = {
@@ -505,7 +485,7 @@ const positionInputStyle = {
   textAlign: 'center' as const,
   flex: '1',
   borderRadius: '0',
-  borderRight: 'none'
+  borderRight: 'none',
 }
 
 const scaleInputStyle = {
@@ -518,7 +498,7 @@ const scaleInputStyle = {
   padding: '2px 4px',
   width: '78px',
   textAlign: 'center' as const,
-  flex: '0 0 auto'
+  flex: '0 0 auto',
 }
 
 // 更新片段名称
@@ -539,7 +519,12 @@ const updatePlaybackRate = (newRate?: number) => {
 
 // 更新目标时长
 const updateTargetDuration = (newTargetDuration: number) => {
-  if (!isNaN(newTargetDuration) && newTargetDuration > 0 && selectedTimelineItem.value && selectedMediaItem.value) {
+  if (
+    !isNaN(newTargetDuration) &&
+    newTargetDuration > 0 &&
+    selectedTimelineItem.value &&
+    selectedMediaItem.value
+  ) {
     const sprite = selectedTimelineItem.value.sprite
     const timeRange = selectedTimelineItem.value.timeRange
 
@@ -549,12 +534,12 @@ const updateTargetDuration = (newTargetDuration: number) => {
     const clampedRate = Math.max(0.1, Math.min(100, newPlaybackRate))
 
     // 更新CustomVisibleSprite的时间范围
-    const newTimelineEndTime = timeRange.timelineStartTime + (newTargetDuration * 1000000)
+    const newTimelineEndTime = timeRange.timelineStartTime + newTargetDuration * 1000000
     sprite.setTimeRange({
       clipStartTime: timeRange.clipStartTime,
       clipEndTime: timeRange.clipEndTime,
       timelineStartTime: timeRange.timelineStartTime,
-      timelineEndTime: newTimelineEndTime
+      timelineEndTime: newTimelineEndTime,
     })
 
     // 从sprite获取更新后的完整timeRange（包含自动计算的effectiveDuration）
@@ -564,7 +549,7 @@ const updateTargetDuration = (newTargetDuration: number) => {
       inputValue: newTargetDuration,
       newPlaybackRate: clampedRate,
       updatedTimeRange: selectedTimelineItem.value.timeRange,
-      actualTargetDuration: targetDuration.value // computed 会自动计算新值
+      actualTargetDuration: targetDuration.value, // computed 会自动计算新值
     })
   }
 }
@@ -630,11 +615,11 @@ const updateTransform = (transform?: {
       position: { x: transformX.value, y: transformY.value },
       size: {
         width: selectedTimelineItem.value.size.width,
-        height: selectedTimelineItem.value.size.height
+        height: selectedTimelineItem.value.size.height,
       },
       rotation: rotation.value,
       opacity: opacity.value,
-      zIndex: zIndex.value
+      zIndex: zIndex.value,
     }
 
     // 使用videoStore的updateTimelineItemTransform方法
@@ -652,7 +637,7 @@ const toggleProportionalScale = () => {
     const originalResolution = videoStore.getVideoOriginalResolution(selectedMediaItem.value.id)
     const newSize = {
       width: originalResolution.width * scaleX.value,
-      height: originalResolution.height * scaleX.value // 使用X缩放值保持等比
+      height: originalResolution.height * scaleX.value, // 使用X缩放值保持等比
     }
     updateTransform({ size: newSize })
   }
@@ -664,7 +649,7 @@ const updateUniformScale = (newScale: number) => {
     const originalResolution = videoStore.getVideoOriginalResolution(selectedMediaItem.value.id)
     const newSize = {
       width: originalResolution.width * newScale,
-      height: originalResolution.height * newScale
+      height: originalResolution.height * newScale,
     }
     updateTransform({ size: newSize })
   }
@@ -677,7 +662,7 @@ const setScaleX = (value: number) => {
   const newScaleX = Math.max(0.01, Math.min(5, value))
   const newSize = {
     width: originalResolution.width * newScaleX,
-    height: selectedTimelineItem.value.size.height // 保持Y尺寸不变
+    height: selectedTimelineItem.value.size.height, // 保持Y尺寸不变
   }
   updateTransform({ size: newSize })
 }
@@ -689,7 +674,7 @@ const setScaleY = (value: number) => {
   const newScaleY = Math.max(0.01, Math.min(5, value))
   const newSize = {
     width: selectedTimelineItem.value.size.width, // 保持X尺寸不变
-    height: originalResolution.height * newScaleY
+    height: originalResolution.height * newScaleY,
   }
   updateTransform({ size: newSize })
 }
@@ -713,8 +698,6 @@ const formatDuration = (seconds: number): string => {
   const ms = Math.floor((seconds % 1) * 1000)
   return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}.${ms.toString().padStart(3, '0')}`
 }
-
-
 
 // 实现对齐功能（基于项目坐标系：中心为原点）
 const alignHorizontal = (alignment: 'left' | 'center' | 'right') => {
@@ -743,7 +726,7 @@ const alignHorizontal = (alignment: 'left' | 'center' | 'right') => {
 
     const newPosition = {
       x: Math.round(newProjectX),
-      y: transformY.value
+      y: transformY.value,
     }
     updateTransform({ position: newPosition })
 
@@ -779,7 +762,7 @@ const alignVertical = (alignment: 'top' | 'middle' | 'bottom') => {
 
     const newPosition = {
       x: transformX.value,
-      y: Math.round(newProjectY)
+      y: Math.round(newProjectY),
     }
     updateTransform({ position: newPosition })
 
@@ -788,8 +771,6 @@ const alignVertical = (alignment: 'top' | 'middle' | 'bottom') => {
     console.error('垂直对齐失败:', error)
   }
 }
-
-
 </script>
 
 <style scoped>
@@ -932,8 +913,6 @@ const alignVertical = (alignment: 'top' | 'middle' | 'bottom') => {
   -webkit-appearance: none;
   margin: 0;
 }
-
-
 
 /* 位置控制样式 */
 .position-controls {

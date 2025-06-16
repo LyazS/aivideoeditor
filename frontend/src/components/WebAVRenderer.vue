@@ -21,7 +21,12 @@ import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useVideoStore } from '../stores/videoStore'
 import type { VideoResolution } from '../types/videoTypes'
 import { useWebAVControls, isWebAVReady } from '../composables/useWebAVControls'
-import { logRendererState, logComponentLifecycle, createPerformanceTimer, debugError } from '../utils/webavDebug'
+import {
+  logRendererState,
+  logComponentLifecycle,
+  createPerformanceTimer,
+  debugError,
+} from '../utils/webavDebug'
 
 // 扩展HTMLElement类型以包含自定义属性
 interface ExtendedHTMLElement extends HTMLElement {
@@ -66,14 +71,14 @@ const canvasDisplaySize = computed(() => {
 
   return {
     width: Math.round(displayWidth),
-    height: Math.round(displayHeight)
+    height: Math.round(displayHeight),
   }
 })
 
 // 画布容器样式
 const canvasContainerStyle = computed(() => ({
   width: canvasDisplaySize.value.width + 'px',
-  height: canvasDisplaySize.value.height + 'px'
+  height: canvasDisplaySize.value.height + 'px',
 }))
 
 /**
@@ -84,10 +89,11 @@ const initializeWebAVCanvas = async (): Promise<void> => {
 
   logRendererState({
     hasWrapper: !!canvasContainerWrapper.value,
-    wrapperSize: canvasContainerWrapper.value ?
-      `${canvasContainerWrapper.value.clientWidth}x${canvasContainerWrapper.value.clientHeight}` : 'undefined',
+    wrapperSize: canvasContainerWrapper.value
+      ? `${canvasContainerWrapper.value.clientWidth}x${canvasContainerWrapper.value.clientHeight}`
+      : 'undefined',
     canvasDisplaySize: canvasDisplaySize.value,
-    canvasOriginalSize: { width: canvasWidth.value, height: canvasHeight.value }
+    canvasOriginalSize: { width: canvasWidth.value, height: canvasHeight.value },
   })
 
   if (!canvasContainerWrapper.value) {
@@ -109,7 +115,7 @@ const initializeWebAVCanvas = async (): Promise<void> => {
 
     const totalTime = rendererTimer.end()
     console.log('🎬 [WebAV Renderer] Renderer initialization completed (reused existing):', {
-      totalTime: `${totalTime.toFixed(2)}ms`
+      totalTime: `${totalTime.toFixed(2)}ms`,
     })
     return
   }
@@ -124,8 +130,8 @@ const initializeWebAVCanvas = async (): Promise<void> => {
       className: 'webav-canvas-container',
       style: {
         borderRadius: 'var(--border-radius-medium)',
-        boxShadow: 'var(--shadow-lg)'
-      }
+        boxShadow: 'var(--shadow-lg)',
+      },
     })
 
     // 将容器插入到wrapper中
@@ -136,20 +142,20 @@ const initializeWebAVCanvas = async (): Promise<void> => {
     await webAVControls.initializeCanvas(canvasContainer, {
       width: canvasWidth.value,
       height: canvasHeight.value,
-      bgColor: '#000000'
+      bgColor: '#000000',
     })
 
     const totalTime = rendererTimer.end()
     console.log('🎉 [WebAV Renderer] WebAV canvas initialization completed successfully!', {
       totalTime: `${totalTime.toFixed(2)}ms`,
       containerSize: `${canvasDisplaySize.value.width}x${canvasDisplaySize.value.height}`,
-      canvasSize: `${canvasWidth.value}x${canvasHeight.value}`
+      canvasSize: `${canvasWidth.value}x${canvasHeight.value}`,
     })
   } catch (err) {
     const totalTime = rendererTimer.end()
     debugError('WebAV Renderer canvas initialization failed', err as Error, {
       totalTime: `${totalTime.toFixed(2)}ms`,
-      wrapperState: !!canvasContainerWrapper.value
+      wrapperState: !!canvasContainerWrapper.value,
     })
   }
 }
@@ -181,19 +187,23 @@ const recreateCanvasWithNewSize = async (newResolution: VideoResolution): Promis
       className: 'webav-canvas-container',
       style: {
         borderRadius: 'var(--border-radius-medium)',
-        boxShadow: 'var(--shadow-lg)'
-      }
+        boxShadow: 'var(--shadow-lg)',
+      },
     })
 
     // 将新容器插入到wrapper中
     canvasContainerWrapper.value.appendChild(newCanvasContainer)
 
     // 重新创建画布
-    await webAVControls.recreateCanvas(newCanvasContainer, {
-      width: newResolution.width,
-      height: newResolution.height,
-      bgColor: '#000000'
-    }, backup)
+    await webAVControls.recreateCanvas(
+      newCanvasContainer,
+      {
+        width: newResolution.width,
+        height: newResolution.height,
+        bgColor: '#000000',
+      },
+      backup,
+    )
 
     console.log('画布重新创建完成')
   } catch (err) {
@@ -217,15 +227,16 @@ watch(
     console.log('Video resolution changed:', newResolution)
 
     // 检查是否真的需要重新创建画布
-    if (!oldResolution ||
-        newResolution.width !== oldResolution.width ||
-        newResolution.height !== oldResolution.height) {
-
+    if (
+      !oldResolution ||
+      newResolution.width !== oldResolution.width ||
+      newResolution.height !== oldResolution.height
+    ) {
       console.log('画布尺寸发生变化，开始重新创建画布...')
       await recreateCanvasWithNewSize(newResolution)
     }
   },
-  { deep: true }
+  { deep: true },
 )
 
 /**
@@ -243,11 +254,11 @@ watch(
       console.log('Canvas container size updated:', {
         newSize,
         containerElement: canvasContainer.tagName,
-        actualSize: `${canvasContainer.clientWidth}x${canvasContainer.clientHeight}`
+        actualSize: `${canvasContainer.clientWidth}x${canvasContainer.clientHeight}`,
       })
     }
   },
-  { deep: true }
+  { deep: true },
 )
 
 /**
@@ -259,7 +270,7 @@ watch(
     // 注意：这里我们不直接控制WebAV播放，因为WebAV应该是播放状态的主控
     // 这个监听主要用于调试和状态同步检查
     console.log('Video store playing state changed:', isPlaying)
-  }
+  },
 )
 
 /**
@@ -272,7 +283,7 @@ watch(
     if (!videoStore.isPlaying && isWebAVReady()) {
       webAVControls.seekTo(currentTime)
     }
-  }
+  },
 )
 
 /**
@@ -288,7 +299,7 @@ const updateContainerSize = (): void => {
   console.log('Container size updated:', {
     width: containerWidth.value,
     height: containerHeight.value,
-    canvasDisplay: canvasDisplaySize.value
+    canvasDisplay: canvasDisplaySize.value,
   })
 }
 
@@ -347,12 +358,12 @@ onMounted(async () => {
       totalMountTime: `${totalMountTime.toFixed(2)}ms`,
       containerSize: containerWidth.value + 'x' + containerHeight.value,
       canvasDisplaySize: canvasDisplaySize.value,
-      isWebAVReady: videoStore.isWebAVReady
+      isWebAVReady: videoStore.isWebAVReady,
     })
   } catch (err) {
     const totalMountTime = mountTimer.end()
     debugError('WebAV Renderer component mount failed', err as Error, {
-      totalMountTime: `${totalMountTime.toFixed(2)}ms`
+      totalMountTime: `${totalMountTime.toFixed(2)}ms`,
     })
   }
 })
@@ -375,7 +386,7 @@ defineExpose({
   initializeWebAVCanvas,
   recreateCanvasWithNewSize,
   getAVCanvas: webAVControls.getAVCanvas,
-  captureFrame: webAVControls.captureFrame
+  captureFrame: webAVControls.captureFrame,
 })
 </script>
 
@@ -465,10 +476,18 @@ defineExpose({
 }
 
 @keyframes fadeInOut {
-  0% { opacity: 0; }
-  20% { opacity: 1; }
-  80% { opacity: 1; }
-  100% { opacity: 0; }
+  0% {
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
 }
 
 /* 响应式设计 */

@@ -2,11 +2,11 @@ import { ref, reactive, markRaw, type Raw, type Ref } from 'vue'
 import { CustomVisibleSprite } from '../../utils/customVisibleSprite'
 import { webavToProjectCoords, projectToWebavCoords } from '../../utils/coordinateTransform'
 import { printDebugInfo, syncTimeRange } from '../utils/storeUtils'
-import type { 
-  TimelineItem, 
-  MediaItem, 
+import type {
+  TimelineItem,
+  MediaItem,
   PropsChangeEvent,
-  VideoResolution 
+  VideoResolution,
 } from '../../types/videoTypes'
 
 /**
@@ -17,13 +17,13 @@ export function createTimelineModule(
   configModule: { videoResolution: { value: VideoResolution } },
   webavModule: { avCanvas: { value: any } },
   mediaModule: {
-    getMediaItem: (id: string) => MediaItem | undefined,
+    getMediaItem: (id: string) => MediaItem | undefined
     mediaItems: Ref<MediaItem[]>
   },
-  trackModule?: { tracks: Ref<any[]> }
+  trackModule?: { tracks: Ref<any[]> },
 ) {
   // ==================== 状态定义 ====================
-  
+
   const timelineItems = ref<TimelineItem[]>([])
 
   // ==================== 双向数据同步函数 ====================
@@ -50,7 +50,7 @@ export function createTimelineModule(
           rect.w !== undefined ? rect.w : timelineItem.size.width,
           rect.h !== undefined ? rect.h : timelineItem.size.height,
           configModule.videoResolution.value.width,
-          configModule.videoResolution.value.height
+          configModule.videoResolution.value.height,
         )
         timelineItem.position.x = Math.round(projectCoords.x)
         timelineItem.position.y = Math.round(projectCoords.y)
@@ -98,13 +98,19 @@ export function createTimelineModule(
     timelineItems.value.push(timelineItem)
 
     const mediaItem = mediaModule.getMediaItem(timelineItem.mediaItemId)
-    printDebugInfo('添加素材到时间轴', {
-      timelineItemId: timelineItem.id,
-      mediaItemId: timelineItem.mediaItemId,
-      mediaItemName: mediaItem?.name || '未知',
-      trackId: timelineItem.trackId,
-      position: timelineItem.timeRange.timelineStartTime / 1000000
-    }, mediaModule.mediaItems.value, timelineItems.value, trackModule?.tracks.value || [])
+    printDebugInfo(
+      '添加素材到时间轴',
+      {
+        timelineItemId: timelineItem.id,
+        mediaItemId: timelineItem.mediaItemId,
+        mediaItemName: mediaItem?.name || '未知',
+        trackId: timelineItem.trackId,
+        position: timelineItem.timeRange.timelineStartTime / 1000000,
+      },
+      mediaModule.mediaItems.value,
+      timelineItems.value,
+      trackModule?.tracks.value || [],
+    )
   }
 
   /**
@@ -139,13 +145,19 @@ export function createTimelineModule(
       // 从数组中移除
       timelineItems.value.splice(index, 1)
 
-      printDebugInfo('从时间轴删除素材', {
-        timelineItemId,
-        mediaItemId: item.mediaItemId,
-        mediaItemName: mediaItem?.name || '未知',
-        trackId: item.trackId,
-        position: item.timeRange.timelineStartTime / 1000000
-      }, mediaModule.mediaItems.value, timelineItems.value, trackModule?.tracks.value || [])
+      printDebugInfo(
+        '从时间轴删除素材',
+        {
+          timelineItemId,
+          mediaItemId: item.mediaItemId,
+          mediaItemName: mediaItem?.name || '未知',
+          trackId: item.trackId,
+          position: item.timeRange.timelineStartTime / 1000000,
+        },
+        mediaModule.mediaItems.value,
+        timelineItems.value,
+        trackModule?.tracks.value || [],
+      )
     }
   }
 
@@ -155,7 +167,7 @@ export function createTimelineModule(
    * @returns 时间轴项目或undefined
    */
   function getTimelineItem(timelineItemId: string): TimelineItem | undefined {
-    return timelineItems.value.find(item => item.id === timelineItemId)
+    return timelineItems.value.find((item) => item.id === timelineItemId)
   }
 
   /**
@@ -164,7 +176,11 @@ export function createTimelineModule(
    * @param newPosition 新位置（秒）
    * @param newTrackId 新轨道ID（可选）
    */
-  function updateTimelineItemPosition(timelineItemId: string, newPosition: number, newTrackId?: number) {
+  function updateTimelineItemPosition(
+    timelineItemId: string,
+    newPosition: number,
+    newTrackId?: number,
+  ) {
     const item = timelineItems.value.find((item) => item.id === timelineItemId)
     if (item) {
       const oldPosition = item.timeRange.timelineStartTime / 1000000
@@ -184,19 +200,25 @@ export function createTimelineModule(
       // 使用同步函数更新timeRange
       syncTimeRange(item, {
         timelineStartTime: newPosition * 1000000, // 转换为微秒
-        timelineEndTime: newPosition * 1000000 + duration
+        timelineEndTime: newPosition * 1000000 + duration,
       })
 
-      printDebugInfo('更新时间轴项目位置', {
-        timelineItemId,
-        mediaItemName: mediaItem?.name || '未知',
-        oldPosition,
-        newPosition,
-        oldTrackId,
-        newTrackId: item.trackId,
-        positionChanged: oldPosition !== newPosition,
-        trackChanged: oldTrackId !== item.trackId
-      }, mediaModule.mediaItems.value, timelineItems.value, trackModule?.tracks.value || [])
+      printDebugInfo(
+        '更新时间轴项目位置',
+        {
+          timelineItemId,
+          mediaItemName: mediaItem?.name || '未知',
+          oldPosition,
+          newPosition,
+          oldTrackId,
+          newTrackId: item.trackId,
+          positionChanged: oldPosition !== newPosition,
+          trackChanged: oldTrackId !== item.trackId,
+        },
+        mediaModule.mediaItems.value,
+        timelineItems.value,
+        trackModule?.tracks.value || [],
+      )
     }
   }
 
@@ -222,12 +244,18 @@ export function createTimelineModule(
       // 更新sprite引用
       item.sprite = newSprite
 
-      printDebugInfo('更新时间轴项目sprite', {
-        timelineItemId,
-        mediaItemName: mediaItem?.name || '未知',
-        trackId: item.trackId,
-        position: item.timeRange.timelineStartTime / 1000000
-      }, mediaModule.mediaItems.value, timelineItems.value, trackModule?.tracks.value || [])
+      printDebugInfo(
+        '更新时间轴项目sprite',
+        {
+          timelineItemId,
+          mediaItemName: mediaItem?.name || '未知',
+          trackId: item.trackId,
+          position: item.timeRange.timelineStartTime / 1000000,
+        },
+        mediaModule.mediaItems.value,
+        timelineItems.value,
+        trackModule?.tracks.value || [],
+      )
     }
   }
 
@@ -237,13 +265,16 @@ export function createTimelineModule(
    * 更新TimelineItem的VisibleSprite变换属性
    * 这会触发propsChange事件，自动同步到TimelineItem，然后更新属性面板显示
    */
-  function updateTimelineItemTransform(timelineItemId: string, transform: {
-    position?: { x: number; y: number }
-    size?: { width: number; height: number }
-    rotation?: number
-    opacity?: number
-    zIndex?: number
-  }) {
+  function updateTimelineItemTransform(
+    timelineItemId: string,
+    transform: {
+      position?: { x: number; y: number }
+      size?: { width: number; height: number }
+      rotation?: number
+      opacity?: number
+      zIndex?: number
+    },
+  ) {
     const item = timelineItems.value.find((item) => item.id === timelineItemId)
     if (!item) return
 
@@ -269,7 +300,7 @@ export function createTimelineModule(
           newWidth,
           newHeight,
           configModule.videoResolution.value.width,
-          configModule.videoResolution.value.height
+          configModule.videoResolution.value.height,
         )
         sprite.rect.x = webavCoords.x
         sprite.rect.y = webavCoords.y
@@ -277,7 +308,7 @@ export function createTimelineModule(
         console.log('🎯 中心缩放:', {
           newSize: { width: newWidth, height: newHeight },
           centerPosition: { x: currentCenterX, y: currentCenterY },
-          webavCoords: { x: webavCoords.x, y: webavCoords.y }
+          webavCoords: { x: webavCoords.x, y: webavCoords.y },
         })
       }
 
@@ -289,7 +320,7 @@ export function createTimelineModule(
           item.size.width,
           item.size.height,
           configModule.videoResolution.value.width,
-          configModule.videoResolution.value.height
+          configModule.videoResolution.value.height,
         )
         sprite.rect.x = webavCoords.x
         sprite.rect.y = webavCoords.y
@@ -313,7 +344,13 @@ export function createTimelineModule(
       console.log('✅ 属性面板 → VisibleSprite 更新完成:', {
         timelineItemId,
         transform,
-        webavRect: { x: sprite.rect.x, y: sprite.rect.y, w: sprite.rect.w, h: sprite.rect.h, angle: sprite.rect.angle }
+        webavRect: {
+          x: sprite.rect.x,
+          y: sprite.rect.y,
+          w: sprite.rect.w,
+          h: sprite.rect.h,
+          angle: sprite.rect.angle,
+        },
       })
     } catch (error) {
       console.error('更新VisibleSprite变换属性失败:', error)

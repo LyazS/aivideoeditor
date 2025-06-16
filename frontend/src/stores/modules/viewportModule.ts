@@ -1,10 +1,10 @@
 import { ref, computed, type Ref } from 'vue'
-import { 
-  getMaxZoomLevel, 
-  getMinZoomLevel, 
+import {
+  getMaxZoomLevel,
+  getMinZoomLevel,
   getMaxScrollOffset,
   calculateMaxVisibleDuration,
-  calculateContentEndTime
+  calculateContentEndTime,
 } from '../utils/storeUtils'
 import type { TimelineItem } from '../../types/videoTypes'
 
@@ -15,10 +15,10 @@ import type { TimelineItem } from '../../types/videoTypes'
 export function createViewportModule(
   timelineItems: Ref<TimelineItem[]>,
   totalDuration: Ref<number>,
-  timelineDuration: Ref<number>
+  timelineDuration: Ref<number>,
 ) {
   // ==================== 状态定义 ====================
-  
+
   // 缩放和滚动状态
   const zoomLevel = ref(1) // 缩放级别，1为默认，大于1为放大，小于1为缩小
   const scrollOffset = ref(0) // 水平滚动偏移量（像素）
@@ -64,7 +64,12 @@ export function createViewportModule(
    * @returns 最大滚动偏移量
    */
   function getMaxScrollOffsetForTimeline(timelineWidth: number): number {
-    return getMaxScrollOffset(timelineWidth, zoomLevel.value, totalDuration.value, maxVisibleDuration.value)
+    return getMaxScrollOffset(
+      timelineWidth,
+      zoomLevel.value,
+      totalDuration.value,
+      maxVisibleDuration.value,
+    )
   }
 
   /**
@@ -96,7 +101,7 @@ export function createViewportModule(
         newZoom: clampedZoom,
         minZoom,
         maxZoom,
-        clamped: newZoomLevel !== clampedZoom
+        clamped: newZoomLevel !== clampedZoom,
       })
 
       // 调整滚动偏移量以保持在有效范围内
@@ -113,7 +118,7 @@ export function createViewportModule(
   function setScrollOffset(newOffset: number, timelineWidth: number = 800) {
     const maxOffset = getMaxScrollOffsetForTimeline(timelineWidth)
     const clampedOffset = Math.max(0, Math.min(newOffset, maxOffset))
-    
+
     if (scrollOffset.value !== clampedOffset) {
       const oldOffset = scrollOffset.value
       scrollOffset.value = clampedOffset
@@ -123,7 +128,7 @@ export function createViewportModule(
         oldOffset,
         newOffset: clampedOffset,
         maxOffset,
-        clamped: newOffset !== clampedOffset
+        clamped: newOffset !== clampedOffset,
       })
     }
   }
@@ -158,7 +163,7 @@ export function createViewportModule(
       console.log('📏 扩展时间轴长度:', {
         oldDuration: timelineDuration.value,
         newDuration,
-        visibleDuration: visibleDurationCalc
+        visibleDuration: visibleDurationCalc,
       })
       // 这里需要调用外部的设置方法，因为timelineDuration是从配置模块来的
       // 在主store中会处理这个逻辑
@@ -220,7 +225,7 @@ export function createViewportModule(
       visibleDuration: visibleDuration.value,
       maxVisibleDuration: maxVisibleDuration.value,
       contentEndTime: contentEndTime.value,
-      totalDuration: totalDuration.value
+      totalDuration: totalDuration.value,
     }
   }
 

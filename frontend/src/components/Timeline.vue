@@ -152,13 +152,11 @@ import TimeScale from './TimeScale.vue'
 
 // Component name for Vue DevTools
 defineOptions({
-  name: 'TimelineEditor'
+  name: 'TimelineEditor',
 })
 
 const videoStore = useVideoStore()
 const webAVControls = useWebAVControls()
-
-
 
 const timelineBody = ref<HTMLElement>()
 const timelineWidth = ref(800)
@@ -337,7 +335,9 @@ async function handleDrop(event: DragEvent) {
       const dropX = event.clientX - trackContentRect.left
       const dropTime = videoStore.pixelToTime(dropX, timelineWidth.value)
       console.log(`🎯 拖拽素材到时间轴: ${mediaItem.name}`)
-      console.log(`📍 拖拽位置: ${dropX}px, 对应时间: ${dropTime.toFixed(2)}s, 目标轨道: ${targetTrackId}`)
+      console.log(
+        `📍 拖拽位置: ${dropX}px, 对应时间: ${dropTime.toFixed(2)}s, 目标轨道: ${targetTrackId}`,
+      )
 
       // 如果拖拽位置超出当前时间轴长度，动态扩展时间轴
       videoStore.expandTimelineIfNeeded(dropTime + 10) // 预留10秒缓冲
@@ -412,7 +412,7 @@ async function createVideoClipFromMediaItem(
       原始分辨率: originalResolution,
       显示尺寸: { w: sprite.rect.w, h: sprite.rect.h },
       WebAV位置: { x: sprite.rect.x, y: sprite.rect.y },
-      画布尺寸: { w: canvasWidth, h: canvasHeight }
+      画布尺寸: { w: canvasWidth, h: canvasHeight },
     })
 
     // 设置时间范围 - 添加调试信息
@@ -420,14 +420,14 @@ async function createVideoClipFromMediaItem(
       clipStartTime: 0,
       clipEndTime: mediaItem.duration * 1000000, // 转换为微秒
       timelineStartTime: startTime * 1000000, // 转换为微秒
-      timelineEndTime: (startTime + mediaItem.duration) * 1000000 // 转换为微秒
+      timelineEndTime: (startTime + mediaItem.duration) * 1000000, // 转换为微秒
     }
 
     console.log('设置时间范围:', {
       ...timeRangeConfig,
       clipDuration: mediaItem.duration,
       startTime,
-      endTime: startTime + mediaItem.duration
+      endTime: startTime + mediaItem.duration,
     })
 
     sprite.setTimeRange(timeRangeConfig)
@@ -449,7 +449,7 @@ async function createVideoClipFromMediaItem(
       sprite.rect.w,
       sprite.rect.h,
       videoStore.videoResolution.width,
-      videoStore.videoResolution.height
+      videoStore.videoResolution.height,
     )
 
     const timelineItem: TimelineItem = reactive({
@@ -461,26 +461,28 @@ async function createVideoClipFromMediaItem(
       // Sprite位置和大小属性（使用项目坐标系）
       position: {
         x: Math.round(projectCoords.x),
-        y: Math.round(projectCoords.y)
+        y: Math.round(projectCoords.y),
       },
       size: {
         width: sprite.rect.w,
-        height: sprite.rect.h
+        height: sprite.rect.h,
       },
       // 其他sprite属性
       rotation: sprite.rect.angle || 0, // 从sprite获取旋转角度（弧度），默认为0
       zIndex: sprite.zIndex,
-      opacity: sprite.opacity
+      opacity: sprite.opacity,
     })
 
     console.log('🔄 坐标系转换:', {
       WebAV坐标: { x: sprite.rect.x, y: sprite.rect.y },
       项目坐标: { x: timelineItem.position.x, y: timelineItem.position.y },
-      尺寸: { w: sprite.rect.w, h: sprite.rect.h }
+      尺寸: { w: sprite.rect.w, h: sprite.rect.h },
     })
 
     // 添加到store
-    console.log(`📝 添加时间轴项目: ${mediaItem.name} -> 轨道${trackId}, 位置${Math.max(0, startTime).toFixed(2)}s`)
+    console.log(
+      `📝 添加时间轴项目: ${mediaItem.name} -> 轨道${trackId}, 位置${Math.max(0, startTime).toFixed(2)}s`,
+    )
     videoStore.addTimelineItem(timelineItem)
 
     console.log(`✅ 时间轴项目创建完成: ${timelineItem.id}`)
@@ -490,7 +492,11 @@ async function createVideoClipFromMediaItem(
   }
 }
 
-function handleTimelineItemPositionUpdate(timelineItemId: string, newPosition: number, newTrackId?: number) {
+function handleTimelineItemPositionUpdate(
+  timelineItemId: string,
+  newPosition: number,
+  newTrackId?: number,
+) {
   videoStore.updateTimelineItemPosition(timelineItemId, newPosition, newTrackId)
 }
 

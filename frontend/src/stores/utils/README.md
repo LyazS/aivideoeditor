@@ -33,7 +33,7 @@ import {
   pixelToTime,
   expandTimelineIfNeeded,
   getTimelineItemAtTime,
-  autoArrangeTimelineItems
+  autoArrangeTimelineItems,
 } from './utils/storeUtils'
 
 // 在 store 中使用
@@ -43,7 +43,7 @@ export const useVideoStore = defineStore('video', () => {
   return {
     // 包装工具函数以提供正确的参数
     alignTimeToFrame: (time: number) => alignTimeToFrame(time, frameRate.value),
-    timeToPixel: (time: number, timelineWidth: number) => 
+    timeToPixel: (time: number, timelineWidth: number) =>
       timeToPixel(time, timelineWidth, totalDuration.value, zoomLevel.value, scrollOffset.value),
     // ... 其他函数
   }
@@ -62,6 +62,7 @@ export const useVideoStore = defineStore('video', () => {
 工具函数包含完整的单元测试，位于 `__tests__/storeUtils.test.ts` 文件中。
 
 运行测试：
+
 ```bash
 npm run test stores/utils
 ```

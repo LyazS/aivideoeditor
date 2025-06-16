@@ -7,7 +7,7 @@ import { alignTimeToFrame } from '../utils/storeUtils'
  */
 export function createPlaybackModule(frameRate: { value: number }) {
   // ==================== 状态定义 ====================
-  
+
   // 播放相关状态
   const currentTime = ref(0) // 当前播放时间（秒）
   const isPlaying = ref(false) // 是否正在播放
@@ -54,10 +54,10 @@ export function createPlaybackModule(frameRate: { value: number }) {
    */
   function setCurrentTime(time: number, forceAlign: boolean = true) {
     const finalTime = forceAlign ? alignTimeToFrame(time, frameRate.value) : time
-    
+
     // 确保时间不为负数
     const clampedTime = Math.max(0, finalTime)
-    
+
     if (currentTime.value !== clampedTime) {
       currentTime.value = clampedTime
     }
@@ -82,7 +82,7 @@ export function createPlaybackModule(frameRate: { value: number }) {
     console.log('⏭️ 相对跳转:', {
       deltaTime,
       oldTime: currentTime.value - deltaTime,
-      newTime: currentTime.value
+      newTime: currentTime.value,
     })
   }
 
@@ -153,7 +153,7 @@ export function createPlaybackModule(frameRate: { value: number }) {
   function setPlaybackRate(rate: number) {
     // 限制播放速度在合理范围内
     const clampedRate = Math.max(0.1, Math.min(10, rate))
-    
+
     if (playbackRate.value !== clampedRate) {
       const oldRate = playbackRate.value
       playbackRate.value = clampedRate
@@ -161,7 +161,7 @@ export function createPlaybackModule(frameRate: { value: number }) {
         requestedRate: rate,
         oldRate,
         newRate: clampedRate,
-        clamped: rate !== clampedRate
+        clamped: rate !== clampedRate,
       })
     }
   }
@@ -185,7 +185,7 @@ export function createPlaybackModule(frameRate: { value: number }) {
       isPlaying: isPlaying.value,
       playbackRate: playbackRate.value,
       playbackRateText: playbackRateText.value,
-      frameRate: frameRate.value
+      frameRate: frameRate.value,
     }
   }
 

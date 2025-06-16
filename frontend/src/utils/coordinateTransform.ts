@@ -1,6 +1,6 @@
 /**
  * 坐标系转换工具
- * 
+ *
  * 项目坐标系：以画布中心为原点 (0,0)，向右为X正方向，向下为Y正方向
  * WebAV坐标系：以画布左上角为原点 (0,0)，向右为X正方向，向下为Y正方向
  */
@@ -21,19 +21,19 @@ export function webavToProjectCoords(
   spriteWidth: number,
   spriteHeight: number,
   canvasWidth: number,
-  canvasHeight: number
+  canvasHeight: number,
 ) {
   // WebAV坐标系：左上角为原点，webavX/webavY是精灵左上角的位置
   // 项目坐标系：画布中心为原点，需要转换为精灵中心的位置
-  
+
   // 1. 计算精灵中心在WebAV坐标系中的位置
   const spriteCenterX = webavX + spriteWidth / 2
   const spriteCenterY = webavY + spriteHeight / 2
-  
+
   // 2. 转换为项目坐标系（以画布中心为原点）
   const projectX = spriteCenterX - canvasWidth / 2
   const projectY = spriteCenterY - canvasHeight / 2
-  
+
   return { x: projectX, y: projectY }
 }
 
@@ -53,19 +53,19 @@ export function projectToWebavCoords(
   spriteWidth: number,
   spriteHeight: number,
   canvasWidth: number,
-  canvasHeight: number
+  canvasHeight: number,
 ) {
   // 项目坐标系：画布中心为原点，projectX/projectY是精灵中心的位置
   // WebAV坐标系：左上角为原点，需要转换为精灵左上角的位置
-  
+
   // 1. 计算精灵中心在WebAV坐标系中的位置
   const spriteCenterX = projectX + canvasWidth / 2
   const spriteCenterY = projectY + canvasHeight / 2
-  
+
   // 2. 计算精灵左上角在WebAV坐标系中的位置
   const webavX = spriteCenterX - spriteWidth / 2
   const webavY = spriteCenterY - spriteHeight / 2
-  
+
   return { x: webavX, y: webavY }
 }
 
@@ -80,7 +80,7 @@ export function validateCoordinateTransform(
   spriteHeight: number,
   canvasWidth: number,
   canvasHeight: number,
-  tolerance: number = 0.1
+  tolerance: number = 0.1,
 ) {
   // WebAV → 项目 → WebAV
   const projectCoords = webavToProjectCoords(
@@ -89,30 +89,30 @@ export function validateCoordinateTransform(
     spriteWidth,
     spriteHeight,
     canvasWidth,
-    canvasHeight
+    canvasHeight,
   )
-  
+
   const backToWebav = projectToWebavCoords(
     projectCoords.x,
     projectCoords.y,
     spriteWidth,
     spriteHeight,
     canvasWidth,
-    canvasHeight
+    canvasHeight,
   )
-  
+
   const xDiff = Math.abs(originalWebavX - backToWebav.x)
   const yDiff = Math.abs(originalWebavY - backToWebav.y)
-  
+
   const isValid = xDiff <= tolerance && yDiff <= tolerance
-  
+
   return {
     isValid,
     originalWebav: { x: originalWebavX, y: originalWebavY },
     projectCoords,
     backToWebav,
     differences: { x: xDiff, y: yDiff },
-    tolerance
+    tolerance,
   }
 }
 
@@ -125,7 +125,7 @@ export function debugCoordinateTransform(
   spriteWidth: number,
   spriteHeight: number,
   canvasWidth: number,
-  canvasHeight: number
+  canvasHeight: number,
 ) {
   const projectCoords = webavToProjectCoords(
     webavX,
@@ -133,7 +133,7 @@ export function debugCoordinateTransform(
     spriteWidth,
     spriteHeight,
     canvasWidth,
-    canvasHeight
+    canvasHeight,
   )
 
   const backToWebav = projectToWebavCoords(
@@ -142,7 +142,7 @@ export function debugCoordinateTransform(
     spriteWidth,
     spriteHeight,
     canvasWidth,
-    canvasHeight
+    canvasHeight,
   )
 
   console.group('🔄 坐标系转换调试')
@@ -153,7 +153,7 @@ export function debugCoordinateTransform(
   console.log('🔄 反向转换验证:', { x: backToWebav.x, y: backToWebav.y })
   console.log('✅ 转换精度:', {
     xDiff: Math.abs(webavX - backToWebav.x),
-    yDiff: Math.abs(webavY - backToWebav.y)
+    yDiff: Math.abs(webavY - backToWebav.y),
   })
   console.groupEnd()
 
@@ -177,17 +177,10 @@ export function calculateCenterScalePosition(
   newWidth: number,
   newHeight: number,
   canvasWidth: number,
-  canvasHeight: number
+  canvasHeight: number,
 ) {
   // 直接使用现有的坐标转换函数
-  return projectToWebavCoords(
-    centerX,
-    centerY,
-    newWidth,
-    newHeight,
-    canvasWidth,
-    canvasHeight
-  )
+  return projectToWebavCoords(centerX, centerY, newWidth, newHeight, canvasWidth, canvasHeight)
 }
 
 /**
@@ -201,10 +194,24 @@ export function debugCenterScaling(
   newWidth: number,
   newHeight: number,
   canvasWidth: number,
-  canvasHeight: number
+  canvasHeight: number,
 ) {
-  const oldWebavCoords = projectToWebavCoords(centerX, centerY, oldWidth, oldHeight, canvasWidth, canvasHeight)
-  const newWebavCoords = projectToWebavCoords(centerX, centerY, newWidth, newHeight, canvasWidth, canvasHeight)
+  const oldWebavCoords = projectToWebavCoords(
+    centerX,
+    centerY,
+    oldWidth,
+    oldHeight,
+    canvasWidth,
+    canvasHeight,
+  )
+  const newWebavCoords = projectToWebavCoords(
+    centerX,
+    centerY,
+    newWidth,
+    newHeight,
+    canvasWidth,
+    canvasHeight,
+  )
 
   console.group('🎯 中心缩放调试')
   console.log('📐 画布尺寸:', { width: canvasWidth, height: canvasHeight })
@@ -215,7 +222,7 @@ export function debugCenterScaling(
   console.log('🔄 新WebAV位置:', { x: newWebavCoords.x, y: newWebavCoords.y })
   console.log('📏 位置变化:', {
     deltaX: newWebavCoords.x - oldWebavCoords.x,
-    deltaY: newWebavCoords.y - oldWebavCoords.y
+    deltaY: newWebavCoords.y - oldWebavCoords.y,
   })
   console.groupEnd()
 

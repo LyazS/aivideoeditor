@@ -7,7 +7,7 @@ import { AVCanvas } from '@webav/av-canvas'
  */
 export function createWebAVModule() {
   // ==================== 状态定义 ====================
-  
+
   // WebAV核心对象 - 使用markRaw避免Vue响应式包装
   const avCanvas = ref<AVCanvas | null>(null)
   const isWebAVReady = ref(false)
@@ -20,14 +20,14 @@ export function createWebAVModule() {
    * @param canvas AVCanvas实例或null
    */
   function setAVCanvas(canvas: AVCanvas | null) {
-    console.log('🏪 [WebAVModule] setAVCanvas:', { 
-      hasCanvas: !!canvas, 
-      canvasType: canvas?.constructor.name, 
-      previousState: !!avCanvas.value 
+    console.log('🏪 [WebAVModule] setAVCanvas:', {
+      hasCanvas: !!canvas,
+      canvasType: canvas?.constructor.name,
+      previousState: !!avCanvas.value,
     })
-    
+
     avCanvas.value = canvas ? markRaw(canvas) : null
-    
+
     // 如果设置了新的canvas，自动设置为ready状态
     if (canvas) {
       setWebAVReady(true)
@@ -42,14 +42,14 @@ export function createWebAVModule() {
    * @param ready 是否就绪
    */
   function setWebAVReady(ready: boolean) {
-    console.log('🏪 [WebAVModule] setWebAVReady:', { 
-      ready, 
-      previousReady: isWebAVReady.value, 
-      stateChange: ready !== isWebAVReady.value 
+    console.log('🏪 [WebAVModule] setWebAVReady:', {
+      ready,
+      previousReady: isWebAVReady.value,
+      stateChange: ready !== isWebAVReady.value,
     })
-    
+
     isWebAVReady.value = ready
-    
+
     // 如果设置为未就绪，清除错误状态
     if (!ready) {
       setWebAVError(null)
@@ -61,14 +61,14 @@ export function createWebAVModule() {
    * @param error 错误信息或null
    */
   function setWebAVError(error: string | null) {
-    console.log('🏪 [WebAVModule] setWebAVError:', { 
-      error, 
-      hasError: !!error, 
-      previousError: webAVError.value 
+    console.log('🏪 [WebAVModule] setWebAVError:', {
+      error,
+      hasError: !!error,
+      previousError: webAVError.value,
     })
-    
+
     webAVError.value = error
-    
+
     // 如果有错误，自动设置为未就绪状态
     if (error) {
       setWebAVReady(false)
@@ -81,27 +81,26 @@ export function createWebAVModule() {
    * @param options 初始化选项
    */
   async function initializeWebAV(
-    canvasElement: HTMLCanvasElement, 
-    options: { width?: number; height?: number } = {}
+    canvasElement: HTMLCanvasElement,
+    options: { width?: number; height?: number } = {},
   ): Promise<boolean> {
     try {
       console.log('🚀 [WebAVModule] 开始初始化WebAV:', options)
-      
+
       // 清除之前的错误状态
       setWebAVError(null)
-      
+
       // 创建AVCanvas实例
       const canvas = new AVCanvas(canvasElement, {
         width: options.width || 1920,
         height: options.height || 1080,
       })
-      
+
       // 设置canvas实例
       setAVCanvas(canvas)
-      
+
       console.log('✅ [WebAVModule] WebAV初始化成功')
       return true
-      
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error)
       console.error('❌ [WebAVModule] WebAV初始化失败:', errorMessage)
@@ -116,21 +115,20 @@ export function createWebAVModule() {
   function destroyWebAV() {
     try {
       console.log('🗑️ [WebAVModule] 开始销毁WebAV')
-      
+
       if (avCanvas.value) {
         // 如果AVCanvas有destroy方法，调用它
         if (typeof avCanvas.value.destroy === 'function') {
           avCanvas.value.destroy()
         }
       }
-      
+
       // 清除状态
       setAVCanvas(null)
       setWebAVReady(false)
       setWebAVError(null)
-      
+
       console.log('✅ [WebAVModule] WebAV销毁完成')
-      
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error)
       console.error('❌ [WebAVModule] WebAV销毁失败:', errorMessage)
@@ -145,13 +143,13 @@ export function createWebAVModule() {
    */
   async function rebuildWebAV(
     canvasElement: HTMLCanvasElement,
-    options: { width?: number; height?: number } = {}
+    options: { width?: number; height?: number } = {},
   ): Promise<boolean> {
     console.log('🔄 [WebAVModule] 开始重建WebAV画布:', options)
-    
+
     // 先销毁现有实例
     destroyWebAV()
-    
+
     // 重新初始化
     return await initializeWebAV(canvasElement, options)
   }
@@ -175,11 +173,13 @@ export function createWebAVModule() {
       hasError: !!webAVError.value,
       error: webAVError.value,
       isAvailable: isWebAVAvailable(),
-      canvasInfo: avCanvas.value ? {
-        width: avCanvas.value.width || 'unknown',
-        height: avCanvas.value.height || 'unknown',
-        constructor: avCanvas.value.constructor.name
-      } : null
+      canvasInfo: avCanvas.value
+        ? {
+            width: avCanvas.value.width || 'unknown',
+            height: avCanvas.value.height || 'unknown',
+            constructor: avCanvas.value.constructor.name,
+          }
+        : null,
     }
   }
 
@@ -200,7 +200,7 @@ export function createWebAVModule() {
       console.warn('⚠️ [WebAVModule] WebAV不可用，无法添加sprite')
       return false
     }
-    
+
     try {
       avCanvas.value!.addSprite(sprite)
       console.log('✅ [WebAVModule] 添加sprite成功')
@@ -222,7 +222,7 @@ export function createWebAVModule() {
       console.warn('⚠️ [WebAVModule] WebAV不可用，无法移除sprite')
       return false
     }
-    
+
     try {
       avCanvas.value!.removeSprite(sprite)
       console.log('✅ [WebAVModule] 移除sprite成功')

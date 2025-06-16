@@ -12,7 +12,7 @@ export const DEBUG_GROUPS = {
     PREFIX: '🚀 [WebAV Init]',
     CONTAINER: '📦 [Container]',
     CANVAS: '🎨 [Canvas]',
-    EVENTS: '🎧 [Events]'
+    EVENTS: '🎧 [Events]',
   },
 
   // 🔄 画布重建相关
@@ -21,7 +21,7 @@ export const DEBUG_GROUPS = {
     DESTROY: '💥 [Destroy]',
     BACKUP: '📦 [Backup]',
     RESTORE: '🔄 [Restore]',
-    COORDS: '📐 [Coordinates]'
+    COORDS: '📐 [Coordinates]',
   },
 
   // 🎬 组件生命周期相关
@@ -29,15 +29,15 @@ export const DEBUG_GROUPS = {
     PREFIX: '🎬 [Lifecycle]',
     RENDERER: '🖼️ [Renderer]',
     ENGINE: '⚙️ [Engine]',
-    STORE: '🏪 [Store]'
+    STORE: '🏪 [Store]',
   },
 
   // ⚡ 性能监控相关
   PERFORMANCE: {
     PREFIX: '⚡ [Performance]',
     TIMER: '⏱️ [Timer]',
-    STATS: '📊 [Stats]'
-  }
+    STATS: '📊 [Stats]',
+  },
 } as const
 
 // ==================== 🚀 初始化相关调试函数 ====================
@@ -71,7 +71,7 @@ export function logWebAVInitStep(stepNumber: number, stepName: string, details?:
 export function logWebAVInitSuccess(totalTime: number, details?: any) {
   console.log(`🎉 ${DEBUG_GROUPS.INIT.PREFIX} Initialization completed successfully!`, {
     totalTime: `${totalTime.toFixed(2)}ms`,
-    ...details
+    ...details,
   })
   console.groupEnd()
 }
@@ -84,7 +84,7 @@ export function logWebAVInitError(error: Error, totalTime: number, context?: any
     error: error.message,
     errorStack: error.stack,
     totalTime: `${totalTime.toFixed(2)}ms`,
-    ...context
+    ...context,
   })
   console.groupEnd()
 }
@@ -103,8 +103,6 @@ export function logContainerCreation(options: any) {
 export function logContainerCreated(details: any) {
   console.log(`✅ ${DEBUG_GROUPS.INIT.CONTAINER} Container created successfully:`, details)
 }
-
-
 
 // ==================== 🔄 画布重建相关调试函数 ====================
 
@@ -130,7 +128,7 @@ export function logCanvasBackup(spriteCount: number, backupData: any) {
 export function logCanvasDestroyComplete(time: number, spriteCount: number) {
   console.log(`✅ ${DEBUG_GROUPS.REBUILD.DESTROY} Destruction completed`, {
     time: `${time.toFixed(2)}ms`,
-    backupSprites: spriteCount
+    backupSprites: spriteCount,
   })
   console.groupEnd()
 }
@@ -163,7 +161,7 @@ export function logCoordinateTransform(spriteId: string, transform: any) {
 export function logCanvasRecreateComplete(time: number, stats: any) {
   console.log(`🎉 ${DEBUG_GROUPS.REBUILD.PREFIX} Recreation completed successfully!`, {
     time: `${time.toFixed(2)}ms`,
-    ...stats
+    ...stats,
   })
   console.groupEnd()
 }
@@ -192,7 +190,7 @@ export function logComponentLifecycle(component: string, lifecycle: string, data
     mounted: '🔄',
     unmounted: '🔄',
     created: '🆕',
-    destroyed: '💥'
+    destroyed: '💥',
   }
 
   const emoji = lifecycleEmojis[lifecycle] || '🔄'
@@ -206,14 +204,18 @@ export function logWebAVReadyStateChange(isReady: boolean, wasReady?: boolean) {
   console.log(`${DEBUG_GROUPS.LIFECYCLE.ENGINE} WebAV ready state changed:`, {
     isReady,
     wasReady,
-    stateChange: wasReady === undefined ? 'initial' : (isReady ? 'ready' : 'not-ready'),
-    timestamp: new Date().toISOString()
+    stateChange: wasReady === undefined ? 'initial' : isReady ? 'ready' : 'not-ready',
+    timestamp: new Date().toISOString(),
   })
 
   if (isReady && !wasReady) {
-    console.log(`🎉 ${DEBUG_GROUPS.LIFECYCLE.ENGINE} WebAV is now ready! Timeline will be rendered.`)
+    console.log(
+      `🎉 ${DEBUG_GROUPS.LIFECYCLE.ENGINE} WebAV is now ready! Timeline will be rendered.`,
+    )
   } else if (!isReady && wasReady) {
-    console.log(`⚠️ ${DEBUG_GROUPS.LIFECYCLE.ENGINE} WebAV is no longer ready! Timeline will be hidden.`)
+    console.log(
+      `⚠️ ${DEBUG_GROUPS.LIFECYCLE.ENGINE} WebAV is no longer ready! Timeline will be hidden.`,
+    )
   }
 }
 
@@ -232,7 +234,7 @@ export function createPerformanceTimer(name: string) {
       const duration = endTime - startTime
       console.log(`${DEBUG_GROUPS.PERFORMANCE.TIMER} Completed: ${name} - ${duration.toFixed(2)}ms`)
       return duration
-    }
+    },
   }
 }
 
@@ -282,6 +284,6 @@ export function debugError(message: string, error: Error, context?: any) {
   console.error(message, {
     error: error.message,
     stack: error.stack,
-    ...context
+    ...context,
   })
 }

@@ -7,7 +7,7 @@ import type { VideoResolution } from '../../types/videoTypes'
  */
 export function createConfigModule() {
   // ==================== 状态定义 ====================
-  
+
   // 视频分辨率设置
   const videoResolution = ref<VideoResolution>({
     name: '1080p',
@@ -41,7 +41,8 @@ export function createConfigModule() {
    * @param rate 新的帧率值
    */
   function setFrameRate(rate: number) {
-    if (rate > 0 && rate <= 120) { // 合理的帧率范围
+    if (rate > 0 && rate <= 120) {
+      // 合理的帧率范围
       frameRate.value = rate
       console.log('🎬 帧率已设置为:', rate)
     } else {
@@ -97,7 +98,7 @@ export function createConfigModule() {
     frameRate.value = 30
     timelineDuration.value = 300
     proportionalScale.value = true
-    
+
     console.log('🔄 配置已重置为默认值')
   }
 

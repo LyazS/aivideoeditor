@@ -149,7 +149,9 @@ const processFiles = async (files: File[]) => {
 // 添加素材项
 const addMediaItem = async (file: File): Promise<void> => {
   return new Promise(async (resolve) => {
-    console.log(`📁 开始处理上传文件: ${file.name} (大小: ${(file.size / 1024 / 1024).toFixed(2)}MB)`)
+    console.log(
+      `📁 开始处理上传文件: ${file.name} (大小: ${(file.size / 1024 / 1024).toFixed(2)}MB)`,
+    )
 
     const url = URL.createObjectURL(file)
     const video = document.createElement('video')
@@ -169,10 +171,12 @@ const addMediaItem = async (file: File): Promise<void> => {
           name: file.name,
           duration: video.duration,
           type: file.type,
-          mp4Clip: markRaw(mp4Clip) // 使用markRaw避免Vue响应式包装
+          mp4Clip: markRaw(mp4Clip), // 使用markRaw避免Vue响应式包装
         }
 
-        console.log(`📋 创建MediaItem: ${mediaItem.name} (时长: ${mediaItem.duration.toFixed(2)}s, ID: ${mediaItem.id})`)
+        console.log(
+          `📋 创建MediaItem: ${mediaItem.name} (时长: ${mediaItem.duration.toFixed(2)}s, ID: ${mediaItem.id})`,
+        )
         console.log(`📐 视频原始分辨率: ${video.videoWidth}x${video.videoHeight}`)
 
         // 设置视频元素到store中，用于获取原始分辨率

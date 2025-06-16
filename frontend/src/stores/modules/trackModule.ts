@@ -7,7 +7,7 @@ import type { Track, TimelineItem } from '../../types/videoTypes'
  */
 export function createTrackModule() {
   // ==================== 状态定义 ====================
-  
+
   // 轨道列表
   const tracks = ref<Track[]>([
     { id: 1, name: '轨道 1', isVisible: true, isMuted: false, height: 80 },
@@ -31,13 +31,13 @@ export function createTrackModule() {
       height: 80,
     }
     tracks.value.push(newTrack)
-    
+
     console.log('🎵 添加新轨道:', {
       id: newTrack.id,
       name: newTrack.name,
-      totalTracks: tracks.value.length
+      totalTracks: tracks.value.length,
     })
-    
+
     return newTrack
   }
 
@@ -53,7 +53,7 @@ export function createTrackModule() {
       return
     }
 
-    const trackToRemove = tracks.value.find(t => t.id === trackId)
+    const trackToRemove = tracks.value.find((t) => t.id === trackId)
     if (!trackToRemove) {
       console.warn('⚠️ 找不到要删除的轨道:', trackId)
       return
@@ -61,8 +61,8 @@ export function createTrackModule() {
 
     // 将该轨道的所有时间轴项目移动到第一个轨道
     const firstTrackId = tracks.value[0].id
-    const affectedItems = timelineItems.value.filter(item => item.trackId === trackId)
-    
+    const affectedItems = timelineItems.value.filter((item) => item.trackId === trackId)
+
     affectedItems.forEach((item) => {
       item.trackId = firstTrackId
     })
@@ -77,7 +77,7 @@ export function createTrackModule() {
       removedTrackId: trackId,
       removedTrackName: trackToRemove.name,
       affectedItemsCount: affectedItems.length,
-      remainingTracks: tracks.value.length
+      remainingTracks: tracks.value.length,
     })
   }
 
@@ -92,7 +92,7 @@ export function createTrackModule() {
       console.log('👁️ 切换轨道可见性:', {
         trackId,
         trackName: track.name,
-        isVisible: track.isVisible
+        isVisible: track.isVisible,
       })
     } else {
       console.warn('⚠️ 找不到轨道:', trackId)
@@ -110,7 +110,7 @@ export function createTrackModule() {
       console.log('🔇 切换轨道静音状态:', {
         trackId,
         trackName: track.name,
-        isMuted: track.isMuted
+        isMuted: track.isMuted,
       })
     } else {
       console.warn('⚠️ 找不到轨道:', trackId)
@@ -130,7 +130,7 @@ export function createTrackModule() {
       console.log('✏️ 重命名轨道:', {
         trackId,
         oldName,
-        newName: track.name
+        newName: track.name,
       })
     } else if (!track) {
       console.warn('⚠️ 找不到轨道:', trackId)
@@ -151,7 +151,7 @@ export function createTrackModule() {
       console.log('📏 设置轨道高度:', {
         trackId,
         trackName: track.name,
-        height
+        height,
       })
     } else if (!track) {
       console.warn('⚠️ 找不到轨道:', trackId)
@@ -166,7 +166,7 @@ export function createTrackModule() {
    * @returns 轨道对象或undefined
    */
   function getTrack(trackId: number): Track | undefined {
-    return tracks.value.find(t => t.id === trackId)
+    return tracks.value.find((t) => t.id === trackId)
   }
 
   /**
@@ -174,12 +174,12 @@ export function createTrackModule() {
    * @returns 轨道摘要数组
    */
   function getTracksSummary() {
-    return tracks.value.map(track => ({
+    return tracks.value.map((track) => ({
       id: track.id,
       name: track.name,
       isVisible: track.isVisible,
       isMuted: track.isMuted,
-      height: track.height
+      height: track.height,
     }))
   }
 
@@ -187,7 +187,7 @@ export function createTrackModule() {
    * 重置所有轨道为默认状态
    */
   function resetTracksToDefaults() {
-    tracks.value.forEach(track => {
+    tracks.value.forEach((track) => {
       track.isVisible = true
       track.isMuted = false
       track.height = 80

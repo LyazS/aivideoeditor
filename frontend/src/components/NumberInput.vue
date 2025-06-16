@@ -61,7 +61,7 @@ const props = withDefaults(defineProps<Props>(), {
   placeholder: '',
   unit: '',
   inputStyle: () => ({}),
-  realtime: false
+  realtime: false,
 })
 
 const emit = defineEmits<Emits>()
@@ -75,18 +75,18 @@ const displayValue = computed(() => {
   if (isEditing.value) {
     return tempValue.value
   }
-  
+
   if (props.precision !== undefined) {
     return props.modelValue.toFixed(props.precision)
   }
-  
+
   return props.modelValue.toString()
 })
 
 // 格式化数值
 const formatValue = (value: number): number => {
   let formatted = value
-  
+
   // 应用范围限制
   if (props.min !== undefined) {
     formatted = Math.max(props.min, formatted)
@@ -94,12 +94,12 @@ const formatValue = (value: number): number => {
   if (props.max !== undefined) {
     formatted = Math.min(props.max, formatted)
   }
-  
+
   // 应用精度
   if (props.precision !== undefined) {
     formatted = parseFloat(formatted.toFixed(props.precision))
   }
-  
+
   return formatted
 }
 
@@ -108,7 +108,7 @@ const handleInput = (event: Event) => {
   const input = event.target as HTMLInputElement
   tempValue.value = input.value
   isEditing.value = true
-  
+
   if (props.realtime) {
     const value = parseFloat(input.value)
     if (!isNaN(value)) {
@@ -123,10 +123,10 @@ const handleInput = (event: Event) => {
 const handleConfirm = (event: Event) => {
   const input = event.target as HTMLInputElement
   const value = parseFloat(input.value)
-  
+
   isEditing.value = false
   tempValue.value = ''
-  
+
   if (!isNaN(value)) {
     const formatted = formatValue(value)
     emit('update:modelValue', formatted)

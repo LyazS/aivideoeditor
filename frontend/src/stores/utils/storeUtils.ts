@@ -17,7 +17,7 @@ export function printDebugInfo(
   details: unknown,
   mediaItems: MediaItem[],
   timelineItems: TimelineItem[],
-  tracks: any[]
+  tracks: any[],
 ) {
   const timestamp = new Date().toLocaleTimeString()
   console.group(`🎬 [${timestamp}] ${operation}`)
@@ -27,22 +27,26 @@ export function printDebugInfo(
   }
 
   console.log('📚 素材库状态 (mediaItems):')
-  console.table(mediaItems.map(item => ({
-    id: item.id,
-    name: item.name,
-    duration: `${item.duration.toFixed(2)}s`,
-    type: item.type,
-    hasMP4Clip: !!item.mp4Clip
-  })))
+  console.table(
+    mediaItems.map((item) => ({
+      id: item.id,
+      name: item.name,
+      duration: `${item.duration.toFixed(2)}s`,
+      type: item.type,
+      hasMP4Clip: !!item.mp4Clip,
+    })),
+  )
 
   console.log('🎞️ 时间轴状态 (timelineItems):')
-  console.table(timelineItems.map(item => ({
-    id: item.id,
-    mediaItemId: item.mediaItemId,
-    trackId: item.trackId,
-    position: `${(item.timeRange.timelineStartTime / 1000000).toFixed(2)}s`,
-    hasSprite: !!item.sprite
-  })))
+  console.table(
+    timelineItems.map((item) => ({
+      id: item.id,
+      mediaItemId: item.mediaItemId,
+      trackId: item.trackId,
+      position: `${(item.timeRange.timelineStartTime / 1000000).toFixed(2)}s`,
+      hasSprite: !!item.sprite,
+    })),
+  )
 
   console.log('📊 统计信息:')
   console.log(`- 素材库项目数: ${mediaItems.length}`)
@@ -50,8 +54,8 @@ export function printDebugInfo(
   console.log(`- 轨道数: ${tracks.length}`)
 
   // 检查引用关系
-  const orphanedTimelineItems = timelineItems.filter(timelineItem =>
-    !mediaItems.find(mediaItem => mediaItem.id === timelineItem.mediaItemId)
+  const orphanedTimelineItems = timelineItems.filter(
+    (timelineItem) => !mediaItems.find((mediaItem) => mediaItem.id === timelineItem.mediaItemId),
   )
   if (orphanedTimelineItems.length > 0) {
     console.warn('⚠️ 发现孤立的时间轴项目 (没有对应的素材库项目):', orphanedTimelineItems)
@@ -87,7 +91,7 @@ export function timeToPixel(
   timelineWidth: number,
   totalDuration: number,
   zoomLevel: number,
-  scrollOffset: number
+  scrollOffset: number,
 ): number {
   const pixelsPerSecond = (timelineWidth * zoomLevel) / totalDuration
   return time * pixelsPerSecond - scrollOffset
@@ -107,7 +111,7 @@ export function pixelToTime(
   timelineWidth: number,
   totalDuration: number,
   zoomLevel: number,
-  scrollOffset: number
+  scrollOffset: number,
 ): number {
   const pixelsPerSecond = (timelineWidth * zoomLevel) / totalDuration
   return (pixel + scrollOffset) / pixelsPerSecond
@@ -133,14 +137,19 @@ export function expandTimelineIfNeeded(targetTime: number, timelineDuration: Ref
  * @param timelineItems 时间轴项目数组
  * @returns 找到的时间轴项目或null
  */
-export function getTimelineItemAtTime(time: number, timelineItems: TimelineItem[]): TimelineItem | null {
-  return timelineItems.find((item) => {
-    const sprite = item.sprite
-    const timeRange = sprite.getTimeRange()
-    const startTime = timeRange.timelineStartTime / 1000000 // 转换为秒
-    const endTime = timeRange.timelineEndTime / 1000000 // 转换为秒
-    return time >= startTime && time < endTime
-  }) || null
+export function getTimelineItemAtTime(
+  time: number,
+  timelineItems: TimelineItem[],
+): TimelineItem | null {
+  return (
+    timelineItems.find((item) => {
+      const sprite = item.sprite
+      const timeRange = sprite.getTimeRange()
+      const startTime = timeRange.timelineStartTime / 1000000 // 转换为秒
+      const endTime = timeRange.timelineEndTime / 1000000 // 转换为秒
+      return time >= startTime && time < endTime
+    }) || null
+  )
 }
 
 // ==================== 自动整理工具 ====================
@@ -180,7 +189,7 @@ export function autoArrangeTimelineItems(timelineItems: Ref<TimelineItem[]>) {
         clipStartTime: timeRange.clipStartTime,
         clipEndTime: timeRange.clipEndTime,
         timelineStartTime: currentPosition * 1000000, // 转换为微秒
-        timelineEndTime: (currentPosition + duration) * 1000000
+        timelineEndTime: (currentPosition + duration) * 1000000,
       })
       // 从sprite获取更新后的完整timeRange（包含自动计算的effectiveDuration）
       item.timeRange = sprite.getTimeRange()
@@ -200,7 +209,11 @@ export function autoArrangeTimelineItems(timelineItems: Ref<TimelineItem[]>) {
  * @param totalDuration 总时长（秒）
  * @returns 最大缩放级别
  */
-export function getMaxZoomLevel(timelineWidth: number, frameRate: number, totalDuration: number): number {
+export function getMaxZoomLevel(
+  timelineWidth: number,
+  frameRate: number,
+  totalDuration: number,
+): number {
   // 最大缩放级别：一帧占用容器宽度的1/20（即5%）
   const targetFrameWidth = timelineWidth / 20 // 一帧占1/20横幅
   const frameDuration = 1 / frameRate // 一帧的时长（秒）
@@ -233,7 +246,7 @@ export function getMaxScrollOffset(
   timelineWidth: number,
   zoomLevel: number,
   totalDuration: number,
-  maxVisibleDuration: number
+  maxVisibleDuration: number,
 ): number {
   // 基于最大可见范围计算滚动限制，而不是基于totalDuration
   const effectiveDuration = Math.min(totalDuration, maxVisibleDuration)
@@ -251,11 +264,13 @@ export function getMaxScrollOffset(
  */
 export function calculateContentEndTime(timelineItems: TimelineItem[]): number {
   if (timelineItems.length === 0) return 0
-  return Math.max(...timelineItems.map((item) => {
-    const sprite = item.sprite
-    const timeRange = sprite.getTimeRange()
-    return timeRange.timelineEndTime / 1000000 // 转换为秒
-  }))
+  return Math.max(
+    ...timelineItems.map((item) => {
+      const sprite = item.sprite
+      const timeRange = sprite.getTimeRange()
+      return timeRange.timelineEndTime / 1000000 // 转换为秒
+    }),
+  )
 }
 
 /**
@@ -264,14 +279,19 @@ export function calculateContentEndTime(timelineItems: TimelineItem[]): number {
  * @param timelineDuration 基础时间轴时长（秒）
  * @returns 总时长（秒）
  */
-export function calculateTotalDuration(timelineItems: TimelineItem[], timelineDuration: number): number {
+export function calculateTotalDuration(
+  timelineItems: TimelineItem[],
+  timelineDuration: number,
+): number {
   if (timelineItems.length === 0) return timelineDuration
-  const maxEndTime = Math.max(...timelineItems.map((item) => {
-    const sprite = item.sprite
-    const timeRange = sprite.getTimeRange()
-    const timelineEndTime = timeRange.timelineEndTime / 1000000 // 转换为秒
-    return timelineEndTime
-  }))
+  const maxEndTime = Math.max(
+    ...timelineItems.map((item) => {
+      const sprite = item.sprite
+      const timeRange = sprite.getTimeRange()
+      const timelineEndTime = timeRange.timelineEndTime / 1000000 // 转换为秒
+      return timelineEndTime
+    }),
+  )
   return Math.max(maxEndTime, timelineDuration)
 }
 
@@ -281,7 +301,10 @@ export function calculateTotalDuration(timelineItems: TimelineItem[], timelineDu
  * @param defaultDuration 默认时长（秒）
  * @returns 最大可见时长（秒）
  */
-export function calculateMaxVisibleDuration(contentEndTime: number, defaultDuration: number = 300): number {
+export function calculateMaxVisibleDuration(
+  contentEndTime: number,
+  defaultDuration: number = 300,
+): number {
   if (contentEndTime === 0) {
     return defaultDuration // 没有视频时使用默认值
   }
@@ -304,7 +327,7 @@ export function syncTimeRange(timelineItem: TimelineItem, newTimeRange?: Partial
     // 如果提供了新的时间范围，同时更新sprite和TimelineItem
     const completeTimeRange = {
       ...sprite.getTimeRange(),
-      ...newTimeRange
+      ...newTimeRange,
     }
 
     // sprite.setTimeRange会在内部自动计算effectiveDuration
@@ -314,7 +337,7 @@ export function syncTimeRange(timelineItem: TimelineItem, newTimeRange?: Partial
 
     console.log('🔄 同步timeRange (提供新值):', {
       timelineItemId: timelineItem.id,
-      timeRange: completeTimeRange
+      timeRange: completeTimeRange,
     })
   } else {
     // 如果没有提供新值，从sprite同步到TimelineItem
@@ -323,7 +346,7 @@ export function syncTimeRange(timelineItem: TimelineItem, newTimeRange?: Partial
 
     console.log('🔄 同步timeRange (从sprite获取):', {
       timelineItemId: timelineItem.id,
-      timeRange: spriteTimeRange
+      timeRange: spriteTimeRange,
     })
   }
 }
@@ -368,8 +391,11 @@ export function calculateTimeRangeOverlap(range1: TimeRange, range2: TimeRange):
  * @param timelineItems 时间轴项目数组
  * @returns 该轨道的所有项目
  */
-export function getTimelineItemsByTrack(trackId: number, timelineItems: TimelineItem[]): TimelineItem[] {
-  return timelineItems.filter(item => item.trackId === trackId)
+export function getTimelineItemsByTrack(
+  trackId: number,
+  timelineItems: TimelineItem[],
+): TimelineItem[] {
+  return timelineItems.filter((item) => item.trackId === trackId)
 }
 
 /**
@@ -378,9 +404,12 @@ export function getTimelineItemsByTrack(trackId: number, timelineItems: Timeline
  * @param mediaItems 媒体项目数组
  * @returns 孤立的时间轴项目
  */
-export function findOrphanedTimelineItems(timelineItems: TimelineItem[], mediaItems: MediaItem[]): TimelineItem[] {
-  return timelineItems.filter(timelineItem =>
-    !mediaItems.find(mediaItem => mediaItem.id === timelineItem.mediaItemId)
+export function findOrphanedTimelineItems(
+  timelineItems: TimelineItem[],
+  mediaItems: MediaItem[],
+): TimelineItem[] {
+  return timelineItems.filter(
+    (timelineItem) => !mediaItems.find((mediaItem) => mediaItem.id === timelineItem.mediaItemId),
   )
 }
 
@@ -390,8 +419,11 @@ export function findOrphanedTimelineItems(timelineItems: TimelineItem[], mediaIt
  * @param timelineItems 时间轴项目数组
  * @returns 对应的时间轴项目或null
  */
-export function findTimelineItemBySprite(sprite: any, timelineItems: TimelineItem[]): TimelineItem | null {
-  return timelineItems.find(item => item.sprite === sprite) || null
+export function findTimelineItemBySprite(
+  sprite: any,
+  timelineItems: TimelineItem[],
+): TimelineItem | null {
+  return timelineItems.find((item) => item.sprite === sprite) || null
 }
 
 /**
@@ -400,7 +432,10 @@ export function findTimelineItemBySprite(sprite: any, timelineItems: TimelineIte
  * @param timelineItems 时间轴项目数组
  * @returns 重叠的时间轴项目数组
  */
-export function getTimelineItemsAtTime(time: number, timelineItems: TimelineItem[]): TimelineItem[] {
+export function getTimelineItemsAtTime(
+  time: number,
+  timelineItems: TimelineItem[],
+): TimelineItem[] {
   return timelineItems.filter((item) => {
     const sprite = item.sprite
     const timeRange = sprite.getTimeRange()
@@ -417,15 +452,21 @@ export function getTimelineItemsAtTime(time: number, timelineItems: TimelineItem
  * @param timelineItems 时间轴项目数组
  * @returns 找到的时间轴项目或null
  */
-export function getTimelineItemAtTrackAndTime(trackId: number, time: number, timelineItems: TimelineItem[]): TimelineItem | null {
-  return timelineItems.find((item) => {
-    if (item.trackId !== trackId) return false
-    const sprite = item.sprite
-    const timeRange = sprite.getTimeRange()
-    const startTime = timeRange.timelineStartTime / 1000000 // 转换为秒
-    const endTime = timeRange.timelineEndTime / 1000000 // 转换为秒
-    return time >= startTime && time < endTime
-  }) || null
+export function getTimelineItemAtTrackAndTime(
+  trackId: number,
+  time: number,
+  timelineItems: TimelineItem[],
+): TimelineItem | null {
+  return (
+    timelineItems.find((item) => {
+      if (item.trackId !== trackId) return false
+      const sprite = item.sprite
+      const timeRange = sprite.getTimeRange()
+      const startTime = timeRange.timelineStartTime / 1000000 // 转换为秒
+      const endTime = timeRange.timelineEndTime / 1000000 // 转换为秒
+      return time >= startTime && time < endTime
+    }) || null
+  )
 }
 
 // ==================== 验证和清理工具 ====================
@@ -440,11 +481,11 @@ export function getTimelineItemAtTrackAndTime(trackId: number, time: number, tim
 export function validateDataIntegrity(
   mediaItems: MediaItem[],
   timelineItems: TimelineItem[],
-  tracks: Track[]
+  tracks: Track[],
 ): {
-  isValid: boolean;
-  errors: string[];
-  warnings: string[];
+  isValid: boolean
+  errors: string[]
+  warnings: string[]
 } {
   const errors: string[] = []
   const warnings: string[] = []
@@ -456,21 +497,21 @@ export function validateDataIntegrity(
   }
 
   // 检查无效的轨道引用
-  const trackIds = new Set(tracks.map(track => track.id))
-  const invalidTrackItems = timelineItems.filter(item => !trackIds.has(item.trackId))
+  const trackIds = new Set(tracks.map((track) => track.id))
+  const invalidTrackItems = timelineItems.filter((item) => !trackIds.has(item.trackId))
   if (invalidTrackItems.length > 0) {
     errors.push(`发现 ${invalidTrackItems.length} 个时间轴项目引用了不存在的轨道`)
   }
 
   // 检查时间范围有效性
-  const invalidTimeRangeItems = timelineItems.filter(item => !validateTimeRange(item.timeRange))
+  const invalidTimeRangeItems = timelineItems.filter((item) => !validateTimeRange(item.timeRange))
   if (invalidTimeRangeItems.length > 0) {
     warnings.push(`发现 ${invalidTimeRangeItems.length} 个时间轴项目的时间范围无效`)
   }
 
   // 检查重叠项目（同一轨道内）
   const trackGroups = new Map<number, TimelineItem[]>()
-  timelineItems.forEach(item => {
+  timelineItems.forEach((item) => {
     if (!trackGroups.has(item.trackId)) {
       trackGroups.set(item.trackId, [])
     }
@@ -491,7 +532,7 @@ export function validateDataIntegrity(
   return {
     isValid: errors.length === 0,
     errors,
-    warnings
+    warnings,
   }
 }
 
@@ -501,13 +542,16 @@ export function validateDataIntegrity(
  * @param mediaItems 媒体项目数组
  * @returns 清理的项目数量
  */
-export function cleanupInvalidReferences(timelineItems: Ref<TimelineItem[]>, mediaItems: MediaItem[]): number {
+export function cleanupInvalidReferences(
+  timelineItems: Ref<TimelineItem[]>,
+  mediaItems: MediaItem[],
+): number {
   const orphanedItems = findOrphanedTimelineItems(timelineItems.value, mediaItems)
 
   if (orphanedItems.length > 0) {
     // 移除孤立的时间轴项目
-    timelineItems.value = timelineItems.value.filter(item =>
-      !orphanedItems.some(orphaned => orphaned.id === item.id)
+    timelineItems.value = timelineItems.value.filter(
+      (item) => !orphanedItems.some((orphaned) => orphaned.id === item.id),
     )
 
     console.warn(`🧹 清理了 ${orphanedItems.length} 个孤立的时间轴项目`)

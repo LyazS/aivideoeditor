@@ -196,13 +196,13 @@ watch(
   (isReady, wasReady) => {
     logWebAVReadyStateChange(isReady, wasReady)
   },
-  { immediate: true }
+  { immediate: true },
 )
 
 onMounted(() => {
   logComponentLifecycle('VideoPreviewEngine', 'mounted', {
     isWebAVReady: videoStore.isWebAVReady,
-    hasAVCanvas: !!videoStore.avCanvas
+    hasAVCanvas: !!videoStore.avCanvas,
   })
 })
 

@@ -37,7 +37,7 @@ export class CustomVisibleSprite extends VisibleSprite {
     timelineStartTime: 0,
     timelineEndTime: 0,
     effectiveDuration: 0,
-    playbackRate: 1.0
+    playbackRate: 1.0,
   }
 
   /**
@@ -187,7 +187,7 @@ export class CustomVisibleSprite extends VisibleSprite {
       timelineStartTime: 0,
       timelineEndTime: 0,
       effectiveDuration: 0,
-      playbackRate: 1.0
+      playbackRate: 1.0,
     }
     this.#updateVisibleSpriteTime()
   }
@@ -290,8 +290,8 @@ export class CustomVisibleSprite extends VisibleSprite {
     let playbackRate = 1
     let duration = 0
 
-    const clipDuration = clipEndTime - clipStartTime  // 素材内部要播放的时长
-    const timelineDuration = timelineEndTime - timelineStartTime  // 在时间轴上占用的时长
+    const clipDuration = clipEndTime - clipStartTime // 素材内部要播放的时长
+    const timelineDuration = timelineEndTime - timelineStartTime // 在时间轴上占用的时长
 
     if (clipDuration > 0 && timelineDuration > 0) {
       // playbackRate = 素材内部时长 / 时间轴时长
@@ -312,7 +312,7 @@ export class CustomVisibleSprite extends VisibleSprite {
     this.time = {
       offset: timelineStartTime,
       duration: duration,
-      playbackRate: playbackRate
+      playbackRate: playbackRate,
     }
 
     // 将计算出的播放速度同步回TimeRange中（从this.time获取）
