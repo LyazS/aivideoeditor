@@ -49,6 +49,18 @@
 
           <!-- 控制按钮 -->
           <div class="track-buttons">
+            <!-- 自动排列轨道片段 -->
+            <button
+              class="track-btn arrange-btn"
+              :disabled="getClipsForTrack(track.id).length === 0"
+              @click="autoArrangeTrack(track.id)"
+              :title="getClipsForTrack(track.id).length === 0 ? '该轨道没有片段' : '自动排列该轨道的片段'"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M3,3H21V5H3V3M3,7H15V9H3V7M3,11H21V13H3V11M3,15H15V17H3V15M3,19H21V21H3V19Z" />
+              </svg>
+            </button>
+
             <!-- 可见性切换 -->
             <button
               class="track-btn"
@@ -196,6 +208,10 @@ function toggleVisibility(trackId: number) {
 
 function toggleMute(trackId: number) {
   videoStore.toggleTrackMute(trackId)
+}
+
+function autoArrangeTrack(trackId: number) {
+  videoStore.autoArrangeTrackItems(trackId)
 }
 
 async function startRename(track: { id: number; name: string }) {
@@ -739,6 +755,22 @@ onUnmounted(() => {
 }
 
 /* 使用通用的 track-btn 样式 */
+
+.track-btn.arrange-btn {
+  background: var(--color-accent-secondary);
+  color: var(--color-text-primary);
+}
+
+.track-btn.arrange-btn:hover:not(:disabled) {
+  background: var(--color-accent-secondary-hover);
+}
+
+.track-btn.arrange-btn:disabled {
+  background: var(--color-bg-quaternary);
+  color: var(--color-text-tertiary);
+  cursor: not-allowed;
+  opacity: 0.5;
+}
 
 .timeline-grid {
   position: absolute;

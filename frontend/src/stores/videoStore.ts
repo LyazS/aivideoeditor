@@ -8,6 +8,7 @@ import {
   expandTimelineIfNeeded,
   getTimelineItemAtTime,
   autoArrangeTimelineItems,
+  autoArrangeTrackItems,
   calculateTotalDuration,
   findTimelineItemBySprite,
   getTimelineItemsByTrack,
@@ -170,6 +171,7 @@ export const useVideoStore = defineStore('video', () => {
     getTimelineItemAtTime: (time: number) =>
       getTimelineItemAtTime(time, timelineModule.timelineItems.value),
     autoArrangeTimelineItems: () => autoArrangeTimelineItems(timelineModule.timelineItems),
+    autoArrangeTrackItems: (trackId: number) => autoArrangeTrackItems(timelineModule.timelineItems, trackId),
     // 播放控制方法
     setCurrentTime: playbackModule.setCurrentTime,
     setPlaybackRate: playbackModule.setPlaybackRate,
