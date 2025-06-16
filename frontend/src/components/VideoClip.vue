@@ -29,7 +29,7 @@
       <div v-if="showDetails" class="clip-info">
         <div class="clip-name">{{ mediaItem?.name || 'Unknown' }}</div>
         <div class="clip-duration">{{ formatDuration(timelineDuration) }}</div>
-        <div class="clip-speed" v-if="playbackSpeed !== 1">
+        <div class="clip-speed" v-if="Math.abs(playbackSpeed - 1) > 0.001">
           {{ formatSpeed(playbackSpeed) }}
         </div>
       </div>
@@ -200,9 +200,12 @@ function formatDuration(seconds: number): string {
 }
 
 function formatSpeed(rate: number): string {
-  if (rate > 1) {
+  // 使用容差来处理浮点数精度问题，避免显示1.00x快速
+  const tolerance = 0.001
+
+  if (rate > 1 + tolerance) {
     return `${rate.toFixed(1)}x 快速`
-  } else if (rate < 1) {
+  } else if (rate < 1 - tolerance) {
     return `${rate.toFixed(1)}x 慢速`
   }
   return '正常速度'

@@ -87,18 +87,16 @@
                   <div class="speed-divider" style="left: 80%"></div>
                 </div>
               </div>
-              <input
-                :value="speedInputValue"
-                @input="(e) => updateSpeedFromInput((e.target as HTMLInputElement).valueAsNumber)"
-                @blur="(e) => updateSpeedFromInput((e.target as HTMLInputElement).valueAsNumber)"
-                @keyup.enter="
-                  (e) => updateSpeedFromInput((e.target as HTMLInputElement).valueAsNumber)
-                "
-                type="number"
-                step="0.1"
-                min="0.1"
-                max="100"
-                class="speed-input"
+              <NumberInput
+                :model-value="speedInputValue"
+                @change="updateSpeedFromInput"
+                :min="0.1"
+                :max="100"
+                :step="0.1"
+                :precision="1"
+                :show-controls="false"
+                placeholder="倍速"
+                :input-style="speedInputStyle"
               />
             </div>
           </div>
@@ -478,6 +476,11 @@ const speedInputValue = computed(() => playbackRate.value)
 const propertyInputStyle = {
   maxWidth: '80px',
   textAlign: 'right' as const,
+}
+
+const speedInputStyle = {
+  maxWidth: '60px',
+  textAlign: 'center' as const,
 }
 
 const positionInputStyle = {
@@ -889,30 +892,7 @@ const alignVertical = (alignment: 'top' | 'middle' | 'bottom') => {
   transform: translateX(-50%);
 }
 
-/* 倍速输入框 */
-.speed-input {
-  background: var(--color-bg-quaternary);
-  border: 1px solid var(--color-border-secondary);
-  border-radius: var(--border-radius-small);
-  color: var(--color-text-primary);
-  font-size: var(--font-size-base);
-  font-weight: 600;
-  padding: var(--spacing-xs) var(--spacing-sm);
-  min-width: 50px;
-  max-width: 60px;
-  text-align: center;
-}
 
-.speed-input:focus {
-  outline: none;
-  border-color: var(--color-text-primary);
-}
-
-.speed-input::-webkit-outer-spin-button,
-.speed-input::-webkit-inner-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
-}
 
 /* 位置控制样式 */
 .position-controls {

@@ -297,6 +297,13 @@ export class CustomVisibleSprite extends VisibleSprite {
       // playbackRate = 素材内部时长 / 时间轴时长
       playbackRate = clipDuration / timelineDuration
 
+      // 修正浮点数精度问题，避免出现1.00000001这样的值
+      // 如果非常接近整数，则四舍五入到最近的0.1
+      const rounded = Math.round(playbackRate * 10) / 10
+      if (Math.abs(playbackRate - rounded) < 0.001) {
+        playbackRate = rounded
+      }
+
       // duration 是在时间轴上占用的时长
       duration = timelineDuration
 

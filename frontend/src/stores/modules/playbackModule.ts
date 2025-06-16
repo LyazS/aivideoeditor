@@ -36,12 +36,16 @@ export function createPlaybackModule(frameRate: { value: number }) {
    * 播放速度的显示文本
    */
   const playbackRateText = computed(() => {
-    if (playbackRate.value === 1) {
+    // 使用容差来处理浮点数精度问题，避免显示1.00x快速
+    const tolerance = 0.001
+    const rate = playbackRate.value
+
+    if (Math.abs(rate - 1) <= tolerance) {
       return '正常速度'
-    } else if (playbackRate.value < 1) {
-      return `${playbackRate.value}x 慢速`
+    } else if (rate < 1 - tolerance) {
+      return `${rate.toFixed(1)}x 慢速`
     } else {
-      return `${playbackRate.value}x 快速`
+      return `${rate.toFixed(1)}x 快速`
     }
   })
 
