@@ -33,7 +33,8 @@
           v-for="item in videoStore.mediaItems"
           :key="item.id"
           class="media-item"
-          :draggable="true"
+          :class="{ 'parsing': !item.isReady }"
+          :draggable="item.isReady"
           @dragstart="handleItemDragStart($event, item)"
           @dragend="handleItemDragEnd"
         >
@@ -47,6 +48,11 @@
             />
             <div class="duration-badge">
               {{ formatDuration(item.duration) }}
+            </div>
+            <!-- 解析中状态覆盖层 -->
+            <div v-if="!item.isReady" class="parsing-overlay">
+              <div class="parsing-spinner"></div>
+              <div class="parsing-text">解析中</div>
             </div>
           </div>
           <div class="media-info">
@@ -156,37 +162,54 @@ const addMediaItem = async (file: File): Promise<void> => {
     const url = URL.createObjectURL(file)
     const video = document.createElement('video')
 
+    // 先创建一个解析中状态的MediaItem ID
+    const mediaItemId = Date.now().toString() + Math.random().toString(36).substring(2, 11)
+
     video.onloadedmetadata = async () => {
       try {
-        // 创建MP4Clip
-        console.log(`🎬 Creating MP4Clip for: ${file.name}`)
-        const mp4Clip = await webAVControls.createMP4Clip(file)
-        console.log(`✅ MP4Clip created successfully for: ${file.name}`)
-
-        // 创建MediaItem
-        const mediaItem: MediaItem = {
-          id: Date.now().toString() + Math.random().toString(36).substring(2, 11),
+        const parsingMediaItem: MediaItem = {
+          id: mediaItemId,
           file,
           url,
           name: file.name,
           duration: video.duration,
           type: file.type,
+          mp4Clip: null, // 解析中时为null
+          isReady: false, // 标记为未准备好
+        }
+
+        console.log(`📋 创建解析中的MediaItem: ${parsingMediaItem.name} (ID: ${mediaItemId})`)
+
+        // 先添加解析中状态的素材到store
+        videoStore.addMediaItem(parsingMediaItem)
+
+        // 异步创建MP4Clip
+        console.log(`🎬 Creating MP4Clip for: ${file.name}`)
+        const mp4Clip = await webAVControls.createMP4Clip(file)
+        console.log(`✅ MP4Clip created successfully for: ${file.name}`)
+
+        // 更新MediaItem为完成状态
+        const readyMediaItem: MediaItem = {
+          ...parsingMediaItem,
           mp4Clip: markRaw(mp4Clip), // 使用markRaw避免Vue响应式包装
+          isReady: true, // 标记为准备好
         }
 
         console.log(
-          `📋 创建MediaItem: ${mediaItem.name} (时长: ${mediaItem.duration.toFixed(2)}s, ID: ${mediaItem.id})`,
+          `📋 更新MediaItem为完成状态: ${readyMediaItem.name} (时长: ${readyMediaItem.duration.toFixed(2)}s)`,
         )
         console.log(`📐 视频原始分辨率: ${video.videoWidth}x${video.videoHeight}`)
 
         // 设置视频元素到store中，用于获取原始分辨率
-        videoStore.setVideoElement(mediaItem.id, video)
+        videoStore.setVideoElement(mediaItemId, video)
 
-        // 添加到store
-        videoStore.addMediaItem(mediaItem)
+        // 更新store中的MediaItem
+        videoStore.updateMediaItem(readyMediaItem)
         resolve()
       } catch (error) {
         console.error('❌ Failed to create MP4Clip:', error)
+        // 如果解析失败，从store中移除该项目
+        videoStore.removeMediaItem(mediaItemId)
         URL.revokeObjectURL(url)
         resolve()
       }
@@ -194,6 +217,11 @@ const addMediaItem = async (file: File): Promise<void> => {
 
     video.onerror = () => {
       console.error('Failed to load video:', file.name)
+      // 如果视频加载失败，也需要清理可能已经添加的解析中状态的素材
+      const existingItem = videoStore.getMediaItem(mediaItemId)
+      if (existingItem) {
+        videoStore.removeMediaItem(mediaItemId)
+      }
       URL.revokeObjectURL(url)
       resolve()
     }
@@ -220,6 +248,13 @@ const removeMediaItem = (id: string) => {
 
 // 素材项拖拽开始
 const handleItemDragStart = (event: DragEvent, item: MediaItem) => {
+  // 如果素材还未解析完成，阻止拖拽
+  if (!item.isReady) {
+    event.preventDefault()
+    console.log('素材解析中，无法拖拽:', item.name)
+    return
+  }
+
   // 设置拖拽数据，不包含 File 对象（因为不能序列化）
   const dragData = {
     id: item.id,
@@ -354,6 +389,17 @@ const formatFileSize = (bytes: number): string => {
   cursor: grabbing;
 }
 
+/* 解析中状态样式 */
+.media-item.parsing {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background-color: var(--color-bg-secondary);
+}
+
+.media-item.parsing:hover {
+  background-color: var(--color-bg-secondary);
+}
+
 .media-thumbnail {
   width: 60px;
   height: 34px;
@@ -380,6 +426,42 @@ const formatFileSize = (bytes: number): string => {
   padding: 1px var(--spacing-xs);
   border-radius: 2px;
   font-family: monospace;
+}
+
+/* 解析中覆盖层样式 */
+.parsing-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--border-radius-medium);
+}
+
+.parsing-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--color-text-muted);
+  border-top: 2px solid var(--color-accent-primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 4px;
+}
+
+.parsing-text {
+  color: var(--color-text-primary);
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 
 .media-info {

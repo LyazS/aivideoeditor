@@ -53,6 +53,13 @@ export function createClipOperationsModule(
     console.log(`📋 复制时间轴项目: ${mediaItem.name} (ID: ${timelineItemId})`)
 
     try {
+      // 检查素材是否已经解析完成
+      if (!mediaItem.isReady || !mediaItem.mp4Clip) {
+        console.error('❌ 素材还在解析中，无法复制')
+        console.groupEnd()
+        return null
+      }
+
       // 克隆MP4Clip
       const webAVControls = useWebAVControls()
       const clonedClip = await webAVControls.cloneMP4Clip(mediaItem.mp4Clip)
@@ -214,6 +221,13 @@ export function createClipOperationsModule(
 
     if (!mediaItem) {
       console.error('❌ 找不到对应的素材项目')
+      console.groupEnd()
+      return
+    }
+
+    // 检查素材是否已经解析完成
+    if (!mediaItem.isReady || !mediaItem.mp4Clip) {
+      console.error('❌ 素材还在解析中，无法分割')
       console.groupEnd()
       return
     }

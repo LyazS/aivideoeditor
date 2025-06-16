@@ -95,6 +95,10 @@ export const useVideoStore = defineStore('video', () => {
     mediaModule.updateMediaItemName(mediaItemId, newName)
   }
 
+  function updateMediaItem(mediaItem: MediaItem) {
+    mediaModule.updateMediaItem(mediaItem)
+  }
+
   // ==================== 视频元素管理方法 ====================
   // 使用媒体模块的视频元素管理方法
   function setVideoElement(clipId: string, videoElement: HTMLVideoElement | null) {
@@ -135,6 +139,7 @@ export const useVideoStore = defineStore('video', () => {
     removeMediaItem,
     getMediaItem,
     updateMediaItemName,
+    updateMediaItem,
     // 时间轴管理方法
     addTimelineItem: timelineModule.addTimelineItem,
     removeTimelineItem: timelineModule.removeTimelineItem,

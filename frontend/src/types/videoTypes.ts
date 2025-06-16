@@ -16,7 +16,8 @@ export interface MediaItem {
   url: string
   duration: number
   type: string
-  mp4Clip: Raw<MP4Clip>
+  mp4Clip: Raw<MP4Clip> | null // 解析中时为null，解析完成后为MP4Clip实例
+  isReady: boolean // 是否解析完成
 }
 
 // 时间轴层：包装CustomVisibleSprite和时间轴位置信息

@@ -387,6 +387,11 @@ async function createVideoClipFromMediaItem(
       throw new Error('找不到对应的素材项目')
     }
 
+    // 检查素材是否已经解析完成
+    if (!storeMediaItem.isReady || !storeMediaItem.mp4Clip) {
+      throw new Error('素材还在解析中，请稍后再试')
+    }
+
     // 克隆MP4Clip并创建CustomVisibleSprite
     console.log('克隆MP4Clip并创建CustomVisibleSprite for mediaItem:', mediaItem.id)
     const clonedMP4Clip = await webAVControls.cloneMP4Clip(storeMediaItem.mp4Clip)

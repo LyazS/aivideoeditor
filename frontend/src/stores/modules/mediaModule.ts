@@ -136,6 +136,18 @@ export function createMediaModule() {
     }
   }
 
+  /**
+   * 更新媒体项目
+   * @param updatedMediaItem 更新后的媒体项目
+   */
+  function updateMediaItem(updatedMediaItem: MediaItem) {
+    const index = mediaItems.value.findIndex(item => item.id === updatedMediaItem.id)
+    if (index !== -1) {
+      mediaItems.value[index] = updatedMediaItem
+      console.log(`媒体项目已更新: ${updatedMediaItem.id} -> ${updatedMediaItem.name}`)
+    }
+  }
+
   // ==================== 视频元素管理方法 ====================
 
   /**
@@ -179,6 +191,7 @@ export function createMediaModule() {
     removeMediaItem,
     getMediaItem,
     updateMediaItemName,
+    updateMediaItem,
 
     // 视频元素管理方法
     setVideoElement,
