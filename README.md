@@ -1,212 +1,337 @@
-# AI 视频编辑器 - 视频实时预览引擎
+# AI视频编辑器
 
-这是一个基于 Vue 3 + TypeScript + 组合式 API 的视频实时预览引擎，提供了完整的视频编辑界面。
+一个基于Vue 3和WebAV技术栈的现代化视频编辑器，提供高性能的视频预览、时间轴编辑和实时渲染功能。
 
-## 功能特性
+## 🚀 项目特色
 
-### 🎬 核心功能
-- **视频预览窗口**: 实时播放当前时间轴位置的视频内容
-- **时间轴管理**: 可视化的时间轴，支持拖拽视频片段
-- **播放控制**: 完整的播放控制面板，包括播放/暂停、跳转、速度控制等
-- **拖拽上传**: 支持直接拖拽视频文件到时间轴
-- **🔍 时间轴缩放**: Alt + 鼠标滚轮缩放，最小可精确到每一帧
-- **↔️ 水平滚动**: Shift + 鼠标滚轮水平滚动时间轴
+- **高性能渲染**: 基于WebAV的硬件加速视频渲染引擎
+- **现代化架构**: Vue 3 + TypeScript + Pinia状态管理
+- **模块化设计**: 清晰的模块分离和组件化架构
+- **实时预览**: 支持实时视频预览和时间轴编辑
+- **响应式界面**: 自适应布局和可调整面板大小
 
-### 🎯 主要组件
+## 🛠️ 技术栈
 
-#### 1. VideoPreviewEngine.vue
-主容器组件，整合所有子组件
+### 核心技术
+- **Vue 3**: 前端框架，使用Composition API
+- **TypeScript**: 类型安全的JavaScript超集
+- **Pinia**: 现代化的Vue状态管理库
+- **Vite**: 快速的构建工具和开发服务器
 
-#### 2. PreviewWindow.vue
-- 视频预览窗口
-- 支持多种视频格式 (MP4, WebM, AVI 等)
-- 实时同步时间轴位置
-- 显示当前播放时间
+### 视频处理
+- **@webav/av-canvas**: WebAV画布渲染引擎
+- **@webav/av-cliper**: 视频剪辑和处理库
+- **CustomVisibleSprite**: 自定义视频精灵组件
 
-#### 3. Timeline.vue
-- 时间轴容器
-- 支持拖拽文件上传
-- 视频片段管理
-- 背景网格显示（自适应缩放级别）
-- Alt + 滚轮缩放功能
-- Shift + 滚轮水平滚动功能
+### 开发工具
+- **ESLint**: 代码质量检查
+- **Prettier**: 代码格式化
+- **Vue DevTools**: Vue开发调试工具
 
-#### 4. VideoClip.vue
-- 可拖拽的视频片段
-- 缩略图预览
-- 右键菜单操作
-- 片段信息显示
+## 📁 项目结构
 
-#### 5. TimeScale.vue
-- 时间刻度标记（支持帧级精度显示）
-- 播放头指示器
-- 点击跳转功能
-- Alt + 滚轮缩放功能
-- Shift + 滚轮水平滚动功能
+```
+frontend/
+├── src/
+│   ├── components/          # Vue组件
+│   │   ├── VideoPreviewEngine.vue    # 主编辑器界面
+│   │   ├── PreviewWindow.vue         # 视频预览窗口
+│   │   ├── Timeline.vue              # 时间轴组件
+│   │   ├── MediaLibrary.vue          # 素材库
+│   │   ├── PlaybackControls.vue      # 播放控制
+│   │   ├── PropertiesPanel.vue       # 属性面板
+│   │   └── WebAVRenderer.vue         # WebAV渲染器
+│   ├── stores/              # 状态管理
+│   │   ├── videoStore.ts             # 主状态存储
+│   │   ├── modules/                  # 模块化状态管理
+│   │   │   ├── webavModule.ts        # WebAV集成模块
+│   │   │   ├── mediaModule.ts        # 媒体管理模块
+│   │   │   ├── playbackModule.ts     # 播放控制模块
+│   │   │   ├── configModule.ts       # 配置管理模块
+│   │   │   ├── trackModule.ts        # 轨道管理模块
+│   │   │   ├── timelineModule.ts     # 时间轴核心模块
+│   │   │   ├── viewportModule.ts     # 视口管理模块
+│   │   │   ├── selectionModule.ts    # 选择管理模块
+│   │   │   └── clipOperationsModule.ts # 片段操作模块
+│   │   └── utils/                    # 工具函数
+│   ├── composables/         # 组合式函数
+│   │   └── useWebAVControls.ts       # WebAV控制器
+│   ├── utils/               # 工具类
+│   │   ├── customVisibleSprite.ts    # 自定义视频精灵
+│   │   ├── coordinateTransform.ts    # 坐标转换
+│   │   ├── rotationTransform.ts      # 旋转变换
+│   │   └── webavDebug.ts             # WebAV调试工具
+│   ├── types/               # TypeScript类型定义
+│   │   └── videoTypes.ts             # 视频相关类型
+│   └── styles/              # 样式文件
+│       └── common.css                # 通用样式
+├── public/                  # 静态资源
+├── package.json            # 项目依赖配置
+├── vite.config.ts          # Vite配置
+├── tsconfig.json           # TypeScript配置
+└── eslint.config.ts        # ESLint配置
+```
 
-#### 6. PlaybackControls.vue
-- 播放/暂停控制
-- 时间跳转按钮
-- 进度条拖拽
-- 音量控制
-- 播放速度调节
+## 🏗️ 架构设计
 
-## 使用方法
+### 模块化状态管理
+项目采用模块化的状态管理架构，将不同功能拆分为独立模块：
 
-### 1. 启动项目
+- **WebAV模块**: 管理WebAV引擎的初始化和核心功能
+- **媒体模块**: 处理素材库和媒体文件管理
+- **播放模块**: 控制视频播放状态和时间
+- **配置模块**: 管理项目设置和视频分辨率
+- **轨道模块**: 处理时间轴轨道管理
+- **时间轴模块**: 核心时间轴逻辑和项目管理
+- **视口模块**: 管理时间轴缩放和滚动
+- **选择模块**: 处理元素选择和同步
+- **片段操作模块**: 视频片段的增删改查操作
+
+### WebAV集成架构
+- **单例模式**: 全局唯一的AVCanvas实例
+- **组合式API**: 通过useWebAVControls提供统一的WebAV控制接口
+- **异步初始化**: 支持WebAV引擎的异步加载和初始化
+- **错误处理**: 完善的错误捕获和状态管理
+
+### 数据流设计
+```
+UI组件 → VideoStore → 模块化状态 → WebAV引擎
+   ↑                                    ↓
+   ← 事件监听 ← propsChange事件 ← CustomVisibleSprite
+```
+
+## 🚦 快速开始
+
+### 环境要求
+- Node.js >= 18.0.0
+- npm >= 8.0.0
+
+### 安装依赖
 ```bash
 cd frontend
 npm install
+```
+
+### 开发模式
+```bash
 npm run dev
 ```
 
-### 2. 基本操作
+### 构建生产版本
+```bash
+npm run build
+```
 
-#### 上传视频
-1. 将视频文件拖拽到时间轴区域
-2. 视频片段会自动添加到拖拽位置
-3. 支持多个视频文件同时上传
+### 代码检查
+```bash
+npm run lint
+```
 
-#### 时间轴缩放和滚动
-1. **缩放操作**：
-   - 按住 Alt 键 + 鼠标滚轮上下滚动进行缩放
-   - 向上滚动放大，向下滚动缩小
-   - 最大可放大到帧级精度（30fps）
+### 代码格式化
+```bash
+npm run format
+```
 
-2. **水平滚动**：
-   - 按住 Shift 键 + 鼠标滚轮上下滚动进行水平移动
-   - 向上滚动向左移动，向下滚动向右移动
-   - 在放大状态下浏览时间轴的不同部分
+## 🎯 核心功能
 
-3. **精确编辑**：
-   - 放大到最大级别可以看到每一帧
-   - 时间刻度会显示帧数（MM:SS:FF格式）
-   - 播放头自动对齐到帧边界，支持拖拽操作
-   - 支持逐帧精确的剪切和调整
+### 视频编辑功能
+- ✅ 视频文件导入和预览
+- ✅ 时间轴拖拽编辑
+- ✅ 视频片段分割和合并
+- ✅ 实时播放控制
+- ✅ 视频属性调整（位置、缩放、旋转、透明度）
+- ✅ 多轨道支持
+- ✅ 视频分辨率设置
 
-#### 连续播放体验
-1. **智能播放**：
-   - 时间指针持续移动，提供完整的时间轴预览
-   - 自动在视频片段和空白区域间切换
-   - 空白区域显示黑屏和时间指示器
+### 界面功能
+- ✅ 可调整的面板布局
+- ✅ 响应式设计
+- ✅ 深色主题界面
+- ✅ 拖拽式操作
+- ✅ 实时状态反馈
 
-2. **无缝切换**：
-   - 进入视频片段时自动开始播放
-   - 离开视频片段时自动显示黑屏
-   - 支持跨片段的连续播放体验
+### 性能优化
+- ✅ WebAV硬件加速渲染
+- ✅ 异步视频解析
+- ✅ 内存管理和资源清理
+- ✅ 帧对齐和时间精确控制
 
-#### 编辑视频片段
-1. **拖拽移动**: 点击并拖拽视频片段到新位置
-2. **删除片段**: 右键点击片段选择"删除"
-3. **复制片段**: 右键点击片段选择"复制"
+## 🔧 开发指南
 
-#### 播放控制
-1. **播放/暂停**: 点击中央播放按钮
-2. **时间跳转**: 点击时间轴任意位置
-3. **快进/快退**: 使用前进/后退按钮（10秒间隔）
-4. **速度控制**: 使用右侧速度选择器
+### 添加新组件
+1. 在`src/components/`目录下创建Vue组件
+2. 使用TypeScript和Composition API
+3. 遵循项目的命名约定和代码风格
 
-### 3. 技术架构
+### 扩展状态管理
+1. 在`src/stores/modules/`下创建新模块
+2. 在`videoStore.ts`中集成新模块
+3. 确保模块间的依赖关系清晰
 
-#### 状态管理 (Pinia)
+### WebAV集成
+1. 使用`useWebAVControls`组合式函数
+2. 通过`CustomVisibleSprite`处理视频对象
+3. 注意WebAV对象需要使用`markRaw`避免Vue响应式包装
+
+## 📝 开发注意事项
+
+### WebAV对象处理
+- WebAV对象不能被Vue响应式系统包装，需要使用`markRaw()`
+- CustomVisibleSprite需要通过`toRaw()`获取原始对象进行操作
+- 监听WebAV事件时要注意内存泄漏问题
+
+### 坐标系统
+- 画布坐标系以中心点(0,0)为原点
+- 缩放因子1.0表示等比例显示
+- 位置和尺寸需要根据画布分辨率进行转换
+
+### 性能考虑
+- 视频解析采用异步处理，避免阻塞UI
+- 大文件处理时显示加载状态
+- 及时清理不再使用的WebAV资源
+
+## 🤝 贡献指南
+
+1. Fork项目仓库
+2. 创建功能分支 (`git checkout -b feature/AmazingFeature`)
+3. 提交更改 (`git commit -m 'Add some AmazingFeature'`)
+4. 推送到分支 (`git push origin feature/AmazingFeature`)
+5. 创建Pull Request
+
+## 📄 许可证
+
+本项目采用MIT许可证 - 查看[LICENSE](LICENSE)文件了解详情
+
+## 🔍 详细功能说明
+
+### 视频导入和管理
+- **支持格式**: MP4, WebM, MOV等主流视频格式
+- **异步解析**: 视频文件上传后异步创建MP4Clip，显示解析进度
+- **素材库**: 统一管理所有导入的视频素材
+- **预览缩略图**: 自动生成视频缩略图用于素材库显示
+
+### 时间轴编辑
+- **多轨道支持**: 支持多个视频轨道的并行编辑
+- **精确定位**: 基于帧率的精确时间定位和对齐
+- **拖拽操作**: 支持素材从素材库拖拽到时间轴
+- **片段分割**: 支持在任意时间点分割视频片段
+- **片段合并**: 支持相邻片段的合并操作
+
+### 视频预览
+- **实时渲染**: 基于WebAV的硬件加速实时渲染
+- **播放控制**: 播放、暂停、快进、快退等完整控制
+- **时间同步**: 预览窗口与时间轴的精确时间同步
+- **分辨率设置**: 支持多种视频分辨率的设置和切换
+
+### 视频属性编辑
+- **位置调整**: 支持视频在画布中的位置调整
+- **缩放控制**: 支持等比例和非等比例缩放
+- **旋转变换**: 支持任意角度的旋转操作
+- **透明度**: 支持透明度调整和混合效果
+- **层级管理**: 支持多层视频的层级调整
+
+## 🏛️ 技术架构详解
+
+### 状态管理架构
+项目采用Pinia进行状态管理，通过模块化设计实现功能分离：
+
 ```typescript
-interface VideoClip {
-  id: string
-  file: File
-  url: string
-  duration: number
-  startTime: number
-  endTime: number
-  timelinePosition: number
-  name: string
+// 主状态存储结构
+videoStore = {
+  // 核心数据
+  mediaItems,      // 素材库数据
+  timelineItems,   // 时间轴项目数据
+  tracks,          // 轨道数据
+
+  // 播放状态
+  currentTime,     // 当前播放时间
+  isPlaying,       // 播放状态
+  playbackRate,    // 播放速率
+
+  // 选择状态
+  selectedTimelineItemId,  // 选中的时间轴项
+  selectedAVCanvasSprite,  // 选中的画布精灵
+
+  // 视口状态
+  zoomLevel,       // 缩放级别
+  scrollOffset,    // 滚动偏移
+  visibleDuration, // 可见时长
 }
 ```
 
-#### 核心功能
-- **实时预览**: 根据时间轴位置自动切换视频片段
-- **拖拽系统**: 原生 HTML5 拖拽 API
-- **时间同步**: 视频播放与时间轴实时同步
-- **响应式设计**: 适配不同屏幕尺寸
+### WebAV集成方案
+- **单例模式**: 全局唯一的AVCanvas实例，避免资源冲突
+- **异步初始化**: 支持WebAV引擎的渐进式加载
+- **内存管理**: 自动清理不再使用的WebAV资源
+- **错误恢复**: 完善的错误处理和状态恢复机制
 
-## 支持的视频格式
+### 组件通信机制
+- **Props/Events**: 父子组件间的标准通信
+- **Pinia Store**: 跨组件的状态共享
+- **WebAV Events**: WebAV对象的事件监听和响应
+- **Custom Events**: 自定义事件系统用于复杂交互
 
-- MP4 (推荐)
-- WebM
-- AVI
-- MOV
-- 其他浏览器支持的视频格式
+## 🧪 测试和调试
 
-## 浏览器兼容性
+### 调试工具
+项目内置了完善的调试工具：
 
-- Chrome 90+
-- Firefox 88+
-- Safari 14+
-- Edge 90+
-
-## 高级功能
-
-### 🎯 可视化编辑
-- **直接操作**: 在预览窗口中直接点击、拖拽、缩放视频片段
-- **精确控制**: 支持像素级精确调整和键盘快捷键
-- **实时预览**: 所有调整实时反映到预览窗口
-- 详细使用方法请参考：[可视化编辑指南](VISUAL_EDITING_GUIDE.md)
-
-### 🔄 连续播放
-- **智能切换**: 自动在视频片段和空白区域间切换
-- **时间轴驱动**: 时间指针持续移动，提供完整的预览体验
-- **空白处理**: 没有视频的时间段显示黑屏和时间指示器
-
-### ⚡ 性能优化
-- **帧级精度**: 支持30fps的逐帧编辑
-- **智能缓存**: 优化视频加载和播放性能
-- **响应式设计**: 适配不同屏幕尺寸和分辨率
-
-## 开发计划
-
-### 即将实现的功能
-- [ ] 视频片段裁剪和分割
-- [ ] 音频轨道支持
-- [ ] 转场效果和滤镜
-- [ ] 视频导出功能
-- [ ] 撤销/重做操作
-- [ ] 更多键盘快捷键
-
-### 技术优化
-- [ ] 虚拟滚动优化大量片段性能
-- [ ] Web Workers 处理视频解析
-- [ ] 更精确的时间同步算法
-- [ ] 多轨道编辑支持
-
-## 项目结构
-
-```
-frontend/src/
-├── components/
-│   ├── VideoPreviewEngine.vue  # 主容器
-│   ├── PreviewWindow.vue       # 预览窗口
-│   ├── Timeline.vue            # 时间轴
-│   ├── VideoClip.vue          # 视频片段
-│   ├── TimeScale.vue          # 时间刻度
-│   └── PlaybackControls.vue   # 播放控制
-├── stores/
-│   └── videostore.ts          # 视频状态管理
-└── App.vue                    # 应用入口
+```typescript
+// WebAV调试工具
+import {
+  logWebAVReadyStateChange,
+  logComponentLifecycle,
+  createPerformanceTimer,
+  debugError
+} from '../utils/webavDebug'
 ```
 
-## 📚 文档说明
+### 性能监控
+- **渲染性能**: 监控WebAV渲染性能和帧率
+- **内存使用**: 跟踪内存使用情况和潜在泄漏
+- **加载时间**: 监控视频文件加载和解析时间
+- **操作响应**: 监控用户操作的响应时间
 
-- **README.md** - 项目主要说明文档（本文件）
-- **VISUAL_EDITING_GUIDE.md** - 可视化编辑功能详细使用指南
-- **frontend/README.md** - Vue 3 + Vite 项目的标准说明
+## 🔧 配置和自定义
 
-## 贡献指南
+### 项目配置
+```typescript
+// 默认配置
+const defaultConfig = {
+  videoResolution: { width: 1920, height: 1080 },
+  frameRate: 30,
+  timelineDuration: 300,
+  proportionalScale: true
+}
+```
 
-1. Fork 项目
-2. 创建功能分支
-3. 提交更改
-4. 推送到分支
-5. 创建 Pull Request
+### 自定义主题
+项目支持CSS变量自定义主题：
 
-## 许可证
+```css
+:root {
+  --color-bg-primary: #1a1a1a;
+  --color-bg-secondary: #2d2d2d;
+  --color-text-primary: #ffffff;
+  --color-accent: #007acc;
+}
+```
 
-MIT License
+## 🚀 部署指南
+
+### 构建优化
+- **代码分割**: 自动进行代码分割和懒加载
+- **资源压缩**: 自动压缩CSS、JS和图片资源
+- **缓存策略**: 合理的缓存策略提升加载速度
+
+### 部署环境
+- **开发环境**: 使用Vite开发服务器
+- **生产环境**: 构建静态文件部署到CDN或静态服务器
+- **容器化**: 支持Docker容器化部署
+
+## 🙏 致谢
+
+- [WebAV](https://github.com/hughfenghen/WebAV) - 强大的Web视频处理库
+- [Vue.js](https://vuejs.org/) - 渐进式JavaScript框架
+- [Vite](https://vitejs.dev/) - 下一代前端构建工具
+- [Pinia](https://pinia.vuejs.org/) - Vue的现代状态管理库
