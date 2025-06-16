@@ -387,13 +387,7 @@ export function useWebAVControls() {
     globalAVCanvas.previewFrame(timeMicroseconds)
   }
 
-  /**
-   * 获取当前帧截图
-   */
-  const captureFrame = (): string | null => {
-    if (!globalAVCanvas) return null
-    return globalAVCanvas.captureImage()
-  }
+
 
   /**
    * 销毁WebAV实例
@@ -701,7 +695,6 @@ export function useWebAVControls() {
     play,
     pause,
     seekTo,
-    captureFrame,
     destroy,
     getAVCanvas,
     getCanvasContainer,

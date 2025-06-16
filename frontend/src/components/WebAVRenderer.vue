@@ -386,7 +386,6 @@ defineExpose({
   initializeWebAVCanvas,
   recreateCanvasWithNewSize,
   getAVCanvas: webAVControls.getAVCanvas,
-  captureFrame: webAVControls.captureFrame,
 })
 </script>
 

@@ -128,9 +128,6 @@ cloneMP4Clip(originalClip: MP4Clip): MP4Clip
 play(): Promise<void>
 pause(): void
 seekTo(time: number): void
-
-// 帧捕获
-captureFrame(): Promise<ImageData>
 ```
 
 ## CustomVisibleSprite API
