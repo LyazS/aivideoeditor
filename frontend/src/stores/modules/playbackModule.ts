@@ -60,13 +60,6 @@ export function createPlaybackModule(frameRate: { value: number }) {
     
     if (currentTime.value !== clampedTime) {
       currentTime.value = clampedTime
-      console.log('⏰ 设置播放时间:', {
-        originalTime: time,
-        alignedTime: finalTime,
-        finalTime: clampedTime,
-        forceAlign,
-        frameRate: frameRate.value
-      })
     }
   }
 

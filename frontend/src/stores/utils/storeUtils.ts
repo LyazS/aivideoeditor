@@ -15,9 +15,9 @@ import type { TimeRange } from '../../utils/customVisibleSprite'
 export function printDebugInfo(
   operation: string,
   details: unknown,
-  mediaItems: Ref<MediaItem[]>,
-  timelineItems: Ref<TimelineItem[]>,
-  tracks: Ref<any[]>
+  mediaItems: MediaItem[],
+  timelineItems: TimelineItem[],
+  tracks: any[]
 ) {
   const timestamp = new Date().toLocaleTimeString()
   console.group(`🎬 [${timestamp}] ${operation}`)
@@ -27,7 +27,7 @@ export function printDebugInfo(
   }
 
   console.log('📚 素材库状态 (mediaItems):')
-  console.table(mediaItems.value.map(item => ({
+  console.table(mediaItems.map(item => ({
     id: item.id,
     name: item.name,
     duration: `${item.duration.toFixed(2)}s`,
@@ -36,7 +36,7 @@ export function printDebugInfo(
   })))
 
   console.log('🎞️ 时间轴状态 (timelineItems):')
-  console.table(timelineItems.value.map(item => ({
+  console.table(timelineItems.map(item => ({
     id: item.id,
     mediaItemId: item.mediaItemId,
     trackId: item.trackId,
@@ -45,13 +45,13 @@ export function printDebugInfo(
   })))
 
   console.log('📊 统计信息:')
-  console.log(`- 素材库项目数: ${mediaItems.value.length}`)
-  console.log(`- 时间轴项目数: ${timelineItems.value.length}`)
-  console.log(`- 轨道数: ${tracks.value.length}`)
+  console.log(`- 素材库项目数: ${mediaItems.length}`)
+  console.log(`- 时间轴项目数: ${timelineItems.length}`)
+  console.log(`- 轨道数: ${tracks.length}`)
 
   // 检查引用关系
-  const orphanedTimelineItems = timelineItems.value.filter(timelineItem =>
-    !mediaItems.value.find(mediaItem => mediaItem.id === timelineItem.mediaItemId)
+  const orphanedTimelineItems = timelineItems.filter(timelineItem =>
+    !mediaItems.find(mediaItem => mediaItem.id === timelineItem.mediaItemId)
   )
   if (orphanedTimelineItems.length > 0) {
     console.warn('⚠️ 发现孤立的时间轴项目 (没有对应的素材库项目):', orphanedTimelineItems)

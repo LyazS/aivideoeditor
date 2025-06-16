@@ -34,7 +34,7 @@ export function createMediaModule() {
       name: mediaItem.name,
       duration: mediaItem.duration,
       type: mediaItem.type
-    }, mediaItems, timelineItems, tracks)
+    }, mediaItems.value, timelineItems.value, tracks.value)
   }
 
   /**
@@ -96,7 +96,7 @@ export function createMediaModule() {
         mediaItemName: mediaItem.name,
         removedTimelineItemsCount: relatedTimelineItems.length,
         removedTimelineItemIds: relatedTimelineItems.map(item => item.id)
-      }, mediaItems, timelineItems, tracks)
+      }, mediaItems.value, timelineItems.value, tracks.value)
     }
   }
 
