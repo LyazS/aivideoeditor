@@ -186,9 +186,13 @@ import ClipManagementToolbar from './ClipManagementToolbar.vue'
 import MediaLibrary from './MediaLibrary.vue'
 import PropertiesPanel from './PropertiesPanel.vue'
 import { useVideoStore } from '../stores/videoStore'
+import { useKeyboardShortcuts } from '../composables/useKeyboardShortcuts'
 import { logWebAVReadyStateChange, logComponentLifecycle } from '../utils/webavDebug'
 
 const videoStore = useVideoStore()
+
+// 注册全局快捷键
+useKeyboardShortcuts()
 
 // 添加WebAV就绪状态监听
 watch(

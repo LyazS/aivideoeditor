@@ -210,7 +210,7 @@ class UpdateTransformCommand implements SimpleCommand {
 - [x] **AutoArrangeTrackCommand** - 单轨道自动排列 ✅
 
 ##### 🟡 中优先级操作
-- [ ] **RenameTrackCommand** - 重命名轨道
+- [x] **RenameTrackCommand** - 重命名轨道
 - [ ] **ToggleTrackVisibilityCommand** - 切换轨道可见性
 - [ ] **ToggleTrackMuteCommand** - 切换轨道静音
 - [x] **ResizeTimelineItemCommand** - 时间范围调整（拖拽边缘） ✅

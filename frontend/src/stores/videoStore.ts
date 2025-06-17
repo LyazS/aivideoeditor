@@ -23,7 +23,7 @@ import { createSelectionModule } from './modules/selectionModule'
 import { createTimelineModule } from './modules/timelineModule'
 import { createClipOperationsModule } from './modules/clipOperationsModule'
 import { createHistoryModule } from './modules/historyModule'
-import { AddTimelineItemCommand, RemoveTimelineItemCommand, MoveTimelineItemCommand, UpdateTransformCommand, SplitTimelineItemCommand, DuplicateTimelineItemCommand, AddTrackCommand, RemoveTrackCommand, AutoArrangeTrackCommand, ResizeTimelineItemCommand } from './modules/commands/timelineCommands'
+import { AddTimelineItemCommand, RemoveTimelineItemCommand, MoveTimelineItemCommand, UpdateTransformCommand, SplitTimelineItemCommand, DuplicateTimelineItemCommand, AddTrackCommand, RemoveTrackCommand, RenameTrackCommand, AutoArrangeTrackCommand, ResizeTimelineItemCommand } from './modules/commands/timelineCommands'
 import type { MediaItem, TimelineItem } from '../types/videoTypes'
 
 export const useVideoStore = defineStore('video', () => {
@@ -533,6 +533,50 @@ export const useVideoStore = defineStore('video', () => {
   }
 
   /**
+   * 带历史记录的重命名轨道方法
+   * @param trackId 要重命名的轨道ID
+   * @param newName 新的轨道名称
+   * @returns 是否成功重命名
+   */
+  async function renameTrackWithHistory(trackId: number, newName: string): Promise<boolean> {
+    // 检查轨道是否存在
+    const track = trackModule.getTrack(trackId)
+    if (!track) {
+      console.warn(`⚠️ 轨道不存在，无法重命名: ${trackId}`)
+      return false
+    }
+
+    // 检查新名称是否有效
+    if (!newName.trim()) {
+      console.warn('⚠️ 轨道名称不能为空')
+      return false
+    }
+
+    // 如果名称没有变化，直接返回成功
+    if (track.name === newName.trim()) {
+      console.log('⚠️ 轨道名称没有变化，无需重命名')
+      return true
+    }
+
+    const command = new RenameTrackCommand(
+      trackId,
+      newName.trim(),
+      {
+        renameTrack: trackModule.renameTrack,
+        getTrack: trackModule.getTrack,
+      }
+    )
+
+    try {
+      await historyModule.executeCommand(command)
+      return true
+    } catch (error) {
+      console.error('❌ 重命名轨道失败:', error)
+      return false
+    }
+  }
+
+  /**
    * 带历史记录的自动排列轨道方法
    * @param trackId 要自动排列的轨道ID
    * @returns 是否成功排列
@@ -832,6 +876,7 @@ export const useVideoStore = defineStore('video', () => {
     duplicateTimelineItemWithHistory,
     addTrackWithHistory,
     removeTrackWithHistory,
+    renameTrackWithHistory,
     autoArrangeTrackWithHistory,
     resizeTimelineItemWithHistory,
   }

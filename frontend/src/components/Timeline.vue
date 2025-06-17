@@ -35,7 +35,7 @@
               @keyup.enter="finishRename"
               @keyup.escape="cancelRename"
               class="track-name-input"
-              ref="nameInput"
+              :ref="(el) => { if (editingTrackId === track.id) nameInput = el as HTMLInputElement }"
             />
             <span
               v-else
@@ -180,7 +180,7 @@ const tracks = computed(() => videoStore.tracks)
 // 编辑轨道名称相关
 const editingTrackId = ref<number | null>(null)
 const editingTrackName = ref('')
-const nameInput = ref<HTMLInputElement>()
+let nameInput: HTMLInputElement | null = null
 
 // 获取指定轨道的时间轴项目
 function getClipsForTrack(trackId: number) {
@@ -246,13 +246,22 @@ async function startRename(track: { id: number; name: string }) {
   editingTrackId.value = track.id
   editingTrackName.value = track.name
   await nextTick()
-  nameInput.value?.focus()
-  nameInput.value?.select()
+  nameInput?.focus()
+  nameInput?.select()
 }
 
-function finishRename() {
+async function finishRename() {
   if (editingTrackId.value && editingTrackName.value.trim()) {
-    videoStore.renameTrack(editingTrackId.value, editingTrackName.value.trim())
+    try {
+      const success = await videoStore.renameTrackWithHistory(editingTrackId.value, editingTrackName.value.trim())
+      if (success) {
+        console.log('✅ 轨道重命名成功')
+      } else {
+        console.error('❌ 轨道重命名失败')
+      }
+    } catch (error) {
+      console.error('❌ 重命名轨道时出错:', error)
+    }
   }
   editingTrackId.value = null
   editingTrackName.value = ''
@@ -705,6 +714,11 @@ function handleWheel(event: WheelEvent) {
 }
 
 function handleKeyDown(event: KeyboardEvent) {
+  // 检查是否有修饰键，如果有则不处理（让全局快捷键处理）
+  if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) {
+    return
+  }
+
   // 按 Escape 键取消选中
   if (event.key === 'Escape') {
     videoStore.selectTimelineItem(null)
