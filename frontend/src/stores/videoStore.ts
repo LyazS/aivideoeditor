@@ -23,7 +23,7 @@ import { createSelectionModule } from './modules/selectionModule'
 import { createTimelineModule } from './modules/timelineModule'
 import { createClipOperationsModule } from './modules/clipOperationsModule'
 import { createHistoryModule } from './modules/historyModule'
-import { AddTimelineItemCommand, RemoveTimelineItemCommand, MoveTimelineItemCommand, UpdateTransformCommand } from './modules/commands/timelineCommands'
+import { AddTimelineItemCommand, RemoveTimelineItemCommand, MoveTimelineItemCommand, UpdateTransformCommand, SplitTimelineItemCommand } from './modules/commands/timelineCommands'
 import type { MediaItem, TimelineItem } from '../types/videoTypes'
 
 export const useVideoStore = defineStore('video', () => {
@@ -358,6 +358,57 @@ export const useVideoStore = defineStore('video', () => {
     return changedProperties.length === 1 ? changedProperties[0] as any : 'multiple'
   }
 
+  /**
+   * 带历史记录的分割时间轴项目方法
+   * @param timelineItemId 要分割的时间轴项目ID
+   * @param splitTime 分割时间点（秒）
+   */
+  async function splitTimelineItemAtTimeWithHistory(
+    timelineItemId: string,
+    splitTime: number
+  ) {
+    // 获取要分割的时间轴项目
+    const timelineItem = timelineModule.getTimelineItem(timelineItemId)
+    if (!timelineItem) {
+      console.warn(`⚠️ 时间轴项目不存在，无法分割: ${timelineItemId}`)
+      return
+    }
+
+    // 检查是否为视频类型（图片不支持分割）
+    if (timelineItem.mediaType !== 'video') {
+      console.error('❌ 只有视频片段支持分割操作')
+      return
+    }
+
+    // 检查分割时间是否在项目范围内
+    const timelineStartTime = timelineItem.timeRange.timelineStartTime / 1000000 // 转换为秒
+    const timelineEndTime = timelineItem.timeRange.timelineEndTime / 1000000 // 转换为秒
+
+    if (splitTime <= timelineStartTime || splitTime >= timelineEndTime) {
+      console.error('❌ 分割时间不在项目范围内')
+      return
+    }
+
+    const command = new SplitTimelineItemCommand(
+      timelineItemId,
+      timelineItem, // 传入完整的timelineItem用于保存重建数据
+      splitTime,
+      {
+        addTimelineItem: timelineModule.addTimelineItem,
+        removeTimelineItem: timelineModule.removeTimelineItem,
+        getTimelineItem: timelineModule.getTimelineItem,
+      },
+      {
+        addSprite: webavModule.addSprite,
+        removeSprite: webavModule.removeSprite,
+      },
+      {
+        getMediaItem: mediaModule.getMediaItem,
+      }
+    )
+    await historyModule.executeCommand(command)
+  }
+
   function removeMediaItem(mediaItemId: string) {
     mediaModule.removeMediaItem(
       mediaItemId,
@@ -483,7 +534,7 @@ export const useVideoStore = defineStore('video', () => {
     // 轨道管理方法
     addTrack: (name?: string) => trackModule.addTrack(name),
     removeTrack: (trackId: number) =>
-      trackModule.removeTrack(trackId, timelineModule.timelineItems),
+      trackModule.removeTrack(trackId, timelineModule.timelineItems, timelineModule.removeTimelineItem),
     toggleTrackVisibility: trackModule.toggleTrackVisibility,
     toggleTrackMute: trackModule.toggleTrackMute,
     renameTrack: trackModule.renameTrack,
@@ -564,5 +615,6 @@ export const useVideoStore = defineStore('video', () => {
     removeTimelineItemWithHistory,
     moveTimelineItemWithHistory,
     updateTimelineItemTransformWithHistory,
+    splitTimelineItemAtTimeWithHistory,
   }
 })

@@ -139,10 +139,22 @@ async function splitSelectedClip() {
       `🔪 开始裁剪时间轴项目: ${mediaItem?.name || '未知'} (ID: ${videoStore.selectedTimelineItemId})`,
     )
     console.log(`📍 裁剪时间位置: ${videoStore.currentTime.toFixed(2)}s`)
-    await videoStore.splitTimelineItemAtTime(
-      videoStore.selectedTimelineItemId,
-      videoStore.currentTime,
-    )
+
+    try {
+      // 使用带历史记录的分割方法
+      await videoStore.splitTimelineItemAtTimeWithHistory(
+        videoStore.selectedTimelineItemId,
+        videoStore.currentTime,
+      )
+      console.log('✅ 时间轴项目分割成功')
+    } catch (error) {
+      console.error('❌ 分割时间轴项目失败:', error)
+      // 如果历史记录分割失败，回退到直接分割
+      await videoStore.splitTimelineItemAtTime(
+        videoStore.selectedTimelineItemId,
+        videoStore.currentTime,
+      )
+    }
   }
 }
 

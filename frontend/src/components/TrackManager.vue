@@ -121,7 +121,7 @@ function removeTrack(trackId: number) {
     return
   }
 
-  if (confirm('确定要删除这个轨道吗？轨道上的所有片段将移动到第一个轨道。')) {
+  if (confirm('确定要删除这个轨道吗？轨道上的所有片段也将被删除。')) {
     videoStore.removeTrack(trackId)
   }
 }

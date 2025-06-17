@@ -716,3 +716,335 @@ export class UpdateTransformCommand implements SimpleCommand {
     timelineItem.timeRange = sprite.getTimeRange()
   }
 }
+
+/**
+ * 分割时间轴项目命令
+ * 支持分割时间轴项目的撤销/重做操作
+ * 遵循"从源头重建"原则：保存完整的重建元数据，撤销时从原始素材重新创建
+ */
+export class SplitTimelineItemCommand implements SimpleCommand {
+  public readonly id: string
+  public readonly description: string
+  private originalTimelineItemData: any // 保存原始项目的重建数据
+  private firstItemId: string // 分割后第一个项目的ID
+  private secondItemId: string // 分割后第二个项目的ID
+
+  constructor(
+    private originalTimelineItemId: string,
+    originalTimelineItem: TimelineItem, // 要分割的原始时间轴项目
+    private splitTime: number, // 分割时间点（秒）
+    private timelineModule: {
+      addTimelineItem: (item: TimelineItem) => void
+      removeTimelineItem: (id: string) => void
+      getTimelineItem: (id: string) => TimelineItem | undefined
+    },
+    private webavModule: {
+      addSprite: (sprite: unknown) => void
+      removeSprite: (sprite: unknown) => void
+    },
+    private mediaModule: {
+      getMediaItem: (id: string) => MediaItem | undefined
+    }
+  ) {
+    this.id = generateCommandId()
+
+    const mediaItem = this.mediaModule.getMediaItem(originalTimelineItem.mediaItemId)
+    this.description = `分割时间轴项目: ${mediaItem?.name || '未知素材'} (在 ${splitTime.toFixed(2)}s)`
+
+    // 🎯 关键：保存原始项目的完整重建元数据
+    this.originalTimelineItemData = {
+      id: originalTimelineItem.id,
+      mediaItemId: originalTimelineItem.mediaItemId,
+      trackId: originalTimelineItem.trackId,
+      mediaType: originalTimelineItem.mediaType,
+      // 深拷贝时间范围信息
+      timeRange: {
+        timelineStartTime: originalTimelineItem.timeRange.timelineStartTime,
+        timelineEndTime: originalTimelineItem.timeRange.timelineEndTime,
+        ...(originalTimelineItem.mediaType === 'video' && 'clipStartTime' in originalTimelineItem.timeRange ? {
+          clipStartTime: originalTimelineItem.timeRange.clipStartTime,
+          clipEndTime: originalTimelineItem.timeRange.clipEndTime,
+          playbackRate: originalTimelineItem.timeRange.playbackRate,
+          effectiveDuration: originalTimelineItem.timeRange.effectiveDuration,
+        } : {}),
+      },
+      // 深拷贝变换属性
+      position: {
+        x: originalTimelineItem.position.x,
+        y: originalTimelineItem.position.y,
+      },
+      size: {
+        width: originalTimelineItem.size.width,
+        height: originalTimelineItem.size.height,
+      },
+      rotation: originalTimelineItem.rotation,
+      zIndex: originalTimelineItem.zIndex,
+      opacity: originalTimelineItem.opacity,
+      thumbnailUrl: originalTimelineItem.thumbnailUrl,
+    }
+
+    // 生成分割后项目的ID
+    this.firstItemId = Date.now().toString() + Math.random().toString(36).substring(2, 11)
+    this.secondItemId = Date.now().toString() + Math.random().toString(36).substring(2, 11)
+
+    console.log('💾 保存分割项目的重建数据:', {
+      originalId: this.originalTimelineItemData.id,
+      mediaItemId: this.originalTimelineItemData.mediaItemId,
+      mediaType: this.originalTimelineItemData.mediaType,
+      splitTime,
+      timeRange: this.originalTimelineItemData.timeRange,
+      firstItemId: this.firstItemId,
+      secondItemId: this.secondItemId,
+    })
+  }
+
+  /**
+   * 从原始素材重建分割后的两个sprite和timelineItem
+   * 遵循"从源头重建"原则，每次都完全重新创建
+   */
+  private async rebuildSplitItems(): Promise<{ firstItem: TimelineItem; secondItem: TimelineItem }> {
+    console.log('🔄 开始从源头重建分割后的时间轴项目...')
+
+    // 1. 获取原始素材
+    const mediaItem = this.mediaModule.getMediaItem(this.originalTimelineItemData.mediaItemId)
+    if (!mediaItem) {
+      throw new Error(`原始素材不存在: ${this.originalTimelineItemData.mediaItemId}`)
+    }
+
+    if (!mediaItem.isReady || !mediaItem.mp4Clip) {
+      throw new Error(`素材尚未解析完成或不是视频: ${mediaItem.name}`)
+    }
+
+    // 2. 计算分割点的时间信息
+    const originalTimeRange = this.originalTimelineItemData.timeRange
+    const timelineStartTime = originalTimeRange.timelineStartTime / 1000000 // 转换为秒
+    const timelineEndTime = originalTimeRange.timelineEndTime / 1000000 // 转换为秒
+    const clipStartTime = originalTimeRange.clipStartTime / 1000000 // 转换为秒
+    const clipEndTime = originalTimeRange.clipEndTime / 1000000 // 转换为秒
+
+    // 计算分割点在素材中的相对位置
+    const timelineDuration = timelineEndTime - timelineStartTime
+    const relativeTimelineTime = this.splitTime - timelineStartTime
+    const relativeRatio = relativeTimelineTime / timelineDuration
+    const clipDuration = clipEndTime - clipStartTime
+    const splitClipTime = clipStartTime + clipDuration * relativeRatio
+
+    // 3. 从原始素材重新创建两个sprite
+    const webAVControls = useWebAVControls()
+    const firstClonedClip = await webAVControls.cloneMP4Clip(mediaItem.mp4Clip)
+    const secondClonedClip = await webAVControls.cloneMP4Clip(mediaItem.mp4Clip)
+
+    const firstSprite = new CustomVisibleSprite(firstClonedClip)
+    firstSprite.setTimeRange({
+      clipStartTime: clipStartTime * 1000000,
+      clipEndTime: splitClipTime * 1000000,
+      timelineStartTime: timelineStartTime * 1000000,
+      timelineEndTime: this.splitTime * 1000000,
+    })
+
+    const secondSprite = new CustomVisibleSprite(secondClonedClip)
+    secondSprite.setTimeRange({
+      clipStartTime: splitClipTime * 1000000,
+      clipEndTime: clipEndTime * 1000000,
+      timelineStartTime: this.splitTime * 1000000,
+      timelineEndTime: timelineEndTime * 1000000,
+    })
+
+    // 4. 应用变换属性到两个sprite
+    const applyTransformToSprite = (sprite: CustomVisibleSprite) => {
+      sprite.rect.x = this.originalTimelineItemData.position.x
+      sprite.rect.y = this.originalTimelineItemData.position.y
+      sprite.rect.w = this.originalTimelineItemData.size.width
+      sprite.rect.h = this.originalTimelineItemData.size.height
+      sprite.rect.angle = this.originalTimelineItemData.rotation
+      sprite.zIndex = this.originalTimelineItemData.zIndex
+      sprite.opacity = this.originalTimelineItemData.opacity
+    }
+
+    applyTransformToSprite(firstSprite)
+    applyTransformToSprite(secondSprite)
+
+    // 5. 创建新的TimelineItem
+    const firstItem: TimelineItem = reactive({
+      id: this.firstItemId,
+      mediaItemId: this.originalTimelineItemData.mediaItemId,
+      trackId: this.originalTimelineItemData.trackId,
+      mediaType: this.originalTimelineItemData.mediaType,
+      timeRange: firstSprite.getTimeRange(),
+      sprite: markRaw(firstSprite),
+      thumbnailUrl: this.originalTimelineItemData.thumbnailUrl,
+      position: {
+        x: this.originalTimelineItemData.position.x,
+        y: this.originalTimelineItemData.position.y,
+      },
+      size: {
+        width: this.originalTimelineItemData.size.width,
+        height: this.originalTimelineItemData.size.height,
+      },
+      rotation: this.originalTimelineItemData.rotation,
+      zIndex: this.originalTimelineItemData.zIndex,
+      opacity: this.originalTimelineItemData.opacity,
+    })
+
+    const secondItem: TimelineItem = reactive({
+      id: this.secondItemId,
+      mediaItemId: this.originalTimelineItemData.mediaItemId,
+      trackId: this.originalTimelineItemData.trackId,
+      mediaType: this.originalTimelineItemData.mediaType,
+      timeRange: secondSprite.getTimeRange(),
+      sprite: markRaw(secondSprite),
+      thumbnailUrl: this.originalTimelineItemData.thumbnailUrl,
+      position: {
+        x: this.originalTimelineItemData.position.x,
+        y: this.originalTimelineItemData.position.y,
+      },
+      size: {
+        width: this.originalTimelineItemData.size.width,
+        height: this.originalTimelineItemData.size.height,
+      },
+      rotation: this.originalTimelineItemData.rotation,
+      zIndex: this.originalTimelineItemData.zIndex,
+      opacity: this.originalTimelineItemData.opacity,
+    })
+
+    console.log('🔄 重建分割项目完成:', {
+      firstItemId: firstItem.id,
+      secondItemId: secondItem.id,
+      splitTime: this.splitTime,
+      firstTimeRange: firstItem.timeRange,
+      secondTimeRange: secondItem.timeRange,
+    })
+
+    return { firstItem, secondItem }
+  }
+
+  /**
+   * 从原始素材重建原始项目
+   * 用于撤销分割操作
+   */
+  private async rebuildOriginalItem(): Promise<TimelineItem> {
+    console.log('🔄 开始从源头重建原始时间轴项目...')
+
+    // 1. 获取原始素材
+    const mediaItem = this.mediaModule.getMediaItem(this.originalTimelineItemData.mediaItemId)
+    if (!mediaItem) {
+      throw new Error(`原始素材不存在: ${this.originalTimelineItemData.mediaItemId}`)
+    }
+
+    if (!mediaItem.isReady || !mediaItem.mp4Clip) {
+      throw new Error(`素材尚未解析完成或不是视频: ${mediaItem.name}`)
+    }
+
+    // 2. 从原始素材重新创建sprite
+    const webAVControls = useWebAVControls()
+    const clonedMP4Clip = await webAVControls.cloneMP4Clip(mediaItem.mp4Clip)
+    const newSprite = new CustomVisibleSprite(clonedMP4Clip)
+
+    // 3. 设置原始时间范围
+    newSprite.setTimeRange(this.originalTimelineItemData.timeRange)
+
+    // 4. 应用变换属性
+    newSprite.rect.x = this.originalTimelineItemData.position.x
+    newSprite.rect.y = this.originalTimelineItemData.position.y
+    newSprite.rect.w = this.originalTimelineItemData.size.width
+    newSprite.rect.h = this.originalTimelineItemData.size.height
+    newSprite.rect.angle = this.originalTimelineItemData.rotation
+    newSprite.zIndex = this.originalTimelineItemData.zIndex
+    newSprite.opacity = this.originalTimelineItemData.opacity
+
+    // 5. 创建新的TimelineItem
+    const newTimelineItem: TimelineItem = reactive({
+      id: this.originalTimelineItemData.id,
+      mediaItemId: this.originalTimelineItemData.mediaItemId,
+      trackId: this.originalTimelineItemData.trackId,
+      mediaType: this.originalTimelineItemData.mediaType,
+      timeRange: newSprite.getTimeRange(),
+      sprite: markRaw(newSprite),
+      thumbnailUrl: this.originalTimelineItemData.thumbnailUrl,
+      position: {
+        x: this.originalTimelineItemData.position.x,
+        y: this.originalTimelineItemData.position.y,
+      },
+      size: {
+        width: this.originalTimelineItemData.size.width,
+        height: this.originalTimelineItemData.size.height,
+      },
+      rotation: this.originalTimelineItemData.rotation,
+      zIndex: this.originalTimelineItemData.zIndex,
+      opacity: this.originalTimelineItemData.opacity,
+    })
+
+    console.log('🔄 重建原始项目完成:', {
+      id: newTimelineItem.id,
+      mediaType: mediaItem.mediaType,
+      timeRange: this.originalTimelineItemData.timeRange,
+    })
+
+    return newTimelineItem
+  }
+
+  /**
+   * 执行命令：分割时间轴项目
+   */
+  async execute(): Promise<void> {
+    try {
+      // 检查原始项目是否存在
+      const originalItem = this.timelineModule.getTimelineItem(this.originalTimelineItemId)
+      if (!originalItem) {
+        console.warn(`⚠️ 原始时间轴项目不存在，无法分割: ${this.originalTimelineItemId}`)
+        return
+      }
+
+      // 从原始素材重新创建分割后的两个项目
+      const { firstItem, secondItem } = await this.rebuildSplitItems()
+
+      // 1. 删除原始项目
+      this.timelineModule.removeTimelineItem(this.originalTimelineItemId)
+
+      // 2. 添加分割后的两个项目
+      this.timelineModule.addTimelineItem(firstItem)
+      this.timelineModule.addTimelineItem(secondItem)
+
+      // 3. 添加sprite到WebAV画布
+      this.webavModule.addSprite(firstItem.sprite)
+      this.webavModule.addSprite(secondItem.sprite)
+
+      const mediaItem = this.mediaModule.getMediaItem(this.originalTimelineItemData.mediaItemId)
+      console.log(`🔪 已分割时间轴项目: ${mediaItem?.name || '未知素材'} 在 ${this.splitTime.toFixed(2)}s`)
+    } catch (error) {
+      const mediaItem = this.mediaModule.getMediaItem(this.originalTimelineItemData.mediaItemId)
+      console.error(`❌ 分割时间轴项目失败: ${mediaItem?.name || '未知素材'}`, error)
+      throw error
+    }
+  }
+
+  /**
+   * 撤销命令：恢复原始项目，删除分割后的项目
+   * 遵循"从源头重建"原则，从原始素材完全重新创建
+   */
+  async undo(): Promise<void> {
+    try {
+      console.log(`🔄 撤销分割操作：重建原始时间轴项目...`)
+
+      // 1. 删除分割后的两个项目
+      this.timelineModule.removeTimelineItem(this.firstItemId)
+      this.timelineModule.removeTimelineItem(this.secondItemId)
+
+      // 2. 从原始素材重新创建原始项目
+      const originalItem = await this.rebuildOriginalItem()
+
+      // 3. 添加原始项目到时间轴
+      this.timelineModule.addTimelineItem(originalItem)
+
+      // 4. 添加sprite到WebAV画布
+      this.webavModule.addSprite(originalItem.sprite)
+
+      const mediaItem = this.mediaModule.getMediaItem(this.originalTimelineItemData.mediaItemId)
+      console.log(`↩️ 已撤销分割时间轴项目: ${mediaItem?.name || '未知素材'}`)
+    } catch (error) {
+      const mediaItem = this.mediaModule.getMediaItem(this.originalTimelineItemData.mediaItemId)
+      console.error(`❌ 撤销分割时间轴项目失败: ${mediaItem?.name || '未知素材'}`, error)
+      throw error
+    }
+  }
+}

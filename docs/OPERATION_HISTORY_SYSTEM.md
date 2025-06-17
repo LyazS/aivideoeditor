@@ -193,10 +193,97 @@ class UpdateTransformCommand implements SimpleCommand {
 - ✅ 属性面板操作使用带历史记录的更新方法
 - ✅ 视频支持时长和倍速的撤销/重做
 - ✅ 图片支持时长的撤销/重做
+- ✅ 支持视频裁剪操作的撤销/重做
 
 ---
 
-### 阶段5：添加命令合并功能（1-2天）
+### 阶段5：完善所有核心操作支持（2-3天）
+
+**目标**: 支持所有核心编辑操作的撤销/重做
+
+#### 实现内容
+
+##### 🔥 高优先级操作
+- [ ] **DuplicateTimelineItemCommand** - 复制时间轴项目
+- [ ] **AddTrackCommand** - 添加轨道
+- [ ] **RemoveTrackCommand** - 删除轨道
+- [ ] **AutoArrangeTrackCommand** - 单轨道自动排列
+
+##### 🟡 中优先级操作
+- [ ] **RenameTrackCommand** - 重命名轨道
+- [ ] **ToggleTrackVisibilityCommand** - 切换轨道可见性
+- [ ] **ToggleTrackMuteCommand** - 切换轨道静音
+- [ ] **ResizeTimelineItemCommand** - 时间范围调整（拖拽边缘）
+
+##### 🟢 低优先级操作
+- [ ] **SetVideoResolutionCommand** - 修改视频分辨率
+- [ ] **SetFrameRateCommand** - 修改帧率
+- [ ] **RenameMediaItemCommand** - 重命名素材
+
+#### 🚫 明确不支持的操作
+- **删除素材** - 用警告对话框替代，显示受影响的时间轴项目数量
+- **修改时间轴总时长** - 应基于内容自动计算，不需要手动修改
+- **调整轨道高度** - 纯UI布局操作，不影响项目内容
+
+#### 技术方案
+```typescript
+// 复制操作示例
+class DuplicateTimelineItemCommand implements SimpleCommand {
+  constructor(
+    private originalItemId: string,
+    private newItemData: TimelineItemData,
+    private timelineModule: any,
+    private webavModule: any
+  ) {}
+
+  async execute(): Promise<void> {
+    // 从原始素材创建新的sprite和TimelineItem
+    const newItem = await this.rebuildDuplicatedItem()
+    this.timelineModule.addTimelineItem(newItem)
+    this.webavModule.addSprite(newItem.sprite)
+  }
+
+  async undo(): Promise<void> {
+    // 删除复制的项目
+    this.timelineModule.removeTimelineItem(this.newItemData.id)
+  }
+}
+
+// 轨道管理操作示例
+class RemoveTrackCommand implements SimpleCommand {
+  constructor(
+    private trackId: number,
+    private trackData: TrackData,
+    private affectedItems: TimelineItemData[], // 保存被删除的项目信息
+    private trackModule: any,
+    private timelineModule: any
+  ) {}
+
+  async execute(): Promise<void> {
+    // 删除轨道，连带删除该轨道上的所有时间轴项目
+    this.trackModule.removeTrack(this.trackId)
+  }
+
+  async undo(): Promise<void> {
+    // 重建轨道
+    this.trackModule.addTrack(this.trackData)
+    // 重建被删除的时间轴项目
+    for (const itemData of this.affectedItems) {
+      await this.timelineModule.rebuildTimelineItem(itemData)
+    }
+  }
+}
+```
+
+#### 验证标准
+- [ ] 所有高优先级操作都支持撤销/重做
+- [ ] 操作描述清晰，用户能理解每个历史记录
+- [ ] 复杂操作（如轨道删除）正确处理依赖关系
+- [ ] 性能良好，不影响编辑流畅度
+
+---
+
+### 阶段6：添加命令合并功能（1-2天）
 
 **目标**: 实现连续相同操作的合并
 
@@ -238,7 +325,7 @@ class UpdateTransformCommand implements Command {
 
 ---
 
-### 阶段6：添加依赖验证（1天）
+### 阶段7：添加依赖验证（1天）
 
 **目标**: 处理素材删除对历史记录的影响
 
@@ -275,31 +362,6 @@ undo(): boolean {
 - ✅ 删除素材后，相关历史操作不能执行
 - ✅ 给出清晰的错误提示信息
 - ✅ UI按钮状态正确反映操作可用性
-
----
-
-### 阶段7：完善所有操作类型（2-3天）
-
-**目标**: 支持所有用户操作的撤销/重做
-
-#### 实现内容
-- [ ] 实现轨道管理相关命令
-  - [ ] AddTrackCommand
-  - [ ] RemoveTrackCommand  
-  - [ ] RenameTrackCommand
-  - [ ] ToggleTrackVisibilityCommand
-- [ ] 实现素材管理相关命令
-  - [ ] AddMediaItemCommand
-  - [ ] RemoveMediaItemCommand
-  - [ ] RenameMediaItemCommand
-- [ ] 实现复杂操作命令
-  - [ ] SplitTimelineItemCommand
-  - [ ] UpdatePlaybackSpeedCommand
-
-#### 验证标准
-- ✅ 所有主要用户操作都支持撤销/重做
-- ✅ 复杂操作（如分割）的撤销逻辑正确
-- ✅ 系统稳定性不受影响
 
 ---
 
@@ -446,9 +508,9 @@ const addTimelineItemWithHistory = async (timelineItem: TimelineItem) => {
 | 2 | 删除操作支持 | 1天 | ✅ 已完成 | 2025-06-17 |
 | 3 | 移动操作支持 | 1天 | ✅ 已完成 | 2025-06-17 |
 | 4 | 属性变更支持 | 2天 | ✅ 已完成 | 2025-06-17 |
-| 5 | 命令合并功能 | 1-2天 | 🟡 计划中 | - |
-| 6 | 依赖验证 | 1天 | ⚪ 待开始 | - |
-| 7 | 完整操作支持 | 2-3天 | ⚪ 待开始 | - |
+| 5 | 完善所有核心操作支持 | 2-3天 | 🟡 计划中 | - |
+| 6 | 命令合并功能 | 1-2天 | ⚪ 待开始 | - |
+| 7 | 依赖验证 | 1天 | ⚪ 待开始 | - |
 | 8 | 性能优化 | 1-2天 | ⚪ 待开始 | - |
 
 **总计预估时间**: 9-13天
@@ -658,6 +720,8 @@ const addTimelineItemWithHistory = async (timelineItem: TimelineItem) => {
 - ✅ **UI集成**：修改了PropertiesPanel.vue中的属性更新逻辑
 - ✅ **videoStore集成**：添加了updateTimelineItemTransformWithHistory方法
 - ✅ **时长和倍速支持**：扩展支持视频的时长和倍速，图片的时长撤销/重做
+- ✅ **SplitTimelineItemCommand类实现**：完整实现了视频裁剪操作的命令类
+- ✅ **裁剪操作集成**：修改了ClipManagementToolbar.vue中的裁剪逻辑
 
 #### 关键技术实现
 
@@ -741,6 +805,43 @@ const addTimelineItemWithHistory = async (timelineItem: TimelineItem) => {
    }
    ```
 
+6. **裁剪操作的复杂重建逻辑**
+   ```typescript
+   // 裁剪操作需要保存原始项目的完整信息，撤销时重建原始项目
+   class SplitTimelineItemCommand implements SimpleCommand {
+     constructor(
+       private originalTimelineItemId: string,
+       originalTimelineItem: TimelineItem,
+       private splitTime: number
+     ) {
+       // 保存原始项目的完整重建元数据
+       this.originalTimelineItemData = {
+         id: originalTimelineItem.id,
+         mediaItemId: originalTimelineItem.mediaItemId,
+         timeRange: { ...originalTimelineItem.timeRange },
+         position: { ...originalTimelineItem.position },
+         // ... 所有属性的深拷贝
+       }
+     }
+
+     async execute(): Promise<void> {
+       // 执行分割：删除原始项目，创建两个新项目
+       const { firstItem, secondItem } = await this.rebuildSplitItems()
+       this.timelineModule.removeTimelineItem(this.originalTimelineItemId)
+       this.timelineModule.addTimelineItem(firstItem)
+       this.timelineModule.addTimelineItem(secondItem)
+     }
+
+     async undo(): Promise<void> {
+       // 撤销分割：删除分割后的项目，重建原始项目
+       this.timelineModule.removeTimelineItem(this.firstItemId)
+       this.timelineModule.removeTimelineItem(this.secondItemId)
+       const originalItem = await this.rebuildOriginalItem()
+       this.timelineModule.addTimelineItem(originalItem)
+     }
+   }
+   ```
+
 #### 验证结果
 - ✅ 属性面板中的所有变换属性修改都可以撤销/重做
 - ✅ 支持位置、大小、旋转、透明度、层级、时长、倍速等所有属性类型
@@ -749,6 +850,129 @@ const addTimelineItemWithHistory = async (timelineItem: TimelineItem) => {
 - ✅ UI操作流畅，用户体验良好
 - ✅ 视频的时长和倍速修改可以正确撤销/重做
 - ✅ 图片的时长修改可以正确撤销/重做
+- ✅ 视频裁剪操作可以正确撤销/重做，完整恢复原始项目
+- ✅ 裁剪操作遵循"从源头重建"原则，确保数据一致性
+
+---
+
+## 📋 完整操作支持规划
+
+### ✅ 已支持的操作
+1. **AddTimelineItemCommand** - 添加时间轴项目
+2. **RemoveTimelineItemCommand** - 删除时间轴项目
+3. **MoveTimelineItemCommand** - 移动时间轴项目（位置和轨道）
+4. **UpdateTransformCommand** - 更新变换属性（位置、大小、旋转、透明度、层级、时长、倍速）
+5. **SplitTimelineItemCommand** - 分割时间轴项目（裁剪操作）
+
+### 🔥 待实现的高优先级操作
+
+#### 1. DuplicateTimelineItemCommand - 复制时间轴项目
+- **触发位置**: VideoClip.vue右键菜单"复制"选项
+- **实现复杂度**: 中等
+- **技术要点**:
+  - 从原始素材重新创建sprite
+  - 生成新的唯一ID
+  - 复制所有变换属性
+  - 自动调整位置避免重叠
+
+#### 2. AddTrackCommand - 添加轨道
+- **触发位置**: Timeline.vue"添加轨道"按钮
+- **实现复杂度**: 简单
+- **技术要点**:
+  - 保存新轨道的配置信息
+  - 撤销时删除轨道及其所有项目
+
+#### 3. RemoveTrackCommand - 删除轨道
+- **触发位置**: Timeline.vue轨道删除按钮
+- **实现复杂度**: 复杂
+- **技术要点**:
+  - 保存轨道信息和所有项目信息
+  - 处理项目重新分配到其他轨道
+  - 撤销时完整恢复轨道和项目
+
+#### 4. AutoArrangeTrackCommand - 单轨道自动排列
+- **触发位置**: Timeline.vue每个轨道的自动排列按钮
+- **实现复杂度**: 中等
+- **技术要点**:
+  - 保存排列前所有项目的位置信息
+  - 撤销时恢复原始位置
+
+### 🟡 待实现的中优先级操作
+
+#### 5. RenameTrackCommand - 重命名轨道
+- **触发位置**: Timeline.vue轨道名称编辑
+- **实现复杂度**: 简单
+- **技术要点**: 保存旧名称和新名称
+
+#### 6. ToggleTrackVisibilityCommand - 切换轨道可见性
+- **触发位置**: Timeline.vue轨道可见性按钮
+- **实现复杂度**: 简单
+- **技术要点**: 保存可见性状态
+
+#### 7. ToggleTrackMuteCommand - 切换轨道静音
+- **触发位置**: Timeline.vue轨道静音按钮
+- **实现复杂度**: 简单
+- **技术要点**: 保存静音状态
+
+#### 8. ResizeTimelineItemCommand - 时间范围调整
+- **触发位置**: VideoClip.vue拖拽边缘调整长度
+- **实现复杂度**: 中等
+- **技术要点**:
+  - 保存调整前的时间范围
+  - 处理clipStartTime和clipEndTime的变化
+
+### 🟢 待实现的低优先级操作
+
+#### 9. SetVideoResolutionCommand - 修改视频分辨率
+- **触发位置**: 配置面板
+- **实现复杂度**: 中等
+- **技术要点**: 影响所有sprite的坐标系统
+
+#### 10. SetFrameRateCommand - 修改帧率
+- **触发位置**: 配置面板
+- **实现复杂度**: 简单
+- **技术要点**: 保存帧率设置
+
+#### 11. RenameMediaItemCommand - 重命名素材
+- **触发位置**: 素材库素材名称编辑
+- **实现复杂度**: 简单
+- **技术要点**: 保存旧名称和新名称
+
+### 🚫 明确不支持的操作及原因
+
+#### 1. 删除素材操作
+- **原因**: 删除素材会影响多个时间轴项目，撤销逻辑过于复杂
+- **替代方案**: 删除前显示警告对话框，告知用户会影响哪些时间轴项目
+- **实现建议**:
+  ```typescript
+  // 在删除确认对话框中显示
+  const affectedItems = getTimelineItemsByMediaId(mediaItemId)
+  const message = `删除此素材将影响 ${affectedItems.length} 个时间轴项目，确定要删除吗？`
+  ```
+
+#### 2. 修改时间轴总时长
+- **原因**: 时间轴总时长应该根据内容自动调整，不应该手动修改
+- **替代方案**: 基于最后一个时间轴项目的结束时间自动计算
+- **实现建议**: 移除手动设置功能，改为自动计算
+
+#### 3. 调整轨道高度
+- **原因**: 这是纯粹的界面布局调整，不影响项目内容
+- **替代方案**: 保持当前实现，不需要撤销功能
+- **实现建议**: 继续作为即时生效的UI操作
+
+### 📊 实现优先级建议
+
+1. **第一批**: DuplicateTimelineItemCommand, AddTrackCommand, RemoveTrackCommand
+   - 这些是用户最常用的操作
+   - 实现后可以覆盖大部分编辑场景
+
+2. **第二批**: AutoArrangeTrackCommand, RenameTrackCommand, ToggleTrackVisibilityCommand, ToggleTrackMuteCommand
+   - 完善轨道管理功能
+   - 提升用户体验
+
+3. **第三批**: ResizeTimelineItemCommand, SetVideoResolutionCommand, SetFrameRateCommand, RenameMediaItemCommand
+   - 补充完整性
+   - 根据用户反馈决定是否实现
 
 ---
 

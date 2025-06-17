@@ -44,9 +44,14 @@ export function createTrackModule() {
   /**
    * 删除轨道
    * @param trackId 要删除的轨道ID
-   * @param timelineItems 时间轴项目引用（用于重新分配轨道）
+   * @param timelineItems 时间轴项目引用（用于删除该轨道上的所有项目）
+   * @param removeTimelineItemCallback 删除时间轴项目的回调函数
    */
-  function removeTrack(trackId: number, timelineItems: Ref<TimelineItem[]>) {
+  function removeTrack(
+    trackId: number,
+    timelineItems: Ref<TimelineItem[]>,
+    removeTimelineItemCallback?: (timelineItemId: string) => void
+  ) {
     // 不能删除最后一个轨道
     if (tracks.value.length <= 1) {
       console.warn('⚠️ 不能删除最后一个轨道')
@@ -59,12 +64,14 @@ export function createTrackModule() {
       return
     }
 
-    // 将该轨道的所有时间轴项目移动到第一个轨道
-    const firstTrackId = tracks.value[0].id
+    // 找到该轨道上的所有时间轴项目并删除它们
     const affectedItems = timelineItems.value.filter((item) => item.trackId === trackId)
 
+    // 删除该轨道上的所有时间轴项目
     affectedItems.forEach((item) => {
-      item.trackId = firstTrackId
+      if (removeTimelineItemCallback) {
+        removeTimelineItemCallback(item.id)
+      }
     })
 
     // 删除轨道
@@ -76,7 +83,7 @@ export function createTrackModule() {
     console.log('🗑️ 删除轨道:', {
       removedTrackId: trackId,
       removedTrackName: trackToRemove.name,
-      affectedItemsCount: affectedItems.length,
+      deletedItemsCount: affectedItems.length,
       remainingTracks: tracks.value.length,
     })
   }
