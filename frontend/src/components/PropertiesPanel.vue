@@ -511,45 +511,69 @@ const updateClipName = () => {
   }
 }
 
-// 更新播放速度（仅对视频有效）
-const updatePlaybackRate = (newRate?: number) => {
+// 更新播放速度（仅对视频有效）- 使用带历史记录的方法
+const updatePlaybackRate = async (newRate?: number) => {
   if (selectedTimelineItem.value && selectedTimelineItem.value.mediaType === 'video') {
     const rate = newRate || playbackRate.value
-    videoStore.updateTimelineItemPlaybackRate(selectedTimelineItem.value.id, rate)
-    // targetDuration 现在是 computed 属性，会自动更新
+
+    try {
+      // 使用带历史记录的变换属性更新方法
+      await videoStore.updateTimelineItemTransformWithHistory(selectedTimelineItem.value.id, {
+        playbackRate: rate
+      })
+      console.log('✅ 倍速更新成功')
+    } catch (error) {
+      console.error('❌ 更新倍速失败:', error)
+      // 如果历史记录更新失败，回退到直接更新
+      videoStore.updateTimelineItemPlaybackRate(selectedTimelineItem.value.id, rate)
+    }
   }
 }
 
-// 更新目标时长
-const updateTargetDuration = (newTargetDuration: number) => {
+// 更新目标时长 - 使用带历史记录的方法
+const updateTargetDuration = async (newTargetDuration: number) => {
   if (
     !isNaN(newTargetDuration) &&
     newTargetDuration > 0 &&
     selectedTimelineItem.value &&
     selectedMediaItem.value
   ) {
-    const sprite = selectedTimelineItem.value.sprite
-    const timeRange = selectedTimelineItem.value.timeRange
+    try {
+      // 使用带历史记录的变换属性更新方法
+      await videoStore.updateTimelineItemTransformWithHistory(selectedTimelineItem.value.id, {
+        duration: newTargetDuration
+      })
+      console.log('✅ 时长更新成功')
+    } catch (error) {
+      console.error('❌ 更新时长失败:', error)
+      // 如果历史记录更新失败，回退到直接更新
+      const sprite = selectedTimelineItem.value.sprite
+      const timeRange = selectedTimelineItem.value.timeRange
 
-    // 对于视频，计算新的播放速度：原始时长 / 目标时长
-    if (selectedTimelineItem.value.mediaType === 'video') {
-      const newPlaybackRate = selectedMediaItem.value.duration / newTargetDuration
-      // 确保播放速度在合理范围内（0.1-100x）
-      const clampedRate = Math.max(0.1, Math.min(100, newPlaybackRate))
+      // 对于视频，直接更新时间范围
+      if (selectedTimelineItem.value.mediaType === 'video') {
+        // 更新CustomVisibleSprite的时间范围
+        const newTimelineEndTime = timeRange.timelineStartTime + newTargetDuration * 1000000
 
-      // 更新CustomVisibleSprite的时间范围
-      const newTimelineEndTime = timeRange.timelineStartTime + newTargetDuration * 1000000
-
-      // 根据媒体类型设置不同的时间范围
-      if (isVideoTimeRange(timeRange)) {
-        sprite.setTimeRange({
-          clipStartTime: timeRange.clipStartTime,
-          clipEndTime: timeRange.clipEndTime,
-          timelineStartTime: timeRange.timelineStartTime,
-          timelineEndTime: newTimelineEndTime,
-        })
-      } else {
-        // 图片类型
+        // 根据媒体类型设置不同的时间范围
+        if (isVideoTimeRange(timeRange)) {
+          sprite.setTimeRange({
+            clipStartTime: timeRange.clipStartTime,
+            clipEndTime: timeRange.clipEndTime,
+            timelineStartTime: timeRange.timelineStartTime,
+            timelineEndTime: newTimelineEndTime,
+          })
+        } else {
+          // 图片类型
+          sprite.setTimeRange({
+            timelineStartTime: timeRange.timelineStartTime,
+            timelineEndTime: newTimelineEndTime,
+            displayDuration: newTargetDuration * 1000000,
+          })
+        }
+      } else if (selectedTimelineItem.value.mediaType === 'image') {
+        // 对于图片，直接更新显示时长
+        const newTimelineEndTime = timeRange.timelineStartTime + newTargetDuration * 1000000
         sprite.setTimeRange({
           timelineStartTime: timeRange.timelineStartTime,
           timelineEndTime: newTimelineEndTime,
@@ -557,28 +581,9 @@ const updateTargetDuration = (newTargetDuration: number) => {
         })
       }
 
-      console.log('🎯 视频目标时长更新:', {
-        inputValue: newTargetDuration,
-        newPlaybackRate: clampedRate,
-        updatedTimeRange: sprite.getTimeRange(),
-      })
-    } else if (selectedTimelineItem.value.mediaType === 'image') {
-      // 对于图片，直接更新显示时长
-      const newTimelineEndTime = timeRange.timelineStartTime + newTargetDuration * 1000000
-      sprite.setTimeRange({
-        timelineStartTime: timeRange.timelineStartTime,
-        timelineEndTime: newTimelineEndTime,
-        displayDuration: newTargetDuration * 1000000,
-      })
-
-      console.log('🎯 图片目标时长更新:', {
-        inputValue: newTargetDuration,
-        updatedTimeRange: sprite.getTimeRange(),
-      })
+      // 从sprite获取更新后的完整timeRange
+      selectedTimelineItem.value.timeRange = sprite.getTimeRange()
     }
-
-    // 从sprite获取更新后的完整timeRange
-    selectedTimelineItem.value.timeRange = sprite.getTimeRange()
   }
 }
 
@@ -627,8 +632,8 @@ const speedToNormalized = (speed: number) => {
   return 20 // 默认值对应1x
 }
 
-// 更新变换属性 - 使用新的双向同步机制
-const updateTransform = (transform?: {
+// 更新变换属性 - 使用带历史记录的方法
+const updateTransform = async (transform?: {
   position?: { x: number; y: number }
   size?: { width: number; height: number }
   rotation?: number
@@ -637,24 +642,26 @@ const updateTransform = (transform?: {
 }) => {
   if (!selectedTimelineItem.value) return
 
-  try {
-    // 如果没有提供transform参数，使用当前的响应式值
-    const finalTransform = transform || {
-      position: { x: transformX.value, y: transformY.value },
-      size: {
-        width: selectedTimelineItem.value.size.width,
-        height: selectedTimelineItem.value.size.height,
-      },
-      rotation: rotation.value,
-      opacity: opacity.value,
-      zIndex: zIndex.value,
-    }
+  // 如果没有提供transform参数，使用当前的响应式值
+  const finalTransform = transform || {
+    position: { x: transformX.value, y: transformY.value },
+    size: {
+      width: selectedTimelineItem.value.size.width,
+      height: selectedTimelineItem.value.size.height,
+    },
+    rotation: rotation.value,
+    opacity: opacity.value,
+    zIndex: zIndex.value,
+  }
 
-    // 使用videoStore的updateTimelineItemTransform方法
-    // 这会触发propsChange事件，自动同步到TimelineItem，然后更新属性面板显示
-    videoStore.updateTimelineItemTransform(selectedTimelineItem.value.id, finalTransform)
+  try {
+    // 使用带历史记录的变换属性更新方法
+    await videoStore.updateTimelineItemTransformWithHistory(selectedTimelineItem.value.id, finalTransform)
+    console.log('✅ 变换属性更新成功')
   } catch (error) {
-    console.error('更新变换属性失败:', error)
+    console.error('❌ 更新变换属性失败:', error)
+    // 如果历史记录更新失败，回退到直接更新
+    videoStore.updateTimelineItemTransform(selectedTimelineItem.value.id, finalTransform)
   }
 }
 

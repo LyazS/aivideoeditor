@@ -563,11 +563,11 @@ async function createMediaClipFromMediaItem(
       尺寸: { w: sprite.rect.w, h: sprite.rect.h },
     })
 
-    // 添加到store
+    // 添加到store（使用带历史记录的方法）
     console.log(
       `📝 添加时间轴项目: ${mediaItem.name} -> 轨道${trackId}, 位置${Math.max(0, startTime).toFixed(2)}s`,
     )
-    videoStore.addTimelineItem(timelineItem)
+    await videoStore.addTimelineItemWithHistory(timelineItem)
 
     console.log(`✅ 时间轴项目创建完成: ${timelineItem.id}`)
   } catch (error) {
@@ -576,36 +576,50 @@ async function createMediaClipFromMediaItem(
   }
 }
 
-function handleTimelineItemPositionUpdate(
+async function handleTimelineItemPositionUpdate(
   timelineItemId: string,
   newPosition: number,
   newTrackId?: number,
 ) {
-  videoStore.updateTimelineItemPosition(timelineItemId, newPosition, newTrackId)
+  try {
+    // 使用带历史记录的移动方法
+    await videoStore.moveTimelineItemWithHistory(timelineItemId, newPosition, newTrackId)
+    console.log('✅ 时间轴项目移动成功')
+  } catch (error) {
+    console.error('❌ 移动时间轴项目失败:', error)
+    // 如果历史记录移动失败，回退到直接移动
+    videoStore.updateTimelineItemPosition(timelineItemId, newPosition, newTrackId)
+  }
 }
 
-function handleTimelineItemRemove(timelineItemId: string) {
+async function handleTimelineItemRemove(timelineItemId: string) {
   try {
     const item = videoStore.getTimelineItem(timelineItemId)
     if (item) {
       const mediaItem = videoStore.getMediaItem(item.mediaItemId)
       console.log(`🗑️ 准备从时间轴删除项目: ${mediaItem?.name || '未知'} (ID: ${timelineItemId})`)
 
-      // 从WebAV画布移除CustomVisibleSprite
-      const avCanvas = webAVControls.getAVCanvas()
-      if (avCanvas) {
-        avCanvas.removeSprite(item.sprite)
-      }
-
-      // 从store中移除TimelineItem
-      videoStore.removeTimelineItem(timelineItemId)
-
+      // 使用带历史记录的删除方法
+      await videoStore.removeTimelineItemWithHistory(timelineItemId)
       console.log(`✅ 时间轴项目删除完成: ${timelineItemId}`)
     }
   } catch (error) {
-    console.error('❌ Failed to remove timeline item:', error)
-    // 即使WebAV移除失败，也要移除TimelineItem
-    videoStore.removeTimelineItem(timelineItemId)
+    console.error('❌ 删除时间轴项目失败:', error)
+    // 如果历史记录删除失败，回退到直接删除
+    try {
+      const item = videoStore.getTimelineItem(timelineItemId)
+      if (item) {
+        // 从WebAV画布移除CustomVisibleSprite
+        const avCanvas = webAVControls.getAVCanvas()
+        if (avCanvas) {
+          avCanvas.removeSprite(item.sprite)
+        }
+        // 从store中移除TimelineItem
+        videoStore.removeTimelineItem(timelineItemId)
+      }
+    } catch (fallbackError) {
+      console.error('❌ 回退删除也失败:', fallbackError)
+    }
   }
 }
 

@@ -22,7 +22,9 @@ import { createViewportModule } from './modules/viewportModule'
 import { createSelectionModule } from './modules/selectionModule'
 import { createTimelineModule } from './modules/timelineModule'
 import { createClipOperationsModule } from './modules/clipOperationsModule'
-import type { MediaItem } from '../types/videoTypes'
+import { createHistoryModule } from './modules/historyModule'
+import { AddTimelineItemCommand, RemoveTimelineItemCommand, MoveTimelineItemCommand, UpdateTransformCommand } from './modules/commands/timelineCommands'
+import type { MediaItem, TimelineItem } from '../types/videoTypes'
 
 export const useVideoStore = defineStore('video', () => {
   // 创建媒体管理模块
@@ -69,12 +71,291 @@ export const useVideoStore = defineStore('video', () => {
     trackModule,
   )
 
+  // 创建历史管理模块
+  const historyModule = createHistoryModule()
+
   // ==================== 双向数据同步函数 ====================
 
   // ==================== 素材管理方法 ====================
   // 使用媒体模块的方法，但需要包装以提供额外的依赖
   function addMediaItem(mediaItem: MediaItem) {
     mediaModule.addMediaItem(mediaItem, timelineModule.timelineItems, trackModule.tracks)
+  }
+
+  // ==================== 历史记录包装方法 ====================
+
+  /**
+   * 带历史记录的添加时间轴项目方法
+   * @param timelineItem 要添加的时间轴项目
+   */
+  async function addTimelineItemWithHistory(timelineItem: TimelineItem) {
+    const command = new AddTimelineItemCommand(
+      timelineItem,
+      {
+        addTimelineItem: timelineModule.addTimelineItem,
+        removeTimelineItem: timelineModule.removeTimelineItem,
+        getTimelineItem: timelineModule.getTimelineItem,
+      },
+      {
+        addSprite: webavModule.addSprite,
+        removeSprite: webavModule.removeSprite,
+      },
+      {
+        getMediaItem: mediaModule.getMediaItem,
+      }
+    )
+    await historyModule.executeCommand(command)
+  }
+
+  /**
+   * 带历史记录的删除时间轴项目方法
+   * @param timelineItemId 要删除的时间轴项目ID
+   */
+  async function removeTimelineItemWithHistory(timelineItemId: string) {
+    // 获取要删除的时间轴项目
+    const timelineItem = timelineModule.getTimelineItem(timelineItemId)
+    if (!timelineItem) {
+      console.warn(`⚠️ 时间轴项目不存在，无法删除: ${timelineItemId}`)
+      return
+    }
+
+    const command = new RemoveTimelineItemCommand(
+      timelineItemId,
+      timelineItem, // 传入完整的timelineItem用于保存重建数据
+      {
+        addTimelineItem: timelineModule.addTimelineItem,
+        removeTimelineItem: timelineModule.removeTimelineItem,
+        getTimelineItem: timelineModule.getTimelineItem,
+      },
+      {
+        addSprite: webavModule.addSprite,
+        removeSprite: webavModule.removeSprite,
+      },
+      {
+        getMediaItem: mediaModule.getMediaItem,
+      }
+    )
+    await historyModule.executeCommand(command)
+  }
+
+  /**
+   * 带历史记录的移动时间轴项目方法
+   * @param timelineItemId 要移动的时间轴项目ID
+   * @param newPosition 新的时间位置（秒）
+   * @param newTrackId 新的轨道ID（可选）
+   */
+  async function moveTimelineItemWithHistory(
+    timelineItemId: string,
+    newPosition: number,
+    newTrackId?: number
+  ) {
+    // 获取要移动的时间轴项目
+    const timelineItem = timelineModule.getTimelineItem(timelineItemId)
+    if (!timelineItem) {
+      console.warn(`⚠️ 时间轴项目不存在，无法移动: ${timelineItemId}`)
+      return
+    }
+
+    // 获取当前位置和轨道
+    const oldPosition = timelineItem.timeRange.timelineStartTime / 1000000 // 转换为秒
+    const oldTrackId = timelineItem.trackId
+    const finalNewTrackId = newTrackId !== undefined ? newTrackId : oldTrackId
+
+    // 检查是否有实际变化
+    const positionChanged = Math.abs(oldPosition - newPosition) > 0.001 // 允许1毫秒的误差
+    const trackChanged = oldTrackId !== finalNewTrackId
+
+    if (!positionChanged && !trackChanged) {
+      console.log('⚠️ 位置和轨道都没有变化，跳过移动操作')
+      return
+    }
+
+    const command = new MoveTimelineItemCommand(
+      timelineItemId,
+      oldPosition,
+      newPosition,
+      oldTrackId,
+      finalNewTrackId,
+      {
+        updateTimelineItemPosition: timelineModule.updateTimelineItemPosition,
+        getTimelineItem: timelineModule.getTimelineItem,
+      },
+      {
+        getMediaItem: mediaModule.getMediaItem,
+      }
+    )
+    await historyModule.executeCommand(command)
+  }
+
+  /**
+   * 带历史记录的更新变换属性方法
+   * @param timelineItemId 要更新的时间轴项目ID
+   * @param newTransform 新的变换属性
+   */
+  async function updateTimelineItemTransformWithHistory(
+    timelineItemId: string,
+    newTransform: {
+      position?: { x: number; y: number }
+      size?: { width: number; height: number }
+      rotation?: number
+      opacity?: number
+      zIndex?: number
+      duration?: number // 时长（秒）
+      playbackRate?: number // 倍速
+    }
+  ) {
+    // 获取要更新的时间轴项目
+    const timelineItem = timelineModule.getTimelineItem(timelineItemId)
+    if (!timelineItem) {
+      console.warn(`⚠️ 时间轴项目不存在，无法更新变换属性: ${timelineItemId}`)
+      return
+    }
+
+    // 获取当前的变换属性
+    const oldTransform: typeof newTransform = {}
+
+    if (newTransform.position) {
+      oldTransform.position = {
+        x: timelineItem.position.x,
+        y: timelineItem.position.y,
+      }
+    }
+
+    if (newTransform.size) {
+      oldTransform.size = {
+        width: timelineItem.size.width,
+        height: timelineItem.size.height,
+      }
+    }
+
+    if (newTransform.rotation !== undefined) {
+      oldTransform.rotation = timelineItem.rotation
+    }
+
+    if (newTransform.opacity !== undefined) {
+      oldTransform.opacity = timelineItem.opacity
+    }
+
+    if (newTransform.zIndex !== undefined) {
+      oldTransform.zIndex = timelineItem.zIndex
+    }
+
+    if (newTransform.duration !== undefined) {
+      // 计算当前时长
+      const timeRange = timelineItem.timeRange
+      const currentDuration = (timeRange.timelineEndTime - timeRange.timelineStartTime) / 1000000 // 转换为秒
+      oldTransform.duration = currentDuration
+    }
+
+    if (newTransform.playbackRate !== undefined) {
+      // 获取当前倍速（仅对视频有效）
+      if (timelineItem.mediaType === 'video' && 'playbackRate' in timelineItem.timeRange) {
+        oldTransform.playbackRate = timelineItem.timeRange.playbackRate || 1
+      } else {
+        oldTransform.playbackRate = 1 // 图片默认为1
+      }
+    }
+
+    // 检查是否有实际变化
+    const hasChanges = checkTransformChanges(oldTransform, newTransform)
+    if (!hasChanges) {
+      console.log('⚠️ 变换属性没有变化，跳过更新操作')
+      return
+    }
+
+    // 确定属性类型
+    const propertyType = determinePropertyType(newTransform)
+
+    const command = new UpdateTransformCommand(
+      timelineItemId,
+      propertyType,
+      oldTransform,
+      newTransform,
+      {
+        updateTimelineItemTransform: timelineModule.updateTimelineItemTransform,
+        getTimelineItem: timelineModule.getTimelineItem,
+      },
+      {
+        getMediaItem: mediaModule.getMediaItem,
+      },
+      {
+        updateTimelineItemPlaybackRate: clipOperationsModule.updateTimelineItemPlaybackRate,
+      }
+    )
+    await historyModule.executeCommand(command)
+  }
+
+  /**
+   * 检查变换属性是否有实际变化
+   */
+  function checkTransformChanges(
+    oldTransform: any,
+    newTransform: any
+  ): boolean {
+    // 检查位置变化
+    if (newTransform.position && oldTransform.position) {
+      const positionChanged =
+        Math.abs(oldTransform.position.x - newTransform.position.x) > 0.1 ||
+        Math.abs(oldTransform.position.y - newTransform.position.y) > 0.1
+      if (positionChanged) return true
+    }
+
+    // 检查大小变化
+    if (newTransform.size && oldTransform.size) {
+      const sizeChanged =
+        Math.abs(oldTransform.size.width - newTransform.size.width) > 0.1 ||
+        Math.abs(oldTransform.size.height - newTransform.size.height) > 0.1
+      if (sizeChanged) return true
+    }
+
+    // 检查旋转变化
+    if (newTransform.rotation !== undefined && oldTransform.rotation !== undefined) {
+      const rotationChanged = Math.abs(oldTransform.rotation - newTransform.rotation) > 0.001 // 约0.06度
+      if (rotationChanged) return true
+    }
+
+    // 检查透明度变化
+    if (newTransform.opacity !== undefined && oldTransform.opacity !== undefined) {
+      const opacityChanged = Math.abs(oldTransform.opacity - newTransform.opacity) > 0.001
+      if (opacityChanged) return true
+    }
+
+    // 检查层级变化
+    if (newTransform.zIndex !== undefined && oldTransform.zIndex !== undefined) {
+      const zIndexChanged = oldTransform.zIndex !== newTransform.zIndex
+      if (zIndexChanged) return true
+    }
+
+    // 检查时长变化
+    if (newTransform.duration !== undefined && oldTransform.duration !== undefined) {
+      const durationChanged = Math.abs(oldTransform.duration - newTransform.duration) > 0.1 // 0.1秒误差容忍
+      if (durationChanged) return true
+    }
+
+    // 检查倍速变化
+    if (newTransform.playbackRate !== undefined && oldTransform.playbackRate !== undefined) {
+      const playbackRateChanged = Math.abs(oldTransform.playbackRate - newTransform.playbackRate) > 0.01 // 0.01倍速误差容忍
+      if (playbackRateChanged) return true
+    }
+
+    return false
+  }
+
+  /**
+   * 确定属性类型
+   */
+  function determinePropertyType(transform: any): 'position' | 'size' | 'rotation' | 'opacity' | 'zIndex' | 'duration' | 'playbackRate' | 'multiple' {
+    const changedProperties = []
+
+    if (transform.position) changedProperties.push('position')
+    if (transform.size) changedProperties.push('size')
+    if (transform.rotation !== undefined) changedProperties.push('rotation')
+    if (transform.opacity !== undefined) changedProperties.push('opacity')
+    if (transform.zIndex !== undefined) changedProperties.push('zIndex')
+    if (transform.duration !== undefined) changedProperties.push('duration')
+    if (transform.playbackRate !== undefined) changedProperties.push('playbackRate')
+
+    return changedProperties.length === 1 ? changedProperties[0] as any : 'multiple'
   }
 
   function removeMediaItem(mediaItemId: string) {
@@ -272,5 +553,16 @@ export const useVideoStore = defineStore('video', () => {
     resetWebAVToDefaults: webavModule.resetToDefaults,
     addSpriteToCanvas: webavModule.addSprite,
     removeSpriteFromCanvas: webavModule.removeSprite,
+    // 历史管理方法
+    canUndo: historyModule.canUndo,
+    canRedo: historyModule.canRedo,
+    undo: historyModule.undo,
+    redo: historyModule.redo,
+    clearHistory: historyModule.clear,
+    getHistorySummary: historyModule.getHistorySummary,
+    addTimelineItemWithHistory,
+    removeTimelineItemWithHistory,
+    moveTimelineItemWithHistory,
+    updateTimelineItemTransformWithHistory,
   }
 })
