@@ -9,15 +9,15 @@ import { markRaw, reactive } from 'vue'
 /**
  * 添加时间轴项目命令
  * 支持添加时间轴项目的撤销/重做操作
+ * 采用统一重建逻辑：每次执行都从原始素材重新创建sprite
  */
 export class AddTimelineItemCommand implements SimpleCommand {
   public readonly id: string
   public readonly description: string
-  private isFirstExecution = true // 标记是否为首次执行
   private originalTimelineItemData: any // 保存原始timelineItem数据用于重建
 
   constructor(
-    private timelineItem: TimelineItem,
+    timelineItem: TimelineItem, // 注意：不再保存timelineItem引用，只保存重建数据
     private timelineModule: {
       addTimelineItem: (item: TimelineItem) => void
       removeTimelineItem: (id: string) => void
@@ -52,14 +52,23 @@ export class AddTimelineItemCommand implements SimpleCommand {
   }
 
   /**
-   * 重建sprite（用于重做时）
+   * 从原始素材重建完整的TimelineItem
+   * 统一重建逻辑：每次都从原始素材完全重新创建
    */
-  private async rebuildSprite(): Promise<void> {
+  private async rebuildTimelineItem(): Promise<TimelineItem> {
+    console.log('🔄 开始从源头重建时间轴项目...')
+
+    // 1. 获取原始素材
     const mediaItem = this.mediaModule.getMediaItem(this.originalTimelineItemData.mediaItemId)
     if (!mediaItem) {
-      throw new Error('媒体项目不存在，无法重建sprite')
+      throw new Error(`原始素材不存在: ${this.originalTimelineItemData.mediaItemId}`)
     }
 
+    if (!mediaItem.isReady) {
+      throw new Error(`素材尚未解析完成: ${mediaItem.name}`)
+    }
+
+    // 2. 从原始素材重新创建sprite
     const webAVControls = useWebAVControls()
     let newSprite: CustomVisibleSprite | ImageVisibleSprite
 
@@ -79,57 +88,72 @@ export class AddTimelineItemCommand implements SimpleCommand {
       throw new Error('不支持的媒体类型')
     }
 
-    // 恢复sprite的时间范围和变换属性
+    // 3. 设置时间范围
     newSprite.setTimeRange(this.originalTimelineItemData.timeRange)
 
-    // 恢复变换属性
-    newSprite.rect.x = this.timelineItem.sprite.rect.x
-    newSprite.rect.y = this.timelineItem.sprite.rect.y
+    // 4. 应用变换属性
+    newSprite.rect.x = this.originalTimelineItemData.position.x
+    newSprite.rect.y = this.originalTimelineItemData.position.y
     newSprite.rect.w = this.originalTimelineItemData.size.width
     newSprite.rect.h = this.originalTimelineItemData.size.height
     newSprite.rect.angle = this.originalTimelineItemData.rotation
     newSprite.zIndex = this.originalTimelineItemData.zIndex
     newSprite.opacity = this.originalTimelineItemData.opacity
 
-    // 更新timelineItem的sprite引用
-    this.timelineItem.sprite = markRaw(newSprite)
+    // 5. 创建新的TimelineItem
+    const newTimelineItem: TimelineItem = reactive({
+      id: this.originalTimelineItemData.id,
+      mediaItemId: this.originalTimelineItemData.mediaItemId,
+      trackId: this.originalTimelineItemData.trackId,
+      mediaType: this.originalTimelineItemData.mediaType,
+      timeRange: newSprite.getTimeRange(),
+      sprite: markRaw(newSprite),
+      thumbnailUrl: this.originalTimelineItemData.thumbnailUrl,
+      position: {
+        x: this.originalTimelineItemData.position.x,
+        y: this.originalTimelineItemData.position.y,
+      },
+      size: {
+        width: this.originalTimelineItemData.size.width,
+        height: this.originalTimelineItemData.size.height,
+      },
+      rotation: this.originalTimelineItemData.rotation,
+      zIndex: this.originalTimelineItemData.zIndex,
+      opacity: this.originalTimelineItemData.opacity,
+    })
 
-    console.log('🔄 重建sprite完成:', {
+    console.log('🔄 重建时间轴项目完成:', {
+      id: newTimelineItem.id,
       mediaType: mediaItem.mediaType,
       timeRange: this.originalTimelineItemData.timeRange,
       position: { x: newSprite.rect.x, y: newSprite.rect.y },
       size: { w: newSprite.rect.w, h: newSprite.rect.h }
     })
+
+    return newTimelineItem
   }
 
   /**
    * 执行命令：添加时间轴项目
+   * 统一重建逻辑：每次执行都从原始素材重新创建
    */
   async execute(): Promise<void> {
     try {
-      // 如果不是首次执行（即重做），需要重建sprite
-      if (!this.isFirstExecution) {
-        console.log(`🔄 重做操作：重建sprite...`)
-        await this.rebuildSprite()
-      }
+      console.log(`🔄 执行添加操作：从源头重建时间轴项目...`)
+
+      // 从原始素材重新创建TimelineItem和sprite
+      const newTimelineItem = await this.rebuildTimelineItem()
 
       // 1. 添加到时间轴
-      this.timelineModule.addTimelineItem(this.timelineItem)
+      this.timelineModule.addTimelineItem(newTimelineItem)
 
-      // 2. 只有在重做时才需要添加sprite到WebAV画布
-      // 首次执行时，sprite已经在Timeline.vue中添加到画布了
-      if (!this.isFirstExecution) {
-        this.webavModule.addSprite(this.timelineItem.sprite)
-        console.log(`🔄 重做时添加sprite到WebAV画布`)
-      }
+      // 2. 添加sprite到WebAV画布
+      this.webavModule.addSprite(newTimelineItem.sprite)
 
-      // 标记已经执行过一次
-      this.isFirstExecution = false
-
-      const mediaItem = this.mediaModule.getMediaItem(this.timelineItem.mediaItemId)
+      const mediaItem = this.mediaModule.getMediaItem(this.originalTimelineItemData.mediaItemId)
       console.log(`✅ 已添加时间轴项目: ${mediaItem?.name || '未知素材'}`)
     } catch (error) {
-      const mediaItem = this.mediaModule.getMediaItem(this.timelineItem.mediaItemId)
+      const mediaItem = this.mediaModule.getMediaItem(this.originalTimelineItemData.mediaItemId)
       console.error(`❌ 添加时间轴项目失败: ${mediaItem?.name || '未知素材'}`, error)
       throw error
     }
@@ -141,18 +165,18 @@ export class AddTimelineItemCommand implements SimpleCommand {
   undo(): void {
     try {
       // 检查项目是否仍然存在
-      const existingItem = this.timelineModule.getTimelineItem(this.timelineItem.id)
+      const existingItem = this.timelineModule.getTimelineItem(this.originalTimelineItemData.id)
       if (!existingItem) {
-        console.warn(`⚠️ 时间轴项目不存在，无法撤销: ${this.timelineItem.id}`)
+        console.warn(`⚠️ 时间轴项目不存在，无法撤销: ${this.originalTimelineItemData.id}`)
         return
       }
 
       // 移除时间轴项目（这会自动处理sprite的清理）
-      this.timelineModule.removeTimelineItem(this.timelineItem.id)
-      const mediaItem = this.mediaModule.getMediaItem(this.timelineItem.mediaItemId)
+      this.timelineModule.removeTimelineItem(this.originalTimelineItemData.id)
+      const mediaItem = this.mediaModule.getMediaItem(this.originalTimelineItemData.mediaItemId)
       console.log(`↩️ 已撤销添加时间轴项目: ${mediaItem?.name || '未知素材'}`)
     } catch (error) {
-      const mediaItem = this.mediaModule.getMediaItem(this.timelineItem.mediaItemId)
+      const mediaItem = this.mediaModule.getMediaItem(this.originalTimelineItemData.mediaItemId)
       console.error(`❌ 撤销添加时间轴项目失败: ${mediaItem?.name || '未知素材'}`, error)
       throw error
     }
@@ -203,7 +227,8 @@ export class RemoveTimelineItemCommand implements SimpleCommand {
         ...(timelineItem.mediaType === 'video' && 'clipStartTime' in timelineItem.timeRange ? {
           clipStartTime: timelineItem.timeRange.clipStartTime,
           clipEndTime: timelineItem.timeRange.clipEndTime,
-          playbackSpeed: timelineItem.timeRange.playbackSpeed,
+          playbackRate: timelineItem.timeRange.playbackRate,
+          effectiveDuration: timelineItem.timeRange.effectiveDuration,
         } : {}),
       },
       // 深拷贝变换属性
@@ -693,13 +718,12 @@ export class UpdateTransformCommand implements SimpleCommand {
 
     if (timelineItem.mediaType === 'video') {
       // 对于视频，通过调整倍速来实现时长变化
-      const newPlaybackRate = mediaItem.duration / newDuration
-      const clampedRate = Math.max(0.1, Math.min(100, newPlaybackRate))
+      const videoTimeRange = timeRange as import('../../../utils/VideoVisibleSprite').VideoTimeRange
 
       // 更新sprite的时间范围
       sprite.setTimeRange({
-        clipStartTime: timeRange.clipStartTime || 0,
-        clipEndTime: timeRange.clipEndTime || mediaItem.duration * 1000000,
+        clipStartTime: videoTimeRange.clipStartTime || 0,
+        clipEndTime: videoTimeRange.clipEndTime || mediaItem.duration * 1000000,
         timelineStartTime: timeRange.timelineStartTime,
         timelineEndTime: newTimelineEndTime,
       })

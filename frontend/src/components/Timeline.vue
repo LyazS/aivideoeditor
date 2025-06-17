@@ -496,12 +496,7 @@ async function createMediaClipFromMediaItem(
       ;(sprite as ImageVisibleSprite).setTimeRange(imageTimeRangeConfig)
     }
 
-    // 添加到WebAV画布
-    const avCanvas = webAVControls.getAVCanvas()
-    if (!avCanvas) {
-      throw new Error('WebAV画布未初始化')
-    }
-    await avCanvas.addSprite(sprite)
+    // 注意：不再直接添加sprite到画布，让AddTimelineItemCommand统一处理
 
     // 生成时间轴clip的缩略图
     console.log('🖼️ 生成时间轴clip缩略图...')
