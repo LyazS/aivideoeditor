@@ -3,7 +3,7 @@ import { VisibleSprite, MP4Clip } from '@webav/av-cliper'
 /**
  * 时间范围接口定义
  */
-export interface TimeRange {
+export interface VideoTimeRange {
   /** 素材内部开始时间（微秒） - 从素材的哪个时间点开始播放 */
   clipStartTime: number
   /** 素材内部结束时间（微秒） - 播放到素材的哪个时间点结束 */
@@ -31,7 +31,7 @@ export class CustomVisibleSprite extends VisibleSprite {
   /**
    * 时间范围信息
    */
-  #timeRange: TimeRange = {
+  #timeRange: VideoTimeRange = {
     clipStartTime: 0,
     clipEndTime: 0,
     timelineStartTime: 0,
@@ -173,7 +173,7 @@ export class CustomVisibleSprite extends VisibleSprite {
    * 获取完整的时间范围信息
    * @returns 时间范围信息
    */
-  public getTimeRange(): TimeRange {
+  public getTimeRange(): VideoTimeRange {
     return { ...this.#timeRange }
   }
 
@@ -326,27 +326,4 @@ export class CustomVisibleSprite extends VisibleSprite {
     this.#timeRange.playbackRate = this.time.playbackRate
   }
 
-  /**
-   * 销毁sprite并清理资源
-   */
-  public destroy(): void {
-    try {
-      // 获取并清理MP4Clip资源
-      const clip = this.getClip()
-      if (clip && typeof clip.destroy === 'function') {
-        clip.destroy()
-      }
-    } catch (error) {
-      console.warn('清理MP4Clip资源时出错:', error)
-    }
-
-    // 调用父类销毁方法（如果存在）
-    try {
-      if (super.destroy && typeof super.destroy === 'function') {
-        super.destroy()
-      }
-    } catch (error) {
-      console.warn('调用父类destroy方法时出错:', error)
-    }
-  }
 }

@@ -8,28 +8,43 @@
       resizing: isResizing,
     }"
     :style="clipStyle"
+    :data-media-type="mediaItem?.mediaType"
     @mousedown="startDrag"
     @click="selectClip"
     @contextmenu="showContextMenu"
+    @mouseenter="showTooltip"
+    @mousemove="updateTooltipPosition"
+    @mouseleave="hideTooltip"
   >
     <div class="clip-content">
-      <!-- 缩略图 - 总是显示 -->
+      <!-- 缩略图容器 - 只在showDetails时显示 -->
       <div v-if="showDetails" class="clip-thumbnail">
-        <video
-          ref="thumbnailVideo"
-          :src="mediaItem?.url"
-          @loadedmetadata="generateThumbnail"
-          muted
-          preload="metadata"
+        <!-- 显示已生成的缩略图 -->
+        <img
+          v-if="props.timelineItem.thumbnailUrl"
+          :src="props.timelineItem.thumbnailUrl"
+          class="thumbnail-image"
+          alt="缩略图"
         />
-        <canvas ref="thumbnailCanvas" class="thumbnail-canvas"></canvas>
+        <!-- 缩略图加载中的占位符 -->
+        <div
+          v-else
+          class="thumbnail-placeholder"
+        >
+          <div class="loading-spinner"></div>
+        </div>
       </div>
 
       <!-- 详细信息 - 只在片段足够宽时显示 -->
       <div v-if="showDetails" class="clip-info">
         <div class="clip-name">{{ mediaItem?.name || 'Unknown' }}</div>
+        <!-- 时长信息 - 视频和图片都显示 -->
         <div class="clip-duration">{{ formatDuration(timelineDuration) }}</div>
-        <div class="clip-speed" v-if="Math.abs(playbackSpeed - 1) > 0.001">
+        <!-- 倍速信息 - 只有视频显示 -->
+        <div
+          class="clip-speed"
+          v-if="mediaItem?.mediaType === 'video' && Math.abs(playbackSpeed - 1) > 0.001"
+        >
           {{ formatSpeed(playbackSpeed) }}
         </div>
       </div>
@@ -49,6 +64,31 @@
       <div class="menu-item" @click="removeClip">删除</div>
       <div class="menu-item" @click="duplicateClip">复制</div>
     </div>
+
+    <!-- Tooltip -->
+    <div v-if="showTooltipFlag" class="clip-tooltip" :style="tooltipStyle">
+      <div class="tooltip-content">
+        <div class="tooltip-title">{{ mediaItem?.name || 'Unknown' }}</div>
+        <div class="tooltip-info">
+          <div class="tooltip-row">
+            <span class="tooltip-label">类型:</span>
+            <span class="tooltip-value">{{ mediaItem?.mediaType === 'video' ? '视频' : '图片' }}</span>
+          </div>
+          <div class="tooltip-row">
+            <span class="tooltip-label">时长:</span>
+            <span class="tooltip-value">{{ formatDuration(timelineDuration) }}</span>
+          </div>
+          <div class="tooltip-row">
+            <span class="tooltip-label">位置:</span>
+            <span class="tooltip-value">{{ formatDuration(props.timelineItem.timeRange.timelineStartTime / 1000000) }}</span>
+          </div>
+          <div v-if="mediaItem?.mediaType === 'video' && Math.abs(playbackSpeed - 1) > 0.001" class="tooltip-row">
+            <span class="tooltip-label">倍速:</span>
+            <span class="tooltip-value">{{ formatSpeed(playbackSpeed) }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -56,6 +96,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useVideoStore } from '../stores/videoStore'
 import { useWebAVControls, isWebAVReady } from '../composables/useWebAVControls'
+import { regenerateThumbnailForTimelineItem } from '../utils/thumbnailGenerator'
 import type { TimelineItem, Track } from '../types/videoTypes'
 
 interface Props {
@@ -88,16 +129,24 @@ const timelineDuration = computed(() => {
   return (timeRange.timelineEndTime - timeRange.timelineStartTime) / 1000000 // 转换为秒
 })
 
-// 获取播放速度
+// 获取播放速度（仅对视频有效）
 const playbackSpeed = computed(() => {
+  // 图片没有播放速度概念，直接返回1
+  if (mediaItem.value?.mediaType === 'image') {
+    return 1
+  }
   // 直接从timelineItem.timeRange获取，与videostore的同步机制保持一致
-  return props.timelineItem.timeRange.playbackRate || 1
+  // 使用类型守卫确保timeRange有playbackRate属性（只有TimeRange接口有，ImageTimeRange没有）
+  const timeRange = props.timelineItem.timeRange
+  return 'playbackRate' in timeRange ? timeRange.playbackRate || 1 : 1
 })
 
-const thumbnailVideo = ref<HTMLVideoElement>()
-const thumbnailCanvas = ref<HTMLCanvasElement>()
 const showMenu = ref(false)
 const menuStyle = ref({})
+
+// Tooltip相关状态
+const showTooltipFlag = ref(false)
+const tooltipStyle = ref({})
 
 const isDragging = ref(false)
 const isResizing = ref(false)
@@ -211,26 +260,7 @@ function formatSpeed(rate: number): string {
   return '正常速度'
 }
 
-function generateThumbnail() {
-  if (!thumbnailVideo.value || !thumbnailCanvas.value) return
 
-  const video = thumbnailVideo.value
-  const canvas = thumbnailCanvas.value
-  const ctx = canvas.getContext('2d')
-
-  if (!ctx) return
-
-  // 设置画布尺寸
-  canvas.width = 60
-  canvas.height = 40
-
-  // 跳转到视频中间帧
-  video.currentTime = video.duration / 2
-
-  video.onseeked = () => {
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
-  }
-}
 
 function selectClip(event: MouseEvent) {
   // 如果正在拖拽或调整大小，不处理选中
@@ -401,23 +431,36 @@ function stopResize() {
       }
 
       console.log('🔧 调整大小 - 设置时间范围:', {
-        clipStartTime: 0,
-        clipEndTime: mediaItem.duration * 1000000,
+        mediaType: mediaItem.mediaType,
         timelineStartTime: newTimelineStartTime,
         timelineEndTime: newTimelineEndTime,
         duration: tempDuration.value,
       })
 
-      // 更新CustomVisibleSprite的时间范围
-      sprite.setTimeRange({
-        clipStartTime: 0,
-        clipEndTime: mediaItem.duration * 1000000,
-        timelineStartTime: newTimelineStartTime,
-        timelineEndTime: newTimelineEndTime,
-      })
+      // 根据媒体类型更新sprite的时间范围
+      if (mediaItem.mediaType === 'video') {
+        // 视频使用CustomVisibleSprite的setTimeRange方法
+        sprite.setTimeRange({
+          clipStartTime: 0,
+          clipEndTime: mediaItem.duration * 1000000,
+          timelineStartTime: newTimelineStartTime,
+          timelineEndTime: newTimelineEndTime,
+        })
+      } else if (mediaItem.mediaType === 'image') {
+        // 图片使用ImageVisibleSprite的setTimeRange方法
+        sprite.setTimeRange({
+          timelineStartTime: newTimelineStartTime,
+          timelineEndTime: newTimelineEndTime,
+          displayDuration: newTimelineEndTime - newTimelineStartTime,
+        })
+      }
 
-      // 从sprite获取更新后的完整timeRange（包含自动计算的effectiveDuration）
+      // 从sprite获取更新后的完整timeRange
+      // eslint-disable-next-line vue/no-mutating-props
       props.timelineItem.timeRange = sprite.getTimeRange()
+
+      // 重新生成缩略图（异步执行，不阻塞UI）
+      regenerateThumbnailAfterResize()
     }
   }
 
@@ -425,6 +468,36 @@ function stopResize() {
   resizeDirection.value = null
   document.removeEventListener('mousemove', handleResize)
   document.removeEventListener('mouseup', stopResize)
+}
+
+/**
+ * 调整大小后重新生成缩略图
+ */
+async function regenerateThumbnailAfterResize() {
+  const mediaItem = videoStore.getMediaItem(props.timelineItem.mediaItemId)
+  if (!mediaItem) {
+    console.error('❌ 无法找到对应的MediaItem，跳过缩略图重新生成')
+    return
+  }
+
+  try {
+    console.log('🔄 开始重新生成调整大小后的缩略图...')
+    const newThumbnailUrl = await regenerateThumbnailForTimelineItem(props.timelineItem, mediaItem)
+
+    if (newThumbnailUrl) {
+      // 清理旧的缩略图URL
+      if (props.timelineItem.thumbnailUrl) {
+        URL.revokeObjectURL(props.timelineItem.thumbnailUrl)
+      }
+
+      // 更新缩略图URL
+      // eslint-disable-next-line vue/no-mutating-props
+      props.timelineItem.thumbnailUrl = newThumbnailUrl
+      console.log('✅ 缩略图重新生成完成')
+    }
+  } catch (error) {
+    console.error('❌ 重新生成缩略图失败:', error)
+  }
 }
 
 function showContextMenu(event: MouseEvent) {
@@ -467,10 +540,54 @@ async function duplicateClip() {
   }
 }
 
-onMounted(() => {
-  if (thumbnailVideo.value) {
-    thumbnailVideo.value.load()
+// Tooltip相关方法
+function showTooltip(event: MouseEvent) {
+  // 如果正在拖拽或调整大小，不显示tooltip
+  if (isDragging.value || isResizing.value) return
+
+  showTooltipFlag.value = true
+
+  // 获取clip元素的位置信息
+  const clipElement = event.currentTarget as HTMLElement
+  const clipRect = clipElement.getBoundingClientRect()
+
+  // 将tooltip定位在鼠标位置的上方
+  tooltipStyle.value = {
+    position: 'fixed',
+    left: `${event.clientX}px`, // 使用鼠标的X坐标
+    bottom: `${window.innerHeight - clipRect.top + 10}px`, // 在clip上方10px
+    transform: 'translateX(-50%)', // 水平居中对齐鼠标位置
+    zIndex: 1001,
   }
+}
+
+function updateTooltipPosition(event: MouseEvent) {
+  // 只有在tooltip显示时才更新位置
+  if (!showTooltipFlag.value) return
+  // 如果正在拖拽或调整大小，不更新tooltip位置
+  if (isDragging.value || isResizing.value) return
+
+  // 获取clip元素的位置信息
+  const clipElement = event.currentTarget as HTMLElement
+  const clipRect = clipElement.getBoundingClientRect()
+
+  // 更新tooltip位置，跟随鼠标的横向位置
+  tooltipStyle.value = {
+    position: 'fixed',
+    left: `${event.clientX}px`, // 使用鼠标的X坐标
+    bottom: `${window.innerHeight - clipRect.top + 10}px`, // 在clip上方10px
+    transform: 'translateX(-50%)', // 水平居中对齐鼠标位置
+    zIndex: 1001,
+  }
+}
+
+function hideTooltip() {
+  showTooltipFlag.value = false
+}
+
+onMounted(() => {
+  // VideoClip组件挂载完成
+  console.log('VideoClip组件挂载完成:', props.timelineItem.id)
 })
 
 onUnmounted(() => {
@@ -492,6 +609,11 @@ onUnmounted(() => {
   z-index: 10; /* 确保视频片段在网格线上方 */
   border: 2px solid transparent;
   transition: all 0.2s;
+}
+
+/* 图片片段使用与视频相同的背景色 */
+.video-clip[data-media-type='image'] {
+  background: linear-gradient(135deg, #4a90e2, #357abd);
 }
 
 /* 在拖拽或调整大小时禁用过渡效果，避免延迟 */
@@ -547,14 +669,33 @@ onUnmounted(() => {
   flex-shrink: 0;
 }
 
-.thumbnail-canvas {
+.thumbnail-image {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
 
-.clip-thumbnail video {
-  display: none;
+.thumbnail-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(0, 0, 0, 0.3);
+}
+
+.loading-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top: 2px solid #fff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 
 .clip-info {
@@ -653,5 +794,66 @@ onUnmounted(() => {
 
 .menu-item:hover {
   background-color: #444;
+}
+
+/* Tooltip样式 */
+.clip-tooltip {
+  position: fixed;
+  background-color: rgba(0, 0, 0, 0.9);
+  border: 1px solid #555;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  z-index: 1001;
+  pointer-events: none; /* 防止tooltip阻挡鼠标事件 */
+  max-width: 250px;
+  min-width: 180px;
+}
+
+.tooltip-content {
+  padding: 12px;
+}
+
+.tooltip-title {
+  font-size: 14px;
+  font-weight: bold;
+  color: white;
+  margin-bottom: 8px;
+  word-break: break-word;
+}
+
+.tooltip-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tooltip-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+}
+
+.tooltip-label {
+  color: rgba(255, 255, 255, 0.7);
+  font-weight: 500;
+  min-width: 40px;
+}
+
+.tooltip-value {
+  color: white;
+  font-weight: 600;
+  text-align: right;
+}
+
+/* 添加一个小箭头指向clip */
+.clip-tooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-top-color: rgba(0, 0, 0, 0.9);
 }
 </style>

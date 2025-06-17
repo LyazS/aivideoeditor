@@ -3,13 +3,16 @@ import type { TimelineItem } from '../../types/videoTypes'
 import { findTimelineItemBySprite } from '../utils/storeUtils'
 
 // 定义CustomVisibleSprite类型（避免循环依赖）
-type CustomVisibleSprite = any
+type CustomVisibleSprite = {
+  destroy: () => void
+  [key: string]: unknown
+}
 
 /**
  * 选择管理模块
  * 负责管理时间轴和AVCanvas的选择状态同步
  */
-export function createSelectionModule(timelineItems: Ref<TimelineItem[]>, avCanvas: Ref<any>) {
+export function createSelectionModule(timelineItems: Ref<TimelineItem[]>, avCanvas: Ref<{ activeSprite: unknown } | null>) {
   // ==================== 状态定义 ====================
 
   // 选择状态

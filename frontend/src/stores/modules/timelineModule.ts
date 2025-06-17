@@ -1,5 +1,6 @@
-import { ref, reactive, markRaw, type Raw, type Ref } from 'vue'
+import { ref, type Raw, type Ref } from 'vue'
 import { CustomVisibleSprite } from '../../utils/VideoVisibleSprite'
+import { ImageVisibleSprite } from '../../utils/ImageVisibleSprite'
 import { webavToProjectCoords, projectToWebavCoords } from '../../utils/coordinateTransform'
 import { printDebugInfo, syncTimeRange } from '../utils/storeUtils'
 import type {
@@ -15,12 +16,12 @@ import type {
  */
 export function createTimelineModule(
   configModule: { videoResolution: { value: VideoResolution } },
-  webavModule: { avCanvas: { value: any } },
+  webavModule: { avCanvas: { value: { removeSprite: (sprite: unknown) => void } | null } },
   mediaModule: {
     getMediaItem: (id: string) => MediaItem | undefined
     mediaItems: Ref<MediaItem[]>
   },
-  trackModule?: { tracks: Ref<any[]> },
+  trackModule?: { tracks: Ref<{ id: number; name: string }[]> },
 ) {
   // ==================== 状态定义 ====================
 
@@ -227,7 +228,7 @@ export function createTimelineModule(
    * @param timelineItemId 时间轴项目ID
    * @param newSprite 新的sprite实例
    */
-  function updateTimelineItemSprite(timelineItemId: string, newSprite: Raw<CustomVisibleSprite>) {
+  function updateTimelineItemSprite(timelineItemId: string, newSprite: Raw<CustomVisibleSprite | ImageVisibleSprite>) {
     const item = timelineItems.value.find((item) => item.id === timelineItemId)
     if (item) {
       const mediaItem = mediaModule.getMediaItem(item.mediaItemId)

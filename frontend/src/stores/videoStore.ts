@@ -1,4 +1,4 @@
-import { ref, computed, markRaw, reactive, type Raw } from 'vue'
+import { computed, type Raw } from 'vue'
 import { defineStore } from 'pinia'
 import { CustomVisibleSprite } from '../utils/VideoVisibleSprite'
 import {
@@ -108,6 +108,16 @@ export const useVideoStore = defineStore('video', () => {
 
   function getVideoOriginalResolution(clipId: string): { width: number; height: number } {
     return mediaModule.getVideoOriginalResolution(clipId)
+  }
+
+  // ==================== 图片元素管理方法 ====================
+  // 使用媒体模块的图片元素管理方法
+  function setImageElement(clipId: string, imageElement: HTMLImageElement | null) {
+    mediaModule.setImageElement(clipId, imageElement)
+  }
+
+  function getImageOriginalResolution(clipId: string): { width: number; height: number } {
+    return mediaModule.getImageOriginalResolution(clipId)
   }
 
   return {
@@ -244,6 +254,9 @@ export const useVideoStore = defineStore('video', () => {
     // 视频元素管理
     setVideoElement,
     getVideoOriginalResolution,
+    // 图片元素管理
+    setImageElement,
+    getImageOriginalResolution,
     // WebAV 相关状态和方法
     avCanvas: webavModule.avCanvas,
     isWebAVReady: webavModule.isWebAVReady,

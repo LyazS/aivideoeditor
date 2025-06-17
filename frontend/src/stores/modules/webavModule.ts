@@ -1,4 +1,4 @@
-import { ref, markRaw, type Raw } from 'vue'
+import { ref, markRaw } from 'vue'
 import { AVCanvas } from '@webav/av-canvas'
 
 /**
@@ -195,7 +195,7 @@ export function createWebAVModule() {
    * 添加sprite到画布
    * @param sprite 要添加的sprite
    */
-  function addSprite(sprite: any) {
+  function addSprite(sprite: unknown) {
     if (!isWebAVAvailable()) {
       console.warn('⚠️ [WebAVModule] WebAV不可用，无法添加sprite')
       return false
@@ -217,7 +217,7 @@ export function createWebAVModule() {
    * 从画布移除sprite
    * @param sprite 要移除的sprite
    */
-  function removeSprite(sprite: any) {
+  function removeSprite(sprite: unknown) {
     if (!isWebAVAvailable()) {
       console.warn('⚠️ [WebAVModule] WebAV不可用，无法移除sprite')
       return false

@@ -24,7 +24,7 @@
           />
         </svg>
         <p>拖拽文件到此处导入</p>
-        <p class="hint">支持 MP4, WebM, AVI 等格式</p>
+        <p class="hint">支持 MP4, WebM, AVI 等视频格式和 JPG, PNG, GIF 等图片格式</p>
       </div>
 
       <!-- 素材列表 -->
@@ -39,14 +39,19 @@
           @dragend="handleItemDragEnd"
         >
           <div class="media-thumbnail">
-            <video
-              :src="item.url"
-              class="thumbnail-video"
-              preload="metadata"
-              muted
-              @loadedmetadata="onThumbnailLoaded"
+            <!-- WebAV生成的缩略图 -->
+            <img
+              v-if="item.thumbnailUrl"
+              :src="item.thumbnailUrl"
+              class="thumbnail-image"
+              alt="缩略图"
             />
-            <div class="duration-badge">
+            <!-- 缩略图生成中的占位符 -->
+            <div v-else class="thumbnail-placeholder">
+              <div class="loading-spinner"></div>
+            </div>
+            <!-- 只有视频才显示时长标签 -->
+            <div v-if="item.mediaType === 'video'" class="duration-badge">
               {{ formatDuration(item.duration) }}
             </div>
             <!-- 解析中状态覆盖层 -->
@@ -82,7 +87,7 @@
       ref="fileInput"
       type="file"
       multiple
-      accept="video/*"
+      accept="video/*,image/*"
       style="display: none"
       @change="handleFileSelect"
     />
@@ -94,6 +99,7 @@ import { ref, markRaw } from 'vue'
 import { useVideoStore } from '../stores/videoStore'
 import { useWebAVControls } from '../composables/useWebAVControls'
 import type { MediaItem } from '../types/videoTypes'
+import { generateVideoThumbnail, generateImageThumbnail, canvasToBlob } from '../utils/thumbnailGenerator'
 
 const videoStore = useVideoStore()
 const webAVControls = useWebAVControls()
@@ -140,14 +146,16 @@ const handleDrop = (event: DragEvent) => {
 
 // 处理文件
 const processFiles = async (files: File[]) => {
-  const videoFiles = files.filter((file) => file.type.startsWith('video/'))
+  const mediaFiles = files.filter((file) =>
+    file.type.startsWith('video/') || file.type.startsWith('image/')
+  )
 
-  if (videoFiles.length === 0) {
-    alert('请选择视频文件')
+  if (mediaFiles.length === 0) {
+    alert('请选择视频或图片文件')
     return
   }
 
-  for (const file of videoFiles) {
+  for (const file of mediaFiles) {
     await addMediaItem(file)
   }
 }
@@ -160,74 +168,184 @@ const addMediaItem = async (file: File): Promise<void> => {
     )
 
     const url = URL.createObjectURL(file)
-    const video = document.createElement('video')
-
-    // 先创建一个解析中状态的MediaItem ID
     const mediaItemId = Date.now().toString() + Math.random().toString(36).substring(2, 11)
+    const isVideo = file.type.startsWith('video/')
+    const isImage = file.type.startsWith('image/')
 
-    video.onloadedmetadata = async () => {
-      try {
-        const parsingMediaItem: MediaItem = {
-          id: mediaItemId,
-          file,
-          url,
-          name: file.name,
-          duration: video.duration,
-          type: file.type,
-          mp4Clip: null, // 解析中时为null
-          isReady: false, // 标记为未准备好
-        }
-
-        console.log(`📋 创建解析中的MediaItem: ${parsingMediaItem.name} (ID: ${mediaItemId})`)
-
-        // 先添加解析中状态的素材到store
-        videoStore.addMediaItem(parsingMediaItem)
-
-        // 异步创建MP4Clip
-        console.log(`🎬 Creating MP4Clip for: ${file.name}`)
-        const mp4Clip = await webAVControls.createMP4Clip(file)
-        console.log(`✅ MP4Clip created successfully for: ${file.name}`)
-
-        // 更新MediaItem为完成状态
-        const readyMediaItem: MediaItem = {
-          ...parsingMediaItem,
-          mp4Clip: markRaw(mp4Clip), // 使用markRaw避免Vue响应式包装
-          isReady: true, // 标记为准备好
-        }
-
-        console.log(
-          `📋 更新MediaItem为完成状态: ${readyMediaItem.name} (时长: ${readyMediaItem.duration.toFixed(2)}s)`,
-        )
-        console.log(`📐 视频原始分辨率: ${video.videoWidth}x${video.videoHeight}`)
-
-        // 设置视频元素到store中，用于获取原始分辨率
-        videoStore.setVideoElement(mediaItemId, video)
-
-        // 更新store中的MediaItem
-        videoStore.updateMediaItem(readyMediaItem)
-        resolve()
-      } catch (error) {
-        console.error('❌ Failed to create MP4Clip:', error)
-        // 如果解析失败，从store中移除该项目
-        videoStore.removeMediaItem(mediaItemId)
-        URL.revokeObjectURL(url)
-        resolve()
-      }
-    }
-
-    video.onerror = () => {
-      console.error('Failed to load video:', file.name)
-      // 如果视频加载失败，也需要清理可能已经添加的解析中状态的素材
-      const existingItem = videoStore.getMediaItem(mediaItemId)
-      if (existingItem) {
-        videoStore.removeMediaItem(mediaItemId)
-      }
+    if (isVideo) {
+      await addVideoItem(file, url, mediaItemId, resolve)
+    } else if (isImage) {
+      await addImageItem(file, url, mediaItemId, resolve)
+    } else {
+      console.error('不支持的文件类型:', file.type)
       URL.revokeObjectURL(url)
       resolve()
     }
-
-    video.src = url
   })
+}
+
+// 添加视频素材项
+const addVideoItem = async (file: File, url: string, mediaItemId: string, resolve: () => void) => {
+  const video = document.createElement('video')
+
+  video.onloadedmetadata = async () => {
+    try {
+      const parsingMediaItem: MediaItem = {
+        id: mediaItemId,
+        file,
+        url,
+        name: file.name,
+        duration: video.duration,
+        type: file.type,
+        mediaType: 'video',
+        mp4Clip: null, // 解析中时为null
+        imgClip: null,
+        isReady: false, // 标记为未准备好
+      }
+
+      console.log(`📋 创建解析中的MediaItem: ${parsingMediaItem.name} (ID: ${mediaItemId})`)
+
+      // 先添加解析中状态的素材到store
+      videoStore.addMediaItem(parsingMediaItem)
+
+      // 异步创建MP4Clip
+      console.log(`🎬 Creating MP4Clip for: ${file.name}`)
+      const mp4Clip = await webAVControls.createMP4Clip(file)
+      console.log(`✅ MP4Clip created successfully for: ${file.name}`)
+
+      // 生成缩略图
+      console.log(`🖼️ 生成视频缩略图: ${file.name}`)
+      let thumbnailUrl: string | undefined
+      try {
+        const thumbnailCanvas = await generateVideoThumbnail(mp4Clip)
+        thumbnailUrl = await canvasToBlob(thumbnailCanvas)
+        console.log(`✅ 视频缩略图生成成功: ${file.name}`)
+      } catch (error) {
+        console.error(`❌ 视频缩略图生成失败: ${file.name}`, error)
+      }
+
+      // 更新MediaItem为完成状态
+      const readyMediaItem: MediaItem = {
+        ...parsingMediaItem,
+        mp4Clip: markRaw(mp4Clip), // 使用markRaw避免Vue响应式包装
+        isReady: true, // 标记为准备好
+        thumbnailUrl, // 添加缩略图URL
+      }
+
+      console.log(
+        `📋 更新MediaItem为完成状态: ${readyMediaItem.name} (时长: ${readyMediaItem.duration.toFixed(2)}s)`,
+      )
+      console.log(`📐 视频原始分辨率: ${video.videoWidth}x${video.videoHeight}`)
+
+      // 设置视频元素到store中，用于获取原始分辨率
+      videoStore.setVideoElement(mediaItemId, video)
+
+      // 更新store中的MediaItem
+      videoStore.updateMediaItem(readyMediaItem)
+      resolve()
+    } catch (error) {
+      console.error('❌ Failed to create MP4Clip:', error)
+      // 如果解析失败，从store中移除该项目
+      videoStore.removeMediaItem(mediaItemId)
+      URL.revokeObjectURL(url)
+      resolve()
+    }
+  }
+
+  video.onerror = () => {
+    console.error('Failed to load video:', file.name)
+    // 如果视频加载失败，也需要清理可能已经添加的解析中状态的素材
+    const existingItem = videoStore.getMediaItem(mediaItemId)
+    if (existingItem) {
+      videoStore.removeMediaItem(mediaItemId)
+    }
+    URL.revokeObjectURL(url)
+    resolve()
+  }
+
+  video.src = url
+}
+
+// 添加图片素材项
+const addImageItem = async (file: File, url: string, mediaItemId: string, resolve: () => void) => {
+  const img = document.createElement('img')
+
+  img.onload = async () => {
+    try {
+      const parsingMediaItem: MediaItem = {
+        id: mediaItemId,
+        file,
+        url,
+        name: file.name,
+        duration: 5, // 图片默认5秒时长
+        type: file.type,
+        mediaType: 'image',
+        mp4Clip: null,
+        imgClip: null, // 解析中时为null
+        isReady: false, // 标记为未准备好
+      }
+
+      console.log(`📋 创建解析中的图片MediaItem: ${parsingMediaItem.name} (ID: ${mediaItemId})`)
+
+      // 先添加解析中状态的素材到store
+      videoStore.addMediaItem(parsingMediaItem)
+
+      // 异步创建ImgClip
+      console.log(`🖼️ Creating ImgClip for: ${file.name}`)
+      const imgClip = await webAVControls.createImgClip(file)
+      console.log(`✅ ImgClip created successfully for: ${file.name}`)
+
+      // 生成缩略图
+      console.log(`🖼️ 生成图片缩略图: ${file.name}`)
+      let thumbnailUrl: string | undefined
+      try {
+        const thumbnailCanvas = await generateImageThumbnail(imgClip)
+        thumbnailUrl = await canvasToBlob(thumbnailCanvas)
+        console.log(`✅ 图片缩略图生成成功: ${file.name}`)
+      } catch (error) {
+        console.error(`❌ 图片缩略图生成失败: ${file.name}`, error)
+      }
+
+      // 更新MediaItem为完成状态
+      const readyMediaItem: MediaItem = {
+        ...parsingMediaItem,
+        imgClip: markRaw(imgClip), // 使用markRaw避免Vue响应式包装
+        isReady: true, // 标记为准备好
+        thumbnailUrl, // 添加缩略图URL
+      }
+
+      console.log(
+        `📋 更新图片MediaItem为完成状态: ${readyMediaItem.name} (时长: ${readyMediaItem.duration.toFixed(2)}s)`,
+      )
+      console.log(`📐 图片原始分辨率: ${img.naturalWidth}x${img.naturalHeight}`)
+
+      // 设置图片元素到store中，用于获取原始分辨率
+      videoStore.setImageElement(mediaItemId, img)
+
+      // 更新store中的MediaItem
+      videoStore.updateMediaItem(readyMediaItem)
+      resolve()
+    } catch (error) {
+      console.error('❌ Failed to create ImgClip:', error)
+      // 如果解析失败，从store中移除该项目
+      videoStore.removeMediaItem(mediaItemId)
+      URL.revokeObjectURL(url)
+      resolve()
+    }
+  }
+
+  img.onerror = () => {
+    console.error('Failed to load image:', file.name)
+    // 如果图片加载失败，也需要清理可能已经添加的解析中状态的素材
+    const existingItem = videoStore.getMediaItem(mediaItemId)
+    if (existingItem) {
+      videoStore.removeMediaItem(mediaItemId)
+    }
+    URL.revokeObjectURL(url)
+    resolve()
+  }
+
+  img.src = url
 }
 
 // 移除素材项
@@ -238,6 +356,11 @@ const removeMediaItem = (id: string) => {
 
     // 清理URL
     URL.revokeObjectURL(item.url)
+
+    // 清理缩略图URL
+    if (item.thumbnailUrl) {
+      URL.revokeObjectURL(item.thumbnailUrl)
+    }
 
     // 从store中移除MediaItem（会自动移除相关的TimelineItem）
     videoStore.removeMediaItem(id)
@@ -262,6 +385,7 @@ const handleItemDragStart = (event: DragEvent, item: MediaItem) => {
     name: item.name,
     duration: item.duration,
     type: item.type,
+    mediaType: item.mediaType,
     // 存储文件的基本信息，而不是整个 File 对象
     fileInfo: {
       name: item.file.name,
@@ -281,12 +405,7 @@ const handleItemDragEnd = () => {
   // 拖拽结束处理
 }
 
-// 缩略图加载完成
-const onThumbnailLoaded = (event: Event) => {
-  const video = event.target as HTMLVideoElement
-  // 跳转到视频中间位置作为缩略图
-  video.currentTime = video.duration / 2
-}
+
 
 // 格式化时长
 const formatDuration = (seconds: number): string => {
@@ -410,10 +529,33 @@ const formatFileSize = (bytes: number): string => {
   flex-shrink: 0;
 }
 
-.thumbnail-video {
+.thumbnail-image {
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+.thumbnail-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(0, 0, 0, 0.3);
+}
+
+.loading-spinner {
+  width: 12px;
+  height: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-top: 1px solid #fff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 
 .duration-badge {
