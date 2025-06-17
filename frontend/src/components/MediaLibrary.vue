@@ -144,7 +144,7 @@ const handleDrop = (event: DragEvent) => {
   processFiles(files)
 }
 
-// 处理文件
+// 处理文件 - 并行处理，限制最大并发数为5
 const processFiles = async (files: File[]) => {
   const mediaFiles = files.filter((file) =>
     file.type.startsWith('video/') || file.type.startsWith('image/')
@@ -155,16 +155,44 @@ const processFiles = async (files: File[]) => {
     return
   }
 
-  for (const file of mediaFiles) {
-    await addMediaItem(file)
+  console.log(`📁 开始并行处理 ${mediaFiles.length} 个文件，最大并发数: 5`)
+
+  // 使用并发控制处理文件
+  await processConcurrentFiles(mediaFiles, 5)
+
+  console.log(`✅ 所有文件处理完成`)
+}
+
+// 并发控制处理文件
+const processConcurrentFiles = async (files: File[], maxConcurrency: number) => {
+  const results: Promise<void>[] = []
+  const executing: Promise<void>[] = []
+
+  for (const file of files) {
+    const promise = addMediaItem(file).then(() => {
+      // 从执行队列中移除已完成的任务
+      executing.splice(executing.indexOf(promise), 1)
+    })
+
+    results.push(promise)
+    executing.push(promise)
+
+    // 如果达到最大并发数，等待其中一个完成
+    if (executing.length >= maxConcurrency) {
+      await Promise.race(executing)
+    }
   }
+
+  // 等待所有任务完成
+  await Promise.all(results)
 }
 
 // 添加素材项
 const addMediaItem = async (file: File): Promise<void> => {
+  const startTime = Date.now()
   return new Promise(async (resolve) => {
     console.log(
-      `📁 开始处理上传文件: ${file.name} (大小: ${(file.size / 1024 / 1024).toFixed(2)}MB)`,
+      `📁 [并发处理] 开始处理文件: ${file.name} (大小: ${(file.size / 1024 / 1024).toFixed(2)}MB)`,
     )
 
     const url = URL.createObjectURL(file)
@@ -173,9 +201,9 @@ const addMediaItem = async (file: File): Promise<void> => {
     const isImage = file.type.startsWith('image/')
 
     if (isVideo) {
-      await addVideoItem(file, url, mediaItemId, resolve)
+      await addVideoItem(file, url, mediaItemId, startTime, resolve)
     } else if (isImage) {
-      await addImageItem(file, url, mediaItemId, resolve)
+      await addImageItem(file, url, mediaItemId, startTime, resolve)
     } else {
       console.error('不支持的文件类型:', file.type)
       URL.revokeObjectURL(url)
@@ -185,7 +213,7 @@ const addMediaItem = async (file: File): Promise<void> => {
 }
 
 // 添加视频素材项
-const addVideoItem = async (file: File, url: string, mediaItemId: string, resolve: () => void) => {
+const addVideoItem = async (file: File, url: string, mediaItemId: string, startTime: number, resolve: () => void) => {
   const video = document.createElement('video')
 
   video.onloadedmetadata = async () => {
@@ -242,9 +270,13 @@ const addVideoItem = async (file: File, url: string, mediaItemId: string, resolv
 
       // 更新store中的MediaItem
       videoStore.updateMediaItem(readyMediaItem)
+
+      const processingTime = ((Date.now() - startTime) / 1000).toFixed(2)
+      console.log(`✅ [并发处理] 视频文件处理完成: ${file.name} (耗时: ${processingTime}s)`)
       resolve()
     } catch (error) {
-      console.error('❌ Failed to create MP4Clip:', error)
+      const processingTime = ((Date.now() - startTime) / 1000).toFixed(2)
+      console.error(`❌ [并发处理] 视频文件处理失败: ${file.name} (耗时: ${processingTime}s)`, error)
       // 如果解析失败，从store中移除该项目
       videoStore.removeMediaItem(mediaItemId)
       URL.revokeObjectURL(url)
@@ -253,7 +285,8 @@ const addVideoItem = async (file: File, url: string, mediaItemId: string, resolv
   }
 
   video.onerror = () => {
-    console.error('Failed to load video:', file.name)
+    const processingTime = ((Date.now() - startTime) / 1000).toFixed(2)
+    console.error(`❌ [并发处理] 视频加载失败: ${file.name} (耗时: ${processingTime}s)`)
     // 如果视频加载失败，也需要清理可能已经添加的解析中状态的素材
     const existingItem = videoStore.getMediaItem(mediaItemId)
     if (existingItem) {
@@ -267,7 +300,7 @@ const addVideoItem = async (file: File, url: string, mediaItemId: string, resolv
 }
 
 // 添加图片素材项
-const addImageItem = async (file: File, url: string, mediaItemId: string, resolve: () => void) => {
+const addImageItem = async (file: File, url: string, mediaItemId: string, startTime: number, resolve: () => void) => {
   const img = document.createElement('img')
 
   img.onload = async () => {
@@ -324,9 +357,13 @@ const addImageItem = async (file: File, url: string, mediaItemId: string, resolv
 
       // 更新store中的MediaItem
       videoStore.updateMediaItem(readyMediaItem)
+
+      const processingTime = ((Date.now() - startTime) / 1000).toFixed(2)
+      console.log(`✅ [并发处理] 图片文件处理完成: ${file.name} (耗时: ${processingTime}s)`)
       resolve()
     } catch (error) {
-      console.error('❌ Failed to create ImgClip:', error)
+      const processingTime = ((Date.now() - startTime) / 1000).toFixed(2)
+      console.error(`❌ [并发处理] 图片文件处理失败: ${file.name} (耗时: ${processingTime}s)`, error)
       // 如果解析失败，从store中移除该项目
       videoStore.removeMediaItem(mediaItemId)
       URL.revokeObjectURL(url)
@@ -335,7 +372,8 @@ const addImageItem = async (file: File, url: string, mediaItemId: string, resolv
   }
 
   img.onerror = () => {
-    console.error('Failed to load image:', file.name)
+    const processingTime = ((Date.now() - startTime) / 1000).toFixed(2)
+    console.error(`❌ [并发处理] 图片加载失败: ${file.name} (耗时: ${processingTime}s)`)
     // 如果图片加载失败，也需要清理可能已经添加的解析中状态的素材
     const existingItem = videoStore.getMediaItem(mediaItemId)
     if (existingItem) {
