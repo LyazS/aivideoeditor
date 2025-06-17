@@ -2,6 +2,7 @@ import { reactive, markRaw, type Ref } from 'vue'
 import { CustomVisibleSprite } from '../../utils/VideoVisibleSprite'
 import { ImageVisibleSprite } from '../../utils/ImageVisibleSprite'
 import { useWebAVControls } from '../../composables/useWebAVControls'
+import { regenerateThumbnailForTimelineItem } from '../../utils/thumbnailGenerator'
 import { printDebugInfo, syncTimeRange } from '../utils/storeUtils'
 import type { TimelineItem, MediaItem } from '../../types/videoTypes'
 
@@ -163,6 +164,9 @@ export function createClipOperationsModule(
 
       // 🔄 为新创建的TimelineItem设置双向数据同步
       timelineModule.setupBidirectionalSync(newItem)
+
+      // 🖼️ 为复制的片段重新生成缩略图（异步执行，不阻塞UI）
+      regenerateThumbnailAfterDuplicate(newItem, mediaItem)
 
       console.log('✅ 复制完成')
       console.groupEnd()
@@ -417,6 +421,9 @@ export function createClipOperationsModule(
       timelineModule.setupBidirectionalSync(firstItem)
       timelineModule.setupBidirectionalSync(secondItem)
 
+      // 🖼️ 为分割后的两个片段重新生成缩略图（异步执行，不阻塞UI）
+      regenerateThumbnailsAfterSplit(firstItem, secondItem, mediaItem)
+
       console.log('✅ 分割完成')
       console.groupEnd()
 
@@ -442,6 +449,61 @@ export function createClipOperationsModule(
     } catch (error) {
       console.error('❌ 分割过程中出错:', error)
       console.groupEnd()
+    }
+  }
+
+  // ==================== 辅助函数 ====================
+
+  /**
+   * 复制后重新生成缩略图
+   * @param newItem 新复制的时间轴项目
+   * @param mediaItem 对应的媒体项目
+   */
+  async function regenerateThumbnailAfterDuplicate(newItem: TimelineItem, mediaItem: MediaItem) {
+    try {
+      console.log('🖼️ 开始为复制的片段重新生成缩略图...')
+
+      const thumbnailUrl = await regenerateThumbnailForTimelineItem(newItem, mediaItem)
+      if (thumbnailUrl) {
+        newItem.thumbnailUrl = thumbnailUrl
+        console.log('✅ 复制片段缩略图生成完成')
+      }
+    } catch (error) {
+      console.error('❌ 复制后缩略图重新生成失败:', error)
+    }
+  }
+
+  /**
+   * 分割后重新生成缩略图
+   * @param firstItem 第一个分割片段
+   * @param secondItem 第二个分割片段
+   * @param mediaItem 对应的媒体项目
+   */
+  async function regenerateThumbnailsAfterSplit(
+    firstItem: TimelineItem,
+    secondItem: TimelineItem,
+    mediaItem: MediaItem
+  ) {
+    try {
+      console.log('🖼️ 开始为分割后的片段重新生成缩略图...')
+
+      // 为第一个片段生成缩略图
+      const firstThumbnailUrl = await regenerateThumbnailForTimelineItem(firstItem, mediaItem)
+      if (firstThumbnailUrl) {
+        firstItem.thumbnailUrl = firstThumbnailUrl
+        console.log('✅ 第一个分割片段缩略图生成完成')
+      }
+
+      // 为第二个片段生成缩略图
+      const secondThumbnailUrl = await regenerateThumbnailForTimelineItem(secondItem, mediaItem)
+      if (secondThumbnailUrl) {
+        secondItem.thumbnailUrl = secondThumbnailUrl
+        console.log('✅ 第二个分割片段缩略图生成完成')
+      }
+
+      console.log('✅ 分割后缩略图重新生成完成')
+    } catch (error) {
+      console.error('❌ 分割后缩略图重新生成失败:', error)
     }
   }
 

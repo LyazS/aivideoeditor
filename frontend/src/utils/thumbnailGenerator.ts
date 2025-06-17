@@ -71,17 +71,33 @@ export async function generateVideoThumbnail(
   let clonedClip: MP4Clip | null = null
 
   try {
+    console.log('🎬 [ThumbnailGenerator] 开始生成视频缩略图...')
+
     // 等待MP4Clip准备完成
+    console.log('⏳ [ThumbnailGenerator] 等待MP4Clip准备完成...')
     const meta = await mp4Clip.ready
+    console.log('✅ [ThumbnailGenerator] MP4Clip准备完成:', {
+      duration: meta.duration,
+      width: meta.width,
+      height: meta.height
+    })
 
     // 克隆MP4Clip以避免影响原始实例
+    console.log('🔄 [ThumbnailGenerator] 克隆MP4Clip...')
     clonedClip = await mp4Clip.clone()
+    console.log('✅ [ThumbnailGenerator] MP4Clip克隆完成')
 
     // 如果没有指定时间位置，使用视频中间位置
     const tickTime = timePosition ?? (meta.duration / 2)
+    console.log('⏰ [ThumbnailGenerator] 获取视频帧时间位置:', tickTime)
 
     // 使用克隆的clip获取指定时间的帧
+    console.log('🎞️ [ThumbnailGenerator] 开始tick获取视频帧...')
     const tickResult = await clonedClip.tick(tickTime)
+    console.log('📸 [ThumbnailGenerator] tick结果:', {
+      state: tickResult.state,
+      hasVideo: !!tickResult.video
+    })
 
     if (tickResult.state !== 'success' || !tickResult.video) {
       throw new Error('无法获取视频帧')
@@ -92,13 +108,19 @@ export async function generateVideoThumbnail(
       meta.width,
       meta.height
     )
+    console.log('📐 [ThumbnailGenerator] 缩略图尺寸:', {
+      original: `${meta.width}x${meta.height}`,
+      thumbnail: `${thumbnailWidth}x${thumbnailHeight}`
+    })
 
     // 创建缩略图canvas
+    console.log('🎨 [ThumbnailGenerator] 创建缩略图canvas...')
     const canvas = createThumbnailCanvas(
       tickResult.video,
       thumbnailWidth,
       thumbnailHeight
     )
+    console.log('✅ [ThumbnailGenerator] 缩略图canvas创建完成')
 
     // 清理VideoFrame资源
     if ('close' in tickResult.video) {
@@ -107,11 +129,13 @@ export async function generateVideoThumbnail(
 
     return canvas
   } catch (error) {
-    console.error('生成视频缩略图失败:', error)
+    console.error('❌ [ThumbnailGenerator] 生成视频缩略图失败:', error)
+    console.error('❌ [ThumbnailGenerator] 错误堆栈:', error.stack)
     throw error
   } finally {
     // 清理克隆的clip
     if (clonedClip) {
+      console.log('🧹 [ThumbnailGenerator] 清理克隆的clip')
       clonedClip.destroy()
     }
   }
@@ -126,14 +150,28 @@ export async function generateImageThumbnail(imgClip: ImgClip): Promise<HTMLCanv
   let clonedClip: ImgClip | null = null
 
   try {
+    console.log('🖼️ [ThumbnailGenerator] 开始生成图片缩略图...')
+
     // 等待ImgClip准备完成
+    console.log('⏳ [ThumbnailGenerator] 等待ImgClip准备完成...')
     const meta = await imgClip.ready
+    console.log('✅ [ThumbnailGenerator] ImgClip准备完成:', {
+      width: meta.width,
+      height: meta.height
+    })
 
     // 克隆ImgClip以避免影响原始实例
+    console.log('🔄 [ThumbnailGenerator] 克隆ImgClip...')
     clonedClip = await imgClip.clone()
+    console.log('✅ [ThumbnailGenerator] ImgClip克隆完成')
 
     // 使用克隆的clip获取图片（时间参数对静态图片无意义，传0即可）
+    console.log('🎞️ [ThumbnailGenerator] 开始tick获取图片数据...')
     const tickResult = await clonedClip.tick(0)
+    console.log('📸 [ThumbnailGenerator] tick结果:', {
+      state: tickResult.state,
+      hasVideo: !!tickResult.video
+    })
 
     if (tickResult.state !== 'success' || !tickResult.video) {
       throw new Error('无法获取图片数据')
@@ -144,13 +182,19 @@ export async function generateImageThumbnail(imgClip: ImgClip): Promise<HTMLCanv
       meta.width,
       meta.height
     )
+    console.log('📐 [ThumbnailGenerator] 缩略图尺寸:', {
+      original: `${meta.width}x${meta.height}`,
+      thumbnail: `${thumbnailWidth}x${thumbnailHeight}`
+    })
 
     // 创建缩略图canvas
+    console.log('🎨 [ThumbnailGenerator] 创建缩略图canvas...')
     const canvas = createThumbnailCanvas(
       tickResult.video,
       thumbnailWidth,
       thumbnailHeight
     )
+    console.log('✅ [ThumbnailGenerator] 缩略图canvas创建完成')
 
     // 清理资源（如果是VideoFrame）
     if ('close' in tickResult.video) {
@@ -159,11 +203,13 @@ export async function generateImageThumbnail(imgClip: ImgClip): Promise<HTMLCanv
 
     return canvas
   } catch (error) {
-    console.error('生成图片缩略图失败:', error)
+    console.error('❌ [ThumbnailGenerator] 生成图片缩略图失败:', error)
+    console.error('❌ [ThumbnailGenerator] 错误堆栈:', error.stack)
     throw error
   } finally {
     // 清理克隆的clip
     if (clonedClip) {
+      console.log('🧹 [ThumbnailGenerator] 清理克隆的clip')
       clonedClip.destroy()
     }
   }
@@ -186,4 +232,58 @@ export function canvasToBlob(canvas: HTMLCanvasElement, quality: number = 0.8): 
       }
     }, 'image/jpeg', quality)
   })
+}
+
+/**
+ * 根据TimelineItem的时间范围重新生成缩略图
+ * @param timelineItem 时间轴项目
+ * @param mediaItem 对应的媒体项目
+ * @returns Promise<string | undefined> 新的缩略图URL
+ */
+export async function regenerateThumbnailForTimelineItem(
+  timelineItem: any,
+  mediaItem: any
+): Promise<string | undefined> {
+  try {
+    console.log('🔄 [ThumbnailGenerator] 重新生成时间轴clip缩略图:', {
+      timelineItemId: timelineItem.id,
+      mediaType: mediaItem.mediaType
+    })
+
+    let canvas: HTMLCanvasElement
+
+    if (mediaItem.mediaType === 'video' && mediaItem.mp4Clip) {
+      // 对于视频，使用clip的起始时间作为缩略图时间位置
+      const timeRange = timelineItem.timeRange
+      let thumbnailTime: number
+
+      if ('clipStartTime' in timeRange) {
+        // 使用clip内部的起始时间（微秒）
+        thumbnailTime = timeRange.clipStartTime
+        console.log('📍 [ThumbnailGenerator] 使用视频clip起始时间:', thumbnailTime / 1000000, 's')
+      } else {
+        // 如果没有clipStartTime，使用视频中间位置
+        const meta = await mediaItem.mp4Clip.ready
+        thumbnailTime = meta.duration / 2
+        console.log('📍 [ThumbnailGenerator] 使用视频中间位置:', thumbnailTime / 1000000, 's')
+      }
+
+      canvas = await generateVideoThumbnail(mediaItem.mp4Clip, thumbnailTime)
+    } else if (mediaItem.mediaType === 'image' && mediaItem.imgClip) {
+      // 图片缩略图不需要时间位置
+      canvas = await generateImageThumbnail(mediaItem.imgClip)
+    } else {
+      console.error('❌ [ThumbnailGenerator] 不支持的媒体类型或缺少clip')
+      return undefined
+    }
+
+    // 转换为Blob URL
+    const thumbnailUrl = await canvasToBlob(canvas)
+    console.log('✅ [ThumbnailGenerator] 时间轴clip缩略图重新生成成功')
+    return thumbnailUrl
+
+  } catch (error) {
+    console.error('❌ [ThumbnailGenerator] 重新生成时间轴clip缩略图失败:', error)
+    return undefined
+  }
 }

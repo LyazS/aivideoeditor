@@ -159,6 +159,7 @@ import { useWebAVControls, waitForWebAVReady, isWebAVReady } from '../composable
 import { CustomVisibleSprite } from '../utils/VideoVisibleSprite'
 import { ImageVisibleSprite } from '../utils/ImageVisibleSprite'
 import { webavToProjectCoords } from '../utils/coordinateTransform'
+import { generateVideoThumbnail, generateImageThumbnail, canvasToBlob } from '../utils/thumbnailGenerator'
 import type { TimelineItem } from '../types/videoTypes'
 import VideoClip from './VideoClip.vue'
 import TimeScale from './TimeScale.vue'
@@ -502,6 +503,24 @@ async function createMediaClipFromMediaItem(
     }
     await avCanvas.addSprite(sprite)
 
+    // 生成时间轴clip的缩略图
+    console.log('🖼️ 生成时间轴clip缩略图...')
+    let thumbnailUrl: string | undefined
+    try {
+      if (mediaItem.mediaType === 'video' && storeMediaItem.mp4Clip) {
+        const thumbnailCanvas = await generateVideoThumbnail(storeMediaItem.mp4Clip)
+        thumbnailUrl = await canvasToBlob(thumbnailCanvas)
+        console.log('✅ 时间轴视频缩略图生成成功')
+      } else if (mediaItem.mediaType === 'image' && storeMediaItem.imgClip) {
+        const thumbnailCanvas = await generateImageThumbnail(storeMediaItem.imgClip)
+        thumbnailUrl = await canvasToBlob(thumbnailCanvas)
+        console.log('✅ 时间轴图片缩略图生成成功')
+      }
+    } catch (error) {
+      console.error('❌ 时间轴缩略图生成失败:', error)
+      // 缩略图生成失败不影响TimelineItem创建
+    }
+
     // 创建TimelineItem - 使用markRaw包装CustomVisibleSprite
     const timelineItemId = Date.now().toString() + Math.random().toString(36).substring(2, 11)
 
@@ -522,6 +541,7 @@ async function createMediaClipFromMediaItem(
       mediaType: mediaItem.mediaType,
       timeRange: sprite.getTimeRange(), // 从sprite获取完整的timeRange（已经通过setTimeRange设置）
       sprite: markRaw(sprite), // 使用markRaw避免Vue响应式包装
+      thumbnailUrl, // 添加缩略图URL
       // Sprite位置和大小属性（使用项目坐标系）
       position: {
         x: Math.round(projectCoords.x),

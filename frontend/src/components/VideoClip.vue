@@ -17,17 +17,18 @@
     @mouseleave="hideTooltip"
   >
     <div class="clip-content">
-      <!-- 缩略图 - 总是显示 -->
+      <!-- 缩略图容器 - 只在showDetails时显示 -->
       <div v-if="showDetails" class="clip-thumbnail">
-        <!-- WebAV生成的缩略图 -->
-        <canvas
-          ref="thumbnailCanvas"
-          class="thumbnail-canvas"
-          v-show="thumbnailGenerated"
-        ></canvas>
+        <!-- 显示已生成的缩略图 -->
+        <img
+          v-if="props.timelineItem.thumbnailUrl"
+          :src="props.timelineItem.thumbnailUrl"
+          class="thumbnail-image"
+          alt="缩略图"
+        />
         <!-- 缩略图加载中的占位符 -->
         <div
-          v-show="!thumbnailGenerated"
+          v-else
           class="thumbnail-placeholder"
         >
           <div class="loading-spinner"></div>
@@ -95,8 +96,8 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useVideoStore } from '../stores/videoStore'
 import { useWebAVControls, isWebAVReady } from '../composables/useWebAVControls'
+import { regenerateThumbnailForTimelineItem } from '../utils/thumbnailGenerator'
 import type { TimelineItem, Track } from '../types/videoTypes'
-import { generateVideoThumbnail, generateImageThumbnail } from '../utils/thumbnailGenerator'
 
 interface Props {
   timelineItem: TimelineItem
@@ -140,8 +141,6 @@ const playbackSpeed = computed(() => {
   return 'playbackRate' in timeRange ? timeRange.playbackRate || 1 : 1
 })
 
-const thumbnailCanvas = ref<HTMLCanvasElement>()
-const thumbnailGenerated = ref(false)
 const showMenu = ref(false)
 const menuStyle = ref({})
 
@@ -261,49 +260,7 @@ function formatSpeed(rate: number): string {
   return '正常速度'
 }
 
-/**
- * 使用WebAV生成缩略图
- */
-async function generateThumbnail() {
-  if (!thumbnailCanvas.value || !mediaItem.value) return
 
-  try {
-    thumbnailGenerated.value = false
-    let canvas: HTMLCanvasElement
-
-    if (mediaItem.value.mediaType === 'video') {
-      // 生成视频缩略图
-      if (!mediaItem.value.mp4Clip) {
-        console.error('MP4Clip未准备好')
-        return
-      }
-      canvas = await generateVideoThumbnail(mediaItem.value.mp4Clip)
-    } else if (mediaItem.value.mediaType === 'image') {
-      // 生成图片缩略图
-      if (!mediaItem.value.imgClip) {
-        console.error('ImgClip未准备好')
-        return
-      }
-      canvas = await generateImageThumbnail(mediaItem.value.imgClip)
-    } else {
-      console.error('不支持的媒体类型:', mediaItem.value.mediaType)
-      return
-    }
-
-    // 将生成的canvas内容复制到组件的canvas中
-    const targetCanvas = thumbnailCanvas.value
-    const targetCtx = targetCanvas.getContext('2d')
-
-    if (targetCtx) {
-      targetCanvas.width = canvas.width
-      targetCanvas.height = canvas.height
-      targetCtx.drawImage(canvas, 0, 0)
-      thumbnailGenerated.value = true
-    }
-  } catch (error) {
-    console.error('生成缩略图失败:', error)
-  }
-}
 
 function selectClip(event: MouseEvent) {
   // 如果正在拖拽或调整大小，不处理选中
@@ -501,6 +458,9 @@ function stopResize() {
       // 从sprite获取更新后的完整timeRange
       // eslint-disable-next-line vue/no-mutating-props
       props.timelineItem.timeRange = sprite.getTimeRange()
+
+      // 重新生成缩略图（异步执行，不阻塞UI）
+      regenerateThumbnailAfterResize()
     }
   }
 
@@ -508,6 +468,36 @@ function stopResize() {
   resizeDirection.value = null
   document.removeEventListener('mousemove', handleResize)
   document.removeEventListener('mouseup', stopResize)
+}
+
+/**
+ * 调整大小后重新生成缩略图
+ */
+async function regenerateThumbnailAfterResize() {
+  const mediaItem = videoStore.getMediaItem(props.timelineItem.mediaItemId)
+  if (!mediaItem) {
+    console.error('❌ 无法找到对应的MediaItem，跳过缩略图重新生成')
+    return
+  }
+
+  try {
+    console.log('🔄 开始重新生成调整大小后的缩略图...')
+    const newThumbnailUrl = await regenerateThumbnailForTimelineItem(props.timelineItem, mediaItem)
+
+    if (newThumbnailUrl) {
+      // 清理旧的缩略图URL
+      if (props.timelineItem.thumbnailUrl) {
+        URL.revokeObjectURL(props.timelineItem.thumbnailUrl)
+      }
+
+      // 更新缩略图URL
+      // eslint-disable-next-line vue/no-mutating-props
+      props.timelineItem.thumbnailUrl = newThumbnailUrl
+      console.log('✅ 缩略图重新生成完成')
+    }
+  } catch (error) {
+    console.error('❌ 重新生成缩略图失败:', error)
+  }
 }
 
 function showContextMenu(event: MouseEvent) {
@@ -596,8 +586,8 @@ function hideTooltip() {
 }
 
 onMounted(() => {
-  // 组件挂载后生成缩略图
-  generateThumbnail()
+  // VideoClip组件挂载完成
+  console.log('VideoClip组件挂载完成:', props.timelineItem.id)
 })
 
 onUnmounted(() => {
@@ -679,7 +669,7 @@ onUnmounted(() => {
   flex-shrink: 0;
 }
 
-.thumbnail-canvas {
+.thumbnail-image {
   width: 100%;
   height: 100%;
   object-fit: cover;

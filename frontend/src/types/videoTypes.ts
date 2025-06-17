@@ -32,6 +32,7 @@ export interface TimelineItem {
   mediaType: 'video' | 'image' // 媒体类型：视频或图片
   timeRange: VideoTimeRange | ImageTimeRange // 时间范围信息（视频包含倍速，图片不包含）
   sprite: Raw<CustomVisibleSprite | ImageVisibleSprite> // 视频或图片sprite
+  thumbnailUrl?: string // 时间轴clip的缩略图URL
   // Sprite位置和大小属性（响应式）
   position: {
     x: number
