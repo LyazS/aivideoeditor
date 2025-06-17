@@ -71,7 +71,7 @@ export function logWebAVInitStep(stepNumber: number, stepName: string, details?:
 export function logWebAVInitSuccess(totalTime: number, details?: unknown) {
   console.log(`🎉 ${DEBUG_GROUPS.INIT.PREFIX} Initialization completed successfully!`, {
     totalTime: `${totalTime.toFixed(2)}ms`,
-    ...details,
+    ...(details && typeof details === 'object' ? details : {}),
   })
   console.groupEnd()
 }
@@ -84,7 +84,7 @@ export function logWebAVInitError(error: Error, totalTime: number, context?: unk
     error: error.message,
     errorStack: error.stack,
     totalTime: `${totalTime.toFixed(2)}ms`,
-    ...context,
+    ...(context && typeof context === 'object' ? context : {}),
   })
   console.groupEnd()
 }
@@ -161,7 +161,7 @@ export function logCoordinateTransform(spriteId: string, transform: unknown) {
 export function logCanvasRecreateComplete(time: number, stats: unknown) {
   console.log(`🎉 ${DEBUG_GROUPS.REBUILD.PREFIX} Recreation completed successfully!`, {
     time: `${time.toFixed(2)}ms`,
-    ...stats,
+    ...(stats && typeof stats === 'object' ? stats : {}),
   })
   console.groupEnd()
 }
@@ -284,6 +284,6 @@ export function debugError(message: string, error: Error, context?: unknown) {
   console.error(message, {
     error: error.message,
     stack: error.stack,
-    ...context,
+    ...(context && typeof context === 'object' ? context : {}),
   })
 }

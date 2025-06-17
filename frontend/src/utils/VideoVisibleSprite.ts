@@ -234,7 +234,7 @@ export class CustomVisibleSprite extends VisibleSprite {
   public async getOriginalClipDuration(): Promise<number> {
     const clip = this.getClip()
     if (clip && 'meta' in clip) {
-      const meta = await clip.meta
+      const meta = clip.meta
       return meta.duration
     }
     return 0

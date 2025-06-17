@@ -94,6 +94,7 @@ export function createWebAVModule() {
       const canvas = new AVCanvas(canvasElement, {
         width: options.width || 1920,
         height: options.height || 1080,
+        bgColor: '#000000', // 添加必需的背景色参数
       })
 
       // 设置canvas实例
@@ -175,8 +176,8 @@ export function createWebAVModule() {
       isAvailable: isWebAVAvailable(),
       canvasInfo: avCanvas.value
         ? {
-            width: avCanvas.value.width || 'unknown',
-            height: avCanvas.value.height || 'unknown',
+            width: (avCanvas.value as any).width || 'unknown',
+            height: (avCanvas.value as any).height || 'unknown',
             constructor: avCanvas.value.constructor.name,
           }
         : null,
@@ -202,7 +203,7 @@ export function createWebAVModule() {
     }
 
     try {
-      avCanvas.value!.addSprite(sprite)
+      avCanvas.value!.addSprite(sprite as any)
       console.log('✅ [WebAVModule] 添加sprite成功')
       return true
     } catch (error) {
@@ -224,7 +225,7 @@ export function createWebAVModule() {
     }
 
     try {
-      avCanvas.value!.removeSprite(sprite)
+      avCanvas.value!.removeSprite(sprite as any)
       console.log('✅ [WebAVModule] 移除sprite成功')
       return true
     } catch (error) {

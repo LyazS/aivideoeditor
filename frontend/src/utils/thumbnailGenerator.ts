@@ -130,7 +130,7 @@ export async function generateVideoThumbnail(
     return canvas
   } catch (error) {
     console.error('❌ [ThumbnailGenerator] 生成视频缩略图失败:', error)
-    console.error('❌ [ThumbnailGenerator] 错误堆栈:', error.stack)
+    console.error('❌ [ThumbnailGenerator] 错误堆栈:', (error as Error).stack)
     throw error
   } finally {
     // 清理克隆的clip
@@ -204,7 +204,7 @@ export async function generateImageThumbnail(imgClip: ImgClip): Promise<HTMLCanv
     return canvas
   } catch (error) {
     console.error('❌ [ThumbnailGenerator] 生成图片缩略图失败:', error)
-    console.error('❌ [ThumbnailGenerator] 错误堆栈:', error.stack)
+    console.error('❌ [ThumbnailGenerator] 错误堆栈:', (error as Error).stack)
     throw error
   } finally {
     // 清理克隆的clip

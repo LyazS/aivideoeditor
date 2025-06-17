@@ -5,6 +5,7 @@ import { useWebAVControls } from '../../composables/useWebAVControls'
 import { regenerateThumbnailForTimelineItem } from '../../utils/thumbnailGenerator'
 import { printDebugInfo, syncTimeRange } from '../utils/storeUtils'
 import type { TimelineItem, MediaItem } from '../../types/videoTypes'
+import { isVideoTimeRange } from '../../types/videoTypes'
 
 /**
  * 视频片段操作模块
@@ -79,7 +80,7 @@ export function createClipOperationsModule(
       }
 
       // 根据媒体类型复制时间范围设置
-      if (mediaItem.mediaType === 'video') {
+      if (mediaItem.mediaType === 'video' && isVideoTimeRange(timeRange)) {
         (newSprite as CustomVisibleSprite).setTimeRange({
           clipStartTime: timeRange.clipStartTime,
           clipEndTime: timeRange.clipEndTime,
@@ -144,7 +145,7 @@ export function createClipOperationsModule(
       })
 
       // 根据媒体类型更新新sprite的时间轴位置
-      if (mediaItem.mediaType === 'video') {
+      if (mediaItem.mediaType === 'video' && isVideoTimeRange(timeRange)) {
         (newSprite as CustomVisibleSprite).setTimeRange({
           clipStartTime: timeRange.clipStartTime,
           clipEndTime: timeRange.clipEndTime,
@@ -210,21 +211,29 @@ export function createClipOperationsModule(
       const clampedRate = Math.max(0.1, Math.min(100, newRate))
 
       // 更新sprite的播放速度（这会自动更新sprite内部的timeRange）
-      item.sprite.setPlaybackSpeed(clampedRate)
+      // 只有视频sprite才有setPlaybackSpeed方法
+      if (item.mediaType === 'video') {
+        ;(item.sprite as CustomVisibleSprite).setPlaybackSpeed(clampedRate)
+      }
 
       // 使用同步函数更新TimelineItem的timeRange
       syncTimeRange(item)
 
-      console.log('🎬 播放速度更新:', {
-        timelineItemId,
-        newRate: clampedRate,
-        timeRange: {
-          clipDuration: (item.timeRange.clipEndTime - item.timeRange.clipStartTime) / 1000000,
-          timelineDuration:
-            (item.timeRange.timelineEndTime - item.timeRange.timelineStartTime) / 1000000,
-          effectiveDuration: item.timeRange.effectiveDuration / 1000000,
-        },
-      })
+      // 只有视频才记录详细的时间范围信息
+      if (item.mediaType === 'video' && isVideoTimeRange(item.timeRange)) {
+        console.log('🎬 播放速度更新:', {
+          timelineItemId,
+          newRate: clampedRate,
+          timeRange: {
+            clipDuration: (item.timeRange.clipEndTime - item.timeRange.clipStartTime) / 1000000,
+            timelineDuration:
+              (item.timeRange.timelineEndTime - item.timeRange.timelineStartTime) / 1000000,
+            effectiveDuration: item.timeRange.effectiveDuration / 1000000,
+          },
+        })
+      } else {
+        console.log('🎬 [ClipOperations] 图片不支持播放速度调整:', { timelineItemId })
+      }
     }
   }
 
@@ -281,6 +290,13 @@ export function createClipOperationsModule(
     // 检查分割时间是否在项目范围内
     if (splitTime <= timelineStartTime || splitTime >= timelineEndTime) {
       console.error('❌ 分割时间不在项目范围内')
+      console.groupEnd()
+      return
+    }
+
+    // 只有视频才支持分割
+    if (originalItem.mediaType !== 'video' || !isVideoTimeRange(timeRange)) {
+      console.error('❌ 只有视频片段支持分割')
       console.groupEnd()
       return
     }

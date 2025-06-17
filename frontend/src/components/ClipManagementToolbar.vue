@@ -56,6 +56,7 @@
 import { computed } from 'vue'
 import { useVideoStore } from '../stores/videoStore'
 import type { TimelineItem } from '../types/videoTypes'
+import { isVideoTimeRange } from '../types/videoTypes'
 
 const videoStore = useVideoStore()
 
@@ -168,7 +169,7 @@ function debugTimeline() {
     console.log('时间轴位置 (秒):', (timeRange.timelineStartTime / 1000000).toFixed(2))
     console.log('时间轴开始 (秒):', (timeRange.timelineStartTime / 1000000).toFixed(2))
     console.log('时间轴结束 (秒):', (timeRange.timelineEndTime / 1000000).toFixed(2))
-    console.log('播放速度:', timeRange.playbackRate)
+    console.log('播放速度:', isVideoTimeRange(timeRange) ? timeRange.playbackRate : '不适用(图片)')
     console.groupEnd()
   })
   console.groupEnd()

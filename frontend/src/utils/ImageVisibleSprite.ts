@@ -180,7 +180,7 @@ export class ImageVisibleSprite extends VisibleSprite {
   public async getImageMeta(): Promise<{ width: number; height: number }> {
     const clip = this.getClip() as ImgClip
     if (clip && 'meta' in clip) {
-      const meta = await clip.meta
+      const meta = clip.meta
       return {
         width: meta.width,
         height: meta.height

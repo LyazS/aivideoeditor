@@ -1,6 +1,8 @@
 import type { Ref } from 'vue'
 import type { MediaItem, TimelineItem, Track } from '../../types/videoTypes'
 import type { VideoTimeRange } from '../../utils/VideoVisibleSprite'
+import type { ImageTimeRange } from '../../utils/ImageVisibleSprite'
+import { isVideoTimeRange } from '../../types/videoTypes'
 
 // ==================== 调试开关 ====================
 
@@ -243,13 +245,22 @@ export function autoArrangeTrackItems(timelineItems: Ref<TimelineItem[]>, trackI
     const timeRange = sprite.getTimeRange()
     const duration = (timeRange.timelineEndTime - timeRange.timelineStartTime) / 1000000 // 转换为秒
 
-    // 更新时间轴位置
-    sprite.setTimeRange({
-      clipStartTime: timeRange.clipStartTime,
-      clipEndTime: timeRange.clipEndTime,
-      timelineStartTime: currentPosition * 1000000, // 转换为微秒
-      timelineEndTime: (currentPosition + duration) * 1000000,
-    })
+    // 更新时间轴位置 - 根据媒体类型设置不同的时间范围
+    if (item.mediaType === 'video' && isVideoTimeRange(timeRange)) {
+      sprite.setTimeRange({
+        clipStartTime: timeRange.clipStartTime,
+        clipEndTime: timeRange.clipEndTime,
+        timelineStartTime: currentPosition * 1000000, // 转换为微秒
+        timelineEndTime: (currentPosition + duration) * 1000000,
+      })
+    } else {
+      // 图片类型
+      sprite.setTimeRange({
+        timelineStartTime: currentPosition * 1000000, // 转换为微秒
+        timelineEndTime: (currentPosition + duration) * 1000000,
+        displayDuration: duration * 1000000,
+      })
+    }
     // 从sprite获取更新后的完整timeRange（包含自动计算的effectiveDuration）
     item.timeRange = sprite.getTimeRange()
     currentPosition += duration
@@ -274,7 +285,7 @@ export function autoArrangeTimelineItems(timelineItems: Ref<TimelineItem[]>) {
   })
 
   // 在每个轨道内重新排列项目
-  trackGroups.forEach((trackItems, trackId) => {
+  trackGroups.forEach((_, trackId) => {
     autoArrangeTrackItems(timelineItems, trackId)
   })
 
@@ -482,13 +493,23 @@ export function syncTimeRange(timelineItem: TimelineItem, newTimeRange?: Partial
  * @param timeRange 时间范围
  * @returns 是否有效
  */
-export function validateTimeRange(timeRange: VideoTimeRange): boolean {
-  return (
-    timeRange.clipStartTime >= 0 &&
-    timeRange.clipEndTime > timeRange.clipStartTime &&
+export function validateTimeRange(timeRange: VideoTimeRange | ImageTimeRange): boolean {
+  // 通用验证：时间轴时间范围
+  const basicValid = (
     timeRange.timelineStartTime >= 0 &&
     timeRange.timelineEndTime > timeRange.timelineStartTime
   )
+
+  // 视频特有验证
+  if (isVideoTimeRange(timeRange)) {
+    return basicValid && (
+      timeRange.clipStartTime >= 0 &&
+      timeRange.clipEndTime > timeRange.clipStartTime
+    )
+  }
+
+  // 图片特有验证
+  return basicValid && timeRange.displayDuration > 0
 }
 
 /**
@@ -497,7 +518,7 @@ export function validateTimeRange(timeRange: VideoTimeRange): boolean {
  * @param range2 时间范围2
  * @returns 重叠时长（秒）
  */
-export function calculateTimeRangeOverlap(range1: VideoTimeRange, range2: VideoTimeRange): number {
+export function calculateTimeRangeOverlap(range1: VideoTimeRange | ImageTimeRange, range2: VideoTimeRange | ImageTimeRange): number {
   const start1 = range1.timelineStartTime / 1000000 // 转换为秒
   const end1 = range1.timelineEndTime / 1000000
   const start2 = range2.timelineStartTime / 1000000

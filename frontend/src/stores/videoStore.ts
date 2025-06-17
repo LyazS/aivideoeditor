@@ -41,7 +41,7 @@ export const useVideoStore = defineStore('video', () => {
   const webavModule = createWebAVModule()
 
   // 创建时间轴核心管理模块
-  const timelineModule = createTimelineModule(configModule, webavModule, mediaModule, trackModule)
+  const timelineModule = createTimelineModule(configModule, webavModule as any, mediaModule, trackModule)
 
   const totalDuration = computed(() => {
     return calculateTotalDuration(
@@ -62,7 +62,7 @@ export const useVideoStore = defineStore('video', () => {
 
   // 创建视频片段操作模块（需要在其他模块之后创建）
   const clipOperationsModule = createClipOperationsModule(
-    webavModule,
+    webavModule as any,
     mediaModule,
     timelineModule,
     selectionModule,
@@ -82,7 +82,7 @@ export const useVideoStore = defineStore('video', () => {
       mediaItemId,
       timelineModule.timelineItems,
       trackModule.tracks,
-      webavModule.avCanvas.value,
+      webavModule.avCanvas.value as any,
       () => {}, // 清理回调，目前为空
     )
   }

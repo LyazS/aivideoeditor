@@ -244,7 +244,7 @@ export function useWebAVControls() {
     globalAVCanvas.on('activeSpriteChange', (sprite) => {
       // 处理选中状态的变化 - 同步到时间轴选择
       // 类型断言：我们知道这里的sprite是CustomVisibleSprite或null
-      videoStore.handleAVCanvasSpriteChange(sprite as CustomVisibleSprite | null)
+      videoStore.handleAVCanvasSpriteChange(sprite as any)
     })
 
     console.log('✅ [WebAV Events] All event listeners registered successfully')

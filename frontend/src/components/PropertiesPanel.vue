@@ -358,7 +358,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useVideoStore } from '../stores/videoStore'
-
+import { isVideoTimeRange } from '../types/videoTypes'
 import { uiDegreesToWebAVRadians, webAVRadiansToUIDegrees } from '../utils/rotationTransform'
 import NumberInput from './NumberInput.vue'
 
@@ -462,7 +462,8 @@ const playbackRate = computed(() => {
   }
 
   // 直接从TimeRange中获取播放速度属性（仅对视频有效）
-  return selectedTimelineItem.value.timeRange.playbackRate || 1
+  const timeRange = selectedTimelineItem.value.timeRange
+  return isVideoTimeRange(timeRange) ? timeRange.playbackRate || 1 : 1
 })
 
 const normalizedSpeed = computed(() => {
@@ -538,12 +539,23 @@ const updateTargetDuration = (newTargetDuration: number) => {
 
       // 更新CustomVisibleSprite的时间范围
       const newTimelineEndTime = timeRange.timelineStartTime + newTargetDuration * 1000000
-      sprite.setTimeRange({
-        clipStartTime: timeRange.clipStartTime,
-        clipEndTime: timeRange.clipEndTime,
-        timelineStartTime: timeRange.timelineStartTime,
-        timelineEndTime: newTimelineEndTime,
-      })
+
+      // 根据媒体类型设置不同的时间范围
+      if (isVideoTimeRange(timeRange)) {
+        sprite.setTimeRange({
+          clipStartTime: timeRange.clipStartTime,
+          clipEndTime: timeRange.clipEndTime,
+          timelineStartTime: timeRange.timelineStartTime,
+          timelineEndTime: newTimelineEndTime,
+        })
+      } else {
+        // 图片类型
+        sprite.setTimeRange({
+          timelineStartTime: timeRange.timelineStartTime,
+          timelineEndTime: newTimelineEndTime,
+          displayDuration: newTargetDuration * 1000000,
+        })
+      }
 
       console.log('🎯 视频目标时长更新:', {
         inputValue: newTargetDuration,
@@ -865,6 +877,7 @@ const alignVertical = (alignment: 'top' | 'middle' | 'bottom') => {
   outline: none;
   cursor: pointer;
   -webkit-appearance: none;
+  appearance: none;
   position: relative;
   z-index: 2;
 }
@@ -958,6 +971,7 @@ const alignVertical = (alignment: 'top' | 'middle' | 'bottom') => {
   border-radius: 2px;
   outline: none;
   -webkit-appearance: none;
+  appearance: none;
 }
 
 .scale-slider::-webkit-slider-thumb,

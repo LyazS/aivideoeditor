@@ -56,6 +56,44 @@ export interface VideoResolution {
   category?: string
 }
 
+// ==================== 类型守卫函数 ====================
+
+/**
+ * 检查时间范围是否为视频时间范围
+ * @param timeRange 时间范围对象
+ * @returns 是否为视频时间范围
+ */
+export function isVideoTimeRange(timeRange: VideoTimeRange | ImageTimeRange): timeRange is VideoTimeRange {
+  return 'clipStartTime' in timeRange && 'clipEndTime' in timeRange && 'effectiveDuration' in timeRange && 'playbackRate' in timeRange
+}
+
+/**
+ * 检查时间范围是否为图片时间范围
+ * @param timeRange 时间范围对象
+ * @returns 是否为图片时间范围
+ */
+export function isImageTimeRange(timeRange: VideoTimeRange | ImageTimeRange): timeRange is ImageTimeRange {
+  return 'displayDuration' in timeRange && !('clipStartTime' in timeRange)
+}
+
+/**
+ * 检查时间轴项目是否为视频类型
+ * @param item 时间轴项目
+ * @returns 是否为视频类型
+ */
+export function isVideoTimelineItem(item: TimelineItem): item is TimelineItem & { timeRange: VideoTimeRange; sprite: Raw<CustomVisibleSprite> } {
+  return item.mediaType === 'video' && isVideoTimeRange(item.timeRange)
+}
+
+/**
+ * 检查时间轴项目是否为图片类型
+ * @param item 时间轴项目
+ * @returns 是否为图片类型
+ */
+export function isImageTimelineItem(item: TimelineItem): item is TimelineItem & { timeRange: ImageTimeRange; sprite: Raw<ImageVisibleSprite> } {
+  return item.mediaType === 'image' && isImageTimeRange(item.timeRange)
+}
+
 export interface Track {
   id: number
   name: string

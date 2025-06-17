@@ -170,6 +170,7 @@ const handleDecrement = () => {
 
 .number-input[type='number'] {
   -moz-appearance: textfield;
+  appearance: textfield;
 }
 
 .number-btn-up {

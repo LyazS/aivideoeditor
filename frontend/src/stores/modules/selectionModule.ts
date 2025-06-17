@@ -39,7 +39,7 @@ export function createSelectionModule(timelineItems: Ref<TimelineItem[]>, avCanv
     if (timelineItemId) {
       const timelineItem = getTimelineItem(timelineItemId)
       if (timelineItem) {
-        selectAVCanvasSprite(timelineItem.sprite, false) // false表示不触发反向同步
+        selectAVCanvasSprite(timelineItem.sprite as any, false) // false表示不触发反向同步
         console.log('🔗 同步选择AVCanvas sprite:', timelineItem.sprite)
       }
     } else {
@@ -168,7 +168,7 @@ export function createSelectionModule(timelineItems: Ref<TimelineItem[]>, avCanv
    */
   function getSelectedTimelineItem(): TimelineItem | null {
     if (!selectedTimelineItemId.value) return null
-    return getTimelineItem(selectedTimelineItemId.value)
+    return getTimelineItem(selectedTimelineItemId.value) || null
   }
 
   /**
@@ -191,7 +191,7 @@ export function createSelectionModule(timelineItems: Ref<TimelineItem[]>, avCanv
           }
         : null,
       selectionsInSync: selectedItem
-        ? selectedAVCanvasSprite.value === selectedItem.sprite
+        ? (selectedAVCanvasSprite.value as any) === selectedItem.sprite
         : !selectedAVCanvasSprite.value,
     }
   }
