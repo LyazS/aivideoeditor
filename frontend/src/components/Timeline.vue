@@ -188,18 +188,36 @@ function getClipsForTrack(trackId: number) {
 }
 
 // 轨道管理方法
-function addNewTrack() {
-  videoStore.addTrack()
+async function addNewTrack() {
+  try {
+    const newTrackId = await videoStore.addTrackWithHistory()
+    if (newTrackId) {
+      console.log('✅ 轨道添加成功，新轨道ID:', newTrackId)
+    } else {
+      console.error('❌ 轨道添加失败')
+    }
+  } catch (error) {
+    console.error('❌ 添加轨道时出错:', error)
+  }
 }
 
-function removeTrack(trackId: number) {
+async function removeTrack(trackId: number) {
   if (tracks.value.length <= 1) {
     alert('至少需要保留一个轨道')
     return
   }
 
   if (confirm('确定要删除这个轨道吗？轨道上的所有片段也将被删除。')) {
-    videoStore.removeTrack(trackId)
+    try {
+      const success = await videoStore.removeTrackWithHistory(trackId)
+      if (success) {
+        console.log('✅ 轨道删除成功')
+      } else {
+        console.error('❌ 轨道删除失败')
+      }
+    } catch (error) {
+      console.error('❌ 删除轨道时出错:', error)
+    }
   }
 }
 
@@ -211,8 +229,17 @@ function toggleMute(trackId: number) {
   videoStore.toggleTrackMute(trackId)
 }
 
-function autoArrangeTrack(trackId: number) {
-  videoStore.autoArrangeTrackItems(trackId)
+async function autoArrangeTrack(trackId: number) {
+  try {
+    const success = await videoStore.autoArrangeTrackWithHistory(trackId)
+    if (success) {
+      console.log('✅ 轨道自动排列成功')
+    } else {
+      console.error('❌ 轨道自动排列失败')
+    }
+  } catch (error) {
+    console.error('❌ 自动排列轨道时出错:', error)
+  }
 }
 
 async function startRename(track: { id: number; name: string }) {

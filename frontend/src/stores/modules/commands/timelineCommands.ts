@@ -1,6 +1,6 @@
 import { generateCommandId } from '../../../utils/idGenerator'
 import type { SimpleCommand } from '../historyModule'
-import type { TimelineItem, MediaItem } from '../../../types/videoTypes'
+import type { TimelineItem, MediaItem, Track } from '../../../types/videoTypes'
 import { CustomVisibleSprite } from '../../../utils/VideoVisibleSprite'
 import { ImageVisibleSprite } from '../../../utils/ImageVisibleSprite'
 import { useWebAVControls } from '../../../composables/useWebAVControls'
@@ -384,6 +384,197 @@ export class RemoveTimelineItemCommand implements SimpleCommand {
     } catch (error) {
       const mediaItem = this.mediaModule.getMediaItem(this.originalTimelineItemData.mediaItemId)
       console.error(`❌ 撤销删除时间轴项目失败: ${mediaItem?.name || '未知素材'}`, error)
+      throw error
+    }
+  }
+}
+
+/**
+ * 复制时间轴项目命令
+ * 支持复制时间轴项目的撤销/重做操作
+ * 遵循"从源头重建"原则：保存完整的重建元数据，撤销时删除复制的项目
+ */
+export class DuplicateTimelineItemCommand implements SimpleCommand {
+  public readonly id: string
+  public readonly description: string
+  private originalTimelineItemData: any // 保存原始项目的重建元数据
+  public readonly newTimelineItemId: string // 新创建的项目ID
+
+  constructor(
+    private originalTimelineItemId: string,
+    originalTimelineItem: TimelineItem, // 要复制的原始时间轴项目
+    private newPosition: number, // 新项目的时间位置（秒）
+    private timelineModule: {
+      addTimelineItem: (item: TimelineItem) => void
+      removeTimelineItem: (id: string) => void
+      getTimelineItem: (id: string) => TimelineItem | undefined
+      setupBidirectionalSync: (item: TimelineItem) => void
+    },
+    private webavModule: {
+      addSprite: (sprite: unknown) => void
+      removeSprite: (sprite: unknown) => void
+    },
+    private mediaModule: {
+      getMediaItem: (id: string) => MediaItem | undefined
+    }
+  ) {
+    this.id = generateCommandId()
+    const mediaItem = this.mediaModule.getMediaItem(originalTimelineItem.mediaItemId)
+    this.description = `复制时间轴项目: ${mediaItem?.name || '未知素材'}`
+
+    // 保存原始项目的完整重建元数据
+    this.originalTimelineItemData = {
+      mediaItemId: originalTimelineItem.mediaItemId,
+      trackId: originalTimelineItem.trackId,
+      mediaType: originalTimelineItem.mediaType,
+      timeRange: { ...originalTimelineItem.timeRange },
+      position: { ...originalTimelineItem.position },
+      size: { ...originalTimelineItem.size },
+      rotation: originalTimelineItem.rotation,
+      zIndex: originalTimelineItem.zIndex,
+      opacity: originalTimelineItem.opacity,
+      thumbnailUrl: originalTimelineItem.thumbnailUrl,
+    }
+
+    // 生成新项目的ID
+    this.newTimelineItemId = `timeline_item_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`
+  }
+
+  /**
+   * 从原始素材重建复制的时间轴项目
+   */
+  private async rebuildDuplicatedItem(): Promise<TimelineItem> {
+    const mediaItem = this.mediaModule.getMediaItem(this.originalTimelineItemData.mediaItemId)
+    if (!mediaItem) {
+      throw new Error(`找不到素材项目: ${this.originalTimelineItemData.mediaItemId}`)
+    }
+
+    // 检查素材是否已经解析完成
+    if (!mediaItem.isReady || (!mediaItem.mp4Clip && !mediaItem.imgClip)) {
+      throw new Error('素材还在解析中，无法复制')
+    }
+
+    // 根据媒体类型克隆对应的Clip
+    const webAVControls = useWebAVControls()
+    let newSprite: CustomVisibleSprite | ImageVisibleSprite
+
+    if (mediaItem.mediaType === 'video' && mediaItem.mp4Clip) {
+      const clonedClip = await webAVControls.cloneMP4Clip(mediaItem.mp4Clip)
+      newSprite = new CustomVisibleSprite(clonedClip)
+    } else if (mediaItem.mediaType === 'image' && mediaItem.imgClip) {
+      const clonedClip = await webAVControls.cloneImgClip(mediaItem.imgClip)
+      newSprite = new ImageVisibleSprite(clonedClip)
+    } else {
+      throw new Error('不支持的媒体类型或缺少对应的clip')
+    }
+
+    // 设置时间范围（调整到新位置）
+    const originalTimeRange = this.originalTimelineItemData.timeRange
+    const originalDuration = (originalTimeRange.timelineEndTime - originalTimeRange.timelineStartTime) / 1000000 // 转换为秒
+    const newTimelineStartTime = this.newPosition * 1000000 // 转换为微秒
+    const newTimelineEndTime = newTimelineStartTime + (originalDuration * 1000000)
+
+    if (mediaItem.mediaType === 'video') {
+      newSprite.setTimeRange({
+        clipStartTime: originalTimeRange.clipStartTime || 0,
+        clipEndTime: originalTimeRange.clipEndTime || mediaItem.duration * 1000000,
+        timelineStartTime: newTimelineStartTime,
+        timelineEndTime: newTimelineEndTime,
+      })
+    } else if (mediaItem.mediaType === 'image') {
+      newSprite.setTimeRange({
+        timelineStartTime: newTimelineStartTime,
+        timelineEndTime: newTimelineEndTime,
+        displayDuration: originalDuration * 1000000,
+      })
+    }
+
+    // 设置变换属性
+    const rect = newSprite.rect
+    rect.x = this.originalTimelineItemData.position.x
+    rect.y = this.originalTimelineItemData.position.y
+    rect.w = this.originalTimelineItemData.size.width
+    rect.h = this.originalTimelineItemData.size.height
+    rect.angle = this.originalTimelineItemData.rotation
+
+    // 设置其他属性
+    newSprite.zIndex = this.originalTimelineItemData.zIndex
+    newSprite.opacity = this.originalTimelineItemData.opacity
+
+    // 创建新的TimelineItem
+    const newTimelineItem: TimelineItem = reactive({
+      id: this.newTimelineItemId,
+      mediaItemId: this.originalTimelineItemData.mediaItemId,
+      trackId: this.originalTimelineItemData.trackId,
+      mediaType: this.originalTimelineItemData.mediaType,
+      timeRange: mediaItem.mediaType === 'video' ? {
+        clipStartTime: originalTimeRange.clipStartTime || 0,
+        clipEndTime: originalTimeRange.clipEndTime || mediaItem.duration * 1000000,
+        timelineStartTime: newTimelineStartTime,
+        timelineEndTime: newTimelineEndTime,
+        effectiveDuration: originalDuration * 1000000,
+        playbackRate: originalTimeRange.playbackRate || 1.0,
+      } : {
+        timelineStartTime: newTimelineStartTime,
+        timelineEndTime: newTimelineEndTime,
+        displayDuration: originalDuration * 1000000,
+      },
+      position: { ...this.originalTimelineItemData.position },
+      size: { ...this.originalTimelineItemData.size },
+      rotation: this.originalTimelineItemData.rotation,
+      zIndex: this.originalTimelineItemData.zIndex,
+      opacity: this.originalTimelineItemData.opacity,
+      sprite: markRaw(newSprite),
+      thumbnailUrl: this.originalTimelineItemData.thumbnailUrl,
+    })
+
+    return newTimelineItem
+  }
+
+  /**
+   * 执行命令：创建复制的时间轴项目
+   * 遵循"从源头重建"原则，从原始素材完全重新创建
+   */
+  async execute(): Promise<void> {
+    try {
+      console.log(`🔄 执行复制操作：从源头重建时间轴项目...`)
+
+      // 从原始素材重新创建复制的TimelineItem和sprite
+      const newTimelineItem = await this.rebuildDuplicatedItem()
+
+      // 1. 添加到时间轴
+      this.timelineModule.addTimelineItem(newTimelineItem)
+
+      // 2. 设置双向数据同步
+      this.timelineModule.setupBidirectionalSync(newTimelineItem)
+
+      // 3. 添加sprite到WebAV画布
+      this.webavModule.addSprite(newTimelineItem.sprite)
+
+      const mediaItem = this.mediaModule.getMediaItem(this.originalTimelineItemData.mediaItemId)
+      console.log(`✅ 已复制时间轴项目: ${mediaItem?.name || '未知素材'}`)
+    } catch (error) {
+      const mediaItem = this.mediaModule.getMediaItem(this.originalTimelineItemData.mediaItemId)
+      console.error(`❌ 复制时间轴项目失败: ${mediaItem?.name || '未知素材'}`, error)
+      throw error
+    }
+  }
+
+  /**
+   * 撤销命令：删除复制的时间轴项目
+   */
+  async undo(): Promise<void> {
+    try {
+      console.log(`🔄 撤销复制操作：删除复制的时间轴项目...`)
+
+      // 删除复制的时间轴项目
+      this.timelineModule.removeTimelineItem(this.newTimelineItemId)
+
+      const mediaItem = this.mediaModule.getMediaItem(this.originalTimelineItemData.mediaItemId)
+      console.log(`↩️ 已撤销复制时间轴项目: ${mediaItem?.name || '未知素材'}`)
+    } catch (error) {
+      const mediaItem = this.mediaModule.getMediaItem(this.originalTimelineItemData.mediaItemId)
+      console.error(`❌ 撤销复制时间轴项目失败: ${mediaItem?.name || '未知素材'}`, error)
       throw error
     }
   }
@@ -1068,6 +1259,600 @@ export class SplitTimelineItemCommand implements SimpleCommand {
     } catch (error) {
       const mediaItem = this.mediaModule.getMediaItem(this.originalTimelineItemData.mediaItemId)
       console.error(`❌ 撤销分割时间轴项目失败: ${mediaItem?.name || '未知素材'}`, error)
+      throw error
+    }
+  }
+}
+
+/**
+ * 添加轨道命令
+ * 支持添加轨道的撤销/重做操作
+ * 采用简单的添加/删除逻辑，不涉及WebAV对象重建
+ */
+export class AddTrackCommand implements SimpleCommand {
+  public readonly id: string
+  public readonly description: string
+  private newTrackId: number = 0 // 新创建的轨道ID
+  private trackData: Track // 保存轨道数据
+
+  constructor(
+    private trackName: string | undefined, // 轨道名称（可选）
+    private trackModule: {
+      addTrack: (name?: string) => Track
+      removeTrack: (trackId: number, timelineItems: any, removeTimelineItemCallback?: any) => void
+      getTrack: (trackId: number) => Track | undefined
+    }
+  ) {
+    this.id = generateCommandId()
+    this.description = `添加轨道: ${trackName || '新轨道'}`
+
+    // 预先计算新轨道ID（模拟trackModule的逻辑）
+    // 注意：这里我们无法直接访问tracks数组，所以在execute时会获取实际的轨道数据
+    this.newTrackId = 0 // 将在execute时设置
+    this.trackData = {
+      id: 0,
+      name: '',
+      isVisible: true,
+      isMuted: false,
+      height: 80,
+    }
+  }
+
+  /**
+   * 获取新创建的轨道ID
+   */
+  get createdTrackId(): number {
+    return this.newTrackId
+  }
+
+  /**
+   * 执行命令：添加轨道
+   */
+  async execute(): Promise<void> {
+    try {
+      console.log(`🔄 执行添加轨道操作...`)
+
+      // 调用trackModule的addTrack方法
+      const newTrack = this.trackModule.addTrack(this.trackName)
+
+      // 保存轨道数据用于撤销
+      this.newTrackId = newTrack.id
+      this.trackData = { ...newTrack }
+
+      console.log(`✅ 已添加轨道: ${newTrack.name} (ID: ${newTrack.id})`)
+    } catch (error) {
+      console.error(`❌ 添加轨道失败: ${this.trackName || '新轨道'}`, error)
+      throw error
+    }
+  }
+
+  /**
+   * 撤销命令：删除添加的轨道
+   */
+  async undo(): Promise<void> {
+    try {
+      console.log(`🔄 撤销添加轨道操作：删除轨道 ${this.trackData.name}...`)
+
+      // 删除添加的轨道
+      // 注意：这里传入空的timelineItems和回调，因为新添加的轨道上不应该有任何项目
+      this.trackModule.removeTrack(this.newTrackId, { value: [] } as any, undefined)
+
+      console.log(`↩️ 已撤销添加轨道: ${this.trackData.name}`)
+    } catch (error) {
+      console.error(`❌ 撤销添加轨道失败: ${this.trackData.name}`, error)
+      throw error
+    }
+  }
+}
+
+/**
+ * 删除轨道命令
+ * 支持删除轨道的撤销/重做操作
+ * 遵循"从源头重建"原则：保存轨道信息和所有受影响的时间轴项目信息，撤销时完全重建
+ */
+export class RemoveTrackCommand implements SimpleCommand {
+  public readonly id: string
+  public readonly description: string
+  private trackData: Track // 保存被删除的轨道数据
+  private affectedTimelineItems: any[] = [] // 保存被删除的时间轴项目的重建元数据
+
+  constructor(
+    private trackId: number,
+    private trackModule: {
+      addTrack: (name?: string) => Track
+      removeTrack: (trackId: number, timelineItems: any, removeTimelineItemCallback?: any) => void
+      getTrack: (trackId: number) => Track | undefined
+      tracks: { value: Track[] }
+    },
+    private timelineModule: {
+      addTimelineItem: (item: TimelineItem) => void
+      removeTimelineItem: (id: string) => void
+      getTimelineItem: (id: string) => TimelineItem | undefined
+      setupBidirectionalSync: (item: TimelineItem) => void
+      timelineItems: { value: TimelineItem[] }
+    },
+    private webavModule: {
+      addSprite: (sprite: unknown) => void
+      removeSprite: (sprite: unknown) => void
+    },
+    private mediaModule: {
+      getMediaItem: (id: string) => MediaItem | undefined
+    }
+  ) {
+    this.id = generateCommandId()
+
+    // 获取要删除的轨道信息
+    const track = this.trackModule.getTrack(trackId)
+    if (!track) {
+      throw new Error(`找不到要删除的轨道: ${trackId}`)
+    }
+
+    this.trackData = { ...track }
+    this.description = `删除轨道: ${track.name}`
+
+    // 保存该轨道上所有时间轴项目的重建元数据
+    const affectedItems = this.timelineModule.timelineItems.value.filter(item => item.trackId === trackId)
+    this.affectedTimelineItems = affectedItems.map(item => ({
+      id: item.id,
+      mediaItemId: item.mediaItemId,
+      trackId: item.trackId,
+      mediaType: item.mediaType,
+      timeRange: { ...item.timeRange },
+      position: { ...item.position },
+      size: { ...item.size },
+      rotation: item.rotation,
+      zIndex: item.zIndex,
+      opacity: item.opacity,
+      thumbnailUrl: item.thumbnailUrl,
+    }))
+
+    console.log(`📋 准备删除轨道: ${track.name}, 受影响的时间轴项目: ${this.affectedTimelineItems.length}个`)
+  }
+
+  /**
+   * 从原始素材重建时间轴项目
+   */
+  private async rebuildTimelineItem(itemData: any): Promise<TimelineItem> {
+    const mediaItem = this.mediaModule.getMediaItem(itemData.mediaItemId)
+    if (!mediaItem) {
+      throw new Error(`找不到素材项目: ${itemData.mediaItemId}`)
+    }
+
+    // 检查素材是否已经解析完成
+    if (!mediaItem.isReady || (!mediaItem.mp4Clip && !mediaItem.imgClip)) {
+      throw new Error('素材还在解析中，无法重建')
+    }
+
+    // 根据媒体类型克隆对应的Clip
+    const webAVControls = useWebAVControls()
+    let newSprite: CustomVisibleSprite | ImageVisibleSprite
+
+    if (mediaItem.mediaType === 'video' && mediaItem.mp4Clip) {
+      const clonedClip = await webAVControls.cloneMP4Clip(mediaItem.mp4Clip)
+      newSprite = new CustomVisibleSprite(clonedClip)
+    } else if (mediaItem.mediaType === 'image' && mediaItem.imgClip) {
+      const clonedClip = await webAVControls.cloneImgClip(mediaItem.imgClip)
+      newSprite = new ImageVisibleSprite(clonedClip)
+    } else {
+      throw new Error('不支持的媒体类型或缺少对应的clip')
+    }
+
+    // 设置时间范围
+    if (mediaItem.mediaType === 'video') {
+      newSprite.setTimeRange({
+        clipStartTime: itemData.timeRange.clipStartTime || 0,
+        clipEndTime: itemData.timeRange.clipEndTime || mediaItem.duration * 1000000,
+        timelineStartTime: itemData.timeRange.timelineStartTime,
+        timelineEndTime: itemData.timeRange.timelineEndTime,
+      })
+    } else if (mediaItem.mediaType === 'image') {
+      newSprite.setTimeRange({
+        timelineStartTime: itemData.timeRange.timelineStartTime,
+        timelineEndTime: itemData.timeRange.timelineEndTime,
+        displayDuration: itemData.timeRange.displayDuration,
+      })
+    }
+
+    // 设置变换属性
+    const rect = newSprite.rect
+    rect.x = itemData.position.x
+    rect.y = itemData.position.y
+    rect.w = itemData.size.width
+    rect.h = itemData.size.height
+    rect.angle = itemData.rotation
+
+    // 设置其他属性
+    newSprite.zIndex = itemData.zIndex
+    newSprite.opacity = itemData.opacity
+
+    // 创建新的TimelineItem
+    const newTimelineItem: TimelineItem = reactive({
+      id: itemData.id,
+      mediaItemId: itemData.mediaItemId,
+      trackId: itemData.trackId,
+      mediaType: itemData.mediaType,
+      timeRange: mediaItem.mediaType === 'video' ? {
+        clipStartTime: itemData.timeRange.clipStartTime || 0,
+        clipEndTime: itemData.timeRange.clipEndTime || mediaItem.duration * 1000000,
+        timelineStartTime: itemData.timeRange.timelineStartTime,
+        timelineEndTime: itemData.timeRange.timelineEndTime,
+        effectiveDuration: itemData.timeRange.effectiveDuration,
+        playbackRate: itemData.timeRange.playbackRate || 1.0,
+      } : {
+        timelineStartTime: itemData.timeRange.timelineStartTime,
+        timelineEndTime: itemData.timeRange.timelineEndTime,
+        displayDuration: itemData.timeRange.displayDuration,
+      },
+      position: { ...itemData.position },
+      size: { ...itemData.size },
+      rotation: itemData.rotation,
+      zIndex: itemData.zIndex,
+      opacity: itemData.opacity,
+      sprite: markRaw(newSprite),
+      thumbnailUrl: itemData.thumbnailUrl,
+    })
+
+    return newTimelineItem
+  }
+
+  /**
+   * 执行命令：删除轨道及其上的所有时间轴项目
+   */
+  async execute(): Promise<void> {
+    try {
+      console.log(`🔄 执行删除轨道操作: ${this.trackData.name}...`)
+
+      // 检查是否为最后一个轨道
+      if (this.trackModule.tracks.value.length <= 1) {
+        throw new Error('不能删除最后一个轨道')
+      }
+
+      // 检查轨道是否存在
+      const track = this.trackModule.getTrack(this.trackId)
+      if (!track) {
+        console.warn(`⚠️ 轨道不存在，无法删除: ${this.trackId}`)
+        return
+      }
+
+      // 删除轨道（这会自动删除轨道上的所有时间轴项目）
+      this.trackModule.removeTrack(
+        this.trackId,
+        this.timelineModule.timelineItems,
+        this.timelineModule.removeTimelineItem
+      )
+
+      console.log(`✅ 已删除轨道: ${this.trackData.name}, 删除了 ${this.affectedTimelineItems.length} 个时间轴项目`)
+    } catch (error) {
+      console.error(`❌ 删除轨道失败: ${this.trackData.name}`, error)
+      throw error
+    }
+  }
+
+  /**
+   * 撤销命令：重建轨道和所有受影响的时间轴项目
+   * 遵循"从源头重建"原则，从原始素材完全重新创建所有项目
+   */
+  async undo(): Promise<void> {
+    try {
+      console.log(`🔄 撤销删除轨道操作：重建轨道 ${this.trackData.name}...`)
+
+      // 1. 重建轨道
+      // 注意：我们需要手动重建轨道，保持原有的ID和属性
+      // 找到正确的插入位置（按ID排序）
+      const tracks = this.trackModule.tracks.value
+      const insertIndex = tracks.findIndex(track => track.id > this.trackData.id)
+      if (insertIndex === -1) {
+        tracks.push({ ...this.trackData })
+      } else {
+        tracks.splice(insertIndex, 0, { ...this.trackData })
+      }
+
+      // 2. 重建所有受影响的时间轴项目
+      for (const itemData of this.affectedTimelineItems) {
+        console.log(`🔄 重建时间轴项目: ${itemData.id}`)
+
+        const newTimelineItem = await this.rebuildTimelineItem(itemData)
+
+        // 添加到时间轴
+        this.timelineModule.addTimelineItem(newTimelineItem)
+
+        // 设置双向数据同步
+        this.timelineModule.setupBidirectionalSync(newTimelineItem)
+
+        // 添加sprite到WebAV画布
+        this.webavModule.addSprite(newTimelineItem.sprite)
+      }
+
+      console.log(`↩️ 已撤销删除轨道: ${this.trackData.name}, 恢复了 ${this.affectedTimelineItems.length} 个时间轴项目`)
+    } catch (error) {
+      console.error(`❌ 撤销删除轨道失败: ${this.trackData.name}`, error)
+      throw error
+    }
+  }
+}
+
+/**
+ * 自动排列轨道命令
+ * 支持单轨道自动排列的撤销/重做操作
+ * 保存排列前的所有时间轴项目位置，撤销时恢复原始位置
+ */
+export class AutoArrangeTrackCommand implements SimpleCommand {
+  public readonly id: string
+  public readonly description: string
+  private originalPositions: Map<string, { timelineStartTime: number; timelineEndTime: number }> = new Map()
+  private affectedItemIds: string[] = []
+
+  constructor(
+    private trackId: number,
+    private timelineModule: {
+      timelineItems: { value: TimelineItem[] }
+      getTimelineItem: (id: string) => TimelineItem | undefined
+    },
+    private trackModule: {
+      getTrack: (trackId: number) => Track | undefined
+    }
+  ) {
+    this.id = generateCommandId()
+
+    // 获取轨道信息
+    const track = this.trackModule.getTrack(trackId)
+    this.description = `自动排列轨道: ${track?.name || `轨道 ${trackId}`}`
+
+    // 获取该轨道的所有时间轴项目
+    const trackItems = this.timelineModule.timelineItems.value.filter(item => item.trackId === trackId)
+
+    if (trackItems.length === 0) {
+      console.log(`⚠️ 轨道 ${trackId} 没有片段需要整理`)
+      return
+    }
+
+    // 保存原始位置
+    trackItems.forEach(item => {
+      const timeRange = item.sprite.getTimeRange()
+      this.originalPositions.set(item.id, {
+        timelineStartTime: timeRange.timelineStartTime,
+        timelineEndTime: timeRange.timelineEndTime,
+      })
+      this.affectedItemIds.push(item.id)
+    })
+
+    console.log(`📋 准备自动排列轨道: ${track?.name || `轨道 ${trackId}`}, 受影响的项目: ${this.affectedItemIds.length}个`)
+  }
+
+  /**
+   * 执行命令：自动排列轨道上的所有时间轴项目
+   */
+  async execute(): Promise<void> {
+    try {
+      console.log(`🔄 执行自动排列轨道操作: 轨道 ${this.trackId}...`)
+
+      // 获取该轨道的所有项目
+      const trackItems = this.timelineModule.timelineItems.value.filter(item => item.trackId === this.trackId)
+
+      if (trackItems.length === 0) {
+        console.log(`⚠️ 轨道 ${this.trackId} 没有片段需要整理`)
+        return
+      }
+
+      // 按时间轴开始时间排序
+      const sortedItems = trackItems.sort((a, b) => {
+        const rangeA = a.sprite.getTimeRange()
+        const rangeB = b.sprite.getTimeRange()
+        return rangeA.timelineStartTime - rangeB.timelineStartTime
+      })
+
+      let currentPosition = 0
+      for (const item of sortedItems) {
+        const sprite = item.sprite
+        const timeRange = sprite.getTimeRange()
+        const duration = (timeRange.timelineEndTime - timeRange.timelineStartTime) / 1000000 // 转换为秒
+
+        // 更新时间轴位置 - 根据媒体类型设置不同的时间范围
+        if (item.mediaType === 'video' && 'clipStartTime' in timeRange) {
+          sprite.setTimeRange({
+            clipStartTime: timeRange.clipStartTime,
+            clipEndTime: timeRange.clipEndTime,
+            timelineStartTime: currentPosition * 1000000, // 转换为微秒
+            timelineEndTime: (currentPosition + duration) * 1000000,
+          })
+        } else {
+          // 图片类型
+          sprite.setTimeRange({
+            timelineStartTime: currentPosition * 1000000, // 转换为微秒
+            timelineEndTime: (currentPosition + duration) * 1000000,
+            displayDuration: duration * 1000000,
+          })
+        }
+
+        // 从sprite获取更新后的完整timeRange（包含自动计算的effectiveDuration）
+        item.timeRange = sprite.getTimeRange()
+        currentPosition += duration
+      }
+
+      const track = this.trackModule.getTrack(this.trackId)
+      console.log(`✅ 轨道 ${track?.name || `轨道 ${this.trackId}`} 的片段自动整理完成，共整理 ${sortedItems.length} 个片段`)
+    } catch (error) {
+      const track = this.trackModule.getTrack(this.trackId)
+      console.error(`❌ 自动排列轨道失败: ${track?.name || `轨道 ${this.trackId}`}`, error)
+      throw error
+    }
+  }
+
+  /**
+   * 撤销命令：恢复所有时间轴项目的原始位置
+   */
+  async undo(): Promise<void> {
+    try {
+      console.log(`🔄 撤销自动排列轨道操作：恢复轨道 ${this.trackId} 的原始布局...`)
+
+      // 恢复每个项目的原始位置
+      for (const itemId of this.affectedItemIds) {
+        const item = this.timelineModule.getTimelineItem(itemId)
+        const originalPosition = this.originalPositions.get(itemId)
+
+        if (!item || !originalPosition) {
+          console.warn(`⚠️ 无法找到项目或原始位置: ${itemId}`)
+          continue
+        }
+
+        const sprite = item.sprite
+        const currentTimeRange = sprite.getTimeRange()
+
+        // 根据媒体类型恢复时间范围
+        if (item.mediaType === 'video' && 'clipStartTime' in currentTimeRange) {
+          sprite.setTimeRange({
+            clipStartTime: currentTimeRange.clipStartTime,
+            clipEndTime: currentTimeRange.clipEndTime,
+            timelineStartTime: originalPosition.timelineStartTime,
+            timelineEndTime: originalPosition.timelineEndTime,
+          })
+        } else {
+          // 图片类型
+          const duration = originalPosition.timelineEndTime - originalPosition.timelineStartTime
+          sprite.setTimeRange({
+            timelineStartTime: originalPosition.timelineStartTime,
+            timelineEndTime: originalPosition.timelineEndTime,
+            displayDuration: duration,
+          })
+        }
+
+        // 从sprite获取更新后的完整timeRange
+        item.timeRange = sprite.getTimeRange()
+      }
+
+      const track = this.trackModule.getTrack(this.trackId)
+      console.log(`↩️ 已撤销自动排列轨道: ${track?.name || `轨道 ${this.trackId}`}, 恢复了 ${this.affectedItemIds.length} 个项目的位置`)
+    } catch (error) {
+      const track = this.trackModule.getTrack(this.trackId)
+      console.error(`❌ 撤销自动排列轨道失败: ${track?.name || `轨道 ${this.trackId}`}`, error)
+      throw error
+    }
+  }
+}
+
+/**
+ * 调整时间轴项目大小命令
+ * 支持时间范围调整（拖拽边缘）的撤销/重做操作
+ * 保存调整前的时间范围，撤销时恢复原始时间范围
+ */
+export class ResizeTimelineItemCommand implements SimpleCommand {
+  public readonly id: string
+  public readonly description: string
+  private originalTimeRange: { timelineStartTime: number; timelineEndTime: number; [key: string]: any }
+  private newTimeRange: { timelineStartTime: number; timelineEndTime: number; [key: string]: any }
+
+  constructor(
+    private timelineItemId: string,
+    originalTimeRange: any, // 原始时间范围
+    newTimeRange: any, // 新的时间范围
+    private timelineModule: {
+      getTimelineItem: (id: string) => TimelineItem | undefined
+    },
+    private mediaModule: {
+      getMediaItem: (id: string) => MediaItem | undefined
+    }
+  ) {
+    this.id = generateCommandId()
+
+    // 保存原始和新的时间范围
+    this.originalTimeRange = { ...originalTimeRange }
+    this.newTimeRange = { ...newTimeRange }
+
+    // 获取时间轴项目信息用于描述
+    const timelineItem = this.timelineModule.getTimelineItem(timelineItemId)
+    const mediaItem = timelineItem ? this.mediaModule.getMediaItem(timelineItem.mediaItemId) : null
+
+    const originalDuration = (this.originalTimeRange.timelineEndTime - this.originalTimeRange.timelineStartTime) / 1000000
+    const newDuration = (this.newTimeRange.timelineEndTime - this.newTimeRange.timelineStartTime) / 1000000
+
+    this.description = `调整时间范围: ${mediaItem?.name || '未知素材'} (${originalDuration.toFixed(2)}s → ${newDuration.toFixed(2)}s)`
+
+    console.log(`📋 准备调整时间范围: ${mediaItem?.name || '未知素材'}`, {
+      原始时长: originalDuration.toFixed(2) + 's',
+      新时长: newDuration.toFixed(2) + 's',
+      原始位置: (this.originalTimeRange.timelineStartTime / 1000000).toFixed(2) + 's',
+      新位置: (this.newTimeRange.timelineStartTime / 1000000).toFixed(2) + 's',
+    })
+  }
+
+  /**
+   * 应用时间范围到sprite和timelineItem
+   */
+  private applyTimeRange(timeRange: any): void {
+    const timelineItem = this.timelineModule.getTimelineItem(this.timelineItemId)
+    if (!timelineItem) {
+      throw new Error(`找不到时间轴项目: ${this.timelineItemId}`)
+    }
+
+    const sprite = timelineItem.sprite
+    const mediaItem = this.mediaModule.getMediaItem(timelineItem.mediaItemId)
+    if (!mediaItem) {
+      throw new Error(`找不到素材项目: ${timelineItem.mediaItemId}`)
+    }
+
+    // 根据媒体类型设置时间范围
+    if (mediaItem.mediaType === 'video') {
+      // 视频类型：保持clipStartTime和clipEndTime，更新timeline时间
+      sprite.setTimeRange({
+        clipStartTime: timeRange.clipStartTime || 0,
+        clipEndTime: timeRange.clipEndTime || mediaItem.duration * 1000000,
+        timelineStartTime: timeRange.timelineStartTime,
+        timelineEndTime: timeRange.timelineEndTime,
+      })
+    } else if (mediaItem.mediaType === 'image') {
+      // 图片类型：设置displayDuration
+      const duration = timeRange.timelineEndTime - timeRange.timelineStartTime
+      sprite.setTimeRange({
+        timelineStartTime: timeRange.timelineStartTime,
+        timelineEndTime: timeRange.timelineEndTime,
+        displayDuration: duration,
+      })
+    }
+
+    // 同步timeRange到TimelineItem
+    timelineItem.timeRange = sprite.getTimeRange()
+  }
+
+  /**
+   * 执行命令：应用新的时间范围
+   */
+  async execute(): Promise<void> {
+    try {
+      console.log(`🔄 执行调整时间范围操作: ${this.timelineItemId}...`)
+
+      this.applyTimeRange(this.newTimeRange)
+
+      const timelineItem = this.timelineModule.getTimelineItem(this.timelineItemId)
+      const mediaItem = timelineItem ? this.mediaModule.getMediaItem(timelineItem.mediaItemId) : null
+      const newDuration = (this.newTimeRange.timelineEndTime - this.newTimeRange.timelineStartTime) / 1000000
+
+      console.log(`✅ 已调整时间范围: ${mediaItem?.name || '未知素材'} → ${newDuration.toFixed(2)}s`)
+    } catch (error) {
+      const timelineItem = this.timelineModule.getTimelineItem(this.timelineItemId)
+      const mediaItem = timelineItem ? this.mediaModule.getMediaItem(timelineItem.mediaItemId) : null
+      console.error(`❌ 调整时间范围失败: ${mediaItem?.name || '未知素材'}`, error)
+      throw error
+    }
+  }
+
+  /**
+   * 撤销命令：恢复原始时间范围
+   */
+  async undo(): Promise<void> {
+    try {
+      console.log(`🔄 撤销调整时间范围操作：恢复 ${this.timelineItemId} 的原始时间范围...`)
+
+      this.applyTimeRange(this.originalTimeRange)
+
+      const timelineItem = this.timelineModule.getTimelineItem(this.timelineItemId)
+      const mediaItem = timelineItem ? this.mediaModule.getMediaItem(timelineItem.mediaItemId) : null
+      const originalDuration = (this.originalTimeRange.timelineEndTime - this.originalTimeRange.timelineStartTime) / 1000000
+
+      console.log(`↩️ 已撤销调整时间范围: ${mediaItem?.name || '未知素材'} → ${originalDuration.toFixed(2)}s`)
+    } catch (error) {
+      const timelineItem = this.timelineModule.getTimelineItem(this.timelineItemId)
+      const mediaItem = timelineItem ? this.mediaModule.getMediaItem(timelineItem.mediaItemId) : null
+      console.error(`❌ 撤销调整时间范围失败: ${mediaItem?.name || '未知素材'}`, error)
       throw error
     }
   }

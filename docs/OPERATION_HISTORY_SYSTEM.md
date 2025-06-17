@@ -204,16 +204,16 @@ class UpdateTransformCommand implements SimpleCommand {
 #### 实现内容
 
 ##### 🔥 高优先级操作
-- [ ] **DuplicateTimelineItemCommand** - 复制时间轴项目
-- [ ] **AddTrackCommand** - 添加轨道
-- [ ] **RemoveTrackCommand** - 删除轨道
-- [ ] **AutoArrangeTrackCommand** - 单轨道自动排列
+- [x] **DuplicateTimelineItemCommand** - 复制时间轴项目 ✅
+- [x] **AddTrackCommand** - 添加轨道 ✅
+- [x] **RemoveTrackCommand** - 删除轨道 ✅
+- [x] **AutoArrangeTrackCommand** - 单轨道自动排列 ✅
 
 ##### 🟡 中优先级操作
 - [ ] **RenameTrackCommand** - 重命名轨道
 - [ ] **ToggleTrackVisibilityCommand** - 切换轨道可见性
 - [ ] **ToggleTrackMuteCommand** - 切换轨道静音
-- [ ] **ResizeTimelineItemCommand** - 时间范围调整（拖拽边缘）
+- [x] **ResizeTimelineItemCommand** - 时间范围调整（拖拽边缘） ✅
 
 ##### 🟢 低优先级操作
 - [ ] **SetVideoResolutionCommand** - 修改视频分辨率

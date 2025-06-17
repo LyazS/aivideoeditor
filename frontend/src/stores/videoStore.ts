@@ -23,7 +23,7 @@ import { createSelectionModule } from './modules/selectionModule'
 import { createTimelineModule } from './modules/timelineModule'
 import { createClipOperationsModule } from './modules/clipOperationsModule'
 import { createHistoryModule } from './modules/historyModule'
-import { AddTimelineItemCommand, RemoveTimelineItemCommand, MoveTimelineItemCommand, UpdateTransformCommand, SplitTimelineItemCommand } from './modules/commands/timelineCommands'
+import { AddTimelineItemCommand, RemoveTimelineItemCommand, MoveTimelineItemCommand, UpdateTransformCommand, SplitTimelineItemCommand, DuplicateTimelineItemCommand, AddTrackCommand, RemoveTrackCommand, AutoArrangeTrackCommand, ResizeTimelineItemCommand } from './modules/commands/timelineCommands'
 import type { MediaItem, TimelineItem } from '../types/videoTypes'
 
 export const useVideoStore = defineStore('video', () => {
@@ -409,6 +409,219 @@ export const useVideoStore = defineStore('video', () => {
     await historyModule.executeCommand(command)
   }
 
+  /**
+   * 带历史记录的复制时间轴项目方法
+   * @param timelineItemId 要复制的时间轴项目ID
+   * @returns 新创建的时间轴项目ID，失败时返回null
+   */
+  async function duplicateTimelineItemWithHistory(timelineItemId: string): Promise<string | null> {
+    // 获取要复制的时间轴项目
+    const timelineItem = timelineModule.getTimelineItem(timelineItemId)
+    if (!timelineItem) {
+      console.warn(`⚠️ 时间轴项目不存在，无法复制: ${timelineItemId}`)
+      return null
+    }
+
+    // 计算新位置（在原项目后面，避免重叠）
+    const originalEndTime = timelineItem.timeRange.timelineEndTime / 1000000 // 转换为秒
+    const newPosition = originalEndTime + 0.1 // 在原项目结束后0.1秒的位置
+
+    const command = new DuplicateTimelineItemCommand(
+      timelineItemId,
+      timelineItem, // 传入完整的timelineItem用于保存重建数据
+      newPosition,
+      {
+        addTimelineItem: timelineModule.addTimelineItem,
+        removeTimelineItem: timelineModule.removeTimelineItem,
+        getTimelineItem: timelineModule.getTimelineItem,
+        setupBidirectionalSync: timelineModule.setupBidirectionalSync,
+      },
+      {
+        addSprite: webavModule.addSprite,
+        removeSprite: webavModule.removeSprite,
+      },
+      {
+        getMediaItem: mediaModule.getMediaItem,
+      }
+    )
+
+    try {
+      await historyModule.executeCommand(command)
+      // 返回新创建的项目ID
+      return command.newTimelineItemId
+    } catch (error) {
+      console.error('❌ 复制时间轴项目失败:', error)
+      return null
+    }
+  }
+
+  /**
+   * 带历史记录的添加轨道方法
+   * @param name 轨道名称（可选）
+   * @returns 新创建的轨道ID，失败时返回null
+   */
+  async function addTrackWithHistory(name?: string): Promise<number | null> {
+    const command = new AddTrackCommand(
+      name,
+      {
+        addTrack: trackModule.addTrack,
+        removeTrack: trackModule.removeTrack,
+        getTrack: trackModule.getTrack,
+      }
+    )
+
+    try {
+      await historyModule.executeCommand(command)
+      // 返回新创建的轨道ID
+      return command.createdTrackId
+    } catch (error) {
+      console.error('❌ 添加轨道失败:', error)
+      return null
+    }
+  }
+
+  /**
+   * 带历史记录的删除轨道方法
+   * @param trackId 要删除的轨道ID
+   * @returns 是否成功删除
+   */
+  async function removeTrackWithHistory(trackId: number): Promise<boolean> {
+    // 检查是否为最后一个轨道
+    if (trackModule.tracks.value.length <= 1) {
+      console.warn('⚠️ 不能删除最后一个轨道')
+      return false
+    }
+
+    // 检查轨道是否存在
+    const track = trackModule.getTrack(trackId)
+    if (!track) {
+      console.warn(`⚠️ 轨道不存在，无法删除: ${trackId}`)
+      return false
+    }
+
+    const command = new RemoveTrackCommand(
+      trackId,
+      {
+        addTrack: trackModule.addTrack,
+        removeTrack: trackModule.removeTrack,
+        getTrack: trackModule.getTrack,
+        tracks: trackModule.tracks,
+      },
+      {
+        addTimelineItem: timelineModule.addTimelineItem,
+        removeTimelineItem: timelineModule.removeTimelineItem,
+        getTimelineItem: timelineModule.getTimelineItem,
+        setupBidirectionalSync: timelineModule.setupBidirectionalSync,
+        timelineItems: timelineModule.timelineItems,
+      },
+      {
+        addSprite: webavModule.addSprite,
+        removeSprite: webavModule.removeSprite,
+      },
+      {
+        getMediaItem: mediaModule.getMediaItem,
+      }
+    )
+
+    try {
+      await historyModule.executeCommand(command)
+      return true
+    } catch (error) {
+      console.error('❌ 删除轨道失败:', error)
+      return false
+    }
+  }
+
+  /**
+   * 带历史记录的自动排列轨道方法
+   * @param trackId 要自动排列的轨道ID
+   * @returns 是否成功排列
+   */
+  async function autoArrangeTrackWithHistory(trackId: number): Promise<boolean> {
+    // 检查轨道是否存在
+    const track = trackModule.getTrack(trackId)
+    if (!track) {
+      console.warn(`⚠️ 轨道不存在，无法自动排列: ${trackId}`)
+      return false
+    }
+
+    // 检查轨道是否有项目
+    const trackItems = timelineModule.timelineItems.value.filter(item => item.trackId === trackId)
+    if (trackItems.length === 0) {
+      console.log(`⚠️ 轨道 ${trackId} 没有片段需要整理`)
+      return false
+    }
+
+    const command = new AutoArrangeTrackCommand(
+      trackId,
+      {
+        timelineItems: timelineModule.timelineItems,
+        getTimelineItem: timelineModule.getTimelineItem,
+      },
+      {
+        getTrack: trackModule.getTrack,
+      }
+    )
+
+    try {
+      await historyModule.executeCommand(command)
+      return true
+    } catch (error) {
+      console.error('❌ 自动排列轨道失败:', error)
+      return false
+    }
+  }
+
+  /**
+   * 带历史记录的调整时间范围方法
+   * @param timelineItemId 时间轴项目ID
+   * @param newTimeRange 新的时间范围
+   * @returns 是否成功调整
+   */
+  async function resizeTimelineItemWithHistory(
+    timelineItemId: string,
+    newTimeRange: { timelineStartTime: number; timelineEndTime: number; [key: string]: any }
+  ): Promise<boolean> {
+    // 获取时间轴项目
+    const timelineItem = timelineModule.getTimelineItem(timelineItemId)
+    if (!timelineItem) {
+      console.warn(`⚠️ 时间轴项目不存在，无法调整时间范围: ${timelineItemId}`)
+      return false
+    }
+
+    // 获取原始时间范围
+    const originalTimeRange = timelineItem.sprite.getTimeRange()
+
+    // 检查是否有实际变化
+    const startTimeChanged = Math.abs(originalTimeRange.timelineStartTime - newTimeRange.timelineStartTime) > 1000 // 允许1毫秒的误差
+    const endTimeChanged = Math.abs(originalTimeRange.timelineEndTime - newTimeRange.timelineEndTime) > 1000
+
+    if (!startTimeChanged && !endTimeChanged) {
+      console.log('⚠️ 时间范围没有变化，跳过调整操作')
+      return false
+    }
+
+    const command = new ResizeTimelineItemCommand(
+      timelineItemId,
+      originalTimeRange,
+      newTimeRange,
+      {
+        getTimelineItem: timelineModule.getTimelineItem,
+      },
+      {
+        getMediaItem: mediaModule.getMediaItem,
+      }
+    )
+
+    try {
+      await historyModule.executeCommand(command)
+      return true
+    } catch (error) {
+      console.error('❌ 调整时间范围失败:', error)
+      return false
+    }
+  }
+
   function removeMediaItem(mediaItemId: string) {
     mediaModule.removeMediaItem(
       mediaItemId,
@@ -616,5 +829,10 @@ export const useVideoStore = defineStore('video', () => {
     moveTimelineItemWithHistory,
     updateTimelineItemTransformWithHistory,
     splitTimelineItemAtTimeWithHistory,
+    duplicateTimelineItemWithHistory,
+    addTrackWithHistory,
+    removeTrackWithHistory,
+    autoArrangeTrackWithHistory,
+    resizeTimelineItemWithHistory,
   }
 })

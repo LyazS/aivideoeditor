@@ -408,10 +408,8 @@ function handleResize(event: MouseEvent) {
   tempResizePosition.value = newTimelinePosition
 }
 
-function stopResize() {
+async function stopResize() {
   if (isResizing.value) {
-    // 更新CustomVisibleSprite的时间范围
-    const sprite = props.timelineItem.sprite
     const mediaItem = videoStore.getMediaItem(props.timelineItem.mediaItemId)
 
     if (mediaItem) {
@@ -437,30 +435,37 @@ function stopResize() {
         duration: tempDuration.value,
       })
 
-      // 根据媒体类型更新sprite的时间范围
+      // 构建新的时间范围对象
+      const newTimeRange = {
+        timelineStartTime: newTimelineStartTime,
+        timelineEndTime: newTimelineEndTime,
+      }
+
+      // 根据媒体类型添加额外的属性
       if (mediaItem.mediaType === 'video') {
-        // 视频使用CustomVisibleSprite的setTimeRange方法
-        sprite.setTimeRange({
+        Object.assign(newTimeRange, {
           clipStartTime: 0,
           clipEndTime: mediaItem.duration * 1000000,
-          timelineStartTime: newTimelineStartTime,
-          timelineEndTime: newTimelineEndTime,
         })
       } else if (mediaItem.mediaType === 'image') {
-        // 图片使用ImageVisibleSprite的setTimeRange方法
-        sprite.setTimeRange({
-          timelineStartTime: newTimelineStartTime,
-          timelineEndTime: newTimelineEndTime,
+        Object.assign(newTimeRange, {
           displayDuration: newTimelineEndTime - newTimelineStartTime,
         })
       }
 
-      // 从sprite获取更新后的完整timeRange
-      // eslint-disable-next-line vue/no-mutating-props
-      props.timelineItem.timeRange = sprite.getTimeRange()
-
-      // 重新生成缩略图（异步执行，不阻塞UI）
-      regenerateThumbnailAfterResize()
+      try {
+        // 使用带历史记录的调整方法
+        const success = await videoStore.resizeTimelineItemWithHistory(props.timelineItem.id, newTimeRange)
+        if (success) {
+          console.log('✅ 时间范围调整成功')
+          // 重新生成缩略图（异步执行，不阻塞UI）
+          regenerateThumbnailAfterResize()
+        } else {
+          console.error('❌ 时间范围调整失败')
+        }
+      } catch (error) {
+        console.error('❌ 调整时间范围时出错:', error)
+      }
     }
   }
 
@@ -529,7 +534,7 @@ async function duplicateClip() {
   hideContextMenu()
 
   try {
-    const newItemId = await videoStore.duplicateTimelineItem(props.timelineItem.id)
+    const newItemId = await videoStore.duplicateTimelineItemWithHistory(props.timelineItem.id)
     if (newItemId) {
       console.log('✅ 时间轴项目复制成功，新项目ID:', newItemId)
     } else {
