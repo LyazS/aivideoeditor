@@ -6,55 +6,85 @@ import { MP4Clip, ImgClip } from '@webav/av-cliper'
  */
 
 /**
- * 计算保持宽高比的缩略图尺寸
+ * 计算保持宽高比的缩略图尺寸（在固定尺寸容器内居中显示）
  * @param originalWidth 原始宽度
  * @param originalHeight 原始高度
- * @param maxSize 最大尺寸（60px）
- * @returns 缩略图尺寸
+ * @param containerWidth 容器宽度（100px）
+ * @param containerHeight 容器高度（60px）
+ * @returns 缩略图尺寸和位置信息
  */
-function calculateThumbnailSize(originalWidth: number, originalHeight: number, maxSize: number = 60) {
+function calculateThumbnailSize(originalWidth: number, originalHeight: number, containerWidth: number = 100, containerHeight: number = 60) {
   const aspectRatio = originalWidth / originalHeight
-  
-  if (originalWidth > originalHeight) {
-    // 宽度较大，以宽度为准
-    return {
-      width: Math.min(originalWidth, maxSize),
-      height: Math.min(originalWidth, maxSize) / aspectRatio
-    }
+  const containerAspectRatio = containerWidth / containerHeight
+
+  let drawWidth: number
+  let drawHeight: number
+
+  if (aspectRatio > containerAspectRatio) {
+    // 原始宽高比大于容器宽高比，以容器宽度为准
+    drawWidth = containerWidth
+    drawHeight = containerWidth / aspectRatio
   } else {
-    // 高度较大，以高度为准
-    return {
-      width: Math.min(originalHeight, maxSize) * aspectRatio,
-      height: Math.min(originalHeight, maxSize)
-    }
+    // 原始宽高比小于等于容器宽高比，以容器高度为准
+    drawWidth = containerHeight * aspectRatio
+    drawHeight = containerHeight
+  }
+
+  // 计算居中位置
+  const offsetX = (containerWidth - drawWidth) / 2
+  const offsetY = (containerHeight - drawHeight) / 2
+
+  return {
+    containerWidth,
+    containerHeight,
+    drawWidth,
+    drawHeight,
+    offsetX,
+    offsetY
   }
 }
 
 /**
- * 从VideoFrame或ImageBitmap创建Canvas并绘制缩略图
+ * 从VideoFrame或ImageBitmap创建Canvas并绘制缩略图（固定80x80，居中显示，黑色背景）
  * @param source VideoFrame或ImageBitmap
- * @param targetWidth 目标宽度
- * @param targetHeight 目标高度
+ * @param sizeInfo 尺寸和位置信息
  * @returns Canvas元素
  */
 function createThumbnailCanvas(
-  source: VideoFrame | ImageBitmap, 
-  targetWidth: number, 
-  targetHeight: number
+  source: VideoFrame | ImageBitmap,
+  sizeInfo: {
+    containerWidth: number
+    containerHeight: number
+    drawWidth: number
+    drawHeight: number
+    offsetX: number
+    offsetY: number
+  }
 ): HTMLCanvasElement {
   const canvas = document.createElement('canvas')
   const ctx = canvas.getContext('2d')
-  
+
   if (!ctx) {
     throw new Error('无法创建Canvas上下文')
   }
-  
-  canvas.width = targetWidth
-  canvas.height = targetHeight
-  
-  // 绘制图像到canvas
-  ctx.drawImage(source as any, 0, 0, targetWidth, targetHeight)
-  
+
+  // 设置固定的容器尺寸
+  canvas.width = sizeInfo.containerWidth
+  canvas.height = sizeInfo.containerHeight
+
+  // 填充黑色背景
+  ctx.fillStyle = '#000000'
+  ctx.fillRect(0, 0, sizeInfo.containerWidth, sizeInfo.containerHeight)
+
+  // 在居中位置绘制图像
+  ctx.drawImage(
+    source as any,
+    sizeInfo.offsetX,
+    sizeInfo.offsetY,
+    sizeInfo.drawWidth,
+    sizeInfo.drawHeight
+  )
+
   return canvas
 }
 
@@ -104,22 +134,17 @@ export async function generateVideoThumbnail(
     }
 
     // 计算缩略图尺寸
-    const { width: thumbnailWidth, height: thumbnailHeight } = calculateThumbnailSize(
-      meta.width,
-      meta.height
-    )
+    const sizeInfo = calculateThumbnailSize(meta.width, meta.height)
     console.log('📐 [ThumbnailGenerator] 缩略图尺寸:', {
       original: `${meta.width}x${meta.height}`,
-      thumbnail: `${thumbnailWidth}x${thumbnailHeight}`
+      container: `${sizeInfo.containerWidth}x${sizeInfo.containerHeight}`,
+      draw: `${sizeInfo.drawWidth}x${sizeInfo.drawHeight}`,
+      offset: `${sizeInfo.offsetX},${sizeInfo.offsetY}`
     })
 
     // 创建缩略图canvas
     console.log('🎨 [ThumbnailGenerator] 创建缩略图canvas...')
-    const canvas = createThumbnailCanvas(
-      tickResult.video,
-      thumbnailWidth,
-      thumbnailHeight
-    )
+    const canvas = createThumbnailCanvas(tickResult.video, sizeInfo)
     console.log('✅ [ThumbnailGenerator] 缩略图canvas创建完成')
 
     // 清理VideoFrame资源
@@ -178,22 +203,17 @@ export async function generateImageThumbnail(imgClip: ImgClip): Promise<HTMLCanv
     }
 
     // 计算缩略图尺寸
-    const { width: thumbnailWidth, height: thumbnailHeight } = calculateThumbnailSize(
-      meta.width,
-      meta.height
-    )
+    const sizeInfo = calculateThumbnailSize(meta.width, meta.height)
     console.log('📐 [ThumbnailGenerator] 缩略图尺寸:', {
       original: `${meta.width}x${meta.height}`,
-      thumbnail: `${thumbnailWidth}x${thumbnailHeight}`
+      container: `${sizeInfo.containerWidth}x${sizeInfo.containerHeight}`,
+      draw: `${sizeInfo.drawWidth}x${sizeInfo.drawHeight}`,
+      offset: `${sizeInfo.offsetX},${sizeInfo.offsetY}`
     })
 
     // 创建缩略图canvas
     console.log('🎨 [ThumbnailGenerator] 创建缩略图canvas...')
-    const canvas = createThumbnailCanvas(
-      tickResult.video,
-      thumbnailWidth,
-      thumbnailHeight
-    )
+    const canvas = createThumbnailCanvas(tickResult.video, sizeInfo)
     console.log('✅ [ThumbnailGenerator] 缩略图canvas创建完成')
 
     // 清理资源（如果是VideoFrame）

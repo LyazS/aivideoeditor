@@ -50,22 +50,22 @@
             <div v-else class="thumbnail-placeholder">
               <div class="loading-spinner"></div>
             </div>
-            <!-- 只有视频才显示时长标签 -->
+
+            <!-- 左上角状态标签 -->
+            <div class="status-badge" :class="`status-${item.status || (item.isReady ? 'ready' : 'parsing')}`">
+              {{ getStatusText(item.status || (item.isReady ? 'ready' : 'parsing')) }}
+            </div>
+
+            <!-- 右上角时长标签（只有视频才显示） -->
             <div v-if="item.mediaType === 'video'" class="duration-badge">
               {{ formatDuration(item.duration) }}
             </div>
-            <!-- 解析中状态覆盖层 -->
-            <div v-if="!item.isReady" class="parsing-overlay">
-              <div class="parsing-spinner"></div>
-              <div class="parsing-text">解析中</div>
-            </div>
           </div>
-          <div class="media-info">
-            <div class="media-name" :title="item.name">{{ item.name }}</div>
-            <div class="media-details">
-              {{ formatFileSize(item.file.size) }}
-            </div>
-          </div>
+
+          <!-- 底部素材名称 -->
+          <div class="media-name" :title="item.name">{{ item.name }}</div>
+
+          <!-- 移除按钮 -->
           <button
             class="remove-btn"
             @click.stop="removeMediaItem(item.id)"
@@ -229,6 +229,7 @@ const addVideoItem = async (file: File, url: string, mediaItemId: string, startT
         mp4Clip: null, // 解析中时为null
         imgClip: null,
         isReady: false, // 标记为未准备好
+        status: 'parsing', // 解析中状态
       }
 
       console.log(`📋 创建解析中的MediaItem: ${parsingMediaItem.name} (ID: ${mediaItemId})`)
@@ -257,6 +258,7 @@ const addVideoItem = async (file: File, url: string, mediaItemId: string, startT
         ...parsingMediaItem,
         mp4Clip: markRaw(mp4Clip), // 使用markRaw避免Vue响应式包装
         isReady: true, // 标记为准备好
+        status: 'ready', // 已准备好状态
         thumbnailUrl, // 添加缩略图URL
       }
 
@@ -316,6 +318,7 @@ const addImageItem = async (file: File, url: string, mediaItemId: string, startT
         mp4Clip: null,
         imgClip: null, // 解析中时为null
         isReady: false, // 标记为未准备好
+        status: 'parsing', // 解析中状态
       }
 
       console.log(`📋 创建解析中的图片MediaItem: ${parsingMediaItem.name} (ID: ${mediaItemId})`)
@@ -344,6 +347,7 @@ const addImageItem = async (file: File, url: string, mediaItemId: string, startT
         ...parsingMediaItem,
         imgClip: markRaw(imgClip), // 使用markRaw避免Vue响应式包装
         isReady: true, // 标记为准备好
+        status: 'ready', // 已准备好状态
         thumbnailUrl, // 添加缩略图URL
       }
 
@@ -452,6 +456,22 @@ const formatDuration = (seconds: number): string => {
   return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
 }
 
+// 获取状态文本
+const getStatusText = (status: string): string => {
+  switch (status) {
+    case 'parsing':
+      return '解析中'
+    case 'ready':
+      return '已添加'
+    case 'error':
+      return '错误'
+    case 'missing':
+      return '已丢失'
+    default:
+      return '未知'
+  }
+}
+
 // 格式化文件大小
 const formatFileSize = (bytes: number): string => {
   if (bytes === 0) return '0 B'
@@ -521,21 +541,23 @@ const formatFileSize = (bytes: number): string => {
 /* 使用通用的 empty-state 和 hint 样式 */
 
 .media-list {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
   gap: var(--spacing-md);
+  padding: var(--spacing-md);
 }
 
 .media-item {
   background-color: var(--color-bg-tertiary);
   border-radius: var(--border-radius-large);
-  padding: var(--spacing-md);
+  padding: var(--spacing-sm);
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: var(--spacing-lg);
   cursor: grab;
   transition: background-color var(--transition-fast);
   position: relative;
+  min-height: 100px;
 }
 
 .media-item:hover {
@@ -558,19 +580,20 @@ const formatFileSize = (bytes: number): string => {
 }
 
 .media-thumbnail {
-  width: 60px;
-  height: 34px;
+  width: 100px;
+  height: 60px;
   background-color: #000;
   border-radius: var(--border-radius-medium);
   position: relative;
   overflow: hidden;
   flex-shrink: 0;
+  margin-bottom: var(--spacing-xs);
 }
 
 .thumbnail-image {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
 }
 
 .thumbnail-placeholder {
@@ -591,6 +614,35 @@ const formatFileSize = (bytes: number): string => {
   animation: spin 1s linear infinite;
 }
 
+/* 状态标签样式 */
+.status-badge {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  background-color: rgba(0, 0, 0, 0.8);
+  color: white;
+  font-size: 10px;
+  padding: 2px 4px;
+  border-radius: 3px;
+  z-index: 2;
+}
+
+.status-badge.status-parsing {
+  background-color: rgba(255, 165, 0, 0.9);
+}
+
+.status-badge.status-ready {
+  background-color: rgba(34, 197, 94, 0.9);
+}
+
+.status-badge.status-error {
+  background-color: rgba(239, 68, 68, 0.9);
+}
+
+.status-badge.status-missing {
+  background-color: rgba(156, 163, 175, 0.9);
+}
+
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
@@ -598,13 +650,14 @@ const formatFileSize = (bytes: number): string => {
 
 .duration-badge {
   position: absolute;
-  bottom: 2px;
+  top: 2px;
   right: 2px;
   background-color: rgba(0, 0, 0, 0.8);
-  color: var(--color-text-primary);
-  font-size: var(--font-size-xs);
-  padding: 1px var(--spacing-xs);
-  border-radius: 2px;
+  color: white;
+  font-size: 10px;
+  padding: 2px 4px;
+  border-radius: 3px;
+  z-index: 2;
   font-family: monospace;
 }
 
@@ -644,41 +697,47 @@ const formatFileSize = (bytes: number): string => {
   100% { transform: rotate(360deg); }
 }
 
-.media-info {
-  flex: 1;
-  min-width: 0;
-}
-
+/* 素材名称样式 */
 .media-name {
-  font-size: var(--font-size-base);
+  font-size: var(--font-size-xs);
   color: var(--color-text-primary);
+  text-align: center;
+  width: 100%;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  margin-bottom: 2px;
-}
-
-.media-details {
-  font-size: var(--font-size-xs);
-  color: var(--color-text-muted);
+  margin-top: var(--spacing-xs);
+  padding: 0 2px;
+  line-height: 1.2;
+  max-width: 100px;
 }
 
 .remove-btn {
-  background: #f44336;
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  background: rgba(244, 67, 54, 0.9);
   border: none;
-  border-radius: 3px;
+  border-radius: 50%;
   color: white;
-  padding: 4px;
+  width: 18px;
+  height: 18px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background-color 0.2s;
-  flex-shrink: 0;
+  transition: all 0.2s;
+  opacity: 0;
+  z-index: 4;
+}
+
+.media-item:hover .remove-btn {
+  opacity: 1;
 }
 
 .remove-btn:hover {
-  background: #d32f2f;
+  background: rgba(211, 47, 47, 0.9);
+  transform: scale(1.1);
 }
 
 /* 自定义滚动条样式 */

@@ -9,6 +9,9 @@ export interface PropsChangeEvent {
   zIndex?: number
 }
 
+// 素材状态枚举
+export type MediaStatus = 'parsing' | 'ready' | 'error' | 'missing'
+
 // 素材层：包装MP4Clip/ImgClip和原始文件信息
 export interface MediaItem {
   id: string
@@ -21,6 +24,7 @@ export interface MediaItem {
   mp4Clip: Raw<MP4Clip> | null // 视频文件解析中时为null，解析完成后为MP4Clip实例
   imgClip: Raw<ImgClip> | null // 图片文件解析中时为null，解析完成后为ImgClip实例
   isReady: boolean // 是否解析完成
+  status: MediaStatus // 素材状态
   thumbnailUrl?: string // WebAV生成的缩略图URL
 }
 
