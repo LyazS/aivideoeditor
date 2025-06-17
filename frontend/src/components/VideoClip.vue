@@ -6,6 +6,7 @@
       selected: isSelected,
       dragging: isDragging,
       resizing: isResizing,
+      'track-hidden': !isTrackVisible,
     }"
     :style="clipStyle"
     :data-media-type="mediaItem?.mediaType"
@@ -240,6 +241,12 @@ const isOverlapping = computed(() => {
 // 检查当前片段是否被选中
 const isSelected = computed(() => {
   return videoStore.selectedTimelineItemId === props.timelineItem.id
+})
+
+// 检查轨道是否可见
+const isTrackVisible = computed(() => {
+  const track = videoStore.getTrack(props.timelineItem.trackId)
+  return track ? track.isVisible : true
 })
 
 function formatDuration(seconds: number): string {
@@ -642,6 +649,34 @@ onUnmounted(() => {
   background: linear-gradient(135deg, #ff6b35, #f7931e);
   border-color: #ff6b35;
   box-shadow: 0 2px 12px rgba(255, 107, 53, 0.6);
+}
+
+/* 隐藏轨道上的clip样式 */
+.video-clip.track-hidden {
+  opacity: 0.4;
+  background: linear-gradient(135deg, #666, #555);
+  border-color: #777;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.video-clip.track-hidden:hover {
+  opacity: 0.6;
+  border-color: #999;
+}
+
+.video-clip.track-hidden.selected {
+  opacity: 0.7;
+  background: linear-gradient(135deg, #cc5529, #c4741a);
+  border-color: #cc5529;
+  box-shadow: 0 2px 12px rgba(204, 85, 41, 0.4);
+}
+
+/* 隐藏轨道上的clip内容也要调整透明度 */
+.video-clip.track-hidden .clip-name,
+.video-clip.track-hidden .clip-duration,
+.video-clip.track-hidden .clip-speed,
+.video-clip.track-hidden .simple-duration {
+  opacity: 0.8;
 }
 
 @keyframes pulse-warning {

@@ -144,8 +144,17 @@ async function removeTrack(trackId: number) {
   }
 }
 
-function toggleVisibility(trackId: number) {
-  videoStore.toggleTrackVisibility(trackId)
+async function toggleVisibility(trackId: number) {
+  try {
+    const success = await videoStore.toggleTrackVisibilityWithHistory(trackId)
+    if (success) {
+      console.log('✅ 轨道可见性切换成功')
+    } else {
+      console.error('❌ 轨道可见性切换失败')
+    }
+  } catch (error) {
+    console.error('❌ 切换轨道可见性时出错:', error)
+  }
 }
 
 function toggleMute(trackId: number) {

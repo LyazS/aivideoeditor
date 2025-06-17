@@ -91,16 +91,35 @@ export function createTrackModule() {
   /**
    * 切换轨道可见性
    * @param trackId 轨道ID
+   * @param timelineItems 时间轴项目列表（用于同步sprite可见性）
    */
-  function toggleTrackVisibility(trackId: number) {
+  function toggleTrackVisibility(trackId: number, timelineItems?: Ref<TimelineItem[]>) {
     const track = tracks.value.find((t) => t.id === trackId)
     if (track) {
       track.isVisible = !track.isVisible
-      console.log('👁️ 切换轨道可见性:', {
-        trackId,
-        trackName: track.name,
-        isVisible: track.isVisible,
-      })
+
+      // 同步该轨道上所有TimelineItem的sprite可见性
+      if (timelineItems) {
+        const trackItems = timelineItems.value.filter(item => item.trackId === trackId)
+        trackItems.forEach(item => {
+          if (item.sprite) {
+            item.sprite.visible = track.isVisible
+          }
+        })
+
+        console.log('👁️ 切换轨道可见性:', {
+          trackId,
+          trackName: track.name,
+          isVisible: track.isVisible,
+          affectedClips: trackItems.length,
+        })
+      } else {
+        console.log('👁️ 切换轨道可见性:', {
+          trackId,
+          trackName: track.name,
+          isVisible: track.isVisible,
+        })
+      }
     } else {
       console.warn('⚠️ 找不到轨道:', trackId)
     }

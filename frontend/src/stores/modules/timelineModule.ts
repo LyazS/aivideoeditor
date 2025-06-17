@@ -93,6 +93,14 @@ export function createTimelineModule(
       timelineItem.trackId = 1
     }
 
+    // 根据轨道的可见性设置sprite的visible属性
+    if (trackModule) {
+      const track = trackModule.tracks.value.find(t => t.id === timelineItem.trackId)
+      if (track && timelineItem.sprite) {
+        timelineItem.sprite.visible = track.isVisible
+      }
+    }
+
     // 设置双向数据同步
     setupBidirectionalSync(timelineItem)
 
@@ -107,6 +115,7 @@ export function createTimelineModule(
         mediaItemName: mediaItem?.name || '未知',
         trackId: timelineItem.trackId,
         position: timelineItem.timeRange.timelineStartTime / 1000000,
+        spriteVisible: timelineItem.sprite?.visible,
       },
       mediaModule.mediaItems.value,
       timelineItems.value,
@@ -188,9 +197,17 @@ export function createTimelineModule(
       const oldTrackId = item.trackId
       const mediaItem = mediaModule.getMediaItem(item.mediaItemId)
 
-      // 如果指定了新轨道，更新轨道ID
+      // 如果指定了新轨道，更新轨道ID并同步可见性
       if (newTrackId !== undefined) {
         item.trackId = newTrackId
+
+        // 根据新轨道的可见性设置sprite的visible属性
+        if (trackModule) {
+          const newTrack = trackModule.tracks.value.find(t => t.id === newTrackId)
+          if (newTrack && item.sprite) {
+            item.sprite.visible = newTrack.isVisible
+          }
+        }
       }
 
       // 更新时间轴位置

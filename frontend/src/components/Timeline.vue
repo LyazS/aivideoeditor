@@ -118,6 +118,7 @@
         <!-- 右侧轨道内容区域 -->
         <div
           class="track-content"
+          :class="{ 'track-hidden': !track.isVisible }"
           :data-track-id="track.id"
           @dragover="handleDragOver"
           @drop="handleDrop"
@@ -221,8 +222,17 @@ async function removeTrack(trackId: number) {
   }
 }
 
-function toggleVisibility(trackId: number) {
-  videoStore.toggleTrackVisibility(trackId)
+async function toggleVisibility(trackId: number) {
+  try {
+    const success = await videoStore.toggleTrackVisibilityWithHistory(trackId)
+    if (success) {
+      console.log('✅ 轨道可见性切换成功')
+    } else {
+      console.error('❌ 轨道可见性切换失败')
+    }
+  } catch (error) {
+    console.error('❌ 切换轨道可见性时出错:', error)
+  }
 }
 
 function toggleMute(trackId: number) {
@@ -829,6 +839,35 @@ onUnmounted(() => {
 
 .track-content:hover {
   background-color: var(--color-bg-tertiary);
+}
+
+/* 隐藏轨道样式 */
+.track-content.track-hidden {
+  background-color: var(--color-bg-quaternary);
+  opacity: 0.6;
+  position: relative;
+}
+
+.track-content.track-hidden::before {
+  content: '轨道已隐藏';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  pointer-events: none;
+  z-index: 1;
+  background-color: rgba(0, 0, 0, 0.7);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--border-radius-small);
+  white-space: nowrap;
+}
+
+.track-content.track-hidden:hover {
+  background-color: var(--color-bg-quaternary);
+  opacity: 0.8;
 }
 
 .track-name {

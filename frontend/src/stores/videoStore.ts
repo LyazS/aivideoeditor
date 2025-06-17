@@ -23,7 +23,7 @@ import { createSelectionModule } from './modules/selectionModule'
 import { createTimelineModule } from './modules/timelineModule'
 import { createClipOperationsModule } from './modules/clipOperationsModule'
 import { createHistoryModule } from './modules/historyModule'
-import { AddTimelineItemCommand, RemoveTimelineItemCommand, MoveTimelineItemCommand, UpdateTransformCommand, SplitTimelineItemCommand, DuplicateTimelineItemCommand, AddTrackCommand, RemoveTrackCommand, RenameTrackCommand, AutoArrangeTrackCommand, ResizeTimelineItemCommand } from './modules/commands/timelineCommands'
+import { AddTimelineItemCommand, RemoveTimelineItemCommand, MoveTimelineItemCommand, UpdateTransformCommand, SplitTimelineItemCommand, DuplicateTimelineItemCommand, AddTrackCommand, RemoveTrackCommand, RenameTrackCommand, AutoArrangeTrackCommand, ToggleTrackVisibilityCommand, ResizeTimelineItemCommand } from './modules/commands/timelineCommands'
 import type { MediaItem, TimelineItem } from '../types/videoTypes'
 
 export const useVideoStore = defineStore('video', () => {
@@ -617,6 +617,39 @@ export const useVideoStore = defineStore('video', () => {
   }
 
   /**
+   * 带历史记录的切换轨道可见性方法
+   * @param trackId 要切换可见性的轨道ID
+   * @returns 是否成功切换
+   */
+  async function toggleTrackVisibilityWithHistory(trackId: number): Promise<boolean> {
+    // 检查轨道是否存在
+    const track = trackModule.getTrack(trackId)
+    if (!track) {
+      console.warn(`⚠️ 轨道不存在，无法切换可见性: ${trackId}`)
+      return false
+    }
+
+    const command = new ToggleTrackVisibilityCommand(
+      trackId,
+      {
+        getTrack: trackModule.getTrack,
+        toggleTrackVisibility: trackModule.toggleTrackVisibility,
+      },
+      {
+        timelineItems: timelineModule.timelineItems,
+      }
+    )
+
+    try {
+      await historyModule.executeCommand(command)
+      return true
+    } catch (error) {
+      console.error('❌ 切换轨道可见性失败:', error)
+      return false
+    }
+  }
+
+  /**
    * 带历史记录的调整时间范围方法
    * @param timelineItemId 时间轴项目ID
    * @param newTimeRange 新的时间范围
@@ -792,7 +825,7 @@ export const useVideoStore = defineStore('video', () => {
     addTrack: (name?: string) => trackModule.addTrack(name),
     removeTrack: (trackId: number) =>
       trackModule.removeTrack(trackId, timelineModule.timelineItems, timelineModule.removeTimelineItem),
-    toggleTrackVisibility: trackModule.toggleTrackVisibility,
+    toggleTrackVisibility: (trackId: number) => trackModule.toggleTrackVisibility(trackId, timelineModule.timelineItems),
     toggleTrackMute: trackModule.toggleTrackMute,
     renameTrack: trackModule.renameTrack,
     setTrackHeight: trackModule.setTrackHeight,
@@ -878,6 +911,7 @@ export const useVideoStore = defineStore('video', () => {
     removeTrackWithHistory,
     renameTrackWithHistory,
     autoArrangeTrackWithHistory,
+    toggleTrackVisibilityWithHistory,
     resizeTimelineItemWithHistory,
   }
 })
