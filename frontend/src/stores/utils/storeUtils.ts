@@ -440,7 +440,7 @@ export function calculateTotalDuration(
  */
 export function calculateMaxVisibleDuration(
   contentEndTime: number,
-  defaultDuration: number = 300,
+  defaultDuration: number = 60,
 ): number {
   if (contentEndTime === 0) {
     return defaultDuration // 没有视频时使用默认值

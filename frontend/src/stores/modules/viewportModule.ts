@@ -32,7 +32,7 @@ export function createViewportModule(
 
   // 计算最大允许的可见时间范围（基于视频内容长度）
   const maxVisibleDuration = computed(() => {
-    return calculateMaxVisibleDuration(contentEndTime.value, 300)
+    return calculateMaxVisibleDuration(contentEndTime.value, timelineDuration.value)
   })
 
   // 缩放相关计算属性

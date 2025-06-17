@@ -20,7 +20,7 @@ export function createConfigModule() {
   const frameRate = ref(30) // 假设视频帧率为30fps
 
   // 时间轴基础时长
-  const timelineDuration = ref(300) // 默认300秒时间轴，确保有足够的刻度线空间
+  const timelineDuration = ref(60) // 默认60秒时间轴，确保有足够的刻度线空间
 
   // 编辑设置
   const proportionalScale = ref(true) // 等比缩放设置
@@ -96,7 +96,7 @@ export function createConfigModule() {
       aspectRatio: '16:9',
     }
     frameRate.value = 30
-    timelineDuration.value = 300
+    timelineDuration.value = 60
     proportionalScale.value = true
 
     console.log('🔄 配置已重置为默认值')

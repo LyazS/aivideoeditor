@@ -300,7 +300,7 @@ import {
 const defaultConfig = {
   videoResolution: { width: 1920, height: 1080 },
   frameRate: 30,
-  timelineDuration: 300,
+  timelineDuration: 60,
   proportionalScale: true
 }
 ```
