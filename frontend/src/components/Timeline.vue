@@ -420,6 +420,12 @@ async function createMediaClipFromMediaItem(
       console.log('克隆MP4Clip并创建VideoVisibleSprite for mediaItem:', mediaItem.id)
       const clonedMP4Clip = await webAVControls.cloneMP4Clip(storeMediaItem.mp4Clip)
       sprite = new VideoVisibleSprite(clonedMP4Clip)
+
+      // 为VideoVisibleSprite设置轨道静音检查器
+      ;(sprite as VideoVisibleSprite).setTrackMuteChecker(() => {
+        const track = videoStore.getTrack(trackId)
+        return track ? track.isMuted : false
+      })
     } else if (mediaItem.mediaType === 'image') {
       // 处理图片
       if (!storeMediaItem.imgClip) {
