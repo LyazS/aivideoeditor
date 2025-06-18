@@ -50,6 +50,9 @@ export interface TimelineItem {
   rotation: number // 旋转角度（弧度）
   zIndex: number
   opacity: number
+  // 音频属性（仅对视频有效）
+  volume: number // 音量（0-1之间）
+  isMuted: boolean // 静音状态
 }
 
 export interface VideoResolution {

@@ -142,6 +142,9 @@ export function createClipOperationsModule(
         rotation: originalItem.rotation,
         zIndex: originalItem.zIndex,
         opacity: originalItem.opacity,
+        // 复制音量属性
+        volume: originalItem.volume,
+        isMuted: originalItem.isMuted,
       })
 
       // 根据媒体类型更新新sprite的时间轴位置
@@ -402,6 +405,9 @@ export function createClipOperationsModule(
         rotation: originalItem.rotation,
         zIndex: originalItem.zIndex,
         opacity: originalItem.opacity,
+        // 复制音量属性
+        volume: originalItem.volume,
+        isMuted: originalItem.isMuted,
       })
 
       const secondItem: TimelineItem = reactive({
@@ -423,6 +429,9 @@ export function createClipOperationsModule(
         rotation: originalItem.rotation,
         zIndex: originalItem.zIndex,
         opacity: originalItem.opacity,
+        // 复制音量属性
+        volume: originalItem.volume,
+        isMuted: originalItem.isMuted,
       })
 
       // 从WebAV画布移除原始sprite

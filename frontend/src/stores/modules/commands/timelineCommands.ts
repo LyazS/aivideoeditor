@@ -120,6 +120,8 @@ export class AddTimelineItemCommand implements SimpleCommand {
       rotation: this.originalTimelineItemData.rotation,
       zIndex: this.originalTimelineItemData.zIndex,
       opacity: this.originalTimelineItemData.opacity,
+      volume: this.originalTimelineItemData.volume,
+      isMuted: this.originalTimelineItemData.isMuted,
     })
 
     console.log('🔄 重建时间轴项目完成:', {
@@ -325,6 +327,8 @@ export class RemoveTimelineItemCommand implements SimpleCommand {
       rotation: this.originalTimelineItemData.rotation,
       zIndex: this.originalTimelineItemData.zIndex,
       opacity: this.originalTimelineItemData.opacity,
+      volume: this.originalTimelineItemData.volume,
+      isMuted: this.originalTimelineItemData.isMuted,
     })
 
     console.log('🔄 重建时间轴项目完成:', {
@@ -524,6 +528,8 @@ export class DuplicateTimelineItemCommand implements SimpleCommand {
       rotation: this.originalTimelineItemData.rotation,
       zIndex: this.originalTimelineItemData.zIndex,
       opacity: this.originalTimelineItemData.opacity,
+      volume: this.originalTimelineItemData.volume,
+      isMuted: this.originalTimelineItemData.isMuted,
       sprite: markRaw(newSprite),
       thumbnailUrl: this.originalTimelineItemData.thumbnailUrl,
     })
@@ -995,6 +1001,8 @@ export class SplitTimelineItemCommand implements SimpleCommand {
       rotation: originalTimelineItem.rotation,
       zIndex: originalTimelineItem.zIndex,
       opacity: originalTimelineItem.opacity,
+      volume: originalTimelineItem.volume,
+      isMuted: originalTimelineItem.isMuted,
       thumbnailUrl: originalTimelineItem.thumbnailUrl,
     }
 
@@ -1099,6 +1107,8 @@ export class SplitTimelineItemCommand implements SimpleCommand {
       rotation: this.originalTimelineItemData.rotation,
       zIndex: this.originalTimelineItemData.zIndex,
       opacity: this.originalTimelineItemData.opacity,
+      volume: this.originalTimelineItemData.volume,
+      isMuted: this.originalTimelineItemData.isMuted,
     })
 
     const secondItem: TimelineItem = reactive({
@@ -1120,6 +1130,8 @@ export class SplitTimelineItemCommand implements SimpleCommand {
       rotation: this.originalTimelineItemData.rotation,
       zIndex: this.originalTimelineItemData.zIndex,
       opacity: this.originalTimelineItemData.opacity,
+      volume: this.originalTimelineItemData.volume,
+      isMuted: this.originalTimelineItemData.isMuted,
     })
 
     console.log('🔄 重建分割项目完成:', {
@@ -1187,6 +1199,8 @@ export class SplitTimelineItemCommand implements SimpleCommand {
       rotation: this.originalTimelineItemData.rotation,
       zIndex: this.originalTimelineItemData.zIndex,
       opacity: this.originalTimelineItemData.opacity,
+      volume: this.originalTimelineItemData.volume,
+      isMuted: this.originalTimelineItemData.isMuted,
     })
 
     console.log('🔄 重建原始项目完成:', {
@@ -1481,6 +1495,8 @@ export class RemoveTrackCommand implements SimpleCommand {
       rotation: item.rotation,
       zIndex: item.zIndex,
       opacity: item.opacity,
+      volume: item.volume,
+      isMuted: item.isMuted,
       thumbnailUrl: item.thumbnailUrl,
     }))
 
@@ -1566,6 +1582,8 @@ export class RemoveTrackCommand implements SimpleCommand {
       rotation: itemData.rotation,
       zIndex: itemData.zIndex,
       opacity: itemData.opacity,
+      volume: itemData.volume,
+      isMuted: itemData.isMuted,
       sprite: markRaw(newSprite),
       thumbnailUrl: itemData.thumbnailUrl,
     })

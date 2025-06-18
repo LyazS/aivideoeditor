@@ -76,11 +76,14 @@ const displayValue = computed(() => {
     return tempValue.value
   }
 
+  // 确保 modelValue 不是 undefined 或 null
+  const value = props.modelValue ?? 0
+
   if (props.precision !== undefined) {
-    return props.modelValue.toFixed(props.precision)
+    return value.toFixed(props.precision)
   }
 
-  return props.modelValue.toString()
+  return value.toString()
 })
 
 // 格式化数值
@@ -136,14 +139,16 @@ const handleConfirm = (event: Event) => {
 
 // 处理增加
 const handleIncrement = () => {
-  const newValue = formatValue(props.modelValue + props.step)
+  const currentValue = props.modelValue ?? 0
+  const newValue = formatValue(currentValue + props.step)
   emit('update:modelValue', newValue)
   emit('change', newValue)
 }
 
 // 处理减少
 const handleDecrement = () => {
-  const newValue = formatValue(props.modelValue - props.step)
+  const currentValue = props.modelValue ?? 0
+  const newValue = formatValue(currentValue - props.step)
   emit('update:modelValue', newValue)
   emit('change', newValue)
 }

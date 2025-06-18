@@ -90,6 +90,46 @@
               />
             </div>
           </div>
+
+          <!-- 音量控制 - 仅对视频显示 -->
+          <div v-if="selectedTimelineItem?.mediaType === 'video'" class="property-item">
+            <label>音量</label>
+            <div class="volume-controls">
+              <input
+                :value="volume"
+                @input="(e) => updateVolume((e.target as HTMLInputElement).valueAsNumber)"
+                type="range"
+                min="0"
+                max="1"
+                step="0.01"
+                class="volume-slider"
+              />
+              <NumberInput
+                :model-value="volume"
+                @change="updateVolume"
+                :min="0"
+                :max="1"
+                :step="0.01"
+                :precision="2"
+                :show-controls="false"
+                placeholder="音量"
+                :input-style="speedInputStyle"
+              />
+              <button
+                @click="toggleMute"
+                class="mute-btn"
+                :class="{ muted: isMuted }"
+                :title="isMuted ? '取消静音' : '静音'"
+              >
+                <svg v-if="!isMuted" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M3,9V15H7L12,20V4L7,9H3M16.5,12C16.5,10.23 15.5,8.71 14,7.97V16C15.5,15.29 16.5,13.76 16.5,12M14,3.23V5.29C16.89,6.15 19,8.83 19,12C19,15.17 16.89,17.84 14,18.7V20.77C18,19.86 21,16.28 21,12C21,7.72 18,4.14 14,3.23Z"/>
+                </svg>
+                <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12,4L9.91,6.09L12,8.18M4.27,3L3,4.27L7.73,9H3V15H7L12,20V13.27L16.25,17.53C15.58,18.04 14.83,18.46 14,18.7V20.77C15.38,20.45 16.63,19.82 17.68,18.96L19.73,21L21,19.73L12,10.73M19,12C19,12.94 18.8,13.82 18.46,14.64L19.97,16.15C20.62,14.91 21,13.5 21,12C21,7.72 18,4.14 14,3.23V5.29C16.89,6.15 19,8.83 19,12M16.5,12C16.5,10.23 15.5,8.71 14,7.97V10.18L16.45,12.63C16.5,12.43 16.5,12.21 16.5,12Z"/>
+                </svg>
+              </button>
+            </div>
+          </div>
         </div>
 
         <!-- 位置大小 -->
@@ -472,6 +512,21 @@ const normalizedSpeed = computed(() => {
 
 const speedInputValue = computed(() => playbackRate.value)
 
+// 音量相关 - 直接从TimelineItem读取，这是响应式的
+const volume = computed(() => {
+  if (!selectedTimelineItem.value || selectedTimelineItem.value.mediaType !== 'video') return 1
+  // 确保 volume 和 isMuted 都有默认值
+  const itemVolume = selectedTimelineItem.value.volume ?? 1
+  const itemMuted = selectedTimelineItem.value.isMuted ?? false
+  // 静音时显示0，否则显示实际音量
+  return itemMuted ? 0 : itemVolume
+})
+
+const isMuted = computed(() => {
+  if (!selectedTimelineItem.value || selectedTimelineItem.value.mediaType !== 'video') return false
+  return selectedTimelineItem.value.isMuted ?? false
+})
+
 // NumberInput 样式定义
 const propertyInputStyle = {
   maxWidth: '80px',
@@ -600,6 +655,69 @@ const updateSpeedFromInput = (newSpeed: number) => {
     const clampedSpeed = Math.max(0.1, Math.min(100, newSpeed))
     updatePlaybackRate(clampedSpeed)
   }
+}
+
+// 更新音量
+const updateVolume = (newVolume: number) => {
+  if (!selectedTimelineItem.value || selectedTimelineItem.value.mediaType !== 'video') return
+
+  const clampedVolume = Math.max(0, Math.min(1, newVolume))
+
+  // 确保属性存在，如果不存在则初始化
+  if (selectedTimelineItem.value.volume === undefined) {
+    selectedTimelineItem.value.volume = 1
+  }
+  if (selectedTimelineItem.value.isMuted === undefined) {
+    selectedTimelineItem.value.isMuted = false
+  }
+
+  // 如果设置音量为0，则设为静音；如果从0设置为其他值，则取消静音
+  if (clampedVolume === 0) {
+    // 设为静音，但保留原音量值
+    selectedTimelineItem.value.isMuted = true
+    const sprite = selectedTimelineItem.value.sprite
+    if (sprite && 'setMuted' in sprite) {
+      ;(sprite as any).setMuted(true)
+    }
+  } else {
+    // 更新音量值并取消静音
+    selectedTimelineItem.value.volume = clampedVolume
+    selectedTimelineItem.value.isMuted = false
+
+    const sprite = selectedTimelineItem.value.sprite
+    if (sprite && 'setVolume' in sprite && 'setMuted' in sprite) {
+      ;(sprite as any).setVolume(clampedVolume)
+      ;(sprite as any).setMuted(false)
+    }
+  }
+
+  console.log('✅ 音量更新成功:', clampedVolume, '静音:', selectedTimelineItem.value.isMuted)
+}
+
+// 切换静音状态
+const toggleMute = () => {
+  if (!selectedTimelineItem.value || selectedTimelineItem.value.mediaType !== 'video') return
+
+  // 确保属性存在，如果不存在则初始化
+  if (selectedTimelineItem.value.volume === undefined) {
+    selectedTimelineItem.value.volume = 1
+  }
+  if (selectedTimelineItem.value.isMuted === undefined) {
+    selectedTimelineItem.value.isMuted = false
+  }
+
+  const newMutedState = !selectedTimelineItem.value.isMuted
+
+  // 更新TimelineItem的静音状态
+  selectedTimelineItem.value.isMuted = newMutedState
+
+  // 更新sprite的静音状态
+  const sprite = selectedTimelineItem.value.sprite
+  if (sprite && 'setMuted' in sprite) {
+    ;(sprite as any).setMuted(newMutedState)
+  }
+
+  console.log('✅ 静音状态切换:', newMutedState ? '静音' : '有声', '音量保持:', selectedTimelineItem.value.volume)
 }
 
 // 将归一化值(0-100)转换为实际播放速度
@@ -927,7 +1045,66 @@ const alignVertical = (alignment: 'top' | 'middle' | 'bottom') => {
   transform: translateX(-50%);
 }
 
+/* 音量控制样式 */
+.volume-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  flex: 1;
+}
 
+.volume-slider {
+  flex: 1;
+  height: 4px;
+  background: var(--color-bg-quaternary);
+  border-radius: 2px;
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.volume-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 12px;
+  height: 12px;
+  background: var(--color-accent-secondary);
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.volume-slider::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  background: var(--color-accent-secondary);
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+}
+
+.mute-btn {
+  background: var(--color-bg-quaternary);
+  border: 1px solid var(--color-border-secondary);
+  border-radius: var(--border-radius-small);
+  color: var(--color-text-primary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-xs);
+  transition: all 0.2s ease;
+  min-width: 32px;
+  height: 32px;
+}
+
+.mute-btn:hover {
+  background: var(--color-bg-tertiary);
+  border-color: var(--color-border-focus);
+}
+
+.mute-btn.muted {
+  background: var(--color-accent-secondary);
+  color: var(--color-bg-primary);
+}
 
 /* 位置控制样式 */
 .position-controls {

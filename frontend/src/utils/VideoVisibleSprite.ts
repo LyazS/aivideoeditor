@@ -19,14 +19,32 @@ export interface VideoTimeRange {
 }
 
 /**
+ * 音频状态接口
+ */
+export interface AudioState {
+  /** 音量（0-1之间，0为静音，1为最大音量） */
+  volume: number
+  /** 静音状态标记 */
+  isMuted: boolean
+}
+
+/**
  * 自定义的VisibleSprite类，继承自WebAV的VisibleSprite
- * 添加了startOffset属性用于自定义起始偏移
+ * 添加了startOffset属性用于自定义起始偏移和音量控制功能
  */
 export class VideoVisibleSprite extends VisibleSprite {
   /**
    * 起始偏移时间（微秒）
    */
   #startOffset: number = 0
+
+  /**
+   * 音频状态
+   */
+  #audioState: AudioState = {
+    volume: 1,
+    isMuted: false,
+  }
 
   /**
    * 时间范围信息
@@ -47,6 +65,9 @@ export class VideoVisibleSprite extends VisibleSprite {
   constructor(clip: MP4Clip) {
     // 调用父类构造函数
     super(clip)
+
+    // 设置音频拦截器来控制音量
+    this.#setupVolumeInterceptor()
   }
 
   /**
@@ -324,6 +345,107 @@ export class VideoVisibleSprite extends VisibleSprite {
 
     // 将计算出的播放速度同步回TimeRange中（从this.time获取）
     this.#timeRange.playbackRate = this.time.playbackRate
+  }
+
+  // ==================== 音量控制接口 ====================
+
+  /**
+   * 设置音频拦截器来控制音量
+   */
+  #setupVolumeInterceptor(): void {
+    const clip = this.getClip()
+    if (clip && 'tickInterceptor' in clip) {
+      // 设置tickInterceptor来拦截音频数据
+      clip.tickInterceptor = async (_time: number, tickRet: any) => {
+        // 如果有音频数据，根据静音状态和音量调整
+        if (tickRet.audio && tickRet.audio.length > 0) {
+          // 计算实际音量：静音时为0，否则使用当前音量
+          const effectiveVolume = this.#audioState.isMuted ? 0 : this.#audioState.volume
+
+          if (effectiveVolume !== 1) {
+            // 对每个声道的PCM数据进行音量调整
+            tickRet.audio = tickRet.audio.map((channelData: Float32Array) => {
+              // 创建新的Float32Array避免修改原数据
+              const adjustedData = new Float32Array(channelData.length)
+              for (let i = 0; i < channelData.length; i++) {
+                adjustedData[i] = channelData[i] * effectiveVolume
+              }
+              return adjustedData
+            })
+          }
+        }
+
+        return tickRet
+      }
+    }
+  }
+
+  /**
+   * 动态设置音量
+   * @param volume 音量值（0-1之间，0为静音，1为最大音量）
+   */
+  public setVolume(volume: number): void {
+    // 限制音量范围 0-1
+    this.#audioState.volume = Math.max(0, Math.min(1, volume))
+  }
+
+  /**
+   * 获取当前音量
+   * @returns 当前音量值（0-1之间）
+   */
+  public getVolume(): number {
+    return this.#audioState.volume
+  }
+
+  /**
+   * 设置静音状态
+   * @param muted 是否静音
+   */
+  public setMuted(muted: boolean): void {
+    this.#audioState.isMuted = muted
+  }
+
+  /**
+   * 静音/取消静音切换
+   * @returns 切换后的静音状态（true为静音，false为有声音）
+   */
+  public toggleMute(): boolean {
+    this.#audioState.isMuted = !this.#audioState.isMuted
+    return this.#audioState.isMuted
+  }
+
+  /**
+   * 检查是否处于静音状态
+   * @returns 是否静音
+   */
+  public isMuted(): boolean {
+    return this.#audioState.isMuted
+  }
+
+  /**
+   * 获取显示音量（用于UI显示）
+   * 静音时返回0，否则返回实际音量
+   * @returns 显示音量值（0-1之间）
+   */
+  public getDisplayVolume(): number {
+    return this.#audioState.isMuted ? 0 : this.#audioState.volume
+  }
+
+  /**
+   * 获取完整的音频状态
+   * @returns 音频状态对象
+   */
+  public getAudioState(): AudioState {
+    return { ...this.#audioState }
+  }
+
+  /**
+   * 设置完整的音频状态
+   * @param audioState 音频状态对象
+   */
+  public setAudioState(audioState: AudioState): void {
+    this.#audioState.volume = Math.max(0, Math.min(1, audioState.volume))
+    this.#audioState.isMuted = audioState.isMuted
   }
 
 }

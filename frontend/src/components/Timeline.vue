@@ -610,6 +610,9 @@ async function createMediaClipFromMediaItem(
       rotation: sprite.rect.angle || 0, // 从sprite获取旋转角度（弧度），默认为0
       zIndex: sprite.zIndex,
       opacity: sprite.opacity,
+      // 音频属性（仅对视频有效）
+      volume: mediaItem.mediaType === 'video' ? 1 : 1, // 默认音量为1
+      isMuted: false, // 默认不静音
     })
 
     console.log('🔄 坐标系转换:', {
