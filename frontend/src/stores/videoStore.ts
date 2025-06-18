@@ -202,6 +202,8 @@ export const useVideoStore = defineStore('video', () => {
       zIndex?: number
       duration?: number // 时长（秒）
       playbackRate?: number // 倍速
+      volume?: number // 音量（0-1之间）
+      isMuted?: boolean // 静音状态
     }
   ) {
     // 获取要更新的时间轴项目
@@ -253,6 +255,20 @@ export const useVideoStore = defineStore('video', () => {
         oldTransform.playbackRate = timelineItem.timeRange.playbackRate || 1
       } else {
         oldTransform.playbackRate = 1 // 图片默认为1
+      }
+    }
+
+    if (newTransform.volume !== undefined) {
+      // 获取当前音量（仅对视频有效）
+      if (timelineItem.mediaType === 'video') {
+        oldTransform.volume = timelineItem.volume ?? 1
+      }
+    }
+
+    if (newTransform.isMuted !== undefined) {
+      // 获取当前静音状态（仅对视频有效）
+      if (timelineItem.mediaType === 'video') {
+        oldTransform.isMuted = timelineItem.isMuted ?? false
       }
     }
 
@@ -338,13 +354,25 @@ export const useVideoStore = defineStore('video', () => {
       if (playbackRateChanged) return true
     }
 
+    // 检查音量变化
+    if (newTransform.volume !== undefined && oldTransform.volume !== undefined) {
+      const volumeChanged = Math.abs(oldTransform.volume - newTransform.volume) > 0.01 // 0.01音量误差容忍
+      if (volumeChanged) return true
+    }
+
+    // 检查静音状态变化
+    if (newTransform.isMuted !== undefined && oldTransform.isMuted !== undefined) {
+      const muteChanged = oldTransform.isMuted !== newTransform.isMuted
+      if (muteChanged) return true
+    }
+
     return false
   }
 
   /**
    * 确定属性类型
    */
-  function determinePropertyType(transform: any): 'position' | 'size' | 'rotation' | 'opacity' | 'zIndex' | 'duration' | 'playbackRate' | 'multiple' {
+  function determinePropertyType(transform: any): 'position' | 'size' | 'rotation' | 'opacity' | 'zIndex' | 'duration' | 'playbackRate' | 'volume' | 'audioState' | 'multiple' {
     const changedProperties = []
 
     if (transform.position) changedProperties.push('position')
@@ -354,6 +382,13 @@ export const useVideoStore = defineStore('video', () => {
     if (transform.zIndex !== undefined) changedProperties.push('zIndex')
     if (transform.duration !== undefined) changedProperties.push('duration')
     if (transform.playbackRate !== undefined) changedProperties.push('playbackRate')
+    if (transform.volume !== undefined) changedProperties.push('volume')
+    if (transform.isMuted !== undefined) changedProperties.push('audioState')
+
+    // 如果同时有音量和静音状态变化，归类为audioState
+    if (transform.volume !== undefined && transform.isMuted !== undefined) {
+      return 'audioState'
+    }
 
     return changedProperties.length === 1 ? changedProperties[0] as any : 'multiple'
   }

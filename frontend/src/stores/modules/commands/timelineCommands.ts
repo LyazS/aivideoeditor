@@ -702,7 +702,7 @@ export class UpdateTransformCommand implements SimpleCommand {
 
   constructor(
     private timelineItemId: string,
-    private propertyType: 'position' | 'size' | 'rotation' | 'opacity' | 'zIndex' | 'duration' | 'playbackRate' | 'multiple',
+    private propertyType: 'position' | 'size' | 'rotation' | 'opacity' | 'zIndex' | 'duration' | 'playbackRate' | 'volume' | 'audioState' | 'multiple',
     private oldValues: {
       position?: { x: number; y: number }
       size?: { width: number; height: number }
@@ -711,6 +711,8 @@ export class UpdateTransformCommand implements SimpleCommand {
       zIndex?: number
       duration?: number // 时长（秒）
       playbackRate?: number // 倍速
+      volume?: number // 音量（0-1之间）
+      isMuted?: boolean // 静音状态
     },
     private newValues: {
       position?: { x: number; y: number }
@@ -720,6 +722,8 @@ export class UpdateTransformCommand implements SimpleCommand {
       zIndex?: number
       duration?: number // 时长（秒）
       playbackRate?: number // 倍速
+      volume?: number // 音量（0-1之间）
+      isMuted?: boolean // 静音状态
     },
     private timelineModule: {
       updateTimelineItemTransform: (id: string, transform: any) => void
@@ -791,6 +795,18 @@ export class UpdateTransformCommand implements SimpleCommand {
       changes.push(`倍速: ${this.oldValues.playbackRate.toFixed(1)}x → ${this.newValues.playbackRate.toFixed(1)}x`)
     }
 
+    if (this.newValues.volume !== undefined && this.oldValues.volume !== undefined) {
+      const oldVolumePercent = (this.oldValues.volume * 100).toFixed(0)
+      const newVolumePercent = (this.newValues.volume * 100).toFixed(0)
+      changes.push(`音量: ${oldVolumePercent}% → ${newVolumePercent}%`)
+    }
+
+    if (this.newValues.isMuted !== undefined && this.oldValues.isMuted !== undefined) {
+      const oldMuteText = this.oldValues.isMuted ? '静音' : '有声'
+      const newMuteText = this.newValues.isMuted ? '静音' : '有声'
+      changes.push(`静音状态: ${oldMuteText} → ${newMuteText}`)
+    }
+
     const changeText = changes.length > 0 ? ` (${changes.join(', ')})` : ''
     return `更新变换属性: ${mediaName}${changeText}`
   }
@@ -833,6 +849,25 @@ export class UpdateTransformCommand implements SimpleCommand {
       // 处理时长更新（通过直接操作sprite的timeRange）
       if (this.newValues.duration !== undefined) {
         this.updateTimelineItemDuration(this.timelineItemId, this.newValues.duration)
+      }
+
+      // 处理音量更新（仅对视频有效）
+      if (timelineItem.mediaType === 'video') {
+        if (this.newValues.volume !== undefined) {
+          timelineItem.volume = this.newValues.volume
+          const sprite = timelineItem.sprite
+          if (sprite && 'setVolume' in sprite) {
+            ;(sprite as any).setVolume(this.newValues.volume)
+          }
+        }
+
+        if (this.newValues.isMuted !== undefined) {
+          timelineItem.isMuted = this.newValues.isMuted
+          const sprite = timelineItem.sprite
+          if (sprite && 'setMuted' in sprite) {
+            ;(sprite as any).setMuted(this.newValues.isMuted)
+          }
+        }
       }
 
       const mediaItem = this.mediaModule.getMediaItem(timelineItem.mediaItemId)
@@ -883,6 +918,25 @@ export class UpdateTransformCommand implements SimpleCommand {
       // 处理时长恢复（通过直接操作sprite的timeRange）
       if (this.oldValues.duration !== undefined) {
         this.updateTimelineItemDuration(this.timelineItemId, this.oldValues.duration)
+      }
+
+      // 处理音量恢复（仅对视频有效）
+      if (timelineItem.mediaType === 'video') {
+        if (this.oldValues.volume !== undefined) {
+          timelineItem.volume = this.oldValues.volume
+          const sprite = timelineItem.sprite
+          if (sprite && 'setVolume' in sprite) {
+            ;(sprite as any).setVolume(this.oldValues.volume)
+          }
+        }
+
+        if (this.oldValues.isMuted !== undefined) {
+          timelineItem.isMuted = this.oldValues.isMuted
+          const sprite = timelineItem.sprite
+          if (sprite && 'setMuted' in sprite) {
+            ;(sprite as any).setMuted(this.oldValues.isMuted)
+          }
+        }
       }
 
       const mediaItem = this.mediaModule.getMediaItem(timelineItem.mediaItemId)

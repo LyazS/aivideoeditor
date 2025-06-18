@@ -671,27 +671,21 @@ const updateVolume = (newVolume: number) => {
     selectedTimelineItem.value.isMuted = false
   }
 
-  // 如果设置音量为0，则设为静音；如果从0设置为其他值，则取消静音
+  // 使用历史记录系统更新音量
   if (clampedVolume === 0) {
     // 设为静音，但保留原音量值
-    selectedTimelineItem.value.isMuted = true
-    const sprite = selectedTimelineItem.value.sprite
-    if (sprite && 'setMuted' in sprite) {
-      ;(sprite as any).setMuted(true)
-    }
+    videoStore.updateTimelineItemTransformWithHistory(selectedTimelineItem.value.id, {
+      isMuted: true
+    })
   } else {
     // 更新音量值并取消静音
-    selectedTimelineItem.value.volume = clampedVolume
-    selectedTimelineItem.value.isMuted = false
-
-    const sprite = selectedTimelineItem.value.sprite
-    if (sprite && 'setVolume' in sprite && 'setMuted' in sprite) {
-      ;(sprite as any).setVolume(clampedVolume)
-      ;(sprite as any).setMuted(false)
-    }
+    videoStore.updateTimelineItemTransformWithHistory(selectedTimelineItem.value.id, {
+      volume: clampedVolume,
+      isMuted: false
+    })
   }
 
-  console.log('✅ 音量更新成功:', clampedVolume, '静音:', selectedTimelineItem.value.isMuted)
+  console.log('✅ 音量更新成功:', clampedVolume)
 }
 
 // 切换静音状态
@@ -708,14 +702,10 @@ const toggleMute = () => {
 
   const newMutedState = !selectedTimelineItem.value.isMuted
 
-  // 更新TimelineItem的静音状态
-  selectedTimelineItem.value.isMuted = newMutedState
-
-  // 更新sprite的静音状态
-  const sprite = selectedTimelineItem.value.sprite
-  if (sprite && 'setMuted' in sprite) {
-    ;(sprite as any).setMuted(newMutedState)
-  }
+  // 使用历史记录系统切换静音状态
+  videoStore.updateTimelineItemTransformWithHistory(selectedTimelineItem.value.id, {
+    isMuted: newMutedState
+  })
 
   console.log('✅ 静音状态切换:', newMutedState ? '静音' : '有声', '音量保持:', selectedTimelineItem.value.volume)
 }
