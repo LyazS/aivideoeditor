@@ -168,25 +168,26 @@ class MoveTimelineItemCommand implements SimpleCommand {
 **目标**: 支持变换属性的撤销/重做
 
 #### 实现内容
-- [ ] 实现UpdateTransformCommand
-- [ ] 支持位置、大小、旋转、透明度变更
-- [ ] 每次属性变更作为独立命令（暂不合并）
+- [x] 实现UpdateTransformCommand ✅
+- [x] 支持位置、大小、旋转、透明度变更 ✅
+- [x] 支持音量和静音状态变更 ✅
+- [x] 每次属性变更作为独立命令（暂不合并） ✅
 
 #### 技术方案
 ```typescript
 class UpdateTransformCommand implements SimpleCommand {
   constructor(
     private timelineItemId: string,
-    private propertyType: 'position' | 'size' | 'rotation' | 'opacity',
-    private oldValue: any,
-    private newValue: any
+    private propertyType: 'position' | 'size' | 'rotation' | 'opacity' | 'volume' | 'audioState' | 'multiple',
+    private oldValues: any,
+    private newValues: any
   ) {}
 }
 ```
 
 #### 验证标准
 - ✅ 能够撤销/重做属性面板中的变换属性修改
-- ✅ 支持所有变换属性类型（位置、大小、旋转、透明度、层级、时长、倍速）
+- ✅ 支持所有变换属性类型（位置、大小、旋转、透明度、层级、时长、倍速、音量、静音状态）
 - ✅ 属性变更后WebAV渲染正确更新
 - ✅ 智能检测属性变化，避免无意义的历史记录
 - ✅ 详细的命令描述信息，显示具体的属性变化
@@ -194,6 +195,7 @@ class UpdateTransformCommand implements SimpleCommand {
 - ✅ 视频支持时长和倍速的撤销/重做
 - ✅ 图片支持时长的撤销/重做
 - ✅ 支持视频裁剪操作的撤销/重做
+- ✅ 支持视频音量调整和静音/取消静音的撤销/重做
 
 ---
 
@@ -805,7 +807,35 @@ const addTimelineItemWithHistory = async (timelineItem: TimelineItem) => {
    }
    ```
 
-6. **裁剪操作的复杂重建逻辑**
+6. **音量控制的实现**
+   ```typescript
+   // 音量调整的变化检测（0.01音量误差容忍）
+   if (newTransform.volume !== undefined && oldTransform.volume !== undefined) {
+     const volumeChanged = Math.abs(oldTransform.volume - newTransform.volume) > 0.01
+     if (volumeChanged) return true
+   }
+
+   // 静音状态变化检测
+   if (newTransform.isMuted !== undefined && oldTransform.isMuted !== undefined) {
+     const muteChanged = oldTransform.isMuted !== newTransform.isMuted
+     if (muteChanged) return true
+   }
+
+   // 音量控制的描述生成
+   if (this.newValues.volume !== undefined && this.oldValues.volume !== undefined) {
+     const oldVolumePercent = (this.oldValues.volume * 100).toFixed(0)
+     const newVolumePercent = (this.newValues.volume * 100).toFixed(0)
+     changes.push(`音量: ${oldVolumePercent}% → ${newVolumePercent}%`)
+   }
+
+   if (this.newValues.isMuted !== undefined && this.oldValues.isMuted !== undefined) {
+     const oldState = this.oldValues.isMuted ? '静音' : '有声'
+     const newState = this.newValues.isMuted ? '静音' : '有声'
+     changes.push(`音频状态: ${oldState} → ${newState}`)
+   }
+   ```
+
+   7. **裁剪操作的复杂重建逻辑**
    ```typescript
    // 裁剪操作需要保存原始项目的完整信息，撤销时重建原始项目
    class SplitTimelineItemCommand implements SimpleCommand {
@@ -820,6 +850,8 @@ const addTimelineItemWithHistory = async (timelineItem: TimelineItem) => {
          mediaItemId: originalTimelineItem.mediaItemId,
          timeRange: { ...originalTimelineItem.timeRange },
          position: { ...originalTimelineItem.position },
+         volume: originalTimelineItem.volume,
+         isMuted: originalTimelineItem.isMuted,
          // ... 所有属性的深拷贝
        }
      }
@@ -844,7 +876,7 @@ const addTimelineItemWithHistory = async (timelineItem: TimelineItem) => {
 
 #### 验证结果
 - ✅ 属性面板中的所有变换属性修改都可以撤销/重做
-- ✅ 支持位置、大小、旋转、透明度、层级、时长、倍速等所有属性类型
+- ✅ 支持位置、大小、旋转、透明度、层级、时长、倍速、音量等所有属性类型
 - ✅ 智能过滤微小变化，避免历史记录污染
 - ✅ 详细的命令描述，用户可以清楚了解每次变更的内容
 - ✅ UI操作流畅，用户体验良好
@@ -852,6 +884,7 @@ const addTimelineItemWithHistory = async (timelineItem: TimelineItem) => {
 - ✅ 图片的时长修改可以正确撤销/重做
 - ✅ 视频裁剪操作可以正确撤销/重做，完整恢复原始项目
 - ✅ 裁剪操作遵循"从源头重建"原则，确保数据一致性
+- ✅ 视频音量调整和静音/取消静音操作可以正确撤销/重做
 
 ---
 
@@ -861,7 +894,7 @@ const addTimelineItemWithHistory = async (timelineItem: TimelineItem) => {
 1. **AddTimelineItemCommand** - 添加时间轴项目
 2. **RemoveTimelineItemCommand** - 删除时间轴项目
 3. **MoveTimelineItemCommand** - 移动时间轴项目（位置和轨道）
-4. **UpdateTransformCommand** - 更新变换属性（位置、大小、旋转、透明度、层级、时长、倍速）
+4. **UpdateTransformCommand** - 更新变换属性（位置、大小、旋转、透明度、层级、时长、倍速、音量、静音状态）
 5. **SplitTimelineItemCommand** - 分割时间轴项目（裁剪操作）
 
 ### 🔥 待实现的高优先级操作
@@ -913,6 +946,7 @@ const addTimelineItemWithHistory = async (timelineItem: TimelineItem) => {
 - **触发位置**: Timeline.vue轨道静音按钮
 - **实现复杂度**: 简单
 - **技术要点**: 保存静音状态
+- **⚠️ 当前状态**: 功能已存在但**未集成历史记录系统**，需要实现`toggleTrackMuteWithHistory`方法
 
 #### 8. ResizeTimelineItemCommand - 时间范围调整
 - **触发位置**: VideoClip.vue拖拽边缘调整长度
@@ -1043,6 +1077,52 @@ const addTimelineItemWithHistory = async (timelineItem: TimelineItem) => {
 3. **优先考虑异步操作支持**
 4. **充分测试资源清理和重建逻辑**
 5. **保持命令逻辑的简单性**
+
+---
+
+## 🎵 音量控制功能实现总结
+
+### ✅ 已完成的音量控制功能
+
+#### 1. 单个时间轴项目的音量控制
+- **实现位置**: PropertiesPanel.vue
+- **支持操作**:
+  - 音量滑块调整（0-100%）
+  - 数值输入框精确设置
+  - 静音/取消静音按钮切换
+- **历史记录支持**: ✅ 已完成
+  - 使用`UpdateTransformCommand`支持音量和静音状态的撤销/重做
+  - 智能变化检测（0.01音量误差容忍）
+  - 详细的命令描述显示具体变化
+
+#### 2. 底层音频处理
+- **实现位置**: VideoVisibleSprite.ts
+- **技术实现**:
+  - 使用`tickInterceptor`拦截音频PCM数据
+  - 实时音量调整和静音处理
+  - 支持动态音量变化
+
+### ⚠️ 待完成的音量控制功能
+
+#### 1. 轨道级别的静音控制
+- **当前状态**: 功能已存在但未集成历史记录系统
+- **问题**: Timeline.vue和TrackManager.vue中的轨道静音按钮直接调用`toggleTrackMute`，不支持撤销/重做
+- **需要实现**:
+  - `ToggleTrackMuteCommand`类
+  - `toggleTrackMuteWithHistory`方法
+  - 修改UI组件使用带历史记录的方法
+
+#### 2. 轨道静音的音频处理
+- **技术挑战**: 轨道静音需要影响该轨道上所有时间轴项目的音频输出
+- **实现方案**: 在音频处理时检查轨道静音状态，与项目级静音状态结合
+
+### 📋 音量控制相关的操作记录支持
+
+| 操作类型 | 触发位置 | 历史记录支持 | 状态 |
+|---------|----------|-------------|------|
+| 调整项目音量 | PropertiesPanel.vue 音量滑块 | ✅ UpdateTransformCommand | 已完成 |
+| 项目静音切换 | PropertiesPanel.vue 静音按钮 | ✅ UpdateTransformCommand | 已完成 |
+| 轨道静音切换 | Timeline.vue 轨道静音按钮 | ❌ 需要实现 | 待完成 |
 
 ---
 

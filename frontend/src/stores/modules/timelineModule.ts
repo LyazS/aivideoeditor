@@ -21,7 +21,7 @@ export function createTimelineModule(
     getMediaItem: (id: string) => MediaItem | undefined
     mediaItems: Ref<MediaItem[]>
   },
-  trackModule?: { tracks: Ref<{ id: number; name: string }[]> },
+  trackModule?: { tracks: Ref<{ id: number; name: string; isVisible: boolean; isMuted: boolean }[]> },
 ) {
   // ==================== 状态定义 ====================
 
@@ -93,11 +93,18 @@ export function createTimelineModule(
       timelineItem.trackId = 1
     }
 
-    // 根据轨道的可见性设置sprite的visible属性
+    // 根据轨道的可见性和静音状态设置sprite属性
     if (trackModule) {
       const track = trackModule.tracks.value.find(t => t.id === timelineItem.trackId)
       if (track && timelineItem.sprite) {
+        // 设置可见性
         timelineItem.sprite.visible = track.isVisible
+
+        // 为视频片段设置轨道静音检查函数
+        if (timelineItem.mediaType === 'video' && 'setTrackMuteChecker' in timelineItem.sprite) {
+          const sprite = timelineItem.sprite as any // VideoVisibleSprite
+          sprite.setTrackMuteChecker(() => track.isMuted)
+        }
       }
     }
 

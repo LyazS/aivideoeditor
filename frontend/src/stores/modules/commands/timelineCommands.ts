@@ -4,7 +4,7 @@ import type { TimelineItem, MediaItem, Track } from '../../../types/videoTypes'
 import { VideoVisibleSprite } from '../../../utils/VideoVisibleSprite'
 import { ImageVisibleSprite } from '../../../utils/ImageVisibleSprite'
 import { useWebAVControls } from '../../../composables/useWebAVControls'
-import { markRaw, reactive } from 'vue'
+import { markRaw, reactive, type Ref } from 'vue'
 
 /**
  * 添加时间轴项目命令
@@ -1801,6 +1801,89 @@ export class ToggleTrackVisibilityCommand implements SimpleCommand {
     } catch (error) {
       const track = this.trackModule.getTrack(this.trackId)
       console.error(`❌ 撤销切换轨道可见性失败: ${track?.name || `轨道 ${this.trackId}`}`, error)
+      throw error
+    }
+  }
+}
+
+/**
+ * 切换轨道静音状态命令
+ * 支持切换轨道静音状态的撤销/重做操作
+ * 同时同步该轨道上所有视频时间轴项目的sprite静音状态
+ */
+export class ToggleTrackMuteCommand implements SimpleCommand {
+  public readonly id: string
+  public readonly description: string
+  private previousMuteState: boolean // 保存切换前的静音状态
+
+  constructor(
+    private trackId: number,
+    private trackModule: {
+      getTrack: (trackId: number) => Track | undefined
+      toggleTrackMute: (trackId: number, timelineItems?: Ref<TimelineItem[]>) => void
+    },
+    private timelineModule: {
+      timelineItems: Ref<TimelineItem[]>
+    }
+  ) {
+    this.id = `toggle-track-mute-${trackId}-${Date.now()}`
+
+    // 获取当前轨道信息
+    const track = this.trackModule.getTrack(trackId)
+    const trackName = track?.name || `轨道 ${trackId}`
+
+    this.description = `切换轨道静音状态: ${trackName}`
+
+    // 保存当前静音状态
+    this.previousMuteState = track?.isMuted || false
+  }
+
+  /**
+   * 执行命令：切换轨道静音状态
+   */
+  async execute(): Promise<void> {
+    try {
+      const track = this.trackModule.getTrack(this.trackId)
+      if (!track) {
+        throw new Error(`轨道不存在: ${this.trackId}`)
+      }
+
+      console.log(`🔄 执行切换轨道静音状态操作: ${track.name}...`)
+
+      // 调用trackModule的toggleTrackMute方法
+      // 这会自动同步该轨道上所有视频TimelineItem的sprite静音状态
+      this.trackModule.toggleTrackMute(this.trackId, this.timelineModule.timelineItems)
+
+      const newMuteState = track.isMuted
+      console.log(`✅ 已切换轨道静音状态: ${track.name}, 新状态: ${newMuteState ? '静音' : '有声'}`)
+    } catch (error) {
+      const track = this.trackModule.getTrack(this.trackId)
+      console.error(`❌ 切换轨道静音状态失败: ${track?.name || `轨道 ${this.trackId}`}`, error)
+      throw error
+    }
+  }
+
+  /**
+   * 撤销命令：恢复轨道静音状态
+   */
+  async undo(): Promise<void> {
+    try {
+      const track = this.trackModule.getTrack(this.trackId)
+      if (!track) {
+        throw new Error(`轨道不存在: ${this.trackId}`)
+      }
+
+      console.log(`🔄 撤销轨道静音状态操作: ${track.name}...`)
+
+      // 如果当前状态与之前状态不同，则切换回去
+      if (track.isMuted !== this.previousMuteState) {
+        this.trackModule.toggleTrackMute(this.trackId, this.timelineModule.timelineItems)
+      }
+
+      console.log(`✅ 已撤销轨道静音状态: ${track.name}, 恢复状态: ${this.previousMuteState ? '静音' : '有声'}`)
+    } catch (error) {
+      const track = this.trackModule.getTrack(this.trackId)
+      console.error(`❌ 撤销轨道静音状态失败: ${track?.name || `轨道 ${this.trackId}`}`, error)
       throw error
     }
   }

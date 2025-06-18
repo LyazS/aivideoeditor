@@ -128,16 +128,37 @@ export function createTrackModule() {
   /**
    * 切换轨道静音状态
    * @param trackId 轨道ID
+   * @param timelineItems 时间轴项目列表（用于同步sprite静音状态）
    */
-  function toggleTrackMute(trackId: number) {
+  function toggleTrackMute(trackId: number, timelineItems?: Ref<TimelineItem[]>) {
     const track = tracks.value.find((t) => t.id === trackId)
     if (track) {
       track.isMuted = !track.isMuted
-      console.log('🔇 切换轨道静音状态:', {
-        trackId,
-        trackName: track.name,
-        isMuted: track.isMuted,
-      })
+
+      // 同步该轨道上所有TimelineItem的sprite静音状态
+      if (timelineItems) {
+        const trackItems = timelineItems.value.filter(item => item.trackId === trackId && item.mediaType === 'video')
+        trackItems.forEach(item => {
+          if (item.sprite && 'setTrackMuteChecker' in item.sprite) {
+            // 为每个VideoVisibleSprite设置轨道静音检查函数
+            const sprite = item.sprite as any // VideoVisibleSprite
+            sprite.setTrackMuteChecker(() => track.isMuted)
+          }
+        })
+
+        console.log('🔇 切换轨道静音状态:', {
+          trackId,
+          trackName: track.name,
+          isMuted: track.isMuted,
+          affectedVideoClips: trackItems.length,
+        })
+      } else {
+        console.log('🔇 切换轨道静音状态:', {
+          trackId,
+          trackName: track.name,
+          isMuted: track.isMuted,
+        })
+      }
     } else {
       console.warn('⚠️ 找不到轨道:', trackId)
     }

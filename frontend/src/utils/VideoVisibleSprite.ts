@@ -47,6 +47,12 @@ export class VideoVisibleSprite extends VisibleSprite {
   }
 
   /**
+   * 轨道静音状态检查函数
+   * 这个函数由外部设置，用于检查当前sprite所在轨道是否被静音
+   */
+  #trackMuteChecker: (() => boolean) | null = null
+
+  /**
    * 时间范围信息
    */
   #timeRange: VideoTimeRange = {
@@ -359,8 +365,11 @@ export class VideoVisibleSprite extends VisibleSprite {
       clip.tickInterceptor = async (_time: number, tickRet: any) => {
         // 如果有音频数据，根据静音状态和音量调整
         if (tickRet.audio && tickRet.audio.length > 0) {
-          // 计算实际音量：静音时为0，否则使用当前音量
-          const effectiveVolume = this.#audioState.isMuted ? 0 : this.#audioState.volume
+          // 检查轨道是否被静音
+          const isTrackMuted = this.#trackMuteChecker ? this.#trackMuteChecker() : false
+
+          // 计算实际音量：轨道静音或片段静音时为0，否则使用当前音量
+          const effectiveVolume = (this.#audioState.isMuted || isTrackMuted) ? 0 : this.#audioState.volume
 
           if (effectiveVolume !== 1) {
             // 对每个声道的PCM数据进行音量调整
@@ -446,6 +455,30 @@ export class VideoVisibleSprite extends VisibleSprite {
   public setAudioState(audioState: AudioState): void {
     this.#audioState.volume = Math.max(0, Math.min(1, audioState.volume))
     this.#audioState.isMuted = audioState.isMuted
+  }
+
+  /**
+   * 设置轨道静音状态检查函数
+   * @param checker 检查函数，返回true表示轨道被静音
+   */
+  public setTrackMuteChecker(checker: (() => boolean) | null): void {
+    this.#trackMuteChecker = checker
+  }
+
+  /**
+   * 检查是否因轨道静音而被静音
+   * @returns 是否因轨道静音而被静音
+   */
+  public isTrackMuted(): boolean {
+    return this.#trackMuteChecker ? this.#trackMuteChecker() : false
+  }
+
+  /**
+   * 检查是否被静音（包括片段静音和轨道静音）
+   * @returns 是否被静音
+   */
+  public isEffectivelyMuted(): boolean {
+    return this.#audioState.isMuted || this.isTrackMuted()
   }
 
 }

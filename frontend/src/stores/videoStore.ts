@@ -23,7 +23,7 @@ import { createSelectionModule } from './modules/selectionModule'
 import { createTimelineModule } from './modules/timelineModule'
 import { createClipOperationsModule } from './modules/clipOperationsModule'
 import { createHistoryModule } from './modules/historyModule'
-import { AddTimelineItemCommand, RemoveTimelineItemCommand, MoveTimelineItemCommand, UpdateTransformCommand, SplitTimelineItemCommand, DuplicateTimelineItemCommand, AddTrackCommand, RemoveTrackCommand, RenameTrackCommand, AutoArrangeTrackCommand, ToggleTrackVisibilityCommand, ResizeTimelineItemCommand } from './modules/commands/timelineCommands'
+import { AddTimelineItemCommand, RemoveTimelineItemCommand, MoveTimelineItemCommand, UpdateTransformCommand, SplitTimelineItemCommand, DuplicateTimelineItemCommand, AddTrackCommand, RemoveTrackCommand, RenameTrackCommand, AutoArrangeTrackCommand, ToggleTrackVisibilityCommand, ToggleTrackMuteCommand, ResizeTimelineItemCommand } from './modules/commands/timelineCommands'
 import type { MediaItem, TimelineItem } from '../types/videoTypes'
 
 export const useVideoStore = defineStore('video', () => {
@@ -685,6 +685,39 @@ export const useVideoStore = defineStore('video', () => {
   }
 
   /**
+   * 带历史记录的切换轨道静音状态方法
+   * @param trackId 要切换静音状态的轨道ID
+   * @returns 是否成功切换
+   */
+  async function toggleTrackMuteWithHistory(trackId: number): Promise<boolean> {
+    // 检查轨道是否存在
+    const track = trackModule.getTrack(trackId)
+    if (!track) {
+      console.warn(`⚠️ 轨道不存在，无法切换静音状态: ${trackId}`)
+      return false
+    }
+
+    const command = new ToggleTrackMuteCommand(
+      trackId,
+      {
+        getTrack: trackModule.getTrack,
+        toggleTrackMute: trackModule.toggleTrackMute,
+      },
+      {
+        timelineItems: timelineModule.timelineItems,
+      }
+    )
+
+    try {
+      await historyModule.executeCommand(command)
+      return true
+    } catch (error) {
+      console.error('❌ 切换轨道静音状态失败:', error)
+      return false
+    }
+  }
+
+  /**
    * 带历史记录的调整时间范围方法
    * @param timelineItemId 时间轴项目ID
    * @param newTimeRange 新的时间范围
@@ -861,7 +894,7 @@ export const useVideoStore = defineStore('video', () => {
     removeTrack: (trackId: number) =>
       trackModule.removeTrack(trackId, timelineModule.timelineItems, timelineModule.removeTimelineItem),
     toggleTrackVisibility: (trackId: number) => trackModule.toggleTrackVisibility(trackId, timelineModule.timelineItems),
-    toggleTrackMute: trackModule.toggleTrackMute,
+    toggleTrackMute: (trackId: number) => trackModule.toggleTrackMute(trackId, timelineModule.timelineItems),
     renameTrack: trackModule.renameTrack,
     setTrackHeight: trackModule.setTrackHeight,
     getTrack: trackModule.getTrack,
@@ -947,6 +980,7 @@ export const useVideoStore = defineStore('video', () => {
     renameTrackWithHistory,
     autoArrangeTrackWithHistory,
     toggleTrackVisibilityWithHistory,
+    toggleTrackMuteWithHistory,
     resizeTimelineItemWithHistory,
   }
 })

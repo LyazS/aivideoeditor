@@ -157,8 +157,17 @@ async function toggleVisibility(trackId: number) {
   }
 }
 
-function toggleMute(trackId: number) {
-  videoStore.toggleTrackMute(trackId)
+async function toggleMute(trackId: number) {
+  try {
+    const success = await videoStore.toggleTrackMuteWithHistory(trackId)
+    if (success) {
+      console.log('✅ 轨道静音状态切换成功')
+    } else {
+      console.error('❌ 轨道静音状态切换失败')
+    }
+  } catch (error) {
+    console.error('❌ 切换轨道静音状态时出错:', error)
+  }
 }
 
 async function startRename(track: { id: number; name: string }) {
