@@ -35,7 +35,12 @@
               @keyup.enter="finishRename"
               @keyup.escape="cancelRename"
               class="track-name-input"
-              :ref="(el) => { if (editingTrackId === track.id) nameInput = el as HTMLInputElement }"
+              :ref="
+                (el) => {
+                  /* @ts-ignore */
+                  if (editingTrackId === track.id) nameInput = el as HTMLInputElement
+                }
+              "
             />
             <span
               v-else
@@ -54,10 +59,14 @@
               class="track-btn arrange-btn"
               :disabled="getClipsForTrack(track.id).length === 0"
               @click="autoArrangeTrack(track.id)"
-              :title="getClipsForTrack(track.id).length === 0 ? '该轨道没有片段' : '自动排列该轨道的片段'"
+              :title="
+                getClipsForTrack(track.id).length === 0 ? '该轨道没有片段' : '自动排列该轨道的片段'
+              "
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M3,3H21V5H3V3M3,7H15V9H3V7M3,11H21V13H3V11M3,15H15V17H3V15M3,19H21V21H3V19Z" />
+                <path
+                  d="M3,3H21V5H3V3M3,7H15V9H3V7M3,11H21V13H3V11M3,15H15V17H3V15M3,19H21V21H3V19Z"
+                />
               </svg>
             </button>
 
@@ -160,7 +169,11 @@ import { useWebAVControls, waitForWebAVReady, isWebAVReady } from '../composable
 import { VideoVisibleSprite } from '../utils/VideoVisibleSprite'
 import { ImageVisibleSprite } from '../utils/ImageVisibleSprite'
 import { webavToProjectCoords } from '../utils/coordinateTransform'
-import { generateVideoThumbnail, generateImageThumbnail, canvasToBlob } from '../utils/thumbnailGenerator'
+import {
+  generateVideoThumbnail,
+  generateImageThumbnail,
+  canvasToBlob,
+} from '../utils/thumbnailGenerator'
 import type { TimelineItem } from '../types/videoTypes'
 import VideoClip from './VideoClip.vue'
 import TimeScale from './TimeScale.vue'
@@ -263,7 +276,10 @@ async function startRename(track: { id: number; name: string }) {
 async function finishRename() {
   if (editingTrackId.value && editingTrackName.value.trim()) {
     try {
-      const success = await videoStore.renameTrackWithHistory(editingTrackId.value, editingTrackName.value.trim())
+      const success = await videoStore.renameTrackWithHistory(
+        editingTrackId.value,
+        editingTrackName.value.trim(),
+      )
       if (success) {
         console.log('✅ 轨道重命名成功')
       } else {
@@ -522,7 +538,6 @@ async function createMediaClipFromMediaItem(
         startTime,
         endTime: startTime + mediaItem.duration,
       })
-
       ;(sprite as VideoVisibleSprite).setTimeRange(timeRangeConfig)
     } else {
       // 图片使用不同的时间范围设置
@@ -538,7 +553,6 @@ async function createMediaClipFromMediaItem(
         startTime,
         endTime: startTime + mediaItem.duration,
       })
-
       ;(sprite as ImageVisibleSprite).setTimeRange(imageTimeRangeConfig)
     }
 
