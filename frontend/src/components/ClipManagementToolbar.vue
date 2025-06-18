@@ -1,6 +1,6 @@
 <template>
   <!-- 工具栏 -->
-  <div v-if="timelineItems.length > 0" class="clip-management-toolbar">
+  <div class="clip-management-toolbar">
     <div class="toolbar-section">
       <span class="toolbar-label">片段管理:</span>
       <button
@@ -33,6 +33,35 @@
       <span v-if="overlappingCount > 0" class="overlap-warning">
         ⚠️ {{ overlappingCount }} 个重叠
       </span>
+    </div>
+
+    <div class="toolbar-section">
+      <button
+        class="toolbar-btn undo-btn"
+        @click="undoOperation"
+        title="撤销上一步操作"
+        disabled
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+          <path
+            d="M12.5,8C9.85,8 7.45,9 5.6,10.6L2,7V16H11L7.38,12.38C8.77,11.22 10.54,10.5 12.5,10.5C16.04,10.5 19.05,12.81 20.1,16L22.47,15.22C21.08,11.03 17.15,8 12.5,8Z"
+          />
+        </svg>
+        撤销
+      </button>
+      <button
+        class="toolbar-btn redo-btn"
+        @click="redoOperation"
+        title="重做上一步操作"
+        disabled
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+          <path
+            d="M18.4,10.6C16.55,9 14.15,8 11.5,8C6.85,8 2.92,11.03 1.53,15.22L3.9,16C4.95,12.81 7.96,10.5 11.5,10.5C13.46,10.5 15.23,11.22 16.62,12.38L13,16H22V7L18.4,10.6Z"
+          />
+        </svg>
+        重做
+      </button>
     </div>
 
     <div class="toolbar-section">
@@ -128,6 +157,16 @@ function deleteSelectedClip() {
     )
     videoStore.removeTimelineItem(videoStore.selectedTimelineItemId)
   }
+}
+
+function undoOperation() {
+  console.log('🔄 撤销操作 - 功能尚未实现')
+  // TODO: 实现撤销功能
+}
+
+function redoOperation() {
+  console.log('🔄 重做操作 - 功能尚未实现')
+  // TODO: 实现重做功能
 }
 
 function debugTimeline() {
@@ -254,6 +293,32 @@ function formatFileSize(bytes: number): string {
 
 .toolbar-btn.delete-btn:hover {
   background-color: #c82333;
+}
+
+.toolbar-btn.undo-btn {
+  background-color: #17a2b8;
+}
+
+.toolbar-btn.undo-btn:hover:not(:disabled) {
+  background-color: #138496;
+}
+
+.toolbar-btn.redo-btn {
+  background-color: #17a2b8;
+}
+
+.toolbar-btn.redo-btn:hover:not(:disabled) {
+  background-color: #138496;
+}
+
+.toolbar-btn:disabled {
+  background-color: #6c757d;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.toolbar-btn:disabled:hover {
+  background-color: #6c757d;
 }
 
 .toolbar-btn svg {
