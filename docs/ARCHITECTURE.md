@@ -200,9 +200,8 @@ App
     ├── PreviewWindow (预览区域)
     │   ├── WebAVRenderer (WebAV渲染器)
     │   └── 控制覆盖层
-    ├── Timeline (时间轴)
+    ├── Timeline (时间轴，包含轨道管理)
     │   ├── TimeScale (时间刻度)
-    │   ├── TrackManager (轨道管理)
     │   └── VideoClip[] (视频片段)
     ├── PlaybackControls (播放控制)
     ├── PropertiesPanel (属性面板)

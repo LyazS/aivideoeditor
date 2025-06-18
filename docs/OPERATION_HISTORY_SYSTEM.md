@@ -1106,7 +1106,7 @@ const addTimelineItemWithHistory = async (timelineItem: TimelineItem) => {
 
 #### 1. 轨道级别的静音控制
 - **当前状态**: 功能已存在但未集成历史记录系统
-- **问题**: Timeline.vue和TrackManager.vue中的轨道静音按钮直接调用`toggleTrackMute`，不支持撤销/重做
+- **问题**: Timeline.vue中的轨道静音按钮直接调用`toggleTrackMute`，不支持撤销/重做
 - **需要实现**:
   - `ToggleTrackMuteCommand`类
   - `toggleTrackMuteWithHistory`方法

@@ -93,7 +93,7 @@ async function addTrackWithHistory(name?: string): Promise<number | null> {
 
 ### UI组件集成
 ```typescript
-// Timeline.vue / TrackManager.vue
+// Timeline.vue
 async function addNewTrack() {
   try {
     const newTrackId = await videoStore.addTrackWithHistory()
