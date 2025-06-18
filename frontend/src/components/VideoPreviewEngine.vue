@@ -203,11 +203,24 @@ watch(
   { immediate: true },
 )
 
-onMounted(() => {
+onMounted(async () => {
   logComponentLifecycle('VideoPreviewEngine', 'mounted', {
     isWebAVReady: videoStore.isWebAVReady,
     hasAVCanvas: !!videoStore.avCanvas,
   })
+
+  // 初始化现代化操作系统
+  try {
+    console.log('🚀 初始化现代化操作系统...')
+    const success = await videoStore.initializeOperationSystem()
+    if (success) {
+      console.log('✅ 现代化操作系统初始化成功')
+    } else {
+      console.warn('⚠️ 现代化操作系统初始化失败')
+    }
+  } catch (error) {
+    console.error('❌ 现代化操作系统初始化出错:', error)
+  }
 })
 
 // 响应式数据
