@@ -552,7 +552,7 @@ const updateTargetDuration = async (newTargetDuration: number) => {
 
       // 对于视频，直接更新时间范围
       if (selectedTimelineItem.value.mediaType === 'video') {
-        // 更新CustomVisibleSprite的时间范围
+        // 更新VideoVisibleSprite的时间范围
         const newTimelineEndTime = timeRange.timelineStartTime + newTargetDuration * 1000000
 
         // 根据媒体类型设置不同的时间范围

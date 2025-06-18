@@ -40,7 +40,7 @@
 ### API文档
 - VideoStore API详解
 - useWebAVControls接口说明
-- CustomVisibleSprite API
+- VideoVisibleSprite API
 - 类型定义和接口规范
 - 事件系统说明
 - 工具函数参考

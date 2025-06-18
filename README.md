@@ -21,7 +21,7 @@
 ### 视频处理
 - **@webav/av-canvas**: WebAV画布渲染引擎
 - **@webav/av-cliper**: 视频剪辑和处理库
-- **CustomVisibleSprite**: 自定义视频精灵组件
+- **VideoVisibleSprite**: 自定义视频精灵组件
 
 ### 开发工具
 - **ESLint**: 代码质量检查
@@ -97,7 +97,7 @@ frontend/
 ```
 UI组件 → VideoStore → 模块化状态 → WebAV引擎
    ↑                                    ↓
-   ← 事件监听 ← propsChange事件 ← CustomVisibleSprite
+   ← 事件监听 ← propsChange事件 ← VideoVisibleSprite
 ```
 
 ## 🚦 快速开始
@@ -170,14 +170,14 @@ npm run format
 
 ### WebAV集成
 1. 使用`useWebAVControls`组合式函数
-2. 通过`CustomVisibleSprite`处理视频对象
+2. 通过`VideoVisibleSprite`处理视频对象
 3. 注意WebAV对象需要使用`markRaw`避免Vue响应式包装
 
 ## 📝 开发注意事项
 
 ### WebAV对象处理
 - WebAV对象不能被Vue响应式系统包装，需要使用`markRaw()`
-- CustomVisibleSprite需要通过`toRaw()`获取原始对象进行操作
+- VideoVisibleSprite需要通过`toRaw()`获取原始对象进行操作
 - 监听WebAV事件时要注意内存泄漏问题
 
 ### 坐标系统

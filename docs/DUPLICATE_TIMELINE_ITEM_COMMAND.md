@@ -59,7 +59,7 @@ this.originalTimelineItemData = {
 ### 重建流程
 1. **获取原始素材**: 从MediaItem重新获取MP4Clip或ImgClip
 2. **克隆Clip**: 使用WebAV的clone()方法创建新的Clip实例
-3. **创建Sprite**: 根据媒体类型创建CustomVisibleSprite或ImageVisibleSprite
+3. **创建Sprite**: 根据媒体类型创建VideoVisibleSprite或ImageVisibleSprite
 4. **设置时间范围**: 调整到新的时间位置
 5. **应用变换属性**: 设置位置、大小、旋转等属性
 6. **创建TimelineItem**: 创建完整的TimelineItem对象

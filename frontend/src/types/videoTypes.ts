@@ -1,6 +1,6 @@
 import type { Raw } from 'vue'
 import type { MP4Clip, ImgClip, Rect } from '@webav/av-cliper'
-import type { CustomVisibleSprite, VideoTimeRange } from '../utils/VideoVisibleSprite'
+import type { VideoVisibleSprite, VideoTimeRange } from '../utils/VideoVisibleSprite'
 import type { ImageVisibleSprite, ImageTimeRange } from '../utils/ImageVisibleSprite'
 
 // 定义WebAV属性变化事件的类型
@@ -28,14 +28,14 @@ export interface MediaItem {
   thumbnailUrl?: string // WebAV生成的缩略图URL
 }
 
-// 时间轴层：包装CustomVisibleSprite/ImageVisibleSprite和时间轴位置信息
+// 时间轴层：包装VideoVisibleSprite/ImageVisibleSprite和时间轴位置信息
 export interface TimelineItem {
   id: string
   mediaItemId: string // 引用MediaItem的ID
   trackId: number
   mediaType: 'video' | 'image' // 媒体类型：视频或图片
   timeRange: VideoTimeRange | ImageTimeRange // 时间范围信息（视频包含倍速，图片不包含）
-  sprite: Raw<CustomVisibleSprite | ImageVisibleSprite> // 视频或图片sprite
+  sprite: Raw<VideoVisibleSprite | ImageVisibleSprite> // 视频或图片sprite
   thumbnailUrl?: string // 时间轴clip的缩略图URL
   // Sprite位置和大小属性（响应式）
   position: {
@@ -85,7 +85,7 @@ export function isImageTimeRange(timeRange: VideoTimeRange | ImageTimeRange): ti
  * @param item 时间轴项目
  * @returns 是否为视频类型
  */
-export function isVideoTimelineItem(item: TimelineItem): item is TimelineItem & { timeRange: VideoTimeRange; sprite: Raw<CustomVisibleSprite> } {
+export function isVideoTimelineItem(item: TimelineItem): item is TimelineItem & { timeRange: VideoTimeRange; sprite: Raw<VideoVisibleSprite> } {
   return item.mediaType === 'video' && isVideoTimeRange(item.timeRange)
 }
 

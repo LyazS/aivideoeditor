@@ -550,7 +550,7 @@ const addTimelineItemWithHistory = async (timelineItem: TimelineItem) => {
    }
 
    // ❌ 错误：保存对象引用
-   private sprite: CustomVisibleSprite // 可能被销毁
+   private sprite: VideoVisibleSprite // 可能被销毁
    ```
 
 2. **每次execute都完全重建**

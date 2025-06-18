@@ -157,7 +157,7 @@
 import { ref, computed, onMounted, onUnmounted, nextTick, markRaw, reactive } from 'vue'
 import { useVideoStore } from '../stores/videoStore'
 import { useWebAVControls, waitForWebAVReady, isWebAVReady } from '../composables/useWebAVControls'
-import { CustomVisibleSprite } from '../utils/VideoVisibleSprite'
+import { VideoVisibleSprite } from '../utils/VideoVisibleSprite'
 import { ImageVisibleSprite } from '../utils/ImageVisibleSprite'
 import { webavToProjectCoords } from '../utils/coordinateTransform'
 import { generateVideoThumbnail, generateImageThumbnail, canvasToBlob } from '../utils/thumbnailGenerator'
@@ -456,16 +456,16 @@ async function createMediaClipFromMediaItem(
       throw new Error('素材还在解析中，请稍后再试')
     }
 
-    let sprite: CustomVisibleSprite | ImageVisibleSprite
+    let sprite: VideoVisibleSprite | ImageVisibleSprite
 
     if (mediaItem.mediaType === 'video') {
       // 处理视频
       if (!storeMediaItem.mp4Clip) {
         throw new Error('视频素材解析失败')
       }
-      console.log('克隆MP4Clip并创建CustomVisibleSprite for mediaItem:', mediaItem.id)
+      console.log('克隆MP4Clip并创建VideoVisibleSprite for mediaItem:', mediaItem.id)
       const clonedMP4Clip = await webAVControls.cloneMP4Clip(storeMediaItem.mp4Clip)
-      sprite = new CustomVisibleSprite(clonedMP4Clip)
+      sprite = new VideoVisibleSprite(clonedMP4Clip)
     } else if (mediaItem.mediaType === 'image') {
       // 处理图片
       if (!storeMediaItem.imgClip) {
@@ -523,7 +523,7 @@ async function createMediaClipFromMediaItem(
         endTime: startTime + mediaItem.duration,
       })
 
-      ;(sprite as CustomVisibleSprite).setTimeRange(timeRangeConfig)
+      ;(sprite as VideoVisibleSprite).setTimeRange(timeRangeConfig)
     } else {
       // 图片使用不同的时间范围设置
       const imageTimeRangeConfig = {
@@ -562,7 +562,7 @@ async function createMediaClipFromMediaItem(
       // 缩略图生成失败不影响TimelineItem创建
     }
 
-    // 创建TimelineItem - 使用markRaw包装CustomVisibleSprite
+    // 创建TimelineItem - 使用markRaw包装VideoVisibleSprite
     const timelineItemId = Date.now().toString() + Math.random().toString(36).substring(2, 11)
 
     // 将WebAV坐标系转换为项目坐标系（中心原点）
@@ -650,7 +650,7 @@ async function handleTimelineItemRemove(timelineItemId: string) {
     try {
       const item = videoStore.getTimelineItem(timelineItemId)
       if (item) {
-        // 从WebAV画布移除CustomVisibleSprite
+        // 从WebAV画布移除VideoVisibleSprite
         const avCanvas = webAVControls.getAVCanvas()
         if (avCanvas) {
           avCanvas.removeSprite(item.sprite)

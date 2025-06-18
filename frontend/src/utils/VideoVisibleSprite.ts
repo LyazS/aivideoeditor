@@ -22,7 +22,7 @@ export interface VideoTimeRange {
  * 自定义的VisibleSprite类，继承自WebAV的VisibleSprite
  * 添加了startOffset属性用于自定义起始偏移
  */
-export class CustomVisibleSprite extends VisibleSprite {
+export class VideoVisibleSprite extends VisibleSprite {
   /**
    * 起始偏移时间（微秒）
    */

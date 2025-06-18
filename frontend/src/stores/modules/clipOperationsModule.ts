@@ -1,5 +1,5 @@
 import { reactive, markRaw, type Ref } from 'vue'
-import { CustomVisibleSprite } from '../../utils/VideoVisibleSprite'
+import { VideoVisibleSprite } from '../../utils/VideoVisibleSprite'
 import { ImageVisibleSprite } from '../../utils/ImageVisibleSprite'
 import { useWebAVControls } from '../../composables/useWebAVControls'
 import { regenerateThumbnailForTimelineItem } from '../../utils/thumbnailGenerator'
@@ -65,11 +65,11 @@ export function createClipOperationsModule(
 
       // 根据媒体类型克隆对应的Clip
       const webAVControls = useWebAVControls()
-      let newSprite: CustomVisibleSprite | ImageVisibleSprite
+      let newSprite: VideoVisibleSprite | ImageVisibleSprite
 
       if (mediaItem.mediaType === 'video' && mediaItem.mp4Clip) {
         const clonedClip = await webAVControls.cloneMP4Clip(mediaItem.mp4Clip)
-        newSprite = new CustomVisibleSprite(clonedClip)
+        newSprite = new VideoVisibleSprite(clonedClip)
       } else if (mediaItem.mediaType === 'image' && mediaItem.imgClip) {
         const clonedClip = await webAVControls.cloneImgClip(mediaItem.imgClip)
         newSprite = new ImageVisibleSprite(clonedClip)
@@ -81,7 +81,7 @@ export function createClipOperationsModule(
 
       // 根据媒体类型复制时间范围设置
       if (mediaItem.mediaType === 'video' && isVideoTimeRange(timeRange)) {
-        (newSprite as CustomVisibleSprite).setTimeRange({
+        (newSprite as VideoVisibleSprite).setTimeRange({
           clipStartTime: timeRange.clipStartTime,
           clipEndTime: timeRange.clipEndTime,
           timelineStartTime: timeRange.timelineStartTime,
@@ -146,7 +146,7 @@ export function createClipOperationsModule(
 
       // 根据媒体类型更新新sprite的时间轴位置
       if (mediaItem.mediaType === 'video' && isVideoTimeRange(timeRange)) {
-        (newSprite as CustomVisibleSprite).setTimeRange({
+        (newSprite as VideoVisibleSprite).setTimeRange({
           clipStartTime: timeRange.clipStartTime,
           clipEndTime: timeRange.clipEndTime,
           timelineStartTime: newTimelinePosition * 1000000,
@@ -213,7 +213,7 @@ export function createClipOperationsModule(
       // 更新sprite的播放速度（这会自动更新sprite内部的timeRange）
       // 只有视频sprite才有setPlaybackSpeed方法
       if (item.mediaType === 'video') {
-        ;(item.sprite as CustomVisibleSprite).setPlaybackSpeed(clampedRate)
+        ;(item.sprite as VideoVisibleSprite).setPlaybackSpeed(clampedRate)
       }
 
       // 使用同步函数更新TimelineItem的timeRange
@@ -322,8 +322,8 @@ export function createClipOperationsModule(
       const firstClonedClip = await webAVControls.cloneMP4Clip(mediaItem.mp4Clip)
       const secondClonedClip = await webAVControls.cloneMP4Clip(mediaItem.mp4Clip)
 
-      // 创建第一个片段的CustomVisibleSprite
-      const firstSprite = new CustomVisibleSprite(firstClonedClip)
+      // 创建第一个片段的VideoVisibleSprite
+      const firstSprite = new VideoVisibleSprite(firstClonedClip)
       firstSprite.setTimeRange({
         clipStartTime: clipStartTime * 1000000,
         clipEndTime: splitClipTime * 1000000,
@@ -349,8 +349,8 @@ export function createClipOperationsModule(
         opacity: sprite.opacity,
       })
 
-      // 创建第二个片段的CustomVisibleSprite
-      const secondSprite = new CustomVisibleSprite(secondClonedClip)
+      // 创建第二个片段的VideoVisibleSprite
+      const secondSprite = new VideoVisibleSprite(secondClonedClip)
       secondSprite.setTimeRange({
         clipStartTime: splitClipTime * 1000000,
         clipEndTime: clipEndTime * 1000000,
