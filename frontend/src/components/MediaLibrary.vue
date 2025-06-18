@@ -394,20 +394,32 @@ const addImageItem = async (file: File, url: string, mediaItemId: string, startT
 const removeMediaItem = (id: string) => {
   const item = videoStore.getMediaItem(id)
   if (item) {
-    console.log(`🗑️ 准备删除素材库项目: ${item.name} (ID: ${id})`)
+    // 检查是否有相关的时间轴项目
+    const relatedTimelineItems = videoStore.timelineItems.filter(
+      (timelineItem) => timelineItem.mediaItemId === id
+    )
 
-    // 清理URL
-    URL.revokeObjectURL(item.url)
-
-    // 清理缩略图URL
-    if (item.thumbnailUrl) {
-      URL.revokeObjectURL(item.thumbnailUrl)
+    let confirmMessage = `确定要删除素材 "${item.name}" 吗？`
+    if (relatedTimelineItems.length > 0) {
+      confirmMessage += `\n\n注意：这将同时删除时间轴上的 ${relatedTimelineItems.length} 个相关片段。`
     }
 
-    // 从store中移除MediaItem（会自动移除相关的TimelineItem）
-    videoStore.removeMediaItem(id)
+    if (confirm(confirmMessage)) {
+      console.log(`🗑️ 准备删除素材库项目: ${item.name} (ID: ${id})`)
 
-    console.log(`✅ 素材库项目删除完成: ${item.name}`)
+      // 清理URL
+      URL.revokeObjectURL(item.url)
+
+      // 清理缩略图URL
+      if (item.thumbnailUrl) {
+        URL.revokeObjectURL(item.thumbnailUrl)
+      }
+
+      // 从store中移除MediaItem（会自动移除相关的TimelineItem）
+      videoStore.removeMediaItem(id)
+
+      console.log(`✅ 素材库项目删除完成: ${item.name}`)
+    }
   }
 }
 

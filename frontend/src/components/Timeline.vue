@@ -221,17 +221,15 @@ async function removeTrack(trackId: number) {
     return
   }
 
-  if (confirm('确定要删除这个轨道吗？轨道上的所有片段也将被删除。')) {
-    try {
-      const success = await videoStore.removeTrackWithHistory(trackId)
-      if (success) {
-        console.log('✅ 轨道删除成功')
-      } else {
-        console.error('❌ 轨道删除失败')
-      }
-    } catch (error) {
-      console.error('❌ 删除轨道时出错:', error)
+  try {
+    const success = await videoStore.removeTrackWithHistory(trackId)
+    if (success) {
+      console.log('✅ 轨道删除成功')
+    } else {
+      console.error('❌ 轨道删除失败')
     }
+  } catch (error) {
+    console.error('❌ 删除轨道时出错:', error)
   }
 }
 

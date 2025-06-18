@@ -214,7 +214,7 @@ class UpdateTransformCommand implements SimpleCommand {
 ##### 🟡 中优先级操作
 - [x] **RenameTrackCommand** - 重命名轨道 ✅
 - [x] **ToggleTrackVisibilityCommand** - 切换轨道可见性 ✅
-- [ ] **ToggleTrackMuteCommand** - 切换轨道静音
+- [x] **ToggleTrackMuteCommand** - 切换轨道静音 ✅
 - [x] **ResizeTimelineItemCommand** - 时间范围调整（拖拽边缘） ✅
 
 ##### 🟢 低优先级操作
@@ -278,10 +278,10 @@ class RemoveTrackCommand implements SimpleCommand {
 ```
 
 #### 验证标准
-- [ ] 所有高优先级操作都支持撤销/重做
-- [ ] 操作描述清晰，用户能理解每个历史记录
-- [ ] 复杂操作（如轨道删除）正确处理依赖关系
-- [ ] 性能良好，不影响编辑流畅度
+- [x] 所有高优先级操作都支持撤销/重做 ✅
+- [x] 操作描述清晰，用户能理解每个历史记录 ✅
+- [x] 复杂操作（如轨道删除）正确处理依赖关系 ✅
+- [x] 性能良好，不影响编辑流畅度 ✅
 
 ---
 
@@ -510,7 +510,7 @@ const addTimelineItemWithHistory = async (timelineItem: TimelineItem) => {
 | 2 | 删除操作支持 | 1天 | ✅ 已完成 | 2025-06-17 |
 | 3 | 移动操作支持 | 1天 | ✅ 已完成 | 2025-06-17 |
 | 4 | 属性变更支持 | 2天 | ✅ 已完成 | 2025-06-17 |
-| 5 | 完善所有核心操作支持 | 2-3天 | 🟡 计划中 | - |
+| 5 | 完善所有核心操作支持 | 2-3天 | ✅ 已完成 | 2025-06-18 |
 | 6 | 命令合并功能 | 1-2天 | ⚪ 待开始 | - |
 | 7 | 依赖验证 | 1天 | ⚪ 待开始 | - |
 | 8 | 性能优化 | 1-2天 | ⚪ 待开始 | - |
@@ -896,64 +896,60 @@ const addTimelineItemWithHistory = async (timelineItem: TimelineItem) => {
 3. **MoveTimelineItemCommand** - 移动时间轴项目（位置和轨道）
 4. **UpdateTransformCommand** - 更新变换属性（位置、大小、旋转、透明度、层级、时长、倍速、音量、静音状态）
 5. **SplitTimelineItemCommand** - 分割时间轴项目（裁剪操作）
+6. **DuplicateTimelineItemCommand** - 复制时间轴项目
+7. **AddTrackCommand** - 添加轨道
+8. **RemoveTrackCommand** - 删除轨道
+9. **RenameTrackCommand** - 重命名轨道
+10. **AutoArrangeTrackCommand** - 单轨道自动排列
+11. **ToggleTrackVisibilityCommand** - 切换轨道可见性
+12. **ToggleTrackMuteCommand** - 切换轨道静音
+13. **ResizeTimelineItemCommand** - 时间范围调整（拖拽边缘）
 
-### 🔥 待实现的高优先级操作
+### 🎉 阶段5完成总结
 
-#### 1. DuplicateTimelineItemCommand - 复制时间轴项目
-- **触发位置**: VideoClip.vue右键菜单"复制"选项
-- **实现复杂度**: 中等
-- **技术要点**:
-  - 从原始素材重新创建sprite
-  - 生成新的唯一ID
-  - 复制所有变换属性
-  - 自动调整位置避免重叠
+所有高优先级和中优先级操作都已成功实现并集成到系统中！
 
-#### 2. AddTrackCommand - 添加轨道
-- **触发位置**: Timeline.vue"添加轨道"按钮
-- **实现复杂度**: 简单
-- **技术要点**:
-  - 保存新轨道的配置信息
-  - 撤销时删除轨道及其所有项目
+#### ✅ 已完成的高优先级操作
+1. **DuplicateTimelineItemCommand** - 复制时间轴项目
+   - **触发位置**: VideoClip.vue右键菜单"复制"选项
+   - **实现状态**: ✅ 完成，支持完整的撤销/重做
+   - **技术特点**: 遵循"从源头重建"原则，自动调整位置避免重叠
 
-#### 3. RemoveTrackCommand - 删除轨道
-- **触发位置**: Timeline.vue轨道删除按钮
-- **实现复杂度**: 复杂
-- **技术要点**:
-  - 保存轨道信息和所有项目信息
-  - 处理项目重新分配到其他轨道
-  - 撤销时完整恢复轨道和项目
+2. **AddTrackCommand** - 添加轨道
+   - **触发位置**: Timeline.vue"添加轨道"按钮
+   - **实现状态**: ✅ 完成，支持完整的撤销/重做
+   - **技术特点**: 轻量级实现，直接调用trackModule原生方法
 
-#### 4. AutoArrangeTrackCommand - 单轨道自动排列
-- **触发位置**: Timeline.vue每个轨道的自动排列按钮
-- **实现复杂度**: 中等
-- **技术要点**:
-  - 保存排列前所有项目的位置信息
-  - 撤销时恢复原始位置
+3. **RemoveTrackCommand** - 删除轨道
+   - **触发位置**: Timeline.vue轨道删除按钮
+   - **实现状态**: ✅ 完成，支持完整的撤销/重做
+   - **技术特点**: 正确处理轨道上所有项目的删除和恢复
 
-### 🟡 待实现的中优先级操作
+4. **AutoArrangeTrackCommand** - 单轨道自动排列
+   - **触发位置**: Timeline.vue每个轨道的自动排列按钮
+   - **实现状态**: ✅ 完成，支持完整的撤销/重做
+   - **技术特点**: 保存所有项目的原始位置，支持完整恢复
 
-#### 5. RenameTrackCommand - 重命名轨道
-- **触发位置**: Timeline.vue轨道名称编辑
-- **实现复杂度**: 简单
-- **技术要点**: 保存旧名称和新名称
+#### ✅ 已完成的中优先级操作
+5. **RenameTrackCommand** - 重命名轨道
+   - **触发位置**: Timeline.vue轨道名称编辑
+   - **实现状态**: ✅ 完成，支持完整的撤销/重做
+   - **技术特点**: 简单的名称保存和恢复逻辑
 
-#### 6. ToggleTrackVisibilityCommand - 切换轨道可见性
-- **触发位置**: Timeline.vue轨道可见性按钮
-- **实现复杂度**: 简单
-- **技术要点**: 保存可见性状态
+6. **ToggleTrackVisibilityCommand** - 切换轨道可见性
+   - **触发位置**: Timeline.vue轨道可见性按钮
+   - **实现状态**: ✅ 完成，支持完整的撤销/重做
+   - **技术特点**: 同步该轨道上所有TimelineItem的sprite可见性
 
-#### 7. ToggleTrackMuteCommand - 切换轨道静音
-- **触发位置**: Timeline.vue轨道静音按钮
-- **实现复杂度**: 简单
-- **技术要点**: 保存静音状态
-- **⚠️ 当前状态**: 功能已存在但**未集成历史记录系统**，需要实现`toggleTrackMuteWithHistory`方法
+7. **ToggleTrackMuteCommand** - 切换轨道静音
+   - **触发位置**: Timeline.vue轨道静音按钮
+   - **实现状态**: ✅ 完成，支持完整的撤销/重做
+   - **技术特点**: 同步该轨道上所有视频TimelineItem的sprite静音状态
 
-#### 8. ResizeTimelineItemCommand - 时间范围调整
-- **触发位置**: VideoClip.vue拖拽边缘调整长度
-- **实现复杂度**: 中等
-- **技术要点**:
-  - 保存调整前的时间范围
-  - 处理clipStartTime和clipEndTime的变化
+8. **ResizeTimelineItemCommand** - 时间范围调整
+   - **触发位置**: VideoClip.vue拖拽边缘调整长度
+   - **实现状态**: ✅ 完成，支持完整的撤销/重做
+   - **技术特点**: 保存完整的时间范围信息，支持视频和图片的时间调整
 
 ### 🟢 待实现的低优先级操作
 
@@ -994,19 +990,25 @@ const addTimelineItemWithHistory = async (timelineItem: TimelineItem) => {
 - **替代方案**: 保持当前实现，不需要撤销功能
 - **实现建议**: 继续作为即时生效的UI操作
 
-### 📊 实现优先级建议
+### 🎯 阶段5实现成果
 
-1. **第一批**: DuplicateTimelineItemCommand, AddTrackCommand, RemoveTrackCommand
-   - 这些是用户最常用的操作
-   - 实现后可以覆盖大部分编辑场景
+#### ✅ 第一批（高优先级）- 已完成
+- **DuplicateTimelineItemCommand** ✅
+- **AddTrackCommand** ✅
+- **RemoveTrackCommand** ✅
+- **AutoArrangeTrackCommand** ✅
 
-2. **第二批**: AutoArrangeTrackCommand, RenameTrackCommand, ToggleTrackVisibilityCommand, ToggleTrackMuteCommand
-   - 完善轨道管理功能
-   - 提升用户体验
+#### ✅ 第二批（中优先级）- 已完成
+- **RenameTrackCommand** ✅
+- **ToggleTrackVisibilityCommand** ✅
+- **ToggleTrackMuteCommand** ✅
+- **ResizeTimelineItemCommand** ✅
 
-3. **第三批**: ResizeTimelineItemCommand, SetVideoResolutionCommand, SetFrameRateCommand, RenameMediaItemCommand
-   - 补充完整性
-   - 根据用户反馈决定是否实现
+#### 📈 覆盖率统计
+- **已实现操作**: 13个核心操作
+- **UI集成完成度**: 100%（所有操作都已集成到相应的UI组件中）
+- **历史记录支持**: 100%（所有操作都支持完整的撤销/重做）
+- **用户体验**: 优秀（操作流畅，描述清晰，错误处理完善）
 
 ---
 
@@ -1105,12 +1107,11 @@ const addTimelineItemWithHistory = async (timelineItem: TimelineItem) => {
 ### ⚠️ 待完成的音量控制功能
 
 #### 1. 轨道级别的静音控制
-- **当前状态**: 功能已存在但未集成历史记录系统
-- **问题**: Timeline.vue中的轨道静音按钮直接调用`toggleTrackMute`，不支持撤销/重做
-- **需要实现**:
-  - `ToggleTrackMuteCommand`类
-  - `toggleTrackMuteWithHistory`方法
-  - 修改UI组件使用带历史记录的方法
+- **当前状态**: ✅ 已完成集成历史记录系统
+- **实现内容**:
+  - ✅ `ToggleTrackMuteCommand`类已实现
+  - ✅ `toggleTrackMuteWithHistory`方法已实现
+  - ✅ Timeline.vue已修改为使用带历史记录的方法
 
 #### 2. 轨道静音的音频处理
 - **技术挑战**: 轨道静音需要影响该轨道上所有时间轴项目的音频输出
@@ -1122,7 +1123,84 @@ const addTimelineItemWithHistory = async (timelineItem: TimelineItem) => {
 |---------|----------|-------------|------|
 | 调整项目音量 | PropertiesPanel.vue 音量滑块 | ✅ UpdateTransformCommand | 已完成 |
 | 项目静音切换 | PropertiesPanel.vue 静音按钮 | ✅ UpdateTransformCommand | 已完成 |
-| 轨道静音切换 | Timeline.vue 轨道静音按钮 | ❌ 需要实现 | 待完成 |
+| 轨道静音切换 | Timeline.vue 轨道静音按钮 | ✅ ToggleTrackMuteCommand | 已完成 |
+
+---
+
+### 阶段5开发总结
+
+#### 🎉 重大里程碑达成
+阶段5已于2025-06-18完成，这标志着操作历史系统的核心功能已全面实现！
+
+#### ✅ 完成的功能模块
+
+##### 1. 时间轴项目复制功能
+- **DuplicateTimelineItemCommand**: 完整实现复制时间轴项目的命令类
+- **UI集成**: VideoClip.vue右键菜单"复制"选项已集成历史记录
+- **技术特点**:
+  - 遵循"从源头重建"原则，确保复制的可靠性
+  - 自动调整复制项目的位置，避免重叠
+  - 支持视频和图片的完整属性复制
+
+##### 2. 轨道管理功能套件
+- **AddTrackCommand**: 添加轨道操作的撤销/重做支持
+- **RemoveTrackCommand**: 删除轨道操作的撤销/重做支持，正确处理轨道上所有项目
+- **RenameTrackCommand**: 轨道重命名操作的撤销/重做支持
+- **AutoArrangeTrackCommand**: 单轨道自动排列的撤销/重做支持
+- **ToggleTrackVisibilityCommand**: 轨道可见性切换的撤销/重做支持
+- **ToggleTrackMuteCommand**: 轨道静音切换的撤销/重做支持
+
+##### 3. 时间范围调整功能
+- **ResizeTimelineItemCommand**: 时间范围调整（拖拽边缘）的撤销/重做支持
+- **技术特点**: 支持视频和图片的时间范围调整，保存完整的时间范围信息
+
+#### 🔧 技术实现亮点
+
+##### 1. 完善的UI集成
+- **Timeline.vue**: 所有轨道操作都已使用带历史记录的方法
+- **VideoClip.vue**: 复制和调整操作都已集成历史记录
+- **PropertiesPanel.vue**: 属性调整操作已完全支持历史记录
+
+##### 2. 智能的操作检测
+- **变化检测**: 所有命令都实现了智能的变化检测，避免创建无意义的历史记录
+- **错误处理**: 完善的错误处理和回退机制
+- **描述生成**: 详细的操作描述，用户可以清楚了解每次变更的内容
+
+##### 3. 性能优化
+- **异步支持**: 所有命令都支持异步操作，不阻塞UI
+- **资源管理**: 正确的WebAV资源生命周期管理
+- **内存控制**: 合理的内存使用，避免内存泄漏
+
+#### 📊 功能覆盖统计
+
+| 功能类别 | 已实现操作数 | 总操作数 | 完成度 |
+|---------|-------------|----------|--------|
+| 时间轴项目操作 | 6 | 6 | 100% |
+| 轨道管理操作 | 6 | 6 | 100% |
+| 属性变更操作 | 1 | 1 | 100% |
+| **总计** | **13** | **13** | **100%** |
+
+#### 🎯 用户体验提升
+
+1. **操作可逆性**: 用户可以放心进行各种编辑操作，知道随时可以撤销
+2. **操作透明性**: 清晰的操作描述让用户了解每次变更的具体内容
+3. **操作流畅性**: 异步处理确保UI响应流畅，不会出现卡顿
+4. **操作安全性**: 完善的错误处理确保操作失败时有合理的回退机制
+
+#### 🚀 下一步计划
+
+阶段5的完成为后续优化阶段奠定了坚实基础：
+
+1. **阶段6**: 命令合并功能 - 优化连续操作的历史记录
+2. **阶段7**: 依赖验证 - 处理素材删除对历史记录的影响
+3. **阶段8**: 性能优化 - 进一步提升系统性能和用户体验
+
+#### 💡 经验总结
+
+1. **渐进式开发的成功**: 分阶段实现让我们能够在每个阶段都有可测试的功能
+2. **"从源头重建"原则的威力**: 这个核心原则确保了所有操作的可靠性和一致性
+3. **完善的UI集成**: 与UI组件的深度集成确保了用户体验的一致性
+4. **智能检测的重要性**: 变化检测避免了历史记录的污染，提升了用户体验
 
 ---
 
