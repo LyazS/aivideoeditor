@@ -29,18 +29,14 @@ export function useKeyboardShortcuts() {
       switch (event.key.toLowerCase()) {
         case 'z':
           event.preventDefault()
-          if (videoStore.canUndo) {
-            console.log('🎹 快捷键触发: 撤销 (Ctrl+Z)')
-            await videoStore.undo()
-          }
+          console.log('🎹 快捷键触发: 撤销 (Ctrl+Z)')
+          await videoStore.undo() // 总是调用，让undo方法内部处理通知
           break
 
         case 'y':
           event.preventDefault()
-          if (videoStore.canRedo) {
-            console.log('🎹 快捷键触发: 重做 (Ctrl+Y)')
-            await videoStore.redo()
-          }
+          console.log('🎹 快捷键触发: 重做 (Ctrl+Y)')
+          await videoStore.redo() // 总是调用，让redo方法内部处理通知
           break
       }
     }
@@ -48,10 +44,8 @@ export function useKeyboardShortcuts() {
     // Ctrl+Shift+Z 也可以触发重做（常见的替代快捷键）
     if (isCtrl && isShift && !isAlt && event.key.toLowerCase() === 'z') {
       event.preventDefault()
-      if (videoStore.canRedo) {
-        console.log('🎹 快捷键触发: 重做 (Ctrl+Shift+Z)')
-        await videoStore.redo()
-      }
+      console.log('🎹 快捷键触发: 重做 (Ctrl+Shift+Z)')
+      await videoStore.redo() // 总是调用，让redo方法内部处理通知
     }
   }
 

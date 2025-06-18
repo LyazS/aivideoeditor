@@ -1,6 +1,107 @@
 import { ref } from 'vue'
 
 /**
+ * 通知类型
+ */
+export type NotificationType = 'success' | 'error' | 'warning' | 'info'
+
+/**
+ * 通知接口
+ */
+export interface Notification {
+  id: string
+  type: NotificationType
+  title: string
+  message?: string
+  duration?: number // 显示时长（毫秒），0表示不自动消失
+}
+
+/**
+ * 简单通知管理器
+ */
+class SimpleNotificationManager {
+  private notifications = ref<Notification[]>([])
+  private nextId = 1
+
+  /**
+   * 显示通知
+   * @param notification 通知配置
+   */
+  show(notification: Omit<Notification, 'id'>): string {
+    const id = `notification-${this.nextId++}`
+    const fullNotification: Notification = {
+      id,
+      duration: 5000, // 默认5秒
+      ...notification,
+    }
+
+    this.notifications.value.push(fullNotification)
+
+    // 自动移除通知
+    if (fullNotification.duration && fullNotification.duration > 0) {
+      setTimeout(() => {
+        this.remove(id)
+      }, fullNotification.duration)
+    }
+
+    return id
+  }
+
+  /**
+   * 移除通知
+   * @param id 通知ID
+   */
+  remove(id: string): void {
+    const index = this.notifications.value.findIndex(n => n.id === id)
+    if (index > -1) {
+      this.notifications.value.splice(index, 1)
+    }
+  }
+
+  /**
+   * 清空所有通知
+   */
+  clear(): void {
+    this.notifications.value = []
+  }
+
+  /**
+   * 获取通知列表
+   */
+  getNotifications() {
+    return this.notifications
+  }
+
+  /**
+   * 显示成功通知
+   */
+  success(title: string, message?: string, duration?: number): string {
+    return this.show({ type: 'success', title, message, duration: duration || 3000 }) // 成功通知默认3秒
+  }
+
+  /**
+   * 显示错误通知
+   */
+  error(title: string, message?: string, duration?: number): string {
+    return this.show({ type: 'error', title, message, duration: duration || 5000 }) // 错误通知默认5秒
+  }
+
+  /**
+   * 显示警告通知
+   */
+  warning(title: string, message?: string, duration?: number): string {
+    return this.show({ type: 'warning', title, message, duration: duration || 5000 }) // 警告通知默认5秒
+  }
+
+  /**
+   * 显示信息通知
+   */
+  info(title: string, message?: string, duration?: number): string {
+    return this.show({ type: 'info', title, message, duration: duration || 5000 }) // 信息通知默认5秒
+  }
+}
+
+/**
  * 简单命令接口
  * 阶段1的最简实现，只包含基础的execute和undo方法
  */
@@ -18,6 +119,11 @@ export interface SimpleCommand {
 class SimpleHistoryManager {
   private commands: SimpleCommand[] = []
   private currentIndex = -1
+  private notificationManager: SimpleNotificationManager
+
+  constructor(notificationManager: SimpleNotificationManager) {
+    this.notificationManager = notificationManager
+  }
 
   /**
    * 执行命令并添加到历史记录
@@ -41,6 +147,13 @@ class SimpleHistoryManager {
       console.log(`📊 历史记录: ${this.currentIndex + 1}/${this.commands.length}`)
     } catch (error) {
       console.error(`❌ 命令执行失败: ${command.description}`, error)
+
+      // 显示错误通知
+      this.notificationManager.error(
+        '操作执行失败',
+        `无法执行操作: ${command.description}。${error instanceof Error ? error.message : '未知错误'}`
+      )
+
       throw error
     }
   }
@@ -52,6 +165,7 @@ class SimpleHistoryManager {
   async undo(): Promise<boolean> {
     if (!this.canUndo()) {
       console.log('⚠️ 没有可撤销的操作')
+      this.notificationManager.warning('无法撤销', '没有可撤销的操作')
       return false
     }
 
@@ -62,9 +176,20 @@ class SimpleHistoryManager {
 
       console.log(`↩️ 已撤销: ${command.description}`)
       console.log(`📊 历史记录: ${this.currentIndex + 1}/${this.commands.length}`)
+
+      // 显示成功通知
+      this.notificationManager.success('撤销成功', `已撤销: ${command.description}`)
+
       return true
     } catch (error) {
       console.error('❌ 撤销操作失败', error)
+
+      // 显示错误通知
+      this.notificationManager.error(
+        '撤销失败',
+        `撤销操作时发生错误。${error instanceof Error ? error.message : '未知错误'}`
+      )
+
       return false
     }
   }
@@ -76,6 +201,7 @@ class SimpleHistoryManager {
   async redo(): Promise<boolean> {
     if (!this.canRedo()) {
       console.log('⚠️ 没有可重做的操作')
+      this.notificationManager.warning('无法重做', '没有可重做的操作')
       return false
     }
 
@@ -86,10 +212,21 @@ class SimpleHistoryManager {
 
       console.log(`↪️ 已重做: ${command.description}`)
       console.log(`📊 历史记录: ${this.currentIndex + 1}/${this.commands.length}`)
+
+      // 显示成功通知
+      this.notificationManager.success('重做成功', `已重做: ${command.description}`)
+
       return true
     } catch (error) {
       console.error('❌ 重做操作失败', error)
       this.currentIndex-- // 回滚索引
+
+      // 显示错误通知
+      this.notificationManager.error(
+        '重做失败',
+        `重做操作时发生错误。${error instanceof Error ? error.message : '未知错误'}`
+      )
+
       return false
     }
   }
@@ -145,9 +282,13 @@ class SimpleHistoryManager {
  */
 export function createHistoryModule() {
   // ==================== 状态定义 ====================
-  
-  const historyManager = new SimpleHistoryManager()
-  
+
+  // 创建通知管理器
+  const notificationManager = new SimpleNotificationManager()
+
+  // 创建历史管理器
+  const historyManager = new SimpleHistoryManager(notificationManager)
+
   // 响应式状态
   const canUndo = ref(false)
   const canRedo = ref(false)
@@ -215,12 +356,24 @@ export function createHistoryModule() {
     // 响应式状态
     canUndo,
     canRedo,
+    notifications: notificationManager.getNotifications(),
 
-    // 方法
+    // 历史操作方法
     executeCommand,
     undo,
     redo,
     clear,
     getHistorySummary,
+
+    // 通知管理方法
+    showNotification: (notification: Omit<Notification, 'id'>) => notificationManager.show(notification),
+    removeNotification: (id: string) => notificationManager.remove(id),
+    clearNotifications: () => notificationManager.clear(),
+
+    // 便捷通知方法
+    showSuccess: (title: string, message?: string, duration?: number) => notificationManager.success(title, message, duration),
+    showError: (title: string, message?: string, duration?: number) => notificationManager.error(title, message, duration),
+    showWarning: (title: string, message?: string, duration?: number) => notificationManager.warning(title, message, duration),
+    showInfo: (title: string, message?: string, duration?: number) => notificationManager.info(title, message, duration),
   }
 }
