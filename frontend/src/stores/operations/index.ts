@@ -1,5 +1,10 @@
 // 整个操作系统导出
 
+// 导入内部使用的类（用于createOperationSystem函数）
+import { OperationContext } from './context'
+import { OperationFactory } from './factory'
+import { OperationSystemManager } from './OperationSystemManager'
+
 // 类型导出
 export type { Operation, CompositeOperation, OperationResult } from './types'
 export { ExecutionStrategy } from './types'
@@ -21,11 +26,11 @@ export type { SystemStatus } from './OperationSystemManager'
 
 // 上下文导出
 export { OperationContext } from './context'
-export type { 
-  TimelineService, 
-  CanvasService, 
-  TrackService, 
-  MediaService, 
+export type {
+  TimelineService,
+  CanvasService,
+  TrackService,
+  MediaService,
   WebAVService,
   TimelineItemData,
   TransformData,
@@ -69,6 +74,7 @@ export function createOperationSystem(modules: {
   webavModule: any
   trackModule: any
   mediaModule: any
+  configModule: any
 }) {
   // 临时解决方案：直接创建简化的适配器
   const timelineService = {
@@ -108,13 +114,37 @@ export function createOperationSystem(modules: {
     removeItem: (mediaItemId: string) => {
       const index = modules.mediaModule.mediaItems.value.findIndex((item: any) => item.id === mediaItemId)
       if (index > -1) modules.mediaModule.mediaItems.value.splice(index, 1)
-    }
+    },
+    getVideoOriginalResolution: (mediaItemId: string) => modules.mediaModule.getVideoOriginalResolution(mediaItemId),
+    getImageOriginalResolution: (mediaItemId: string) => modules.mediaModule.getImageOriginalResolution(mediaItemId)
   }
 
   const webavService = {
-    cloneMP4Clip: async (clip: any) => clip, // 简化实现
-    cloneImgClip: async (clip: any) => clip, // 简化实现
+    cloneMP4Clip: async (clip: any) => {
+      try {
+        // 使用WebAV内置的clone方法进行真正的克隆
+        const clonedClip = await clip.clone()
+        return clonedClip
+      } catch (error) {
+        console.error('❌ 克隆MP4Clip失败:', error)
+        throw new Error(`克隆MP4Clip失败: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      }
+    },
+    cloneImgClip: async (clip: any) => {
+      try {
+        // 使用WebAV内置的clone方法进行真正的克隆
+        const clonedClip = await clip.clone()
+        return clonedClip
+      } catch (error) {
+        console.error('❌ 克隆ImgClip失败:', error)
+        throw new Error(`克隆ImgClip失败: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      }
+    },
     getCanvas: () => modules.webavModule.avCanvas.value || undefined
+  }
+
+  const configService = {
+    videoResolution: modules.configModule.videoResolution
   }
 
   // 创建操作上下文
@@ -123,7 +153,8 @@ export function createOperationSystem(modules: {
     canvasService as any,
     trackService as any,
     mediaService as any,
-    webavService as any
+    webavService as any,
+    configService as any
   )
 
   // 创建操作工厂

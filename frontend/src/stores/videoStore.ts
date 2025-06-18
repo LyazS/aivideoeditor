@@ -76,7 +76,8 @@ export const useVideoStore = defineStore('video', () => {
     timelineModule,
     webavModule,
     trackModule,
-    mediaModule
+    mediaModule,
+    configModule
   })
 
   // ==================== 双向数据同步函数 ====================

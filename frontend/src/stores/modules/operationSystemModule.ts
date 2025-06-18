@@ -10,6 +10,7 @@ export function createOperationSystemModule(modules: {
   webavModule: any
   trackModule: any
   mediaModule: any
+  configModule: any
 }) {
   // ==================== 状态定义 ====================
   

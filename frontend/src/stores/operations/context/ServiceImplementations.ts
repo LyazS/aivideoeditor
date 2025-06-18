@@ -1,9 +1,10 @@
-import type { 
-  TimelineService, 
-  CanvasService, 
-  TrackService, 
-  MediaService, 
+import type {
+  TimelineService,
+  CanvasService,
+  TrackService,
+  MediaService,
   WebAVService,
+  ConfigService,
   TrackData
 } from './ServiceInterfaces'
 import type { TimelineItem, MediaItem, Track } from '../../../types/videoTypes'
@@ -133,6 +134,8 @@ export class MediaServiceAdapter implements MediaService {
       addMediaItem: (item: MediaItem, timelineItems: any, tracks: any) => void
       removeMediaItem: (mediaItemId: string, timelineItems: any, tracks: any, avCanvas: any, cleanupCallback: any) => void
       mediaItems: { value: MediaItem[] }
+      getVideoOriginalResolution: (mediaItemId: string) => { width: number; height: number }
+      getImageOriginalResolution: (mediaItemId: string) => { width: number; height: number }
     },
     private timelineModule: {
       timelineItems: { value: TimelineItem[] }
@@ -157,6 +160,14 @@ export class MediaServiceAdapter implements MediaService {
     if (index > -1) {
       this.mediaModule.mediaItems.value.splice(index, 1)
     }
+  }
+
+  getVideoOriginalResolution(mediaItemId: string): { width: number; height: number } {
+    return this.mediaModule.getVideoOriginalResolution(mediaItemId)
+  }
+
+  getImageOriginalResolution(mediaItemId: string): { width: number; height: number } {
+    return this.mediaModule.getImageOriginalResolution(mediaItemId)
   }
 }
 
@@ -183,5 +194,21 @@ export class WebAVServiceAdapter implements WebAVService {
 
   getCanvas(): AVCanvas | undefined {
     return this.webavModule.avCanvas.value || undefined
+  }
+}
+
+/**
+ * 配置服务适配器
+ * 适配现有的configModule
+ */
+export class ConfigServiceAdapter implements ConfigService {
+  constructor(
+    private configModule: {
+      videoResolution: { value: { width: number; height: number } }
+    }
+  ) {}
+
+  get videoResolution() {
+    return this.configModule.videoResolution
   }
 }

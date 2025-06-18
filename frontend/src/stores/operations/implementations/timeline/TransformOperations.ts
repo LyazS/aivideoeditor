@@ -154,18 +154,14 @@ export class TransformTimelineItemOperation extends AtomicOperation {
   private applyTransformToSprite(sprite: any, transform: TransformData): void {
     if (!sprite) return
 
-    // 更新sprite的rect属性
-    if (transform.position || transform.size) {
-      const rect = sprite.rect
-      if (transform.position) {
-        rect.x = transform.position.x
-        rect.y = transform.position.y
-      }
-      if (transform.size) {
-        rect.w = transform.size.width
-        rect.h = transform.size.height
-      }
-      sprite.rect = rect
+    // 更新sprite的rect属性 - 逐个设置属性而不是替换整个rect对象
+    if (transform.position) {
+      sprite.rect.x = transform.position.x
+      sprite.rect.y = transform.position.y
+    }
+    if (transform.size) {
+      sprite.rect.w = transform.size.width
+      sprite.rect.h = transform.size.height
     }
 
     // 更新其他属性

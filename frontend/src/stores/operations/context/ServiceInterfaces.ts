@@ -32,12 +32,18 @@ export interface MediaService {
   getItem(mediaItemId: string): MediaItem | undefined
   addItem(item: MediaItem): void
   removeItem(mediaItemId: string): void
+  getVideoOriginalResolution(mediaItemId: string): { width: number; height: number }
+  getImageOriginalResolution(mediaItemId: string): { width: number; height: number }
 }
 
 export interface WebAVService {
   cloneMP4Clip(originalClip: MP4Clip): Promise<MP4Clip>
   cloneImgClip(originalClip: ImgClip): Promise<ImgClip>
   getCanvas(): AVCanvas | undefined
+}
+
+export interface ConfigService {
+  videoResolution: { value: { width: number; height: number } }
 }
 
 /**

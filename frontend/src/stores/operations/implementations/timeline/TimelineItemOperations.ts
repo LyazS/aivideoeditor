@@ -65,6 +65,14 @@ export class AddTimelineItemOperation extends AtomicOperation {
       // 从原始素材重新创建sprite
       const sprite = await this.context.createSprite(this.itemData)
 
+      // 生成缩略图（如果还没有）
+      if (!this.itemData.thumbnailUrl) {
+        const thumbnailUrl = await this.context.generateThumbnail(this.itemData)
+        if (thumbnailUrl) {
+          this.itemData.thumbnailUrl = thumbnailUrl
+        }
+      }
+
       // 创建时间轴项目
       const timelineItem = this.context.createTimelineItem(sprite, this.itemData)
 
@@ -218,6 +226,14 @@ export class RemoveTimelineItemOperation extends AtomicOperation {
 
       // 从原始素材重新创建sprite
       const sprite = await this.context.createSprite(this.originalItemData)
+
+      // 生成缩略图（如果还没有）
+      if (!this.originalItemData.thumbnailUrl) {
+        const thumbnailUrl = await this.context.generateThumbnail(this.originalItemData)
+        if (thumbnailUrl) {
+          this.originalItemData.thumbnailUrl = thumbnailUrl
+        }
+      }
 
       // 创建时间轴项目
       const timelineItem = this.context.createTimelineItem(sprite, this.originalItemData)
