@@ -562,7 +562,7 @@ export function findOrphanedTimelineItems(
 
 /**
  * 根据sprite查找时间轴项目
- * @param sprite CustomVisibleSprite实例
+ * @param sprite VideoVisibleSprite实例
  * @param timelineItems 时间轴项目数组
  * @returns 对应的时间轴项目或null
  */

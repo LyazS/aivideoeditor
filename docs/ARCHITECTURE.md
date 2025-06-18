@@ -34,7 +34,7 @@ AI视频编辑器是一个基于现代Web技术栈的视频编辑应用，采用
 ├─────────────────────────────────────────────────────────────┤
 │                      服务层                                 │
 ├─────────────────────────────────────────────────────────────┤
-│           useWebAVControls │ CustomVisibleSprite           │
+│           useWebAVControls │ VideoVisibleSprite            │
 ├─────────────────────────────────────────────────────────────┤
 │                      引擎层                                 │
 ├─────────────────────────────────────────────────────────────┤
@@ -156,7 +156,7 @@ export function useWebAVControls() {
 ```typescript
 interface CanvasBackup {
   sprites: Array<{
-    sprite: Raw<CustomVisibleSprite>
+    sprite: Raw<VideoVisibleSprite>
     clip: MP4Clip
     timelineItemId: string
   }>
@@ -254,7 +254,7 @@ avCanvas.on('timeupdate', (time: number) => {
   videoStore.setCurrentTime(time)
 })
 
-// CustomVisibleSprite事件监听
+// VideoVisibleSprite事件监听
 sprite.on('propsChange', (props: SpriteProperties) => {
   videoStore.updateTimelineItem(itemId, props)
 })

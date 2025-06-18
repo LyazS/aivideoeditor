@@ -410,7 +410,7 @@ function handleResize(event: MouseEvent) {
 
 function stopResize() {
   if (isResizing.value) {
-    // 更新CustomVisibleSprite的时间范围
+    // 更新VideoVisibleSprite的时间范围
     const sprite = props.timelineItem.sprite
     const mediaItem = videoStore.getMediaItem(props.timelineItem.mediaItemId)
 
@@ -439,7 +439,7 @@ function stopResize() {
 
       // 根据媒体类型更新sprite的时间范围
       if (mediaItem.mediaType === 'video') {
-        // 视频使用CustomVisibleSprite的setTimeRange方法
+        // 视频使用VideoVisibleSprite的setTimeRange方法
         sprite.setTimeRange({
           clipStartTime: 0,
           clipEndTime: mediaItem.duration * 1000000,

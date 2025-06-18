@@ -1,7 +1,7 @@
 import { ref, markRaw, type Raw } from 'vue'
 import { AVCanvas } from '@webav/av-canvas'
 import { MP4Clip, ImgClip } from '@webav/av-cliper'
-import { CustomVisibleSprite } from '../utils/VideoVisibleSprite'
+import { VideoVisibleSprite } from '../utils/VideoVisibleSprite'
 import { ImageVisibleSprite } from '../utils/ImageVisibleSprite'
 import { useVideoStore } from '../stores/videoStore'
 import {
@@ -37,7 +37,7 @@ const globalError = ref<string | null>(null)
 // 画布重新创建时的内容备份
 interface CanvasBackup {
   sprites: Array<{
-    sprite: Raw<CustomVisibleSprite | ImageVisibleSprite>
+    sprite: Raw<VideoVisibleSprite | ImageVisibleSprite>
     clip: MP4Clip | ImgClip
     mediaType: 'video' | 'image'
     timelineItemId: string
@@ -243,7 +243,7 @@ export function useWebAVControls() {
     // 活动精灵变化事件
     globalAVCanvas.on('activeSpriteChange', (sprite) => {
       // 处理选中状态的变化 - 同步到时间轴选择
-      // 类型断言：我们知道这里的sprite是CustomVisibleSprite或null
+      // 类型断言：我们知道这里的sprite是VideoVisibleSprite或null
       videoStore.handleAVCanvasSpriteChange(sprite as any)
     })
 
@@ -542,11 +542,11 @@ export function useWebAVControls() {
             )
 
             // 根据媒体类型克隆对应的Clip
-            let newSprite: CustomVisibleSprite | ImageVisibleSprite
+            let newSprite: VideoVisibleSprite | ImageVisibleSprite
             if (spriteBackup.mediaType === 'video') {
               const clonedClip = await cloneMP4Clip(spriteBackup.clip as MP4Clip)
               logSpriteRestore(spriteBackup.timelineItemId, 'MP4Clip cloned')
-              newSprite = new CustomVisibleSprite(clonedClip)
+              newSprite = new VideoVisibleSprite(clonedClip)
             } else {
               const clonedClip = await cloneImgClip(spriteBackup.clip as ImgClip)
               logSpriteRestore(spriteBackup.timelineItemId, 'ImgClip cloned')

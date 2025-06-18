@@ -2,8 +2,8 @@ import { ref, type Raw, type Ref } from 'vue'
 import type { TimelineItem } from '../../types/videoTypes'
 import { findTimelineItemBySprite } from '../utils/storeUtils'
 
-// 定义CustomVisibleSprite类型（避免循环依赖）
-type CustomVisibleSprite = {
+// 定义VideoVisibleSprite类型（避免循环依赖）
+type VideoVisibleSprite = {
   destroy: () => void
   [key: string]: unknown
 }
@@ -17,7 +17,7 @@ export function createSelectionModule(timelineItems: Ref<TimelineItem[]>, avCanv
 
   // 选择状态
   const selectedTimelineItemId = ref<string | null>(null) // 当前选中的时间轴项ID
-  const selectedAVCanvasSprite = ref<Raw<CustomVisibleSprite> | null>(null) // 当前在AVCanvas中选中的sprite
+  const selectedAVCanvasSprite = ref<Raw<VideoVisibleSprite> | null>(null) // 当前在AVCanvas中选中的sprite
 
   // ==================== 选择管理方法 ====================
 
@@ -51,11 +51,11 @@ export function createSelectionModule(timelineItems: Ref<TimelineItem[]>, avCanv
 
   /**
    * 选择AVCanvas中的sprite
-   * @param sprite CustomVisibleSprite实例或null
+   * @param sprite VideoVisibleSprite实例或null
    * @param syncToTimeline 是否同步到时间轴选择
    */
   function selectAVCanvasSprite(
-    sprite: Raw<CustomVisibleSprite> | null,
+    sprite: Raw<VideoVisibleSprite> | null,
     syncToTimeline: boolean = true,
   ) {
     const oldSprite = selectedAVCanvasSprite.value
@@ -104,7 +104,7 @@ export function createSelectionModule(timelineItems: Ref<TimelineItem[]>, avCanv
    * 这个方法用于响应AVCanvas内部的选择变化事件
    * @param sprite 新选择的sprite或null
    */
-  function handleAVCanvasSpriteChange(sprite: Raw<CustomVisibleSprite> | null) {
+  function handleAVCanvasSpriteChange(sprite: Raw<VideoVisibleSprite> | null) {
     console.log('📡 处理AVCanvas sprite选择变化:', { hasSprite: !!sprite })
 
     // 更新AVCanvas选择状态，但不触发反向同步（避免循环）
@@ -155,10 +155,10 @@ export function createSelectionModule(timelineItems: Ref<TimelineItem[]>, avCanv
 
   /**
    * 检查sprite是否被选中
-   * @param sprite CustomVisibleSprite实例
+   * @param sprite VideoVisibleSprite实例
    * @returns 是否被选中
    */
-  function isSpriteSelected(sprite: Raw<CustomVisibleSprite>): boolean {
+  function isSpriteSelected(sprite: Raw<VideoVisibleSprite>): boolean {
     return selectedAVCanvasSprite.value === sprite
   }
 

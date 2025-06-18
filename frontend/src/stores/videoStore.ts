@@ -1,6 +1,6 @@
 import { computed, type Raw } from 'vue'
 import { defineStore } from 'pinia'
-import { CustomVisibleSprite } from '../utils/VideoVisibleSprite'
+import { VideoVisibleSprite } from '../utils/VideoVisibleSprite'
 import {
   alignTimeToFrame,
   timeToPixel,
@@ -161,6 +161,7 @@ export const useVideoStore = defineStore('video', () => {
     updateTimelineItemSprite: timelineModule.updateTimelineItemSprite,
     setupBidirectionalSync: timelineModule.setupBidirectionalSync,
     updateTimelineItemTransform: timelineModule.updateTimelineItemTransform,
+    updateTimelineItemAudio: timelineModule.updateTimelineItemAudio,
     // 选择管理方法
     selectTimelineItem: selectionModule.selectTimelineItem,
     selectAVCanvasSprite: selectionModule.selectAVCanvasSprite,
@@ -172,7 +173,7 @@ export const useVideoStore = defineStore('video', () => {
     getSelectedTimelineItem: selectionModule.getSelectedTimelineItem,
     getSelectionSummary: selectionModule.getSelectionSummary,
     resetSelectionToDefaults: selectionModule.resetToDefaults,
-    findTimelineItemBySprite: (sprite: Raw<CustomVisibleSprite>) =>
+    findTimelineItemBySprite: (sprite: Raw<VideoVisibleSprite>) =>
       findTimelineItemBySprite(sprite, timelineModule.timelineItems.value),
     // 视频片段操作方法
     duplicateTimelineItem: clipOperationsModule.duplicateTimelineItem,

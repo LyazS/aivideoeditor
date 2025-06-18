@@ -1,5 +1,5 @@
 import { ref, type Raw, type Ref } from 'vue'
-import { CustomVisibleSprite } from '../../utils/VideoVisibleSprite'
+import { VideoVisibleSprite } from '../../utils/VideoVisibleSprite'
 import { ImageVisibleSprite } from '../../utils/ImageVisibleSprite'
 import { webavToProjectCoords, projectToWebavCoords } from '../../utils/coordinateTransform'
 import { printDebugInfo, syncTimeRange } from '../utils/storeUtils'
@@ -75,6 +75,20 @@ export function createTimelineModule(
       if (changedProps.zIndex !== undefined) {
         timelineItem.zIndex = changedProps.zIndex
         // console.log('🔄 VisibleSprite → TimelineItem 同步 zIndex:', changedProps.zIndex)
+      }
+
+      // 同步音频状态（仅对视频有效）
+      if (timelineItem.mediaType === 'video' && timelineItem.audioState) {
+        const videoSprite = sprite as any
+        if (videoSprite.getAudioState) {
+          try {
+            const audioState = videoSprite.getAudioState()
+            timelineItem.audioState.volume = audioState.volume
+            timelineItem.audioState.isMuted = audioState.isMuted
+          } catch (error) {
+            console.warn('同步音频状态失败:', error)
+          }
+        }
       }
 
       // 注意：opacity属性没有propsChange回调，需要在直接设置sprite.opacity的地方手动同步
@@ -228,7 +242,7 @@ export function createTimelineModule(
    * @param timelineItemId 时间轴项目ID
    * @param newSprite 新的sprite实例
    */
-  function updateTimelineItemSprite(timelineItemId: string, newSprite: Raw<CustomVisibleSprite | ImageVisibleSprite>) {
+  function updateTimelineItemSprite(timelineItemId: string, newSprite: Raw<VideoVisibleSprite | ImageVisibleSprite>) {
     const item = timelineItems.value.find((item) => item.id === timelineItemId)
     if (item) {
       const mediaItem = mediaModule.getMediaItem(item.mediaItemId)
@@ -358,6 +372,52 @@ export function createTimelineModule(
     }
   }
 
+  /**
+   * 更新TimelineItem的音频状态
+   * @param timelineItemId 时间轴项目ID
+   * @param audioState 音频状态
+   */
+  function updateTimelineItemAudio(
+    timelineItemId: string,
+    audioState: { volume?: number; isMuted?: boolean }
+  ) {
+    const item = timelineItems.value.find((item) => item.id === timelineItemId)
+    if (!item || item.mediaType !== 'video') return
+
+    const sprite = item.sprite as any
+
+    try {
+      // 更新VideoVisibleSprite的音频状态
+      if (audioState.volume !== undefined && typeof sprite.setVolume === 'function') {
+        sprite.setVolume(audioState.volume)
+      }
+
+      if (audioState.isMuted !== undefined && typeof sprite.setMuted === 'function') {
+        sprite.setMuted(audioState.isMuted)
+      }
+
+      // 同步到TimelineItem
+      if (!item.audioState) {
+        item.audioState = { volume: 1, isMuted: false }
+      }
+
+      if (audioState.volume !== undefined) {
+        item.audioState.volume = audioState.volume
+      }
+
+      if (audioState.isMuted !== undefined) {
+        item.audioState.isMuted = audioState.isMuted
+      }
+
+      console.log('🔊 音频状态更新完成:', {
+        timelineItemId,
+        audioState: item.audioState,
+      })
+    } catch (error) {
+      console.error('更新音频状态失败:', error)
+    }
+  }
+
   // ==================== 导出接口 ====================
 
   return {
@@ -372,6 +432,7 @@ export function createTimelineModule(
     updateTimelineItemPosition,
     updateTimelineItemSprite,
     updateTimelineItemTransform,
+    updateTimelineItemAudio,
   }
 }
 

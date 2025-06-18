@@ -90,6 +90,44 @@
               />
             </div>
           </div>
+
+          <!-- 音量控制 - 仅对视频显示 -->
+          <div v-if="selectedTimelineItem?.mediaType === 'video'" class="property-item">
+            <label>音量</label>
+            <div class="volume-controls">
+              <button @click="toggleMute" class="mute-btn" :class="{ muted: isMuted }" title="静音/取消静音">
+                <svg v-if="!isMuted && volume > 0.5" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M14,3.23V5.29C16.89,6.15 19,8.83 19,12C19,15.17 16.89,17.85 14,18.71V20.77C18.01,19.86 21,16.28 21,12C21,7.72 18.01,4.14 14,3.23M16.5,12C16.5,10.23 15.5,8.71 14,7.97V16C15.5,15.29 16.5,13.76 16.5,12M3,9V15H7L12,20V4L7,9H3Z" />
+                </svg>
+                <svg v-else-if="!isMuted && volume > 0" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M5,9V15H9L14,20V4L9,9M18.5,12C18.5,10.23 17.5,8.71 16,7.97V16C17.5,15.29 18.5,13.76 18.5,12Z" />
+                </svg>
+                <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12,4L9.91,6.09L12,8.18M4.27,3L3,4.27L7.73,9H3V15H7L12,20V13.27L16.25,17.53C15.58,18.04 14.83,18.46 14,18.7V20.77C15.38,20.45 16.63,19.82 17.68,18.96L19.73,21L21,19.73L12,10.73M19,12C19,12.94 18.8,13.82 18.46,14.64L19.97,16.15C20.62,14.91 21,13.5 21,12C21,7.72 18,4.14 14,3.23V5.29C16.89,6.15 19,8.83 19,12M16.5,12C16.5,10.23 15.5,8.71 14,7.97V10.18L16.45,12.63C16.5,12.43 16.5,12.21 16.5,12Z" />
+                </svg>
+              </button>
+              <input
+                :value="displayVolume"
+                @input="(e) => updateVolume((e.target as HTMLInputElement).valueAsNumber)"
+                type="range"
+                min="0"
+                max="1"
+                step="0.01"
+                class="volume-slider"
+              />
+              <NumberInput
+                :model-value="displayVolume"
+                @change="updateVolume"
+                :min="0"
+                :max="1"
+                :step="0.01"
+                :precision="2"
+                :show-controls="false"
+                placeholder="音量"
+                :input-style="scaleInputStyle"
+              />
+            </div>
+          </div>
         </div>
 
         <!-- 位置大小 -->
@@ -472,6 +510,21 @@ const normalizedSpeed = computed(() => {
 
 const speedInputValue = computed(() => playbackRate.value)
 
+// 音量相关属性 - 仅对视频有效
+const volume = computed(() => {
+  if (!selectedTimelineItem.value || selectedTimelineItem.value.mediaType !== 'video') return 1
+  return selectedTimelineItem.value.audioState?.volume || 1
+})
+
+const isMuted = computed(() => {
+  if (!selectedTimelineItem.value || selectedTimelineItem.value.mediaType !== 'video') return false
+  return selectedTimelineItem.value.audioState?.isMuted || false
+})
+
+const displayVolume = computed(() => {
+  return isMuted.value ? 0 : volume.value
+})
+
 // NumberInput 样式定义
 const propertyInputStyle = {
   maxWidth: '80px',
@@ -537,7 +590,7 @@ const updateTargetDuration = (newTargetDuration: number) => {
       // 确保播放速度在合理范围内（0.1-100x）
       const clampedRate = Math.max(0.1, Math.min(100, newPlaybackRate))
 
-      // 更新CustomVisibleSprite的时间范围
+      // 更新VideoVisibleSprite的时间范围
       const newTimelineEndTime = timeRange.timelineStartTime + newTargetDuration * 1000000
 
       // 根据媒体类型设置不同的时间范围
@@ -625,6 +678,30 @@ const speedToNormalized = (speed: number) => {
     }
   }
   return 20 // 默认值对应1x
+}
+
+// 音量控制方法
+const updateVolume = (newVolume: number) => {
+  if (selectedTimelineItem.value && selectedTimelineItem.value.mediaType === 'video') {
+    // 限制音量范围 0-1
+    const clampedVolume = Math.max(0, Math.min(1, newVolume))
+
+    // 使用videoStore的方法更新音频状态
+    videoStore.updateTimelineItemAudio(selectedTimelineItem.value.id, {
+      volume: clampedVolume
+    })
+  }
+}
+
+const toggleMute = () => {
+  if (selectedTimelineItem.value && selectedTimelineItem.value.mediaType === 'video') {
+    const currentMutedState = selectedTimelineItem.value.audioState?.isMuted || false
+
+    // 使用videoStore的方法切换静音状态
+    videoStore.updateTimelineItemAudio(selectedTimelineItem.value.id, {
+      isMuted: !currentMutedState
+    })
+  }
 }
 
 // 更新变换属性 - 使用新的双向同步机制
@@ -954,7 +1031,8 @@ const alignVertical = (alignment: 'top' | 'middle' | 'bottom') => {
 
 .scale-controls,
 .rotation-controls,
-.opacity-controls {
+.opacity-controls,
+.volume-controls {
   display: flex;
   align-items: center;
   gap: var(--spacing-sm);
@@ -964,7 +1042,8 @@ const alignVertical = (alignment: 'top' | 'middle' | 'bottom') => {
 /* 使用通用的 slider 样式 */
 .scale-slider,
 .rotation-slider,
-.opacity-slider {
+.opacity-slider,
+.volume-slider {
   flex: 1;
   height: 4px;
   background: var(--color-bg-quaternary);
@@ -976,7 +1055,8 @@ const alignVertical = (alignment: 'top' | 'middle' | 'bottom') => {
 
 .scale-slider::-webkit-slider-thumb,
 .rotation-slider::-webkit-slider-thumb,
-.opacity-slider::-webkit-slider-thumb {
+.opacity-slider::-webkit-slider-thumb,
+.volume-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   width: 12px;
   height: 12px;
@@ -987,13 +1067,45 @@ const alignVertical = (alignment: 'top' | 'middle' | 'bottom') => {
 
 .scale-slider::-moz-range-thumb,
 .rotation-slider::-moz-range-thumb,
-.opacity-slider::-moz-range-thumb {
+.opacity-slider::-moz-range-thumb,
+.volume-slider::-moz-range-thumb {
   width: 12px;
   height: 12px;
   background: var(--color-accent-secondary);
   border-radius: 50%;
   cursor: pointer;
   border: none;
+}
+
+/* 静音按钮样式 */
+.mute-btn {
+  background: var(--color-bg-quaternary);
+  border: 1px solid var(--color-border-secondary);
+  border-radius: var(--border-radius-small);
+  color: var(--color-text-primary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  height: 32px;
+  padding: var(--spacing-xs);
+  transition: all 0.2s ease;
+}
+
+.mute-btn:hover {
+  background: var(--color-bg-tertiary);
+  border-color: var(--color-border-focus);
+}
+
+.mute-btn.muted {
+  background: var(--color-error);
+  border-color: var(--color-error);
+  color: white;
+}
+
+.mute-btn.muted:hover {
+  background: var(--color-error-hover, #d32f2f);
 }
 
 /* 分辨率显示样式 */

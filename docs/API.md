@@ -64,11 +64,11 @@ setPlaybackRate(rate: number): void
 selectedTimelineItemId: Ref<string | null>
 
 // 选中的AVCanvas精灵
-selectedAVCanvasSprite: Ref<Raw<CustomVisibleSprite> | null>
+selectedAVCanvasSprite: Ref<Raw<VideoVisibleSprite> | null>
 
 // 选择方法
 selectTimelineItem(itemId: string | null): void
-selectAVCanvasSprite(sprite: Raw<CustomVisibleSprite> | null): void
+selectAVCanvasSprite(sprite: Raw<VideoVisibleSprite> | null): void
 ```
 
 ### WebAV集成
@@ -130,11 +130,11 @@ pause(): void
 seekTo(time: number): void
 ```
 
-## CustomVisibleSprite API
+## VideoVisibleSprite API
 
 ### 属性
 ```typescript
-interface CustomVisibleSprite extends VisibleSprite {
+interface VideoVisibleSprite extends VisibleSprite {
   // 时间范围
   timeRange: { start: number; end: number }
   
@@ -205,7 +205,7 @@ interface TimelineItem {
   zIndex: number
   
   // WebAV相关
-  sprite?: Raw<CustomVisibleSprite>
+  sprite?: Raw<VideoVisibleSprite>
 }
 ```
 
@@ -246,7 +246,7 @@ avCanvas.on('timeupdate', (time: number) => void)
 avCanvas.on('error', (error: Error) => void)
 ```
 
-### CustomVisibleSprite事件
+### VideoVisibleSprite事件
 ```typescript
 // 属性变化
 sprite.on('propsChange', (props: SpriteProperties) => void)
