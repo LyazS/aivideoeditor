@@ -255,6 +255,41 @@ export function canvasToBlob(canvas: HTMLCanvasElement, quality: number = 0.8): 
 }
 
 /**
+ * 统一的缩略图生成函数 - 根据媒体类型自动选择合适的生成方法
+ * @param mediaItem 媒体项目
+ * @param timePosition 视频时间位置（微秒），仅对视频有效
+ * @returns Promise<string | undefined> 缩略图URL
+ */
+export async function generateThumbnailForMediaItem(
+  mediaItem: { mediaType: 'video' | 'image'; mp4Clip?: any; imgClip?: any },
+  timePosition?: number
+): Promise<string | undefined> {
+  try {
+    let canvas: HTMLCanvasElement
+
+    if (mediaItem.mediaType === 'video' && mediaItem.mp4Clip) {
+      console.log('🎬 生成视频缩略图...')
+      canvas = await generateVideoThumbnail(mediaItem.mp4Clip, timePosition)
+      console.log('✅ 视频缩略图生成成功')
+    } else if (mediaItem.mediaType === 'image' && mediaItem.imgClip) {
+      console.log('🖼️ 生成图片缩略图...')
+      canvas = await generateImageThumbnail(mediaItem.imgClip)
+      console.log('✅ 图片缩略图生成成功')
+    } else {
+      console.error('❌ 不支持的媒体类型或缺少clip对象')
+      return undefined
+    }
+
+    // 转换为Blob URL
+    const thumbnailUrl = await canvasToBlob(canvas)
+    return thumbnailUrl
+  } catch (error) {
+    console.error('❌ 缩略图生成失败:', error)
+    return undefined
+  }
+}
+
+/**
  * 根据TimelineItem的时间范围重新生成缩略图
  * @param timelineItem 时间轴项目
  * @param mediaItem 对应的媒体项目
@@ -270,12 +305,11 @@ export async function regenerateThumbnailForTimelineItem(
       mediaType: mediaItem.mediaType
     })
 
-    let canvas: HTMLCanvasElement
+    let thumbnailTime: number | undefined
 
     if (mediaItem.mediaType === 'video' && mediaItem.mp4Clip) {
       // 对于视频，使用clip的起始时间作为缩略图时间位置
       const timeRange = timelineItem.timeRange
-      let thumbnailTime: number
 
       if ('clipStartTime' in timeRange) {
         // 使用clip内部的起始时间（微秒）
@@ -287,19 +321,15 @@ export async function regenerateThumbnailForTimelineItem(
         thumbnailTime = meta.duration / 2
         console.log('📍 [ThumbnailGenerator] 使用视频中间位置:', thumbnailTime / 1000000, 's')
       }
-
-      canvas = await generateVideoThumbnail(mediaItem.mp4Clip, thumbnailTime)
-    } else if (mediaItem.mediaType === 'image' && mediaItem.imgClip) {
-      // 图片缩略图不需要时间位置
-      canvas = await generateImageThumbnail(mediaItem.imgClip)
-    } else {
-      console.error('❌ [ThumbnailGenerator] 不支持的媒体类型或缺少clip')
-      return undefined
     }
 
-    // 转换为Blob URL
-    const thumbnailUrl = await canvasToBlob(canvas)
-    console.log('✅ [ThumbnailGenerator] 时间轴clip缩略图重新生成成功')
+    // 使用统一的缩略图生成函数
+    const thumbnailUrl = await generateThumbnailForMediaItem(mediaItem, thumbnailTime)
+
+    if (thumbnailUrl) {
+      console.log('✅ [ThumbnailGenerator] 时间轴clip缩略图重新生成成功')
+    }
+
     return thumbnailUrl
 
   } catch (error) {

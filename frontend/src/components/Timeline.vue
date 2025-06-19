@@ -179,9 +179,7 @@ import {
   formatTime as formatTimeUtil
 } from '../stores/utils/storeUtils'
 import {
-  generateVideoThumbnail,
-  generateImageThumbnail,
-  canvasToBlob,
+  generateThumbnailForMediaItem,
 } from '../utils/thumbnailGenerator'
 import type { TimelineItem, TimelineItemDragData, MediaItemDragData } from '../types/videoTypes'
 import VideoClip from './VideoClip.vue'
@@ -758,21 +756,11 @@ async function createMediaClipFromMediaItem(
 
     // 生成时间轴clip的缩略图
     console.log('🖼️ 生成时间轴clip缩略图...')
-    let thumbnailUrl: string | undefined
-    try {
-      if (mediaItem.mediaType === 'video' && storeMediaItem.mp4Clip) {
-        const thumbnailCanvas = await generateVideoThumbnail(storeMediaItem.mp4Clip)
-        thumbnailUrl = await canvasToBlob(thumbnailCanvas)
-        console.log('✅ 时间轴视频缩略图生成成功')
-      } else if (mediaItem.mediaType === 'image' && storeMediaItem.imgClip) {
-        const thumbnailCanvas = await generateImageThumbnail(storeMediaItem.imgClip)
-        thumbnailUrl = await canvasToBlob(thumbnailCanvas)
-        console.log('✅ 时间轴图片缩略图生成成功')
-      }
-    } catch (error) {
-      console.error('❌ 时间轴缩略图生成失败:', error)
-      // 缩略图生成失败不影响TimelineItem创建
-    }
+    const thumbnailUrl = await generateThumbnailForMediaItem({
+      mediaType: mediaItem.mediaType,
+      mp4Clip: storeMediaItem.mp4Clip,
+      imgClip: storeMediaItem.imgClip
+    })
 
     // 创建TimelineItem - 使用markRaw包装VideoVisibleSprite
     const timelineItemId = Date.now().toString() + Math.random().toString(36).substring(2, 11)

@@ -99,7 +99,7 @@ import { ref, markRaw } from 'vue'
 import { useVideoStore } from '../stores/videoStore'
 import { useWebAVControls } from '../composables/useWebAVControls'
 import type { MediaItem } from '../types/videoTypes'
-import { generateVideoThumbnail, generateImageThumbnail, canvasToBlob } from '../utils/thumbnailGenerator'
+import { generateThumbnailForMediaItem } from '../utils/thumbnailGenerator'
 
 const videoStore = useVideoStore()
 const webAVControls = useWebAVControls()
@@ -244,14 +244,10 @@ const addVideoItem = async (file: File, url: string, mediaItemId: string, startT
 
       // 生成缩略图
       console.log(`🖼️ 生成视频缩略图: ${file.name}`)
-      let thumbnailUrl: string | undefined
-      try {
-        const thumbnailCanvas = await generateVideoThumbnail(mp4Clip)
-        thumbnailUrl = await canvasToBlob(thumbnailCanvas)
-        console.log(`✅ 视频缩略图生成成功: ${file.name}`)
-      } catch (error) {
-        console.error(`❌ 视频缩略图生成失败: ${file.name}`, error)
-      }
+      const thumbnailUrl = await generateThumbnailForMediaItem({
+        mediaType: 'video',
+        mp4Clip
+      })
 
       // 更新MediaItem为完成状态
       const readyMediaItem: MediaItem = {
@@ -333,14 +329,10 @@ const addImageItem = async (file: File, url: string, mediaItemId: string, startT
 
       // 生成缩略图
       console.log(`🖼️ 生成图片缩略图: ${file.name}`)
-      let thumbnailUrl: string | undefined
-      try {
-        const thumbnailCanvas = await generateImageThumbnail(imgClip)
-        thumbnailUrl = await canvasToBlob(thumbnailCanvas)
-        console.log(`✅ 图片缩略图生成成功: ${file.name}`)
-      } catch (error) {
-        console.error(`❌ 图片缩略图生成失败: ${file.name}`, error)
-      }
+      const thumbnailUrl = await generateThumbnailForMediaItem({
+        mediaType: 'image',
+        imgClip
+      })
 
       // 更新MediaItem为完成状态
       const readyMediaItem: MediaItem = {
