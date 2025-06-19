@@ -43,19 +43,20 @@ frontend/
 │   │   └── WebAVRenderer.vue         # WebAV渲染器
 │   ├── stores/              # 状态管理
 │   │   ├── videoStore.ts             # 主状态存储
-│   │   ├── modules/                  # 模块化状态管理
-│   │   │   ├── webavModule.ts        # WebAV集成模块
-│   │   │   ├── mediaModule.ts        # 媒体管理模块
-│   │   │   ├── playbackModule.ts     # 播放控制模块
-│   │   │   ├── configModule.ts       # 配置管理模块
-│   │   │   ├── trackModule.ts        # 轨道管理模块
-│   │   │   ├── timelineModule.ts     # 时间轴核心模块
-│   │   │   ├── viewportModule.ts     # 视口管理模块
-│   │   │   ├── selectionModule.ts    # 选择管理模块
-│   │   │   └── clipOperationsModule.ts # 片段操作模块
-│   │   └── utils/                    # 工具函数
+│   │   └── modules/                  # 模块化状态管理
+│   │       ├── webavModule.ts        # WebAV集成模块
+│   │       ├── mediaModule.ts        # 媒体管理模块
+│   │       ├── playbackModule.ts     # 播放控制模块
+│   │       ├── configModule.ts       # 配置管理模块
+│   │       ├── trackModule.ts        # 轨道管理模块
+│   │       ├── timelineModule.ts     # 时间轴核心模块
+│   │       ├── viewportModule.ts     # 视口管理模块
+│   │       ├── selectionModule.ts    # 选择管理模块
+│   │       ├── historyModule.ts      # 操作历史模块
+│   │       └── clipOperationsModule.ts # 片段操作模块
 │   ├── composables/         # 组合式函数
-│   │   └── useWebAVControls.ts       # WebAV控制器
+│   │   ├── useWebAVControls.ts       # WebAV控制器
+│   │   └── useDragPreview.ts         # 拖拽预览管理
 │   ├── utils/               # 工具类
 │   │   ├── VideoVisibleSprite.ts     # 自定义视频精灵
 │   │   ├── coordinateTransform.ts    # 坐标转换
@@ -65,6 +66,10 @@ frontend/
 │   │   └── videoTypes.ts             # 视频相关类型
 │   └── styles/              # 样式文件
 │       └── common.css                # 通用样式
+├── docs/                    # 项目文档
+│   ├── user/                # 用户文档
+│   ├── developer/           # 开发者文档
+│   └── features/            # 功能实现文档
 ├── public/                  # 静态资源
 ├── package.json            # 项目依赖配置
 ├── vite.config.ts          # Vite配置
@@ -137,23 +142,31 @@ npm run format
 ### 视频编辑功能
 - ✅ 视频文件导入和预览
 - ✅ 时间轴拖拽编辑
-- ✅ 视频片段分割和合并
+- ✅ 多选和批量操作
+- ✅ 撤销/重做操作历史
 - ✅ 实时播放控制
 - ✅ 视频属性调整（位置、缩放、旋转、透明度）
 - ✅ 多轨道支持
 - ✅ 视频分辨率设置
 
+### 高级功能
+- ✅ 统一的拖拽预览系统
+- ✅ 智能的选择同步机制
+- ✅ 批量操作命令系统
+- ✅ 完整的操作历史管理
+- ✅ 冲突检测和视觉反馈
+
 ### 界面功能
 - ✅ 可调整的面板布局
 - ✅ 响应式设计
 - ✅ 深色主题界面
-- ✅ 拖拽式操作
+- ✅ 直观的拖拽操作
 - ✅ 实时状态反馈
 
 ### 性能优化
 - ✅ WebAV硬件加速渲染
 - ✅ 异步视频解析
-- ✅ 内存管理和资源清理
+- ✅ 智能内存管理
 - ✅ 帧对齐和时间精确控制
 
 ## 🔧 开发指南
@@ -328,6 +341,35 @@ const defaultConfig = {
 - **开发环境**: 使用Vite开发服务器
 - **生产环境**: 构建静态文件部署到CDN或静态服务器
 - **容器化**: 支持Docker容器化部署
+
+## 📚 文档
+
+### 完整文档
+详细的项目文档请查看 [docs/](docs/) 目录：
+
+#### 👤 用户文档
+- **[用户使用指南](docs/user/USER_GUIDE.md)** - 详细的用户操作手册
+- **[功能详解](docs/user/FEATURES.md)** - 完整的功能介绍和使用技巧
+
+#### 👨‍💻 开发者文档
+- **[架构设计](docs/developer/ARCHITECTURE.md)** - 系统架构设计说明
+- **[开发指南](docs/developer/DEVELOPMENT.md)** - 开发环境设置和工作流程
+- **[API文档](docs/developer/API.md)** - 详细的API接口文档
+
+#### 🔧 功能实现文档
+- **[操作历史系统](docs/features/OPERATION_HISTORY.md)** - 撤销/重做功能实现
+- **[拖拽功能](docs/features/DRAG_AND_DROP.md)** - 统一拖拽操作系统
+- **[选择系统](docs/features/SELECTION_SYSTEM.md)** - 选择管理和同步机制
+- **[批量操作](docs/features/BATCH_OPERATIONS.md)** - 批量命令系统
+
+#### 📋 项目规划
+- **[未来规划](docs/FUTURE_PLANS.md)** - 项目发展路线图
+
+### 快速链接
+- [项目特色功能详解](docs/user/FEATURES.md#核心功能)
+- [开发环境设置](docs/developer/DEVELOPMENT.md#开发环境设置)
+- [架构设计原则](docs/developer/ARCHITECTURE.md#核心设计原则)
+- [性能优化策略](docs/user/FEATURES.md#性能特性)
 
 ## 🙏 致谢
 

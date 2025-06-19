@@ -1890,7 +1890,11 @@ export class ToggleTrackMuteCommand implements SimpleCommand {
 }
 
 /**
- * 自动排列轨道命令
+ * 自动排列轨道命令（已弃用，使用BatchAutoArrangeTrackCommand替代）
+ *
+ * @deprecated 此类已被BatchAutoArrangeTrackCommand替代，新的实现基于批量操作架构
+ * 保留此类是为了向后兼容，建议使用新的批量命令实现
+ *
  * 支持单轨道自动排列的撤销/重做操作
  * 保存排列前的所有时间轴项目位置，撤销时恢复原始位置
  */
@@ -1914,7 +1918,7 @@ export class AutoArrangeTrackCommand implements SimpleCommand {
 
     // 获取轨道信息
     const track = this.trackModule.getTrack(trackId)
-    this.description = `自动排列轨道: ${track?.name || `轨道 ${trackId}`}`
+    this.description = `自动排列轨道: ${track?.name || `轨道 ${trackId}`} (传统模式)`
 
     // 获取该轨道的所有时间轴项目
     const trackItems = this.timelineModule.timelineItems.value.filter(item => item.trackId === trackId)

@@ -6,99 +6,90 @@
 
 ### 🚀 快速开始
 - **[项目README](../README.md)** - 项目概述、特色功能和快速开始指南
-- **[用户使用指南](USER_GUIDE.md)** - 详细的用户操作手册和功能说明
 
-### 🛠️ 开发文档
-- **[开发指南](DEVELOPMENT.md)** - 开发环境设置、工作流程和代码规范
-- **[API文档](API.md)** - 详细的API接口文档和使用示例
-- **[架构设计](ARCHITECTURE.md)** - 系统架构设计和技术选型说明
+### 👤 用户文档
+- **[用户使用指南](user/USER_GUIDE.md)** - 详细的用户操作手册
+- **[功能详解](user/FEATURES.md)** - 完整的功能介绍和使用技巧
+
+### 👨‍💻 开发者文档
+- **[架构设计](developer/ARCHITECTURE.md)** - 系统架构设计和技术选型
+- **[开发指南](developer/DEVELOPMENT.md)** - 开发环境设置和工作流程
+- **[API文档](developer/API.md)** - 详细的API接口文档和使用示例
+
+### 🔧 功能实现文档
+- **[操作历史系统](features/OPERATION_HISTORY.md)** - 撤销/重做功能的完整实现
+- **[拖拽功能](features/DRAG_AND_DROP.md)** - 统一的拖拽操作系统
+- **[选择系统](features/SELECTION_SYSTEM.md)** - 单选/多选的统一管理
+- **[批量操作](features/BATCH_OPERATIONS.md)** - 批量操作的命令模式实现
+
+### 📋 项目规划
+- **[未来规划](FUTURE_PLANS.md)** - 项目发展路线图和功能规划
 
 ## 📖 文档概览
 
-### 项目README
-- 项目特色和技术栈介绍
-- 项目结构和模块说明
-- 核心功能列表
-- 快速开始指南
-- 开发注意事项
+### 用户文档
+- **用户使用指南**: 界面介绍、基础操作、编辑功能使用方法
+- **功能详解**: 详细的功能介绍、快捷键、使用技巧和最佳实践
 
-### 用户使用指南
-- 界面介绍和基础操作
-- 视频导入和编辑功能
-- 高级编辑技巧
-- 快捷键和性能优化
-- 故障排除和技术支持
+### 开发者文档
+- **架构设计**: 系统整体架构、模块化设计、WebAV集成方案
+- **开发指南**: 开发环境配置、工作流程、代码规范和调试技巧
+- **API文档**: VideoStore API、组件接口、类型定义和事件系统
 
-### 开发指南
-- 开发环境配置
-- 项目架构理解
-- 开发工作流程
-- 代码规范和最佳实践
-- 调试技巧和测试策略
-- 部署和发布流程
-
-### API文档
-- VideoStore API详解
-- useWebAVControls接口说明
-- VideoVisibleSprite API
-- 类型定义和接口规范
-- 事件系统说明
-- 工具函数参考
-
-### 架构设计
-- 系统整体架构
-- 模块化设计原则
-- WebAV集成架构
-- 组件架构和通信模式
-- 性能优化架构
-- 错误处理和扩展性设计
+### 功能实现文档
+- **操作历史系统**: 命令模式、批量操作、撤销/重做的完整实现
+- **拖拽功能**: 素材拖拽、项目移动、冲突检测和预览系统
+- **选择系统**: 单选/多选统一管理、双向同步机制
+- **批量操作**: 批量命令架构、错误处理和性能优化
 
 ## 🎯 按角色查看文档
 
 ### 👤 最终用户
 如果您是使用者，建议按以下顺序阅读：
 1. [项目README](../README.md) - 了解项目概况
-2. [用户使用指南](USER_GUIDE.md) - 学习如何使用
+2. [用户使用指南](user/USER_GUIDE.md) - 学习基本操作
+3. [功能详解](user/FEATURES.md) - 深入了解各项功能
 
 ### 👨‍💻 开发者
 如果您是开发者，建议按以下顺序阅读：
 1. [项目README](../README.md) - 了解项目概况
-2. [架构设计](ARCHITECTURE.md) - 理解系统架构
-3. [开发指南](DEVELOPMENT.md) - 学习开发流程
-4. [API文档](API.md) - 查阅接口详情
+2. [架构设计](developer/ARCHITECTURE.md) - 理解系统架构
+3. [开发指南](developer/DEVELOPMENT.md) - 学习开发流程
+4. [API文档](developer/API.md) - 查阅接口详情
 
 ### 🏗️ 架构师
 如果您关注架构设计，建议重点阅读：
-1. [架构设计](ARCHITECTURE.md) - 系统架构详解
-2. [API文档](API.md) - 接口设计规范
-3. [开发指南](DEVELOPMENT.md) - 技术实现细节
+1. [架构设计](developer/ARCHITECTURE.md) - 系统架构详解
+2. [功能实现文档](features/) - 具体功能的技术实现
+3. [API文档](developer/API.md) - 接口设计规范
 
 ## 🔍 按主题查看文档
 
 ### WebAV集成
-- [架构设计 - WebAV集成架构](ARCHITECTURE.md#webav集成架构)
-- [开发指南 - WebAV调试](DEVELOPMENT.md#webav调试)
-- [API文档 - useWebAVControls API](API.md#usewebavcontrols-api)
+- [架构设计 - WebAV集成架构](developer/ARCHITECTURE.md#webav集成架构)
+- [开发指南 - WebAV调试](developer/DEVELOPMENT.md#webav调试)
+- [API文档 - useWebAVControls API](developer/API.md#usewebavcontrols-api)
 
 ### 状态管理
-- [架构设计 - 模块化设计](ARCHITECTURE.md#模块化设计)
-- [API文档 - VideoStore API](API.md#videostore-api)
-- [开发指南 - 状态调试](DEVELOPMENT.md#状态调试)
+- [架构设计 - 模块化设计](developer/ARCHITECTURE.md#模块化设计)
+- [API文档 - VideoStore API](developer/API.md#videostore-api)
+- [开发指南 - 状态调试](developer/DEVELOPMENT.md#状态调试)
 
-### 组件开发
-- [架构设计 - 组件架构](ARCHITECTURE.md#组件架构)
-- [开发指南 - 添加新组件](DEVELOPMENT.md#添加新组件)
-- [API文档 - 组件事件](API.md#组件事件)
+### 编辑功能
+- [操作历史系统](features/OPERATION_HISTORY.md) - 撤销/重做功能实现
+- [拖拽功能](features/DRAG_AND_DROP.md) - 拖拽操作和预览系统
+- [选择系统](features/SELECTION_SYSTEM.md) - 选择管理和同步机制
+- [批量操作](features/BATCH_OPERATIONS.md) - 批量命令和错误处理
 
 ### 性能优化
-- [架构设计 - 性能优化架构](ARCHITECTURE.md#性能优化架构)
-- [开发指南 - 性能优化](DEVELOPMENT.md#性能优化)
-- [用户使用指南 - 性能优化建议](USER_GUIDE.md#性能优化建议)
+- [架构设计 - 性能优化架构](developer/ARCHITECTURE.md#性能优化架构)
+- [开发指南 - 性能优化](developer/DEVELOPMENT.md#性能优化)
+- [功能详解 - 性能特性](user/FEATURES.md#性能特性)
 
 ### 错误处理
-- [架构设计 - 错误处理架构](ARCHITECTURE.md#错误处理架构)
-- [开发指南 - 常见问题解决](DEVELOPMENT.md#常见问题解决)
-- [用户使用指南 - 故障排除](USER_GUIDE.md#故障排除)
+- [架构设计 - 错误处理架构](developer/ARCHITECTURE.md#错误处理架构)
+- [开发指南 - 常见问题解决](developer/DEVELOPMENT.md#常见问题解决)
+- [用户使用指南 - 故障排除](user/USER_GUIDE.md#故障排除)
 
 ## 📝 文档维护
 

@@ -1,5 +1,5 @@
 <template>
-  <div class="timeline">
+  <div class="timeline" @click="handleTimelineContainerClick">
     <!-- 顶部区域：轨道管理器头部 + 时间刻度 -->
     <div class="timeline-header">
       <div class="track-manager-header">
@@ -166,6 +166,7 @@
 import { ref, computed, onMounted, onUnmounted, nextTick, markRaw, reactive } from 'vue'
 import { useVideoStore } from '../stores/videoStore'
 import { useWebAVControls, waitForWebAVReady, isWebAVReady } from '../composables/useWebAVControls'
+import { getDragPreviewManager } from '../composables/useDragPreview'
 import { VideoVisibleSprite } from '../utils/VideoVisibleSprite'
 import { ImageVisibleSprite } from '../utils/ImageVisibleSprite'
 import { webavToProjectCoords } from '../utils/coordinateTransform'
@@ -178,6 +179,26 @@ import type { TimelineItem } from '../types/videoTypes'
 import VideoClip from './VideoClip.vue'
 import TimeScale from './TimeScale.vue'
 
+// 拖拽数据结构
+interface TimelineItemDragData {
+  type: 'timeline-item'
+  itemId: string
+  trackId: number
+  startTime: number
+  selectedItems: string[]  // 多选支持
+  dragOffset: { x: number, y: number }  // 拖拽偏移
+}
+
+// 从window对象获取拖拽数据的辅助函数
+function getCurrentDragData(): TimelineItemDragData | null {
+  return (window as any).__timelineDragData || null
+}
+
+// 从window对象获取素材拖拽数据的辅助函数
+function getCurrentMediaDragData(): any | null {
+  return (window as any).__mediaDragData || null
+}
+
 // Component name for Vue DevTools
 defineOptions({
   name: 'TimelineEditor',
@@ -185,6 +206,7 @@ defineOptions({
 
 const videoStore = useVideoStore()
 const webAVControls = useWebAVControls()
+const dragPreviewManager = getDragPreviewManager()
 
 const timelineBody = ref<HTMLElement>()
 const timelineWidth = ref(800)
@@ -374,70 +396,270 @@ function handleDragOver(event: DragEvent) {
 
   // 检查拖拽数据类型
   const types = event.dataTransfer?.types || []
-  if (types.includes('application/media-item')) {
+
+  if (types.includes('application/timeline-item')) {
+    // 时间轴项目拖拽
+    event.dataTransfer!.dropEffect = 'move'
+    handleTimelineItemDragOver(event)
+  } else if (types.includes('application/media-item')) {
+    // 素材库拖拽
     event.dataTransfer!.dropEffect = 'copy'
+    handleMediaItemDragOver(event)
   } else if (types.includes('Files')) {
     // 文件拖拽，但我们不再支持直接文件拖拽
     event.dataTransfer!.dropEffect = 'none'
+    dragPreviewManager.hidePreview()
   } else {
     event.dataTransfer!.dropEffect = 'copy'
+    dragPreviewManager.hidePreview()
+  }
+}
+
+// 处理素材库拖拽悬停
+function handleMediaItemDragOver(event: DragEvent) {
+  const targetElement = event.target as HTMLElement
+  const trackContent = targetElement.closest('.track-content')
+
+  if (!trackContent) {
+    dragPreviewManager.hidePreview()
+    return
+  }
+
+  // 计算目标位置
+  const rect = trackContent.getBoundingClientRect()
+  const mouseX = event.clientX - rect.left
+  const dropTime = videoStore.pixelToTime(mouseX, timelineWidth.value)
+  const targetTrackId = parseInt(trackContent.getAttribute('data-track-id') || '1')
+
+  // 从全局状态获取素材拖拽数据
+  const mediaDragData = getCurrentMediaDragData()
+  if (mediaDragData) {
+    // 检测素材库拖拽的重叠冲突
+    const conflicts = detectMediaItemConflicts(dropTime, targetTrackId, mediaDragData.duration)
+    const isConflict = conflicts.length > 0
+
+    // 显示统一预览
+    dragPreviewManager.updatePreview({
+      name: mediaDragData.name,
+      duration: mediaDragData.duration,
+      startTime: dropTime,
+      trackId: targetTrackId,
+      isConflict: isConflict,
+      isMultiple: false
+    }, timelineWidth.value)
+  } else {
+    // 显示默认预览
+    dragPreviewManager.updatePreview({
+      name: '素材预览',
+      duration: 5,
+      startTime: dropTime,
+      trackId: targetTrackId,
+      isConflict: false,
+      isMultiple: false
+    }, timelineWidth.value)
+  }
+}
+
+// 处理时间轴项目拖拽悬停
+function handleTimelineItemDragOver(event: DragEvent) {
+  const targetElement = event.target as HTMLElement
+  const trackContent = targetElement.closest('.track-content')
+
+  if (!trackContent) {
+    dragPreviewManager.hidePreview()
+    return
+  }
+
+  // 计算目标位置
+  const rect = trackContent.getBoundingClientRect()
+  const mouseX = event.clientX - rect.left
+  const targetTrackId = parseInt(trackContent.getAttribute('data-track-id') || '1')
+
+  // 获取全局拖拽数据
+  const currentDragData = getCurrentDragData()
+  if (currentDragData) {
+    // 考虑拖拽偏移量，计算clip的实际开始位置
+    const clipStartX = mouseX - currentDragData.dragOffset.x
+    const clipStartTime = videoStore.pixelToTime(clipStartX, timelineWidth.value)
+
+    // 获取拖拽项目信息
+    const draggedItem = videoStore.getTimelineItem(currentDragData.itemId)
+    if (draggedItem) {
+      const duration = (draggedItem.timeRange.timelineEndTime - draggedItem.timeRange.timelineStartTime) / 1000000
+
+      // 检测冲突
+      const conflicts = detectTimelineConflicts(clipStartTime, targetTrackId, currentDragData)
+      const isConflict = conflicts.length > 0
+
+      // 获取显示名称
+      const mediaItem = videoStore.getMediaItem(draggedItem.mediaItemId)
+      const name = mediaItem?.name || 'Clip'
+
+      // 显示统一预览
+      dragPreviewManager.updatePreview({
+        name: name,
+        duration: duration,
+        startTime: clipStartTime,
+        trackId: targetTrackId,
+        isConflict: isConflict,
+        isMultiple: currentDragData.selectedItems.length > 1,
+        count: currentDragData.selectedItems.length
+      }, timelineWidth.value)
+    }
+  } else {
+    dragPreviewManager.hidePreview()
   }
 }
 
 async function handleDrop(event: DragEvent) {
   event.preventDefault()
-  console.log('时间轴接收到拖拽事件')
+  console.log('🎯 [Timeline] 时间轴接收到拖拽事件')
+
+  // 清理统一预览
+  dragPreviewManager.hidePreview()
 
   // 暂停播放以便进行编辑
   if (isWebAVReady() && videoStore.isPlaying) {
     webAVControls.pause()
   }
 
-  // 检查是否是从素材库拖拽的素材
+  // 检查拖拽数据类型
+  const timelineItemData = event.dataTransfer?.getData('application/timeline-item')
   const mediaItemData = event.dataTransfer?.getData('application/media-item')
-  console.log('拖拽数据:', mediaItemData)
 
-  if (mediaItemData) {
+  if (timelineItemData) {
+    // 处理时间轴项目拖拽
+    console.log('📦 [Timeline] 处理时间轴项目拖拽')
+    await handleTimelineItemDrop(event, JSON.parse(timelineItemData))
+  } else if (mediaItemData) {
     // 处理素材库拖拽
-    try {
-      const mediaItem = JSON.parse(mediaItemData)
-      console.log('解析的素材数据:', mediaItem)
-
-      // 获取目标轨道ID
-      const targetElement = event.target as HTMLElement
-      const trackContent = targetElement.closest('.track-content')
-      const targetTrackId = trackContent
-        ? parseInt(trackContent.getAttribute('data-track-id') || '1')
-        : 1
-      console.log('目标轨道ID:', targetTrackId)
-
-      // 计算拖拽位置对应的时间（考虑缩放和滚动偏移量）
-      const trackContentRect = trackContent?.getBoundingClientRect()
-      if (!trackContentRect) {
-        console.error('无法获取轨道区域信息')
-        return
-      }
-
-      const dropX = event.clientX - trackContentRect.left
-      const dropTime = videoStore.pixelToTime(dropX, timelineWidth.value)
-      console.log(`🎯 拖拽素材到时间轴: ${mediaItem.name}`)
-      console.log(
-        `📍 拖拽位置: ${dropX}px, 对应时间: ${dropTime.toFixed(2)}s, 目标轨道: ${targetTrackId}`,
-      )
-
-      // 如果拖拽位置超出当前时间轴长度，动态扩展时间轴
-      videoStore.expandTimelineIfNeeded(dropTime + 10) // 预留10秒缓冲
-
-      // 从素材库项创建媒体片段（视频或图片）
-      await createMediaClipFromMediaItem(mediaItem, dropTime, targetTrackId)
-    } catch (error) {
-      console.error('Failed to parse media item data:', error)
-      alert('拖拽数据格式错误')
-    }
+    console.log('📦 [Timeline] 处理素材库拖拽')
+    await handleMediaItemDrop(event, JSON.parse(mediaItemData))
   } else {
-    console.log('没有检测到素材库拖拽数据')
-    // 不再支持直接拖拽文件
+    console.log('❌ [Timeline] 没有检测到有效的拖拽数据')
     alert('请先将视频或图片文件导入到素材库，然后从素材库拖拽到时间轴')
+  }
+
+  // 清理全局拖拽状态
+  ;(window as any).__timelineDragData = null
+  ;(window as any).__mediaDragData = null
+}
+
+// 处理时间轴项目拖拽放置
+async function handleTimelineItemDrop(event: DragEvent, dragData: TimelineItemDragData) {
+  console.log('🎯 [Timeline] 处理时间轴项目拖拽放置:', dragData)
+
+  const targetElement = event.target as HTMLElement
+  const trackContent = targetElement.closest('.track-content')
+
+  if (!trackContent) {
+    console.error('❌ [Timeline] 无法找到目标轨道')
+    return
+  }
+
+  // 计算目标位置，考虑拖拽偏移量
+  const rect = trackContent.getBoundingClientRect()
+  const mouseX = event.clientX - rect.left
+  // 考虑拖拽偏移量，计算clip的实际开始位置
+  const clipStartX = mouseX - dragData.dragOffset.x
+  const dropTime = videoStore.pixelToTime(clipStartX, timelineWidth.value)
+  const targetTrackId = parseInt(trackContent.getAttribute('data-track-id') || '1')
+
+  console.log('📍 [Timeline] 拖拽目标位置:', {
+    mouseX,
+    dragOffsetX: dragData.dragOffset.x,
+    clipStartX,
+    dropTime: dropTime.toFixed(2),
+    targetTrackId,
+    selectedItems: dragData.selectedItems
+  })
+
+  // TODO: 检测冲突
+  // const conflicts = detectTimelineConflicts(dropTime, targetTrackId, dragData.selectedItems)
+  // if (conflicts.length > 0) {
+  //   const shouldContinue = await showConflictDialog(conflicts)
+  //   if (!shouldContinue) return
+  // }
+
+  // 执行移动操作
+  try {
+    if (dragData.selectedItems.length > 1) {
+      // 多选拖拽
+      console.log('🔄 [Timeline] 执行多选项目移动')
+      await moveMultipleItems(dragData.selectedItems, dropTime, targetTrackId, dragData.startTime)
+    } else {
+      // 单个拖拽
+      console.log('🔄 [Timeline] 执行单个项目移动')
+      await moveSingleItem(dragData.itemId, dropTime, targetTrackId)
+    }
+    console.log('✅ [Timeline] 时间轴项目移动完成')
+  } catch (error) {
+    console.error('❌ [Timeline] 时间轴项目移动失败:', error)
+  }
+}
+
+// 处理素材库拖拽放置（重构现有逻辑）
+async function handleMediaItemDrop(event: DragEvent, mediaItem: any) {
+  try {
+    console.log('解析的素材数据:', mediaItem)
+
+    // 获取目标轨道ID
+    const targetElement = event.target as HTMLElement
+    const trackContent = targetElement.closest('.track-content')
+    const targetTrackId = trackContent
+      ? parseInt(trackContent.getAttribute('data-track-id') || '1')
+      : 1
+    console.log('目标轨道ID:', targetTrackId)
+
+    // 计算拖拽位置对应的时间（考虑缩放和滚动偏移量）
+    const trackContentRect = trackContent?.getBoundingClientRect()
+    if (!trackContentRect) {
+      console.error('无法获取轨道区域信息')
+      return
+    }
+
+    const dropX = event.clientX - trackContentRect.left
+    const dropTime = videoStore.pixelToTime(dropX, timelineWidth.value)
+    console.log(`🎯 拖拽素材到时间轴: ${mediaItem.name}`)
+    console.log(
+      `📍 拖拽位置: ${dropX}px, 对应时间: ${dropTime.toFixed(2)}s, 目标轨道: ${targetTrackId}`,
+    )
+
+    // 如果拖拽位置超出当前时间轴长度，动态扩展时间轴
+    videoStore.expandTimelineIfNeeded(dropTime + 10) // 预留10秒缓冲
+
+    // 从素材库项创建媒体片段（视频或图片）
+    await createMediaClipFromMediaItem(mediaItem, dropTime, targetTrackId)
+  } catch (error) {
+    console.error('Failed to parse media item data:', error)
+    alert('拖拽数据格式错误')
+  }
+}
+
+// 移动单个项目
+async function moveSingleItem(itemId: string, newTime: number, newTrackId: number) {
+  await handleTimelineItemPositionUpdate(itemId, newTime, newTrackId)
+}
+
+// 移动多个项目（保持相对位置）
+async function moveMultipleItems(itemIds: string[], newTime: number, newTrackId: number, originalStartTime: number) {
+  console.log('🔄 [Timeline] 开始批量移动项目:', { itemIds, newTime, newTrackId, originalStartTime })
+
+  // 计算时间偏移量
+  const timeOffset = newTime - originalStartTime
+
+  // 批量移动所有选中的项目
+  for (const itemId of itemIds) {
+    const item = videoStore.getTimelineItem(itemId)
+    if (item) {
+      const currentStartTime = item.timeRange.timelineStartTime / 1000000
+      const newStartTime = currentStartTime + timeOffset
+
+      // 对于第一个项目，使用目标轨道；其他项目保持相对轨道关系
+      const targetTrack = itemId === itemIds[0] ? newTrackId : item.trackId
+
+      await handleTimelineItemPositionUpdate(itemId, newStartTime, targetTrack)
+    }
   }
 }
 
@@ -689,10 +911,29 @@ async function handleTimelineItemRemove(timelineItemId: string) {
 }
 
 function handleTimelineClick(event: MouseEvent) {
-  // 点击轨道内容空白区域取消选中
+  // 点击轨道内容空白区域取消所有选中（包括单选和多选）
   const target = event.target as HTMLElement
   if (target.classList.contains('track-content')) {
-    videoStore.selectTimelineItem(null)
+    videoStore.clearAllSelections()
+  }
+}
+
+function handleTimelineContainerClick(event: MouseEvent) {
+  // 点击时间轴容器的空白区域取消所有选中
+  const target = event.target as HTMLElement
+
+  // 检查点击的是否是时间轴容器本身或其他空白区域
+  // 排除点击在VideoClip、按钮、输入框等交互元素上的情况
+  if (
+    target.classList.contains('timeline') ||
+    target.classList.contains('timeline-header') ||
+    target.classList.contains('timeline-body') ||
+    target.classList.contains('timeline-grid') ||
+    target.classList.contains('grid-line') ||
+    target.classList.contains('track-row') ||
+    target.classList.contains('track-content')
+  ) {
+    videoStore.clearAllSelections()
   }
 }
 
@@ -759,15 +1000,472 @@ function handleKeyDown(event: KeyboardEvent) {
   }
 }
 
+// ==================== 视觉反馈系统 ====================
+
+// 显示插入指示器
+function showInsertionIndicator(x: number, trackId: number) {
+  let indicator = document.querySelector('.timeline-insertion-indicator') as HTMLElement
+
+  if (!indicator) {
+    indicator = document.createElement('div')
+    indicator.className = 'timeline-insertion-indicator'
+    indicator.style.cssText = `
+      position: absolute;
+      width: 3px;
+      height: 60px;
+      background: linear-gradient(180deg, #00ff88, #00cc66);
+      pointer-events: none;
+      z-index: 1000;
+      border-radius: 2px;
+      box-shadow: 0 0 8px rgba(0, 255, 136, 0.6);
+      opacity: 0;
+      transition: opacity 0.2s ease;
+    `
+    document.body.appendChild(indicator)
+  }
+
+  // 找到目标轨道元素
+  const trackElement = document.querySelector(`[data-track-id="${trackId}"] .track-content`) as HTMLElement
+  if (trackElement) {
+    const trackRect = trackElement.getBoundingClientRect()
+
+    // 计算指示器位置
+    const indicatorX = trackRect.left + x - 1.5 // 居中对齐
+    const indicatorY = trackRect.top + 10 // 轨道内部偏移
+
+    indicator.style.left = `${indicatorX}px`
+    indicator.style.top = `${indicatorY}px`
+    indicator.style.opacity = '1'
+
+    console.log('📍 [Timeline] 显示插入指示器:', { x, trackId, indicatorX, indicatorY })
+  }
+}
+
+// 隐藏插入指示器
+function hideInsertionIndicator() {
+  const indicator = document.querySelector('.timeline-insertion-indicator') as HTMLElement
+  if (indicator) {
+    indicator.style.opacity = '0'
+    // 延迟移除，让过渡动画完成
+    setTimeout(() => {
+      if (indicator && indicator.style.opacity === '0') {
+        indicator.remove()
+      }
+    }, 200)
+  }
+}
+
+// 冲突检测
+interface ConflictInfo {
+  itemId: string
+  itemName: string
+  startTime: number
+  endTime: number
+  overlapStart: number
+  overlapEnd: number
+}
+
+// 检测素材库拖拽的重叠冲突
+function detectMediaItemConflicts(dropTime: number, targetTrackId: number, duration: number): ConflictInfo[] {
+  const conflicts: ConflictInfo[] = []
+
+  // 获取目标轨道上的所有项目
+  const trackItems = videoStore.getTimelineItemsForTrack(targetTrackId)
+
+  const dragEndTime = dropTime + duration
+
+  // 检查与其他项目的冲突
+  for (const item of trackItems) {
+    const itemStartTime = item.timeRange.timelineStartTime / 1000000
+    const itemEndTime = item.timeRange.timelineEndTime / 1000000
+
+    // 检查时间重叠
+    const overlapStart = Math.max(dropTime, itemStartTime)
+    const overlapEnd = Math.min(dragEndTime, itemEndTime)
+
+    if (overlapStart < overlapEnd) {
+      const mediaItem = videoStore.getMediaItem(item.mediaItemId)
+      conflicts.push({
+        itemId: item.id,
+        itemName: mediaItem?.name || 'Unknown',
+        startTime: itemStartTime,
+        endTime: itemEndTime,
+        overlapStart,
+        overlapEnd
+      })
+    }
+  }
+
+  return conflicts
+}
+
+function detectTimelineConflicts(dropTime: number, targetTrackId: number, dragData: TimelineItemDragData): ConflictInfo[] {
+  const conflicts: ConflictInfo[] = []
+
+  // 获取目标轨道上的所有项目
+  const trackItems = videoStore.getTimelineItemsForTrack(targetTrackId)
+
+  // 计算拖拽项目的时长
+  const draggedItem = videoStore.getTimelineItem(dragData.itemId)
+  if (!draggedItem) return conflicts
+
+  const dragDuration = (draggedItem.timeRange.timelineEndTime - draggedItem.timeRange.timelineStartTime) / 1000000
+  const dragEndTime = dropTime + dragDuration
+
+  // 检查与其他项目的冲突
+  for (const item of trackItems) {
+    // 跳过正在拖拽的项目
+    if (dragData.selectedItems.includes(item.id)) continue
+
+    const itemStartTime = item.timeRange.timelineStartTime / 1000000
+    const itemEndTime = item.timeRange.timelineEndTime / 1000000
+
+    // 检查时间重叠
+    const overlapStart = Math.max(dropTime, itemStartTime)
+    const overlapEnd = Math.min(dragEndTime, itemEndTime)
+
+    if (overlapStart < overlapEnd) {
+      const mediaItem = videoStore.getMediaItem(item.mediaItemId)
+      conflicts.push({
+        itemId: item.id,
+        itemName: mediaItem?.name || 'Unknown',
+        startTime: itemStartTime,
+        endTime: itemEndTime,
+        overlapStart,
+        overlapEnd
+      })
+    }
+  }
+
+  return conflicts
+}
+
+// 显示冲突警告指示器
+function updateConflictIndicator(conflicts: ConflictInfo[], x: number, trackId: number) {
+  // 先清理现有的冲突指示器
+  hideConflictIndicator()
+
+  if (conflicts.length === 0) return
+
+  const indicator = document.createElement('div')
+  indicator.className = 'timeline-conflict-indicator'
+  indicator.style.cssText = `
+    position: absolute;
+    width: 3px;
+    height: 60px;
+    background: linear-gradient(180deg, #ff4444, #cc0000);
+    pointer-events: none;
+    z-index: 1001;
+    border-radius: 2px;
+    box-shadow: 0 0 8px rgba(255, 68, 68, 0.8);
+    opacity: 0;
+    transition: opacity 0.2s ease;
+  `
+
+  // 找到目标轨道元素
+  const trackElement = document.querySelector(`[data-track-id="${trackId}"] .track-content`) as HTMLElement
+  if (trackElement) {
+    const trackRect = trackElement.getBoundingClientRect()
+
+    // 计算指示器位置
+    const indicatorX = trackRect.left + x - 1.5 // 居中对齐
+    const indicatorY = trackRect.top + 10 // 轨道内部偏移
+
+    indicator.style.left = `${indicatorX}px`
+    indicator.style.top = `${indicatorY}px`
+    indicator.style.opacity = '1'
+
+    // 添加冲突提示
+    const tooltip = document.createElement('div')
+    tooltip.className = 'timeline-conflict-tooltip'
+    tooltip.style.cssText = `
+      position: absolute;
+      top: -30px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(255, 68, 68, 0.9);
+      color: white;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 10px;
+      white-space: nowrap;
+      pointer-events: none;
+      z-index: 1002;
+    `
+    tooltip.textContent = `冲突: ${conflicts.length} 个项目`
+
+    indicator.appendChild(tooltip)
+    document.body.appendChild(indicator)
+
+    console.log('⚠️ [Timeline] 检测到冲突:', conflicts)
+  }
+}
+
+// 隐藏冲突指示器
+function hideConflictIndicator() {
+  const indicator = document.querySelector('.timeline-conflict-indicator') as HTMLElement
+  if (indicator) {
+    indicator.style.opacity = '0'
+    setTimeout(() => {
+      if (indicator && indicator.style.opacity === '0') {
+        indicator.remove()
+      }
+    }, 200)
+  }
+}
+
+// 显示实时位置预览
+function showPositionPreview(dropTime: number, targetTrackId: number, dragData: TimelineItemDragData, x: number) {
+  // 先清理现有的位置预览
+  hidePositionPreview()
+
+  const preview = document.createElement('div')
+  preview.className = 'timeline-position-preview'
+  preview.style.cssText = `
+    position: absolute;
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 11px;
+    pointer-events: none;
+    z-index: 1003;
+    white-space: nowrap;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    opacity: 0;
+    transition: opacity 0.2s ease;
+  `
+
+  // 格式化时间显示
+  function formatTime(seconds: number): string {
+    const mins = Math.floor(seconds / 60)
+    const secs = Math.floor(seconds % 60)
+    const ms = Math.floor((seconds % 1) * 100)
+    return `${mins}:${secs.toString().padStart(2, '0')}.${ms.toString().padStart(2, '0')}`
+  }
+
+  // 获取轨道信息
+  const track = videoStore.getTrack(targetTrackId)
+  const trackName = track?.name || `轨道 ${targetTrackId}`
+
+  // 计算拖拽项目的结束时间
+  const draggedItem = videoStore.getTimelineItem(dragData.itemId)
+  const duration = draggedItem ? (draggedItem.timeRange.timelineEndTime - draggedItem.timeRange.timelineStartTime) / 1000000 : 0
+  const endTime = dropTime + duration
+
+  // 创建预览内容
+  const content = document.createElement('div')
+  content.innerHTML = `
+    <div style="margin-bottom: 4px; font-weight: bold; color: #00ff88;">
+      ${dragData.selectedItems.length > 1 ? `${dragData.selectedItems.length} 个项目` : '移动项目'}
+    </div>
+    <div style="margin-bottom: 2px;">
+      📍 位置: ${formatTime(dropTime)} - ${formatTime(endTime)}
+    </div>
+    <div style="margin-bottom: 2px;">
+      🎬 轨道: ${trackName}
+    </div>
+    <div style="font-size: 10px; opacity: 0.8;">
+      ⏱️ 时长: ${formatTime(duration)}
+    </div>
+  `
+
+  preview.appendChild(content)
+
+  // 找到目标轨道元素来定位预览
+  const trackElement = document.querySelector(`[data-track-id="${targetTrackId}"] .track-content`) as HTMLElement
+  if (trackElement) {
+    const trackRect = trackElement.getBoundingClientRect()
+
+    // 计算预览位置（在指示器上方）
+    let previewX = trackRect.left + x + 10 // 稍微偏右
+    let previewY = trackRect.top - 80 // 在轨道上方
+
+    // 确保预览不会超出屏幕边界
+    const previewWidth = 200 // 预估宽度
+    if (previewX + previewWidth > window.innerWidth) {
+      previewX = trackRect.left + x - previewWidth - 10 // 移到左侧
+    }
+    if (previewY < 0) {
+      previewY = trackRect.bottom + 10 // 移到轨道下方
+    }
+
+    preview.style.left = `${previewX}px`
+    preview.style.top = `${previewY}px`
+    preview.style.opacity = '1'
+
+    document.body.appendChild(preview)
+  }
+}
+
+// 隐藏位置预览
+function hidePositionPreview() {
+  const preview = document.querySelector('.timeline-position-preview') as HTMLElement
+  if (preview) {
+    preview.style.opacity = '0'
+    setTimeout(() => {
+      if (preview && preview.style.opacity === '0') {
+        preview.remove()
+      }
+    }, 200)
+  }
+}
+
+// 显示目标位置的clip预览
+function showDropPreview(dropTime: number, targetTrackId: number, dragData: TimelineItemDragData, trackElement: HTMLElement) {
+  // 获取被拖拽的项目信息
+  const draggedItem = videoStore.getTimelineItem(dragData.itemId)
+  if (!draggedItem) return
+
+  const duration = (draggedItem.timeRange.timelineEndTime - draggedItem.timeRange.timelineStartTime) / 1000000
+  const endTime = dropTime + duration
+
+  // 计算预览clip的位置和尺寸
+  const left = videoStore.timeToPixel(dropTime, timelineWidth.value)
+  const right = videoStore.timeToPixel(endTime, timelineWidth.value)
+  const width = Math.max(right - left, 20) // 最小宽度20px
+
+  // 使用传入的轨道元素
+  const trackRect = trackElement.getBoundingClientRect()
+
+  // 检查是否已有预览元素
+  let preview = document.querySelector('.timeline-drop-preview') as HTMLElement
+
+  // 计算新的位置
+  const newLeft = trackRect.left + left
+  const newTop = trackRect.top + 10
+
+  if (preview) {
+    // 如果已有预览元素，只更新位置和尺寸
+    preview.style.left = `${newLeft}px`
+    preview.style.top = `${newTop}px`
+    preview.style.width = `${width}px`
+
+    // 检查冲突状态是否改变
+    const conflicts = detectTimelineConflicts(dropTime, targetTrackId, dragData)
+    const hasConflict = conflicts.length > 0
+    const currentBorder = preview.style.borderColor
+    const expectedBorder = hasConflict ? '#ff4444' : '#888888'
+
+    if (currentBorder !== expectedBorder) {
+      // 冲突状态改变，更新样式
+      preview.style.background = hasConflict
+        ? 'linear-gradient(135deg, rgba(255, 68, 68, 0.5), rgba(204, 0, 0, 0.5))'
+        : 'linear-gradient(135deg, rgba(128, 128, 128, 0.6), rgba(96, 96, 96, 0.6))'
+      preview.style.borderColor = expectedBorder
+      preview.style.color = hasConflict ? '#ff4444' : '#ffffff'
+    }
+
+    return
+  }
+
+  // 创建新的预览元素
+  preview = document.createElement('div')
+  preview.className = 'timeline-drop-preview'
+
+  // 检查是否有冲突来决定样式
+  const conflicts = detectTimelineConflicts(dropTime, targetTrackId, dragData)
+  const hasConflict = conflicts.length > 0
+
+  preview.style.cssText = `
+    position: absolute;
+    left: ${newLeft}px;
+    top: ${newTop}px;
+    width: ${width}px;
+    height: 60px;
+    background: ${hasConflict
+      ? 'linear-gradient(135deg, rgba(255, 68, 68, 0.5), rgba(204, 0, 0, 0.5))'
+      : 'linear-gradient(135deg, rgba(128, 128, 128, 0.6), rgba(96, 96, 96, 0.6))'
+    };
+    border: 2px dashed ${hasConflict ? '#ff4444' : '#888888'};
+    border-radius: 4px;
+    pointer-events: none;
+    z-index: 999;
+    opacity: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: ${hasConflict ? '#ff4444' : '#ffffff'};
+    font-size: 10px;
+    font-weight: bold;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+  `
+
+  // 添加内容
+  const content = document.createElement('div')
+  content.style.cssText = `
+    text-align: center;
+    max-width: 100%;
+    overflow: hidden;
+  `
+
+  if (dragData.selectedItems.length > 1) {
+    content.innerHTML = `
+      <div>${dragData.selectedItems.length} 个项目</div>
+      <div style="font-size: 8px; opacity: 0.8;">${hasConflict ? '位置冲突' : '批量放置'}</div>
+    `
+  } else {
+    const mediaItem = videoStore.getMediaItem(draggedItem.mediaItemId)
+    const clipName = mediaItem?.name || 'Clip'
+    content.innerHTML = `
+      <div>${clipName.length > 10 ? clipName.substring(0, 8) + '..' : clipName}</div>
+      <div style="font-size: 8px; opacity: 0.8;">${hasConflict ? '位置冲突' : formatDuration(duration)}</div>
+    `
+  }
+
+  preview.appendChild(content)
+  document.body.appendChild(preview)
+}
+
+// 隐藏目标位置预览
+function hideDropPreview() {
+  // 移除所有现有的预览元素
+  const previews = document.querySelectorAll('.timeline-drop-preview')
+  previews.forEach(preview => {
+    preview.remove()
+  })
+}
+
+// 格式化时长显示
+function formatDuration(seconds: number): string {
+  const mins = Math.floor(seconds / 60)
+  const secs = Math.floor(seconds % 60)
+  return `${mins}:${secs.toString().padStart(2, '0')}`
+}
+
+// 处理拖拽离开事件
+function handleDragLeave(event: DragEvent) {
+  // 只有当真正离开时间轴区域时才隐藏预览
+  const relatedTarget = event.relatedTarget as Element
+  const timelineElement = event.currentTarget as Element
+
+  if (!timelineElement.contains(relatedTarget)) {
+    dragPreviewManager.hidePreview()
+  }
+}
+
 onMounted(() => {
   updateTimelineWidth()
   window.addEventListener('resize', updateTimelineWidth)
   window.addEventListener('keydown', handleKeyDown)
+
+  // 添加拖拽离开事件监听
+  if (timelineBody.value) {
+    timelineBody.value.addEventListener('dragleave', handleDragLeave)
+  }
 })
 
 onUnmounted(() => {
   window.removeEventListener('resize', updateTimelineWidth)
   window.removeEventListener('keydown', handleKeyDown)
+
+  // 清理统一预览
+  dragPreviewManager.hidePreview()
+
+  // 移除拖拽离开事件监听
+  if (timelineBody.value) {
+    timelineBody.value.removeEventListener('dragleave', handleDragLeave)
+  }
 })
 </script>
 

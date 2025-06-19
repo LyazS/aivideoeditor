@@ -24,6 +24,7 @@ import { createTimelineModule } from './modules/timelineModule'
 import { createClipOperationsModule } from './modules/clipOperationsModule'
 import { createHistoryModule } from './modules/historyModule'
 import { AddTimelineItemCommand, RemoveTimelineItemCommand, MoveTimelineItemCommand, UpdateTransformCommand, SplitTimelineItemCommand, DuplicateTimelineItemCommand, AddTrackCommand, RemoveTrackCommand, RenameTrackCommand, AutoArrangeTrackCommand, ToggleTrackVisibilityCommand, ToggleTrackMuteCommand, ResizeTimelineItemCommand } from './modules/commands/timelineCommands'
+import { BatchDeleteCommand, BatchAutoArrangeTrackCommand, BatchUpdatePropertiesCommand } from './modules/commands/batchCommands'
 import type { MediaItem, TimelineItem } from '../types/videoTypes'
 
 export const useVideoStore = defineStore('video', () => {
@@ -612,7 +613,7 @@ export const useVideoStore = defineStore('video', () => {
   }
 
   /**
-   * 带历史记录的自动排列轨道方法
+   * 带历史记录的自动排列轨道方法（使用批量操作架构）
    * @param trackId 要自动排列的轨道ID
    * @returns 是否成功排列
    */
@@ -631,11 +632,17 @@ export const useVideoStore = defineStore('video', () => {
       return false
     }
 
-    const command = new AutoArrangeTrackCommand(
+    // 使用新的批量自动排列命令
+    const batchCommand = new BatchAutoArrangeTrackCommand(
       trackId,
+      trackItems,
       {
-        timelineItems: timelineModule.timelineItems,
         getTimelineItem: timelineModule.getTimelineItem,
+        timelineItems: timelineModule.timelineItems,
+        updateTimelineItemPosition: timelineModule.updateTimelineItemPosition,
+      },
+      {
+        getMediaItem: mediaModule.getMediaItem,
       },
       {
         getTrack: trackModule.getTrack,
@@ -643,7 +650,7 @@ export const useVideoStore = defineStore('video', () => {
     )
 
     try {
-      await historyModule.executeCommand(command)
+      await historyModule.executeBatchCommand(batchCommand)
       return true
     } catch (error) {
       console.error('❌ 自动排列轨道失败:', error)
@@ -767,6 +774,55 @@ export const useVideoStore = defineStore('video', () => {
     }
   }
 
+  /**
+   * 批量删除选中的时间轴项目
+   * @param timelineItemIds 要删除的时间轴项目ID数组
+   * @returns 是否成功删除
+   */
+  async function batchDeleteTimelineItems(timelineItemIds: string[]): Promise<boolean> {
+    if (timelineItemIds.length === 0) {
+      console.warn('⚠️ 没有选中要删除的时间轴项目')
+      return false
+    }
+
+    // 验证所有项目是否存在
+    const validItemIds = timelineItemIds.filter(id => timelineModule.getTimelineItem(id))
+    if (validItemIds.length === 0) {
+      console.warn('⚠️ 所有选中的时间轴项目都不存在')
+      return false
+    }
+
+    if (validItemIds.length !== timelineItemIds.length) {
+      console.warn(`⚠️ ${timelineItemIds.length - validItemIds.length} 个时间轴项目不存在，将删除其余 ${validItemIds.length} 个项目`)
+    }
+
+    // 创建批量删除命令
+    const batchCommand = new BatchDeleteCommand(
+      validItemIds,
+      {
+        getTimelineItem: timelineModule.getTimelineItem,
+        timelineItems: timelineModule.timelineItems,
+        addTimelineItem: timelineModule.addTimelineItem,
+        removeTimelineItem: timelineModule.removeTimelineItem,
+      },
+      {
+        addSprite: webavModule.addSprite,
+        removeSprite: webavModule.removeSprite,
+      },
+      {
+        getMediaItem: mediaModule.getMediaItem,
+      }
+    )
+
+    try {
+      await historyModule.executeBatchCommand(batchCommand)
+      return true
+    } catch (error) {
+      console.error('❌ 批量删除时间轴项目失败:', error)
+      return false
+    }
+  }
+
   function removeMediaItem(mediaItemId: string) {
     mediaModule.removeMediaItem(
       mediaItemId,
@@ -823,6 +879,9 @@ export const useVideoStore = defineStore('video', () => {
     playbackRate: playbackModule.playbackRate,
     selectedTimelineItemId: selectionModule.selectedTimelineItemId,
     selectedAVCanvasSprite: selectionModule.selectedAVCanvasSprite,
+    // 多选状态
+    selectedTimelineItemIds: selectionModule.selectedTimelineItemIds,
+    isMultiSelectMode: selectionModule.isMultiSelectMode,
     // 编辑设置
     proportionalScale: configModule.proportionalScale,
     // 缩放和滚动状态
@@ -851,7 +910,11 @@ export const useVideoStore = defineStore('video', () => {
     updateTimelineItemSprite: timelineModule.updateTimelineItemSprite,
     setupBidirectionalSync: timelineModule.setupBidirectionalSync,
     updateTimelineItemTransform: timelineModule.updateTimelineItemTransform,
-    // 选择管理方法
+    // 统一选择管理API
+    selectTimelineItems: selectionModule.selectTimelineItems,
+    syncAVCanvasSelection: selectionModule.syncAVCanvasSelection,
+    hasSelection: selectionModule.hasSelection,
+    // 兼容性选择方法
     selectTimelineItem: selectionModule.selectTimelineItem,
     selectAVCanvasSprite: selectionModule.selectAVCanvasSprite,
     handleAVCanvasSpriteChange: selectionModule.handleAVCanvasSpriteChange,
@@ -864,6 +927,12 @@ export const useVideoStore = defineStore('video', () => {
     resetSelectionToDefaults: selectionModule.resetToDefaults,
     findTimelineItemBySprite: (sprite: Raw<VideoVisibleSprite>) =>
       findTimelineItemBySprite(sprite, timelineModule.timelineItems.value),
+    // 多选兼容性方法
+    addToMultiSelection: selectionModule.addToMultiSelection,
+    removeFromMultiSelection: selectionModule.removeFromMultiSelection,
+    toggleMultiSelection: selectionModule.toggleMultiSelection,
+    clearMultiSelection: selectionModule.clearMultiSelection,
+    isInMultiSelection: selectionModule.isInMultiSelection,
     // 视频片段操作方法
     duplicateTimelineItem: clipOperationsModule.duplicateTimelineItem,
     splitTimelineItemAtTime: clipOperationsModule.splitTimelineItemAtTime,
@@ -991,5 +1060,9 @@ export const useVideoStore = defineStore('video', () => {
     toggleTrackVisibilityWithHistory,
     toggleTrackMuteWithHistory,
     resizeTimelineItemWithHistory,
+    batchDeleteTimelineItems,
+    // 批量操作方法
+    startBatch: historyModule.startBatch,
+    executeBatchCommand: historyModule.executeBatchCommand,
   }
 })

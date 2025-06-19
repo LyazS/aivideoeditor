@@ -12,7 +12,43 @@
 
 采用 **Command Pattern** 结合 **History Stack** 的架构，为所有用户操作提供撤销/重做支持。
 
-### 1.2 核心接口设计
+**✅ 当前状态**：核心功能已完成，支持所有基础操作的撤销/重做。
+
+### 1.2 批量操作扩展（新增）
+
+**目标**：为复杂的多步骤操作（如自动排列）提供统一的撤销/重做支持。
+
+**设计原则**：
+- 向后兼容现有单个操作命令
+- 批量操作作为整体进行撤销/重做
+- 性能优化：减少重复的状态更新和通知
+
+**核心架构**：
+```typescript
+abstract class BaseBatchCommand implements SimpleCommand {
+  protected subCommands: SimpleCommand[] = []
+
+  async execute(): Promise<void> {
+    for (const command of this.subCommands) {
+      await command.execute()
+    }
+  }
+
+  async undo(): Promise<void> {
+    // 逆序撤销所有子命令
+    for (let i = this.subCommands.length - 1; i >= 0; i--) {
+      await this.subCommands[i].undo()
+    }
+  }
+}
+```
+
+**实现计划**：
+1. **阶段1**：实现基础批量架构和自动排列命令
+2. **阶段2**：添加批量删除功能
+3. **阶段3**：扩展到其他批量操作类型
+
+### 1.3 核心接口设计
 
 ```typescript
 // 命令接口
@@ -59,6 +95,8 @@ interface HistoryEntry {
 - `MoveTimelineItemCommand` - 移动时间轴项目位置
 - `SplitTimelineItemCommand` - 分割视频片段
 - `MergeTimelineItemCommand` - 合并视频片段
+- `DuplicateTimelineItemCommand` - 复制时间轴项目
+- `ResizeTimelineItemCommand` - 调整时间轴项目时间范围
 
 #### 属性变更操作
 - `UpdateTransformCommand` - 变换属性（位置、大小、旋转、透明度）
@@ -70,11 +108,25 @@ interface HistoryEntry {
 - `RemoveTrackCommand` - 删除轨道
 - `RenameTrackCommand` - 重命名轨道
 - `ToggleTrackVisibilityCommand` - 切换轨道可见性
+- `ToggleTrackMuteCommand` - 切换轨道静音状态
+- `AutoArrangeTrackCommand` - 单轨道自动排列
 
 #### 素材操作
 - `AddMediaItemCommand` - 添加素材
 - `RemoveMediaItemCommand` - 删除素材
 - `RenameMediaItemCommand` - 重命名素材
+
+#### 批量操作（新增）
+- `AutoArrangeTrackCommand` - 自动排列轨道上的所有项目
+- `BatchDeleteCommand` - 批量删除选中的时间轴项目
+- `BatchTransformCommand` - 批量修改多个项目的属性
+- `BatchTrackOperationCommand` - 批量轨道操作（添加/删除多个轨道）
+
+**批量操作特点**：
+- 作为单个历史记录条目，支持一键撤销/重做
+- 内部包含多个子命令，按顺序执行
+- 执行期间暂停UI更新，完成后统一刷新
+- 提供批量操作的进度反馈和结果通知
 
 ### 1.4 命令合并策略
 
@@ -98,20 +150,28 @@ class UpdateTransformCommand implements Command {
 
 ### 1.5 实施计划
 
-#### 阶段1：基础框架（1-2周）
-- [ ] 创建 `historyModule.ts`
-- [ ] 实现 Command 接口和 HistoryManager
-- [ ] 添加基础的撤销/重做UI控件
+#### 阶段1：基础框架（1-2周）✅ 已完成
+- [x] 创建 `historyModule.ts`
+- [x] 实现 Command 接口和 HistoryManager
+- [x] 添加基础的撤销/重做UI控件
 
-#### 阶段2：核心操作支持（2-3周）
-- [ ] 包装现有的时间轴操作为Command
-- [ ] 实现属性变更的Command
-- [ ] 添加命令合并逻辑
+#### 阶段2：核心操作支持（2-3周）✅ 已完成
+- [x] 包装现有的时间轴操作为Command
+- [x] 实现属性变更的Command
+- [x] 添加命令合并逻辑
 
-#### 阶段3：完整功能（1-2周）
-- [ ] 支持所有操作类型
-- [ ] 添加历史面板UI
-- [ ] 性能优化和内存管理
+#### 阶段3：完整功能（1-2周）✅ 已完成
+- [x] 支持所有操作类型
+- [x] 添加历史面板UI
+- [x] 性能优化和内存管理
+
+#### 阶段4：批量操作扩展（1-2周）✅ 已完成
+- [x] 实现 `BaseBatchCommand` 基类
+- [x] 创建 `BatchBuilder` 构建器
+- [x] 扩展 `SimpleHistoryManager` 支持批量命令
+- [x] 实现 `BatchAutoArrangeTrackCommand` 批量命令
+- [x] 添加批量删除功能
+- [x] 性能优化：暂停/恢复UI更新机制
 
 ### 1.6 素材删除的影响处理
 
@@ -502,15 +562,219 @@ class BaseCommand implements Command {
 
 ## 🚀 5. 总体时间规划
 
-| 阶段 | 功能 | 预计时间 | 优先级 |
-|------|------|----------|--------|
-| 1 | 操作记录基础框架 | 1-2周 | 高 |
-| 2 | 本地项目序列化 | 1-2周 | 高 |
-| 3 | 操作记录完整功能 | 2-3周 | 高 |
-| 4 | 后端API开发 | 2-3周 | 中 |
-| 5 | 云端项目管理 | 2-3周 | 中 |
-| 6 | 代理视频功能 | 2-4周 | 低 |
+| 阶段 | 功能 | 预计时间 | 优先级 | 状态 |
+|------|------|----------|--------|------|
+| 1 | 操作记录基础框架 | 1-2周 | 高 | ✅ 已完成 |
+| 2 | 操作记录完整功能 | 2-3周 | 高 | ✅ 已完成 |
+| 3 | 批量操作扩展 | 1-2周 | 高 | ✅ 已完成 |
+| 4 | 时间轴多选功能 | 1周 | 高 | 🚧 进行中 |
+| 5 | 本地项目序列化 | 1-2周 | 中 | 📋 待开始 |
+| 6 | 后端API开发 | 2-3周 | 中 | 📋 待开始 |
+| 7 | 云端项目管理 | 2-3周 | 中 | 📋 待开始 |
+| 8 | 代理视频功能 | 2-4周 | 低 | 📋 待开始 |
 
-**总计：10-17周**
+**当前进度**：操作记录系统核心功能已完成，正在规划时间轴多选功能
 
-建议优先实现操作记录系统，因为它是纯前端功能，可以立即提升用户体验，同时为项目持久化打好基础。
+**下一步重点**：
+1. **时间轴多选功能**（1周）- 实现Ctrl+点击多选交互和批量操作UI
+2. **本地项目序列化**（1-2周）- 实现项目的本地保存和加载功能
+
+**总计：12-20周**
+
+建议优先完成时间轴多选功能，因为这是用户体验的重要提升，且能充分利用现有的批量操作基础设施。
+
+## 🎯 6. 时间轴多选功能
+
+### 6.1 设计理念
+
+实现基于Ctrl+点击的多选交互，充分利用现有的批量操作基础设施，提供直观的多选体验。
+
+**核心原则**：
+- 按住Ctrl进入多选模式
+- 单选时保持现有逻辑（AVCanvas同步）
+- 多选时取消AVCanvas选中状态
+- 属性面板多选时显示占位内容
+
+### 6.2 状态管理设计
+
+#### 选择状态扩展
+```typescript
+// 在 selectionModule.ts 中新增
+const selectedTimelineItemIds = ref<Set<string>>(new Set()) // 多选项目ID集合
+const isMultiSelectMode = computed(() => selectedTimelineItemIds.value.size > 1)
+
+// 多选管理方法
+function addToMultiSelection(timelineItemId: string): void
+function removeFromMultiSelection(timelineItemId: string): void
+function toggleMultiSelection(timelineItemId: string): void
+function clearMultiSelection(): void
+function isInMultiSelection(timelineItemId: string): boolean
+```
+
+#### 交互逻辑
+```typescript
+// VideoClip.vue 点击处理
+function selectClip(event: MouseEvent) {
+  if (event.ctrlKey) {
+    // Ctrl+点击：多选模式
+    if (videoStore.isInMultiSelection(props.timelineItem.id)) {
+      videoStore.removeFromMultiSelection(props.timelineItem.id)
+    } else {
+      // 确保当前单选项也加入多选
+      if (videoStore.selectedTimelineItemId &&
+          !videoStore.isInMultiSelection(videoStore.selectedTimelineItemId)) {
+        videoStore.addToMultiSelection(videoStore.selectedTimelineItemId)
+      }
+      videoStore.addToMultiSelection(props.timelineItem.id)
+    }
+  } else {
+    // 普通点击：单选模式
+    videoStore.clearMultiSelection()
+    videoStore.selectTimelineItem(props.timelineItem.id)
+  }
+}
+```
+
+### 6.3 视觉反馈设计
+
+#### CSS样式层次
+```scss
+.video-clip {
+  &.selected {
+    // 单选样式（现有）
+    border: 2px solid #409eff;
+  }
+
+  &.multi-selected {
+    // 多选样式
+    border: 2px solid #67c23a;
+    box-shadow: 0 0 6px rgba(103, 194, 58, 0.3);
+  }
+
+  &.multi-selected-primary {
+    // 多选中的最后选择项（主选项）
+    border: 2px solid #409eff;
+    box-shadow: 0 0 8px rgba(64, 158, 255, 0.4);
+  }
+}
+```
+
+#### 状态同步策略
+- **单选模式**：`selectedTimelineItemId` 为主，`selectedTimelineItemIds` 为空
+- **多选模式**：`selectedTimelineItemIds` 为主，`selectedTimelineItemId` 指向最后选择的项目
+- **模式切换**：普通点击清空多选，Ctrl+点击进入多选
+
+### 6.4 属性面板适配
+
+#### 多选状态显示
+```vue
+<template>
+  <div class="properties-panel">
+    <!-- 多选状态 -->
+    <div v-if="multiSelectInfo" class="multi-select-state">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M9,20.42L2.79,14.21L5.62,11.38L9,14.77L18.88,4.88L21.71,7.71L9,20.42Z"/>
+      </svg>
+      <p>已选择 {{ multiSelectInfo.count }} 个片段</p>
+      <p class="hint">批量操作功能开发中...</p>
+
+      <!-- 选中项目列表 -->
+      <div class="selected-items-list">
+        <div v-for="item in multiSelectInfo.items" :key="item.id" class="selected-item">
+          <span class="item-name">
+            {{ videoStore.getMediaItem(item.mediaItemId)?.name || '未知素材' }}
+          </span>
+          <span class="item-type">{{ item.mediaType === 'video' ? '视频' : '图片' }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 单选状态（现有内容保持不变） -->
+    <div v-else-if="selectedTimelineItem" class="properties-content">
+      <!-- 现有的属性编辑内容 -->
+    </div>
+
+    <!-- 无选择状态 -->
+    <div v-else class="empty-state">
+      <!-- 现有的空状态内容 -->
+    </div>
+  </div>
+</template>
+```
+
+### 6.5 批量操作集成
+
+#### 工具栏按钮适配
+```typescript
+// ClipManagementToolbar.vue
+const canDelete = computed(() => {
+  return videoStore.selectedTimelineItemId || videoStore.isMultiSelectMode
+})
+
+const deleteButtonText = computed(() => {
+  if (videoStore.isMultiSelectMode) {
+    return `删除选中项目 (${videoStore.selectedTimelineItemIds.size})`
+  }
+  return '删除选中项目'
+})
+
+async function deleteSelectedClip() {
+  if (videoStore.isMultiSelectMode) {
+    // 批量删除
+    const itemIds = Array.from(videoStore.selectedTimelineItemIds)
+    const success = await videoStore.batchDeleteTimelineItems(itemIds)
+    if (success) {
+      videoStore.clearMultiSelection()
+    }
+  } else if (videoStore.selectedTimelineItemId) {
+    // 单个删除
+    await videoStore.removeTimelineItemWithHistory(videoStore.selectedTimelineItemId)
+  }
+}
+```
+
+### 6.6 实施计划
+
+#### 阶段1：核心功能（3-4天）
+- [ ] 扩展 `selectionModule` 多选状态管理
+- [ ] 修改 `VideoClip` 点击处理逻辑
+- [ ] 添加多选视觉样式
+- [ ] 修改 `PropertiesPanel` 多选占位显示
+
+#### 阶段2：功能完善（2-3天）
+- [ ] 集成批量删除到工具栏
+- [ ] 空白区域点击清除多选
+- [ ] 键盘快捷键支持（Escape清除选择）
+- [ ] 多选状态的边界情况处理
+
+#### 阶段3：用户体验优化（1-2天）
+- [ ] 多选操作提示和反馈
+- [ ] 性能优化（大量选择时）
+- [ ] 测试和bug修复
+
+**总计：1周**
+
+### 6.7 技术优势
+
+1. **充分利用现有基础设施**：
+   - 复用已实现的批量删除功能
+   - 利用现有的操作历史系统
+   - 保持与现有选择逻辑的兼容性
+
+2. **渐进式增强**：
+   - 不破坏现有单选功能
+   - 可独立开发和测试
+   - 为未来批量操作功能奠定基础
+
+3. **用户体验优先**：
+   - 直观的Ctrl+点击交互
+   - 清晰的视觉反馈
+   - 合理的状态转换逻辑
+
+### 6.8 未来扩展
+
+多选功能完成后，可以基于此架构扩展：
+- 框选多选功能
+- 批量属性编辑
+- 批量变换操作
+- 多选拖拽移动

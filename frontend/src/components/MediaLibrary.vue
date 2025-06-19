@@ -425,10 +425,12 @@ const removeMediaItem = (id: string) => {
 
 // 素材项拖拽开始
 const handleItemDragStart = (event: DragEvent, item: MediaItem) => {
+  console.log('🎯 [MediaLibrary] 开始拖拽素材:', item.name, 'isReady:', item.isReady)
+
   // 如果素材还未解析完成，阻止拖拽
   if (!item.isReady) {
     event.preventDefault()
-    console.log('素材解析中，无法拖拽:', item.name)
+    console.log('❌ [MediaLibrary] 素材解析中，无法拖拽:', item.name)
     return
   }
 
@@ -449,14 +451,21 @@ const handleItemDragStart = (event: DragEvent, item: MediaItem) => {
     },
   }
 
+  console.log('📦 [MediaLibrary] 设置拖拽数据:', dragData)
+
   event.dataTransfer!.setData('application/media-item', JSON.stringify(dragData))
   event.dataTransfer!.effectAllowed = 'copy'
 
-  console.log('开始拖拽素材:', dragData.name)
+  // 设置全局拖拽状态（类似时间轴项目拖拽）
+  ;(window as any).__mediaDragData = dragData
+
+  console.log('✅ [MediaLibrary] 拖拽数据设置完成，类型:', event.dataTransfer!.types)
 }
 
 const handleItemDragEnd = () => {
-  // 拖拽结束处理
+  console.log('🏁 [MediaLibrary] 拖拽结束，清理全局状态')
+  // 清理全局拖拽状态
+  ;(window as any).__mediaDragData = null
 }
 
 

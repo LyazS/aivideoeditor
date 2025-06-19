@@ -5,17 +5,32 @@
     </div>
 
     <div class="panel-content">
-      <div v-if="!selectedTimelineItem" class="empty-state">
+      <!-- 多选状态 -->
+      <div v-if="multiSelectInfo" class="multi-select-state">
         <svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor">
-          <path
-            d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4M11,16.5L18,9.5L16.5,8L11,13.5L7.5,10L6,11.5L11,16.5Z"
-          />
+          <path d="M9,20.42L2.79,14.21L5.62,11.38L9,14.77L18.88,4.88L21.71,7.71L9,20.42Z"/>
         </svg>
-        <p>选择片段查看属性</p>
-        <p class="hint">在时间轴上点击视频片段</p>
+        <p>已选择 {{ multiSelectInfo.count }} 个片段</p>
+        <p class="hint">批量操作功能开发中...</p>
+
+        <!-- 选中项目列表 -->
+        <div class="selected-items-list">
+          <div
+            v-for="item in multiSelectInfo.items"
+            :key="item.id"
+            class="selected-item"
+          >
+            <span class="item-name">
+              {{ videoStore.getMediaItem(item.mediaItemId)?.name || '未知素材' }}
+            </span>
+            <span class="item-type">{{ item.mediaType === 'video' ? '视频' : '图片' }}</span>
+          </div>
+        </div>
       </div>
 
-      <div v-else class="properties-content">
+      <!-- 单选状态（现有内容保持不变） -->
+      <div v-else-if="selectedTimelineItem" class="properties-content">
+        <!-- 现有的属性编辑内容 -->
         <!-- 基本信息 -->
         <div class="property-section">
           <h4>基本信息</h4>
@@ -391,6 +406,17 @@
           </div>
         </div>
       </div>
+
+      <!-- 无选择状态 -->
+      <div v-else class="empty-state">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor">
+          <path
+            d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4M11,16.5L18,9.5L16.5,8L11,13.5L7.5,10L6,11.5L11,16.5Z"
+          />
+        </svg>
+        <p>选择片段查看属性</p>
+        <p class="hint">在时间轴上点击视频片段</p>
+      </div>
     </div>
   </div>
 </template>
@@ -406,8 +432,24 @@ const videoStore = useVideoStore()
 
 // 选中的时间轴项目
 const selectedTimelineItem = computed(() => {
+  // 多选模式时返回null，显示占位内容
+  if (videoStore.isMultiSelectMode) return null
+
+  // 单选模式时返回选中项
   if (!videoStore.selectedTimelineItemId) return null
   return videoStore.getTimelineItem(videoStore.selectedTimelineItemId) || null
+})
+
+// 多选状态信息
+const multiSelectInfo = computed(() => {
+  if (!videoStore.isMultiSelectMode) return null
+
+  return {
+    count: videoStore.selectedTimelineItemIds.size,
+    items: Array.from(videoStore.selectedTimelineItemIds).map(id =>
+      videoStore.getTimelineItem(id)
+    ).filter(Boolean)
+  }
 })
 
 // 选中项目对应的素材
@@ -1190,4 +1232,64 @@ const alignVertical = (alignment: 'top' | 'middle' | 'bottom') => {
 }
 
 /* 使用通用的 align-btn 样式 */
+
+/* 多选状态样式 */
+.multi-select-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 200px;
+  text-align: center;
+  color: var(--color-text-secondary);
+  padding: var(--spacing-lg);
+}
+
+.multi-select-state svg {
+  color: var(--color-success);
+  margin-bottom: var(--spacing-md);
+}
+
+.multi-select-state p {
+  margin: var(--spacing-xs) 0;
+  font-size: var(--font-size-base);
+}
+
+.multi-select-state .hint {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-hint);
+}
+
+.selected-items-list {
+  margin-top: var(--spacing-lg);
+  width: 100%;
+  max-height: 150px;
+  overflow-y: auto;
+}
+
+.selected-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  margin-bottom: var(--spacing-xs);
+  background: var(--color-bg-quaternary);
+  border-radius: var(--border-radius-small);
+  font-size: var(--font-size-sm);
+}
+
+.selected-item .item-name {
+  flex: 1;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-right: var(--spacing-sm);
+}
+
+.selected-item .item-type {
+  color: var(--color-text-hint);
+  font-size: var(--font-size-xs);
+  flex-shrink: 0;
+}
 </style>

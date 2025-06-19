@@ -1,4 +1,4 @@
-import { ref, type Raw, type Ref } from 'vue'
+import { ref, computed, type Raw, type Ref } from 'vue'
 import type { TimelineItem } from '../../types/videoTypes'
 import { findTimelineItemBySprite } from '../utils/storeUtils'
 
@@ -15,37 +15,88 @@ type VideoVisibleSprite = {
 export function createSelectionModule(timelineItems: Ref<TimelineItem[]>, avCanvas: Ref<{ activeSprite: unknown } | null>) {
   // ==================== 状态定义 ====================
 
-  // 选择状态
-  const selectedTimelineItemId = ref<string | null>(null) // 当前选中的时间轴项ID
+  // 统一选择状态：使用单一集合管理所有选择
+  const selectedTimelineItemIds = ref<Set<string>>(new Set()) // 选中项目ID集合
   const selectedAVCanvasSprite = ref<Raw<VideoVisibleSprite> | null>(null) // 当前在AVCanvas中选中的sprite
+
+  // 计算属性：从集合派生的状态
+  const selectedTimelineItemId = computed(() => {
+    // 单选时返回唯一ID，多选或无选择时返回null
+    return selectedTimelineItemIds.value.size === 1
+      ? Array.from(selectedTimelineItemIds.value)[0]
+      : null
+  })
+
+  const isMultiSelectMode = computed(() => selectedTimelineItemIds.value.size > 1)
+  const hasSelection = computed(() => selectedTimelineItemIds.value.size > 0)
 
   // ==================== 选择管理方法 ====================
 
   /**
-   * 选择时间轴项目
+   * 统一的时间轴项目选择方法
+   * @param itemIds 要操作的项目ID数组
+   * @param mode 操作模式：'replace'替换选择，'toggle'切换选择状态
+   */
+  function selectTimelineItems(itemIds: string[], mode: 'replace' | 'toggle' = 'replace') {
+    const oldSelection = new Set(selectedTimelineItemIds.value)
+
+    if (mode === 'replace') {
+      // 替换模式：清空现有选择，设置新选择
+      selectedTimelineItemIds.value.clear()
+      itemIds.forEach(id => selectedTimelineItemIds.value.add(id))
+    } else {
+      // 切换模式：切换每个项目的选择状态
+      itemIds.forEach(id => {
+        if (selectedTimelineItemIds.value.has(id)) {
+          selectedTimelineItemIds.value.delete(id)
+        } else {
+          selectedTimelineItemIds.value.add(id)
+        }
+      })
+    }
+
+    console.log('🎯 统一选择操作:', {
+      mode,
+      itemIds,
+      oldSize: oldSelection.size,
+      newSize: selectedTimelineItemIds.value.size,
+      isMultiSelect: isMultiSelectMode.value,
+      oldSelection: Array.from(oldSelection),
+      newSelection: Array.from(selectedTimelineItemIds.value)
+    })
+
+    // 统一的AVCanvas同步逻辑
+    syncAVCanvasSelection()
+  }
+
+  /**
+   * AVCanvas选择同步逻辑
+   */
+  function syncAVCanvasSelection() {
+    if (selectedTimelineItemIds.value.size === 1) {
+      // 单选：同步到AVCanvas
+      const itemId = Array.from(selectedTimelineItemIds.value)[0]
+      const timelineItem = getTimelineItem(itemId)
+      if (timelineItem) {
+        selectAVCanvasSprite(timelineItem.sprite as any, false)
+        console.log('🔗 单选模式：同步AVCanvas sprite')
+      }
+    } else {
+      // 无选择或多选：清除AVCanvas选择
+      selectAVCanvasSprite(null, false)
+      console.log('🔗 多选/无选择模式：清除AVCanvas选择')
+    }
+  }
+
+  /**
+   * 兼容性方法：选择单个时间轴项目
    * @param timelineItemId 时间轴项目ID，null表示取消选择
    */
   function selectTimelineItem(timelineItemId: string | null) {
-    const oldSelection = selectedTimelineItemId.value
-    selectedTimelineItemId.value = timelineItemId
-
-    console.log('🎯 选择时间轴项目:', {
-      oldSelection,
-      newSelection: timelineItemId,
-      selectionChanged: oldSelection !== timelineItemId,
-    })
-
-    // 同步选择AVCanvas中的sprite
     if (timelineItemId) {
-      const timelineItem = getTimelineItem(timelineItemId)
-      if (timelineItem) {
-        selectAVCanvasSprite(timelineItem.sprite as any, false) // false表示不触发反向同步
-        console.log('🔗 同步选择AVCanvas sprite:', timelineItem.sprite)
-      }
+      selectTimelineItems([timelineItemId], 'replace')
     } else {
-      // 取消时间轴选择时，同步取消AVCanvas选择
-      selectAVCanvasSprite(null, false)
-      console.log('🔗 同步取消AVCanvas选择')
+      selectTimelineItems([], 'replace')
     }
   }
 
@@ -88,7 +139,8 @@ export function createSelectionModule(timelineItems: Ref<TimelineItem[]>, avCanv
         // 根据sprite查找对应的timelineItem
         const timelineItem = findTimelineItemBySprite(sprite, timelineItems.value)
         if (timelineItem) {
-          selectedTimelineItemId.value = timelineItem.id
+          // 使用统一API选择对应的时间轴项目
+          selectTimelineItems([timelineItem.id], 'replace')
           console.log('🔗 同步选择时间轴项目:', timelineItem.id)
         } else {
           console.warn('⚠️ 未找到对应的时间轴项目')
@@ -114,7 +166,8 @@ export function createSelectionModule(timelineItems: Ref<TimelineItem[]>, avCanv
     if (sprite) {
       const timelineItem = findTimelineItemBySprite(sprite, timelineItems.value)
       if (timelineItem) {
-        selectedTimelineItemId.value = timelineItem.id
+        // 使用统一API选择对应的时间轴项目
+        selectTimelineItems([timelineItem.id], 'replace')
         console.log('🔗 同步选择时间轴项目:', timelineItem.id)
       } else {
         console.warn('⚠️ 未找到对应的时间轴项目')
@@ -123,13 +176,59 @@ export function createSelectionModule(timelineItems: Ref<TimelineItem[]>, avCanv
     // 注意：当sprite为null时，保留时间轴选择状态
   }
 
+  // ==================== 多选管理方法 ====================
+
   /**
-   * 清除所有选择
+   * 添加项目到选择集合（兼容性方法）
+   * @param timelineItemId 时间轴项目ID
+   */
+  function addToMultiSelection(timelineItemId: string) {
+    // 如果项目未选中，则添加它
+    if (!selectedTimelineItemIds.value.has(timelineItemId)) {
+      selectTimelineItems([timelineItemId], 'toggle')
+    }
+  }
+
+  /**
+   * 从选择集合移除项目（兼容性方法）
+   * @param timelineItemId 时间轴项目ID
+   */
+  function removeFromMultiSelection(timelineItemId: string) {
+    // 如果项目已选中，则移除它
+    if (selectedTimelineItemIds.value.has(timelineItemId)) {
+      selectTimelineItems([timelineItemId], 'toggle')
+    }
+  }
+
+  /**
+   * 切换项目的选择状态（兼容性方法）
+   * @param timelineItemId 时间轴项目ID
+   */
+  function toggleMultiSelection(timelineItemId: string) {
+    selectTimelineItems([timelineItemId], 'toggle')
+  }
+
+  /**
+   * 清空多选集合（兼容性方法）
+   */
+  function clearMultiSelection() {
+    selectTimelineItems([], 'replace')
+  }
+
+  /**
+   * 检查项目是否在多选集合中
+   * @param timelineItemId 时间轴项目ID
+   * @returns 是否在多选集合中
+   */
+  function isInMultiSelection(timelineItemId: string): boolean {
+    return selectedTimelineItemIds.value.has(timelineItemId)
+  }
+
+  /**
+   * 清除所有选择（包括单选和多选）
    */
   function clearAllSelections() {
-    console.log('🧹 清除所有选择')
-    selectedTimelineItemId.value = null
-    selectAVCanvasSprite(null, false)
+    selectTimelineItems([], 'replace')
   }
 
   /**
@@ -221,8 +320,15 @@ export function createSelectionModule(timelineItems: Ref<TimelineItem[]>, avCanv
     // 状态
     selectedTimelineItemId,
     selectedAVCanvasSprite,
+    selectedTimelineItemIds,
+    isMultiSelectMode,
+    hasSelection,
 
-    // 方法
+    // 统一选择API
+    selectTimelineItems,
+    syncAVCanvasSelection,
+
+    // 兼容性方法
     selectTimelineItem,
     selectAVCanvasSprite,
     handleAVCanvasSpriteChange,
@@ -233,6 +339,13 @@ export function createSelectionModule(timelineItems: Ref<TimelineItem[]>, avCanv
     getSelectedTimelineItem,
     getSelectionSummary,
     resetToDefaults,
+
+    // 多选兼容性方法
+    addToMultiSelection,
+    removeFromMultiSelection,
+    toggleMultiSelection,
+    clearMultiSelection,
+    isInMultiSelection,
   }
 }
 

@@ -10,7 +10,9 @@
     }"
     :style="clipStyle"
     :data-media-type="mediaItem?.mediaType"
-    @mousedown="startDrag"
+    :draggable="true"
+    @dragstart="handleDragStart"
+    @dragend="handleDragEnd"
     @click="selectClip"
     @contextmenu="showContextMenu"
     @mouseenter="showTooltip"
@@ -100,6 +102,16 @@ import { useWebAVControls, isWebAVReady } from '../composables/useWebAVControls'
 import { regenerateThumbnailForTimelineItem } from '../utils/thumbnailGenerator'
 import type { TimelineItem, Track } from '../types/videoTypes'
 
+// 拖拽数据结构
+interface TimelineItemDragData {
+  type: 'timeline-item'
+  itemId: string
+  trackId: number
+  startTime: number
+  selectedItems: string[]  // 多选支持
+  dragOffset: { x: number, y: number }  // 拖拽偏移
+}
+
 interface Props {
   timelineItem: TimelineItem
   track?: Track
@@ -149,14 +161,9 @@ const menuStyle = ref({})
 const showTooltipFlag = ref(false)
 const tooltipStyle = ref({})
 
-const isDragging = ref(false)
+const isDragging = ref(false) // 保留用于原生拖拽状态
 const isResizing = ref(false)
 const resizeDirection = ref<'left' | 'right' | null>(null)
-const dragStartX = ref(0)
-const dragStartY = ref(0)
-const dragStartPosition = ref(0)
-const tempPosition = ref(0) // 临时位置，用于拖拽过程中的视觉反馈
-const tempTrackId = ref(0) // 临时轨道ID，用于拖拽过程中的视觉反馈
 const resizeStartX = ref(0)
 const resizeStartDuration = ref(0)
 const resizeStartPosition = ref(0)
@@ -169,12 +176,10 @@ const clipStyle = computed(() => {
   // 直接从timelineItem.timeRange获取，与videostore的同步机制保持一致
   const timeRange = props.timelineItem.timeRange
 
-  // 在拖拽或调整大小时使用临时值，否则使用实际值
-  const position = isDragging.value
-    ? tempPosition.value
-    : isResizing.value
-      ? tempResizePosition.value
-      : timeRange.timelineStartTime / 1000000 // 转换为秒
+  // 在调整大小时使用临时值，否则使用实际值
+  const position = isResizing.value
+    ? tempResizePosition.value
+    : timeRange.timelineStartTime / 1000000 // 转换为秒
   const duration = isResizing.value
     ? tempDuration.value
     : (timeRange.timelineEndTime - timeRange.timelineStartTime) / 1000000 // 转换为秒
@@ -198,12 +203,10 @@ const showDetails = computed(() => {
   // 直接从timelineItem.timeRange获取，与videostore的同步机制保持一致
   const timeRange = props.timelineItem.timeRange
 
-  // 在拖拽或调整大小时使用临时值，否则使用实际值
-  const position = isDragging.value
-    ? tempPosition.value
-    : isResizing.value
-      ? tempResizePosition.value
-      : timeRange.timelineStartTime / 1000000 // 转换为秒
+  // 在调整大小时使用临时值，否则使用实际值
+  const position = isResizing.value
+    ? tempResizePosition.value
+    : timeRange.timelineStartTime / 1000000 // 转换为秒
   const duration = isResizing.value
     ? tempDuration.value
     : (timeRange.timelineEndTime - timeRange.timelineStartTime) / 1000000 // 转换为秒
@@ -238,9 +241,9 @@ const isOverlapping = computed(() => {
   })
 })
 
-// 检查当前片段是否被选中
+// 统一的选择状态计算
 const isSelected = computed(() => {
-  return videoStore.selectedTimelineItemId === props.timelineItem.id
+  return videoStore.selectedTimelineItemIds.has(props.timelineItem.id)
 })
 
 // 检查轨道是否可见
@@ -267,87 +270,201 @@ function formatSpeed(rate: number): string {
   return '正常速度'
 }
 
+// ==================== 原生拖拽API事件处理 ====================
 
+function handleDragStart(event: DragEvent) {
+  console.log('🎯 [原生拖拽] dragstart事件触发:', props.timelineItem.id)
+
+  // 检查是否应该启动拖拽
+  if (event.ctrlKey) {
+    // Ctrl+拖拽暂时禁用，避免与多选冲突
+    console.log('🚫 [原生拖拽] Ctrl+拖拽被禁用')
+    event.preventDefault()
+    return
+  }
+
+  // 暂停播放
+  if (isWebAVReady() && videoStore.isPlaying) {
+    webAVControls.pause()
+  }
+
+  // 隐藏tooltip
+  hideTooltip()
+
+  // 确保当前项目被选中
+  if (!videoStore.selectedTimelineItemIds.has(props.timelineItem.id)) {
+    videoStore.selectTimelineItem(props.timelineItem.id)
+  }
+
+  // 准备拖拽数据
+  const dragData: TimelineItemDragData = {
+    type: 'timeline-item',
+    itemId: props.timelineItem.id,
+    trackId: props.timelineItem.trackId,
+    startTime: props.timelineItem.timeRange.timelineStartTime / 1000000,
+    selectedItems: Array.from(videoStore.selectedTimelineItemIds),
+    dragOffset: {
+      x: event.offsetX,
+      y: event.offsetY
+    }
+  }
+
+  console.log('📦 [原生拖拽] 设置拖拽数据:', dragData)
+
+  // 设置拖拽数据
+  event.dataTransfer!.setData('application/timeline-item', JSON.stringify(dragData))
+  event.dataTransfer!.effectAllowed = 'move'
+
+  // 设置全局拖拽状态（用于dragover事件中访问）
+  ;(window as any).__timelineDragData = dragData
+
+  // 创建拖拽预览图像
+  const dragImage = createDragPreview()
+  event.dataTransfer!.setDragImage(dragImage, dragData.dragOffset.x, dragData.dragOffset.y)
+
+  // 设置拖拽状态
+  isDragging.value = true
+}
+
+function handleDragEnd(event: DragEvent) {
+  console.log('🏁 [原生拖拽] dragend事件触发:', props.timelineItem.id)
+
+  // 清理拖拽状态
+  isDragging.value = false
+
+  // 清理全局拖拽状态
+  ;(window as any).__timelineDragData = null
+
+  // 移除拖拽预览元素（如果还存在）
+  removeDragPreview()
+}
+
+function createDragPreview(): HTMLElement {
+  const selectedCount = videoStore.selectedTimelineItemIds.size
+  const preview = document.createElement('div')
+
+  preview.className = 'timeline-drag-preview'
+
+  // 计算预览宽度（基于实际clip宽度或固定最小宽度）
+  const clipWidth = Math.max(120, Math.min(200, timelineDuration.value * 20)) // 基于时长计算宽度
+
+  preview.style.cssText = `
+    position: fixed;
+    top: -1000px;
+    left: -1000px;
+    width: ${clipWidth}px;
+    height: 40px;
+    background: linear-gradient(135deg, rgba(255, 165, 0, 0.9), rgba(255, 107, 53, 0.9));
+    border: 2px solid #ff6b35;
+    border-radius: 6px;
+    pointer-events: none;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: bold;
+    font-size: 11px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(2px);
+  `
+
+  // 创建内容容器
+  const content = document.createElement('div')
+  content.style.cssText = `
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    text-align: center;
+    max-width: 100%;
+    overflow: hidden;
+  `
+
+  if (selectedCount > 1) {
+    // 多选预览
+    const countLabel = document.createElement('div')
+    countLabel.textContent = `${selectedCount} 个项目`
+    countLabel.style.cssText = `
+      font-size: 12px;
+      font-weight: bold;
+    `
+
+    const detailLabel = document.createElement('div')
+    detailLabel.textContent = '批量移动'
+    detailLabel.style.cssText = `
+      font-size: 9px;
+      opacity: 0.8;
+    `
+
+    content.appendChild(countLabel)
+    content.appendChild(detailLabel)
+  } else {
+    // 单选预览
+    const nameLabel = document.createElement('div')
+    const clipName = mediaItem.value?.name || 'Clip'
+    nameLabel.textContent = clipName.length > 15 ? clipName.substring(0, 12) + '...' : clipName
+    nameLabel.style.cssText = `
+      font-size: 11px;
+      font-weight: bold;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: ${clipWidth - 20}px;
+    `
+
+    const durationLabel = document.createElement('div')
+    durationLabel.textContent = formatDuration(timelineDuration.value)
+    durationLabel.style.cssText = `
+      font-size: 9px;
+      opacity: 0.8;
+    `
+
+    content.appendChild(nameLabel)
+    content.appendChild(durationLabel)
+  }
+
+  preview.appendChild(content)
+  document.body.appendChild(preview)
+
+  // 设置清理定时器
+  setTimeout(() => {
+    removeDragPreview()
+  }, 100)
+
+  return preview
+}
+
+function removeDragPreview() {
+  const preview = document.querySelector('.timeline-drag-preview')
+  if (preview && document.body.contains(preview)) {
+    document.body.removeChild(preview)
+  }
+}
+
+// ==================== 点击选择事件处理 ====================
 
 function selectClip(event: MouseEvent) {
   // 如果正在拖拽或调整大小，不处理选中
   if (isDragging.value || isResizing.value) return
 
-  videoStore.selectTimelineItem(props.timelineItem.id)
+  console.log('🖱️ selectClip被调用:', {
+    ctrlKey: event.ctrlKey,
+    itemId: props.timelineItem.id,
+    currentSelections: Array.from(videoStore.selectedTimelineItemIds)
+  })
+
+  if (event.ctrlKey) {
+    // Ctrl+点击：切换选择状态
+    console.log('🔄 执行toggle选择')
+    videoStore.selectTimelineItems([props.timelineItem.id], 'toggle')
+  } else {
+    // 普通点击：替换选择
+    console.log('🔄 执行replace选择')
+    videoStore.selectTimelineItems([props.timelineItem.id], 'replace')
+  }
+
   event.stopPropagation()
-}
-
-function startDrag(event: MouseEvent) {
-  if (isResizing.value) return
-
-  // 暂停播放以便进行编辑
-  if (isWebAVReady() && videoStore.isPlaying) {
-    webAVControls.pause()
-  }
-
-  // 选中当前片段
-  videoStore.selectTimelineItem(props.timelineItem.id)
-
-  isDragging.value = true
-  dragStartX.value = event.clientX
-  dragStartY.value = event.clientY
-  dragStartPosition.value = props.timelineItem.timeRange.timelineStartTime / 1000000 // 转换为秒
-  tempPosition.value = props.timelineItem.timeRange.timelineStartTime / 1000000 // 初始化临时位置
-  tempTrackId.value = props.timelineItem.trackId // 初始化临时轨道ID
-
-  document.addEventListener('mousemove', handleDrag)
-  document.addEventListener('mouseup', stopDrag)
-
-  event.preventDefault()
-}
-
-function handleDrag(event: MouseEvent) {
-  if (!isDragging.value) return
-
-  const deltaX = event.clientX - dragStartX.value
-  const deltaY = event.clientY - dragStartY.value
-
-  // 计算新的时间位置
-  const currentPixel = videoStore.timeToPixel(dragStartPosition.value, props.timelineWidth)
-  const newPixel = currentPixel + deltaX
-  const newTime = videoStore.pixelToTime(newPixel, props.timelineWidth)
-
-  const newPosition = Math.max(0, newTime)
-  const maxPosition = props.totalDuration - timelineDuration.value
-
-  // 计算新的轨道ID（基于Y坐标变化）
-  const newTrackId = getTrackIdFromDelta(deltaY)
-
-  // 只更新临时位置和轨道，不触发 store 更新
-  tempPosition.value = Math.min(newPosition, maxPosition)
-  tempTrackId.value = newTrackId
-}
-
-// 根据Y坐标变化确定目标轨道
-function getTrackIdFromDelta(deltaY: number): number {
-  const tracks = videoStore.tracks
-  const currentTrackIndex = tracks.findIndex((t) => t.id === props.timelineItem.trackId)
-
-  if (currentTrackIndex === -1) return props.timelineItem.trackId
-
-  // 计算轨道变化（每80px为一个轨道高度）
-  const trackChange = Math.round(deltaY / 80)
-  const newTrackIndex = Math.max(0, Math.min(currentTrackIndex + trackChange, tracks.length - 1))
-
-  return tracks[newTrackIndex].id
-}
-
-function stopDrag() {
-  if (isDragging.value) {
-    // 只在拖拽结束时更新 store，避免拖拽过程中的频繁更新
-    const newTrackId =
-      tempTrackId.value !== props.timelineItem.trackId ? tempTrackId.value : undefined
-    emit('update-position', props.timelineItem.id, tempPosition.value, newTrackId)
-  }
-
-  isDragging.value = false
-  document.removeEventListener('mousemove', handleDrag)
-  document.removeEventListener('mouseup', stopDrag)
 }
 
 function startResize(direction: 'left' | 'right', event: MouseEvent) {
@@ -355,6 +472,9 @@ function startResize(direction: 'left' | 'right', event: MouseEvent) {
   if (isWebAVReady() && videoStore.isPlaying) {
     webAVControls.pause()
   }
+
+  // 隐藏tooltip
+  hideTooltip()
 
   isResizing.value = true
   resizeDirection.value = direction
@@ -603,8 +723,6 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
-  document.removeEventListener('mousemove', handleDrag)
-  document.removeEventListener('mouseup', stopDrag)
   document.removeEventListener('mousemove', handleResize)
   document.removeEventListener('mouseup', stopResize)
 })
@@ -651,6 +769,8 @@ onUnmounted(() => {
   box-shadow: 0 2px 12px rgba(255, 107, 53, 0.6);
 }
 
+/* 移除多选特定样式，现在使用统一的选择样式 */
+
 /* 隐藏轨道上的clip样式 */
 .video-clip.track-hidden {
   opacity: 0.4;
@@ -670,6 +790,8 @@ onUnmounted(() => {
   border-color: #cc5529;
   box-shadow: 0 2px 12px rgba(204, 85, 41, 0.4);
 }
+
+/* 隐藏轨道上的选择样式现在统一使用 .selected 类 */
 
 /* 隐藏轨道上的clip内容也要调整透明度 */
 .video-clip.track-hidden .clip-name,

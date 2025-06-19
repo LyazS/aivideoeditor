@@ -113,6 +113,105 @@ export interface SimpleCommand {
 }
 
 /**
+ * 批量命令基类
+ * 支持将多个单个命令组合为一个批量操作，统一执行和撤销
+ */
+export abstract class BaseBatchCommand implements SimpleCommand {
+  public readonly id: string
+  public readonly description: string
+  protected subCommands: SimpleCommand[] = []
+
+  constructor(description: string) {
+    this.id = this.generateCommandId()
+    this.description = description
+  }
+
+  /**
+   * 批量执行：依次执行所有子命令
+   */
+  async execute(): Promise<void> {
+    for (const command of this.subCommands) {
+      await command.execute()
+    }
+  }
+
+  /**
+   * 批量撤销：逆序撤销所有子命令
+   */
+  async undo(): Promise<void> {
+    for (let i = this.subCommands.length - 1; i >= 0; i--) {
+      await this.subCommands[i].undo()
+    }
+  }
+
+  /**
+   * 添加子命令
+   */
+  protected addCommand(command: SimpleCommand): void {
+    this.subCommands.push(command)
+  }
+
+  /**
+   * 获取批量操作摘要
+   */
+  getBatchSummary(): string {
+    return `${this.description} (${this.subCommands.length}个操作)`
+  }
+
+  /**
+   * 生成命令ID
+   */
+  private generateCommandId(): string {
+    return `batch_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`
+  }
+}
+
+/**
+ * 批量操作构建器
+ * 提供链式调用方式构建批量命令
+ */
+export class BatchBuilder {
+  private commands: SimpleCommand[] = []
+  private description: string
+
+  constructor(description: string) {
+    this.description = description
+  }
+
+  /**
+   * 添加命令到批量操作（支持链式调用）
+   */
+  addCommand(command: SimpleCommand): BatchBuilder {
+    this.commands.push(command)
+    return this
+  }
+
+  /**
+   * 构建批量命令
+   */
+  build(): GenericBatchCommand {
+    return new GenericBatchCommand(this.description, this.commands)
+  }
+
+  /**
+   * 获取命令数量
+   */
+  getCommandCount(): number {
+    return this.commands.length
+  }
+}
+
+/**
+ * 通用批量命令实现
+ */
+export class GenericBatchCommand extends BaseBatchCommand {
+  constructor(description: string, commands: SimpleCommand[]) {
+    super(description)
+    this.subCommands = [...commands]
+  }
+}
+
+/**
  * 简单历史管理器
  * 阶段1的最简实现，管理命令历史栈和撤销/重做逻辑
  */
@@ -257,6 +356,51 @@ class SimpleHistoryManager {
   }
 
   /**
+   * 开始批量操作
+   * @param description 批量操作描述
+   * @returns 批量操作构建器
+   */
+  startBatch(description: string): BatchBuilder {
+    return new BatchBuilder(description)
+  }
+
+  /**
+   * 执行批量命令
+   * @param batchCommand 要执行的批量命令
+   */
+  async executeBatchCommand(batchCommand: BaseBatchCommand): Promise<void> {
+    try {
+      await batchCommand.execute()
+
+      // 添加到历史记录（作为单个条目）
+      if (this.currentIndex < this.commands.length - 1) {
+        this.commands.splice(this.currentIndex + 1)
+      }
+
+      this.commands.push(batchCommand)
+      this.currentIndex++
+
+      console.log(`✅ 批量命令已执行: ${batchCommand.getBatchSummary()}`)
+
+      // 显示批量操作成功通知
+      this.notificationManager.success(
+        '批量操作完成',
+        batchCommand.getBatchSummary()
+      )
+
+    } catch (error) {
+      console.error(`❌ 批量命令执行失败: ${batchCommand.description}`, error)
+
+      this.notificationManager.error(
+        '批量操作失败',
+        `${batchCommand.description}执行失败。${error instanceof Error ? error.message : '未知错误'}`
+      )
+
+      throw error
+    }
+  }
+
+  /**
    * 获取历史记录摘要（用于调试）
    * @returns 历史记录摘要
    */
@@ -270,7 +414,9 @@ class SimpleHistoryManager {
         id: cmd.id,
         description: cmd.description,
         isCurrent: index === this.currentIndex,
-        isExecuted: index <= this.currentIndex
+        isExecuted: index <= this.currentIndex,
+        isBatch: cmd instanceof BaseBatchCommand,
+        batchSummary: cmd instanceof BaseBatchCommand ? cmd.getBatchSummary() : undefined
       }))
     }
   }
@@ -350,6 +496,24 @@ export function createHistoryModule() {
     return historyManager.getHistorySummary()
   }
 
+  /**
+   * 开始批量操作
+   * @param description 批量操作描述
+   * @returns 批量操作构建器
+   */
+  function startBatch(description: string): BatchBuilder {
+    return historyManager.startBatch(description)
+  }
+
+  /**
+   * 执行批量命令
+   * @param batchCommand 要执行的批量命令
+   */
+  async function executeBatchCommand(batchCommand: BaseBatchCommand): Promise<void> {
+    await historyManager.executeBatchCommand(batchCommand)
+    updateReactiveState()
+  }
+
   // ==================== 导出接口 ====================
 
   return {
@@ -364,6 +528,10 @@ export function createHistoryModule() {
     redo,
     clear,
     getHistorySummary,
+
+    // 批量操作方法
+    startBatch,
+    executeBatchCommand,
 
     // 通知管理方法
     showNotification: (notification: Omit<Notification, 'id'>) => notificationManager.show(notification),
