@@ -98,11 +98,13 @@
 import { ref, markRaw } from 'vue'
 import { useVideoStore } from '../stores/videoStore'
 import { useWebAVControls } from '../composables/useWebAVControls'
+import { useDialogs } from '../composables/useDialogs'
 import type { MediaItem } from '../types/videoTypes'
 import { generateThumbnailForMediaItem } from '../utils/thumbnailGenerator'
 
 const videoStore = useVideoStore()
 const webAVControls = useWebAVControls()
+const dialogs = useDialogs()
 const fileInput = ref<HTMLInputElement>()
 const isDragOver = ref(false)
 
@@ -151,7 +153,7 @@ const processFiles = async (files: File[]) => {
   )
 
   if (mediaFiles.length === 0) {
-    alert('请选择视频或图片文件')
+    dialogs.showFileTypeError()
     return
   }
 
@@ -391,12 +393,7 @@ const removeMediaItem = (id: string) => {
       (timelineItem) => timelineItem.mediaItemId === id
     )
 
-    let confirmMessage = `确定要删除素材 "${item.name}" 吗？`
-    if (relatedTimelineItems.length > 0) {
-      confirmMessage += `\n\n注意：这将同时删除时间轴上的 ${relatedTimelineItems.length} 个相关片段。`
-    }
-
-    if (confirm(confirmMessage)) {
+    if (dialogs.confirmMediaDelete(item.name, relatedTimelineItems.length)) {
       console.log(`🗑️ 准备删除素材库项目: ${item.name} (ID: ${id})`)
 
       // 清理URL

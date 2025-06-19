@@ -23,6 +23,7 @@ import { createSelectionModule } from './modules/selectionModule'
 import { createTimelineModule } from './modules/timelineModule'
 import { createClipOperationsModule } from './modules/clipOperationsModule'
 import { createHistoryModule } from './modules/historyModule'
+import { createNotificationModule } from './modules/notificationModule'
 import { AddTimelineItemCommand, RemoveTimelineItemCommand, MoveTimelineItemCommand, UpdateTransformCommand, SplitTimelineItemCommand, DuplicateTimelineItemCommand, AddTrackCommand, RemoveTrackCommand, RenameTrackCommand, AutoArrangeTrackCommand, ToggleTrackVisibilityCommand, ToggleTrackMuteCommand, ResizeTimelineItemCommand } from './modules/commands/timelineCommands'
 import { BatchDeleteCommand, BatchAutoArrangeTrackCommand, BatchUpdatePropertiesCommand } from './modules/commands/batchCommands'
 import type { MediaItem, TimelineItem } from '../types/videoTypes'
@@ -72,8 +73,11 @@ export const useVideoStore = defineStore('video', () => {
     trackModule,
   )
 
+  // 创建通知管理模块
+  const notificationModule = createNotificationModule()
+
   // 创建历史管理模块
-  const historyModule = createHistoryModule()
+  const historyModule = createHistoryModule(notificationModule)
 
   // ==================== 双向数据同步函数 ====================
 
@@ -1037,14 +1041,14 @@ export const useVideoStore = defineStore('video', () => {
     clearHistory: historyModule.clear,
     getHistorySummary: historyModule.getHistorySummary,
     // 通知管理方法和状态
-    notifications: historyModule.notifications,
-    showNotification: historyModule.showNotification,
-    removeNotification: historyModule.removeNotification,
-    clearNotifications: historyModule.clearNotifications,
-    showSuccess: historyModule.showSuccess,
-    showError: historyModule.showError,
-    showWarning: historyModule.showWarning,
-    showInfo: historyModule.showInfo,
+    notifications: notificationModule.notifications,
+    showNotification: notificationModule.showNotification,
+    removeNotification: notificationModule.removeNotification,
+    clearNotifications: notificationModule.clearNotifications,
+    showSuccess: notificationModule.showSuccess,
+    showError: notificationModule.showError,
+    showWarning: notificationModule.showWarning,
+    showInfo: notificationModule.showInfo,
     addTimelineItemWithHistory,
     removeTimelineItemWithHistory,
     moveTimelineItemWithHistory,

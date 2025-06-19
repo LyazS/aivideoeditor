@@ -169,6 +169,7 @@ import { useWebAVControls, waitForWebAVReady, isWebAVReady } from '../composable
 import { usePlaybackControls } from '../composables/usePlaybackControls'
 import { getDragPreviewManager } from '../composables/useDragPreview'
 import { useDragUtils } from '../composables/useDragUtils'
+import { useDialogs } from '../composables/useDialogs'
 import { VideoVisibleSprite } from '../utils/VideoVisibleSprite'
 import { ImageVisibleSprite } from '../utils/ImageVisibleSprite'
 import { createSpriteFromMediaItem } from '../utils/spriteFactory'
@@ -197,6 +198,7 @@ const webAVControls = useWebAVControls()
 const { pauseForEditing } = usePlaybackControls()
 const dragPreviewManager = getDragPreviewManager()
 const dragUtils = useDragUtils()
+const dialogs = useDialogs()
 
 const timelineBody = ref<HTMLElement>()
 const timelineWidth = ref(800)
@@ -229,7 +231,7 @@ async function addNewTrack() {
 
 async function removeTrack(trackId: number) {
   if (tracks.value.length <= 1) {
-    alert('至少需要保留一个轨道')
+    dialogs.showMinTrackWarning()
     return
   }
 
@@ -538,7 +540,7 @@ async function handleDrop(event: DragEvent) {
     }
     default:
       console.log('❌ [Timeline] 没有检测到有效的拖拽数据')
-      alert('请先将视频或图片文件导入到素材库，然后从素材库拖拽到时间轴')
+      dialogs.showInvalidDragWarning()
       break
   }
 
@@ -618,7 +620,7 @@ async function handleMediaItemDrop(event: DragEvent, mediaItem: MediaItemDragDat
     await createMediaClipFromMediaItem(mediaItem, dropTime, targetTrackId)
   } catch (error) {
     console.error('Failed to parse media item data:', error)
-    alert('拖拽数据格式错误')
+    dialogs.showDragDataError()
   }
 }
 
@@ -816,7 +818,7 @@ async function createMediaClipFromMediaItem(
     console.log(`✅ 时间轴项目创建完成: ${timelineItem.id}`)
   } catch (error) {
     console.error('创建时间轴项目失败:', error)
-    alert(`创建时间轴项目失败: ${(error as Error).message}`)
+    dialogs.showOperationError('创建时间轴项目', (error as Error).message)
   }
 }
 
