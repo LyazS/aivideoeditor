@@ -173,6 +173,11 @@ import { VideoVisibleSprite } from '../utils/VideoVisibleSprite'
 import { ImageVisibleSprite } from '../utils/ImageVisibleSprite'
 import { webavToProjectCoords } from '../utils/coordinateTransform'
 import {
+  calculatePixelsPerSecond,
+  calculateVisibleTimeRange,
+  formatTime as formatTimeUtil
+} from '../stores/utils/storeUtils'
+import {
   generateVideoThumbnail,
   generateImageThumbnail,
   canvasToBlob,
@@ -316,7 +321,7 @@ function cancelRename() {
 // 网格线
 const gridLines = computed(() => {
   const lines = []
-  const pixelsPerSecond = (timelineWidth.value * videoStore.zoomLevel) / videoStore.totalDuration
+  const pixelsPerSecond = calculatePixelsPerSecond(timelineWidth.value, videoStore.totalDuration, videoStore.zoomLevel)
 
   // 根据缩放级别决定网格间隔
   let interval = 5 // 默认每5秒一条网格线
@@ -337,8 +342,12 @@ const gridLines = computed(() => {
   }
 
   // 计算可见时间范围
-  const startTime = videoStore.scrollOffset / pixelsPerSecond
-  const endTime = startTime + timelineWidth.value / pixelsPerSecond
+  const { startTime, endTime } = calculateVisibleTimeRange(
+    timelineWidth.value,
+    videoStore.totalDuration,
+    videoStore.zoomLevel,
+    videoStore.scrollOffset
+  )
 
   // 生成主网格线（秒级别）
   const startLine = Math.floor(startTime / interval) * interval
@@ -1214,12 +1223,9 @@ function showPositionPreview(dropTime: number, targetTrackId: number, dragData: 
     transition: opacity 0.2s ease;
   `
 
-  // 格式化时间显示
+  // 格式化时间显示（使用统一工具函数）
   function formatTime(seconds: number): string {
-    const mins = Math.floor(seconds / 60)
-    const secs = Math.floor(seconds % 60)
-    const ms = Math.floor((seconds % 1) * 100)
-    return `${mins}:${secs.toString().padStart(2, '0')}.${ms.toString().padStart(2, '0')}`
+    return formatTimeUtil(seconds, 'milliseconds')
   }
 
   // 获取轨道信息

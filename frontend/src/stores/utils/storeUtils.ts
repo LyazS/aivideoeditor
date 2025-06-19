@@ -112,6 +112,99 @@ export function alignTimeToFrame(time: number, frameRate: number): number {
 }
 
 /**
+ * 计算每秒像素数
+ * @param timelineWidth 时间轴宽度（像素）
+ * @param totalDuration 总时长（秒）
+ * @param zoomLevel 缩放级别
+ * @returns 每秒像素数
+ */
+export function calculatePixelsPerSecond(
+  timelineWidth: number,
+  totalDuration: number,
+  zoomLevel: number,
+): number {
+  return (timelineWidth * zoomLevel) / totalDuration
+}
+
+/**
+ * 计算可见时间范围
+ * @param timelineWidth 时间轴宽度（像素）
+ * @param totalDuration 总时长（秒）
+ * @param zoomLevel 缩放级别
+ * @param scrollOffset 滚动偏移量（像素）
+ * @param maxVisibleDuration 最大可见时长（秒）
+ * @returns 可见时间范围 { startTime, endTime }
+ */
+export function calculateVisibleTimeRange(
+  timelineWidth: number,
+  totalDuration: number,
+  zoomLevel: number,
+  scrollOffset: number,
+  maxVisibleDuration?: number,
+): { startTime: number; endTime: number } {
+  const pixelsPerSecond = calculatePixelsPerSecond(timelineWidth, totalDuration, zoomLevel)
+  const startTime = scrollOffset / pixelsPerSecond
+  const calculatedEndTime = startTime + timelineWidth / pixelsPerSecond
+  const endTime = maxVisibleDuration ? Math.min(calculatedEndTime, maxVisibleDuration) : calculatedEndTime
+
+  return { startTime, endTime }
+}
+
+/**
+ * 格式化时间显示
+ * @param seconds 时间（秒）
+ * @param precision 显示精度：'frames' | 'milliseconds' | 'seconds'
+ * @param frameRate 帧率（当precision为'frames'时需要）
+ * @returns 格式化的时间字符串
+ */
+export function formatTime(
+  seconds: number,
+  precision: 'frames' | 'milliseconds' | 'seconds' = 'seconds',
+  frameRate: number = 30,
+): string {
+  const mins = Math.floor(seconds / 60)
+  const secs = Math.floor(seconds % 60)
+
+  switch (precision) {
+    case 'frames': {
+      const frames = Math.floor((seconds % 1) * frameRate)
+      return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}:${frames.toString().padStart(2, '0')}`
+    }
+    case 'milliseconds': {
+      const ms = Math.floor((seconds % 1) * 100)
+      return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}.${ms.toString().padStart(2, '0')}`
+    }
+    case 'seconds':
+    default:
+      return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
+  }
+}
+
+/**
+ * 根据缩放级别自动选择时间显示精度
+ * @param seconds 时间（秒）
+ * @param pixelsPerSecond 每秒像素数
+ * @param frameRate 帧率
+ * @returns 格式化的时间字符串
+ */
+export function formatTimeWithAutoPrecision(
+  seconds: number,
+  pixelsPerSecond: number,
+  frameRate: number = 30,
+): string {
+  if (pixelsPerSecond >= 300) {
+    // 高缩放级别：显示帧
+    return formatTime(seconds, 'frames', frameRate)
+  } else if (pixelsPerSecond >= 100) {
+    // 中等缩放级别：显示毫秒
+    return formatTime(seconds, 'milliseconds')
+  } else {
+    // 低缩放级别：只显示分秒
+    return formatTime(seconds, 'seconds')
+  }
+}
+
+/**
  * 将时间转换为像素位置（考虑缩放和滚动）
  * @param time 时间（秒）
  * @param timelineWidth 时间轴宽度（像素）

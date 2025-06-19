@@ -14,6 +14,10 @@
 - `timeToPixel(time, timelineWidth, totalDuration, zoomLevel, scrollOffset)` - 将时间转换为像素位置
 - `pixelToTime(pixel, timelineWidth, totalDuration, zoomLevel, scrollOffset)` - 将像素位置转换为时间
 - `expandTimelineIfNeeded(targetTime, timelineDuration)` - 动态扩展时间轴长度
+- `calculatePixelsPerSecond(timelineWidth, totalDuration, zoomLevel)` - 计算每秒像素数
+- `calculateVisibleTimeRange(timelineWidth, totalDuration, zoomLevel, scrollOffset, maxVisibleDuration?)` - 计算可见时间范围
+- `formatTime(seconds, precision?, frameRate?)` - 格式化时间显示
+- `formatTimeWithAutoPrecision(seconds, pixelsPerSecond, frameRate?)` - 根据缩放级别自动选择时间显示精度
 
 ### 查找工具
 
@@ -34,6 +38,10 @@ import {
   expandTimelineIfNeeded,
   getTimelineItemAtTime,
   autoArrangeTimelineItems,
+  calculatePixelsPerSecond,
+  calculateVisibleTimeRange,
+  formatTime,
+  formatTimeWithAutoPrecision,
 } from './utils/storeUtils'
 
 // 在 store 中使用

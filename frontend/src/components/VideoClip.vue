@@ -103,6 +103,7 @@ import { regenerateThumbnailForTimelineItem } from '../utils/thumbnailGenerator'
 import { useDragUtils } from '../composables/useDragUtils'
 import { usePlaybackControls } from '../composables/usePlaybackControls'
 import { getDragPreviewManager } from '../composables/useDragPreview'
+import { formatTime as formatTimeUtil } from '../stores/utils/storeUtils'
 import type { TimelineItem, Track } from '../types/videoTypes'
 
 interface Props {
@@ -249,9 +250,8 @@ const isTrackVisible = computed(() => {
 })
 
 function formatDuration(seconds: number): string {
-  const mins = Math.floor(seconds / 60)
-  const secs = Math.floor(seconds % 60)
-  return `${mins}:${secs.toString().padStart(2, '0')}`
+  // 使用统一的时间格式化工具函数
+  return formatTimeUtil(seconds, 'seconds')
 }
 
 function formatSpeed(rate: number): string {

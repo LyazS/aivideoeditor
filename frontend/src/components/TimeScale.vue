@@ -32,6 +32,12 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useVideoStore } from '../stores/videoStore'
 import { useWebAVControls } from '../composables/useWebAVControls'
 import { usePlaybackControls } from '../composables/usePlaybackControls'
+import {
+  calculatePixelsPerSecond,
+  calculateVisibleTimeRange,
+  formatTimeWithAutoPrecision,
+  alignTimeToFrame as alignTimeToFrameUtil
+} from '../stores/utils/storeUtils'
 
 const videoStore = useVideoStore()
 const webAVControls = useWebAVControls()
@@ -53,7 +59,7 @@ interface TimeMark {
 const timeMarks = computed((): TimeMark[] => {
   const marks: TimeMark[] = []
   const duration = videoStore.totalDuration
-  const pixelsPerSecond = (containerWidth.value * videoStore.zoomLevel) / duration
+  const pixelsPerSecond = calculatePixelsPerSecond(containerWidth.value, duration, videoStore.zoomLevel)
 
   // 根据缩放级别决定刻度间隔
   let majorInterval = 10 // 主刻度间隔（秒）
@@ -100,9 +106,13 @@ const timeMarks = computed((): TimeMark[] => {
   }
 
   // 计算可见时间范围（受最大可见范围限制）
-  const startTime = videoStore.scrollOffset / pixelsPerSecond
-  const calculatedEndTime = startTime + containerWidth.value / pixelsPerSecond
-  const endTime = Math.min(calculatedEndTime, videoStore.maxVisibleDuration)
+  const { startTime, endTime } = calculateVisibleTimeRange(
+    containerWidth.value,
+    duration,
+    videoStore.zoomLevel,
+    videoStore.scrollOffset,
+    videoStore.maxVisibleDuration
+  )
 
   // 生成刻度标记（基于可见范围，不受当前内容长度限制）
 
@@ -146,10 +156,9 @@ const timeMarks = computed((): TimeMark[] => {
   return marks
 })
 
-// 将时间对齐到帧边界
+// 将时间对齐到帧边界（使用统一工具函数）
 function alignTimeToFrame(time: number): number {
-  const frameDuration = 1 / videoStore.frameRate
-  return Math.floor(time / frameDuration) * frameDuration
+  return alignTimeToFrameUtil(time, videoStore.frameRate)
 }
 
 // 播放头位置 - 始终对齐到帧的左边界
@@ -162,24 +171,9 @@ const playheadPosition = computed(() => {
 })
 
 function formatTime(seconds: number): string {
-  const mins = Math.floor(seconds / 60)
-  const secs = Math.floor(seconds % 60)
-  const frames = Math.floor((seconds % 1) * videoStore.frameRate)
-
-  // 根据缩放级别决定显示精度
-  const pixelsPerSecond = (containerWidth.value * videoStore.zoomLevel) / videoStore.totalDuration
-
-  if (pixelsPerSecond >= 300) {
-    // 高缩放级别：显示帧
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}:${frames.toString().padStart(2, '0')}`
-  } else if (pixelsPerSecond >= 100) {
-    // 中等缩放级别：显示毫秒
-    const ms = Math.floor((seconds % 1) * 100)
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}.${ms.toString().padStart(2, '0')}`
-  } else {
-    // 低缩放级别：只显示分秒
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
-  }
+  // 使用统一的时间格式化工具函数
+  const pixelsPerSecond = calculatePixelsPerSecond(containerWidth.value, videoStore.totalDuration, videoStore.zoomLevel)
+  return formatTimeWithAutoPrecision(seconds, pixelsPerSecond, videoStore.frameRate)
 }
 
 function updateContainerWidth() {

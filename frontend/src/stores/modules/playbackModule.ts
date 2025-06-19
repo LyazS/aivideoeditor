@@ -1,5 +1,5 @@
 import { ref, computed } from 'vue'
-import { alignTimeToFrame } from '../utils/storeUtils'
+import { alignTimeToFrame, formatTime as formatTimeUtil } from '../utils/storeUtils'
 
 /**
  * 播放控制管理模块
@@ -21,14 +21,16 @@ export function createPlaybackModule(frameRate: { value: number }) {
   const formattedCurrentTime = computed(() => {
     const time = currentTime.value
     const hours = Math.floor(time / 3600)
-    const minutes = Math.floor((time % 3600) / 60)
-    const seconds = Math.floor(time % 60)
-    const milliseconds = Math.floor((time % 1) * 1000)
 
     if (hours > 0) {
+      // 如果有小时，显示完整的时:分:秒.毫秒格式
+      const minutes = Math.floor((time % 3600) / 60)
+      const seconds = Math.floor(time % 60)
+      const milliseconds = Math.floor((time % 1) * 1000)
       return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}.${milliseconds.toString().padStart(3, '0')}`
     } else {
-      return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}.${milliseconds.toString().padStart(3, '0')}`
+      // 使用统一的时间格式化工具函数（分:秒.毫秒格式）
+      return formatTimeUtil(time, 'milliseconds')
     }
   })
 
