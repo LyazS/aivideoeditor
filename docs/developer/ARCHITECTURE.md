@@ -47,20 +47,25 @@ AI视频编辑器是一个基于现代Web技术栈的视频编辑应用，采用
 ### 状态管理模块
 
 #### WebAV模块 (webavModule.ts)
-**职责**: WebAV引擎的生命周期管理
+**职责**: WebAV引擎的状态管理（实际操作由useWebAVControls处理）
 ```typescript
 interface WebAVModule {
   // 状态
   avCanvas: Ref<AVCanvas | null>
   isWebAVReady: Ref<boolean>
   webAVError: Ref<string | null>
-  
-  // 方法
+
+  // 状态管理方法
   setAVCanvas(canvas: AVCanvas | null): void
   setWebAVReady(ready: boolean): void
   setWebAVError(error: string | null): void
-  initializeWebAV(element: HTMLCanvasElement, options: any): Promise<boolean>
-  destroyWebAV(): void
+  clearWebAVState(): void
+
+  // 工具方法
+  isWebAVAvailable(): boolean
+  getWebAVSummary(): object
+  addSprite(sprite: unknown): boolean
+  removeSprite(sprite: unknown): boolean
 }
 ```
 

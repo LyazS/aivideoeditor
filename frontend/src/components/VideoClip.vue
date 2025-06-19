@@ -98,19 +98,12 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useVideoStore } from '../stores/videoStore'
-import { useWebAVControls, isWebAVReady } from '../composables/useWebAVControls'
+import { useWebAVControls } from '../composables/useWebAVControls'
 import { regenerateThumbnailForTimelineItem } from '../utils/thumbnailGenerator'
+import { useDragUtils } from '../composables/useDragUtils'
+import { usePlaybackControls } from '../composables/usePlaybackControls'
+import { getDragPreviewManager } from '../composables/useDragPreview'
 import type { TimelineItem, Track } from '../types/videoTypes'
-
-// 拖拽数据结构
-interface TimelineItemDragData {
-  type: 'timeline-item'
-  itemId: string
-  trackId: number
-  startTime: number
-  selectedItems: string[]  // 多选支持
-  dragOffset: { x: number, y: number }  // 拖拽偏移
-}
 
 interface Props {
   timelineItem: TimelineItem
@@ -128,6 +121,9 @@ const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
 const videoStore = useVideoStore()
 const webAVControls = useWebAVControls()
+const dragUtils = useDragUtils()
+const { pauseForEditing } = usePlaybackControls()
+const dragPreviewManager = getDragPreviewManager()
 
 // 获取对应的MediaItem
 const mediaItem = computed(() => {
@@ -283,44 +279,27 @@ function handleDragStart(event: DragEvent) {
     return
   }
 
-  // 暂停播放
-  if (isWebAVReady() && videoStore.isPlaying) {
-    webAVControls.pause()
-  }
-
-  // 隐藏tooltip
+  // 暂停播放并处理拖拽
+  pauseForEditing('时间轴项目拖拽')
   hideTooltip()
+  dragUtils.ensureItemSelected(props.timelineItem.id)
 
-  // 确保当前项目被选中
-  if (!videoStore.selectedTimelineItemIds.has(props.timelineItem.id)) {
-    videoStore.selectTimelineItem(props.timelineItem.id)
-  }
-
-  // 准备拖拽数据
-  const dragData: TimelineItemDragData = {
-    type: 'timeline-item',
-    itemId: props.timelineItem.id,
-    trackId: props.timelineItem.trackId,
-    startTime: props.timelineItem.timeRange.timelineStartTime / 1000000,
-    selectedItems: Array.from(videoStore.selectedTimelineItemIds),
-    dragOffset: {
-      x: event.offsetX,
-      y: event.offsetY
-    }
-  }
+  // 设置拖拽数据
+  const dragOffset = { x: event.offsetX, y: event.offsetY }
+  const dragData = dragUtils.setTimelineItemDragData(
+    event,
+    props.timelineItem.id,
+    props.timelineItem.trackId,
+    props.timelineItem.timeRange.timelineStartTime / 1000000,
+    Array.from(videoStore.selectedTimelineItemIds),
+    dragOffset
+  )
 
   console.log('📦 [原生拖拽] 设置拖拽数据:', dragData)
 
-  // 设置拖拽数据
-  event.dataTransfer!.setData('application/timeline-item', JSON.stringify(dragData))
-  event.dataTransfer!.effectAllowed = 'move'
-
-  // 设置全局拖拽状态（用于dragover事件中访问）
-  ;(window as any).__timelineDragData = dragData
-
-  // 创建拖拽预览图像
-  const dragImage = createDragPreview()
-  event.dataTransfer!.setDragImage(dragImage, dragData.dragOffset.x, dragData.dragOffset.y)
+  // 创建简单的拖拽预览图像（浏览器原生预览）
+  const dragImage = createSimpleDragPreview()
+  event.dataTransfer!.setDragImage(dragImage, dragOffset.x, dragOffset.y)
 
   // 设置拖拽状态
   isDragging.value = true
@@ -332,111 +311,63 @@ function handleDragEnd(event: DragEvent) {
   // 清理拖拽状态
   isDragging.value = false
 
-  // 清理全局拖拽状态
-  ;(window as any).__timelineDragData = null
+  // 使用统一的拖拽工具清理数据
+  dragUtils.clearDragData()
 
   // 移除拖拽预览元素（如果还存在）
-  removeDragPreview()
+  removeSimpleDragPreview()
 }
 
-function createDragPreview(): HTMLElement {
+/**
+ * 创建简单的拖拽预览图像（用于浏览器原生拖拽）
+ * 真正的拖拽预览由Timeline组件的dragPreviewManager处理
+ */
+function createSimpleDragPreview(): HTMLElement {
   const selectedCount = videoStore.selectedTimelineItemIds.size
   const preview = document.createElement('div')
 
-  preview.className = 'timeline-drag-preview'
+  preview.className = 'simple-drag-preview'
 
-  // 计算预览宽度（基于实际clip宽度或固定最小宽度）
-  const clipWidth = Math.max(120, Math.min(200, timelineDuration.value * 20)) // 基于时长计算宽度
-
+  // 简单的预览样式
   preview.style.cssText = `
     position: fixed;
     top: -1000px;
     left: -1000px;
-    width: ${clipWidth}px;
-    height: 40px;
-    background: linear-gradient(135deg, rgba(255, 165, 0, 0.9), rgba(255, 107, 53, 0.9));
-    border: 2px solid #ff6b35;
-    border-radius: 6px;
+    width: 100px;
+    height: 30px;
+    background: rgba(255, 107, 53, 0.8);
+    border: 1px solid #ff6b35;
+    border-radius: 4px;
     pointer-events: none;
     z-index: 9999;
     display: flex;
     align-items: center;
     justify-content: center;
     color: white;
+    font-size: 10px;
     font-weight: bold;
-    font-size: 11px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-    backdrop-filter: blur(2px);
   `
 
-  // 创建内容容器
-  const content = document.createElement('div')
-  content.style.cssText = `
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 2px;
-    text-align: center;
-    max-width: 100%;
-    overflow: hidden;
-  `
-
+  // 简单的文本内容
   if (selectedCount > 1) {
-    // 多选预览
-    const countLabel = document.createElement('div')
-    countLabel.textContent = `${selectedCount} 个项目`
-    countLabel.style.cssText = `
-      font-size: 12px;
-      font-weight: bold;
-    `
-
-    const detailLabel = document.createElement('div')
-    detailLabel.textContent = '批量移动'
-    detailLabel.style.cssText = `
-      font-size: 9px;
-      opacity: 0.8;
-    `
-
-    content.appendChild(countLabel)
-    content.appendChild(detailLabel)
+    preview.textContent = `${selectedCount} 项目`
   } else {
-    // 单选预览
-    const nameLabel = document.createElement('div')
     const clipName = mediaItem.value?.name || 'Clip'
-    nameLabel.textContent = clipName.length > 15 ? clipName.substring(0, 12) + '...' : clipName
-    nameLabel.style.cssText = `
-      font-size: 11px;
-      font-weight: bold;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      max-width: ${clipWidth - 20}px;
-    `
-
-    const durationLabel = document.createElement('div')
-    durationLabel.textContent = formatDuration(timelineDuration.value)
-    durationLabel.style.cssText = `
-      font-size: 9px;
-      opacity: 0.8;
-    `
-
-    content.appendChild(nameLabel)
-    content.appendChild(durationLabel)
+    preview.textContent = clipName.length > 8 ? clipName.substring(0, 6) + '..' : clipName
   }
 
-  preview.appendChild(content)
   document.body.appendChild(preview)
 
   // 设置清理定时器
   setTimeout(() => {
-    removeDragPreview()
+    removeSimpleDragPreview()
   }, 100)
 
   return preview
 }
 
-function removeDragPreview() {
-  const preview = document.querySelector('.timeline-drag-preview')
+function removeSimpleDragPreview() {
+  const preview = document.querySelector('.simple-drag-preview')
   if (preview && document.body.contains(preview)) {
     document.body.removeChild(preview)
   }
@@ -469,9 +400,7 @@ function selectClip(event: MouseEvent) {
 
 function startResize(direction: 'left' | 'right', event: MouseEvent) {
   // 暂停播放以便进行编辑
-  if (isWebAVReady() && videoStore.isPlaying) {
-    webAVControls.pause()
-  }
+  pauseForEditing('片段大小调整')
 
   // 隐藏tooltip
   hideTooltip()

@@ -85,17 +85,28 @@ isWebAVReady: Ref<boolean>
 webAVError: Ref<string | null>
 ```
 
-#### WebAV方法
+#### WebAV状态管理方法
 ```typescript
-// 初始化WebAV
-initializeWebAV(canvasElement: HTMLCanvasElement, options?: WebAVOptions): Promise<boolean>
-
-// 设置AVCanvas
+// 设置AVCanvas实例
 setAVCanvas(canvas: AVCanvas | null): void
 
-// 销毁WebAV
-destroyWebAV(): void
+// 设置WebAV就绪状态
+setWebAVReady(ready: boolean): void
+
+// 设置WebAV错误信息
+setWebAVError(error: string | null): void
+
+// 清除WebAV状态
+clearWebAVState(): void
+
+// 检查WebAV是否可用
+isWebAVAvailable(): boolean
+
+// 获取WebAV状态摘要
+getWebAVSummary(): object
 ```
+
+**注意**: WebAV的实际初始化和销毁操作由 `useWebAVControls` 处理。
 
 ## useWebAVControls API
 

@@ -108,3 +108,28 @@ export interface Track {
   isMuted: boolean
   height: number // 轨道高度
 }
+
+// ==================== 拖拽相关类型定义 ====================
+
+/**
+ * 时间轴项目拖拽数据结构
+ */
+export interface TimelineItemDragData {
+  type: 'timeline-item'
+  itemId: string
+  trackId: number
+  startTime: number
+  selectedItems: string[]  // 多选支持
+  dragOffset: { x: number, y: number }  // 拖拽偏移
+}
+
+/**
+ * 素材库拖拽数据结构
+ */
+export interface MediaItemDragData {
+  type: 'media-item'
+  mediaItemId: string
+  name: string
+  duration: number
+  mediaType: 'video' | 'image'
+}

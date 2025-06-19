@@ -166,7 +166,9 @@
 import { ref, computed, onMounted, onUnmounted, nextTick, markRaw, reactive } from 'vue'
 import { useVideoStore } from '../stores/videoStore'
 import { useWebAVControls, waitForWebAVReady, isWebAVReady } from '../composables/useWebAVControls'
+import { usePlaybackControls } from '../composables/usePlaybackControls'
 import { getDragPreviewManager } from '../composables/useDragPreview'
+import { useDragUtils } from '../composables/useDragUtils'
 import { VideoVisibleSprite } from '../utils/VideoVisibleSprite'
 import { ImageVisibleSprite } from '../utils/ImageVisibleSprite'
 import { webavToProjectCoords } from '../utils/coordinateTransform'
@@ -175,29 +177,11 @@ import {
   generateImageThumbnail,
   canvasToBlob,
 } from '../utils/thumbnailGenerator'
-import type { TimelineItem } from '../types/videoTypes'
+import type { TimelineItem, TimelineItemDragData, MediaItemDragData } from '../types/videoTypes'
 import VideoClip from './VideoClip.vue'
 import TimeScale from './TimeScale.vue'
 
-// 拖拽数据结构
-interface TimelineItemDragData {
-  type: 'timeline-item'
-  itemId: string
-  trackId: number
-  startTime: number
-  selectedItems: string[]  // 多选支持
-  dragOffset: { x: number, y: number }  // 拖拽偏移
-}
 
-// 从window对象获取拖拽数据的辅助函数
-function getCurrentDragData(): TimelineItemDragData | null {
-  return (window as any).__timelineDragData || null
-}
-
-// 从window对象获取素材拖拽数据的辅助函数
-function getCurrentMediaDragData(): any | null {
-  return (window as any).__mediaDragData || null
-}
 
 // Component name for Vue DevTools
 defineOptions({
@@ -206,7 +190,9 @@ defineOptions({
 
 const videoStore = useVideoStore()
 const webAVControls = useWebAVControls()
+const { pauseForEditing } = usePlaybackControls()
 const dragPreviewManager = getDragPreviewManager()
+const dragUtils = useDragUtils()
 
 const timelineBody = ref<HTMLElement>()
 const timelineWidth = ref(800)
@@ -394,118 +380,119 @@ function updateTimelineWidth() {
 function handleDragOver(event: DragEvent) {
   event.preventDefault()
 
-  // 检查拖拽数据类型
-  const types = event.dataTransfer?.types || []
+  // 使用统一的拖拽工具检查数据类型
+  const dragType = dragUtils.getDragDataType(event)
 
-  if (types.includes('application/timeline-item')) {
-    // 时间轴项目拖拽
-    event.dataTransfer!.dropEffect = 'move'
-    handleTimelineItemDragOver(event)
-  } else if (types.includes('application/media-item')) {
-    // 素材库拖拽
-    event.dataTransfer!.dropEffect = 'copy'
-    handleMediaItemDragOver(event)
-  } else if (types.includes('Files')) {
-    // 文件拖拽，但我们不再支持直接文件拖拽
-    event.dataTransfer!.dropEffect = 'none'
-    dragPreviewManager.hidePreview()
-  } else {
-    event.dataTransfer!.dropEffect = 'copy'
-    dragPreviewManager.hidePreview()
+  switch (dragType) {
+    case 'timeline-item':
+      event.dataTransfer!.dropEffect = 'move'
+      handleTimelineItemDragOver(event)
+      break
+    case 'media-item':
+      event.dataTransfer!.dropEffect = 'copy'
+      handleMediaItemDragOver(event)
+      break
+    case 'files':
+      // 文件拖拽，但我们不再支持直接文件拖拽
+      event.dataTransfer!.dropEffect = 'none'
+      dragPreviewManager.hidePreview()
+      break
+    default:
+      event.dataTransfer!.dropEffect = 'copy'
+      dragPreviewManager.hidePreview()
+      break
   }
 }
 
 // 处理素材库拖拽悬停
 function handleMediaItemDragOver(event: DragEvent) {
-  const targetElement = event.target as HTMLElement
-  const trackContent = targetElement.closest('.track-content')
+  // 使用统一的拖拽工具计算目标位置
+  const dropPosition = dragUtils.calculateDropPosition(event, timelineWidth.value)
 
-  if (!trackContent) {
+  if (!dropPosition) {
     dragPreviewManager.hidePreview()
     return
   }
 
-  // 计算目标位置
-  const rect = trackContent.getBoundingClientRect()
-  const mouseX = event.clientX - rect.left
-  const dropTime = videoStore.pixelToTime(mouseX, timelineWidth.value)
-  const targetTrackId = parseInt(trackContent.getAttribute('data-track-id') || '1')
+  const { dropTime, targetTrackId } = dropPosition
 
-  // 从全局状态获取素材拖拽数据
-  const mediaDragData = getCurrentMediaDragData()
+  // 使用统一的拖拽工具获取素材拖拽数据
+  const mediaDragData = dragUtils.getCurrentMediaItemDragData()
   if (mediaDragData) {
     // 检测素材库拖拽的重叠冲突
     const conflicts = detectMediaItemConflicts(dropTime, targetTrackId, mediaDragData.duration)
     const isConflict = conflicts.length > 0
 
-    // 显示统一预览
-    dragPreviewManager.updatePreview({
-      name: mediaDragData.name,
-      duration: mediaDragData.duration,
-      startTime: dropTime,
-      trackId: targetTrackId,
-      isConflict: isConflict,
-      isMultiple: false
-    }, timelineWidth.value)
+    // 使用统一的拖拽工具创建预览数据
+    const previewData = dragUtils.createDragPreviewData(
+      mediaDragData.name,
+      mediaDragData.duration,
+      dropTime,
+      targetTrackId,
+      isConflict,
+      false
+    )
+
+    dragPreviewManager.updatePreview(previewData, timelineWidth.value)
   } else {
     // 显示默认预览
-    dragPreviewManager.updatePreview({
-      name: '素材预览',
-      duration: 5,
-      startTime: dropTime,
-      trackId: targetTrackId,
-      isConflict: false,
-      isMultiple: false
-    }, timelineWidth.value)
+    const previewData = dragUtils.createDragPreviewData(
+      '素材预览',
+      5,
+      dropTime,
+      targetTrackId,
+      false,
+      false
+    )
+
+    dragPreviewManager.updatePreview(previewData, timelineWidth.value)
   }
 }
 
 // 处理时间轴项目拖拽悬停
 function handleTimelineItemDragOver(event: DragEvent) {
-  const targetElement = event.target as HTMLElement
-  const trackContent = targetElement.closest('.track-content')
-
-  if (!trackContent) {
+  // 使用统一的拖拽工具获取当前拖拽数据
+  const currentDragData = dragUtils.getCurrentTimelineItemDragData()
+  if (!currentDragData) {
     dragPreviewManager.hidePreview()
     return
   }
 
-  // 计算目标位置
-  const rect = trackContent.getBoundingClientRect()
-  const mouseX = event.clientX - rect.left
-  const targetTrackId = parseInt(trackContent.getAttribute('data-track-id') || '1')
+  // 使用统一的拖拽工具计算目标位置（考虑拖拽偏移量）
+  const dropPosition = dragUtils.calculateDropPosition(event, timelineWidth.value, currentDragData.dragOffset)
 
-  // 获取全局拖拽数据
-  const currentDragData = getCurrentDragData()
-  if (currentDragData) {
-    // 考虑拖拽偏移量，计算clip的实际开始位置
-    const clipStartX = mouseX - currentDragData.dragOffset.x
-    const clipStartTime = videoStore.pixelToTime(clipStartX, timelineWidth.value)
+  if (!dropPosition) {
+    dragPreviewManager.hidePreview()
+    return
+  }
 
-    // 获取拖拽项目信息
-    const draggedItem = videoStore.getTimelineItem(currentDragData.itemId)
-    if (draggedItem) {
-      const duration = (draggedItem.timeRange.timelineEndTime - draggedItem.timeRange.timelineStartTime) / 1000000
+  const { dropTime: clipStartTime, targetTrackId } = dropPosition
 
-      // 检测冲突
-      const conflicts = detectTimelineConflicts(clipStartTime, targetTrackId, currentDragData)
-      const isConflict = conflicts.length > 0
+  // 获取拖拽项目信息
+  const draggedItem = videoStore.getTimelineItem(currentDragData.itemId)
+  if (draggedItem) {
+    const duration = (draggedItem.timeRange.timelineEndTime - draggedItem.timeRange.timelineStartTime) / 1000000
 
-      // 获取显示名称
-      const mediaItem = videoStore.getMediaItem(draggedItem.mediaItemId)
-      const name = mediaItem?.name || 'Clip'
+    // 检测冲突
+    const conflicts = detectTimelineConflicts(clipStartTime, targetTrackId, currentDragData)
+    const isConflict = conflicts.length > 0
 
-      // 显示统一预览
-      dragPreviewManager.updatePreview({
-        name: name,
-        duration: duration,
-        startTime: clipStartTime,
-        trackId: targetTrackId,
-        isConflict: isConflict,
-        isMultiple: currentDragData.selectedItems.length > 1,
-        count: currentDragData.selectedItems.length
-      }, timelineWidth.value)
-    }
+    // 获取显示名称
+    const mediaItem = videoStore.getMediaItem(draggedItem.mediaItemId)
+    const name = mediaItem?.name || 'Clip'
+
+    // 使用统一的拖拽工具创建预览数据
+    const previewData = dragUtils.createDragPreviewData(
+      name,
+      duration,
+      clipStartTime,
+      targetTrackId,
+      isConflict,
+      currentDragData.selectedItems.length > 1,
+      currentDragData.selectedItems.length
+    )
+
+    dragPreviewManager.updatePreview(previewData, timelineWidth.value)
   } else {
     dragPreviewManager.hidePreview()
   }
@@ -518,57 +505,55 @@ async function handleDrop(event: DragEvent) {
   // 清理统一预览
   dragPreviewManager.hidePreview()
 
-  // 暂停播放以便进行编辑
-  if (isWebAVReady() && videoStore.isPlaying) {
-    webAVControls.pause()
+  // 暂停播放以便进行拖拽操作
+  pauseForEditing('时间轴拖拽放置')
+
+  // 使用统一的拖拽工具检查数据类型
+  const dragType = dragUtils.getDragDataType(event)
+
+  switch (dragType) {
+    case 'timeline-item': {
+      const timelineItemData = event.dataTransfer?.getData('application/timeline-item')
+      if (timelineItemData) {
+        console.log('📦 [Timeline] 处理时间轴项目拖拽')
+        await handleTimelineItemDrop(event, JSON.parse(timelineItemData))
+      }
+      break
+    }
+    case 'media-item': {
+      const mediaItemData = event.dataTransfer?.getData('application/media-item')
+      if (mediaItemData) {
+        console.log('📦 [Timeline] 处理素材库拖拽')
+        await handleMediaItemDrop(event, JSON.parse(mediaItemData))
+      }
+      break
+    }
+    default:
+      console.log('❌ [Timeline] 没有检测到有效的拖拽数据')
+      alert('请先将视频或图片文件导入到素材库，然后从素材库拖拽到时间轴')
+      break
   }
 
-  // 检查拖拽数据类型
-  const timelineItemData = event.dataTransfer?.getData('application/timeline-item')
-  const mediaItemData = event.dataTransfer?.getData('application/media-item')
-
-  if (timelineItemData) {
-    // 处理时间轴项目拖拽
-    console.log('📦 [Timeline] 处理时间轴项目拖拽')
-    await handleTimelineItemDrop(event, JSON.parse(timelineItemData))
-  } else if (mediaItemData) {
-    // 处理素材库拖拽
-    console.log('📦 [Timeline] 处理素材库拖拽')
-    await handleMediaItemDrop(event, JSON.parse(mediaItemData))
-  } else {
-    console.log('❌ [Timeline] 没有检测到有效的拖拽数据')
-    alert('请先将视频或图片文件导入到素材库，然后从素材库拖拽到时间轴')
-  }
-
-  // 清理全局拖拽状态
-  ;(window as any).__timelineDragData = null
-  ;(window as any).__mediaDragData = null
+  // 使用统一的拖拽工具清理全局拖拽状态
+  dragUtils.clearDragData()
 }
 
 // 处理时间轴项目拖拽放置
 async function handleTimelineItemDrop(event: DragEvent, dragData: TimelineItemDragData) {
   console.log('🎯 [Timeline] 处理时间轴项目拖拽放置:', dragData)
 
-  const targetElement = event.target as HTMLElement
-  const trackContent = targetElement.closest('.track-content')
+  // 使用统一的拖拽工具计算目标位置（考虑拖拽偏移量）
+  const dropPosition = dragUtils.calculateDropPosition(event, timelineWidth.value, dragData.dragOffset)
 
-  if (!trackContent) {
+  if (!dropPosition) {
     console.error('❌ [Timeline] 无法找到目标轨道')
     return
   }
 
-  // 计算目标位置，考虑拖拽偏移量
-  const rect = trackContent.getBoundingClientRect()
-  const mouseX = event.clientX - rect.left
-  // 考虑拖拽偏移量，计算clip的实际开始位置
-  const clipStartX = mouseX - dragData.dragOffset.x
-  const dropTime = videoStore.pixelToTime(clipStartX, timelineWidth.value)
-  const targetTrackId = parseInt(trackContent.getAttribute('data-track-id') || '1')
+  const { dropTime, targetTrackId } = dropPosition
 
   console.log('📍 [Timeline] 拖拽目标位置:', {
-    mouseX,
     dragOffsetX: dragData.dragOffset.x,
-    clipStartX,
     dropTime: dropTime.toFixed(2),
     targetTrackId,
     selectedItems: dragData.selectedItems
@@ -599,30 +584,23 @@ async function handleTimelineItemDrop(event: DragEvent, dragData: TimelineItemDr
 }
 
 // 处理素材库拖拽放置（重构现有逻辑）
-async function handleMediaItemDrop(event: DragEvent, mediaItem: any) {
+async function handleMediaItemDrop(event: DragEvent, mediaItem: MediaItemDragData) {
   try {
     console.log('解析的素材数据:', mediaItem)
 
-    // 获取目标轨道ID
-    const targetElement = event.target as HTMLElement
-    const trackContent = targetElement.closest('.track-content')
-    const targetTrackId = trackContent
-      ? parseInt(trackContent.getAttribute('data-track-id') || '1')
-      : 1
-    console.log('目标轨道ID:', targetTrackId)
+    // 使用统一的拖拽工具计算目标位置
+    const dropPosition = dragUtils.calculateDropPosition(event, timelineWidth.value)
 
-    // 计算拖拽位置对应的时间（考虑缩放和滚动偏移量）
-    const trackContentRect = trackContent?.getBoundingClientRect()
-    if (!trackContentRect) {
+    if (!dropPosition) {
       console.error('无法获取轨道区域信息')
       return
     }
 
-    const dropX = event.clientX - trackContentRect.left
-    const dropTime = videoStore.pixelToTime(dropX, timelineWidth.value)
+    const { dropTime, targetTrackId } = dropPosition
+
     console.log(`🎯 拖拽素材到时间轴: ${mediaItem.name}`)
     console.log(
-      `📍 拖拽位置: ${dropX}px, 对应时间: ${dropTime.toFixed(2)}s, 目标轨道: ${targetTrackId}`,
+      `📍 拖拽位置: 对应时间: ${dropTime.toFixed(2)}s, 目标轨道: ${targetTrackId}`,
     )
 
     // 如果拖拽位置超出当前时间轴长度，动态扩展时间轴

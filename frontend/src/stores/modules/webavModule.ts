@@ -76,83 +76,18 @@ export function createWebAVModule() {
   }
 
   /**
-   * 初始化WebAV
-   * @param canvasElement HTML Canvas元素
-   * @param options 初始化选项
+   * 清除WebAV状态（由useWebAVControls调用）
+   * 注意：实际的销毁逻辑由useWebAVControls处理
    */
-  async function initializeWebAV(
-    canvasElement: HTMLCanvasElement,
-    options: { width?: number; height?: number } = {},
-  ): Promise<boolean> {
-    try {
-      console.log('🚀 [WebAVModule] 开始初始化WebAV:', options)
+  function clearWebAVState() {
+    console.log('🗑️ [WebAVModule] 清除WebAV状态')
 
-      // 清除之前的错误状态
-      setWebAVError(null)
+    // 只清除状态，不执行实际的销毁逻辑
+    setAVCanvas(null)
+    setWebAVReady(false)
+    setWebAVError(null)
 
-      // 创建AVCanvas实例
-      const canvas = new AVCanvas(canvasElement, {
-        width: options.width || 1920,
-        height: options.height || 1080,
-        bgColor: '#000000', // 添加必需的背景色参数
-      })
-
-      // 设置canvas实例
-      setAVCanvas(canvas)
-
-      console.log('✅ [WebAVModule] WebAV初始化成功')
-      return true
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error)
-      console.error('❌ [WebAVModule] WebAV初始化失败:', errorMessage)
-      setWebAVError(`WebAV初始化失败: ${errorMessage}`)
-      return false
-    }
-  }
-
-  /**
-   * 销毁WebAV实例
-   */
-  function destroyWebAV() {
-    try {
-      console.log('🗑️ [WebAVModule] 开始销毁WebAV')
-
-      if (avCanvas.value) {
-        // 如果AVCanvas有destroy方法，调用它
-        if (typeof avCanvas.value.destroy === 'function') {
-          avCanvas.value.destroy()
-        }
-      }
-
-      // 清除状态
-      setAVCanvas(null)
-      setWebAVReady(false)
-      setWebAVError(null)
-
-      console.log('✅ [WebAVModule] WebAV销毁完成')
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error)
-      console.error('❌ [WebAVModule] WebAV销毁失败:', errorMessage)
-      setWebAVError(`WebAV销毁失败: ${errorMessage}`)
-    }
-  }
-
-  /**
-   * 重建WebAV画布（用于分辨率变更等场景）
-   * @param canvasElement HTML Canvas元素
-   * @param options 重建选项
-   */
-  async function rebuildWebAV(
-    canvasElement: HTMLCanvasElement,
-    options: { width?: number; height?: number } = {},
-  ): Promise<boolean> {
-    console.log('🔄 [WebAVModule] 开始重建WebAV画布:', options)
-
-    // 先销毁现有实例
-    destroyWebAV()
-
-    // 重新初始化
-    return await initializeWebAV(canvasElement, options)
+    console.log('✅ [WebAVModule] WebAV状态已清除')
   }
 
   /**
@@ -188,7 +123,7 @@ export function createWebAVModule() {
    * 重置WebAV状态为默认值
    */
   function resetToDefaults() {
-    destroyWebAV()
+    clearWebAVState()
     console.log('🔄 [WebAVModule] WebAV状态已重置为默认值')
   }
 
@@ -244,13 +179,13 @@ export function createWebAVModule() {
     isWebAVReady,
     webAVError,
 
-    // 方法
+    // 状态管理方法
     setAVCanvas,
     setWebAVReady,
     setWebAVError,
-    initializeWebAV,
-    destroyWebAV,
-    rebuildWebAV,
+    clearWebAVState,
+
+    // 工具方法
     isWebAVAvailable,
     getWebAVSummary,
     resetToDefaults,

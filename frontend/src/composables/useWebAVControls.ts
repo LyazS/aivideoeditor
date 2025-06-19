@@ -476,6 +476,7 @@ export function useWebAVControls() {
     try {
       // 暂停播放
       if (videoStore.isPlaying) {
+        console.log('⏸️ 因画布销毁暂停播放')
         globalAVCanvas.pause()
       }
 
