@@ -159,22 +159,33 @@ export function useWebAVControls() {
 
 ### 资源管理策略
 ```typescript
+// ✅ 正确的备份策略：只备份元数据，不备份WebAV对象
 interface CanvasBackup {
-  sprites: Array<{
-    sprite: Raw<VideoVisibleSprite>
-    clip: MP4Clip
-    timelineItemId: string
+  timelineItems: Array<{
+    id: string
+    mediaItemId: string
+    trackId: number
+    mediaType: 'video' | 'image'
+    timeRange: VideoTimeRange | ImageTimeRange
+    position: { x: number; y: number }
+    size: { width: number; height: number }
+    rotation: number
+    zIndex: number
+    opacity: number
+    volume: number
+    isMuted: boolean
+    thumbnailUrl: string
   }>
   currentTime: number
   isPlaying: boolean
 }
 
-// 画布重建时的内容迁移
+// 画布重建时的内容迁移：从源头重建
 async function recreateCanvas(options: CanvasOptions) {
-  const backup = createBackup()
+  const backup = createBackup()  // 只备份元数据
   await destroyCanvas()
   await initializeCanvas(options)
-  await restoreFromBackup(backup)
+  await restoreFromBackup(backup)  // 从MP4Clip/ImgClip重建所有Sprite
 }
 ```
 
@@ -182,13 +193,26 @@ async function recreateCanvas(options: CanvasOptions) {
 ```typescript
 // 自动资源清理
 onUnmounted(() => {
-  // 清理WebAV对象
-  sprites.forEach(sprite => sprite.destroy())
-  mp4Clips.forEach(clip => clip.destroy())
-  
+  // 清理Sprite实例（从源头重建的实例）
+  timelineItems.forEach(item => {
+    if (item.sprite && typeof item.sprite.destroy === 'function') {
+      item.sprite.destroy()
+    }
+  })
+
+  // 清理MP4Clip/ImgClip源头对象（在MediaItem中）
+  mediaItems.forEach(item => {
+    if (item.mp4Clip && typeof item.mp4Clip.destroy === 'function') {
+      item.mp4Clip.destroy()
+    }
+    if (item.imgClip && typeof item.imgClip.destroy === 'function') {
+      item.imgClip.destroy()
+    }
+  })
+
   // 移除事件监听器
   avCanvas?.off('timeupdate', handleTimeUpdate)
-  
+
   // 清理DOM引用
   canvasContainer = null
 })
@@ -284,15 +308,28 @@ const frameInterval = 1000 / targetFPS
 
 ### 内存优化
 ```typescript
-// MP4Clip复用机制
-const clipCache = new Map<string, MP4Clip>()
+// ✅ 正确的"从源头重建"架构
+// MP4Clip/ImgClip存储在MediaItem中，作为处理的源头
+interface MediaItem {
+  id: string
+  name: string
+  file: File                    // 原始文件（仅用于初始解析）
+  mp4Clip: Raw<MP4Clip> | null  // 视频处理的源头
+  imgClip: Raw<ImgClip> | null  // 图片处理的源头
+  isReady: boolean
+}
 
-function getOrCreateClip(mediaItemId: string): MP4Clip {
-  if (!clipCache.has(mediaItemId)) {
-    const clip = createMP4Clip(mediaItem.file)
-    clipCache.set(mediaItemId, clip)
+// 从源头快速创建Sprite实例
+async function createSpriteFromMediaItem(mediaItem: MediaItem) {
+  if (mediaItem.mediaType === 'video') {
+    // 从MP4Clip源头快速克隆（性能极佳）
+    const clonedMP4Clip = await webAVControls.cloneMP4Clip(mediaItem.mp4Clip)
+    return new VideoVisibleSprite(clonedMP4Clip)
+  } else {
+    // 从ImgClip源头快速克隆（性能极佳）
+    const clonedImgClip = await webAVControls.cloneImgClip(mediaItem.imgClip)
+    return new ImageVisibleSprite(clonedImgClip)
   }
-  return clipCache.get(mediaItemId)!.clone()
 }
 ```
 
