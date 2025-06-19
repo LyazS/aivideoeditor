@@ -171,6 +171,7 @@ import { getDragPreviewManager } from '../composables/useDragPreview'
 import { useDragUtils } from '../composables/useDragUtils'
 import { VideoVisibleSprite } from '../utils/VideoVisibleSprite'
 import { ImageVisibleSprite } from '../utils/ImageVisibleSprite'
+import { createSpriteFromMediaItem } from '../utils/spriteFactory'
 import { webavToProjectCoords } from '../utils/coordinateTransform'
 import {
   calculatePixelsPerSecond,
@@ -688,27 +689,8 @@ async function createMediaClipFromMediaItem(
       throw new Error('素材还在解析中，请稍后再试')
     }
 
-    let sprite: VideoVisibleSprite | ImageVisibleSprite
-
-    if (mediaItem.mediaType === 'video') {
-      // 处理视频
-      if (!storeMediaItem.mp4Clip) {
-        throw new Error('视频素材解析失败')
-      }
-      console.log('克隆MP4Clip并创建VideoVisibleSprite for mediaItem:', mediaItem.id)
-      const clonedMP4Clip = await webAVControls.cloneMP4Clip(storeMediaItem.mp4Clip)
-      sprite = new VideoVisibleSprite(clonedMP4Clip)
-    } else if (mediaItem.mediaType === 'image') {
-      // 处理图片
-      if (!storeMediaItem.imgClip) {
-        throw new Error('图片素材解析失败')
-      }
-      console.log('克隆ImgClip并创建ImageVisibleSprite for mediaItem:', mediaItem.id)
-      const clonedImgClip = await webAVControls.cloneImgClip(storeMediaItem.imgClip)
-      sprite = new ImageVisibleSprite(clonedImgClip)
-    } else {
-      throw new Error('不支持的媒体类型')
-    }
+    console.log('创建sprite for mediaItem:', mediaItem.id, 'type:', mediaItem.mediaType)
+    const sprite = await createSpriteFromMediaItem(storeMediaItem)
 
     // 获取媒体的原始分辨率
     let originalResolution: { width: number; height: number }

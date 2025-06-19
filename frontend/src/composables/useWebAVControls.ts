@@ -34,13 +34,22 @@ let globalAVCanvas: AVCanvas | null = null
 let globalCanvasContainer: HTMLElement | null = null
 const globalError = ref<string | null>(null)
 
-// 画布重新创建时的内容备份
+// 画布重新创建时的内容备份 - 只备份元数据，不备份WebAV对象
 interface CanvasBackup {
-  sprites: Array<{
-    sprite: Raw<VideoVisibleSprite | ImageVisibleSprite>
-    clip: MP4Clip | ImgClip
+  timelineItems: Array<{
+    id: string
+    mediaItemId: string
+    trackId: number
     mediaType: 'video' | 'image'
-    timelineItemId: string
+    timeRange: any // VideoTimeRange | ImageTimeRange
+    position: { x: number; y: number }
+    size: { width: number; height: number }
+    rotation: number
+    zIndex: number
+    opacity: number
+    volume: number
+    isMuted: boolean
+    thumbnailUrl: string
   }>
   currentTime: number
   isPlaying: boolean
@@ -434,41 +443,35 @@ export function useWebAVControls() {
       timelineItemsCount: videoStore.timelineItems.length,
     })
 
-    // 备份当前状态
+    // 备份当前状态 - 只备份元数据，不备份WebAV对象
     const backup: CanvasBackup = {
-      sprites: [],
+      timelineItems: [],
       currentTime: videoStore.currentTime,
       isPlaying: videoStore.isPlaying,
     }
 
-    // 备份所有sprites
+    // 备份所有时间轴项目的元数据
     const timelineItems = videoStore.timelineItems
     for (const item of timelineItems) {
-      if (item.sprite) {
-        // 从MediaItem获取原始的clip，而不是从sprite获取
-        const mediaItem = videoStore.getMediaItem(item.mediaItemId)
-        if (mediaItem) {
-          let clip: MP4Clip | ImgClip | null = null
-          if (item.mediaType === 'video' && mediaItem.mp4Clip) {
-            clip = mediaItem.mp4Clip
-          } else if (item.mediaType === 'image' && mediaItem.imgClip) {
-            clip = mediaItem.imgClip
-          }
-
-          if (clip) {
-            backup.sprites.push({
-              sprite: item.sprite,
-              clip: clip,
-              mediaType: item.mediaType,
-              timelineItemId: item.id,
-            })
-          }
-        }
-      }
+      backup.timelineItems.push({
+        id: item.id,
+        mediaItemId: item.mediaItemId,
+        trackId: item.trackId,
+        mediaType: item.mediaType,
+        timeRange: { ...item.timeRange },
+        position: { ...item.position },
+        size: { ...item.size },
+        rotation: item.rotation,
+        zIndex: item.zIndex,
+        opacity: item.opacity,
+        volume: item.volume,
+        isMuted: item.isMuted,
+        thumbnailUrl: item.thumbnailUrl || '',
+      })
     }
 
-    logCanvasBackup(backup.sprites.length, {
-      sprites: backup.sprites.length,
+    logCanvasBackup(backup.timelineItems.length, {
+      timelineItems: backup.timelineItems.length,
       isPlaying: backup.isPlaying,
       currentTime: backup.currentTime,
     })
@@ -489,13 +492,13 @@ export function useWebAVControls() {
       videoStore.setWebAVReady(false)
 
       const destroyTime = destroyTimer.end()
-      logCanvasDestroyComplete(destroyTime, backup.sprites.length)
+      logCanvasDestroyComplete(destroyTime, backup.timelineItems.length)
       return backup
     } catch (error) {
       const destroyTime = destroyTimer.end()
       debugError('Canvas destruction failed', error as Error, {
         destroyTime: `${destroyTime.toFixed(2)}ms`,
-        backupSprites: backup.sprites.length,
+        backupTimelineItems: backup.timelineItems.length,
       })
       return backup
     }
@@ -519,108 +522,78 @@ export function useWebAVControls() {
       containerSize: `${container.clientWidth}x${container.clientHeight}`,
       canvasOptions: options,
       hasBackup: !!backup,
-      backupSprites: backup?.sprites.length || 0,
+      backupTimelineItems: backup?.timelineItems.length || 0,
     })
 
     try {
       // 重新初始化画布
       await initializeCanvas(container, options)
 
-      // 如果有备份内容，恢复sprites
-      if (backup && backup.sprites.length > 0) {
+      // 如果有备份内容，从源头重建所有时间轴项目
+      if (backup && backup.timelineItems.length > 0) {
         const avCanvas = getAVCanvas()
         if (!avCanvas) {
           throw new Error('Canvas recreation failed - no canvas available')
         }
 
-        // 恢复每个sprite
+        // 导入工厂函数
+        const { createSpriteFromMediaItem } = await import('../utils/spriteFactory')
+
+        // 恢复每个时间轴项目
         let restoredCount = 0
-        for (const spriteBackup of backup.sprites) {
+        for (const itemData of backup.timelineItems) {
           try {
             logSpriteRestore(
-              spriteBackup.timelineItemId,
-              `Restoring sprite ${restoredCount + 1}/${backup.sprites.length}`,
+              itemData.id,
+              `Restoring timeline item ${restoredCount + 1}/${backup.timelineItems.length}`,
             )
 
-            // 根据媒体类型克隆对应的Clip
-            let newSprite: VideoVisibleSprite | ImageVisibleSprite
-            if (spriteBackup.mediaType === 'video') {
-              const clonedClip = await cloneMP4Clip(spriteBackup.clip as MP4Clip)
-              logSpriteRestore(spriteBackup.timelineItemId, 'MP4Clip cloned')
-              newSprite = new VideoVisibleSprite(clonedClip)
-            } else {
-              const clonedClip = await cloneImgClip(spriteBackup.clip as ImgClip)
-              logSpriteRestore(spriteBackup.timelineItemId, 'ImgClip cloned')
-              newSprite = new ImageVisibleSprite(clonedClip)
+            // 从原始素材重新创建sprite
+            const mediaItem = videoStore.getMediaItem(itemData.mediaItemId)
+            if (!mediaItem) {
+              throw new Error(`Media item not found: ${itemData.mediaItemId}`)
             }
+
+            const newSprite = await createSpriteFromMediaItem(mediaItem)
+            logSpriteRestore(itemData.id, 'Sprite created from media item')
 
             // 恢复时间范围设置
-            const originalTimeRange = spriteBackup.sprite.getTimeRange()
-            newSprite.setTimeRange(originalTimeRange)
-            logSpriteRestore(spriteBackup.timelineItemId, 'Time range restored', originalTimeRange)
+            newSprite.setTimeRange(itemData.timeRange)
+            logSpriteRestore(itemData.id, 'Time range restored', itemData.timeRange)
 
             // 恢复变换属性 - 需要处理新旧画布分辨率不同的情况
-            const restoredTimelineItem = videoStore.getTimelineItem(spriteBackup.timelineItemId)
-            if (restoredTimelineItem) {
-              // 使用TimelineItem中存储的项目坐标系坐标来重新计算新画布分辨率下的WebAV坐标
-              const { projectToWebavCoords } = await import('../utils/coordinateTransform')
-              const newWebavCoords = projectToWebavCoords(
-                restoredTimelineItem.position.x,
-                restoredTimelineItem.position.y,
-                restoredTimelineItem.size.width,
-                restoredTimelineItem.size.height,
-                options.width,
-                options.height,
-              )
+            const { projectToWebavCoords } = await import('../utils/coordinateTransform')
+            const newWebavCoords = projectToWebavCoords(
+              itemData.position.x,
+              itemData.position.y,
+              itemData.size.width,
+              itemData.size.height,
+              options.width,
+              options.height,
+            )
 
-              // 设置新的WebAV坐标
-              newSprite.rect.x = newWebavCoords.x
-              newSprite.rect.y = newWebavCoords.y
-              newSprite.rect.w = restoredTimelineItem.size.width
-              newSprite.rect.h = restoredTimelineItem.size.height
+            // 设置新的WebAV坐标
+            newSprite.rect.x = newWebavCoords.x
+            newSprite.rect.y = newWebavCoords.y
+            newSprite.rect.w = itemData.size.width
+            newSprite.rect.h = itemData.size.height
 
-              logCoordinateTransform(spriteBackup.timelineItemId, {
-                projectCoords: {
-                  x: restoredTimelineItem.position.x,
-                  y: restoredTimelineItem.position.y,
-                },
-                newCanvasSize: { width: options.width, height: options.height },
-                newWebAVCoords: { x: newWebavCoords.x, y: newWebavCoords.y },
-                size: { w: restoredTimelineItem.size.width, h: restoredTimelineItem.size.height },
-              })
-            } else {
-              // 如果找不到TimelineItem，使用原始坐标作为备用方案
-              const originalRect = spriteBackup.sprite.rect
-              newSprite.rect.x = originalRect.x
-              newSprite.rect.y = originalRect.y
-              newSprite.rect.w = originalRect.w
-              newSprite.rect.h = originalRect.h
-
-              logCoordinateTransform(spriteBackup.timelineItemId, {
-                warning: 'TimelineItem not found, using original coordinates',
-                originalCoords: {
-                  x: originalRect.x,
-                  y: originalRect.y,
-                  w: originalRect.w,
-                  h: originalRect.h,
-                },
-              })
-            }
+            logCoordinateTransform(itemData.id, {
+              projectCoords: {
+                x: itemData.position.x,
+                y: itemData.position.y,
+              },
+              newCanvasSize: { width: options.width, height: options.height },
+              newWebAVCoords: { x: newWebavCoords.x, y: newWebavCoords.y },
+              size: { w: itemData.size.width, h: itemData.size.height },
+            })
 
             // 恢复其他属性
-            newSprite.zIndex = spriteBackup.sprite.zIndex
-            newSprite.opacity = spriteBackup.sprite.opacity
+            newSprite.zIndex = itemData.zIndex
+            newSprite.opacity = itemData.opacity
+            newSprite.rect.angle = itemData.rotation
 
-            // 恢复旋转角度
-            if (restoredTimelineItem) {
-              // 使用TimelineItem中存储的旋转角度
-              newSprite.rect.angle = restoredTimelineItem.rotation
-            } else {
-              // 如果找不到TimelineItem，使用原始sprite的旋转角度作为备用方案
-              newSprite.rect.angle = spriteBackup.sprite.rect.angle || 0
-            }
-
-            logSpriteRestore(spriteBackup.timelineItemId, 'Properties restored', {
+            logSpriteRestore(itemData.id, 'Properties restored', {
               zIndex: newSprite.zIndex,
               opacity: newSprite.opacity,
               rotation: newSprite.rect.angle,
@@ -628,26 +601,26 @@ export function useWebAVControls() {
 
             // 添加到画布
             await avCanvas.addSprite(newSprite)
-            logSpriteRestore(spriteBackup.timelineItemId, 'Added to canvas')
+            logSpriteRestore(itemData.id, 'Added to canvas')
 
             // 更新store中的引用
-            videoStore.updateTimelineItemSprite(spriteBackup.timelineItemId, markRaw(newSprite))
-            logSpriteRestore(spriteBackup.timelineItemId, 'Store reference updated')
+            videoStore.updateTimelineItemSprite(itemData.id, markRaw(newSprite))
+            logSpriteRestore(itemData.id, 'Store reference updated')
 
             // 🔄 重新设置双向数据同步 - 这是关键步骤！
-            const syncTimelineItem = videoStore.getTimelineItem(spriteBackup.timelineItemId)
+            const syncTimelineItem = videoStore.getTimelineItem(itemData.id)
             if (syncTimelineItem) {
               videoStore.setupBidirectionalSync(syncTimelineItem)
-              logSpriteRestore(spriteBackup.timelineItemId, 'Bidirectional sync reestablished')
+              logSpriteRestore(itemData.id, 'Bidirectional sync reestablished')
             }
 
             restoredCount++
             logSpriteRestore(
-              spriteBackup.timelineItemId,
-              `Restoration completed (${restoredCount}/${backup.sprites.length})`,
+              itemData.id,
+              `Restoration completed (${restoredCount}/${backup.timelineItems.length})`,
             )
           } catch (error) {
-            debugError(`Failed to restore sprite: ${spriteBackup.timelineItemId}`, error as Error)
+            debugError(`Failed to restore timeline item: ${itemData.id}`, error as Error)
           }
         }
 
@@ -665,7 +638,7 @@ export function useWebAVControls() {
       const totalRecreateTime = recreateTimer.end()
       logCanvasRecreateComplete(totalRecreateTime, {
         canvasSize: `${options.width}x${options.height}`,
-        restoredSprites: backup?.sprites.length || 0,
+        restoredTimelineItems: backup?.timelineItems.length || 0,
         finalState: {
           isPlaying: backup?.isPlaying || false,
           currentTime: backup?.currentTime || 0,
@@ -676,7 +649,7 @@ export function useWebAVControls() {
       debugError('Canvas recreation failed', error as Error, {
         totalTime: `${totalRecreateTime.toFixed(2)}ms`,
         canvasOptions: options,
-        backupSprites: backup?.sprites.length || 0,
+        backupTimelineItems: backup?.timelineItems.length || 0,
       })
       throw error
     }

@@ -1,7 +1,7 @@
 import { reactive, markRaw, type Ref } from 'vue'
 import { VideoVisibleSprite } from '../../utils/VideoVisibleSprite'
 import { ImageVisibleSprite } from '../../utils/ImageVisibleSprite'
-import { useWebAVControls } from '../../composables/useWebAVControls'
+import { createSpriteFromMediaItem } from '../../utils/spriteFactory'
 import { regenerateThumbnailForTimelineItem } from '../../utils/thumbnailGenerator'
 import { printDebugInfo, syncTimeRange } from '../utils/storeUtils'
 import type { TimelineItem, MediaItem } from '../../types/videoTypes'
@@ -64,20 +64,7 @@ export function createClipOperationsModule(
       }
 
       // 根据媒体类型克隆对应的Clip
-      const webAVControls = useWebAVControls()
-      let newSprite: VideoVisibleSprite | ImageVisibleSprite
-
-      if (mediaItem.mediaType === 'video' && mediaItem.mp4Clip) {
-        const clonedClip = await webAVControls.cloneMP4Clip(mediaItem.mp4Clip)
-        newSprite = new VideoVisibleSprite(clonedClip)
-      } else if (mediaItem.mediaType === 'image' && mediaItem.imgClip) {
-        const clonedClip = await webAVControls.cloneImgClip(mediaItem.imgClip)
-        newSprite = new ImageVisibleSprite(clonedClip)
-      } else {
-        console.error('❌ 不支持的媒体类型或缺少对应的clip')
-        console.groupEnd()
-        return null
-      }
+      const newSprite = await createSpriteFromMediaItem(mediaItem)
 
       // 根据媒体类型复制时间范围设置
       if (mediaItem.mediaType === 'video' && isVideoTimeRange(timeRange)) {
@@ -320,13 +307,9 @@ export function createClipOperationsModule(
     console.log('  - 分割点素材时间:', splitClipTime)
 
     try {
-      // 为每个分割片段克隆MP4Clip
-      const webAVControls = useWebAVControls()
-      const firstClonedClip = await webAVControls.cloneMP4Clip(mediaItem.mp4Clip)
-      const secondClonedClip = await webAVControls.cloneMP4Clip(mediaItem.mp4Clip)
-
+      // 为每个分割片段从原始素材创建sprite
       // 创建第一个片段的VideoVisibleSprite
-      const firstSprite = new VideoVisibleSprite(firstClonedClip)
+      const firstSprite = await createSpriteFromMediaItem(mediaItem) as VideoVisibleSprite
       firstSprite.setTimeRange({
         clipStartTime: clipStartTime * 1000000,
         clipEndTime: splitClipTime * 1000000,
@@ -353,7 +336,7 @@ export function createClipOperationsModule(
       })
 
       // 创建第二个片段的VideoVisibleSprite
-      const secondSprite = new VideoVisibleSprite(secondClonedClip)
+      const secondSprite = await createSpriteFromMediaItem(mediaItem) as VideoVisibleSprite
       secondSprite.setTimeRange({
         clipStartTime: splitClipTime * 1000000,
         clipEndTime: clipEndTime * 1000000,

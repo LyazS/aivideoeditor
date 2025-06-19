@@ -3,7 +3,7 @@ import type { SimpleCommand } from '../historyModule'
 import type { TimelineItem, MediaItem, Track } from '../../../types/videoTypes'
 import { VideoVisibleSprite } from '../../../utils/VideoVisibleSprite'
 import { ImageVisibleSprite } from '../../../utils/ImageVisibleSprite'
-import { useWebAVControls } from '../../../composables/useWebAVControls'
+import { createSpriteFromMediaItem } from '../../../utils/spriteFactory'
 import { markRaw, reactive, type Ref } from 'vue'
 
 /**
@@ -69,24 +69,7 @@ export class AddTimelineItemCommand implements SimpleCommand {
     }
 
     // 2. 从原始素材重新创建sprite
-    const webAVControls = useWebAVControls()
-    let newSprite: VideoVisibleSprite | ImageVisibleSprite
-
-    if (mediaItem.mediaType === 'video') {
-      if (!mediaItem.mp4Clip) {
-        throw new Error('视频素材解析失败，无法重建sprite')
-      }
-      const clonedMP4Clip = await webAVControls.cloneMP4Clip(mediaItem.mp4Clip)
-      newSprite = new VideoVisibleSprite(clonedMP4Clip)
-    } else if (mediaItem.mediaType === 'image') {
-      if (!mediaItem.imgClip) {
-        throw new Error('图片素材解析失败，无法重建sprite')
-      }
-      const clonedImgClip = await webAVControls.cloneImgClip(mediaItem.imgClip)
-      newSprite = new ImageVisibleSprite(clonedImgClip)
-    } else {
-      throw new Error('不支持的媒体类型')
-    }
+    const newSprite = await createSpriteFromMediaItem(mediaItem)
 
     // 3. 设置时间范围
     newSprite.setTimeRange(this.originalTimelineItemData.timeRange)
@@ -276,24 +259,7 @@ export class RemoveTimelineItemCommand implements SimpleCommand {
     }
 
     // 2. 从原始素材重新创建sprite
-    const webAVControls = useWebAVControls()
-    let newSprite: VideoVisibleSprite | ImageVisibleSprite
-
-    if (mediaItem.mediaType === 'video') {
-      if (!mediaItem.mp4Clip) {
-        throw new Error('视频素材解析失败，无法重建sprite')
-      }
-      const clonedMP4Clip = await webAVControls.cloneMP4Clip(mediaItem.mp4Clip)
-      newSprite = new VideoVisibleSprite(clonedMP4Clip)
-    } else if (mediaItem.mediaType === 'image') {
-      if (!mediaItem.imgClip) {
-        throw new Error('图片素材解析失败，无法重建sprite')
-      }
-      const clonedImgClip = await webAVControls.cloneImgClip(mediaItem.imgClip)
-      newSprite = new ImageVisibleSprite(clonedImgClip)
-    } else {
-      throw new Error('不支持的媒体类型')
-    }
+    const newSprite = await createSpriteFromMediaItem(mediaItem)
 
     // 3. 设置时间范围
     newSprite.setTimeRange(this.originalTimelineItemData.timeRange)
@@ -459,18 +425,7 @@ export class DuplicateTimelineItemCommand implements SimpleCommand {
     }
 
     // 根据媒体类型克隆对应的Clip
-    const webAVControls = useWebAVControls()
-    let newSprite: VideoVisibleSprite | ImageVisibleSprite
-
-    if (mediaItem.mediaType === 'video' && mediaItem.mp4Clip) {
-      const clonedClip = await webAVControls.cloneMP4Clip(mediaItem.mp4Clip)
-      newSprite = new VideoVisibleSprite(clonedClip)
-    } else if (mediaItem.mediaType === 'image' && mediaItem.imgClip) {
-      const clonedClip = await webAVControls.cloneImgClip(mediaItem.imgClip)
-      newSprite = new ImageVisibleSprite(clonedClip)
-    } else {
-      throw new Error('不支持的媒体类型或缺少对应的clip')
-    }
+    const newSprite = await createSpriteFromMediaItem(mediaItem)
 
     // 设置时间范围（调整到新位置）
     const originalTimeRange = this.originalTimelineItemData.timeRange
@@ -1107,11 +1062,7 @@ export class SplitTimelineItemCommand implements SimpleCommand {
     const splitClipTime = clipStartTime + clipDuration * relativeRatio
 
     // 3. 从原始素材重新创建两个sprite
-    const webAVControls = useWebAVControls()
-    const firstClonedClip = await webAVControls.cloneMP4Clip(mediaItem.mp4Clip)
-    const secondClonedClip = await webAVControls.cloneMP4Clip(mediaItem.mp4Clip)
-
-    const firstSprite = new VideoVisibleSprite(firstClonedClip)
+    const firstSprite = await createSpriteFromMediaItem(mediaItem) as VideoVisibleSprite
     firstSprite.setTimeRange({
       clipStartTime: clipStartTime * 1000000,
       clipEndTime: splitClipTime * 1000000,
@@ -1119,7 +1070,7 @@ export class SplitTimelineItemCommand implements SimpleCommand {
       timelineEndTime: this.splitTime * 1000000,
     })
 
-    const secondSprite = new VideoVisibleSprite(secondClonedClip)
+    const secondSprite = await createSpriteFromMediaItem(mediaItem) as VideoVisibleSprite
     secondSprite.setTimeRange({
       clipStartTime: splitClipTime * 1000000,
       clipEndTime: clipEndTime * 1000000,
@@ -1217,9 +1168,7 @@ export class SplitTimelineItemCommand implements SimpleCommand {
     }
 
     // 2. 从原始素材重新创建sprite
-    const webAVControls = useWebAVControls()
-    const clonedMP4Clip = await webAVControls.cloneMP4Clip(mediaItem.mp4Clip)
-    const newSprite = new VideoVisibleSprite(clonedMP4Clip)
+    const newSprite = await createSpriteFromMediaItem(mediaItem) as VideoVisibleSprite
 
     // 3. 设置原始时间范围
     newSprite.setTimeRange(this.originalTimelineItemData.timeRange)
@@ -1572,18 +1521,7 @@ export class RemoveTrackCommand implements SimpleCommand {
     }
 
     // 根据媒体类型克隆对应的Clip
-    const webAVControls = useWebAVControls()
-    let newSprite: VideoVisibleSprite | ImageVisibleSprite
-
-    if (mediaItem.mediaType === 'video' && mediaItem.mp4Clip) {
-      const clonedClip = await webAVControls.cloneMP4Clip(mediaItem.mp4Clip)
-      newSprite = new VideoVisibleSprite(clonedClip)
-    } else if (mediaItem.mediaType === 'image' && mediaItem.imgClip) {
-      const clonedClip = await webAVControls.cloneImgClip(mediaItem.imgClip)
-      newSprite = new ImageVisibleSprite(clonedClip)
-    } else {
-      throw new Error('不支持的媒体类型或缺少对应的clip')
-    }
+    const newSprite = await createSpriteFromMediaItem(mediaItem)
 
     // 设置时间范围
     if (mediaItem.mediaType === 'video') {
