@@ -1,5 +1,11 @@
 import { ref, computed } from 'vue'
 import { alignTimeToFrame, formatTime as formatTimeUtil } from '../utils/storeUtils'
+import {
+  createStateSetter,
+  createBooleanSetter,
+  createClampTransformer,
+  createRangeValidator
+} from '../utils/stateSetterUtils'
 
 /**
  * 播放控制管理模块
@@ -110,15 +116,36 @@ export function createPlaybackModule(frameRate: { value: number }) {
     console.log('⏮️ 上一帧')
   }
 
+  // 创建统一的状态设置器
+  const setPlayingUnified = createBooleanSetter(
+    isPlaying,
+    'PlaybackModule',
+    '播放状态',
+    '▶️'
+  )
+
+  const setPlaybackRateUnified = createStateSetter(playbackRate, {
+    moduleName: 'PlaybackModule',
+    stateName: '播放速度',
+    emoji: '🏃',
+    validator: createRangeValidator(0.1, 10, '播放速度'),
+    transformer: createClampTransformer(0.1, 10),
+    logFormatter: (value, oldValue) => ({
+      requestedRate: value,
+      oldRate: oldValue,
+      newRate: value,
+      clamped: false, // transformer已处理
+      speedText: value === 1 ? '正常速度' : value < 1 ? `${value}x 慢速` : `${value}x 快速`
+    })
+  })
+
   /**
    * 设置播放状态
    * @param playing 是否播放
    */
   function setPlaying(playing: boolean) {
-    if (isPlaying.value !== playing) {
-      isPlaying.value = playing
-      console.log('▶️ 设置播放状态:', playing ? '播放' : '暂停')
-    }
+    const result = setPlayingUnified(playing)
+    return result.success
   }
 
   /**
@@ -157,19 +184,8 @@ export function createPlaybackModule(frameRate: { value: number }) {
    * @param rate 播放速度倍率
    */
   function setPlaybackRate(rate: number) {
-    // 限制播放速度在合理范围内
-    const clampedRate = Math.max(0.1, Math.min(10, rate))
-
-    if (playbackRate.value !== clampedRate) {
-      const oldRate = playbackRate.value
-      playbackRate.value = clampedRate
-      console.log('🏃 设置播放速度:', {
-        requestedRate: rate,
-        oldRate,
-        newRate: clampedRate,
-        clamped: rate !== clampedRate,
-      })
-    }
+    const result = setPlaybackRateUnified(rate)
+    return result.success
   }
 
   /**

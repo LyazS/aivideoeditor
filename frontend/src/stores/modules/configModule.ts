@@ -1,5 +1,12 @@
 import { ref } from 'vue'
 import type { VideoResolution } from '../../types/videoTypes'
+import {
+  createStateSetter,
+  createNumberSetter,
+  createBooleanSetter,
+  createRangeValidator,
+  createPositiveValidator
+} from '../utils/stateSetterUtils'
 
 /**
  * 项目配置管理模块
@@ -27,13 +34,46 @@ export function createConfigModule() {
 
   // ==================== 配置管理方法 ====================
 
+  // 创建统一的状态设置器
+  const setFrameRateUnified = createNumberSetter(
+    frameRate,
+    'ConfigModule',
+    '帧率',
+    1,
+    120,
+    '🎬'
+  )
+
+  const setTimelineDurationUnified = createStateSetter(timelineDuration, {
+    moduleName: 'ConfigModule',
+    stateName: '时间轴时长',
+    emoji: '🎬',
+    validator: createPositiveValidator('时间轴时长'),
+    logFormatter: (value, oldValue) => ({
+      duration: `${value}秒`,
+      oldDuration: oldValue ? `${oldValue}秒` : undefined,
+      changed: oldValue !== value
+    })
+  })
+
+  const setProportionalScaleUnified = createBooleanSetter(
+    proportionalScale,
+    'ConfigModule',
+    '等比缩放',
+    '🎬'
+  )
+
   /**
    * 设置视频分辨率
    * @param resolution 新的视频分辨率配置
    */
   function setVideoResolution(resolution: VideoResolution) {
     videoResolution.value = resolution
-    console.log('🎬 视频分辨率已设置为:', resolution)
+    console.log('🎬 [ConfigModule] 设置视频分辨率:', {
+      name: resolution.name,
+      dimensions: `${resolution.width}x${resolution.height}`,
+      aspectRatio: resolution.aspectRatio
+    })
   }
 
   /**
@@ -41,13 +81,8 @@ export function createConfigModule() {
    * @param rate 新的帧率值
    */
   function setFrameRate(rate: number) {
-    if (rate > 0 && rate <= 120) {
-      // 合理的帧率范围
-      frameRate.value = rate
-      console.log('🎬 帧率已设置为:', rate)
-    } else {
-      console.warn('⚠️ 无效的帧率值:', rate)
-    }
+    const result = setFrameRateUnified(rate)
+    return result.success
   }
 
   /**
@@ -55,12 +90,8 @@ export function createConfigModule() {
    * @param duration 新的时间轴时长（秒）
    */
   function setTimelineDuration(duration: number) {
-    if (duration > 0) {
-      timelineDuration.value = duration
-      console.log('🎬 时间轴时长已设置为:', duration, '秒')
-    } else {
-      console.warn('⚠️ 无效的时间轴时长:', duration)
-    }
+    const result = setTimelineDurationUnified(duration)
+    return result.success
   }
 
   /**
@@ -68,8 +99,8 @@ export function createConfigModule() {
    * @param enabled 是否启用等比缩放
    */
   function setProportionalScale(enabled: boolean) {
-    proportionalScale.value = enabled
-    console.log('🎬 等比缩放已设置为:', enabled ? '启用' : '禁用')
+    const result = setProportionalScaleUnified(enabled)
+    return result.success
   }
 
   /**
