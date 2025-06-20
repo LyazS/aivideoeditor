@@ -151,27 +151,27 @@ export function createReactiveTimelineItem(
 
     // 音量属性（仅对视频有效）
     get volume(): number {
-      if (baseData.mediaType === 'video' && 'volume' in sprite) {
-        return (sprite as any).volume || 1
+      if (baseData.mediaType === 'video' && sprite instanceof VideoVisibleSprite) {
+        return sprite.getVolume()
       }
       return 1
     },
     set volume(value: number) {
-      if (baseData.mediaType === 'video' && 'volume' in sprite) {
-        (sprite as any).volume = Math.max(0, Math.min(1, value))
+      if (baseData.mediaType === 'video' && sprite instanceof VideoVisibleSprite) {
+        sprite.setVolume(Math.max(0, Math.min(1, value)))
       }
     },
 
     // 静音属性（仅对视频有效）
     get isMuted(): boolean {
-      if (baseData.mediaType === 'video' && 'isMuted' in sprite) {
-        return (sprite as any).isMuted || false
+      if (baseData.mediaType === 'video' && sprite instanceof VideoVisibleSprite) {
+        return sprite.isMuted()
       }
       return false
     },
     set isMuted(value: boolean) {
-      if (baseData.mediaType === 'video' && 'isMuted' in sprite) {
-        (sprite as any).isMuted = value
+      if (baseData.mediaType === 'video' && sprite instanceof VideoVisibleSprite) {
+        sprite.setMuted(value)
       }
     }
   }) as TimelineItem

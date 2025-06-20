@@ -111,7 +111,7 @@
             <label>音量</label>
             <div class="volume-controls">
               <input
-                :value="volume"
+                :value="displayVolume"
                 @input="(e) => updateVolume((e.target as HTMLInputElement).valueAsNumber)"
                 type="range"
                 min="0"
@@ -120,7 +120,7 @@
                 class="volume-slider"
               />
               <NumberInput
-                :model-value="volume"
+                :model-value="actualVolume"
                 @change="updateVolume"
                 :min="0"
                 :max="1"
@@ -555,9 +555,15 @@ const normalizedSpeed = computed(() => {
 const speedInputValue = computed(() => playbackRate.value)
 
 // 音量相关 - 直接从TimelineItem读取，这是响应式的
-const volume = computed(() => {
+// 实际音量值（用于数值输入框，不受静音状态影响）
+const actualVolume = computed(() => {
   if (!selectedTimelineItem.value || selectedTimelineItem.value.mediaType !== 'video') return 1
-  // 确保 volume 和 isMuted 都有默认值
+  return selectedTimelineItem.value.volume ?? 1
+})
+
+// 显示音量值（用于滑块，静音时显示0）
+const displayVolume = computed(() => {
+  if (!selectedTimelineItem.value || selectedTimelineItem.value.mediaType !== 'video') return 1
   const itemVolume = selectedTimelineItem.value.volume ?? 1
   const itemMuted = selectedTimelineItem.value.isMuted ?? false
   // 静音时显示0，否则显示实际音量
@@ -705,18 +711,19 @@ const updateVolume = (newVolume: number) => {
 
   const clampedVolume = Math.max(0, Math.min(1, newVolume))
 
-  if (clampedVolume === 0) {
-    // 设为静音，但保留原音量值
+  // 总是更新音量值
+  updatePropertyWithHistory('volume', clampedVolume)
+
+  // 如果音量大于0且当前是静音状态，则取消静音
+  if (clampedVolume > 0 && selectedTimelineItem.value.isMuted) {
+    updatePropertyWithHistory('isMuted', false)
+  }
+  // 如果音量为0，设为静音
+  else if (clampedVolume === 0) {
     updatePropertyWithHistory('isMuted', true)
-  } else {
-    // 更新音量值并取消静音
-    updatePropertyWithHistory('volume', clampedVolume)
-    if (selectedTimelineItem.value.isMuted) {
-      updatePropertyWithHistory('isMuted', false)
-    }
   }
 
-  console.log('✅ 音量更新成功:', clampedVolume)
+  console.log('✅ 音量更新成功:', clampedVolume, '静音状态:', selectedTimelineItem.value.isMuted)
 }
 
 // 🆕 切换静音状态 - 使用带历史记录的属性更新

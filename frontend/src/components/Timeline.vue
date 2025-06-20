@@ -791,6 +791,12 @@ async function createMediaClipFromMediaItem(
       }
     )
 
+    // 确保视频clip的默认音量为1.0（非静音）
+    if (mediaItem.mediaType === 'video') {
+      timelineItem.volume = 1.0
+      timelineItem.isMuted = false
+    }
+
     console.log('🔄 新架构TimelineItem创建完成:', {
       id: timelineItem.id,
       项目坐标: { x: timelineItem.x, y: timelineItem.y },
