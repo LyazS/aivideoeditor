@@ -61,8 +61,20 @@ export const useVideoStore = defineStore('video', () => {
     configModule.timelineDuration,
   )
 
-  // 创建选择管理模块（需要在webavModule之后创建）
-  const selectionModule = createSelectionModule(timelineModule.timelineItems, webavModule.avCanvas)
+  // 创建通知管理模块
+  const notificationModule = createNotificationModule()
+
+  // 创建历史管理模块
+  const historyModule = createHistoryModule(notificationModule)
+
+  // 创建选择管理模块（需要在webavModule和historyModule之后创建）
+  const selectionModule = createSelectionModule(
+    timelineModule.timelineItems,
+    webavModule.avCanvas,
+    timelineModule.getTimelineItem,
+    mediaModule.getMediaItem,
+    historyModule.executeCommand
+  )
 
   // 创建视频片段操作模块（需要在其他模块之后创建）
   const clipOperationsModule = createClipOperationsModule(
@@ -72,12 +84,6 @@ export const useVideoStore = defineStore('video', () => {
     selectionModule,
     trackModule,
   )
-
-  // 创建通知管理模块
-  const notificationModule = createNotificationModule()
-
-  // 创建历史管理模块
-  const historyModule = createHistoryModule(notificationModule)
 
   // ==================== 双向数据同步函数 ====================
 
@@ -929,6 +935,7 @@ export const useVideoStore = defineStore('video', () => {
     updateTimelineItemSprite: timelineModule.updateTimelineItemSprite,
     // 统一选择管理API
     selectTimelineItems: selectionModule.selectTimelineItems,
+    selectTimelineItemsWithHistory: selectionModule.selectTimelineItemsWithHistory,
     syncAVCanvasSelection: selectionModule.syncAVCanvasSelection,
     hasSelection: selectionModule.hasSelection,
     // 兼容性选择方法

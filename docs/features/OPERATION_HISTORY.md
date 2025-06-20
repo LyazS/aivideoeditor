@@ -138,6 +138,7 @@ const canRedo = videoStore.canRedo
 - ✅ ToggleTrackVisibilityCommand - 切换轨道可见性
 - ✅ ToggleTrackMuteCommand - 切换轨道静音
 - ✅ ResizeTimelineItemCommand - 时间范围调整
+- ✅ SelectTimelineItemsCommand - 选择操作（单选/多选）
 
 ### 🟢 低优先级操作（待实现）
 - ⏳ SetVideoResolutionCommand - 修改视频分辨率

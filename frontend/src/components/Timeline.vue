@@ -858,30 +858,47 @@ async function handleTimelineItemRemove(timelineItemId: string) {
   }
 }
 
-function handleTimelineClick(event: MouseEvent) {
+async function handleTimelineClick(event: MouseEvent) {
   // 点击轨道内容空白区域取消所有选中（包括单选和多选）
   const target = event.target as HTMLElement
   if (target.classList.contains('track-content')) {
-    videoStore.clearAllSelections()
+    // 阻止事件冒泡，避免触发容器的点击事件
+    event.stopPropagation()
+
+    try {
+      // 使用带历史记录的清除选择
+      await videoStore.selectTimelineItemsWithHistory([], 'replace')
+    } catch (error) {
+      console.error('❌ 清除选择操作失败:', error)
+      // 如果历史记录清除失败，回退到普通清除
+      videoStore.clearAllSelections()
+    }
   }
 }
 
-function handleTimelineContainerClick(event: MouseEvent) {
+async function handleTimelineContainerClick(event: MouseEvent) {
   // 点击时间轴容器的空白区域取消所有选中
   const target = event.target as HTMLElement
 
   // 检查点击的是否是时间轴容器本身或其他空白区域
   // 排除点击在VideoClip、按钮、输入框等交互元素上的情况
+  // 注意：不包括 track-content，因为它由 handleTimelineClick 处理
   if (
     target.classList.contains('timeline') ||
     target.classList.contains('timeline-header') ||
     target.classList.contains('timeline-body') ||
     target.classList.contains('timeline-grid') ||
     target.classList.contains('grid-line') ||
-    target.classList.contains('track-row') ||
-    target.classList.contains('track-content')
+    target.classList.contains('track-row')
   ) {
-    videoStore.clearAllSelections()
+    try {
+      // 使用带历史记录的清除选择
+      await videoStore.selectTimelineItemsWithHistory([], 'replace')
+    } catch (error) {
+      console.error('❌ 清除选择操作失败:', error)
+      // 如果历史记录清除失败，回退到普通清除
+      videoStore.clearAllSelections()
+    }
   }
 }
 

@@ -1,5 +1,5 @@
 import { ref, computed, type Raw, type Ref } from 'vue'
-import type { TimelineItem } from '../../types/videoTypes'
+import type { TimelineItem, MediaItem } from '../../types/videoTypes'
 import { findTimelineItemBySprite } from '../utils/storeUtils'
 
 // 定义VideoVisibleSprite类型（避免循环依赖）
@@ -12,7 +12,13 @@ type VideoVisibleSprite = {
  * 选择管理模块
  * 负责管理时间轴和AVCanvas的选择状态同步
  */
-export function createSelectionModule(timelineItems: Ref<TimelineItem[]>, avCanvas: Ref<{ activeSprite: unknown } | null>) {
+export function createSelectionModule(
+  timelineItems: Ref<TimelineItem[]>,
+  avCanvas: Ref<{ activeSprite: unknown } | null>,
+  getTimelineItem: (id: string) => TimelineItem | undefined,
+  getMediaItem: (id: string) => MediaItem | undefined,
+  executeCommand: (command: any) => Promise<void>
+) {
   // ==================== 状态定义 ====================
 
   // 统一选择状态：使用单一集合管理所有选择
@@ -36,8 +42,9 @@ export function createSelectionModule(timelineItems: Ref<TimelineItem[]>, avCanv
    * 统一的时间轴项目选择方法
    * @param itemIds 要操作的项目ID数组
    * @param mode 操作模式：'replace'替换选择，'toggle'切换选择状态
+   * @param withHistory 是否记录到操作历史，默认为true
    */
-  function selectTimelineItems(itemIds: string[], mode: 'replace' | 'toggle' = 'replace') {
+  function selectTimelineItems(itemIds: string[], mode: 'replace' | 'toggle' = 'replace', withHistory: boolean = true) {
     const oldSelection = new Set(selectedTimelineItemIds.value)
 
     if (mode === 'replace') {
@@ -58,6 +65,7 @@ export function createSelectionModule(timelineItems: Ref<TimelineItem[]>, avCanv
     console.log('🎯 统一选择操作:', {
       mode,
       itemIds,
+      withHistory,
       oldSize: oldSelection.size,
       newSize: selectedTimelineItemIds.value.size,
       isMultiSelect: isMultiSelectMode.value,
@@ -67,6 +75,108 @@ export function createSelectionModule(timelineItems: Ref<TimelineItem[]>, avCanv
 
     // 统一的AVCanvas同步逻辑
     syncAVCanvasSelection()
+  }
+
+  // 防抖机制：避免短时间内重复执行相同的选择操作
+  let lastSelectionCommand: { itemIds: string[], mode: string, timestamp: number } | null = null
+  const SELECTION_DEBOUNCE_TIME = 100 // 100毫秒内的重复操作会被忽略
+
+  /**
+   * 带历史记录的时间轴项目选择方法
+   * @param itemIds 要操作的项目ID数组
+   * @param mode 操作模式：'replace'替换选择，'toggle'切换选择状态
+   */
+  async function selectTimelineItemsWithHistory(itemIds: string[], mode: 'replace' | 'toggle' = 'replace') {
+    const now = Date.now()
+
+    // 检查是否是重复的操作（防抖）
+    if (lastSelectionCommand) {
+      const timeDiff = now - lastSelectionCommand.timestamp
+      const isSameOperation =
+        lastSelectionCommand.mode === mode &&
+        arraysEqual(lastSelectionCommand.itemIds, itemIds)
+
+      if (isSameOperation && timeDiff < SELECTION_DEBOUNCE_TIME) {
+        console.log('🎯 检测到重复选择操作，跳过历史记录', { timeDiff, itemIds, mode })
+        return
+      }
+    }
+
+    // 检查是否有实际的选择变化
+    const currentSelection = new Set(selectedTimelineItemIds.value)
+    const newSelection = calculateNewSelection(itemIds, mode, currentSelection)
+
+    // 如果选择状态没有变化，不创建历史记录
+    if (setsEqual(currentSelection, newSelection)) {
+      console.log('🎯 选择状态无变化，跳过历史记录')
+      return
+    }
+
+    // 记录当前操作，用于防抖检测
+    lastSelectionCommand = { itemIds: [...itemIds], mode, timestamp: now }
+
+    // 动态导入命令类以避免循环依赖
+    const { SelectTimelineItemsCommand } = await import('./commands/timelineCommands')
+
+    // 创建选择命令
+    const command = new SelectTimelineItemsCommand(
+      itemIds,
+      mode,
+      {
+        selectedTimelineItemIds,
+        selectTimelineItems: (ids: string[], m: 'replace' | 'toggle') => selectTimelineItems(ids, m, false),
+        syncAVCanvasSelection
+      },
+      { getTimelineItem },
+      { getMediaItem }
+    )
+
+    // 执行命令（这会自动添加到历史记录）
+    await executeCommand(command)
+  }
+
+  /**
+   * 计算新的选择状态
+   */
+  function calculateNewSelection(itemIds: string[], mode: 'replace' | 'toggle', currentSelection: Set<string>): Set<string> {
+    const newSelection = new Set(currentSelection)
+
+    if (mode === 'replace') {
+      newSelection.clear()
+      itemIds.forEach(id => newSelection.add(id))
+    } else {
+      itemIds.forEach(id => {
+        if (newSelection.has(id)) {
+          newSelection.delete(id)
+        } else {
+          newSelection.add(id)
+        }
+      })
+    }
+
+    return newSelection
+  }
+
+  /**
+   * 检查两个Set是否相等
+   */
+  function setsEqual(set1: Set<string>, set2: Set<string>): boolean {
+    if (set1.size !== set2.size) return false
+    for (const item of set1) {
+      if (!set2.has(item)) return false
+    }
+    return true
+  }
+
+  /**
+   * 检查两个数组是否相等
+   */
+  function arraysEqual(arr1: string[], arr2: string[]): boolean {
+    if (arr1.length !== arr2.length) return false
+    for (let i = 0; i < arr1.length; i++) {
+      if (arr1[i] !== arr2[i]) return false
+    }
+    return true
   }
 
   /**
@@ -326,6 +436,7 @@ export function createSelectionModule(timelineItems: Ref<TimelineItem[]>, avCanv
 
     // 统一选择API
     selectTimelineItems,
+    selectTimelineItemsWithHistory,
     syncAVCanvasSelection,
 
     // 兼容性方法
