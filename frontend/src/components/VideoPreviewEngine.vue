@@ -40,16 +40,9 @@
             <div class="center-controls">
               <PlaybackControls />
             </div>
-            <!-- 右侧比例按钮 -->
+            <!-- 右侧分辨率选择器 -->
             <div class="right-controls">
-              <button class="aspect-ratio-btn" @click="openResolutionModal" title="设置视频分辨率">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                  <path
-                    d="M19,12H22L18,8L14,12H17V16H7V12H10L6,8L2,12H5V16A2,2 0 0,0 7,18H17A2,2 0 0,0 19,16V12Z"
-                  />
-                </svg>
-                <span class="aspect-ratio-text">{{ currentResolutionText }}</span>
-              </button>
+              <ResolutionSelector />
             </div>
           </div>
         </div>
@@ -88,103 +81,18 @@
         </div>
       </div>
     </div>
-
-    <!-- 分辨率选择弹窗 -->
-    <div v-if="showResolutionModal" class="modal-overlay" @click="showResolutionModal = false">
-      <div class="resolution-modal" @click.stop>
-        <div class="modal-header">
-          <h3>选择视频分辨率</h3>
-          <button class="close-btn" @click="showResolutionModal = false">×</button>
-        </div>
-        <div class="modal-content">
-          <!-- 预设分辨率 -->
-          <div class="resolution-grid">
-            <div
-              v-for="resolution in resolutionOptions"
-              :key="resolution.name"
-              class="resolution-option"
-              :class="{
-                active:
-                  tempSelectedResolution.name === resolution.name &&
-                  tempSelectedResolution.category !== '自定义',
-              }"
-              @click="selectPresetResolution(resolution)"
-            >
-              <div class="resolution-preview" :style="getPreviewStyle(resolution)"></div>
-              <div class="resolution-info">
-                <div class="resolution-name">{{ resolution.name }}</div>
-                <div class="resolution-size">{{ resolution.width }} × {{ resolution.height }}</div>
-                <div class="resolution-ratio">{{ resolution.aspectRatio }}</div>
-              </div>
-            </div>
-
-            <!-- 自定义分辨率选项 -->
-            <div
-              class="resolution-option custom-option"
-              :class="{ active: tempSelectedResolution.category === '自定义' }"
-              @click="selectCustomResolution"
-            >
-              <div
-                class="resolution-preview"
-                :style="getPreviewStyle({ width: customWidth, height: customHeight })"
-              ></div>
-              <div class="resolution-info">
-                <div class="resolution-name">自定义</div>
-                <div v-if="!showCustomResolution" class="resolution-size">
-                  {{ customWidth }} × {{ customHeight }}
-                </div>
-                <div v-if="!showCustomResolution" class="resolution-ratio">
-                  {{ customResolutionText }}
-                </div>
-
-                <!-- 自定义分辨率输入（集成在选项内） -->
-                <div v-if="showCustomResolution" class="custom-inputs">
-                  <div class="input-row">
-                    <input
-                      type="number"
-                      v-model.number="customWidth"
-                      min="1"
-                      max="7680"
-                      class="custom-input"
-                      placeholder="宽度"
-                      @click.stop
-                    />
-                    <span class="input-separator">×</span>
-                    <input
-                      type="number"
-                      v-model.number="customHeight"
-                      min="1"
-                      max="4320"
-                      class="custom-input"
-                      placeholder="高度"
-                      @click.stop
-                    />
-                  </div>
-                  <div class="custom-ratio">{{ customResolutionText }}</div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- 确认按钮 -->
-          <div class="modal-actions">
-            <button class="cancel-btn" @click="cancelSelection">取消</button>
-            <button class="confirm-btn" @click="confirmSelection">确认</button>
-          </div>
-        </div>
-      </div>
-    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onUnmounted, onMounted } from 'vue'
+import { ref, watch, onMounted, onUnmounted } from 'vue'
 import PreviewWindow from './PreviewWindow.vue'
 import Timeline from './Timeline.vue'
 import PlaybackControls from './PlaybackControls.vue'
 import ClipManagementToolbar from './ClipManagementToolbar.vue'
 import MediaLibrary from './MediaLibrary.vue'
 import PropertiesPanel from './PropertiesPanel.vue'
+import ResolutionSelector from './ResolutionSelector.vue'
 import { useVideoStore } from '../stores/videoStore'
 import { useKeyboardShortcuts } from '../composables/useKeyboardShortcuts'
 import { logWebAVReadyStateChange, logComponentLifecycle } from '../utils/webavDebug'
@@ -194,6 +102,23 @@ const videoStore = useVideoStore()
 
 // 注册全局快捷键
 useKeyboardShortcuts()
+
+// 响应式数据
+const previewHeight = ref(50) // 默认预览窗口占50%
+const timelineHeight = ref(50) // 默认时间轴占50%
+const isDragging = ref(false)
+
+// 垂直分割器相关
+const leftPanelWidth = ref(400) // 左侧素材库宽度
+const rightPanelWidth = ref(400) // 右侧属性面板宽度
+const isLeftDragging = ref(false)
+const isRightDragging = ref(false)
+
+let startY = 0
+let startPreviewHeight = 0
+let startX = 0
+let startLeftWidth = 0
+let startRightWidth = 0
 
 // 添加WebAV就绪状态监听
 watch(
@@ -211,89 +136,7 @@ onMounted(() => {
   })
 })
 
-// 响应式数据
-const previewHeight = ref(60) // 默认预览窗口占60%
-const timelineHeight = ref(40) // 默认时间轴占40%
-const isDragging = ref(false)
-
-// 分辨率相关
-const showResolutionModal = ref(false)
-const currentResolution = ref({
-  name: '1080p',
-  width: 1920,
-  height: 1080,
-  aspectRatio: '16:9',
-  category: '横屏',
-})
-
-const resolutionOptions = [
-  // 横屏 16:9
-  { name: '4K', width: 3840, height: 2160, aspectRatio: '16:9', category: '横屏' },
-  { name: '1440p', width: 2560, height: 1440, aspectRatio: '16:9', category: '横屏' },
-  { name: '1080p', width: 1920, height: 1080, aspectRatio: '16:9', category: '横屏' },
-  { name: '720p', width: 1280, height: 720, aspectRatio: '16:9', category: '横屏' },
-  { name: '480p', width: 854, height: 480, aspectRatio: '16:9', category: '横屏' },
-
-  // 竖屏 9:16
-  { name: '4K 竖屏', width: 2160, height: 3840, aspectRatio: '9:16', category: '竖屏' },
-  { name: '1440p 竖屏', width: 1440, height: 2560, aspectRatio: '9:16', category: '竖屏' },
-  { name: '1080p 竖屏', width: 1080, height: 1920, aspectRatio: '9:16', category: '竖屏' },
-  { name: '720p 竖屏', width: 720, height: 1280, aspectRatio: '9:16', category: '竖屏' },
-  { name: '480p 竖屏', width: 480, height: 854, aspectRatio: '9:16', category: '竖屏' },
-
-  // 正方形 1:1
-  { name: '1080×1080', width: 1080, height: 1080, aspectRatio: '1:1', category: '正方形' },
-  { name: '720×720', width: 720, height: 720, aspectRatio: '1:1', category: '正方形' },
-
-  // 超宽屏
-  { name: '超宽屏 21:9', width: 2560, height: 1080, aspectRatio: '21:9', category: '超宽屏' },
-  { name: '超宽屏 32:9', width: 3840, height: 1080, aspectRatio: '32:9', category: '超宽屏' },
-]
-
-const currentResolutionText = computed(() => {
-  return `${currentResolution.value.aspectRatio}`
-})
-
-// 临时选择的分辨率（在弹窗中选择但未确认）
-const tempSelectedResolution = ref(currentResolution.value)
-
-// 自定义分辨率
-const showCustomResolution = ref(false)
-const customWidth = ref(1920)
-const customHeight = ref(1080)
-
-const customResolutionText = computed(() => {
-  const gcd = (a: number, b: number): number => (b === 0 ? a : gcd(b, a % b))
-  const divisor = gcd(customWidth.value, customHeight.value)
-  const ratioW = customWidth.value / divisor
-  const ratioH = customHeight.value / divisor
-  return `${ratioW}:${ratioH}`
-})
-
-// 监听自定义分辨率输入变化，实时更新临时选择
-watch([customWidth, customHeight], () => {
-  if (showCustomResolution.value) {
-    tempSelectedResolution.value = {
-      name: '自定义',
-      width: customWidth.value,
-      height: customHeight.value,
-      aspectRatio: customResolutionText.value,
-      category: '自定义',
-    }
-  }
-})
-
-// 垂直分割器相关
-const leftPanelWidth = ref(400) // 左侧素材库宽度
-const rightPanelWidth = ref(400) // 右侧属性面板宽度
-const isLeftDragging = ref(false)
-const isRightDragging = ref(false)
-
-let startY = 0
-let startPreviewHeight = 0
-let startX = 0
-let startLeftWidth = 0
-let startRightWidth = 0
+// ==================== 拖拽处理方法 ====================
 
 // 开始拖动
 const startResize = (event: MouseEvent) => {
@@ -352,7 +195,7 @@ const handleLeftResize = (event: MouseEvent) => {
   let newWidth = startLeftWidth + deltaX
 
   // 限制最小宽度，允许更大的最大宽度
-  newWidth = Math.max(100, Math.min(600, newWidth))
+  newWidth = Math.max(100, Math.min(800, newWidth))
 
   leftPanelWidth.value = newWidth
 }
@@ -384,7 +227,7 @@ const handleRightResize = (event: MouseEvent) => {
   let newWidth = startRightWidth - deltaX // 注意：右侧是反向的
 
   // 限制最小宽度，允许更大的最大宽度
-  newWidth = Math.max(100, Math.min(600, newWidth))
+  newWidth = Math.max(100, Math.min(800, newWidth))
 
   rightPanelWidth.value = newWidth
 }
@@ -397,93 +240,11 @@ const stopRightResize = () => {
   document.body.style.userSelect = ''
 }
 
+// ==================== 工具方法 ====================
+
 function formatTime(seconds: number): string {
   // 使用统一的时间格式化工具函数
   return formatTimeUtil(seconds, 'seconds')
-}
-
-// 获取预览样式（根据分辨率比例）
-function getPreviewStyle(resolution: { width: number; height: number }) {
-  const aspectRatio = resolution.width / resolution.height
-  const maxWidth = 60 // 最大宽度
-  const maxHeight = 40 // 最大高度
-
-  let width, height
-  if (aspectRatio > maxWidth / maxHeight) {
-    // 宽度受限
-    width = maxWidth
-    height = maxWidth / aspectRatio
-  } else {
-    // 高度受限
-    height = maxHeight
-    width = maxHeight * aspectRatio
-  }
-
-  return {
-    width: `${width}px`,
-    height: `${height}px`,
-  }
-}
-
-function confirmSelection() {
-  if (showCustomResolution.value) {
-    // 使用自定义分辨率
-    const customResolution = {
-      name: '自定义',
-      width: customWidth.value,
-      height: customHeight.value,
-      aspectRatio: customResolutionText.value,
-      category: '自定义',
-    }
-    currentResolution.value = customResolution
-    videoStore.setVideoResolution(customResolution)
-  } else {
-    // 使用预设分辨率
-    currentResolution.value = tempSelectedResolution.value
-    videoStore.setVideoResolution(tempSelectedResolution.value)
-  }
-
-  showResolutionModal.value = false
-  showCustomResolution.value = false
-  console.log('确认选择分辨率:', currentResolution.value)
-}
-
-function cancelSelection() {
-  showResolutionModal.value = false
-  showCustomResolution.value = false
-  // 重置临时选择
-  tempSelectedResolution.value = currentResolution.value
-}
-
-function selectPresetResolution(resolution: (typeof resolutionOptions)[0]) {
-  showCustomResolution.value = false
-  tempSelectedResolution.value = resolution
-}
-
-function selectCustomResolution() {
-  showCustomResolution.value = true
-  tempSelectedResolution.value = {
-    name: '自定义',
-    width: customWidth.value,
-    height: customHeight.value,
-    aspectRatio: customResolutionText.value,
-    category: '自定义',
-  }
-}
-
-function openResolutionModal() {
-  // 初始化临时选择为当前分辨率
-  tempSelectedResolution.value = currentResolution.value
-  showCustomResolution.value = false
-
-  // 如果当前分辨率是自定义的，显示自定义输入
-  if (currentResolution.value.category === '自定义') {
-    showCustomResolution.value = true
-    customWidth.value = currentResolution.value.width
-    customHeight.value = currentResolution.value.height
-  }
-
-  showResolutionModal.value = true
 }
 
 // 清理事件监听器
@@ -558,7 +319,7 @@ onUnmounted(() => {
   background-color: var(--color-bg-secondary);
   border-radius: var(--border-radius-medium);
   min-width: 100px;
-  max-width: 600px;
+  max-width: 800px;
 }
 
 /* 使用通用的 splitter 样式 */
@@ -579,7 +340,7 @@ onUnmounted(() => {
   background-color: var(--color-bg-secondary);
   border-radius: var(--border-radius-medium);
   min-width: 100px;
-  max-width: 600px;
+  max-width: 800px;
 }
 
 /* 使用通用的 splitter 样式 */
@@ -660,251 +421,65 @@ onUnmounted(() => {
   gap: var(--spacing-xs);
 }
 
-.aspect-ratio-btn {
-  background: none;
-  border: 1px solid var(--color-border-primary);
-  color: var(--color-text-secondary);
-  cursor: pointer;
-  padding: var(--spacing-xs) var(--spacing-md);
-  border-radius: var(--border-radius-medium);
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-xs);
-  font-size: var(--font-size-sm);
-  transition: all var(--transition-fast);
-}
-
-.aspect-ratio-btn:hover {
-  background-color: var(--color-bg-quaternary);
-  border-color: var(--color-border-secondary);
-  color: var(--color-text-primary);
-}
-
-.aspect-ratio-text {
-  font-family: monospace;
-}
-
-/* 分辨率选择弹窗样式 */
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.7);
+/* 分割器样式 */
+.splitter {
+  background-color: var(--color-bg-primary);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  transition: background-color var(--transition-fast);
+  position: relative;
+  z-index: 10;
 }
 
-.resolution-modal {
-  background-color: #2a2a2a;
-  border-radius: 8px;
-  padding: 0;
-  max-width: 600px;
-  width: 90%;
-  max-height: 80vh;
-  overflow: hidden;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+.splitter.horizontal {
+  height: 8px;
+  cursor: ns-resize;
+  flex-direction: row;
 }
 
-.modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px 20px;
-  border-bottom: 1px solid #444;
-  background-color: #2a2a2a;
-}
-
-.modal-header h3 {
-  margin: 0;
-  color: white;
-  font-size: 16px;
-}
-
-.close-btn {
-  background: none;
-  border: none;
-  color: #ccc;
-  font-size: 24px;
-  cursor: pointer;
-  padding: 0;
-  width: 30px;
-  height: 30px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 4px;
-  transition: all 0.2s;
-}
-
-.close-btn:hover {
-  background-color: #444;
-  color: white;
-}
-
-.modal-content {
-  padding: 20px;
-  max-height: calc(80vh - 80px);
-  overflow-y: auto;
-}
-
-.resolution-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 16px;
-  max-height: 400px;
-  overflow-y: auto;
-}
-
-.resolution-option {
-  background-color: #333;
-  border: 2px solid #444;
-  border-radius: 8px;
-  padding: 12px;
-  cursor: pointer;
-  transition: all 0.2s;
-  display: flex;
+.splitter.vertical {
+  width: 8px;
+  cursor: ew-resize;
   flex-direction: column;
-  align-items: center;
-  gap: 8px;
 }
 
-.resolution-option:hover {
-  border-color: #666;
-  background-color: #3a3a3a;
+.splitter:hover {
+  background-color: var(--color-bg-hover);
 }
 
-.resolution-option.active {
-  border-color: #ff4444;
-  background-color: #4a2a2a;
+.splitter.dragging {
+  background-color: var(--color-accent-primary);
 }
 
-.resolution-preview {
-  background-color: #555;
-  border: 1px solid #666;
-  border-radius: 3px;
-  transition: all 0.2s;
-  flex-shrink: 0;
+.splitter-handle {
+  background-color: var(--color-border-secondary);
+  border-radius: 2px;
+  transition: background-color var(--transition-fast);
 }
 
-.resolution-option:hover .resolution-preview {
-  background-color: #666;
-  border-color: #777;
+.horizontal .splitter-handle {
+  width: 40px;
+  height: 2px;
 }
 
-.resolution-option.active .resolution-preview {
-  background-color: #ff4444;
-  border-color: #ff6666;
+.vertical .splitter-handle {
+  width: 2px;
+  height: 40px;
 }
 
-.resolution-info {
-  text-align: center;
-  flex: 1;
+.splitter:hover .splitter-handle,
+.splitter.dragging .splitter-handle {
+  background-color: var(--color-accent-primary);
 }
 
-.resolution-name {
-  font-weight: bold;
-  color: white;
-  margin-bottom: 4px;
-  font-size: 13px;
+/* 动画 */
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
-
-.resolution-size {
-  color: #ccc;
-  font-size: 11px;
-  margin-bottom: 2px;
-}
-
-.resolution-ratio {
-  color: #999;
-  font-size: 10px;
-  font-family: monospace;
-}
-
-/* 自定义分辨率输入（集成在选项内） */
-.custom-inputs {
-  width: 100%;
-  margin-top: 4px;
-}
-
-.input-row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-bottom: 6px;
-}
-
-.custom-input {
-  flex: 1;
-  padding: 4px 6px;
-  background-color: #444;
-  border: 1px solid #555;
-  border-radius: 3px;
-  color: white;
-  font-size: 11px;
-  text-align: center;
-  min-width: 0;
-}
-
-.custom-input:focus {
-  outline: none;
-  border-color: #ff4444;
-}
-
-.input-separator {
-  color: #ccc;
-  font-size: 12px;
-  font-weight: bold;
-}
-
-.custom-ratio {
-  color: #999;
-  font-size: 10px;
-  font-family: monospace;
-  text-align: center;
-}
-
-/* 模态框按钮 */
-.modal-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-  margin-top: 20px;
-  padding-top: 16px;
-  border-top: 1px solid #444;
-}
-
-.cancel-btn,
-.confirm-btn {
-  padding: 8px 16px;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 13px;
-  transition: all 0.2s;
-}
-
-.cancel-btn {
-  background-color: #555;
-  color: #ccc;
-}
-
-.cancel-btn:hover {
-  background-color: #666;
-  color: white;
-}
-
-.confirm-btn {
-  background-color: #ff4444;
-  color: white;
-}
-
-.confirm-btn:hover {
-  background-color: #ff6666;
-}
-
-/* 滚动条样式已在全局样式中定义 */
 </style>
