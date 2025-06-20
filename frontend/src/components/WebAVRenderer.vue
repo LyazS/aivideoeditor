@@ -429,6 +429,7 @@ defineExpose({
   width: 100%;
   height: 100%;
   object-fit: contain;
+  pointer-events: none; /* 阻止鼠标事件 */
 }
 
 .error-message {

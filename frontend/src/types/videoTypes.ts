@@ -29,6 +29,7 @@ export interface MediaItem {
 }
 
 // 时间轴层：包装VideoVisibleSprite/ImageVisibleSprite和时间轴位置信息
+// 🆕 新架构：单向数据流 TimelineItem属性 → Sprite属性
 export interface TimelineItem {
   id: string
   mediaItemId: string // 引用MediaItem的ID
@@ -37,22 +38,17 @@ export interface TimelineItem {
   timeRange: VideoTimeRange | ImageTimeRange // 时间范围信息（视频包含倍速，图片不包含）
   sprite: Raw<VideoVisibleSprite | ImageVisibleSprite> // 视频或图片sprite
   thumbnailUrl?: string // 时间轴clip的缩略图URL
-  // Sprite位置和大小属性（响应式）
-  position: {
-    x: number
-    y: number
-  }
-  size: {
-    width: number
-    height: number
-  }
-  // 其他sprite属性（响应式）
+
+  // 变换属性（通过工厂函数实现 getter/setter）
+  x: number // 位置X（项目坐标系，中心为原点）
+  y: number // 位置Y（项目坐标系，中心为原点）
+  width: number // 宽度
+  height: number // 高度
   rotation: number // 旋转角度（弧度）
-  zIndex: number
-  opacity: number
-  // 音频属性（仅对视频有效）
-  volume: number // 音量（0-1之间）
-  isMuted: boolean // 静音状态
+  opacity: number // 透明度（0-1）
+  zIndex: number // 层级
+  volume: number // 音量（0-1之间，仅对视频有效）
+  isMuted: boolean // 静音状态（仅对视频有效）
 }
 
 export interface VideoResolution {
@@ -61,6 +57,30 @@ export interface VideoResolution {
   height: number
   aspectRatio: string
   category?: string
+}
+
+// ==================== TimelineItem 工厂函数相关类型 ====================
+
+/**
+ * TimelineItem基础数据接口
+ */
+export interface TimelineItemBaseData {
+  id: string
+  mediaItemId: string
+  trackId: number
+  mediaType: 'video' | 'image'
+  timeRange: VideoTimeRange | ImageTimeRange
+  thumbnailUrl?: string
+}
+
+/**
+ * 工厂函数选项
+ */
+export interface TimelineItemFactoryOptions {
+  videoResolution: {
+    width: number
+    height: number
+  }
 }
 
 // ==================== 类型守卫函数 ====================

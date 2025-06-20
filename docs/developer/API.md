@@ -199,24 +199,22 @@ interface MediaItem {
 interface TimelineItem {
   id: string
   mediaItemId: string
-  trackId: string
-  startTime: number
-  endTime: number
-  duration: number
-  trimStart: number
-  trimEnd: number
-  
-  // 变换属性
-  transformX: number
-  transformY: number
-  scaleX: number
-  scaleY: number
-  rotation: number
-  opacity: number
-  zIndex: number
-  
-  // WebAV相关
-  sprite?: Raw<VideoVisibleSprite>
+  trackId: number
+  mediaType: 'video' | 'image'
+  timeRange: VideoTimeRange | ImageTimeRange
+  sprite: Raw<VideoVisibleSprite | ImageVisibleSprite>
+  thumbnailUrl?: string
+
+  // 变换属性（通过工厂函数实现 getter/setter）
+  x: number // 位置X（项目坐标系，中心为原点）
+  y: number // 位置Y（项目坐标系，中心为原点）
+  width: number // 宽度
+  height: number // 高度
+  rotation: number // 旋转角度（弧度）
+  opacity: number // 透明度（0-1）
+  zIndex: number // 层级
+  volume: number // 音量（0-1之间，仅对视频有效）
+  isMuted: boolean // 静音状态（仅对视频有效）
 }
 ```
 

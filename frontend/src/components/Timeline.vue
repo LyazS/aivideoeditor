@@ -174,6 +174,8 @@ import { VideoVisibleSprite } from '../utils/VideoVisibleSprite'
 import { ImageVisibleSprite } from '../utils/ImageVisibleSprite'
 import { createSpriteFromMediaItem } from '../utils/spriteFactory'
 import { webavToProjectCoords } from '../utils/coordinateTransform'
+import { createReactiveTimelineItem } from '../utils/timelineItemFactory'
+import type { TimelineItemBaseData } from '../types/videoTypes'
 import {
   calculatePixelsPerSecond,
   calculateVisibleTimeRange,
@@ -767,46 +769,33 @@ async function createMediaClipFromMediaItem(
     // 创建TimelineItem - 使用markRaw包装VideoVisibleSprite
     const timelineItemId = Date.now().toString() + Math.random().toString(36).substring(2, 11)
 
-    // 将WebAV坐标系转换为项目坐标系（中心原点）
-    const projectCoords = webavToProjectCoords(
-      sprite.rect.x,
-      sprite.rect.y,
-      sprite.rect.w,
-      sprite.rect.h,
-      videoStore.videoResolution.width,
-      videoStore.videoResolution.height,
-    )
-
-    const timelineItem: TimelineItem = reactive({
+    // 🆕 使用新的工厂函数创建响应式TimelineItem
+    // 新架构：单向数据流 TimelineItem属性 → Sprite属性
+    const baseData: TimelineItemBaseData = {
       id: timelineItemId,
       mediaItemId: mediaItem.id,
       trackId: trackId,
       mediaType: mediaItem.mediaType,
       timeRange: sprite.getTimeRange(), // 从sprite获取完整的timeRange（已经通过setTimeRange设置）
-      sprite: markRaw(sprite), // 使用markRaw避免Vue响应式包装
       thumbnailUrl, // 添加缩略图URL
-      // Sprite位置和大小属性（使用项目坐标系）
-      position: {
-        x: Math.round(projectCoords.x),
-        y: Math.round(projectCoords.y),
-      },
-      size: {
-        width: sprite.rect.w,
-        height: sprite.rect.h,
-      },
-      // 其他sprite属性
-      rotation: sprite.rect.angle || 0, // 从sprite获取旋转角度（弧度），默认为0
-      zIndex: sprite.zIndex,
-      opacity: sprite.opacity,
-      // 音频属性（仅对视频有效）
-      volume: mediaItem.mediaType === 'video' ? 1 : 1, // 默认音量为1
-      isMuted: false, // 默认不静音
-    })
+    }
 
-    console.log('🔄 坐标系转换:', {
-      WebAV坐标: { x: sprite.rect.x, y: sprite.rect.y },
-      项目坐标: { x: timelineItem.position.x, y: timelineItem.position.y },
-      尺寸: { w: sprite.rect.w, h: sprite.rect.h },
+    const timelineItem: TimelineItem = createReactiveTimelineItem(
+      baseData,
+      sprite,
+      {
+        videoResolution: {
+          width: videoStore.videoResolution.width,
+          height: videoStore.videoResolution.height
+        }
+      }
+    )
+
+    console.log('🔄 新架构TimelineItem创建完成:', {
+      id: timelineItem.id,
+      项目坐标: { x: timelineItem.x, y: timelineItem.y },
+      尺寸: { width: timelineItem.width, height: timelineItem.height },
+      WebAV坐标: { x: sprite.rect.x, y: sprite.rect.y, w: sprite.rect.w, h: sprite.rect.h },
     })
 
     // 添加到store（使用带历史记录的方法）

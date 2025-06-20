@@ -24,8 +24,8 @@ import { createTimelineModule } from './modules/timelineModule'
 import { createClipOperationsModule } from './modules/clipOperationsModule'
 import { createHistoryModule } from './modules/historyModule'
 import { createNotificationModule } from './modules/notificationModule'
-import { AddTimelineItemCommand, RemoveTimelineItemCommand, MoveTimelineItemCommand, UpdateTransformCommand, SplitTimelineItemCommand, DuplicateTimelineItemCommand, AddTrackCommand, RemoveTrackCommand, RenameTrackCommand, AutoArrangeTrackCommand, ToggleTrackVisibilityCommand, ToggleTrackMuteCommand, ResizeTimelineItemCommand } from './modules/commands/timelineCommands'
-import { BatchDeleteCommand, BatchAutoArrangeTrackCommand, BatchUpdatePropertiesCommand } from './modules/commands/batchCommands'
+import { AddTimelineItemCommand, RemoveTimelineItemCommand, MoveTimelineItemCommand, UpdateTransformCommand, SplitTimelineItemCommand, DuplicateTimelineItemCommand, AddTrackCommand, RemoveTrackCommand, RenameTrackCommand, ToggleTrackVisibilityCommand, ToggleTrackMuteCommand, ResizeTimelineItemCommand } from './modules/commands/timelineCommands'
+import { BatchDeleteCommand, BatchAutoArrangeTrackCommand } from './modules/commands/batchCommands'
 import type { MediaItem, TimelineItem } from '../types/videoTypes'
 
 export const useVideoStore = defineStore('video', () => {
@@ -107,7 +107,8 @@ export const useVideoStore = defineStore('video', () => {
       },
       {
         getMediaItem: mediaModule.getMediaItem,
-      }
+      },
+      configModule
     )
     await historyModule.executeCommand(command)
   }
@@ -138,7 +139,8 @@ export const useVideoStore = defineStore('video', () => {
       },
       {
         getMediaItem: mediaModule.getMediaItem,
-      }
+      },
+      configModule
     )
     await historyModule.executeCommand(command)
   }
@@ -200,8 +202,10 @@ export const useVideoStore = defineStore('video', () => {
   async function updateTimelineItemTransformWithHistory(
     timelineItemId: string,
     newTransform: {
-      position?: { x: number; y: number }
-      size?: { width: number; height: number }
+      x?: number
+      y?: number
+      width?: number
+      height?: number
       rotation?: number
       opacity?: number
       zIndex?: number
@@ -221,18 +225,20 @@ export const useVideoStore = defineStore('video', () => {
     // 获取当前的变换属性
     const oldTransform: typeof newTransform = {}
 
-    if (newTransform.position) {
-      oldTransform.position = {
-        x: timelineItem.position.x,
-        y: timelineItem.position.y,
-      }
+    if (newTransform.x !== undefined) {
+      oldTransform.x = timelineItem.x
     }
 
-    if (newTransform.size) {
-      oldTransform.size = {
-        width: timelineItem.size.width,
-        height: timelineItem.size.height,
-      }
+    if (newTransform.y !== undefined) {
+      oldTransform.y = timelineItem.y
+    }
+
+    if (newTransform.width !== undefined) {
+      oldTransform.width = timelineItem.width
+    }
+
+    if (newTransform.height !== undefined) {
+      oldTransform.height = timelineItem.height
     }
 
     if (newTransform.rotation !== undefined) {
@@ -293,7 +299,6 @@ export const useVideoStore = defineStore('video', () => {
       oldTransform,
       newTransform,
       {
-        updateTimelineItemTransform: timelineModule.updateTimelineItemTransform,
         getTimelineItem: timelineModule.getTimelineItem,
       },
       {
@@ -313,20 +318,28 @@ export const useVideoStore = defineStore('video', () => {
     oldTransform: any,
     newTransform: any
   ): boolean {
-    // 检查位置变化
-    if (newTransform.position && oldTransform.position) {
-      const positionChanged =
-        Math.abs(oldTransform.position.x - newTransform.position.x) > 0.1 ||
-        Math.abs(oldTransform.position.y - newTransform.position.y) > 0.1
-      if (positionChanged) return true
+    // 检查X位置变化
+    if (newTransform.x !== undefined && oldTransform.x !== undefined) {
+      const xChanged = Math.abs(oldTransform.x - newTransform.x) > 0.1
+      if (xChanged) return true
     }
 
-    // 检查大小变化
-    if (newTransform.size && oldTransform.size) {
-      const sizeChanged =
-        Math.abs(oldTransform.size.width - newTransform.size.width) > 0.1 ||
-        Math.abs(oldTransform.size.height - newTransform.size.height) > 0.1
-      if (sizeChanged) return true
+    // 检查Y位置变化
+    if (newTransform.y !== undefined && oldTransform.y !== undefined) {
+      const yChanged = Math.abs(oldTransform.y - newTransform.y) > 0.1
+      if (yChanged) return true
+    }
+
+    // 检查宽度变化
+    if (newTransform.width !== undefined && oldTransform.width !== undefined) {
+      const widthChanged = Math.abs(oldTransform.width - newTransform.width) > 0.1
+      if (widthChanged) return true
+    }
+
+    // 检查高度变化
+    if (newTransform.height !== undefined && oldTransform.height !== undefined) {
+      const heightChanged = Math.abs(oldTransform.height - newTransform.height) > 0.1
+      if (heightChanged) return true
     }
 
     // 检查旋转变化
@@ -377,11 +390,13 @@ export const useVideoStore = defineStore('video', () => {
   /**
    * 确定属性类型
    */
-  function determinePropertyType(transform: any): 'position' | 'size' | 'rotation' | 'opacity' | 'zIndex' | 'duration' | 'playbackRate' | 'volume' | 'audioState' | 'multiple' {
+  function determinePropertyType(transform: any): 'x' | 'y' | 'width' | 'height' | 'rotation' | 'opacity' | 'zIndex' | 'duration' | 'playbackRate' | 'volume' | 'audioState' | 'multiple' {
     const changedProperties = []
 
-    if (transform.position) changedProperties.push('position')
-    if (transform.size) changedProperties.push('size')
+    if (transform.x !== undefined) changedProperties.push('x')
+    if (transform.y !== undefined) changedProperties.push('y')
+    if (transform.width !== undefined) changedProperties.push('width')
+    if (transform.height !== undefined) changedProperties.push('height')
     if (transform.rotation !== undefined) changedProperties.push('rotation')
     if (transform.opacity !== undefined) changedProperties.push('opacity')
     if (transform.zIndex !== undefined) changedProperties.push('zIndex')
@@ -444,7 +459,8 @@ export const useVideoStore = defineStore('video', () => {
       },
       {
         getMediaItem: mediaModule.getMediaItem,
-      }
+      },
+      configModule
     )
     await historyModule.executeCommand(command)
   }
@@ -474,7 +490,6 @@ export const useVideoStore = defineStore('video', () => {
         addTimelineItem: timelineModule.addTimelineItem,
         removeTimelineItem: timelineModule.removeTimelineItem,
         getTimelineItem: timelineModule.getTimelineItem,
-        setupBidirectionalSync: timelineModule.setupBidirectionalSync,
       },
       {
         addSprite: webavModule.addSprite,
@@ -482,7 +497,8 @@ export const useVideoStore = defineStore('video', () => {
       },
       {
         getMediaItem: mediaModule.getMediaItem,
-      }
+      },
+      configModule
     )
 
     try {
@@ -551,7 +567,6 @@ export const useVideoStore = defineStore('video', () => {
         addTimelineItem: timelineModule.addTimelineItem,
         removeTimelineItem: timelineModule.removeTimelineItem,
         getTimelineItem: timelineModule.getTimelineItem,
-        setupBidirectionalSync: timelineModule.setupBidirectionalSync,
         timelineItems: timelineModule.timelineItems,
       },
       {
@@ -912,8 +927,6 @@ export const useVideoStore = defineStore('video', () => {
       getTimelineItemsByTrack(trackId, timelineModule.timelineItems.value),
     updateTimelineItemPosition: timelineModule.updateTimelineItemPosition,
     updateTimelineItemSprite: timelineModule.updateTimelineItemSprite,
-    setupBidirectionalSync: timelineModule.setupBidirectionalSync,
-    updateTimelineItemTransform: timelineModule.updateTimelineItemTransform,
     // 统一选择管理API
     selectTimelineItems: selectionModule.selectTimelineItems,
     syncAVCanvasSelection: selectionModule.syncAVCanvasSelection,

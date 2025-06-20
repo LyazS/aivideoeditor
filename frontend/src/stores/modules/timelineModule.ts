@@ -1,12 +1,10 @@
 import { ref, type Raw, type Ref } from 'vue'
 import { VideoVisibleSprite } from '../../utils/VideoVisibleSprite'
 import { ImageVisibleSprite } from '../../utils/ImageVisibleSprite'
-import { webavToProjectCoords, projectToWebavCoords } from '../../utils/coordinateTransform'
 import { printDebugInfo, syncTimeRange } from '../utils/storeUtils'
 import type {
   TimelineItem,
   MediaItem,
-  PropsChangeEvent,
   VideoResolution,
 } from '../../types/videoTypes'
 
@@ -27,59 +25,7 @@ export function createTimelineModule(
 
   const timelineItems = ref<TimelineItem[]>([])
 
-  // ==================== 双向数据同步函数 ====================
-
-  /**
-   * 为TimelineItem设置双向数据同步
-   * @param timelineItem TimelineItem实例
-   */
-  function setupBidirectionalSync(timelineItem: TimelineItem) {
-    const sprite = timelineItem.sprite
-
-    // 直接使用WebAV原生的propsChange事件监听器
-    // 设置VisibleSprite → TimelineItem 的同步
-    sprite.on('propsChange', (changedProps: PropsChangeEvent) => {
-      if (changedProps.rect) {
-        const rect = changedProps.rect
-
-        // 更新位置（坐标系转换）
-        // 如果rect.x/rect.y为undefined，说明位置没有变化，使用sprite的当前值
-        const currentRect = sprite.rect
-        const projectCoords = webavToProjectCoords(
-          rect.x !== undefined ? rect.x : currentRect.x,
-          rect.y !== undefined ? rect.y : currentRect.y,
-          rect.w !== undefined ? rect.w : timelineItem.size.width,
-          rect.h !== undefined ? rect.h : timelineItem.size.height,
-          configModule.videoResolution.value.width,
-          configModule.videoResolution.value.height,
-        )
-        timelineItem.position.x = Math.round(projectCoords.x)
-        timelineItem.position.y = Math.round(projectCoords.y)
-
-        // 更新尺寸
-        if (rect.w !== undefined) timelineItem.size.width = rect.w
-        if (rect.h !== undefined) timelineItem.size.height = rect.h
-
-        // 更新旋转角度
-        if (rect.angle !== undefined) timelineItem.rotation = rect.angle
-
-        // console.log('🔄 VisibleSprite → TimelineItem 同步:', {
-        //   webavCoords: { x: rect.x, y: rect.y },
-        //   projectCoords: { x: timelineItem.position.x, y: timelineItem.position.y },
-        //   size: { w: timelineItem.size.width, h: timelineItem.size.height },
-        //   rotation: timelineItem.rotation
-        // })
-      }
-
-      // 同步zIndex属性（propsChange事件包含此属性）
-      if (changedProps.zIndex !== undefined) {
-        timelineItem.zIndex = changedProps.zIndex
-        // console.log('🔄 VisibleSprite → TimelineItem 同步 zIndex:', changedProps.zIndex)
-      }
-
-      // 注意：opacity属性没有propsChange回调，需要在直接设置sprite.opacity的地方手动同步
-    })
-  }
+  // ==================== 时间轴管理方法 ====================
 
   // ==================== 时间轴管理方法 ====================
 
@@ -108,8 +54,7 @@ export function createTimelineModule(
       }
     }
 
-    // 设置双向数据同步
-    setupBidirectionalSync(timelineItem)
+
 
     timelineItems.value.push(timelineItem)
 
@@ -284,103 +229,7 @@ export function createTimelineModule(
     }
   }
 
-  // ==================== 属性面板更新方法 ====================
 
-  /**
-   * 更新TimelineItem的VisibleSprite变换属性
-   * 这会触发propsChange事件，自动同步到TimelineItem，然后更新属性面板显示
-   */
-  function updateTimelineItemTransform(
-    timelineItemId: string,
-    transform: {
-      position?: { x: number; y: number }
-      size?: { width: number; height: number }
-      rotation?: number
-      opacity?: number
-      zIndex?: number
-    },
-  ) {
-    const item = timelineItems.value.find((item) => item.id === timelineItemId)
-    if (!item) return
-
-    const sprite = item.sprite
-
-    try {
-      // 更新尺寸时使用中心缩放
-      if (transform.size) {
-        // 获取当前中心位置（项目坐标系）
-        const currentCenterX = item.position.x
-        const currentCenterY = item.position.y
-        const newWidth = transform.size.width
-        const newHeight = transform.size.height
-
-        // 中心缩放：保持中心位置不变，更新尺寸
-        sprite.rect.w = newWidth
-        sprite.rect.h = newHeight
-
-        // 根据新尺寸重新计算WebAV坐标（保持中心位置不变）
-        const webavCoords = projectToWebavCoords(
-          currentCenterX,
-          currentCenterY,
-          newWidth,
-          newHeight,
-          configModule.videoResolution.value.width,
-          configModule.videoResolution.value.height,
-        )
-        sprite.rect.x = webavCoords.x
-        sprite.rect.y = webavCoords.y
-
-        console.log('🎯 中心缩放:', {
-          newSize: { width: newWidth, height: newHeight },
-          centerPosition: { x: currentCenterX, y: currentCenterY },
-          webavCoords: { x: webavCoords.x, y: webavCoords.y },
-        })
-      }
-
-      // 更新位置（需要坐标系转换）
-      if (transform.position) {
-        const webavCoords = projectToWebavCoords(
-          transform.position.x,
-          transform.position.y,
-          item.size.width,
-          item.size.height,
-          configModule.videoResolution.value.width,
-          configModule.videoResolution.value.height,
-        )
-        sprite.rect.x = webavCoords.x
-        sprite.rect.y = webavCoords.y
-      }
-
-      // 更新其他属性
-      if (transform.opacity !== undefined) {
-        sprite.opacity = transform.opacity
-        // 🔧 手动同步opacity到timelineItem（因为opacity没有propsChange回调）
-        item.opacity = transform.opacity
-      }
-      if (transform.zIndex !== undefined) {
-        sprite.zIndex = transform.zIndex
-        // zIndex有propsChange回调，会自动同步到timelineItem
-      }
-      // 更新旋转角度（WebAV的rect.angle支持旋转）
-      if (transform.rotation !== undefined) {
-        sprite.rect.angle = transform.rotation
-      }
-
-      console.log('✅ 属性面板 → VisibleSprite 更新完成:', {
-        timelineItemId,
-        transform,
-        webavRect: {
-          x: sprite.rect.x,
-          y: sprite.rect.y,
-          w: sprite.rect.w,
-          h: sprite.rect.h,
-          angle: sprite.rect.angle,
-        },
-      })
-    } catch (error) {
-      console.error('更新VisibleSprite变换属性失败:', error)
-    }
-  }
 
   // ==================== 导出接口 ====================
 
@@ -389,13 +238,11 @@ export function createTimelineModule(
     timelineItems,
 
     // 方法
-    setupBidirectionalSync,
     addTimelineItem,
     removeTimelineItem,
     getTimelineItem,
     updateTimelineItemPosition,
     updateTimelineItemSprite,
-    updateTimelineItemTransform,
   }
 }
 

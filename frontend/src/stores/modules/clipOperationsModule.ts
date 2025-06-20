@@ -2,6 +2,8 @@ import { reactive, markRaw, type Ref } from 'vue'
 import { VideoVisibleSprite } from '../../utils/VideoVisibleSprite'
 import { ImageVisibleSprite } from '../../utils/ImageVisibleSprite'
 import { createSpriteFromMediaItem } from '../../utils/spriteFactory'
+import { createReactiveTimelineItem } from '../../utils/timelineItemFactory'
+import type { TimelineItemBaseData } from '../../types/videoTypes'
 import { regenerateThumbnailForTimelineItem } from '../../utils/thumbnailGenerator'
 import { printDebugInfo, syncTimeRange } from '../utils/storeUtils'
 import type { TimelineItem, MediaItem } from '../../types/videoTypes'
@@ -19,7 +21,6 @@ export function createClipOperationsModule(
   },
   timelineModule: {
     timelineItems: Ref<TimelineItem[]>
-    setupBidirectionalSync: (item: TimelineItem) => void
   },
   selectionModule: { selectTimelineItem: (id: string) => void; clearAllSelections: () => void },
   trackModule?: { tracks: Ref<{ id: number; name: string }[]> },
@@ -93,8 +94,7 @@ export function createClipOperationsModule(
       newSprite.opacity = sprite.opacity
 
       console.log(`📋 复制原始sprite属性:`, {
-        position: { x: originalRect.x, y: originalRect.y },
-        size: { w: originalRect.w, h: originalRect.h },
+        webavRect: { x: originalRect.x, y: originalRect.y, w: originalRect.w, h: originalRect.h },
         rotation: originalRect.angle,
         zIndex: sprite.zIndex,
         opacity: sprite.opacity,
@@ -110,29 +110,37 @@ export function createClipOperationsModule(
       const duration = (timeRange.timelineEndTime - timeRange.timelineStartTime) / 1000000 // 转换为秒
       const newTimelinePosition = timeRange.timelineStartTime / 1000000 + duration // 紧接着原项目
 
-      const newItem: TimelineItem = reactive({
+      // 🆕 使用新的工厂函数创建TimelineItem
+      const baseData: TimelineItemBaseData = {
         id: Date.now().toString() + Math.random().toString(36).substring(2, 11),
         mediaItemId: originalItem.mediaItemId,
         trackId: originalItem.trackId,
         mediaType: originalItem.mediaType,
-        timeRange: newSprite.getTimeRange(), // 从sprite获取完整的timeRange（包含自动计算的effectiveDuration）
-        sprite: markRaw(newSprite),
-        // 复制原始项目的sprite属性
-        position: {
-          x: originalItem.position.x,
-          y: originalItem.position.y,
-        },
-        size: {
-          width: originalItem.size.width,
-          height: originalItem.size.height,
-        },
-        rotation: originalItem.rotation,
-        zIndex: originalItem.zIndex,
-        opacity: originalItem.opacity,
-        // 复制音量属性
-        volume: originalItem.volume,
-        isMuted: originalItem.isMuted,
-      })
+        timeRange: newSprite.getTimeRange(),
+        thumbnailUrl: originalItem.thumbnailUrl,
+      }
+
+      const newItem = createReactiveTimelineItem(
+        baseData,
+        newSprite,
+        {
+          videoResolution: {
+            width: configModule.videoResolution.value.width,
+            height: configModule.videoResolution.value.height
+          }
+        }
+      )
+
+      // 复制原始项目的变换属性
+      newItem.x = originalItem.x
+      newItem.y = originalItem.y
+      newItem.width = originalItem.width
+      newItem.height = originalItem.height
+      newItem.rotation = originalItem.rotation
+      newItem.zIndex = originalItem.zIndex
+      newItem.opacity = originalItem.opacity
+      newItem.volume = originalItem.volume
+      newItem.isMuted = originalItem.isMuted
 
       // 根据媒体类型更新新sprite的时间轴位置
       if (mediaItem.mediaType === 'video' && isVideoTimeRange(timeRange)) {
@@ -152,9 +160,6 @@ export function createClipOperationsModule(
 
       // 添加到时间轴
       timelineModule.timelineItems.value.push(newItem)
-
-      // 🔄 为新创建的TimelineItem设置双向数据同步
-      timelineModule.setupBidirectionalSync(newItem)
 
       // 🖼️ 为复制的片段重新生成缩略图（异步执行，不阻塞UI）
       regenerateThumbnailAfterDuplicate(newItem, mediaItem)
@@ -328,8 +333,7 @@ export function createClipOperationsModule(
       firstSprite.opacity = sprite.opacity
 
       console.log(`📋 复制原始sprite属性到第一个片段:`, {
-        position: { x: originalRect.x, y: originalRect.y },
-        size: { w: originalRect.w, h: originalRect.h },
+        webavRect: { x: originalRect.x, y: originalRect.y, w: originalRect.w, h: originalRect.h },
         rotation: originalRect.angle,
         zIndex: sprite.zIndex,
         opacity: sprite.opacity,
@@ -354,8 +358,7 @@ export function createClipOperationsModule(
       secondSprite.opacity = sprite.opacity
 
       console.log(`📋 复制原始sprite属性到第二个片段:`, {
-        position: { x: originalRect.x, y: originalRect.y },
-        size: { w: originalRect.w, h: originalRect.h },
+        webavRect: { x: originalRect.x, y: originalRect.y, w: originalRect.w, h: originalRect.h },
         rotation: originalRect.angle,
         zIndex: sprite.zIndex,
         opacity: sprite.opacity,
@@ -368,54 +371,68 @@ export function createClipOperationsModule(
         canvas.addSprite(secondSprite)
       }
 
-      // 创建新的TimelineItem
-      const firstItem: TimelineItem = reactive({
+      // 🆕 使用新的工厂函数创建TimelineItem
+      const firstBaseData: TimelineItemBaseData = {
         id: Date.now().toString() + Math.random().toString(36).substring(2, 11),
         mediaItemId: originalItem.mediaItemId,
         trackId: originalItem.trackId,
         mediaType: originalItem.mediaType,
-        timeRange: firstSprite.getTimeRange(), // 从sprite获取完整的timeRange
-        sprite: markRaw(firstSprite),
-        // 复制原始项目的sprite属性
-        position: {
-          x: originalItem.position.x,
-          y: originalItem.position.y,
-        },
-        size: {
-          width: originalItem.size.width,
-          height: originalItem.size.height,
-        },
-        rotation: originalItem.rotation,
-        zIndex: originalItem.zIndex,
-        opacity: originalItem.opacity,
-        // 复制音量属性
-        volume: originalItem.volume,
-        isMuted: originalItem.isMuted,
-      })
+        timeRange: firstSprite.getTimeRange(),
+        thumbnailUrl: originalItem.thumbnailUrl,
+      }
 
-      const secondItem: TimelineItem = reactive({
+      const firstItem = createReactiveTimelineItem(
+        firstBaseData,
+        firstSprite,
+        {
+          videoResolution: {
+            width: configModule.videoResolution.value.width,
+            height: configModule.videoResolution.value.height
+          }
+        }
+      )
+
+      // 复制原始项目的变换属性
+      firstItem.x = originalItem.x
+      firstItem.y = originalItem.y
+      firstItem.width = originalItem.width
+      firstItem.height = originalItem.height
+      firstItem.rotation = originalItem.rotation
+      firstItem.zIndex = originalItem.zIndex
+      firstItem.opacity = originalItem.opacity
+      firstItem.volume = originalItem.volume
+      firstItem.isMuted = originalItem.isMuted
+
+      const secondBaseData: TimelineItemBaseData = {
         id: Date.now().toString() + Math.random().toString(36).substring(2, 11),
         mediaItemId: originalItem.mediaItemId,
         trackId: originalItem.trackId,
         mediaType: originalItem.mediaType,
-        timeRange: secondSprite.getTimeRange(), // 从sprite获取完整的timeRange
-        sprite: markRaw(secondSprite),
-        // 复制原始项目的sprite属性
-        position: {
-          x: originalItem.position.x,
-          y: originalItem.position.y,
-        },
-        size: {
-          width: originalItem.size.width,
-          height: originalItem.size.height,
-        },
-        rotation: originalItem.rotation,
-        zIndex: originalItem.zIndex,
-        opacity: originalItem.opacity,
-        // 复制音量属性
-        volume: originalItem.volume,
-        isMuted: originalItem.isMuted,
-      })
+        timeRange: secondSprite.getTimeRange(),
+        thumbnailUrl: originalItem.thumbnailUrl,
+      }
+
+      const secondItem = createReactiveTimelineItem(
+        secondBaseData,
+        secondSprite,
+        {
+          videoResolution: {
+            width: configModule.videoResolution.value.width,
+            height: configModule.videoResolution.value.height
+          }
+        }
+      )
+
+      // 复制原始项目的变换属性
+      secondItem.x = originalItem.x
+      secondItem.y = originalItem.y
+      secondItem.width = originalItem.width
+      secondItem.height = originalItem.height
+      secondItem.rotation = originalItem.rotation
+      secondItem.zIndex = originalItem.zIndex
+      secondItem.opacity = originalItem.opacity
+      secondItem.volume = originalItem.volume
+      secondItem.isMuted = originalItem.isMuted
 
       // 从WebAV画布移除原始sprite
       if (canvas) {
@@ -424,10 +441,6 @@ export function createClipOperationsModule(
 
       // 替换原项目为两个新项目
       timelineModule.timelineItems.value.splice(itemIndex, 1, firstItem, secondItem)
-
-      // 🔄 为新创建的两个TimelineItem设置双向数据同步
-      timelineModule.setupBidirectionalSync(firstItem)
-      timelineModule.setupBidirectionalSync(secondItem)
 
       // 🖼️ 为分割后的两个片段重新生成缩略图（异步执行，不阻塞UI）
       regenerateThumbnailsAfterSplit(firstItem, secondItem, mediaItem)

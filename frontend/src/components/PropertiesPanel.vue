@@ -158,7 +158,7 @@
                 <span class="position-label">X</span>
                 <NumberInput
                   :model-value="transformX"
-                  @change="(value) => updateTransform({ position: { x: value, y: transformY } })"
+                  @change="(value) => updatePropertyWithHistory('x', value)"
                   :min="-videoStore.videoResolution.width"
                   :max="videoStore.videoResolution.width"
                   :step="1"
@@ -171,7 +171,7 @@
                 <span class="position-label">Y</span>
                 <NumberInput
                   :model-value="transformY"
-                  @change="(value) => updateTransform({ position: { x: transformX, y: value } })"
+                  @change="(value) => updatePropertyWithHistory('y', value)"
                   :min="-videoStore.videoResolution.height"
                   :max="videoStore.videoResolution.height"
                   :step="1"
@@ -397,7 +397,7 @@
             <label>层级</label>
             <NumberInput
               :model-value="zIndex"
-              @change="(value) => updateTransform({ zIndex: value })"
+              @change="(value) => updatePropertyWithHistory('zIndex', value)"
               :min="0"
               :step="1"
               :precision="0"
@@ -478,22 +478,22 @@ const speedSegments = [
   { min: 10, max: 100, normalizedStart: 80, normalizedEnd: 100 }, // 80-100%: 10-100x
 ]
 
-// 变换属性 - 基于TimelineItem的响应式计算属性
-const transformX = computed(() => selectedTimelineItem.value?.position.x || 0)
-const transformY = computed(() => selectedTimelineItem.value?.position.y || 0)
+// 🆕 变换属性 - 基于新架构的直接属性访问
+const transformX = computed(() => selectedTimelineItem.value?.x || 0)
+const transformY = computed(() => selectedTimelineItem.value?.y || 0)
 const scaleX = computed(() => {
   if (!selectedTimelineItem.value || !selectedMediaItem.value) return 1
   const originalResolution = selectedMediaItem.value.mediaType === 'video'
     ? videoStore.getVideoOriginalResolution(selectedMediaItem.value.id)
     : videoStore.getImageOriginalResolution(selectedMediaItem.value.id)
-  return selectedTimelineItem.value.size.width / originalResolution.width
+  return selectedTimelineItem.value.width / originalResolution.width
 })
 const scaleY = computed(() => {
   if (!selectedTimelineItem.value || !selectedMediaItem.value) return 1
   const originalResolution = selectedMediaItem.value.mediaType === 'video'
     ? videoStore.getVideoOriginalResolution(selectedMediaItem.value.id)
     : videoStore.getImageOriginalResolution(selectedMediaItem.value.id)
-  return selectedTimelineItem.value.size.height / originalResolution.height
+  return selectedTimelineItem.value.height / originalResolution.height
 })
 const rotation = computed(() => {
   const radians = selectedTimelineItem.value?.rotation || 0
@@ -515,10 +515,10 @@ const currentResolution = computed(() => {
   if (!selectedTimelineItem.value) {
     return { width: 0, height: 0 }
   }
-  // 直接使用TimelineItem中的size属性，这是缩放后的实际尺寸
+  // 🆕 直接使用TimelineItem的width/height属性，这是缩放后的实际尺寸
   return {
-    width: Math.round(selectedTimelineItem.value.size.width),
-    height: Math.round(selectedTimelineItem.value.size.height),
+    width: Math.round(selectedTimelineItem.value.width),
+    height: Math.round(selectedTimelineItem.value.height),
   }
 })
 
@@ -699,55 +699,34 @@ const updateSpeedFromInput = (newSpeed: number) => {
   }
 }
 
-// 更新音量
+// 🆕 更新音量 - 使用带历史记录的属性更新
 const updateVolume = (newVolume: number) => {
   if (!selectedTimelineItem.value || selectedTimelineItem.value.mediaType !== 'video') return
 
   const clampedVolume = Math.max(0, Math.min(1, newVolume))
 
-  // 确保属性存在，如果不存在则初始化
-  if (selectedTimelineItem.value.volume === undefined) {
-    selectedTimelineItem.value.volume = 1
-  }
-  if (selectedTimelineItem.value.isMuted === undefined) {
-    selectedTimelineItem.value.isMuted = false
-  }
-
-  // 使用历史记录系统更新音量
   if (clampedVolume === 0) {
     // 设为静音，但保留原音量值
-    videoStore.updateTimelineItemTransformWithHistory(selectedTimelineItem.value.id, {
-      isMuted: true
-    })
+    updatePropertyWithHistory('isMuted', true)
   } else {
     // 更新音量值并取消静音
-    videoStore.updateTimelineItemTransformWithHistory(selectedTimelineItem.value.id, {
-      volume: clampedVolume,
-      isMuted: false
-    })
+    updatePropertyWithHistory('volume', clampedVolume)
+    if (selectedTimelineItem.value.isMuted) {
+      updatePropertyWithHistory('isMuted', false)
+    }
   }
 
   console.log('✅ 音量更新成功:', clampedVolume)
 }
 
-// 切换静音状态
+// 🆕 切换静音状态 - 使用带历史记录的属性更新
 const toggleMute = () => {
   if (!selectedTimelineItem.value || selectedTimelineItem.value.mediaType !== 'video') return
 
-  // 确保属性存在，如果不存在则初始化
-  if (selectedTimelineItem.value.volume === undefined) {
-    selectedTimelineItem.value.volume = 1
-  }
-  if (selectedTimelineItem.value.isMuted === undefined) {
-    selectedTimelineItem.value.isMuted = false
-  }
-
   const newMutedState = !selectedTimelineItem.value.isMuted
 
-  // 使用历史记录系统切换静音状态
-  videoStore.updateTimelineItemTransformWithHistory(selectedTimelineItem.value.id, {
-    isMuted: newMutedState
-  })
+  // 🆕 使用带历史记录的属性更新
+  updatePropertyWithHistory('isMuted', newMutedState)
 
   console.log('✅ 静音状态切换:', newMutedState ? '静音' : '有声', '音量保持:', selectedTimelineItem.value.volume)
 }
@@ -782,117 +761,136 @@ const speedToNormalized = (speed: number) => {
   return 20 // 默认值对应1x
 }
 
-// 更新变换属性 - 使用带历史记录的方法
-const updateTransform = async (transform?: {
-  position?: { x: number; y: number }
-  size?: { width: number; height: number }
-  rotation?: number
-  opacity?: number
-  zIndex?: number
-}) => {
-  if (!selectedTimelineItem.value) return
+// 🆕 新架构：直接属性赋值，无需复杂的updateTransform方法
+// TimelineItem的getter/setter会自动同步到Sprite
 
-  // 如果没有提供transform参数，使用当前的响应式值
-  const finalTransform = transform || {
-    position: { x: transformX.value, y: transformY.value },
-    size: {
-      width: selectedTimelineItem.value.size.width,
-      height: selectedTimelineItem.value.size.height,
-    },
-    rotation: rotation.value,
-    opacity: opacity.value,
-    zIndex: zIndex.value,
-  }
-
-  try {
-    // 使用带历史记录的变换属性更新方法
-    await videoStore.updateTimelineItemTransformWithHistory(selectedTimelineItem.value.id, finalTransform)
-    console.log('✅ 变换属性更新成功')
-  } catch (error) {
-    console.error('❌ 更新变换属性失败:', error)
-    // 如果历史记录更新失败，回退到直接更新
-    videoStore.updateTimelineItemTransform(selectedTimelineItem.value.id, finalTransform)
-  }
-}
-
-// 切换等比缩放
-const toggleProportionalScale = () => {
+// 🆕 切换等比缩放 - 使用带历史记录的属性更新
+const toggleProportionalScale = async () => {
   if (proportionalScale.value && selectedTimelineItem.value && selectedMediaItem.value) {
     // 开启等比缩放时，使用当前X缩放值作为统一缩放值，同时更新Y缩放
     const originalResolution = selectedMediaItem.value.mediaType === 'video'
       ? videoStore.getVideoOriginalResolution(selectedMediaItem.value.id)
       : videoStore.getImageOriginalResolution(selectedMediaItem.value.id)
+
     const newSize = {
       width: originalResolution.width * scaleX.value,
       height: originalResolution.height * scaleX.value, // 使用X缩放值保持等比
     }
-    updateTransform({ size: newSize })
+
+    try {
+      await videoStore.updateTimelineItemTransformWithHistory(selectedTimelineItem.value.id, {
+        width: newSize.width,
+        height: newSize.height
+      })
+    } catch (error) {
+      console.error('等比缩放切换失败:', error)
+      // 回退到直接更新
+      selectedTimelineItem.value.width = newSize.width
+      selectedTimelineItem.value.height = newSize.height
+    }
   }
 }
 
-// 更新统一缩放
-const updateUniformScale = (newScale: number) => {
+// 🆕 更新统一缩放 - 使用带历史记录的属性更新
+const updateUniformScale = async (newScale: number) => {
   if (proportionalScale.value && selectedTimelineItem.value && selectedMediaItem.value) {
     const originalResolution = selectedMediaItem.value.mediaType === 'video'
       ? videoStore.getVideoOriginalResolution(selectedMediaItem.value.id)
       : videoStore.getImageOriginalResolution(selectedMediaItem.value.id)
+
     const newSize = {
       width: originalResolution.width * newScale,
       height: originalResolution.height * newScale,
     }
-    updateTransform({ size: newSize })
+
+    try {
+      await videoStore.updateTimelineItemTransformWithHistory(selectedTimelineItem.value.id, {
+        width: newSize.width,
+        height: newSize.height
+      })
+    } catch (error) {
+      console.error('统一缩放更新失败:', error)
+      // 回退到直接更新
+      selectedTimelineItem.value.width = newSize.width
+      selectedTimelineItem.value.height = newSize.height
+    }
   }
 }
 
-// 设置X缩放绝对值的方法
+// 🆕 设置X缩放绝对值的方法 - 使用带历史记录的属性更新
 const setScaleX = (value: number) => {
   if (!selectedTimelineItem.value || !selectedMediaItem.value) return
   const originalResolution = selectedMediaItem.value.mediaType === 'video'
     ? videoStore.getVideoOriginalResolution(selectedMediaItem.value.id)
     : videoStore.getImageOriginalResolution(selectedMediaItem.value.id)
   const newScaleX = Math.max(0.01, Math.min(5, value))
-  const newSize = {
-    width: originalResolution.width * newScaleX,
-    height: selectedTimelineItem.value.size.height, // 保持Y尺寸不变
-  }
-  updateTransform({ size: newSize })
+
+  const newWidth = originalResolution.width * newScaleX
+  updatePropertyWithHistory('width', newWidth)
 }
 
-// 设置Y缩放绝对值的方法
+// 🆕 设置Y缩放绝对值的方法 - 使用带历史记录的属性更新
 const setScaleY = (value: number) => {
   if (!selectedTimelineItem.value || !selectedMediaItem.value) return
   const originalResolution = selectedMediaItem.value.mediaType === 'video'
     ? videoStore.getVideoOriginalResolution(selectedMediaItem.value.id)
     : videoStore.getImageOriginalResolution(selectedMediaItem.value.id)
   const newScaleY = Math.max(0.01, Math.min(5, value))
-  const newSize = {
-    width: selectedTimelineItem.value.size.width, // 保持X尺寸不变
-    height: originalResolution.height * newScaleY,
-  }
-  updateTransform({ size: newSize })
+
+  const newHeight = originalResolution.height * newScaleY
+  updatePropertyWithHistory('height', newHeight)
 }
 
-// 设置旋转绝对值的方法（输入角度，转换为弧度）
+// 🆕 设置旋转绝对值的方法（输入角度，转换为弧度）- 使用带历史记录的属性更新
 const setRotation = (value: number) => {
+  if (!selectedTimelineItem.value) return
   const newRotationRadians = uiDegreesToWebAVRadians(value)
-  updateTransform({ rotation: newRotationRadians })
+  updatePropertyWithHistory('rotation', newRotationRadians)
 }
 
-// 设置透明度绝对值的方法
+// 🆕 设置透明度绝对值的方法 - 使用直接属性赋值
 const setOpacity = (value: number) => {
+  if (!selectedTimelineItem.value) return
   const newOpacity = Math.max(0, Math.min(1, value))
-  updateTransform({ opacity: newOpacity })
+  updatePropertyWithHistory('opacity', newOpacity)
+}
+
+// 🆕 带历史记录的属性更新方法
+const updatePropertyWithHistory = async (property: string, newValue: any) => {
+  if (!selectedTimelineItem.value) return
+
+  // 获取旧值
+  const oldValue = (selectedTimelineItem.value as any)[property]
+
+  // 检查是否有实际变化
+  if (oldValue === newValue) {
+    return
+  }
+
+  // 🆕 新架构：直接使用属性名构造变换对象
+  const transform: any = {
+    [property]: newValue
+  }
+
+  try {
+    // 使用带历史记录的更新方法
+    await videoStore.updateTimelineItemTransformWithHistory(selectedTimelineItem.value.id, transform)
+    console.log(`✅ 属性 ${property} 更新成功:`, { oldValue, newValue })
+  } catch (error) {
+    console.error(`❌ 属性 ${property} 更新失败:`, error)
+    // 如果历史记录更新失败，回退到直接更新
+    (selectedTimelineItem.value as any)[property] = newValue
+  }
 }
 
 
 
-// 实现对齐功能（基于项目坐标系：中心为原点）
+// 🆕 实现对齐功能（基于项目坐标系：中心为原点）- 使用带历史记录的属性更新
 const alignHorizontal = (alignment: 'left' | 'center' | 'right') => {
   if (!selectedTimelineItem.value) return
 
-  const sprite = selectedTimelineItem.value.sprite
   const canvasWidth = videoStore.videoResolution.width
-  const spriteWidth = sprite.rect.w || canvasWidth
+  const spriteWidth = selectedTimelineItem.value.width
 
   try {
     let newProjectX = 0
@@ -911,13 +909,10 @@ const alignHorizontal = (alignment: 'left' | 'center' | 'right') => {
         break
     }
 
-    const newPosition = {
-      x: Math.round(newProjectX),
-      y: transformY.value,
-    }
-    updateTransform({ position: newPosition })
+    // 🆕 使用带历史记录的属性更新
+    updatePropertyWithHistory('x', Math.round(newProjectX))
 
-    console.log('✅ 水平对齐完成:', alignment, '项目坐标X:', newPosition.x)
+    console.log('✅ 水平对齐完成:', alignment, '项目坐标X:', newProjectX)
   } catch (error) {
     console.error('水平对齐失败:', error)
   }
@@ -926,9 +921,8 @@ const alignHorizontal = (alignment: 'left' | 'center' | 'right') => {
 const alignVertical = (alignment: 'top' | 'middle' | 'bottom') => {
   if (!selectedTimelineItem.value) return
 
-  const sprite = selectedTimelineItem.value.sprite
   const canvasHeight = videoStore.videoResolution.height
-  const spriteHeight = sprite.rect.h || canvasHeight
+  const spriteHeight = selectedTimelineItem.value.height
 
   try {
     let newProjectY = 0
@@ -947,13 +941,10 @@ const alignVertical = (alignment: 'top' | 'middle' | 'bottom') => {
         break
     }
 
-    const newPosition = {
-      x: transformX.value,
-      y: Math.round(newProjectY),
-    }
-    updateTransform({ position: newPosition })
+    // 🆕 使用带历史记录的属性更新
+    updatePropertyWithHistory('y', Math.round(newProjectY))
 
-    console.log('✅ 垂直对齐完成:', alignment, '项目坐标Y:', newPosition.y)
+    console.log('✅ 垂直对齐完成:', alignment, '项目坐标Y:', newProjectY)
   } catch (error) {
     console.error('垂直对齐失败:', error)
   }

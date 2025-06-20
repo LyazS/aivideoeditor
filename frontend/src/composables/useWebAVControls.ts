@@ -564,10 +564,10 @@ export function useWebAVControls() {
             // 恢复变换属性 - 需要处理新旧画布分辨率不同的情况
             const { projectToWebavCoords } = await import('../utils/coordinateTransform')
             const newWebavCoords = projectToWebavCoords(
-              itemData.position.x,
-              itemData.position.y,
-              itemData.size.width,
-              itemData.size.height,
+              itemData.x,
+              itemData.y,
+              itemData.width,
+              itemData.height,
               options.width,
               options.height,
             )
@@ -575,17 +575,17 @@ export function useWebAVControls() {
             // 设置新的WebAV坐标
             newSprite.rect.x = newWebavCoords.x
             newSprite.rect.y = newWebavCoords.y
-            newSprite.rect.w = itemData.size.width
-            newSprite.rect.h = itemData.size.height
+            newSprite.rect.w = itemData.width
+            newSprite.rect.h = itemData.height
 
             logCoordinateTransform(itemData.id, {
               projectCoords: {
-                x: itemData.position.x,
-                y: itemData.position.y,
+                x: itemData.x,
+                y: itemData.y,
               },
               newCanvasSize: { width: options.width, height: options.height },
               newWebAVCoords: { x: newWebavCoords.x, y: newWebavCoords.y },
-              size: { w: itemData.size.width, h: itemData.size.height },
+              size: { w: itemData.width, h: itemData.height },
             })
 
             // 恢复其他属性
@@ -607,12 +607,7 @@ export function useWebAVControls() {
             videoStore.updateTimelineItemSprite(itemData.id, markRaw(newSprite))
             logSpriteRestore(itemData.id, 'Store reference updated')
 
-            // 🔄 重新设置双向数据同步 - 这是关键步骤！
-            const syncTimelineItem = videoStore.getTimelineItem(itemData.id)
-            if (syncTimelineItem) {
-              videoStore.setupBidirectionalSync(syncTimelineItem)
-              logSpriteRestore(itemData.id, 'Bidirectional sync reestablished')
-            }
+            logSpriteRestore(itemData.id, 'Sprite restored successfully')
 
             restoredCount++
             logSpriteRestore(
