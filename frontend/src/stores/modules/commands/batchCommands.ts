@@ -1,4 +1,4 @@
-import { generateCommandId } from '../../../utils/idGenerator'
+
 import { BaseBatchCommand } from '../historyModule'
 import type { SimpleCommand } from '../historyModule'
 import type { TimelineItem, MediaItem, Track } from '../../../types/videoTypes'
@@ -26,6 +26,9 @@ export class BatchDeleteCommand extends BaseBatchCommand {
     },
     private mediaModule: {
       getMediaItem: (id: string) => MediaItem | undefined
+    },
+    private configModule: {
+      videoResolution: { value: { width: number; height: number } }
     }
   ) {
     super(`批量删除 ${timelineItemIds.length} 个时间轴项目`)
@@ -44,7 +47,8 @@ export class BatchDeleteCommand extends BaseBatchCommand {
           item,
           this.timelineModule,
           this.webavModule,
-          this.mediaModule
+          this.mediaModule,
+          this.configModule
         )
         this.addCommand(deleteCommand)
       }
