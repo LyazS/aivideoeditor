@@ -8,7 +8,6 @@
           'notification',
           `notification--${notification.type}`
         ]"
-        @click="removeNotification(notification.id)"
       >
         <div class="notification__icon">
           <NotificationIcons :type="notification.type" />
@@ -19,13 +18,6 @@
             {{ notification.message }}
           </div>
         </div>
-        <button
-          class="notification__close"
-          @click.stop="removeNotification(notification.id)"
-          aria-label="关闭通知"
-        >
-          ×
-        </button>
       </div>
     </TransitionGroup>
   </div>
@@ -50,8 +42,9 @@ function removeNotification(id: string) {
 <style scoped>
 .notification-container {
   position: fixed;
-  top: 20px;
-  right: 20px;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
   z-index: 9999;
   pointer-events: none;
 }
@@ -59,59 +52,54 @@ function removeNotification(id: string) {
 .notification-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  max-width: 400px;
+  gap: 8px;
+  max-width: 320px;
+  min-width: 280px;
 }
 
 .notification {
   display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  padding: 16px;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
   backdrop-filter: blur(8px);
-  cursor: pointer;
   pointer-events: auto;
   transition: all 0.2s ease;
   max-width: 100%;
   word-wrap: break-word;
-}
-
-.notification:hover {
-  transform: translateX(-4px);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+  font-size: 13px;
 }
 
 .notification--success {
-  background: rgba(34, 197, 94, 0.9);
-  border-left: 4px solid #16a34a;
+  background: rgba(34, 197, 94, 0.95);
+  border: 1px solid rgba(34, 197, 94, 0.3);
   color: white;
 }
 
 .notification--error {
-  background: rgba(239, 68, 68, 0.9);
-  border-left: 4px solid #dc2626;
+  background: rgba(239, 68, 68, 0.95);
+  border: 1px solid rgba(239, 68, 68, 0.3);
   color: white;
 }
 
 .notification--warning {
-  background: rgba(245, 158, 11, 0.9);
-  border-left: 4px solid #d97706;
+  background: rgba(245, 158, 11, 0.95);
+  border: 1px solid rgba(245, 158, 11, 0.3);
   color: white;
 }
 
 .notification--info {
-  background: rgba(59, 130, 246, 0.9);
-  border-left: 4px solid #2563eb;
+  background: rgba(59, 130, 246, 0.95);
+  border: 1px solid rgba(59, 130, 246, 0.3);
   color: white;
 }
 
 .notification__icon {
   flex-shrink: 0;
-  width: 20px;
-  height: 20px;
-  margin-top: 2px;
+  width: 16px;
+  height: 16px;
 }
 
 .notification__content {
@@ -120,84 +108,71 @@ function removeNotification(id: string) {
 }
 
 .notification__title {
-  font-weight: 600;
-  font-size: 14px;
-  line-height: 1.4;
-  margin-bottom: 4px;
+  font-weight: 500;
+  font-size: 13px;
+  line-height: 1.3;
+  margin-bottom: 2px;
 }
 
 .notification__message {
-  font-size: 13px;
-  line-height: 1.4;
+  font-size: 12px;
+  line-height: 1.3;
   opacity: 0.9;
-}
-
-.notification__close {
-  flex-shrink: 0;
-  width: 24px;
-  height: 24px;
-  border: none;
-  background: rgba(255, 255, 255, 0.2);
-  color: currentColor;
-  border-radius: 4px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 18px;
-  line-height: 1;
-  transition: background-color 0.2s ease;
-}
-
-.notification__close:hover {
-  background: rgba(255, 255, 255, 0.3);
 }
 
 /* 过渡动画 */
 .notification-enter-active {
-  transition: all 0.3s ease;
+  transition: all 0.25s ease;
 }
 
 .notification-leave-active {
-  transition: all 0.3s ease;
+  transition: all 0.25s ease;
 }
 
 .notification-enter-from {
   opacity: 0;
-  transform: translateX(100%);
+  transform: translateY(-20px) scale(0.95);
 }
 
 .notification-leave-to {
   opacity: 0;
-  transform: translateX(100%);
+  transform: translateY(-20px) scale(0.95);
 }
 
 .notification-move {
-  transition: transform 0.3s ease;
+  transition: transform 0.25s ease;
 }
 
 /* 响应式设计 */
 @media (max-width: 480px) {
   .notification-container {
-    top: 10px;
-    right: 10px;
-    left: 10px;
+    top: 12px;
+    left: 12px;
+    right: 12px;
+    transform: none;
   }
-  
+
   .notification-list {
     max-width: none;
+    min-width: auto;
   }
-  
+
   .notification {
-    padding: 12px;
-  }
-  
-  .notification__title {
-    font-size: 13px;
-  }
-  
-  .notification__message {
+    padding: 6px 10px;
     font-size: 12px;
+  }
+
+  .notification__icon {
+    width: 14px;
+    height: 14px;
+  }
+
+  .notification__title {
+    font-size: 12px;
+  }
+
+  .notification__message {
+    font-size: 11px;
   }
 }
 </style>
