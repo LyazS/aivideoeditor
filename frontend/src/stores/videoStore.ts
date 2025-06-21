@@ -220,7 +220,7 @@ export const useVideoStore = defineStore('video', () => {
       volume?: number // 音量（0-1之间）
       isMuted?: boolean // 静音状态
     }
-  ) {
+  ): Promise<void> {
     // 获取要更新的时间轴项目
     const timelineItem = timelineModule.getTimelineItem(timelineItemId)
     if (!timelineItem) {
@@ -836,7 +836,8 @@ export const useVideoStore = defineStore('video', () => {
       },
       {
         getMediaItem: mediaModule.getMediaItem,
-      }
+      },
+      configModule
     )
 
     try {

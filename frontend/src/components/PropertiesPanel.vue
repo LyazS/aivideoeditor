@@ -17,13 +17,13 @@
         <div class="selected-items-list">
           <div
             v-for="item in multiSelectInfo.items"
-            :key="item.id"
+            :key="item?.id"
             class="selected-item"
           >
             <span class="item-name">
-              {{ videoStore.getMediaItem(item.mediaItemId)?.name || '未知素材' }}
+              {{ item ? videoStore.getMediaItem(item.mediaItemId)?.name || '未知素材' : '未知素材' }}
             </span>
-            <span class="item-type">{{ item.mediaType === 'video' ? '视频' : '图片' }}</span>
+            <span class="item-type">{{ item ? (item.mediaType === 'video' ? '视频' : '图片') : '未知' }}</span>
           </div>
         </div>
       </div>
@@ -918,7 +918,7 @@ const updatePropertyWithHistory = async (property: string, newValue: any) => {
   } catch (error) {
     console.error(`❌ 属性 ${property} 更新失败:`, error)
     // 如果历史记录更新失败，回退到直接更新
-    (selectedTimelineItem.value as any)[property] = newValue
+    ;(selectedTimelineItem.value as any)[property] = newValue
   }
 }
 

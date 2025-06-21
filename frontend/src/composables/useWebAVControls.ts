@@ -1,8 +1,6 @@
 import { ref, markRaw, type Raw } from 'vue'
 import { AVCanvas } from '@webav/av-canvas'
 import { MP4Clip, ImgClip } from '@webav/av-cliper'
-import { VideoVisibleSprite } from '../utils/VideoVisibleSprite'
-import { ImageVisibleSprite } from '../utils/ImageVisibleSprite'
 import { useVideoStore } from '../stores/videoStore'
 import {
   logWebAVInitStart,
@@ -42,8 +40,10 @@ interface CanvasBackup {
     trackId: number
     mediaType: 'video' | 'image'
     timeRange: any // VideoTimeRange | ImageTimeRange
-    position: { x: number; y: number }
-    size: { width: number; height: number }
+    x: number
+    y: number
+    width: number
+    height: number
     rotation: number
     zIndex: number
     opacity: number
@@ -459,8 +459,10 @@ export function useWebAVControls() {
         trackId: item.trackId,
         mediaType: item.mediaType,
         timeRange: { ...item.timeRange },
-        position: { ...item.position },
-        size: { ...item.size },
+        x: item.x,
+        y: item.y,
+        width: item.width,
+        height: item.height,
         rotation: item.rotation,
         zIndex: item.zIndex,
         opacity: item.opacity,
