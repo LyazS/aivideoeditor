@@ -294,8 +294,8 @@ videoStore = {
   playbackRate,    // 播放速率
 
   // 选择状态
-  selectedTimelineItemId,  // 选中的时间轴项
-  selectedAVCanvasSprite,  // 选中的画布精灵
+  selectedTimelineItemId,   // 选中的时间轴项
+  selectedTimelineItemIds,  // 多选时间轴项集合
 
   // 视口状态
   zoomLevel,       // 缩放级别

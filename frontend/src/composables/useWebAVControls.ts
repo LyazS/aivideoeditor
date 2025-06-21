@@ -273,12 +273,10 @@ export function useWebAVControls() {
       }
     })
 
-    // 活动精灵变化事件
-    globalAVCanvas.on('activeSpriteChange', (sprite) => {
-      // 处理选中状态的变化 - 同步到时间轴选择
-      // 类型断言：我们知道这里的sprite是VideoVisibleSprite或null
-      videoStore.handleAVCanvasSpriteChange(sprite as any)
-    })
+    // 注意：不再监听activeSpriteChange事件，因为我们不希望WebAV的activeSprite影响时间轴选择
+    // globalAVCanvas.on('activeSpriteChange', (sprite) => {
+    //   videoStore.handleAVCanvasSpriteChange(sprite as any)
+    // })
 
     console.log('✅ [WebAV Events] All event listeners registered successfully')
   }

@@ -63,12 +63,12 @@ setPlaybackRate(rate: number): void
 // 选中的时间轴项目ID
 selectedTimelineItemId: Ref<string | null>
 
-// 选中的AVCanvas精灵
-selectedAVCanvasSprite: Ref<Raw<VideoVisibleSprite> | null>
+// 多选项目ID集合
+selectedTimelineItemIds: Ref<Set<string>>
 
 // 选择方法
 selectTimelineItem(itemId: string | null): void
-selectAVCanvasSprite(sprite: Raw<VideoVisibleSprite> | null): void
+selectTimelineItems(itemIds: string[], mode: 'replace' | 'toggle'): void
 ```
 
 ### WebAV集成
@@ -272,7 +272,6 @@ sprite.on('timeRangeChange', (range: { start: number; end: number }) => void)
 @timelineItemResized="onTimelineItemResized"
 
 // PreviewWindow组件
-@spriteSelected="onSpriteSelected"
 @spriteTransformed="onSpriteTransformed"
 
 // MediaLibrary组件
