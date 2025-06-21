@@ -20,18 +20,8 @@ export function createPlaybackModule(frameRate: { value: number }) {
    */
   const formattedCurrentTime = computed(() => {
     const time = currentTime.value
-    const hours = Math.floor(time / 3600)
-
-    if (hours > 0) {
-      // 如果有小时，显示完整的时:分:秒.毫秒格式
-      const minutes = Math.floor((time % 3600) / 60)
-      const seconds = Math.floor(time % 60)
-      const milliseconds = Math.floor((time % 1) * 1000)
-      return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}.${milliseconds.toString().padStart(3, '0')}`
-    } else {
-      // 使用统一的时间格式化工具函数（分:秒.毫秒格式）
-      return formatTimeUtil(time, 'milliseconds')
-    }
+    // 使用统一的时间格式化工具函数，支持小时格式
+    return formatTimeUtil(time, 'hours')
   })
 
   /**

@@ -163,9 +163,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, nextTick, markRaw, reactive } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { useVideoStore } from '../stores/videoStore'
-import { useWebAVControls, waitForWebAVReady, isWebAVReady } from '../composables/useWebAVControls'
+import { useWebAVControls, waitForWebAVReady } from '../composables/useWebAVControls'
 import { usePlaybackControls } from '../composables/usePlaybackControls'
 import { getDragPreviewManager } from '../composables/useDragPreview'
 import { useDragUtils } from '../composables/useDragUtils'
@@ -173,13 +173,12 @@ import { useDialogs } from '../composables/useDialogs'
 import { VideoVisibleSprite } from '../utils/VideoVisibleSprite'
 import { ImageVisibleSprite } from '../utils/ImageVisibleSprite'
 import { createSpriteFromMediaItem } from '../utils/spriteFactory'
-import { webavToProjectCoords } from '../utils/coordinateTransform'
+
 import { createReactiveTimelineItem } from '../utils/timelineItemFactory'
 import type { TimelineItemBaseData } from '../types/videoTypes'
 import {
   calculatePixelsPerSecond,
-  calculateVisibleTimeRange,
-  formatTime as formatTimeUtil
+  calculateVisibleTimeRange
 } from '../stores/utils/storeUtils'
 import {
   generateThumbnailForMediaItem,
@@ -595,10 +594,17 @@ async function handleTimelineItemDrop(event: DragEvent, dragData: TimelineItemDr
   }
 }
 
-// 处理素材库拖拽放置（重构现有逻辑）
-async function handleMediaItemDrop(event: DragEvent, mediaItem: MediaItemDragData) {
+// 处理素材库拖拽放置（使用统一的精简格式）
+async function handleMediaItemDrop(event: DragEvent, mediaDragData: MediaItemDragData) {
   try {
-    console.log('解析的素材数据:', mediaItem)
+    console.log('解析的素材拖拽数据:', mediaDragData)
+
+    // 从store中获取完整的MediaItem信息
+    const mediaItem = videoStore.getMediaItem(mediaDragData.mediaItemId)
+    if (!mediaItem) {
+      console.error('❌ 找不到对应的素材项目:', mediaDragData.mediaItemId)
+      return
+    }
 
     // 使用统一的拖拽工具计算目标位置
     const dropPosition = dragUtils.calculateDropPosition(event, timelineWidth.value)
@@ -618,8 +624,22 @@ async function handleMediaItemDrop(event: DragEvent, mediaItem: MediaItemDragDat
     // 如果拖拽位置超出当前时间轴长度，动态扩展时间轴
     videoStore.expandTimelineIfNeeded(dropTime + 10) // 预留10秒缓冲
 
+    // 构建createMediaClipFromMediaItem需要的参数格式
+    const mediaItemForCreation = {
+      id: mediaItem.id,
+      url: mediaItem.url,
+      name: mediaItem.name,
+      duration: mediaItem.duration,
+      mediaType: mediaItem.mediaType,
+      fileInfo: {
+        name: mediaItem.file.name,
+        type: mediaItem.file.type,
+        lastModified: mediaItem.file.lastModified,
+      }
+    }
+
     // 从素材库项创建媒体片段（视频或图片）
-    await createMediaClipFromMediaItem(mediaItem, dropTime, targetTrackId)
+    await createMediaClipFromMediaItem(mediaItemForCreation, dropTime, targetTrackId)
   } catch (error) {
     console.error('Failed to parse media item data:', error)
     dialogs.showDragDataError()
@@ -645,10 +665,13 @@ async function moveMultipleItems(itemIds: string[], newTime: number, newTrackId:
       const currentStartTime = item.timeRange.timelineStartTime / 1000000
       const newStartTime = currentStartTime + timeOffset
 
+      // 确保新位置不为负数（防止多选拖拽时某些项目被拖到负数时间轴）
+      const clampedNewStartTime = Math.max(0, newStartTime)
+
       // 对于第一个项目，使用目标轨道；其他项目保持相对轨道关系
       const targetTrack = itemId === itemIds[0] ? newTrackId : item.trackId
 
-      await handleTimelineItemPositionUpdate(itemId, newStartTime, targetTrack)
+      await handleTimelineItemPositionUpdate(itemId, clampedNewStartTime, targetTrack)
     }
   }
 }
@@ -972,59 +995,7 @@ function handleKeyDown(event: KeyboardEvent) {
 }
 
 // ==================== 视觉反馈系统 ====================
-
-// 显示插入指示器
-function showInsertionIndicator(x: number, trackId: number) {
-  let indicator = document.querySelector('.timeline-insertion-indicator') as HTMLElement
-
-  if (!indicator) {
-    indicator = document.createElement('div')
-    indicator.className = 'timeline-insertion-indicator'
-    indicator.style.cssText = `
-      position: absolute;
-      width: 3px;
-      height: 60px;
-      background: linear-gradient(180deg, #00ff88, #00cc66);
-      pointer-events: none;
-      z-index: 1000;
-      border-radius: 2px;
-      box-shadow: 0 0 8px rgba(0, 255, 136, 0.6);
-      opacity: 0;
-      transition: opacity 0.2s ease;
-    `
-    document.body.appendChild(indicator)
-  }
-
-  // 找到目标轨道元素
-  const trackElement = document.querySelector(`[data-track-id="${trackId}"] .track-content`) as HTMLElement
-  if (trackElement) {
-    const trackRect = trackElement.getBoundingClientRect()
-
-    // 计算指示器位置
-    const indicatorX = trackRect.left + x - 1.5 // 居中对齐
-    const indicatorY = trackRect.top + 10 // 轨道内部偏移
-
-    indicator.style.left = `${indicatorX}px`
-    indicator.style.top = `${indicatorY}px`
-    indicator.style.opacity = '1'
-
-    console.log('📍 [Timeline] 显示插入指示器:', { x, trackId, indicatorX, indicatorY })
-  }
-}
-
-// 隐藏插入指示器
-function hideInsertionIndicator() {
-  const indicator = document.querySelector('.timeline-insertion-indicator') as HTMLElement
-  if (indicator) {
-    indicator.style.opacity = '0'
-    // 延迟移除，让过渡动画完成
-    setTimeout(() => {
-      if (indicator && indicator.style.opacity === '0') {
-        indicator.remove()
-      }
-    }, 200)
-  }
-}
+// 注意：拖拽预览现在统一使用 DragPreviewManager (useDragPreview.ts)
 
 // 冲突检测
 interface ConflictInfo {
@@ -1111,295 +1082,13 @@ function detectTimelineConflicts(dropTime: number, targetTrackId: number, dragDa
   return conflicts
 }
 
-// 显示冲突警告指示器
-function updateConflictIndicator(conflicts: ConflictInfo[], x: number, trackId: number) {
-  // 先清理现有的冲突指示器
-  hideConflictIndicator()
 
-  if (conflicts.length === 0) return
 
-  const indicator = document.createElement('div')
-  indicator.className = 'timeline-conflict-indicator'
-  indicator.style.cssText = `
-    position: absolute;
-    width: 3px;
-    height: 60px;
-    background: linear-gradient(180deg, #ff4444, #cc0000);
-    pointer-events: none;
-    z-index: 1001;
-    border-radius: 2px;
-    box-shadow: 0 0 8px rgba(255, 68, 68, 0.8);
-    opacity: 0;
-    transition: opacity 0.2s ease;
-  `
 
-  // 找到目标轨道元素
-  const trackElement = document.querySelector(`[data-track-id="${trackId}"] .track-content`) as HTMLElement
-  if (trackElement) {
-    const trackRect = trackElement.getBoundingClientRect()
 
-    // 计算指示器位置
-    const indicatorX = trackRect.left + x - 1.5 // 居中对齐
-    const indicatorY = trackRect.top + 10 // 轨道内部偏移
 
-    indicator.style.left = `${indicatorX}px`
-    indicator.style.top = `${indicatorY}px`
-    indicator.style.opacity = '1'
 
-    // 添加冲突提示
-    const tooltip = document.createElement('div')
-    tooltip.className = 'timeline-conflict-tooltip'
-    tooltip.style.cssText = `
-      position: absolute;
-      top: -30px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: rgba(255, 68, 68, 0.9);
-      color: white;
-      padding: 4px 8px;
-      border-radius: 4px;
-      font-size: 10px;
-      white-space: nowrap;
-      pointer-events: none;
-      z-index: 1002;
-    `
-    tooltip.textContent = `冲突: ${conflicts.length} 个项目`
 
-    indicator.appendChild(tooltip)
-    document.body.appendChild(indicator)
-
-    console.log('⚠️ [Timeline] 检测到冲突:', conflicts)
-  }
-}
-
-// 隐藏冲突指示器
-function hideConflictIndicator() {
-  const indicator = document.querySelector('.timeline-conflict-indicator') as HTMLElement
-  if (indicator) {
-    indicator.style.opacity = '0'
-    setTimeout(() => {
-      if (indicator && indicator.style.opacity === '0') {
-        indicator.remove()
-      }
-    }, 200)
-  }
-}
-
-// 显示实时位置预览
-function showPositionPreview(dropTime: number, targetTrackId: number, dragData: TimelineItemDragData, x: number) {
-  // 先清理现有的位置预览
-  hidePositionPreview()
-
-  const preview = document.createElement('div')
-  preview.className = 'timeline-position-preview'
-  preview.style.cssText = `
-    position: absolute;
-    background: rgba(0, 0, 0, 0.8);
-    color: white;
-    padding: 8px 12px;
-    border-radius: 6px;
-    font-size: 11px;
-    pointer-events: none;
-    z-index: 1003;
-    white-space: nowrap;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-    opacity: 0;
-    transition: opacity 0.2s ease;
-  `
-
-  // 格式化时间显示（使用统一工具函数）
-  function formatTime(seconds: number): string {
-    return formatTimeUtil(seconds, 'milliseconds')
-  }
-
-  // 获取轨道信息
-  const track = videoStore.getTrack(targetTrackId)
-  const trackName = track?.name || `轨道 ${targetTrackId}`
-
-  // 计算拖拽项目的结束时间
-  const draggedItem = videoStore.getTimelineItem(dragData.itemId)
-  const duration = draggedItem ? (draggedItem.timeRange.timelineEndTime - draggedItem.timeRange.timelineStartTime) / 1000000 : 0
-  const endTime = dropTime + duration
-
-  // 创建预览内容
-  const content = document.createElement('div')
-  content.innerHTML = `
-    <div style="margin-bottom: 4px; font-weight: bold; color: #00ff88;">
-      ${dragData.selectedItems.length > 1 ? `${dragData.selectedItems.length} 个项目` : '移动项目'}
-    </div>
-    <div style="margin-bottom: 2px;">
-      📍 位置: ${formatTime(dropTime)} - ${formatTime(endTime)}
-    </div>
-    <div style="margin-bottom: 2px;">
-      🎬 轨道: ${trackName}
-    </div>
-    <div style="font-size: 10px; opacity: 0.8;">
-      ⏱️ 时长: ${formatTime(duration)}
-    </div>
-  `
-
-  preview.appendChild(content)
-
-  // 找到目标轨道元素来定位预览
-  const trackElement = document.querySelector(`[data-track-id="${targetTrackId}"] .track-content`) as HTMLElement
-  if (trackElement) {
-    const trackRect = trackElement.getBoundingClientRect()
-
-    // 计算预览位置（在指示器上方）
-    let previewX = trackRect.left + x + 10 // 稍微偏右
-    let previewY = trackRect.top - 80 // 在轨道上方
-
-    // 确保预览不会超出屏幕边界
-    const previewWidth = 200 // 预估宽度
-    if (previewX + previewWidth > window.innerWidth) {
-      previewX = trackRect.left + x - previewWidth - 10 // 移到左侧
-    }
-    if (previewY < 0) {
-      previewY = trackRect.bottom + 10 // 移到轨道下方
-    }
-
-    preview.style.left = `${previewX}px`
-    preview.style.top = `${previewY}px`
-    preview.style.opacity = '1'
-
-    document.body.appendChild(preview)
-  }
-}
-
-// 隐藏位置预览
-function hidePositionPreview() {
-  const preview = document.querySelector('.timeline-position-preview') as HTMLElement
-  if (preview) {
-    preview.style.opacity = '0'
-    setTimeout(() => {
-      if (preview && preview.style.opacity === '0') {
-        preview.remove()
-      }
-    }, 200)
-  }
-}
-
-// 显示目标位置的clip预览
-function showDropPreview(dropTime: number, targetTrackId: number, dragData: TimelineItemDragData, trackElement: HTMLElement) {
-  // 获取被拖拽的项目信息
-  const draggedItem = videoStore.getTimelineItem(dragData.itemId)
-  if (!draggedItem) return
-
-  const duration = (draggedItem.timeRange.timelineEndTime - draggedItem.timeRange.timelineStartTime) / 1000000
-  const endTime = dropTime + duration
-
-  // 计算预览clip的位置和尺寸
-  const left = videoStore.timeToPixel(dropTime, timelineWidth.value)
-  const right = videoStore.timeToPixel(endTime, timelineWidth.value)
-  const width = Math.max(right - left, 20) // 最小宽度20px
-
-  // 使用传入的轨道元素
-  const trackRect = trackElement.getBoundingClientRect()
-
-  // 检查是否已有预览元素
-  let preview = document.querySelector('.timeline-drop-preview') as HTMLElement
-
-  // 计算新的位置
-  const newLeft = trackRect.left + left
-  const newTop = trackRect.top + 10
-
-  if (preview) {
-    // 如果已有预览元素，只更新位置和尺寸
-    preview.style.left = `${newLeft}px`
-    preview.style.top = `${newTop}px`
-    preview.style.width = `${width}px`
-
-    // 检查冲突状态是否改变
-    const conflicts = detectTimelineConflicts(dropTime, targetTrackId, dragData)
-    const hasConflict = conflicts.length > 0
-    const currentBorder = preview.style.borderColor
-    const expectedBorder = hasConflict ? '#ff4444' : '#888888'
-
-    if (currentBorder !== expectedBorder) {
-      // 冲突状态改变，更新样式
-      preview.style.background = hasConflict
-        ? 'linear-gradient(135deg, rgba(255, 68, 68, 0.5), rgba(204, 0, 0, 0.5))'
-        : 'linear-gradient(135deg, rgba(128, 128, 128, 0.6), rgba(96, 96, 96, 0.6))'
-      preview.style.borderColor = expectedBorder
-      preview.style.color = hasConflict ? '#ff4444' : '#ffffff'
-    }
-
-    return
-  }
-
-  // 创建新的预览元素
-  preview = document.createElement('div')
-  preview.className = 'timeline-drop-preview'
-
-  // 检查是否有冲突来决定样式
-  const conflicts = detectTimelineConflicts(dropTime, targetTrackId, dragData)
-  const hasConflict = conflicts.length > 0
-
-  preview.style.cssText = `
-    position: absolute;
-    left: ${newLeft}px;
-    top: ${newTop}px;
-    width: ${width}px;
-    height: 60px;
-    background: ${hasConflict
-      ? 'linear-gradient(135deg, rgba(255, 68, 68, 0.5), rgba(204, 0, 0, 0.5))'
-      : 'linear-gradient(135deg, rgba(128, 128, 128, 0.6), rgba(96, 96, 96, 0.6))'
-    };
-    border: 2px dashed ${hasConflict ? '#ff4444' : '#888888'};
-    border-radius: 4px;
-    pointer-events: none;
-    z-index: 999;
-    opacity: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: ${hasConflict ? '#ff4444' : '#ffffff'};
-    font-size: 10px;
-    font-weight: bold;
-    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
-  `
-
-  // 添加内容
-  const content = document.createElement('div')
-  content.style.cssText = `
-    text-align: center;
-    max-width: 100%;
-    overflow: hidden;
-  `
-
-  if (dragData.selectedItems.length > 1) {
-    content.innerHTML = `
-      <div>${dragData.selectedItems.length} 个项目</div>
-      <div style="font-size: 8px; opacity: 0.8;">${hasConflict ? '位置冲突' : '批量放置'}</div>
-    `
-  } else {
-    const mediaItem = videoStore.getMediaItem(draggedItem.mediaItemId)
-    const clipName = mediaItem?.name || 'Clip'
-    content.innerHTML = `
-      <div>${clipName.length > 10 ? clipName.substring(0, 8) + '..' : clipName}</div>
-      <div style="font-size: 8px; opacity: 0.8;">${hasConflict ? '位置冲突' : formatDuration(duration)}</div>
-    `
-  }
-
-  preview.appendChild(content)
-  document.body.appendChild(preview)
-}
-
-// 隐藏目标位置预览
-function hideDropPreview() {
-  // 移除所有现有的预览元素
-  const previews = document.querySelectorAll('.timeline-drop-preview')
-  previews.forEach(preview => {
-    preview.remove()
-  })
-}
-
-// 格式化时长显示
-function formatDuration(seconds: number): string {
-  const mins = Math.floor(seconds / 60)
-  const secs = Math.floor(seconds % 60)
-  return `${mins}:${secs.toString().padStart(2, '0')}`
-}
 
 // 处理拖拽离开事件
 function handleDragLeave(event: DragEvent) {

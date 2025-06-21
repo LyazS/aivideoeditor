@@ -12,6 +12,7 @@ export {
   formatTime,
   formatTimeWithAutoPrecision,
   expandTimelineIfNeeded,
+  formatFileSize,
 } from './timeUtils'
 
 // 坐标转换工具

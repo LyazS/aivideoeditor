@@ -130,7 +130,7 @@ export function useDragUtils() {
   ) {
     const targetElement = event.target as HTMLElement
     const trackContent = targetElement.closest('.track-content')
-    
+
     if (!trackContent) {
       return null
     }
@@ -148,6 +148,9 @@ export function useDragUtils() {
       // 直接使用鼠标位置
       dropTime = videoStore.pixelToTime(mouseX, timelineWidth)
     }
+
+    // 确保拖拽时间不会小于0（防止clip被拖拽到负数时间轴）
+    dropTime = Math.max(0, dropTime)
 
     return {
       dropTime,
