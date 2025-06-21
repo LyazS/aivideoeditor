@@ -2,6 +2,7 @@ import type { Raw } from 'vue'
 import type { MP4Clip, ImgClip, Rect } from '@webav/av-cliper'
 import type { VideoVisibleSprite, VideoTimeRange } from '../utils/VideoVisibleSprite'
 import type { ImageVisibleSprite, ImageTimeRange } from '../utils/ImageVisibleSprite'
+import type { AnimationConfig } from './animationTypes'
 
 // 定义WebAV属性变化事件的类型
 export interface PropsChangeEvent {
@@ -49,6 +50,9 @@ export interface TimelineItem {
   zIndex: number // 层级
   volume: number // 音量（0-1之间，仅对视频有效）
   isMuted: boolean // 静音状态（仅对视频有效）
+
+  // 🆕 动画相关属性
+  animationConfig?: AnimationConfig // 动画配置，不为null表示包含动画
 }
 
 export interface VideoResolution {

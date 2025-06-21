@@ -17,13 +17,13 @@
         <div class="selected-items-list">
           <div
             v-for="item in multiSelectInfo.items"
-            :key="item.id"
+            :key="item?.id"
             class="selected-item"
           >
             <span class="item-name">
-              {{ videoStore.getMediaItem(item.mediaItemId)?.name || '未知素材' }}
+              {{ item ? videoStore.getMediaItem(item.mediaItemId)?.name || '未知素材' : '未知素材' }}
             </span>
-            <span class="item-type">{{ item.mediaType === 'video' ? '视频' : '图片' }}</span>
+            <span class="item-type">{{ item ? (item.mediaType === 'video' ? '视频' : '图片') : '未知' }}</span>
           </div>
         </div>
       </div>
@@ -180,6 +180,11 @@
                   :input-style="positionInputStyle"
                 />
               </div>
+              <KeyFrameButton
+                property="x"
+                :has-keyframe="false"
+                @toggle-keyframe="handleToggleKeyFrame"
+              />
             </div>
           </div>
 
@@ -216,6 +221,11 @@
                 :precision="2"
                 :input-style="scaleInputStyle"
               />
+              <KeyFrameButton
+                property="width"
+                :has-keyframe="false"
+                @toggle-keyframe="handleToggleKeyFrame"
+              />
             </div>
           </div>
 
@@ -242,6 +252,11 @@
                   :precision="2"
                   :input-style="scaleInputStyle"
                 />
+                <KeyFrameButton
+                  property="width"
+                  :has-keyframe="false"
+                  @toggle-keyframe="handleToggleKeyFrame"
+                />
               </div>
             </div>
             <div class="property-item">
@@ -264,6 +279,11 @@
                   :step="0.01"
                   :precision="2"
                   :input-style="scaleInputStyle"
+                />
+                <KeyFrameButton
+                  property="height"
+                  :has-keyframe="false"
+                  @toggle-keyframe="handleToggleKeyFrame"
                 />
               </div>
             </div>
@@ -368,6 +388,11 @@
                 :precision="1"
                 :input-style="scaleInputStyle"
               />
+              <KeyFrameButton
+                property="rotation"
+                :has-keyframe="false"
+                @toggle-keyframe="handleToggleKeyFrame"
+              />
             </div>
           </div>
           <div class="property-item">
@@ -390,6 +415,11 @@
                 :step="0.01"
                 :precision="2"
                 :input-style="scaleInputStyle"
+              />
+              <KeyFrameButton
+                property="opacity"
+                :has-keyframe="false"
+                @toggle-keyframe="handleToggleKeyFrame"
               />
             </div>
           </div>
@@ -427,6 +457,8 @@ import { useVideoStore } from '../stores/videoStore'
 import { isVideoTimeRange } from '../types/videoTypes'
 import { uiDegreesToWebAVRadians, webAVRadiansToUIDegrees } from '../utils/rotationTransform'
 import NumberInput from './NumberInput.vue'
+import KeyFrameButton from './KeyFrameButton.vue'
+import type { AnimatableProperty } from './KeyFrameButton.vue'
 
 const videoStore = useVideoStore()
 
@@ -886,7 +918,7 @@ const updatePropertyWithHistory = async (property: string, newValue: any) => {
   } catch (error) {
     console.error(`❌ 属性 ${property} 更新失败:`, error)
     // 如果历史记录更新失败，回退到直接更新
-    (selectedTimelineItem.value as any)[property] = newValue
+    ;(selectedTimelineItem.value as any)[property] = newValue
   }
 }
 
@@ -955,6 +987,12 @@ const alignVertical = (alignment: 'top' | 'middle' | 'bottom') => {
   } catch (error) {
     console.error('垂直对齐失败:', error)
   }
+}
+
+// 🆕 关键帧切换处理函数
+const handleToggleKeyFrame = (property: AnimatableProperty) => {
+  console.log(`🎬 切换关键帧:`, property)
+  // 暂时只是打印日志，后续会连接真实的关键帧系统
 }
 </script>
 
@@ -1290,4 +1328,7 @@ const alignVertical = (alignment: 'top' | 'middle' | 'bottom') => {
   font-size: var(--font-size-xs);
   flex-shrink: 0;
 }
+
+/* 🆕 关键帧按钮相关样式 */
+/* 关键帧按钮现在放在控件后面，不需要特殊的标签容器样式 */
 </style>

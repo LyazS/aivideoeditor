@@ -415,15 +415,6 @@ export function createSelectionModule(
 
   // ==================== 辅助方法 ====================
 
-  /**
-   * 根据ID获取时间轴项目
-   * @param timelineItemId 时间轴项目ID
-   * @returns 时间轴项目或undefined
-   */
-  function getTimelineItem(timelineItemId: string): TimelineItem | undefined {
-    return timelineItems.value.find((item) => item.id === timelineItemId)
-  }
-
   // ==================== 导出接口 ====================
 
   return {
