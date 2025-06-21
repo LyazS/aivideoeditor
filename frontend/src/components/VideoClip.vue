@@ -10,6 +10,7 @@
     }"
     :style="clipStyle"
     :data-media-type="mediaItem?.mediaType"
+    :data-timeline-item-id="timelineItem.id"
     :draggable="true"
     @dragstart="handleDragStart"
     @dragend="handleDragEnd"
@@ -328,13 +329,18 @@ function createSimpleDragPreview(): HTMLElement {
 
   preview.className = 'simple-drag-preview'
 
-  // 简单的预览样式
+  // 获取当前clip的实际尺寸
+  const clipElement = document.querySelector(`[data-timeline-item-id="${props.timelineItem.id}"]`) as HTMLElement
+  const clipWidth = clipElement ? clipElement.offsetWidth : 100
+  const clipHeight = clipElement ? clipElement.offsetHeight : 60
+
+  // 简单的预览样式 - 使用与大橙色框相同的尺寸
   preview.style.cssText = `
     position: fixed;
     top: -1000px;
     left: -1000px;
-    width: 100px;
-    height: 30px;
+    width: ${clipWidth}px;
+    height: ${clipHeight}px;
     background: rgba(255, 107, 53, 0.8);
     border: 1px solid #ff6b35;
     border-radius: 4px;
