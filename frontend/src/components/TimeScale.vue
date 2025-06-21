@@ -202,6 +202,46 @@ function handleClick(event: MouseEvent) {
   webAVControls.seekTo(alignedTime)
 }
 
+function handleMouseDown(event: MouseEvent) {
+  // 如果点击的是播放头，让播放头自己的mousedown处理
+  const target = event.target as HTMLElement
+  if (target.closest('.playhead')) {
+    return
+  }
+
+  // 如果正在拖拽播放头，不处理鼠标按下事件
+  if (isDraggingPlayhead.value) return
+  if (!scaleContainer.value) return
+
+  // 暂停播放以便进行播放头拖拽
+  pauseForEditing('时间轴拖拽')
+
+  const rect = scaleContainer.value.getBoundingClientRect()
+  const mouseX = event.clientX - rect.left
+  const newTime = videoStore.pixelToTime(mouseX, containerWidth.value)
+
+  // 限制在有效范围内并对齐到帧边界
+  const clampedTime = Math.max(0, Math.min(newTime, videoStore.totalDuration))
+  const alignedTime = alignTimeToFrame(clampedTime)
+
+  // 立即跳转播放头到鼠标位置
+  webAVControls.seekTo(alignedTime)
+
+  // 开始拖拽播放头
+  isDraggingPlayhead.value = true
+
+  // 添加拖拽样式类
+  if (scaleContainer.value) {
+    scaleContainer.value.classList.add('dragging')
+  }
+
+  document.addEventListener('mousemove', handleDragPlayhead)
+  document.addEventListener('mouseup', stopDragPlayhead)
+
+  event.preventDefault()
+  event.stopPropagation()
+}
+
 function startDragPlayhead(event: MouseEvent) {
   event.preventDefault()
   event.stopPropagation()
@@ -210,6 +250,11 @@ function startDragPlayhead(event: MouseEvent) {
   pauseForEditing('播放头拖拽')
 
   isDraggingPlayhead.value = true
+
+  // 添加拖拽样式类
+  if (scaleContainer.value) {
+    scaleContainer.value.classList.add('dragging')
+  }
 
   document.addEventListener('mousemove', handleDragPlayhead)
   document.addEventListener('mouseup', stopDragPlayhead)
@@ -232,6 +277,11 @@ function handleDragPlayhead(event: MouseEvent) {
 
 function stopDragPlayhead() {
   isDraggingPlayhead.value = false
+
+  // 移除拖拽样式类
+  if (scaleContainer.value) {
+    scaleContainer.value.classList.remove('dragging')
+  }
 
   document.removeEventListener('mousemove', handleDragPlayhead)
   document.removeEventListener('mouseup', stopDragPlayhead)
@@ -291,6 +341,7 @@ onMounted(() => {
 
   if (scaleContainer.value) {
     scaleContainer.value.addEventListener('click', handleClick)
+    scaleContainer.value.addEventListener('mousedown', handleMouseDown)
     scaleContainer.value.addEventListener('wheel', handleWheel, { passive: false })
   }
 })
@@ -300,6 +351,7 @@ onUnmounted(() => {
 
   if (scaleContainer.value) {
     scaleContainer.value.removeEventListener('click', handleClick)
+    scaleContainer.value.removeEventListener('mousedown', handleMouseDown)
     scaleContainer.value.removeEventListener('wheel', handleWheel)
   }
 
@@ -323,6 +375,14 @@ onUnmounted(() => {
   height: 100%;
   position: relative;
   cursor: pointer;
+}
+
+.scale-container.dragging {
+  cursor: grabbing !important;
+}
+
+.scale-container.dragging .playhead {
+  pointer-events: none; /* 拖拽时禁用播放头的指针事件 */
 }
 
 .time-mark {

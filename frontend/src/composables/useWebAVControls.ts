@@ -265,7 +265,7 @@ export function useWebAVControls() {
       isUpdatingTime = true
       try {
         // 将微秒转换为秒
-        console.log('WebAV timeupdate:', time)
+        // console.log('WebAV timeupdate:', time)
         const timeInSeconds = time / 1000000
         videoStore.setCurrentTime(timeInSeconds, false) // 不强制对齐帧，保持流畅
       } finally {
@@ -414,7 +414,7 @@ export function useWebAVControls() {
    */
   const seekTo = (time: number): void => {
     if (!globalAVCanvas) return
-    console.log('WebAV seekTo:', time)
+    // console.log('WebAV seekTo:', time)
     const timeMicroseconds = time * 1000000
     globalAVCanvas.previewFrame(timeMicroseconds)
   }
