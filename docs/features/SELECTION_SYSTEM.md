@@ -87,22 +87,7 @@ function selectTimelineItems(itemIds: string[], mode: 'replace' | 'toggle' = 're
 }
 ```
 
-#### AVCanvas同步逻辑
-```typescript
-function syncAVCanvasSelection() {
-  if (selectedTimelineItemIds.value.size === 1) {
-    // 单选：同步到AVCanvas
-    const itemId = Array.from(selectedTimelineItemIds.value)[0]
-    const item = getTimelineItem(itemId)
-    selectAVCanvasSprite(item?.sprite || null, false)
-  } else {
-    // 无选择或多选：清除AVCanvas选择
-    selectAVCanvasSprite(null, false)
-  }
-}
-```
-
-### 双向同步机制
+### 选择处理机制
 
 #### 时间轴选择处理
 ```typescript
@@ -122,22 +107,12 @@ function selectClip(event: MouseEvent) {
 }
 ```
 
-#### AVCanvas选择处理
+#### 选择状态管理
 ```typescript
-// WebAV sprite选择事件处理
-function handleSpriteSelection(sprite: VideoVisibleSprite | null) {
-  if (!sprite) {
-    // 清除时间轴选择
-    videoStore.clearTimelineSelection()
-    return
-  }
-  
-  // 查找对应的时间轴项目
-  const timelineItem = findTimelineItemBySprite(sprite)
-  if (timelineItem) {
-    // 同步到时间轴选择
-    videoStore.selectTimelineItems([timelineItem.id], 'replace')
-  }
+function syncAVCanvasSelection() {
+  // 注意：由于不再支持AVCanvas选择，这个函数现在只是一个占位符
+  // 保留是为了兼容性，避免破坏现有的调用
+  console.log('🔗 选择状态已更新（不再同步到AVCanvas）')
 }
 ```
 
@@ -230,17 +205,15 @@ function batchSelectUpdate(callback: () => void) {
   └──清除选择──←─ 多选 ←──Ctrl+单击──┘
 ```
 
-### 同步流程
+### 选择流程
 ```
 时间轴选择变化
     ↓
-检查选择数量
+更新选择状态
     ↓
-单选？ ──是──→ 同步到AVCanvas
+触发UI更新
     ↓
-    否
-    ↓
-清除AVCanvas选择
+显示选择反馈
 ```
 
 ## 🧪 测试要点
@@ -250,7 +223,7 @@ function batchSelectUpdate(callback: () => void) {
 - ✅ 多选项目的添加和移除
 - ✅ Ctrl+点击的切换逻辑
 - ✅ 空白区域点击清除选择
-- ✅ 时间轴与AVCanvas的双向同步
+- ✅ 时间轴选择状态的独立管理
 
 ### 边界测试
 - ✅ 快速连续点击的处理
@@ -276,7 +249,7 @@ function batchSelectUpdate(callback: () => void) {
 - ✅ 直观的选择交互模式
 - ✅ 一致的视觉反馈系统
 - ✅ 流畅的多选操作体验
-- ✅ 可靠的状态同步机制
+- ✅ 独立的时间轴选择管理
 
 ### 扩展能力
 - ✅ 支持未来的框选功能

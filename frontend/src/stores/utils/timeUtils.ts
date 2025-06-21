@@ -31,19 +31,31 @@ export function calculatePixelsPerSecond(
 /**
  * 格式化时间显示
  * @param seconds 时间（秒）
- * @param precision 显示精度：'frames' | 'milliseconds' | 'seconds'
+ * @param precision 显示精度：'frames' | 'milliseconds' | 'seconds' | 'hours'
  * @param frameRate 帧率（当precision为'frames'时需要）
  * @returns 格式化的时间字符串
  */
 export function formatTime(
   seconds: number,
-  precision: 'frames' | 'milliseconds' | 'seconds' = 'seconds',
+  precision: 'frames' | 'milliseconds' | 'seconds' | 'hours' = 'seconds',
   frameRate: number = 30,
 ): string {
-  const mins = Math.floor(seconds / 60)
+  const hours = Math.floor(seconds / 3600)
+  const mins = Math.floor((seconds % 3600) / 60)
   const secs = Math.floor(seconds % 60)
 
   switch (precision) {
+    case 'hours': {
+      if (hours > 0) {
+        // 如果有小时，显示完整的时:分:秒.毫秒格式
+        const milliseconds = Math.floor((seconds % 1) * 1000)
+        return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}.${milliseconds.toString().padStart(3, '0')}`
+      } else {
+        // 没有小时时，使用毫秒格式
+        const ms = Math.floor((seconds % 1) * 100)
+        return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}.${ms.toString().padStart(2, '0')}`
+      }
+    }
     case 'frames': {
       const frames = Math.floor((seconds % 1) * frameRate)
       return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}:${frames.toString().padStart(2, '0')}`
@@ -92,4 +104,18 @@ export function expandTimelineIfNeeded(targetTime: number, timelineDuration: Ref
     // 扩展到目标时间的1.5倍，确保有足够的空间
     timelineDuration.value = Math.max(targetTime * 1.5, timelineDuration.value)
   }
+}
+
+/**
+ * 格式化文件大小
+ * @param bytes 文件大小（字节）
+ * @param precision 小数位数（默认为1）
+ * @returns 格式化的文件大小字符串
+ */
+export function formatFileSize(bytes: number, precision: number = 1): string {
+  if (bytes === 0) return '0 B'
+  const k = 1024
+  const sizes = ['B', 'KB', 'MB', 'GB', 'TB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(precision)) + ' ' + sizes[i]
 }

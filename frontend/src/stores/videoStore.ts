@@ -67,10 +67,9 @@ export const useVideoStore = defineStore('video', () => {
   // 创建历史管理模块
   const historyModule = createHistoryModule(notificationModule)
 
-  // 创建选择管理模块（需要在webavModule和historyModule之后创建）
+  // 创建选择管理模块（需要在historyModule之后创建）
   const selectionModule = createSelectionModule(
     timelineModule.timelineItems,
-    webavModule.avCanvas,
     timelineModule.getTimelineItem,
     mediaModule.getMediaItem,
     historyModule.executeCommand
@@ -904,7 +903,6 @@ export const useVideoStore = defineStore('video', () => {
     contentEndTime: viewportModule.contentEndTime,
     playbackRate: playbackModule.playbackRate,
     selectedTimelineItemId: selectionModule.selectedTimelineItemId,
-    selectedAVCanvasSprite: selectionModule.selectedAVCanvasSprite,
     // 多选状态
     selectedTimelineItemIds: selectionModule.selectedTimelineItemIds,
     isMultiSelectMode: selectionModule.isMultiSelectMode,
@@ -941,12 +939,9 @@ export const useVideoStore = defineStore('video', () => {
     hasSelection: selectionModule.hasSelection,
     // 兼容性选择方法
     selectTimelineItem: selectionModule.selectTimelineItem,
-    selectAVCanvasSprite: selectionModule.selectAVCanvasSprite,
-    handleAVCanvasSpriteChange: selectionModule.handleAVCanvasSpriteChange,
     clearAllSelections: selectionModule.clearAllSelections,
     toggleTimelineItemSelection: selectionModule.toggleTimelineItemSelection,
     isTimelineItemSelected: selectionModule.isTimelineItemSelected,
-    isSpriteSelected: selectionModule.isSpriteSelected,
     getSelectedTimelineItem: selectionModule.getSelectedTimelineItem,
     getSelectionSummary: selectionModule.getSelectionSummary,
     resetSelectionToDefaults: selectionModule.resetToDefaults,

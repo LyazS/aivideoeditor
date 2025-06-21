@@ -149,6 +149,9 @@ export function createTimelineModule(
       const oldTrackId = item.trackId
       const mediaItem = mediaModule.getMediaItem(item.mediaItemId)
 
+      // 确保新位置不为负数
+      const clampedNewPosition = Math.max(0, newPosition)
+
       // 如果指定了新轨道，更新轨道ID并同步可见性
       if (newTrackId !== undefined) {
         item.trackId = newTrackId
@@ -169,8 +172,8 @@ export function createTimelineModule(
 
       // 使用同步函数更新timeRange
       syncTimeRange(item, {
-        timelineStartTime: newPosition * 1000000, // 转换为微秒
-        timelineEndTime: newPosition * 1000000 + duration,
+        timelineStartTime: clampedNewPosition * 1000000, // 转换为微秒
+        timelineEndTime: clampedNewPosition * 1000000 + duration,
       })
 
       printDebugInfo(
@@ -179,11 +182,13 @@ export function createTimelineModule(
           timelineItemId,
           mediaItemName: mediaItem?.name || '未知',
           oldPosition,
-          newPosition,
+          newPosition: clampedNewPosition,
+          originalNewPosition: newPosition,
           oldTrackId,
           newTrackId: item.trackId,
-          positionChanged: oldPosition !== newPosition,
+          positionChanged: oldPosition !== clampedNewPosition,
           trackChanged: oldTrackId !== item.trackId,
+          positionClamped: newPosition !== clampedNewPosition,
         },
         mediaModule.mediaItems.value,
         timelineItems.value,
