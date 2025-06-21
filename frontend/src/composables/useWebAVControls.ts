@@ -32,6 +32,9 @@ let globalAVCanvas: AVCanvas | null = null
 let globalCanvasContainer: HTMLElement | null = null
 const globalError = ref<string | null>(null)
 
+// 时间同步锁，防止循环调用
+let isUpdatingTime = false
+
 // 画布重新创建时的内容备份 - 只备份元数据，不备份WebAV对象
 interface CanvasBackup {
   timelineItems: Array<{
@@ -58,6 +61,15 @@ interface CanvasBackup {
 /**
  * WebAV控制器 - 管理AVCanvas和相关操作
  * 使用全局单例模式确保AVCanvas在整个应用中唯一
+ *
+ * 时间控制架构：
+ * UI操作 → webAVControls.seekTo() → WebAV.previewFrame() → timeupdate事件 → videoStore.setCurrentTime()
+ *
+ * 重要原则：
+ * 1. WebAV是时间状态的唯一权威源
+ * 2. 所有UI时间操作都必须通过seekTo()方法
+ * 3. 使用时间同步锁防止循环调用
+ * 4. timeupdate事件是Store状态更新的唯一入口
  */
 export function useWebAVControls() {
   const videoStore = useVideoStore()
@@ -244,9 +256,21 @@ export function useWebAVControls() {
 
     // 时间更新事件
     globalAVCanvas.on('timeupdate', (time: number) => {
-      // 将微秒转换为秒
-      const timeInSeconds = time / 1000000
-      videoStore.setCurrentTime(timeInSeconds, false) // 不强制对齐帧，保持流畅
+      // 使用时间同步锁防止循环调用
+      if (isUpdatingTime) {
+        // 静默跳过，避免日志污染
+        return
+      }
+
+      isUpdatingTime = true
+      try {
+        // 将微秒转换为秒
+        console.log('WebAV timeupdate:', time)
+        const timeInSeconds = time / 1000000
+        videoStore.setCurrentTime(timeInSeconds, false) // 不强制对齐帧，保持流畅
+      } finally {
+        isUpdatingTime = false
+      }
     })
 
     // 活动精灵变化事件
@@ -387,11 +411,12 @@ export function useWebAVControls() {
 
   /**
    * 跳转到指定时间
+   * 这是时间控制的唯一入口点，所有UI时间操作都应该通过此方法
    * @param time 时间（秒）
    */
   const seekTo = (time: number): void => {
     if (!globalAVCanvas) return
-
+    console.log('WebAV seekTo:', time)
     const timeMicroseconds = time * 1000000
     globalAVCanvas.previewFrame(timeMicroseconds)
   }

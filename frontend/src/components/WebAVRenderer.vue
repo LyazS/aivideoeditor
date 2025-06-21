@@ -20,7 +20,7 @@
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useVideoStore } from '../stores/videoStore'
 import type { VideoResolution } from '../types/videoTypes'
-import { useWebAVControls, isWebAVReady } from '../composables/useWebAVControls'
+import { useWebAVControls } from '../composables/useWebAVControls'
 import {
   logRendererState,
   logComponentLifecycle,
@@ -274,17 +274,16 @@ watch(
 )
 
 /**
- * 监听当前时间变化，同步到WebAV
+ * 时间控制架构重构说明：
+ *
+ * 移除了currentTime的watch监听器，原因：
+ * 1. 避免与WebAV的timeupdate事件形成循环调用
+ * 2. 确保WebAV作为时间状态的唯一权威源
+ * 3. 简化时间同步逻辑，提高性能
+ *
+ * 新的时间控制流程：
+ * UI操作 → webAVControls.seekTo() → WebAV → timeupdate事件 → Store更新 → UI响应
  */
-watch(
-  () => videoStore.currentTime,
-  (currentTime) => {
-    // 只有当不是播放状态时才手动跳转（避免播放时的冲突）
-    if (!videoStore.isPlaying && isWebAVReady()) {
-      webAVControls.seekTo(currentTime)
-    }
-  },
-)
 
 /**
  * 更新容器尺寸

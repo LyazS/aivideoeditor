@@ -161,11 +161,10 @@ function alignTimeToFrame(time: number): number {
   return alignTimeToFrameUtil(time, videoStore.frameRate)
 }
 
-// 播放头位置 - 始终对齐到帧的左边界
+// 播放头位置 - 直接使用WebAV返回的精确时间
 const playheadPosition = computed(() => {
-  const originalTime = videoStore.currentTime
-  const alignedTime = alignTimeToFrame(originalTime)
-  const position = videoStore.timeToPixel(alignedTime, containerWidth.value)
+  const currentTime = videoStore.currentTime
+  const position = videoStore.timeToPixel(currentTime, containerWidth.value)
 
   return position
 })
@@ -198,7 +197,9 @@ function handleClick(event: MouseEvent) {
   const clampedTime = Math.max(0, Math.min(newTime, videoStore.totalDuration))
   const alignedTime = alignTimeToFrame(clampedTime)
 
-  videoStore.setCurrentTime(alignedTime)
+  // 统一时间控制：通过WebAV设置时间，避免直接操作Store
+  // 流程：webAVControls.seekTo() → WebAV.previewFrame() → timeupdate事件 → Store更新
+  webAVControls.seekTo(alignedTime)
 }
 
 function startDragPlayhead(event: MouseEvent) {
@@ -225,7 +226,8 @@ function handleDragPlayhead(event: MouseEvent) {
   const clampedTime = Math.max(0, Math.min(newTime, videoStore.totalDuration))
   const alignedTime = alignTimeToFrame(clampedTime)
 
-  videoStore.setCurrentTime(alignedTime)
+  // 统一时间控制：通过WebAV设置时间，确保状态同步
+  webAVControls.seekTo(alignedTime)
 }
 
 function stopDragPlayhead() {
