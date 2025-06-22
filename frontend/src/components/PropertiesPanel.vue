@@ -147,6 +147,23 @@
           </div>
         </div>
 
+        <!-- 🆕 动画调试区域 -->
+        <div class="property-section">
+          <h4>动画调试</h4>
+          <div class="property-item">
+            <button @click="debugKeyFrames" class="debug-btn">
+              🔍 打印关键帧信息
+            </button>
+            <div v-if="hasAnimation" class="animation-status">
+              <span class="status-indicator active">动画已启用</span>
+              <span class="keyframe-count">{{ keyFrameCount }} 个关键帧</span>
+            </div>
+            <div v-else class="animation-status">
+              <span class="status-indicator inactive">动画未启用</span>
+            </div>
+          </div>
+        </div>
+
         <!-- 位置大小 -->
         <div class="property-section">
           <h4>位置大小</h4>
@@ -182,7 +199,12 @@
               </div>
               <KeyFrameButton
                 property="x"
-                :has-keyframe="false"
+                :has-keyframe="hasKeyFrameAtTime('x')"
+                @toggle-keyframe="handleToggleKeyFrame"
+              />
+              <KeyFrameButton
+                property="y"
+                :has-keyframe="hasKeyFrameAtTime('y')"
                 @toggle-keyframe="handleToggleKeyFrame"
               />
             </div>
@@ -223,7 +245,7 @@
               />
               <KeyFrameButton
                 property="width"
-                :has-keyframe="false"
+                :has-keyframe="hasKeyFrameAtTime('width')"
                 @toggle-keyframe="handleToggleKeyFrame"
               />
             </div>
@@ -254,7 +276,7 @@
                 />
                 <KeyFrameButton
                   property="width"
-                  :has-keyframe="false"
+                  :has-keyframe="hasKeyFrameAtTime('width')"
                   @toggle-keyframe="handleToggleKeyFrame"
                 />
               </div>
@@ -282,7 +304,7 @@
                 />
                 <KeyFrameButton
                   property="height"
-                  :has-keyframe="false"
+                  :has-keyframe="hasKeyFrameAtTime('height')"
                   @toggle-keyframe="handleToggleKeyFrame"
                 />
               </div>
@@ -390,7 +412,7 @@
               />
               <KeyFrameButton
                 property="rotation"
-                :has-keyframe="false"
+                :has-keyframe="hasKeyFrameAtTime('rotation')"
                 @toggle-keyframe="handleToggleKeyFrame"
               />
             </div>
@@ -418,7 +440,7 @@
               />
               <KeyFrameButton
                 property="opacity"
-                :has-keyframe="false"
+                :has-keyframe="hasKeyFrameAtTime('opacity')"
                 @toggle-keyframe="handleToggleKeyFrame"
               />
             </div>
@@ -452,15 +474,30 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, watch } from 'vue'
 import { useVideoStore } from '../stores/videoStore'
 import { isVideoTimeRange } from '../types/videoTypes'
 import { uiDegreesToWebAVRadians, webAVRadiansToUIDegrees } from '../utils/rotationTransform'
+import { useKeyFrameAnimation } from '../composables/useKeyFrameAnimation'
+import { KeyFrameAnimationManager } from '../utils/keyFrameAnimationManager'
 import NumberInput from './NumberInput.vue'
 import KeyFrameButton from './KeyFrameButton.vue'
 import type { AnimatableProperty } from './KeyFrameButton.vue'
 
 const videoStore = useVideoStore()
+
+// 🆕 动画管理功能
+const {
+  setSelectedTimelineItem,
+  hasAnimation,
+  keyFrameCount,
+  getKeyFrames,
+  getAnimationDuration,
+  hasKeyFrameAtTime,
+  createKeyFrame,
+  removeKeyFrameProperty,
+  setAnimationEnabled
+} = useKeyFrameAnimation()
 
 // 选中的时间轴项目
 const selectedTimelineItem = computed(() => {
@@ -989,10 +1026,78 @@ const alignVertical = (alignment: 'top' | 'middle' | 'bottom') => {
   }
 }
 
+// 🆕 监听选中项目变化，同步到动画管理器
+watch(selectedTimelineItem, (newItem) => {
+  setSelectedTimelineItem(newItem)
+}, { immediate: true })
+
 // 🆕 关键帧切换处理函数
 const handleToggleKeyFrame = (property: AnimatableProperty) => {
   console.log(`🎬 切换关键帧:`, property)
-  // 暂时只是打印日志，后续会连接真实的关键帧系统
+  if (hasKeyFrameAtTime(property)) {
+    removeKeyFrameProperty(property)
+  } else {
+    createKeyFrame(property)
+  }
+}
+
+// 🆕 调试函数：打印关键帧信息
+const debugKeyFrames = () => {
+  if (!selectedTimelineItem.value) {
+    console.log('🔍 [Debug] 没有选中的时间轴项目')
+    return
+  }
+
+  const item = selectedTimelineItem.value
+  console.log('🔍 [Debug] 时间轴项目信息:', {
+    id: item.id,
+    mediaType: item.mediaType,
+    hasAnimationConfig: !!item.animationConfig
+  })
+
+  if (item.animationConfig) {
+    console.log('🔍 [Debug] 动画配置:', {
+      isEnabled: item.animationConfig.isEnabled,
+      duration: item.animationConfig.duration,
+      durationSeconds: item.animationConfig.duration / 1_000_000,
+      iterCount: item.animationConfig.iterCount,
+      keyFrameCount: item.animationConfig.keyFrames.length
+    })
+
+    console.log('🔍 [Debug] 关键帧列表:')
+    item.animationConfig.keyFrames.forEach((kf, index) => {
+      console.log(`  ${index + 1}. 关键帧 ${kf.id}:`, {
+        time: kf.time,
+        timeSeconds: (kf.time * item.animationConfig!.duration) / 1_000_000,
+        properties: kf.properties.map(p => ({
+          property: p.property,
+          value: p.value,
+          interpolation: p.interpolation
+        }))
+      })
+    })
+  } else {
+    console.log('🔍 [Debug] 没有动画配置')
+  }
+
+  // 打印当前属性值
+  console.log('🔍 [Debug] 当前属性值:', {
+    x: item.x,
+    y: item.y,
+    width: item.width,
+    height: item.height,
+    rotation: item.rotation,
+    opacity: item.opacity,
+    zIndex: item.zIndex
+  })
+
+  // 打印WebAV Sprite信息
+  console.log('🔍 [Debug] WebAV Sprite信息:', {
+    rect: item.sprite.rect,
+    opacity: item.sprite.opacity,
+    zIndex: item.sprite.zIndex,
+    visible: item.sprite.visible
+  })
 }
 </script>
 
@@ -1029,6 +1134,51 @@ const handleToggleKeyFrame = (property: AnimatableProperty) => {
 .property-input:focus {
   outline: none;
   border-color: var(--color-border-focus);
+}
+
+/* 🆕 动画调试样式 */
+.debug-btn {
+  background: var(--color-primary);
+  color: white;
+  border: none;
+  border-radius: var(--border-radius-small);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.debug-btn:hover {
+  background: var(--color-primary-hover);
+}
+
+.animation-status {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-xs);
+}
+
+.status-indicator {
+  font-size: var(--font-size-sm);
+  padding: 2px 6px;
+  border-radius: var(--border-radius-small);
+  font-weight: 500;
+}
+
+.status-indicator.active {
+  background: var(--color-success-bg);
+  color: var(--color-success);
+}
+
+.status-indicator.inactive {
+  background: var(--color-text-quaternary);
+  color: var(--color-text-secondary);
+}
+
+.keyframe-count {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
 }
 
 /* 时长控制样式 */

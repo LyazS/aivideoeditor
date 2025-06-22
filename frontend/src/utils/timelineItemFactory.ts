@@ -7,6 +7,7 @@ import type {
   TimelineItemBaseData,
   TimelineItemFactoryOptions
 } from '../types/videoTypes'
+import type { AnimationConfig } from '../types/animationTypes'
 
 /**
  * 创建响应式TimelineItem的工厂函数
@@ -173,6 +174,9 @@ export function createReactiveTimelineItem(
       if (baseData.mediaType === 'video' && sprite instanceof VideoVisibleSprite) {
         sprite.setMuted(value)
       }
-    }
+    },
+
+    // 🆕 动画配置属性
+    animationConfig: undefined as AnimationConfig | undefined
   }) as TimelineItem
 }
