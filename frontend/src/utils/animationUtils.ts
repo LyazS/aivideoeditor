@@ -55,7 +55,7 @@ export function getPropertyValueAtTime(
   timelineItem: TimelineItem,
   property: AnimatableProperty,
   time: number
-): number {
+): any {
   // 如果没有动画配置，返回当前属性值
   if (!timelineItem.animationConfig || !timelineItem.animationConfig.isEnabled) {
     return getCurrentPropertyValue(timelineItem, property)
@@ -99,6 +99,18 @@ export function getPropertyValueAtTime(
       if (currentProp && nextProp) {
         // 线性插值
         const t = (relativeTime - currentKF.time) / (nextKF.time - currentKF.time)
+
+        // 处理position对象的插值
+        if (property === 'position' &&
+            typeof currentProp.value === 'object' &&
+            typeof nextProp.value === 'object') {
+          return {
+            x: currentProp.value.x + (nextProp.value.x - currentProp.value.x) * t,
+            y: currentProp.value.y + (nextProp.value.y - currentProp.value.y) * t
+          }
+        }
+
+        // 处理数值类型的插值
         return currentProp.value + (nextProp.value - currentProp.value) * t
       }
     }
@@ -113,12 +125,10 @@ export function getPropertyValueAtTime(
  * @param property 属性名
  * @returns 当前属性值
  */
-export function getCurrentPropertyValue(timelineItem: TimelineItem, property: AnimatableProperty): number {
+export function getCurrentPropertyValue(timelineItem: TimelineItem, property: AnimatableProperty): any {
   switch (property) {
-    case 'x':
-      return timelineItem.x
-    case 'y':
-      return timelineItem.y
+    case 'position':
+      return { x: timelineItem.x, y: timelineItem.y }
     case 'width':
       return timelineItem.width
     case 'height':
@@ -127,6 +137,8 @@ export function getCurrentPropertyValue(timelineItem: TimelineItem, property: An
       return timelineItem.rotation
     case 'opacity':
       return timelineItem.opacity
+    case 'zIndex':
+      return timelineItem.zIndex
     default:
       return 0
   }
@@ -141,14 +153,14 @@ export function getCurrentPropertyValue(timelineItem: TimelineItem, property: An
 export function setCurrentPropertyValue(
   timelineItem: TimelineItem,
   property: AnimatableProperty,
-  value: number
+  value: any
 ): void {
   switch (property) {
-    case 'x':
-      timelineItem.x = value
-      break
-    case 'y':
-      timelineItem.y = value
+    case 'position':
+      if (typeof value === 'object' && value !== null) {
+        timelineItem.x = value.x
+        timelineItem.y = value.y
+      }
       break
     case 'width':
       timelineItem.width = value
@@ -161,6 +173,9 @@ export function setCurrentPropertyValue(
       break
     case 'opacity':
       timelineItem.opacity = value
+      break
+    case 'zIndex':
+      timelineItem.zIndex = value
       break
   }
 }
@@ -249,7 +264,7 @@ export function isNearKeyFrame(
  */
 export function createKeyFrameProperty(
   property: AnimatableProperty,
-  value: number,
+  value: any,
   interpolation: 'linear' = 'linear'
 ): KeyFrameProperty {
   return {

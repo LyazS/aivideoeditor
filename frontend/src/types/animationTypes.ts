@@ -4,7 +4,7 @@
  * 可动画属性枚举
  * 定义了支持关键帧动画的所有属性类型
  */
-export type AnimatableProperty = 'x' | 'y' | 'width' | 'height' | 'rotation' | 'opacity' | 'zIndex'
+export type AnimatableProperty = 'position' | 'width' | 'height' | 'rotation' | 'opacity' | 'zIndex'
 
 /**
  * 插值类型枚举
@@ -20,7 +20,7 @@ export interface KeyFrameProperty {
   /** 动画属性类型 */
   property: AnimatableProperty
   /** 属性值 */
-  value: number
+  value: any
   /** 插值类型 */
   interpolation: InterpolationType
 }

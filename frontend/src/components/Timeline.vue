@@ -909,6 +909,23 @@ async function handleTimelineContainerClick(event: MouseEvent) {
   // 点击时间轴容器的空白区域取消所有选中
   const target = event.target as HTMLElement
 
+  // 检查是否点击在时间刻度区域，如果是则不取消选中
+  // 时间刻度相关的类名：time-scale, scale-container, time-mark, mark-line, mark-label, playhead
+  if (
+    target.classList.contains('time-scale') ||
+    target.classList.contains('scale-container') ||
+    target.classList.contains('time-mark') ||
+    target.classList.contains('mark-line') ||
+    target.classList.contains('mark-label') ||
+    target.classList.contains('playhead') ||
+    target.classList.contains('playhead-line') ||
+    target.classList.contains('playhead-handle') ||
+    target.closest('.time-scale') // 检查是否在时间刻度组件内部
+  ) {
+    // 点击时间刻度区域，不取消选中状态
+    return
+  }
+
   // 检查点击的是否是时间轴容器本身或其他空白区域
   // 排除点击在VideoClip、按钮、输入框等交互元素上的情况
   // 注意：不包括 track-content，因为它由 handleTimelineClick 处理

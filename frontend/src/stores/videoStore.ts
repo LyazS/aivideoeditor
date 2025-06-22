@@ -870,7 +870,7 @@ export const useVideoStore = defineStore('video', () => {
   async function createKeyFrameWithHistory(
     timelineItemId: string,
     property: AnimatableProperty,
-    value?: number,
+    value?: any,
     time?: number
   ): Promise<void> {
     const timelineItem = timelineModule.getTimelineItem(timelineItemId)

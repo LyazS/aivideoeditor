@@ -5,7 +5,8 @@ import {
   getPropertyValueAtTime,
   isNearKeyFrame,
   findNearestKeyFrameTime,
-  getClipDuration
+  getClipDuration,
+  getKeyFrameTimePoints
 } from '../utils/animationUtils'
 import { useVideoStore } from '../stores/videoStore'
 import type {
@@ -27,7 +28,7 @@ export function useKeyFrameAnimation() {
 
   // 计算属性：是否有动画配置
   const hasAnimation = computed(() => {
-    return selectedTimelineItem.value?.animationConfig?.isEnabled ?? false
+    return !!selectedTimelineItem.value?.animationConfig
   })
 
   // 计算属性：关键帧数量
@@ -201,39 +202,53 @@ export function useKeyFrameAnimation() {
   }
 
   /**
-   * 跳转到下一个关键帧
+   * 跳转到下一个关键帧（循环导航）
    */
   function goToNextKeyFrame(): void {
     if (!selectedTimelineItem.value?.animationConfig) return
 
-    const nextTime = findNearestKeyFrameTime(
-      selectedTimelineItem.value.animationConfig,
-      videoStore.currentTime,
-      'next'
-    )
+    const timePoints = getKeyFrameTimePoints(selectedTimelineItem.value.animationConfig)
+    if (timePoints.length === 0) return
 
-    if (nextTime !== null) {
-      videoStore.setCurrentTime(nextTime)
-      console.log('⏭️ [Animation] Jumped to next keyframe:', nextTime)
+    // 查找大于当前时间的最小时间点
+    const nextPoints = timePoints.filter(t => t > videoStore.currentTime)
+    let nextTime: number
+
+    if (nextPoints.length > 0) {
+      // 有下一个关键帧
+      nextTime = Math.min(...nextPoints)
+    } else {
+      // 没有下一个关键帧，跳转到第一个关键帧（循环）
+      nextTime = Math.min(...timePoints)
     }
+
+    videoStore.setCurrentTime(nextTime)
+    console.log('⏭️ [Animation] Jumped to next keyframe:', nextTime, nextPoints.length === 0 ? '(循环到第一个)' : '')
   }
 
   /**
-   * 跳转到上一个关键帧
+   * 跳转到上一个关键帧（循环导航）
    */
   function goToPrevKeyFrame(): void {
     if (!selectedTimelineItem.value?.animationConfig) return
 
-    const prevTime = findNearestKeyFrameTime(
-      selectedTimelineItem.value.animationConfig,
-      videoStore.currentTime,
-      'prev'
-    )
+    const timePoints = getKeyFrameTimePoints(selectedTimelineItem.value.animationConfig)
+    if (timePoints.length === 0) return
 
-    if (prevTime !== null) {
-      videoStore.setCurrentTime(prevTime)
-      console.log('⏮️ [Animation] Jumped to prev keyframe:', prevTime)
+    // 查找小于当前时间的最大时间点
+    const prevPoints = timePoints.filter(t => t < videoStore.currentTime)
+    let prevTime: number
+
+    if (prevPoints.length > 0) {
+      // 有上一个关键帧
+      prevTime = Math.max(...prevPoints)
+    } else {
+      // 没有上一个关键帧，跳转到最后一个关键帧（循环）
+      prevTime = Math.max(...timePoints)
     }
+
+    videoStore.setCurrentTime(prevTime)
+    console.log('⏮️ [Animation] Jumped to prev keyframe:', prevTime, prevPoints.length === 0 ? '(循环到最后一个)' : '')
   }
 
   /**

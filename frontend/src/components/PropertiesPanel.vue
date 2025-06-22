@@ -152,35 +152,57 @@
           <h4>动画控制</h4>
           <div class="property-item">
             <div class="animation-controls">
-              <button @click="debugKeyFrames" class="debug-btn">
-                🔍 调试信息
-              </button>
-              <button
-                v-if="hasAnimation"
-                @click="clearAnimation"
-                class="debug-btn danger"
-                title="清除所有动画，转换为静态属性"
-              >
-                🗑️ 清除动画
-              </button>
-              <button
-                v-if="hasAnimation"
-                @click="toggleAnimationEnabled"
-                class="debug-btn"
-                :title="selectedTimelineItem?.animationConfig?.isEnabled ? '禁用动画' : '启用动画'"
-              >
-                {{ selectedTimelineItem?.animationConfig?.isEnabled ? '⏸️ 禁用' : '▶️ 启用' }}
-              </button>
+              <!-- 关键帧导航按钮 -->
+              <div v-if="hasAnimation && keyFrameCount > 0" class="keyframe-navigation">
+                <button
+                  @click="goToPrevKeyFrame"
+                  class="nav-btn"
+                  title="跳转到上一个关键帧"
+                >
+                  ⏮️ 上一帧
+                </button>
+                <button
+                  @click="goToNextKeyFrame"
+                  class="nav-btn"
+                  title="跳转到下一个关键帧"
+                >
+                  ⏭️ 下一帧
+                </button>
+              </div>
+
+              <!-- 调试和控制按钮 -->
+              <div class="debug-controls">
+                <button @click="debugKeyFrames" class="debug-btn">
+                  🔍 调试信息
+                </button>
+                <button
+                  v-if="hasAnimation"
+                  @click="clearAnimation"
+                  class="debug-btn danger"
+                  title="清除所有动画，转换为静态属性"
+                >
+                  🗑️ 清除动画
+                </button>
+                <button
+                  v-if="hasAnimation"
+                  @click="toggleAnimationEnabled"
+                  class="debug-btn"
+                  :title="selectedTimelineItem?.animationConfig?.isEnabled ? '禁用动画' : '启用动画'"
+                >
+                  {{ selectedTimelineItem?.animationConfig?.isEnabled ? '⏸️ 禁用' : '▶️ 启用' }}
+                </button>
+              </div>
             </div>
             <div v-if="hasAnimation" class="animation-status">
               <span class="status-indicator active">
-                动画{{ selectedTimelineItem?.animationConfig?.isEnabled ? '已启用' : '已禁用' }}
+                🎬 带动画clip {{ selectedTimelineItem?.animationConfig?.isEnabled ? '(已启用)' : '(已禁用)' }}
               </span>
               <span class="keyframe-count">{{ keyFrameCount }} 个关键帧</span>
+              <span class="animation-mode-hint">属性修改 → 自动创建/更新关键帧</span>
             </div>
             <div v-else class="animation-status">
-              <span class="status-indicator inactive">动画未启用</span>
-              <span class="hint">点击属性旁的◆按钮创建关键帧</span>
+              <span class="status-indicator inactive">📄 非动画clip</span>
+              <span class="hint">点击属性旁的◆按钮创建关键帧转换为动画clip</span>
             </div>
           </div>
         </div>
@@ -196,7 +218,7 @@
                 <span class="position-label">X</span>
                 <NumberInput
                   :model-value="transformX"
-                  @change="(value) => updatePropertySmart('x', value)"
+                  @change="(value) => updatePositionProperty('x', value)"
                   :min="-videoStore.videoResolution.width"
                   :max="videoStore.videoResolution.width"
                   :step="1"
@@ -204,12 +226,14 @@
                   placeholder="中心为0"
                   :input-style="positionInputStyle"
                 />
+                <span v-if="hasAnimation" class="property-mode-indicator animated" title="由关键帧驱动">🎬</span>
+                <span v-else class="property-mode-indicator static" title="静态值">📄</span>
               </div>
               <div class="position-input-group">
                 <span class="position-label">Y</span>
                 <NumberInput
                   :model-value="transformY"
-                  @change="(value) => updatePropertySmart('y', value)"
+                  @change="(value) => updatePositionProperty('y', value)"
                   :min="-videoStore.videoResolution.height"
                   :max="videoStore.videoResolution.height"
                   :step="1"
@@ -217,17 +241,19 @@
                   placeholder="中心为0"
                   :input-style="positionInputStyle"
                 />
+                <span v-if="hasAnimation" class="property-mode-indicator animated" title="由关键帧驱动">🎬</span>
+                <span v-else class="property-mode-indicator static" title="静态值">📄</span>
               </div>
-              <KeyFrameButton
-                property="x"
-                :has-keyframe="hasKeyFrameAtTime('x')"
-                @toggle-keyframe="handleToggleKeyFrame"
-              />
-              <KeyFrameButton
-                property="y"
-                :has-keyframe="hasKeyFrameAtTime('y')"
-                @toggle-keyframe="handleToggleKeyFrame"
-              />
+              <!-- 位置关键帧按钮 -->
+              <div class="position-keyframe-button">
+                <KeyFrameButton
+                  property="position"
+                  :has-keyframe="hasPositionKeyFrame"
+                  @toggle-keyframe="handleTogglePositionKeyFrame"
+                  :title="hasPositionKeyFrame ? '删除位置关键帧(X,Y)' : '添加位置关键帧(X,Y)'"
+                />
+                <span class="position-label-indicator">XY</span>
+              </div>
             </div>
           </div>
 
@@ -264,6 +290,8 @@
                 :precision="2"
                 :input-style="scaleInputStyle"
               />
+              <span v-if="hasAnimation" class="property-mode-indicator animated" title="由关键帧驱动">🎬</span>
+              <span v-else class="property-mode-indicator static" title="静态值">📄</span>
               <KeyFrameButton
                 property="width"
                 :has-keyframe="hasKeyFrameAtTime('width')"
@@ -295,6 +323,8 @@
                   :precision="2"
                   :input-style="scaleInputStyle"
                 />
+                <span v-if="hasAnimation" class="property-mode-indicator animated" title="由关键帧驱动">🎬</span>
+                <span v-else class="property-mode-indicator static" title="静态值">📄</span>
                 <KeyFrameButton
                   property="width"
                   :has-keyframe="hasKeyFrameAtTime('width')"
@@ -323,6 +353,8 @@
                   :precision="2"
                   :input-style="scaleInputStyle"
                 />
+                <span v-if="hasAnimation" class="property-mode-indicator animated" title="由关键帧驱动">🎬</span>
+                <span v-else class="property-mode-indicator static" title="静态值">📄</span>
                 <KeyFrameButton
                   property="height"
                   :has-keyframe="hasKeyFrameAtTime('height')"
@@ -431,6 +463,8 @@
                 :precision="1"
                 :input-style="scaleInputStyle"
               />
+              <span v-if="hasAnimation" class="property-mode-indicator animated" title="由关键帧驱动">🎬</span>
+              <span v-else class="property-mode-indicator static" title="静态值">📄</span>
               <KeyFrameButton
                 property="rotation"
                 :has-keyframe="hasKeyFrameAtTime('rotation')"
@@ -459,6 +493,8 @@
                 :precision="2"
                 :input-style="scaleInputStyle"
               />
+              <span v-if="hasAnimation" class="property-mode-indicator animated" title="由关键帧驱动">🎬</span>
+              <span v-else class="property-mode-indicator static" title="静态值">📄</span>
               <KeyFrameButton
                 property="opacity"
                 :has-keyframe="hasKeyFrameAtTime('opacity')"
@@ -468,14 +504,18 @@
           </div>
           <div class="property-item">
             <label>层级</label>
-            <NumberInput
-              :model-value="zIndex"
-              @change="(value) => updatePropertySmart('zIndex', value)"
-              :min="0"
-              :step="1"
-              :precision="0"
-              :input-style="scaleInputStyle"
-            />
+            <div class="property-controls">
+              <NumberInput
+                :model-value="zIndex"
+                @change="(value) => updatePropertySmart('zIndex', value)"
+                :min="0"
+                :step="1"
+                :precision="0"
+                :input-style="scaleInputStyle"
+              />
+              <span v-if="hasAnimation" class="property-mode-indicator animated" title="由关键帧驱动">🎬</span>
+              <span v-else class="property-mode-indicator static" title="静态值">📄</span>
+            </div>
           </div>
         </div>
       </div>
@@ -500,9 +540,8 @@ import { useVideoStore } from '../stores/videoStore'
 import { isVideoTimeRange } from '../types/videoTypes'
 import { uiDegreesToWebAVRadians, webAVRadiansToUIDegrees } from '../utils/rotationTransform'
 import { useKeyFrameAnimation } from '../composables/useKeyFrameAnimation'
-import { KeyFrameAnimationManager } from '../utils/keyFrameAnimationManager'
 import { getCurrentPropertyValue, getPropertyValueAtTime } from '../utils/animationUtils'
-import { CreateKeyFrameCommand, ClearAnimationCommand } from '../stores/modules/commands/keyFrameCommands'
+import { ClearAnimationCommand } from '../stores/modules/commands/keyFrameCommands'
 import { UpdateTransformCommand } from '../stores/modules/commands/timelineCommands'
 import NumberInput from './NumberInput.vue'
 import KeyFrameButton from './KeyFrameButton.vue'
@@ -515,12 +554,9 @@ const {
   setSelectedTimelineItem,
   hasAnimation,
   keyFrameCount,
-  getKeyFrames,
-  getAnimationDuration,
   hasKeyFrameAtTime,
-  createKeyFrame,
-  removeKeyFrameProperty,
-  setAnimationEnabled
+  goToNextKeyFrame,
+  goToPrevKeyFrame
 } = useKeyFrameAnimation()
 
 // 选中的时间轴项目
@@ -576,12 +612,14 @@ const transformX = computed(() => {
   if (!selectedTimelineItem.value) return 0
 
   if (hasAnimation.value) {
-    // 有动画：显示当前时间点的插值
-    return getPropertyValueAtTime(
+    // 有动画：从position关键帧获取X值
+    const positionValue = getPropertyValueAtTime(
       selectedTimelineItem.value,
-      'x',
+      'position',
       videoStore.currentTime
     )
+    // position值是{x, y}对象，取x值
+    return typeof positionValue === 'object' && positionValue !== null ? positionValue.x : selectedTimelineItem.value.x
   } else {
     // 无动画：显示TimelineItem属性
     return selectedTimelineItem.value.x
@@ -592,12 +630,14 @@ const transformY = computed(() => {
   if (!selectedTimelineItem.value) return 0
 
   if (hasAnimation.value) {
-    // 有动画：显示当前时间点的插值
-    return getPropertyValueAtTime(
+    // 有动画：从position关键帧获取Y值
+    const positionValue = getPropertyValueAtTime(
       selectedTimelineItem.value,
-      'y',
+      'position',
       videoStore.currentTime
     )
+    // position值是{x, y}对象，取y值
+    return typeof positionValue === 'object' && positionValue !== null ? positionValue.y : selectedTimelineItem.value.y
   } else {
     // 无动画：显示TimelineItem属性
     return selectedTimelineItem.value.y
@@ -1040,28 +1080,28 @@ const updatePropertySmart = async (property: AnimatableProperty, newValue: numbe
   }
 
   if (hasAnimation.value) {
-    // 有动画：通过关键帧命令更新
+    // 🎬 有动画：通过关键帧命令更新
     try {
       await videoStore.createKeyFrameWithHistory(
         selectedTimelineItem.value.id,
         property,
         newValue
       )
-      console.log(`✅ 关键帧属性 ${property} 更新成功:`, { oldValue, newValue })
+      console.log(`🎬 [动画clip] 关键帧属性 ${property} 更新成功:`, { oldValue, newValue, time: videoStore.currentTime })
     } catch (error) {
-      console.error(`❌ 关键帧属性 ${property} 更新失败:`, error)
+      console.error(`❌ [动画clip] 关键帧属性 ${property} 更新失败:`, error)
     }
   } else {
-    // 无动画：通过变换命令更新
+    // 📄 无动画：通过变换命令更新
     const transform: any = {
       [property]: newValue
     }
 
     try {
       await videoStore.updateTimelineItemTransformWithHistory(selectedTimelineItem.value.id, transform)
-      console.log(`✅ 静态属性 ${property} 更新成功:`, { oldValue, newValue })
+      console.log(`📄 [非动画clip] 静态属性 ${property} 更新成功:`, { oldValue, newValue })
     } catch (error) {
-      console.error(`❌ 静态属性 ${property} 更新失败:`, error)
+      console.error(`❌ [非动画clip] 静态属性 ${property} 更新失败:`, error)
       // 如果历史记录更新失败，回退到直接更新
       ;(selectedTimelineItem.value as any)[property] = newValue
     }
@@ -1122,8 +1162,8 @@ const alignHorizontal = (alignment: 'left' | 'center' | 'right') => {
         break
     }
 
-    // 🆕 使用智能属性更新
-    updatePropertySmart('x', Math.round(newProjectX))
+    // 🆕 使用位置属性更新
+    updatePositionProperty('x', Math.round(newProjectX))
 
     console.log('✅ 水平对齐完成:', alignment, '项目坐标X:', newProjectX)
   } catch (error) {
@@ -1154,8 +1194,8 @@ const alignVertical = (alignment: 'top' | 'middle' | 'bottom') => {
         break
     }
 
-    // 🆕 使用智能属性更新
-    updatePropertySmart('y', Math.round(newProjectY))
+    // 🆕 使用位置属性更新
+    updatePositionProperty('y', Math.round(newProjectY))
 
     console.log('✅ 垂直对齐完成:', alignment, '项目坐标Y:', newProjectY)
   } catch (error) {
@@ -1168,11 +1208,115 @@ watch(selectedTimelineItem, (newItem) => {
   setSelectedTimelineItem(newItem)
 }, { immediate: true })
 
-// 🆕 关键帧切换处理函数：使用带历史记录的方法，支持首次动画初始化
+// 🆕 位置属性更新函数：更新X或Y时，同时更新position关键帧
+const updatePositionProperty = async (axis: 'x' | 'y', newValue: number) => {
+  if (!selectedTimelineItem.value) return
+
+  const oldX = selectedTimelineItem.value.x
+  const oldY = selectedTimelineItem.value.y
+
+  // 构建新的位置值
+  const newPosition = {
+    x: axis === 'x' ? newValue : oldX,
+    y: axis === 'y' ? newValue : oldY
+  }
+
+  console.log(`🎬 更新位置属性 ${axis.toUpperCase()}:`, {
+    oldValue: axis === 'x' ? oldX : oldY,
+    newValue,
+    newPosition,
+    hasAnimation: hasAnimation.value
+  })
+
+  if (hasAnimation.value) {
+    // 🎬 有动画：通过position关键帧命令更新
+    try {
+      await videoStore.createKeyFrameWithHistory(
+        selectedTimelineItem.value.id,
+        'position',
+        newPosition
+      )
+      console.log(`🎬 [动画clip] 位置关键帧更新成功:`, { newPosition, time: videoStore.currentTime })
+    } catch (error) {
+      console.error(`❌ [动画clip] 位置关键帧更新失败:`, error)
+    }
+  } else {
+    // 📄 无动画：通过变换命令更新
+    const transform = {
+      [axis]: newValue
+    }
+
+    try {
+      await videoStore.updateTimelineItemTransformWithHistory(selectedTimelineItem.value.id, transform)
+      console.log(`📄 [非动画clip] 位置属性 ${axis.toUpperCase()} 更新成功:`, { oldValue: axis === 'x' ? oldX : oldY, newValue })
+    } catch (error) {
+      console.error(`❌ [非动画clip] 位置属性 ${axis.toUpperCase()} 更新失败:`, error)
+      // 如果历史记录更新失败，回退到直接更新
+      ;(selectedTimelineItem.value as any)[axis] = newValue
+    }
+  }
+}
+
+// 🆕 位置关键帧状态：检查position属性是否有关键帧
+const hasPositionKeyFrame = computed(() => {
+  return hasKeyFrameAtTime('position')
+})
+
+// 🆕 位置关键帧切换处理函数：操作position属性，包含X和Y值
+const handleTogglePositionKeyFrame = async () => {
+  if (!selectedTimelineItem.value) return
+
+  const currentTime = videoStore.currentTime
+  const hasKeyFrame = hasKeyFrameAtTime('position')
+
+  console.log(`🎬 切换位置关键帧:`, {
+    time: currentTime,
+    hasKeyFrame,
+    currentX: selectedTimelineItem.value.x,
+    currentY: selectedTimelineItem.value.y,
+    willCreate: !hasKeyFrame
+  })
+
+  try {
+    if (hasKeyFrame) {
+      // 删除位置关键帧
+      await videoStore.removeKeyFrameWithHistory(
+        selectedTimelineItem.value.id,
+        'position'
+      )
+      console.log(`✅ 已删除位置关键帧 (时间: ${currentTime}s)`)
+    } else {
+      // 创建位置关键帧：保存当前的X和Y值
+      await videoStore.createKeyFrameWithHistory(
+        selectedTimelineItem.value.id,
+        'position'
+      )
+
+      const wasAnimated = hasAnimation.value
+      if (!wasAnimated) {
+        console.log(`🎬 ✨ clip转换为动画clip! 已创建位置关键帧 (X:${selectedTimelineItem.value.x}, Y:${selectedTimelineItem.value.y}) (时间: ${currentTime}s)`)
+      } else {
+        console.log(`✅ 已创建位置关键帧 (X:${selectedTimelineItem.value.x}, Y:${selectedTimelineItem.value.y}) (时间: ${currentTime}s)`)
+      }
+    }
+  } catch (error) {
+    console.error(`❌ 位置关键帧切换失败:`, error)
+  }
+}
+
+// 🆕 关键帧切换处理函数：使用带历史记录的方法
 const handleToggleKeyFrame = async (property: AnimatableProperty) => {
   if (!selectedTimelineItem.value) return
 
-  console.log(`🎬 切换关键帧:`, property)
+  const wasAnimated = hasAnimation.value
+  const currentTime = videoStore.currentTime
+
+  console.log(`🎬 切换关键帧:`, {
+    property,
+    time: currentTime,
+    wasAnimated,
+    hasKeyFrameAtCurrentTime: hasKeyFrameAtTime(property)
+  })
 
   try {
     if (hasKeyFrameAtTime(property)) {
@@ -1181,71 +1325,25 @@ const handleToggleKeyFrame = async (property: AnimatableProperty) => {
         selectedTimelineItem.value.id,
         property
       )
-      console.log(`✅ 已删除关键帧: ${property}`)
+      console.log(`✅ 已删除关键帧: ${property} (时间: ${currentTime}s)`)
     } else {
       // 创建关键帧
-      if (!hasAnimation.value) {
-        // 首次创建关键帧：初始化动画
-        await initializeAnimation(property)
+      await videoStore.createKeyFrameWithHistory(
+        selectedTimelineItem.value.id,
+        property
+      )
+      if (!wasAnimated) {
+        console.log(`🎬 ✨ clip转换为动画clip! 已创建关键帧: ${property} (时间: ${currentTime}s)`)
       } else {
-        // 已有动画：直接创建关键帧
-        await videoStore.createKeyFrameWithHistory(
-          selectedTimelineItem.value.id,
-          property
-        )
+        console.log(`✅ 已创建关键帧: ${property} (时间: ${currentTime}s)`)
       }
-      console.log(`✅ 已创建关键帧: ${property}`)
     }
   } catch (error) {
     console.error(`❌ 关键帧切换失败: ${property}`, error)
   }
 }
 
-// 🆕 初始化动画：首次创建关键帧时的特殊处理
-const initializeAnimation = async (property: AnimatableProperty) => {
-  if (!selectedTimelineItem.value || hasAnimation.value) return
 
-  const currentValue = getCurrentPropertyValue(selectedTimelineItem.value, property)
-
-  console.log(`🎬 初始化动画: ${property}，当前值: ${currentValue}`)
-
-  try {
-    // 批量操作：创建初始关键帧 + 当前关键帧
-    const batch = videoStore.startBatch('初始化动画')
-
-    // 在时间0创建初始关键帧
-    batch.addCommand(new CreateKeyFrameCommand(
-      selectedTimelineItem.value.id,
-      property,
-      0,
-      currentValue,
-      {
-        getTimelineItem: videoStore.getTimelineItem,
-      },
-      videoStore.videoResolution
-    ))
-
-    // 在当前时间创建关键帧（如果不是时间0）
-    if (videoStore.currentTime > 0.001) {
-      batch.addCommand(new CreateKeyFrameCommand(
-        selectedTimelineItem.value.id,
-        property,
-        videoStore.currentTime,
-        currentValue,
-        {
-          getTimelineItem: videoStore.getTimelineItem,
-        },
-        videoStore.videoResolution
-      ))
-    }
-
-    await videoStore.executeBatchCommand(batch.build())
-    console.log(`✅ 动画初始化完成: ${property}`)
-  } catch (error) {
-    console.error(`❌ 动画初始化失败: ${property}`, error)
-    throw error
-  }
-}
 
 // 🆕 清除动画：将动画转换为静态属性
 const clearAnimation = async () => {
@@ -1256,7 +1354,7 @@ const clearAnimation = async () => {
   try {
     // 获取当前时间点的插值作为最终静态值
     const finalValues: Record<string, number> = {}
-    const animatableProperties: AnimatableProperty[] = ['x', 'y', 'width', 'height', 'rotation', 'opacity', 'zIndex']
+    const animatableProperties: AnimatableProperty[] = ['position', 'width', 'height', 'rotation', 'opacity', 'zIndex']
 
     animatableProperties.forEach(property => {
       finalValues[property] = getPropertyValueAtTime(
@@ -1430,8 +1528,20 @@ const debugKeyFrames = () => {
 /* 🆕 动画控制样式 */
 .animation-controls {
   display: flex;
-  gap: var(--spacing-xs);
+  flex-direction: column;
+  gap: var(--spacing-sm);
   margin-bottom: var(--spacing-sm);
+}
+
+.keyframe-navigation {
+  display: flex;
+  gap: var(--spacing-xs);
+  flex-wrap: wrap;
+}
+
+.debug-controls {
+  display: flex;
+  gap: var(--spacing-xs);
   flex-wrap: wrap;
 }
 
@@ -1457,6 +1567,48 @@ const debugKeyFrames = () => {
 
 .debug-btn.danger:hover {
   background: var(--color-danger-hover);
+}
+
+/* 🆕 关键帧导航按钮样式 */
+.nav-btn {
+  background: var(--color-accent-secondary);
+  color: white;
+  border: none;
+  border-radius: var(--border-radius-small);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  transition: background-color 0.2s;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.nav-btn:hover {
+  background: var(--color-accent-secondary-hover);
+}
+
+.nav-btn:active {
+  transform: translateY(1px);
+}
+
+/* 🆕 位置关键帧按钮样式 */
+.position-keyframe-button {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  position: relative;
+}
+
+.position-label-indicator {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  font-weight: 500;
+  background: var(--color-background-secondary);
+  padding: 2px 4px;
+  border-radius: var(--border-radius-small);
+  border: 1px solid var(--color-border);
 }
 
 .animation-status {
@@ -1488,10 +1640,46 @@ const debugKeyFrames = () => {
   color: var(--color-text-secondary);
 }
 
+.animation-mode-hint {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-hint);
+  font-style: italic;
+}
+
 .hint {
   font-size: var(--font-size-sm);
   color: var(--color-text-hint);
   font-style: italic;
+}
+
+/* 🆕 属性模式指示器样式 */
+.property-mode-indicator {
+  font-size: 12px;
+  margin-left: 4px;
+  margin-right: 4px;
+  opacity: 0.7;
+  transition: opacity 0.2s ease;
+  flex-shrink: 0;
+}
+
+.property-mode-indicator.animated {
+  opacity: 0.8;
+}
+
+.property-mode-indicator.static {
+  opacity: 0.5;
+}
+
+.property-mode-indicator:hover {
+  opacity: 1;
+}
+
+/* 🆕 属性控制容器样式 */
+.property-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  flex: 1;
 }
 
 /* 时长控制样式 */
