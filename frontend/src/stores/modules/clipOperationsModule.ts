@@ -23,6 +23,7 @@ export function createClipOperationsModule(
     timelineItems: Ref<TimelineItem[]>
   },
   selectionModule: { selectTimelineItem: (id: string) => void; clearAllSelections: () => void },
+  configModule: { videoResolution: { value: { width: number; height: number } } },
   trackModule?: { tracks: Ref<{ id: number; name: string }[]> },
 ) {
   // ==================== 视频片段操作方法 ====================

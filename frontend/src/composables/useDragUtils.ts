@@ -1,5 +1,6 @@
 import { useVideoStore } from '../stores/videoStore'
 import type { TimelineItemDragData, MediaItemDragData } from '../types/videoTypes'
+import { alignTimeToFrame } from '../stores/utils/timeUtils'
 
 /**
  * 拖拽工具函数集合
@@ -151,6 +152,9 @@ export function useDragUtils() {
 
     // 确保拖拽时间不会小于0（防止clip被拖拽到负数时间轴）
     dropTime = Math.max(0, dropTime)
+
+    // 对齐到帧边界（与播放头拖拽和时间刻度点击保持一致）
+    dropTime = alignTimeToFrame(dropTime, videoStore.frameRate)
 
     return {
       dropTime,

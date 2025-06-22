@@ -81,6 +81,7 @@ export const useVideoStore = defineStore('video', () => {
     mediaModule,
     timelineModule,
     selectionModule,
+    configModule,
     trackModule,
   )
 
