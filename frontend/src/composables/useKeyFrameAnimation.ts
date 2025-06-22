@@ -1,10 +1,11 @@
 import { ref, computed, watch } from 'vue'
 import { KeyFrameAnimationManager } from '../utils/keyFrameAnimationManager'
-import { 
+import {
   getCurrentPropertyValue,
   getPropertyValueAtTime,
   isNearKeyFrame,
-  findNearestKeyFrameTime
+  findNearestKeyFrameTime,
+  getClipDuration
 } from '../utils/animationUtils'
 import { useVideoStore } from '../stores/videoStore'
 import type {
@@ -76,7 +77,8 @@ export function useKeyFrameAnimation() {
       selectedTimelineItem.value,
       property,
       targetTime,
-      targetValue
+      targetValue,
+      videoStore.videoResolution
     )
 
     console.log('🎬 [Animation] Created keyframe:', {
@@ -181,7 +183,11 @@ export function useKeyFrameAnimation() {
       return
     }
 
-    KeyFrameAnimationManager.setAnimationEnabled(selectedTimelineItem.value, enabled)
+    KeyFrameAnimationManager.setAnimationEnabled(
+      selectedTimelineItem.value,
+      enabled,
+      videoStore.videoResolution
+    )
     console.log('🎬 [Animation] Animation enabled:', enabled)
   }
 
@@ -246,39 +252,18 @@ export function useKeyFrameAnimation() {
 
   /**
    * 获取动画时长（秒）
+   * 动画时长现在等于clip时长，不可单独设置
    */
   function getAnimationDuration(): number {
-    if (!selectedTimelineItem.value?.animationConfig) return 2 // 默认2秒
-    return selectedTimelineItem.value.animationConfig.duration / 1_000_000
-  }
+    if (!selectedTimelineItem.value) return 0
 
-  /**
-   * 设置动画时长
-   * @param durationInSeconds 时长（秒）
-   */
-  function setAnimationDuration(durationInSeconds: number): void {
-    if (!selectedTimelineItem.value) return
-
-    if (!selectedTimelineItem.value.animationConfig) {
-      selectedTimelineItem.value.animationConfig = {
-        keyFrames: [],
-        duration: durationInSeconds * 1_000_000,
-        iterCount: 1,
-        isEnabled: true
-      }
-    } else {
-      selectedTimelineItem.value.animationConfig.duration = durationInSeconds * 1_000_000
-      
-      // 重新应用动画
-      if (selectedTimelineItem.value.animationConfig.isEnabled) {
-        KeyFrameAnimationManager.applyAnimationToSprite(
-          selectedTimelineItem.value.sprite,
-          selectedTimelineItem.value.animationConfig
-        )
-      }
+    // 如果有动画配置，返回配置中的时长
+    if (selectedTimelineItem.value.animationConfig) {
+      return selectedTimelineItem.value.animationConfig.duration / 1_000_000
     }
 
-    console.log('⏱️ [Animation] Set animation duration:', durationInSeconds)
+    // 否则返回clip时长
+    return getClipDuration(selectedTimelineItem.value)
   }
 
   // 监听当前时间变化，自动更新属性值（如果有动画的话）
@@ -311,7 +296,6 @@ export function useKeyFrameAnimation() {
     goToNextKeyFrame,
     goToPrevKeyFrame,
     clearAllAnimations,
-    getAnimationDuration,
-    setAnimationDuration
+    getAnimationDuration
   }
 }

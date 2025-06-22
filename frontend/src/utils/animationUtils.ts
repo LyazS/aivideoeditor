@@ -12,6 +12,16 @@ import type { TimelineItem } from '../types/videoTypes'
  */
 
 /**
+ * 获取TimelineItem的clip时长（秒）
+ * @param timelineItem 时间轴项目
+ * @returns clip时长（秒）
+ */
+export function getClipDuration(timelineItem: TimelineItem): number {
+  const timeRange = timelineItem.timeRange
+  return (timeRange.timelineEndTime - timeRange.timelineStartTime) / 1_000_000
+}
+
+/**
  * 将秒转换为动画相对时间（0-1）
  * @param timeInSeconds 时间（秒）
  * @param animationDuration 动画时长（微秒）
@@ -19,8 +29,8 @@ import type { TimelineItem } from '../types/videoTypes'
  */
 export function secondsToRelativeTime(timeInSeconds: number, animationDuration: number): number {
   const animationDurationSeconds = animationDuration / 1_000_000
-  const timeInCycle = timeInSeconds % animationDurationSeconds
-  return Math.max(0, Math.min(1, timeInCycle / animationDurationSeconds))
+  // 移除取模运算，直接计算相对时间
+  return Math.max(0, Math.min(1, timeInSeconds / animationDurationSeconds))
 }
 
 /**

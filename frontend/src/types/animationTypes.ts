@@ -4,7 +4,7 @@
  * 可动画属性枚举
  * 定义了支持关键帧动画的所有属性类型
  */
-export type AnimatableProperty = 'x' | 'y' | 'width' | 'height' | 'rotation' | 'opacity'
+export type AnimatableProperty = 'x' | 'y' | 'width' | 'height' | 'rotation' | 'opacity' | 'zIndex'
 
 /**
  * 插值类型枚举
@@ -72,6 +72,8 @@ export interface WebAVAnimateProps {
   angle?: number
   /** 透明度（0-1） */
   opacity?: number
+  /** 层级（注意：WebAV可能不直接支持zIndex动画） */
+  zIndex?: number
 }
 
 /**

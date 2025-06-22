@@ -147,19 +147,40 @@
           </div>
         </div>
 
-        <!-- 🆕 动画调试区域 -->
+        <!-- 🆕 动画控制区域 -->
         <div class="property-section">
-          <h4>动画调试</h4>
+          <h4>动画控制</h4>
           <div class="property-item">
-            <button @click="debugKeyFrames" class="debug-btn">
-              🔍 打印关键帧信息
-            </button>
+            <div class="animation-controls">
+              <button @click="debugKeyFrames" class="debug-btn">
+                🔍 调试信息
+              </button>
+              <button
+                v-if="hasAnimation"
+                @click="clearAnimation"
+                class="debug-btn danger"
+                title="清除所有动画，转换为静态属性"
+              >
+                🗑️ 清除动画
+              </button>
+              <button
+                v-if="hasAnimation"
+                @click="toggleAnimationEnabled"
+                class="debug-btn"
+                :title="selectedTimelineItem?.animationConfig?.isEnabled ? '禁用动画' : '启用动画'"
+              >
+                {{ selectedTimelineItem?.animationConfig?.isEnabled ? '⏸️ 禁用' : '▶️ 启用' }}
+              </button>
+            </div>
             <div v-if="hasAnimation" class="animation-status">
-              <span class="status-indicator active">动画已启用</span>
+              <span class="status-indicator active">
+                动画{{ selectedTimelineItem?.animationConfig?.isEnabled ? '已启用' : '已禁用' }}
+              </span>
               <span class="keyframe-count">{{ keyFrameCount }} 个关键帧</span>
             </div>
             <div v-else class="animation-status">
               <span class="status-indicator inactive">动画未启用</span>
+              <span class="hint">点击属性旁的◆按钮创建关键帧</span>
             </div>
           </div>
         </div>
@@ -175,7 +196,7 @@
                 <span class="position-label">X</span>
                 <NumberInput
                   :model-value="transformX"
-                  @change="(value) => updatePropertyWithHistory('x', value)"
+                  @change="(value) => updatePropertySmart('x', value)"
                   :min="-videoStore.videoResolution.width"
                   :max="videoStore.videoResolution.width"
                   :step="1"
@@ -188,7 +209,7 @@
                 <span class="position-label">Y</span>
                 <NumberInput
                   :model-value="transformY"
-                  @change="(value) => updatePropertyWithHistory('y', value)"
+                  @change="(value) => updatePropertySmart('y', value)"
                   :min="-videoStore.videoResolution.height"
                   :max="videoStore.videoResolution.height"
                   :step="1"
@@ -449,7 +470,7 @@
             <label>层级</label>
             <NumberInput
               :model-value="zIndex"
-              @change="(value) => updatePropertyWithHistory('zIndex', value)"
+              @change="(value) => updatePropertySmart('zIndex', value)"
               :min="0"
               :step="1"
               :precision="0"
@@ -480,9 +501,12 @@ import { isVideoTimeRange } from '../types/videoTypes'
 import { uiDegreesToWebAVRadians, webAVRadiansToUIDegrees } from '../utils/rotationTransform'
 import { useKeyFrameAnimation } from '../composables/useKeyFrameAnimation'
 import { KeyFrameAnimationManager } from '../utils/keyFrameAnimationManager'
+import { getCurrentPropertyValue, getPropertyValueAtTime } from '../utils/animationUtils'
+import { CreateKeyFrameCommand, ClearAnimationCommand } from '../stores/modules/commands/keyFrameCommands'
+import { UpdateTransformCommand } from '../stores/modules/commands/timelineCommands'
 import NumberInput from './NumberInput.vue'
 import KeyFrameButton from './KeyFrameButton.vue'
-import type { AnimatableProperty } from './KeyFrameButton.vue'
+import type { AnimatableProperty } from '../types/animationTypes'
 
 const videoStore = useVideoStore()
 
@@ -547,9 +571,38 @@ const speedSegments = [
   { min: 10, max: 100, normalizedStart: 80, normalizedEnd: 100 }, // 80-100%: 10-100x
 ]
 
-// 🆕 变换属性 - 基于新架构的直接属性访问
-const transformX = computed(() => selectedTimelineItem.value?.x || 0)
-const transformY = computed(() => selectedTimelineItem.value?.y || 0)
+// 🆕 智能变换属性 - 根据动画状态显示插值或静态值
+const transformX = computed(() => {
+  if (!selectedTimelineItem.value) return 0
+
+  if (hasAnimation.value) {
+    // 有动画：显示当前时间点的插值
+    return getPropertyValueAtTime(
+      selectedTimelineItem.value,
+      'x',
+      videoStore.currentTime
+    )
+  } else {
+    // 无动画：显示TimelineItem属性
+    return selectedTimelineItem.value.x
+  }
+})
+
+const transformY = computed(() => {
+  if (!selectedTimelineItem.value) return 0
+
+  if (hasAnimation.value) {
+    // 有动画：显示当前时间点的插值
+    return getPropertyValueAtTime(
+      selectedTimelineItem.value,
+      'y',
+      videoStore.currentTime
+    )
+  } else {
+    // 无动画：显示TimelineItem属性
+    return selectedTimelineItem.value.y
+  }
+})
 const scaleX = computed(() => {
   if (!selectedTimelineItem.value || !selectedMediaItem.value) return 1
   const originalResolution = selectedMediaItem.value.mediaType === 'video'
@@ -565,11 +618,55 @@ const scaleY = computed(() => {
   return selectedTimelineItem.value.height / originalResolution.height
 })
 const rotation = computed(() => {
-  const radians = selectedTimelineItem.value?.rotation || 0
+  if (!selectedTimelineItem.value) return 0
+
+  let radians = 0
+  if (hasAnimation.value) {
+    // 有动画：显示当前时间点的插值
+    radians = getPropertyValueAtTime(
+      selectedTimelineItem.value,
+      'rotation',
+      videoStore.currentTime
+    )
+  } else {
+    // 无动画：显示TimelineItem属性
+    radians = selectedTimelineItem.value.rotation
+  }
+
   return webAVRadiansToUIDegrees(radians)
 })
-const opacity = computed(() => selectedTimelineItem.value?.opacity || 1)
-const zIndex = computed(() => selectedTimelineItem.value?.zIndex || 0)
+
+const opacity = computed(() => {
+  if (!selectedTimelineItem.value) return 1
+
+  if (hasAnimation.value) {
+    // 有动画：显示当前时间点的插值
+    return getPropertyValueAtTime(
+      selectedTimelineItem.value,
+      'opacity',
+      videoStore.currentTime
+    )
+  } else {
+    // 无动画：显示TimelineItem属性
+    return selectedTimelineItem.value.opacity
+  }
+})
+
+const zIndex = computed(() => {
+  if (!selectedTimelineItem.value) return 0
+
+  if (hasAnimation.value) {
+    // 有动画：显示当前时间点的插值
+    return getPropertyValueAtTime(
+      selectedTimelineItem.value,
+      'zIndex',
+      videoStore.currentTime
+    )
+  } else {
+    // 无动画：显示TimelineItem属性
+    return selectedTimelineItem.value.zIndex
+  }
+})
 
 // 等比缩放相关
 const proportionalScale = computed({
@@ -893,7 +990,7 @@ const updateUniformScale = async (newScale: number) => {
   }
 }
 
-// 🆕 设置X缩放绝对值的方法 - 使用带历史记录的属性更新
+// 🆕 设置X缩放绝对值的方法 - 使用智能属性更新
 const setScaleX = (value: number) => {
   if (!selectedTimelineItem.value || !selectedMediaItem.value) return
   const originalResolution = selectedMediaItem.value.mediaType === 'video'
@@ -902,10 +999,10 @@ const setScaleX = (value: number) => {
   const newScaleX = Math.max(0.01, Math.min(5, value))
 
   const newWidth = originalResolution.width * newScaleX
-  updatePropertyWithHistory('width', newWidth)
+  updatePropertySmart('width', newWidth)
 }
 
-// 🆕 设置Y缩放绝对值的方法 - 使用带历史记录的属性更新
+// 🆕 设置Y缩放绝对值的方法 - 使用智能属性更新
 const setScaleY = (value: number) => {
   if (!selectedTimelineItem.value || !selectedMediaItem.value) return
   const originalResolution = selectedMediaItem.value.mediaType === 'video'
@@ -914,24 +1011,64 @@ const setScaleY = (value: number) => {
   const newScaleY = Math.max(0.01, Math.min(5, value))
 
   const newHeight = originalResolution.height * newScaleY
-  updatePropertyWithHistory('height', newHeight)
+  updatePropertySmart('height', newHeight)
 }
 
-// 🆕 设置旋转绝对值的方法（输入角度，转换为弧度）- 使用带历史记录的属性更新
+// 🆕 设置旋转绝对值的方法（输入角度，转换为弧度）- 使用智能属性更新
 const setRotation = (value: number) => {
   if (!selectedTimelineItem.value) return
   const newRotationRadians = uiDegreesToWebAVRadians(value)
-  updatePropertyWithHistory('rotation', newRotationRadians)
+  updatePropertySmart('rotation', newRotationRadians)
 }
 
-// 🆕 设置透明度绝对值的方法 - 使用直接属性赋值
+// 🆕 设置透明度绝对值的方法 - 使用智能属性更新
 const setOpacity = (value: number) => {
   if (!selectedTimelineItem.value) return
   const newOpacity = Math.max(0, Math.min(1, value))
-  updatePropertyWithHistory('opacity', newOpacity)
+  updatePropertySmart('opacity', newOpacity)
 }
 
-// 🆕 带历史记录的属性更新方法
+// 🆕 智能属性更新方法：根据动画状态自动选择更新方式
+const updatePropertySmart = async (property: AnimatableProperty, newValue: number) => {
+  if (!selectedTimelineItem.value) return
+
+  const oldValue = getCurrentPropertyValue(selectedTimelineItem.value, property)
+
+  // 检查是否有实际变化
+  if (Math.abs(oldValue - newValue) < 0.001) {
+    return
+  }
+
+  if (hasAnimation.value) {
+    // 有动画：通过关键帧命令更新
+    try {
+      await videoStore.createKeyFrameWithHistory(
+        selectedTimelineItem.value.id,
+        property,
+        newValue
+      )
+      console.log(`✅ 关键帧属性 ${property} 更新成功:`, { oldValue, newValue })
+    } catch (error) {
+      console.error(`❌ 关键帧属性 ${property} 更新失败:`, error)
+    }
+  } else {
+    // 无动画：通过变换命令更新
+    const transform: any = {
+      [property]: newValue
+    }
+
+    try {
+      await videoStore.updateTimelineItemTransformWithHistory(selectedTimelineItem.value.id, transform)
+      console.log(`✅ 静态属性 ${property} 更新成功:`, { oldValue, newValue })
+    } catch (error) {
+      console.error(`❌ 静态属性 ${property} 更新失败:`, error)
+      // 如果历史记录更新失败，回退到直接更新
+      ;(selectedTimelineItem.value as any)[property] = newValue
+    }
+  }
+}
+
+// 🆕 兼容性方法：保持现有非动画属性的更新方式
 const updatePropertyWithHistory = async (property: string, newValue: any) => {
   if (!selectedTimelineItem.value) return
 
@@ -985,8 +1122,8 @@ const alignHorizontal = (alignment: 'left' | 'center' | 'right') => {
         break
     }
 
-    // 🆕 使用带历史记录的属性更新
-    updatePropertyWithHistory('x', Math.round(newProjectX))
+    // 🆕 使用智能属性更新
+    updatePropertySmart('x', Math.round(newProjectX))
 
     console.log('✅ 水平对齐完成:', alignment, '项目坐标X:', newProjectX)
   } catch (error) {
@@ -1017,8 +1154,8 @@ const alignVertical = (alignment: 'top' | 'middle' | 'bottom') => {
         break
     }
 
-    // 🆕 使用带历史记录的属性更新
-    updatePropertyWithHistory('y', Math.round(newProjectY))
+    // 🆕 使用智能属性更新
+    updatePropertySmart('y', Math.round(newProjectY))
 
     console.log('✅ 垂直对齐完成:', alignment, '项目坐标Y:', newProjectY)
   } catch (error) {
@@ -1031,13 +1168,167 @@ watch(selectedTimelineItem, (newItem) => {
   setSelectedTimelineItem(newItem)
 }, { immediate: true })
 
-// 🆕 关键帧切换处理函数
-const handleToggleKeyFrame = (property: AnimatableProperty) => {
+// 🆕 关键帧切换处理函数：使用带历史记录的方法，支持首次动画初始化
+const handleToggleKeyFrame = async (property: AnimatableProperty) => {
+  if (!selectedTimelineItem.value) return
+
   console.log(`🎬 切换关键帧:`, property)
-  if (hasKeyFrameAtTime(property)) {
-    removeKeyFrameProperty(property)
-  } else {
-    createKeyFrame(property)
+
+  try {
+    if (hasKeyFrameAtTime(property)) {
+      // 删除关键帧
+      await videoStore.removeKeyFrameWithHistory(
+        selectedTimelineItem.value.id,
+        property
+      )
+      console.log(`✅ 已删除关键帧: ${property}`)
+    } else {
+      // 创建关键帧
+      if (!hasAnimation.value) {
+        // 首次创建关键帧：初始化动画
+        await initializeAnimation(property)
+      } else {
+        // 已有动画：直接创建关键帧
+        await videoStore.createKeyFrameWithHistory(
+          selectedTimelineItem.value.id,
+          property
+        )
+      }
+      console.log(`✅ 已创建关键帧: ${property}`)
+    }
+  } catch (error) {
+    console.error(`❌ 关键帧切换失败: ${property}`, error)
+  }
+}
+
+// 🆕 初始化动画：首次创建关键帧时的特殊处理
+const initializeAnimation = async (property: AnimatableProperty) => {
+  if (!selectedTimelineItem.value || hasAnimation.value) return
+
+  const currentValue = getCurrentPropertyValue(selectedTimelineItem.value, property)
+
+  console.log(`🎬 初始化动画: ${property}，当前值: ${currentValue}`)
+
+  try {
+    // 批量操作：创建初始关键帧 + 当前关键帧
+    const batch = videoStore.startBatch('初始化动画')
+
+    // 在时间0创建初始关键帧
+    batch.addCommand(new CreateKeyFrameCommand(
+      selectedTimelineItem.value.id,
+      property,
+      0,
+      currentValue,
+      {
+        getTimelineItem: videoStore.getTimelineItem,
+      },
+      videoStore.videoResolution
+    ))
+
+    // 在当前时间创建关键帧（如果不是时间0）
+    if (videoStore.currentTime > 0.001) {
+      batch.addCommand(new CreateKeyFrameCommand(
+        selectedTimelineItem.value.id,
+        property,
+        videoStore.currentTime,
+        currentValue,
+        {
+          getTimelineItem: videoStore.getTimelineItem,
+        },
+        videoStore.videoResolution
+      ))
+    }
+
+    await videoStore.executeBatchCommand(batch.build())
+    console.log(`✅ 动画初始化完成: ${property}`)
+  } catch (error) {
+    console.error(`❌ 动画初始化失败: ${property}`, error)
+    throw error
+  }
+}
+
+// 🆕 清除动画：将动画转换为静态属性
+const clearAnimation = async () => {
+  if (!selectedTimelineItem.value || !hasAnimation.value) return
+
+  console.log('🎬 开始清除动画')
+
+  try {
+    // 获取当前时间点的插值作为最终静态值
+    const finalValues: Record<string, number> = {}
+    const animatableProperties: AnimatableProperty[] = ['x', 'y', 'width', 'height', 'rotation', 'opacity', 'zIndex']
+
+    animatableProperties.forEach(property => {
+      finalValues[property] = getPropertyValueAtTime(
+        selectedTimelineItem.value!,
+        property,
+        videoStore.currentTime
+      )
+    })
+
+    console.log('🎬 最终静态值:', finalValues)
+
+    // 批量操作：清除动画 + 设置最终值
+    const batch = videoStore.startBatch('转换为静态属性')
+
+    // 清除动画
+    batch.addCommand(new ClearAnimationCommand(
+      selectedTimelineItem.value.id,
+      {
+        getTimelineItem: videoStore.getTimelineItem,
+      },
+      videoStore.videoResolution
+    ))
+
+    // 设置最终静态值
+    const currentValues = {
+      x: selectedTimelineItem.value.x,
+      y: selectedTimelineItem.value.y,
+      width: selectedTimelineItem.value.width,
+      height: selectedTimelineItem.value.height,
+      rotation: selectedTimelineItem.value.rotation,
+      opacity: selectedTimelineItem.value.opacity,
+      zIndex: selectedTimelineItem.value.zIndex,
+    }
+
+    batch.addCommand(new UpdateTransformCommand(
+      selectedTimelineItem.value.id,
+      'multiple',
+      currentValues, // 旧值
+      finalValues, // 新值
+      {
+        getTimelineItem: videoStore.getTimelineItem,
+      },
+      {
+        getMediaItem: videoStore.getMediaItem,
+      }
+    ))
+
+    await videoStore.executeBatchCommand(batch.build())
+    console.log('✅ 动画清除完成，已转换为静态属性')
+  } catch (error) {
+    console.error('❌ 清除动画失败:', error)
+    throw error
+  }
+}
+
+// 🆕 切换动画启用状态
+const toggleAnimationEnabled = async () => {
+  if (!selectedTimelineItem.value || !hasAnimation.value) return
+
+  const currentEnabled = selectedTimelineItem.value.animationConfig?.isEnabled ?? false
+  const newEnabled = !currentEnabled
+
+  console.log(`🎬 切换动画状态: ${currentEnabled ? '禁用' : '启用'}`)
+
+  try {
+    await videoStore.toggleAnimationWithHistory(
+      selectedTimelineItem.value.id,
+      newEnabled
+    )
+    console.log(`✅ 动画状态已切换: ${newEnabled ? '启用' : '禁用'}`)
+  } catch (error) {
+    console.error('❌ 切换动画状态失败:', error)
   }
 }
 
@@ -1136,7 +1427,14 @@ const debugKeyFrames = () => {
   border-color: var(--color-border-focus);
 }
 
-/* 🆕 动画调试样式 */
+/* 🆕 动画控制样式 */
+.animation-controls {
+  display: flex;
+  gap: var(--spacing-xs);
+  margin-bottom: var(--spacing-sm);
+  flex-wrap: wrap;
+}
+
 .debug-btn {
   background: var(--color-primary);
   color: white;
@@ -1146,10 +1444,19 @@ const debugKeyFrames = () => {
   font-size: var(--font-size-sm);
   cursor: pointer;
   transition: background-color 0.2s;
+  white-space: nowrap;
 }
 
 .debug-btn:hover {
   background: var(--color-primary-hover);
+}
+
+.debug-btn.danger {
+  background: var(--color-danger);
+}
+
+.debug-btn.danger:hover {
+  background: var(--color-danger-hover);
 }
 
 .animation-status {
@@ -1179,6 +1486,12 @@ const debugKeyFrames = () => {
 .keyframe-count {
   font-size: var(--font-size-sm);
   color: var(--color-text-secondary);
+}
+
+.hint {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-hint);
+  font-style: italic;
 }
 
 /* 时长控制样式 */

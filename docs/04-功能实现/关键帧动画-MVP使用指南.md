@@ -176,7 +176,7 @@ const valueAt2Seconds = getPropertyValueAtTime(timelineItem, 'x', 2.0)
 `AnimationControls.vue` 提供了完整的关键帧编辑界面：
 
 - ✅ 动画开关
-- ⏱️ 动画时长设置
+- ℹ️ 动画信息显示（时长自动等于clip时长）
 - 📊 属性值控制
 - 💎 关键帧按钮（实心=有关键帧，空心=无关键帧）
 - 🧭 关键帧导航

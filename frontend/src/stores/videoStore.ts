@@ -26,7 +26,16 @@ import { createHistoryModule } from './modules/historyModule'
 import { createNotificationModule } from './modules/notificationModule'
 import { AddTimelineItemCommand, RemoveTimelineItemCommand, MoveTimelineItemCommand, UpdateTransformCommand, SplitTimelineItemCommand, DuplicateTimelineItemCommand, AddTrackCommand, RemoveTrackCommand, RenameTrackCommand, ToggleTrackVisibilityCommand, ToggleTrackMuteCommand, ResizeTimelineItemCommand } from './modules/commands/timelineCommands'
 import { BatchDeleteCommand, BatchAutoArrangeTrackCommand } from './modules/commands/batchCommands'
+import {
+  CreateKeyFrameCommand,
+  RemoveKeyFrameCommand,
+  UpdateKeyFrameCommand,
+  ClearAnimationCommand,
+  ToggleAnimationCommand,
+} from './modules/commands/keyFrameCommands'
 import type { MediaItem, TimelineItem } from '../types/videoTypes'
+import type { AnimatableProperty } from '../types/animationTypes'
+import { getCurrentPropertyValue } from '../utils/animationUtils'
 
 export const useVideoStore = defineStore('video', () => {
   // 创建媒体管理模块
@@ -849,6 +858,160 @@ export const useVideoStore = defineStore('video', () => {
     }
   }
 
+  // ==================== 关键帧动画历史记录方法 ====================
+
+  /**
+   * 带历史记录的创建关键帧方法
+   * @param timelineItemId 时间轴项目ID
+   * @param property 动画属性
+   * @param value 属性值，如果不提供则使用当前值
+   * @param time 时间点（秒），如果不提供则使用当前播放时间
+   */
+  async function createKeyFrameWithHistory(
+    timelineItemId: string,
+    property: AnimatableProperty,
+    value?: number,
+    time?: number
+  ): Promise<void> {
+    const timelineItem = timelineModule.getTimelineItem(timelineItemId)
+    if (!timelineItem) {
+      console.warn(`⚠️ 时间轴项目不存在，无法创建关键帧: ${timelineItemId}`)
+      return
+    }
+
+    const targetTime = time ?? playbackModule.currentTime.value
+    const targetValue = value ?? getCurrentPropertyValue(timelineItem, property)
+
+    const command = new CreateKeyFrameCommand(
+      timelineItemId,
+      property,
+      targetTime,
+      targetValue,
+      {
+        getTimelineItem: timelineModule.getTimelineItem,
+      },
+      configModule.videoResolution.value
+    )
+
+    await historyModule.executeCommand(command)
+  }
+
+  /**
+   * 带历史记录的删除关键帧方法
+   * @param timelineItemId 时间轴项目ID
+   * @param property 动画属性
+   * @param time 时间点（秒），如果不提供则使用当前播放时间
+   */
+  async function removeKeyFrameWithHistory(
+    timelineItemId: string,
+    property: AnimatableProperty,
+    time?: number
+  ): Promise<void> {
+    const timelineItem = timelineModule.getTimelineItem(timelineItemId)
+    if (!timelineItem) {
+      console.warn(`⚠️ 时间轴项目不存在，无法删除关键帧: ${timelineItemId}`)
+      return
+    }
+
+    const targetTime = time ?? playbackModule.currentTime.value
+
+    const command = new RemoveKeyFrameCommand(
+      timelineItemId,
+      property,
+      targetTime,
+      {
+        getTimelineItem: timelineModule.getTimelineItem,
+      },
+      configModule.videoResolution.value
+    )
+
+    await historyModule.executeCommand(command)
+  }
+
+  /**
+   * 带历史记录的更新关键帧方法
+   * @param timelineItemId 时间轴项目ID
+   * @param property 动画属性
+   * @param newValue 新的属性值
+   * @param time 时间点（秒），如果不提供则使用当前播放时间
+   */
+  async function updateKeyFrameWithHistory(
+    timelineItemId: string,
+    property: AnimatableProperty,
+    newValue: number,
+    time?: number
+  ): Promise<void> {
+    const timelineItem = timelineModule.getTimelineItem(timelineItemId)
+    if (!timelineItem) {
+      console.warn(`⚠️ 时间轴项目不存在，无法更新关键帧: ${timelineItemId}`)
+      return
+    }
+
+    const targetTime = time ?? playbackModule.currentTime.value
+
+    const command = new UpdateKeyFrameCommand(
+      timelineItemId,
+      property,
+      targetTime,
+      newValue,
+      {
+        getTimelineItem: timelineModule.getTimelineItem,
+      },
+      configModule.videoResolution.value
+    )
+
+    await historyModule.executeCommand(command)
+  }
+
+  /**
+   * 带历史记录的清除动画方法
+   * @param timelineItemId 时间轴项目ID
+   */
+  async function clearAnimationWithHistory(timelineItemId: string): Promise<void> {
+    const timelineItem = timelineModule.getTimelineItem(timelineItemId)
+    if (!timelineItem) {
+      console.warn(`⚠️ 时间轴项目不存在，无法清除动画: ${timelineItemId}`)
+      return
+    }
+
+    const command = new ClearAnimationCommand(
+      timelineItemId,
+      {
+        getTimelineItem: timelineModule.getTimelineItem,
+      },
+      configModule.videoResolution.value
+    )
+
+    await historyModule.executeCommand(command)
+  }
+
+  /**
+   * 带历史记录的切换动画启用状态方法
+   * @param timelineItemId 时间轴项目ID
+   * @param enabled 是否启用动画
+   */
+  async function toggleAnimationWithHistory(
+    timelineItemId: string,
+    enabled: boolean
+  ): Promise<void> {
+    const timelineItem = timelineModule.getTimelineItem(timelineItemId)
+    if (!timelineItem) {
+      console.warn(`⚠️ 时间轴项目不存在，无法切换动画状态: ${timelineItemId}`)
+      return
+    }
+
+    const command = new ToggleAnimationCommand(
+      timelineItemId,
+      enabled,
+      {
+        getTimelineItem: timelineModule.getTimelineItem,
+      },
+      configModule.videoResolution.value
+    )
+
+    await historyModule.executeCommand(command)
+  }
+
   function removeMediaItem(mediaItemId: string) {
     mediaModule.removeMediaItem(
       mediaItemId,
@@ -1080,6 +1243,12 @@ export const useVideoStore = defineStore('video', () => {
     toggleTrackMuteWithHistory,
     resizeTimelineItemWithHistory,
     batchDeleteTimelineItems,
+    // 关键帧动画历史记录方法
+    createKeyFrameWithHistory,
+    removeKeyFrameWithHistory,
+    updateKeyFrameWithHistory,
+    clearAnimationWithHistory,
+    toggleAnimationWithHistory,
     // 批量操作方法
     startBatch: historyModule.startBatch,
     executeBatchCommand: historyModule.executeBatchCommand,

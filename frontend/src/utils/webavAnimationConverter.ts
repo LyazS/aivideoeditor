@@ -6,6 +6,8 @@ import type {
   WebAVAnimationOpts,
   AnimatableProperty
 } from '../types/animationTypes'
+import type { TimelineItem } from '../types/videoTypes'
+import { projectToWebavCoords } from './coordinateTransform'
 
 /**
  * WebAV动画格式转换器
@@ -21,15 +23,22 @@ export class WebAVAnimationConverter {
     width: 'w',
     height: 'h',
     rotation: 'angle',
-    opacity: 'opacity'
+    opacity: 'opacity',
+    zIndex: 'zIndex' as keyof WebAVAnimateProps // 注意：WebAV可能不直接支持zIndex动画
   }
 
   /**
    * 将项目关键帧转换为WebAV TKeyFrameOpts格式
    * @param keyFrames 项目关键帧数组
+   * @param timelineItem 时间轴项目（用于获取坐标转换所需的信息）
+   * @param videoResolution 视频分辨率（用于坐标转换）
    * @returns WebAV关键帧格式
    */
-  static convertToWebAVKeyFrames(keyFrames: KeyFrame[]): WebAVKeyFrameOpts {
+  static convertToWebAVKeyFrames(
+    keyFrames: KeyFrame[],
+    timelineItem: TimelineItem,
+    videoResolution: { width: number; height: number }
+  ): WebAVKeyFrameOpts {
     const webavKeyFrames: WebAVKeyFrameOpts = {}
 
     // 按时间排序关键帧
@@ -38,17 +47,30 @@ export class WebAVAnimationConverter {
     sortedKeyFrames.forEach(keyFrame => {
       // 计算时间键值
       const timeKey = this.calculateTimeKey(keyFrame.time)
-      
+
       // 如果该时间点已存在，合并属性
-      if (!webavKeyFrames[timeKey]) {
-        webavKeyFrames[timeKey] = {}
+      if (!(webavKeyFrames as any)[timeKey]) {
+        (webavKeyFrames as any)[timeKey] = {}
       }
 
       // 转换每个属性
       keyFrame.properties.forEach(prop => {
         const webavPropName = this.PROPERTY_MAPPING[prop.property]
         if (webavPropName) {
-          webavKeyFrames[timeKey]![webavPropName] = prop.value
+          // 对于位置属性，需要进行坐标转换
+          let convertedValue = prop.value
+
+          if (prop.property === 'x' || prop.property === 'y') {
+            convertedValue = this.convertPositionToWebAV(
+              prop.property,
+              prop.value,
+              keyFrame,
+              timelineItem,
+              videoResolution
+            )
+          }
+
+          ;(webavKeyFrames as any)[timeKey]![webavPropName] = convertedValue
         }
       })
     })
@@ -134,14 +156,14 @@ export class WebAVAnimationConverter {
 
   /**
    * 创建默认的动画配置
-   * @param duration 动画时长（微秒），默认2秒
+   * @param duration 动画时长（微秒），如果不提供则使用默认值2秒
    * @returns 默认动画配置
    */
-  static createDefaultAnimationConfig(duration: number = 2_000_000): AnimationConfig {
+  static createDefaultAnimationConfig(duration?: number): AnimationConfig {
     return {
       keyFrames: [],
-      duration,
-      iterCount: 1,
+      duration: duration ?? 2_000_000, // 如果没有提供duration，使用默认2秒
+      iterCount: 1, // 固定为1次迭代
       isEnabled: true
     }
   }
@@ -152,9 +174,49 @@ export class WebAVAnimationConverter {
    * @returns 是否有效
    */
   static isValidAnimationConfig(config: AnimationConfig): boolean {
-    return config.isEnabled && 
-           config.keyFrames.length >= 2 && 
+    return config.isEnabled &&
+           config.keyFrames.length >= 2 &&
            config.duration > 0 &&
            this.validateKeyFrames(config.keyFrames).isValid
+  }
+
+  /**
+   * 将项目坐标系的位置属性转换为WebAV坐标系
+   * @param property 属性名（'x' 或 'y'）
+   * @param value 项目坐标系的值
+   * @param keyFrame 当前关键帧（用于获取其他属性）
+   * @param timelineItem 时间轴项目
+   * @param videoResolution 视频分辨率
+   * @returns WebAV坐标系的值
+   */
+  private static convertPositionToWebAV(
+    property: 'x' | 'y',
+    value: number,
+    keyFrame: KeyFrame,
+    timelineItem: TimelineItem,
+    videoResolution: { width: number; height: number }
+  ): number {
+    // 获取当前关键帧中的x和y值，如果没有则使用TimelineItem的当前值
+    const xProp = keyFrame.properties.find(p => p.property === 'x')
+    const yProp = keyFrame.properties.find(p => p.property === 'y')
+
+    const projectX = property === 'x' ? value : (xProp?.value ?? timelineItem.x)
+    const projectY = property === 'y' ? value : (yProp?.value ?? timelineItem.y)
+
+    // 获取sprite的当前尺寸
+    const spriteWidth = timelineItem.width
+    const spriteHeight = timelineItem.height
+
+    // 进行坐标转换
+    const webavCoords = projectToWebavCoords(
+      projectX,
+      projectY,
+      spriteWidth,
+      spriteHeight,
+      videoResolution.width,
+      videoResolution.height
+    )
+
+    return property === 'x' ? webavCoords.x : webavCoords.y
   }
 }

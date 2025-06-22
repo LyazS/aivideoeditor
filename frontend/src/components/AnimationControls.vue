@@ -15,23 +15,17 @@
     </div>
 
     <div v-if="hasAnimation" class="animation-content">
-      <!-- 动画时长设置 -->
-      <div class="duration-control">
-        <label>动画时长（秒）:</label>
-        <input 
-          type="number" 
-          :value="animationDuration" 
-          @input="updateDuration"
-          min="0.1" 
-          max="60" 
-          step="0.1"
-        />
-      </div>
-
-      <!-- 关键帧信息 -->
-      <div class="keyframe-info">
-        <span>关键帧数量: {{ keyFrameCount }}</span>
-        <span v-if="isNearCurrentKeyFrame" class="near-keyframe">📍 接近关键帧</span>
+      <!-- 动画信息显示 -->
+      <div class="animation-info">
+        <div class="info-item">
+          <label>动画时长:</label>
+          <span>{{ animationDuration.toFixed(2) }}秒 (与clip时长一致)</span>
+        </div>
+        <div class="info-item">
+          <label>关键帧数量:</label>
+          <span>{{ keyFrameCount }}</span>
+        </div>
+        <div v-if="isNearCurrentKeyFrame" class="near-keyframe">📍 接近关键帧</div>
       </div>
 
       <!-- 属性控制 -->
@@ -116,8 +110,7 @@ const {
   goToNextKeyFrame,
   goToPrevKeyFrame,
   clearAllAnimations,
-  getAnimationDuration,
-  setAnimationDuration
+  getAnimationDuration
 } = useKeyFrameAnimation()
 
 // 可动画属性列表
@@ -131,7 +124,7 @@ const keyFrames = computed(() => getKeyFrames())
 watch(
   () => props.timelineItem,
   (newItem) => {
-    setSelectedTimelineItem(newItem)
+    setSelectedTimelineItem(newItem || null)
   },
   { immediate: true }
 )
@@ -142,13 +135,7 @@ function toggleAnimation(event: Event) {
   setAnimationEnabled(target.checked)
 }
 
-function updateDuration(event: Event) {
-  const target = event.target as HTMLInputElement
-  const duration = parseFloat(target.value)
-  if (duration > 0) {
-    setAnimationDuration(duration)
-  }
-}
+// 移除updateDuration函数，因为动画时长现在与clip时长保持一致，不可单独设置
 
 function updateProperty(property: AnimatableProperty, event: Event) {
   const target = event.target as HTMLInputElement
@@ -174,7 +161,8 @@ function getPropertyLabel(property: AnimatableProperty): string {
     width: '宽度',
     height: '高度',
     rotation: '旋转',
-    opacity: '透明度'
+    opacity: '透明度',
+    zIndex: '层级'
   }
   return labels[property]
 }
@@ -224,23 +212,25 @@ function formatTime(relativeTime: number): string {
   gap: 16px;
 }
 
-.duration-control {
+.animation-info {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.info-item {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-.duration-control input {
-  width: 80px;
-  padding: 4px 8px;
-  border: 1px solid var(--border-color);
-  border-radius: 4px;
+.info-item label {
+  min-width: 80px;
+  font-weight: 500;
 }
 
-.keyframe-info {
-  display: flex;
-  gap: 16px;
-  font-size: 14px;
+.info-item span {
   color: var(--text-secondary);
 }
 

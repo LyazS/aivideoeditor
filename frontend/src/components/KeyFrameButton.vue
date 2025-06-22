@@ -22,9 +22,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-
-// 可动画属性类型
-export type AnimatableProperty = 'x' | 'y' | 'width' | 'height' | 'rotation' | 'opacity'
+import type { AnimatableProperty } from '../types/animationTypes'
 
 interface Props {
   property: AnimatableProperty

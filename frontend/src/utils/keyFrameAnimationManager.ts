@@ -1,5 +1,6 @@
 import { generateId } from './idGenerator'
 import { WebAVAnimationConverter } from './webavAnimationConverter'
+import { getClipDuration } from './animationUtils'
 import type { VideoVisibleSprite } from './VideoVisibleSprite'
 import type { ImageVisibleSprite } from './ImageVisibleSprite'
 import type {
@@ -23,21 +24,24 @@ export class KeyFrameAnimationManager {
    * @param property 动画属性
    * @param time 当前播放时间（秒）
    * @param value 属性值
+   * @param videoResolution 视频分辨率（用于坐标转换）
    * @returns 操作结果
    */
   static createKeyFrame(
     timelineItem: TimelineItem,
     property: AnimatableProperty,
     time: number,
-    value: number
+    value: number,
+    videoResolution: { width: number; height: number }
   ): KeyFrameOperationResult {
-    // 确保动画配置存在
+    // 确保动画配置存在，使用clip时长作为动画duration
     if (!timelineItem.animationConfig) {
-      timelineItem.animationConfig = WebAVAnimationConverter.createDefaultAnimationConfig()
+      const clipDurationMicroseconds = getClipDuration(timelineItem) * 1_000_000
+      timelineItem.animationConfig = WebAVAnimationConverter.createDefaultAnimationConfig(clipDurationMicroseconds)
     }
 
     const config = timelineItem.animationConfig
-    
+
     // 计算相对时间（0-1）
     const relativeTime = this.calculateRelativeTime(time, config)
     
@@ -51,7 +55,7 @@ export class KeyFrameAnimationManager {
       const existingProperty = existingKeyFrame.properties.find(p => p.property === property)
       if (existingProperty) {
         existingProperty.value = value
-        this.applyAnimationToSprite(timelineItem.sprite, config)
+        this.applyAnimationToSprite(timelineItem.sprite, config, timelineItem, videoResolution)
         return 'updated'
       } else {
         // 添加新属性到现有关键帧
@@ -60,7 +64,7 @@ export class KeyFrameAnimationManager {
           value,
           interpolation: 'linear'
         })
-        this.applyAnimationToSprite(timelineItem.sprite, config)
+        this.applyAnimationToSprite(timelineItem.sprite, config, timelineItem, videoResolution)
         return 'updated'
       }
     } else {
@@ -79,8 +83,8 @@ export class KeyFrameAnimationManager {
       
       // 按时间排序
       config.keyFrames.sort((a, b) => a.time - b.time)
-      
-      this.applyAnimationToSprite(timelineItem.sprite, config)
+
+      this.applyAnimationToSprite(timelineItem.sprite, config, timelineItem, videoResolution)
       return 'added'
     }
   }
@@ -107,7 +111,10 @@ export class KeyFrameAnimationManager {
         config.isEnabled = false
         this.clearSpriteAnimation(timelineItem.sprite)
       } else {
-        this.applyAnimationToSprite(timelineItem.sprite, config)
+        // 需要传入timelineItem和videoResolution参数
+        // 这里使用默认分辨率，实际使用时应该传入正确的分辨率
+        const defaultVideoResolution = { width: 1920, height: 1080 }
+        this.applyAnimationToSprite(timelineItem.sprite, config, timelineItem, defaultVideoResolution)
       }
       return 'removed'
     }
@@ -145,7 +152,9 @@ export class KeyFrameAnimationManager {
       if (keyFrame.properties.length === 0) {
         return this.removeKeyFrame(timelineItem, keyFrame.id)
       } else {
-        this.applyAnimationToSprite(timelineItem.sprite, config)
+        // 需要传入timelineItem和videoResolution参数
+        const defaultVideoResolution = { width: 1920, height: 1080 }
+        this.applyAnimationToSprite(timelineItem.sprite, config, timelineItem, defaultVideoResolution)
         return 'updated'
       }
     }
@@ -197,10 +206,14 @@ export class KeyFrameAnimationManager {
    * 应用动画到WebAV Sprite
    * @param sprite WebAV Sprite实例
    * @param config 动画配置
+   * @param timelineItem 时间轴项目（用于坐标转换）
+   * @param videoResolution 视频分辨率（用于坐标转换）
    */
   static applyAnimationToSprite(
     sprite: VideoVisibleSprite | ImageVisibleSprite,
-    config: AnimationConfig
+    config: AnimationConfig,
+    timelineItem: TimelineItem,
+    videoResolution: { width: number; height: number }
   ): void {
     if (!config.isEnabled || !WebAVAnimationConverter.isValidAnimationConfig(config)) {
       this.clearSpriteAnimation(sprite)
@@ -208,12 +221,16 @@ export class KeyFrameAnimationManager {
     }
 
     try {
-      const webavKeyFrames = WebAVAnimationConverter.convertToWebAVKeyFrames(config.keyFrames)
+      const webavKeyFrames = WebAVAnimationConverter.convertToWebAVKeyFrames(
+        config.keyFrames,
+        timelineItem,
+        videoResolution
+      )
       const webavOpts = WebAVAnimationConverter.convertToWebAVOpts(config)
 
       // 调用WebAV的setAnimation方法
       sprite.setAnimation(webavKeyFrames, webavOpts)
-      
+
       console.log('🎬 [Animation] Applied animation to sprite:', {
         keyFrameCount: config.keyFrames.length,
         duration: config.duration,
@@ -248,10 +265,10 @@ export class KeyFrameAnimationManager {
    */
   private static calculateRelativeTime(currentTime: number, config: AnimationConfig): number {
     const animationDurationSeconds = config.duration / 1_000_000
-    
-    // 将当前时间映射到动画周期内的相对位置
-    const timeInCycle = currentTime % animationDurationSeconds
-    return Math.max(0, Math.min(1, timeInCycle / animationDurationSeconds))
+
+    // 直接计算相对时间，不使用取模运算
+    // 因为动画duration现在等于clip时长，且只迭代一次
+    return Math.max(0, Math.min(1, currentTime / animationDurationSeconds))
   }
 
   /**
@@ -282,19 +299,25 @@ export class KeyFrameAnimationManager {
    * 启用或禁用动画
    * @param timelineItem 时间轴项目
    * @param enabled 是否启用
+   * @param videoResolution 视频分辨率（用于坐标转换）
    */
-  static setAnimationEnabled(timelineItem: TimelineItem, enabled: boolean): void {
+  static setAnimationEnabled(
+    timelineItem: TimelineItem,
+    enabled: boolean,
+    videoResolution: { width: number; height: number }
+  ): void {
     if (!timelineItem.animationConfig) {
       if (enabled) {
-        timelineItem.animationConfig = WebAVAnimationConverter.createDefaultAnimationConfig()
+        const clipDurationMicroseconds = getClipDuration(timelineItem) * 1_000_000
+        timelineItem.animationConfig = WebAVAnimationConverter.createDefaultAnimationConfig(clipDurationMicroseconds)
       }
       return
     }
 
     timelineItem.animationConfig.isEnabled = enabled
-    
+
     if (enabled) {
-      this.applyAnimationToSprite(timelineItem.sprite, timelineItem.animationConfig)
+      this.applyAnimationToSprite(timelineItem.sprite, timelineItem.animationConfig, timelineItem, videoResolution)
     } else {
       this.clearSpriteAnimation(timelineItem.sprite)
     }
