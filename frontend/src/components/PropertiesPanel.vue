@@ -1212,8 +1212,23 @@ watch(selectedTimelineItem, (newItem) => {
 const updatePositionProperty = async (axis: 'x' | 'y', newValue: number) => {
   if (!selectedTimelineItem.value) return
 
-  const oldX = selectedTimelineItem.value.x
-  const oldY = selectedTimelineItem.value.y
+  // 🔧 修复：在动画状态下获取当前时间点的实际值，而不是静态属性值
+  let oldX: number, oldY: number
+
+  if (hasAnimation.value) {
+    // 有动画：从当前时间点的动画值获取
+    const currentPosition = getPropertyValueAtTime(
+      selectedTimelineItem.value,
+      'position',
+      videoStore.currentTime
+    )
+    oldX = currentPosition?.x ?? selectedTimelineItem.value.x
+    oldY = currentPosition?.y ?? selectedTimelineItem.value.y
+  } else {
+    // 无动画：从静态属性获取
+    oldX = selectedTimelineItem.value.x
+    oldY = selectedTimelineItem.value.y
+  }
 
   // 构建新的位置值
   const newPosition = {

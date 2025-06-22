@@ -119,8 +119,8 @@ export class WebAVAnimationConverter {
   static validateKeyFrames(keyFrames: KeyFrame[]): { isValid: boolean; errors: string[] } {
     const errors: string[] = []
 
-    if (keyFrames.length < 2) {
-      errors.push('至少需要2个关键帧才能创建动画')
+    if (keyFrames.length < 1) {
+      errors.push('至少需要1个关键帧才能创建动画')
     }
 
     keyFrames.forEach((keyFrame, index) => {
@@ -175,7 +175,7 @@ export class WebAVAnimationConverter {
    */
   static isValidAnimationConfig(config: AnimationConfig): boolean {
     return config.isEnabled &&
-           config.keyFrames.length >= 2 &&
+           config.keyFrames.length >= 1 &&  // 🔧 修改：WebAV支持单个关键帧
            config.duration > 0 &&
            this.validateKeyFrames(config.keyFrames).isValid
   }

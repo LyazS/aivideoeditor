@@ -106,8 +106,8 @@ export class KeyFrameAnimationManager {
     config.keyFrames = config.keyFrames.filter(kf => kf.id !== keyFrameId)
     
     if (config.keyFrames.length < initialLength) {
-      // 如果关键帧少于2个，禁用动画
-      if (config.keyFrames.length < 2) {
+      // 如果关键帧少于1个，禁用动画
+      if (config.keyFrames.length < 1) {
         config.isEnabled = false
         this.clearSpriteAnimation(timelineItem.sprite)
       } else {
@@ -215,7 +215,15 @@ export class KeyFrameAnimationManager {
     timelineItem: TimelineItem,
     videoResolution: { width: number; height: number }
   ): void {
+    console.log('🔍 [Animation] applyAnimationToSprite called:', {
+      isEnabled: config.isEnabled,
+      keyFrameCount: config.keyFrames.length,
+      duration: config.duration,
+      isValid: WebAVAnimationConverter.isValidAnimationConfig(config)
+    })
+
     if (!config.isEnabled || !WebAVAnimationConverter.isValidAnimationConfig(config)) {
+      console.log('🚫 [Animation] Animation not applied - invalid config or disabled')
       this.clearSpriteAnimation(sprite)
       return
     }
