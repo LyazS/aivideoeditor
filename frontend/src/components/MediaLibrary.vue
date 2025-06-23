@@ -59,7 +59,7 @@
 
             <!-- 右上角时长标签（只有视频才显示） -->
             <div v-if="item.mediaType === 'video'" class="duration-badge">
-              {{ formatTime(item.duration, 'seconds') }}
+              {{ formatTime(item.duration, 'timecode') }}
             </div>
           </div>
 
@@ -101,7 +101,7 @@ import { useVideoStore } from '../stores/videoStore'
 import { useWebAVControls } from '../composables/useWebAVControls'
 import { useDialogs } from '../composables/useDialogs'
 import { useDragUtils } from '../composables/useDragUtils'
-import { formatTime, formatFileSize } from '../stores/utils/timeUtils'
+import { formatTime, formatFileSize } from '../stores/utils/storeUtils'
 import type { MediaItem } from '../types/videoTypes'
 import { generateThumbnailForMediaItem } from '../utils/thumbnailGenerator'
 

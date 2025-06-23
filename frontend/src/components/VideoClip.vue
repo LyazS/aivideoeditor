@@ -251,8 +251,8 @@ const isTrackVisible = computed(() => {
 })
 
 function formatDuration(seconds: number): string {
-  // 使用统一的时间格式化工具函数
-  return formatTimeUtil(seconds, 'seconds')
+  // 使用时间码格式显示时长
+  return formatTimeUtil(seconds, 'timecode')
 }
 
 function formatSpeed(rate: number): string {

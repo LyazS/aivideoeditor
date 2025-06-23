@@ -38,14 +38,10 @@ export interface TimelineItem {
   sprite: Raw<VideoVisibleSprite | ImageVisibleSprite> // 视频或图片sprite
   thumbnailUrl?: string // 时间轴clip的缩略图URL
   // Sprite位置和大小属性（响应式）
-  position: {
-    x: number
-    y: number
-  }
-  size: {
-    width: number
-    height: number
-  }
+  x: number
+  y: number
+  width: number
+  height: number
   // 其他sprite属性（响应式）
   rotation: number // 旋转角度（弧度）
   zIndex: number

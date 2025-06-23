@@ -170,9 +170,8 @@ const playheadPosition = computed(() => {
 })
 
 function formatTime(seconds: number): string {
-  // 使用统一的时间格式化工具函数
-  const pixelsPerSecond = calculatePixelsPerSecond(containerWidth.value, videoStore.totalDuration, videoStore.zoomLevel)
-  return formatTimeWithAutoPrecision(seconds, pixelsPerSecond, videoStore.frameRate)
+  // 始终使用时间码格式显示
+  return formatTimeWithAutoPrecision(seconds, 1000, videoStore.frameRate) // 使用高精度强制显示时间码
 }
 
 function updateContainerWidth() {

@@ -40,8 +40,13 @@
             <div class="center-controls">
               <PlaybackControls />
             </div>
-            <!-- 右侧比例按钮 -->
+            <!-- 右侧控制按钮 -->
             <div class="right-controls">
+              <button class="control-btn" @click="toggleTimeFormatSettings" title="时间格式设置">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12,20A8,8 0 0,0 20,12A8,8 0 0,0 12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22C6.47,22 2,17.5 2,12A10,10 0 0,1 12,2M12.5,7V12.25L17,14.92L16.25,16.15L11,13V7H12.5Z"/>
+                </svg>
+              </button>
               <button class="aspect-ratio-btn" @click="openResolutionModal" title="设置视频分辨率">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
                   <path
@@ -86,6 +91,13 @@
           <div class="loading-spinner"></div>
           <p>正在初始化WebAV引擎...</p>
         </div>
+      </div>
+    </div>
+
+    <!-- 时间格式设置弹窗 -->
+    <div v-if="showTimeFormatSettings" class="modal-overlay" @click="showTimeFormatSettings = false">
+      <div class="time-format-modal" @click.stop>
+        <TimeFormatSettings @settings-changed="handleTimeFormatChange" />
       </div>
     </div>
 
@@ -185,10 +197,11 @@ import PlaybackControls from './PlaybackControls.vue'
 import ClipManagementToolbar from './ClipManagementToolbar.vue'
 import MediaLibrary from './MediaLibrary.vue'
 import PropertiesPanel from './PropertiesPanel.vue'
+import TimeFormatSettings from './TimeFormatSettings.vue'
 import { useVideoStore } from '../stores/videoStore'
 import { useKeyboardShortcuts } from '../composables/useKeyboardShortcuts'
 import { logWebAVReadyStateChange, logComponentLifecycle } from '../utils/webavDebug'
-import { formatTime as formatTimeUtil } from '../stores/utils/storeUtils'
+import { secondsToTimecodeString } from '../stores/utils/storeUtils'
 
 const videoStore = useVideoStore()
 
@@ -215,6 +228,9 @@ onMounted(() => {
 const previewHeight = ref(60) // 默认预览窗口占60%
 const timelineHeight = ref(40) // 默认时间轴占40%
 const isDragging = ref(false)
+
+// 时间格式设置相关
+const showTimeFormatSettings = ref(false)
 
 // 分辨率相关
 const showResolutionModal = ref(false)
@@ -398,8 +414,19 @@ const stopRightResize = () => {
 }
 
 function formatTime(seconds: number): string {
-  // 使用统一的时间格式化工具函数
-  return formatTimeUtil(seconds, 'seconds')
+  // 使用时间码格式显示（时:分:秒.帧）
+  return secondsToTimecodeString(seconds, videoStore.frameRate)
+}
+
+// 切换时间格式设置
+function toggleTimeFormatSettings() {
+  showTimeFormatSettings.value = !showTimeFormatSettings.value
+}
+
+// 处理时间格式设置变化
+function handleTimeFormatChange(settings: any) {
+  console.log('✅ 时间格式设置已更新:', settings)
+  showTimeFormatSettings.value = false
 }
 
 // 获取预览样式（根据分辨率比例）
@@ -682,6 +709,33 @@ onUnmounted(() => {
 
 .aspect-ratio-text {
   font-family: monospace;
+}
+
+.control-btn {
+  background: none;
+  border: none;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  padding: var(--spacing-xs);
+  border-radius: var(--border-radius-medium);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+  margin-right: var(--spacing-xs);
+}
+
+.control-btn:hover {
+  background-color: var(--color-bg-quaternary);
+  color: var(--color-text-primary);
+}
+
+.time-format-modal {
+  background: var(--color-bg-primary);
+  border-radius: 8px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  max-width: 400px;
+  width: 90%;
 }
 
 /* 分辨率选择弹窗样式 */

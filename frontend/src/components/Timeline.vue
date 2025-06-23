@@ -810,14 +810,10 @@ async function createMediaClipFromMediaItem(
       sprite: markRaw(sprite), // 使用markRaw避免Vue响应式包装
       thumbnailUrl, // 添加缩略图URL
       // Sprite位置和大小属性（使用项目坐标系）
-      position: {
-        x: Math.round(projectCoords.x),
-        y: Math.round(projectCoords.y),
-      },
-      size: {
-        width: sprite.rect.w,
-        height: sprite.rect.h,
-      },
+      x: Math.round(projectCoords.x),
+      y: Math.round(projectCoords.y),
+      width: sprite.rect.w,
+      height: sprite.rect.h,
       // 其他sprite属性
       rotation: sprite.rect.angle || 0, // 从sprite获取旋转角度（弧度），默认为0
       zIndex: sprite.zIndex,
@@ -829,7 +825,7 @@ async function createMediaClipFromMediaItem(
 
     console.log('🔄 坐标系转换:', {
       WebAV坐标: { x: sprite.rect.x, y: sprite.rect.y },
-      项目坐标: { x: timelineItem.position.x, y: timelineItem.position.y },
+      项目坐标: { x: timelineItem.x, y: timelineItem.y },
       尺寸: { w: sprite.rect.w, h: sprite.rect.h },
     })
 

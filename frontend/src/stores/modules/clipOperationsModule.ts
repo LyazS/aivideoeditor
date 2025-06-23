@@ -118,14 +118,10 @@ export function createClipOperationsModule(
         timeRange: newSprite.getTimeRange(), // 从sprite获取完整的timeRange（包含自动计算的effectiveDuration）
         sprite: markRaw(newSprite),
         // 复制原始项目的sprite属性
-        position: {
-          x: originalItem.position.x,
-          y: originalItem.position.y,
-        },
-        size: {
-          width: originalItem.size.width,
-          height: originalItem.size.height,
-        },
+        x: originalItem.x,
+        y: originalItem.y,
+        width: originalItem.width,
+        height: originalItem.height,
         rotation: originalItem.rotation,
         zIndex: originalItem.zIndex,
         opacity: originalItem.opacity,
@@ -377,14 +373,10 @@ export function createClipOperationsModule(
         timeRange: firstSprite.getTimeRange(), // 从sprite获取完整的timeRange
         sprite: markRaw(firstSprite),
         // 复制原始项目的sprite属性
-        position: {
-          x: originalItem.position.x,
-          y: originalItem.position.y,
-        },
-        size: {
-          width: originalItem.size.width,
-          height: originalItem.size.height,
-        },
+        x: originalItem.x,
+        y: originalItem.y,
+        width: originalItem.width,
+        height: originalItem.height,
         rotation: originalItem.rotation,
         zIndex: originalItem.zIndex,
         opacity: originalItem.opacity,
@@ -401,14 +393,10 @@ export function createClipOperationsModule(
         timeRange: secondSprite.getTimeRange(), // 从sprite获取完整的timeRange
         sprite: markRaw(secondSprite),
         // 复制原始项目的sprite属性
-        position: {
-          x: originalItem.position.x,
-          y: originalItem.position.y,
-        },
-        size: {
-          width: originalItem.size.width,
-          height: originalItem.size.height,
-        },
+        x: originalItem.x,
+        y: originalItem.y,
+        width: originalItem.width,
+        height: originalItem.height,
         rotation: originalItem.rotation,
         zIndex: originalItem.zIndex,
         opacity: originalItem.opacity,

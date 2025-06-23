@@ -1,5 +1,5 @@
 import { ref, computed } from 'vue'
-import { alignTimeToFrame, formatTime as formatTimeUtil } from '../utils/storeUtils'
+import { alignTimeToFrame, secondsToTimecodeString } from '../utils/storeUtils'
 
 /**
  * 播放控制管理模块
@@ -16,12 +16,12 @@ export function createPlaybackModule(frameRate: { value: number }) {
   // ==================== 计算属性 ====================
 
   /**
-   * 格式化当前时间为时分秒格式
+   * 格式化当前时间为时间码格式
    */
   const formattedCurrentTime = computed(() => {
     const time = currentTime.value
-    // 使用统一的时间格式化工具函数，支持小时格式
-    return formatTimeUtil(time, 'hours')
+    // 使用时间码格式显示（时:分:秒.帧）
+    return secondsToTimecodeString(time, frameRate.value)
   })
 
   /**

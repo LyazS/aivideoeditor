@@ -48,17 +48,17 @@ export function createTimelineModule(
         const projectCoords = webavToProjectCoords(
           rect.x !== undefined ? rect.x : currentRect.x,
           rect.y !== undefined ? rect.y : currentRect.y,
-          rect.w !== undefined ? rect.w : timelineItem.size.width,
-          rect.h !== undefined ? rect.h : timelineItem.size.height,
+          rect.w !== undefined ? rect.w : timelineItem.width,
+          rect.h !== undefined ? rect.h : timelineItem.height,
           configModule.videoResolution.value.width,
           configModule.videoResolution.value.height,
         )
-        timelineItem.position.x = Math.round(projectCoords.x)
-        timelineItem.position.y = Math.round(projectCoords.y)
+        timelineItem.x = Math.round(projectCoords.x)
+        timelineItem.y = Math.round(projectCoords.y)
 
         // 更新尺寸
-        if (rect.w !== undefined) timelineItem.size.width = rect.w
-        if (rect.h !== undefined) timelineItem.size.height = rect.h
+        if (rect.w !== undefined) timelineItem.width = rect.w
+        if (rect.h !== undefined) timelineItem.height = rect.h
 
         // 更新旋转角度
         if (rect.angle !== undefined) timelineItem.rotation = rect.angle
@@ -314,8 +314,8 @@ export function createTimelineModule(
       // 更新尺寸时使用中心缩放
       if (transform.size) {
         // 获取当前中心位置（项目坐标系）
-        const currentCenterX = item.position.x
-        const currentCenterY = item.position.y
+        const currentCenterX = item.x
+        const currentCenterY = item.y
         const newWidth = transform.size.width
         const newHeight = transform.size.height
 
@@ -347,8 +347,8 @@ export function createTimelineModule(
         const webavCoords = projectToWebavCoords(
           transform.position.x,
           transform.position.y,
-          item.size.width,
-          item.size.height,
+          item.width,
+          item.height,
           configModule.videoResolution.value.width,
           configModule.videoResolution.value.height,
         )

@@ -53,17 +53,13 @@
           <div class="property-item">
             <label>目标时长</label>
             <div class="duration-controls">
-              <NumberInput
-                :model-value="targetDuration"
-                @change="updateTargetDuration"
-                :min="0.1"
-                :step="0.1"
-                :precision="1"
-                :show-controls="false"
-                placeholder="秒"
-                :input-style="propertyInputStyle"
+              <TimecodeInput
+                :model-value="targetDurationMicroseconds"
+                @change="updateTargetDurationFromTimecode"
+                :frame-rate="videoStore.frameRate"
+                placeholder="00:05.00"
               />
-              <span class="duration-unit">秒</span>
+              <span class="duration-unit">时间码</span>
             </div>
           </div>
 
@@ -427,6 +423,7 @@ import { useVideoStore } from '../stores/videoStore'
 import { isVideoTimeRange } from '../types/videoTypes'
 import { uiDegreesToWebAVRadians, webAVRadiansToUIDegrees } from '../utils/rotationTransform'
 import NumberInput from './NumberInput.vue'
+import TimecodeInput from './TimecodeInput.vue'
 
 const videoStore = useVideoStore()
 
@@ -469,6 +466,11 @@ const timelineDuration = computed(() => {
 // 目标时长 - 与timelineDuration相同，直接使用timelineDuration
 const targetDuration = computed(() => timelineDuration.value)
 
+// 目标时长的微秒值（用于TimecodeInput）
+const targetDurationMicroseconds = computed(() => {
+  return Math.round(targetDuration.value * 1000000)
+})
+
 // 倍速分段配置
 const speedSegments = [
   { min: 0.1, max: 1, normalizedStart: 0, normalizedEnd: 20 }, // 0-20%: 0.1-1x
@@ -479,21 +481,21 @@ const speedSegments = [
 ]
 
 // 变换属性 - 基于TimelineItem的响应式计算属性
-const transformX = computed(() => selectedTimelineItem.value?.position.x || 0)
-const transformY = computed(() => selectedTimelineItem.value?.position.y || 0)
+const transformX = computed(() => selectedTimelineItem.value?.x || 0)
+const transformY = computed(() => selectedTimelineItem.value?.y || 0)
 const scaleX = computed(() => {
   if (!selectedTimelineItem.value || !selectedMediaItem.value) return 1
   const originalResolution = selectedMediaItem.value.mediaType === 'video'
     ? videoStore.getVideoOriginalResolution(selectedMediaItem.value.id)
     : videoStore.getImageOriginalResolution(selectedMediaItem.value.id)
-  return selectedTimelineItem.value.size.width / originalResolution.width
+  return selectedTimelineItem.value.width / originalResolution.width
 })
 const scaleY = computed(() => {
   if (!selectedTimelineItem.value || !selectedMediaItem.value) return 1
   const originalResolution = selectedMediaItem.value.mediaType === 'video'
     ? videoStore.getVideoOriginalResolution(selectedMediaItem.value.id)
     : videoStore.getImageOriginalResolution(selectedMediaItem.value.id)
-  return selectedTimelineItem.value.size.height / originalResolution.height
+  return selectedTimelineItem.value.height / originalResolution.height
 })
 const rotation = computed(() => {
   const radians = selectedTimelineItem.value?.rotation || 0
@@ -515,10 +517,10 @@ const currentResolution = computed(() => {
   if (!selectedTimelineItem.value) {
     return { width: 0, height: 0 }
   }
-  // 直接使用TimelineItem中的size属性，这是缩放后的实际尺寸
+  // 直接使用TimelineItem中的width/height属性，这是缩放后的实际尺寸
   return {
-    width: Math.round(selectedTimelineItem.value.size.width),
-    height: Math.round(selectedTimelineItem.value.size.height),
+    width: Math.round(selectedTimelineItem.value.width),
+    height: Math.round(selectedTimelineItem.value.height),
   }
 })
 
@@ -684,6 +686,12 @@ const updateTargetDuration = async (newTargetDuration: number) => {
   }
 }
 
+// 从时间码更新目标时长
+const updateTargetDurationFromTimecode = async (microseconds: number) => {
+  const newTargetDuration = microseconds / 1000000 // 转换为秒
+  await updateTargetDuration(newTargetDuration)
+}
+
 // 更新归一化速度
 const updateNormalizedSpeed = (newNormalizedSpeed: number) => {
   const actualSpeed = normalizedToSpeed(newNormalizedSpeed)
@@ -796,8 +804,8 @@ const updateTransform = async (transform?: {
   const finalTransform = transform || {
     position: { x: transformX.value, y: transformY.value },
     size: {
-      width: selectedTimelineItem.value.size.width,
-      height: selectedTimelineItem.value.size.height,
+      width: selectedTimelineItem.value.width,
+      height: selectedTimelineItem.value.height,
     },
     rotation: rotation.value,
     opacity: opacity.value,
@@ -853,7 +861,7 @@ const setScaleX = (value: number) => {
   const newScaleX = Math.max(0.01, Math.min(5, value))
   const newSize = {
     width: originalResolution.width * newScaleX,
-    height: selectedTimelineItem.value.size.height, // 保持Y尺寸不变
+    height: selectedTimelineItem.value.height, // 保持Y尺寸不变
   }
   updateTransform({ size: newSize })
 }
@@ -866,7 +874,7 @@ const setScaleY = (value: number) => {
     : videoStore.getImageOriginalResolution(selectedMediaItem.value.id)
   const newScaleY = Math.max(0.01, Math.min(5, value))
   const newSize = {
-    width: selectedTimelineItem.value.size.width, // 保持X尺寸不变
+    width: selectedTimelineItem.value.width, // 保持X尺寸不变
     height: originalResolution.height * newScaleY,
   }
   updateTransform({ size: newSize })

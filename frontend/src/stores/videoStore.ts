@@ -228,15 +228,15 @@ export const useVideoStore = defineStore('video', () => {
 
     if (newTransform.position) {
       oldTransform.position = {
-        x: timelineItem.position.x,
-        y: timelineItem.position.y,
+        x: timelineItem.x,
+        y: timelineItem.y,
       }
     }
 
     if (newTransform.size) {
       oldTransform.size = {
-        width: timelineItem.size.width,
-        height: timelineItem.size.height,
+        width: timelineItem.width,
+        height: timelineItem.height,
       }
     }
 

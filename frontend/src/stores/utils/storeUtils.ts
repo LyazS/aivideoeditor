@@ -13,6 +13,15 @@ export {
   formatTimeWithAutoPrecision,
   expandTimelineIfNeeded,
   formatFileSize,
+  // 时间码转换系统
+  microsecondsToTimecode,
+  timecodeToMicroseconds,
+  microsecondsToTimecodeString,
+  timecodeStringToMicroseconds,
+  formatTimecode,
+  parseTimecode,
+  secondsToTimecodeString,
+  timecodeStringToSeconds,
 } from './timeUtils'
 
 // 坐标转换工具
