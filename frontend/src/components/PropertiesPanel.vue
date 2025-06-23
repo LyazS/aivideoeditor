@@ -17,13 +17,13 @@
         <div class="selected-items-list">
           <div
             v-for="item in multiSelectInfo.items"
-            :key="item.id"
+            :key="item?.id"
             class="selected-item"
           >
             <span class="item-name">
-              {{ videoStore.getMediaItem(item.mediaItemId)?.name || '未知素材' }}
+              {{ item ? videoStore.getMediaItem(item.mediaItemId)?.name || '未知素材' : '未知素材' }}
             </span>
-            <span class="item-type">{{ item.mediaType === 'video' ? '视频' : '图片' }}</span>
+            <span class="item-type">{{ item?.mediaType === 'video' ? '视频' : '图片' }}</span>
           </div>
         </div>
       </div>
@@ -479,21 +479,21 @@ const speedSegments = [
 ]
 
 // 变换属性 - 基于TimelineItem的响应式计算属性
-const transformX = computed(() => selectedTimelineItem.value?.position.x || 0)
-const transformY = computed(() => selectedTimelineItem.value?.position.y || 0)
+const transformX = computed(() => selectedTimelineItem.value?.x || 0)
+const transformY = computed(() => selectedTimelineItem.value?.y || 0)
 const scaleX = computed(() => {
   if (!selectedTimelineItem.value || !selectedMediaItem.value) return 1
   const originalResolution = selectedMediaItem.value.mediaType === 'video'
     ? videoStore.getVideoOriginalResolution(selectedMediaItem.value.id)
     : videoStore.getImageOriginalResolution(selectedMediaItem.value.id)
-  return selectedTimelineItem.value.size.width / originalResolution.width
+  return selectedTimelineItem.value.width / originalResolution.width
 })
 const scaleY = computed(() => {
   if (!selectedTimelineItem.value || !selectedMediaItem.value) return 1
   const originalResolution = selectedMediaItem.value.mediaType === 'video'
     ? videoStore.getVideoOriginalResolution(selectedMediaItem.value.id)
     : videoStore.getImageOriginalResolution(selectedMediaItem.value.id)
-  return selectedTimelineItem.value.size.height / originalResolution.height
+  return selectedTimelineItem.value.height / originalResolution.height
 })
 const rotation = computed(() => {
   const radians = selectedTimelineItem.value?.rotation || 0
@@ -515,10 +515,10 @@ const currentResolution = computed(() => {
   if (!selectedTimelineItem.value) {
     return { width: 0, height: 0 }
   }
-  // 直接使用TimelineItem中的size属性，这是缩放后的实际尺寸
+  // 直接使用TimelineItem中的width/height属性，这是缩放后的实际尺寸
   return {
-    width: Math.round(selectedTimelineItem.value.size.width),
-    height: Math.round(selectedTimelineItem.value.size.height),
+    width: Math.round(selectedTimelineItem.value.width),
+    height: Math.round(selectedTimelineItem.value.height),
   }
 })
 
@@ -796,8 +796,8 @@ const updateTransform = async (transform?: {
   const finalTransform = transform || {
     position: { x: transformX.value, y: transformY.value },
     size: {
-      width: selectedTimelineItem.value.size.width,
-      height: selectedTimelineItem.value.size.height,
+      width: selectedTimelineItem.value.width,
+      height: selectedTimelineItem.value.height,
     },
     rotation: rotation.value,
     opacity: opacity.value,
@@ -853,7 +853,7 @@ const setScaleX = (value: number) => {
   const newScaleX = Math.max(0.01, Math.min(5, value))
   const newSize = {
     width: originalResolution.width * newScaleX,
-    height: selectedTimelineItem.value.size.height, // 保持Y尺寸不变
+    height: selectedTimelineItem.value.height, // 保持Y尺寸不变
   }
   updateTransform({ size: newSize })
 }
@@ -866,7 +866,7 @@ const setScaleY = (value: number) => {
     : videoStore.getImageOriginalResolution(selectedMediaItem.value.id)
   const newScaleY = Math.max(0.01, Math.min(5, value))
   const newSize = {
-    width: selectedTimelineItem.value.size.width, // 保持X尺寸不变
+    width: selectedTimelineItem.value.width, // 保持X尺寸不变
     height: originalResolution.height * newScaleY,
   }
   updateTransform({ size: newSize })

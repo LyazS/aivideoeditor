@@ -45,8 +45,10 @@ interface CanvasBackup {
     trackId: number
     mediaType: 'video' | 'image'
     timeRange: any // VideoTimeRange | ImageTimeRange
-    position: { x: number; y: number }
-    size: { width: number; height: number }
+    x: number
+    y: number
+    width: number
+    height: number
     rotation: number
     zIndex: number
     opacity: number
@@ -484,8 +486,10 @@ export function useWebAVControls() {
         trackId: item.trackId,
         mediaType: item.mediaType,
         timeRange: { ...item.timeRange },
-        position: { ...item.position },
-        size: { ...item.size },
+        x: item.x,
+        y: item.y,
+        width: item.width,
+        height: item.height,
         rotation: item.rotation,
         zIndex: item.zIndex,
         opacity: item.opacity,
@@ -589,10 +593,10 @@ export function useWebAVControls() {
             // 恢复变换属性 - 需要处理新旧画布分辨率不同的情况
             const { projectToWebavCoords } = await import('../utils/coordinateTransform')
             const newWebavCoords = projectToWebavCoords(
-              itemData.position.x,
-              itemData.position.y,
-              itemData.size.width,
-              itemData.size.height,
+              itemData.x,
+              itemData.y,
+              itemData.width,
+              itemData.height,
               options.width,
               options.height,
             )
@@ -600,17 +604,17 @@ export function useWebAVControls() {
             // 设置新的WebAV坐标
             newSprite.rect.x = newWebavCoords.x
             newSprite.rect.y = newWebavCoords.y
-            newSprite.rect.w = itemData.size.width
-            newSprite.rect.h = itemData.size.height
+            newSprite.rect.w = itemData.width
+            newSprite.rect.h = itemData.height
 
             logCoordinateTransform(itemData.id, {
               projectCoords: {
-                x: itemData.position.x,
-                y: itemData.position.y,
+                x: itemData.x,
+                y: itemData.y,
               },
               newCanvasSize: { width: options.width, height: options.height },
               newWebAVCoords: { x: newWebavCoords.x, y: newWebavCoords.y },
-              size: { w: itemData.size.width, h: itemData.size.height },
+              size: { w: itemData.width, h: itemData.height },
             })
 
             // 恢复其他属性

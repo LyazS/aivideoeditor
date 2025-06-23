@@ -42,8 +42,10 @@ export class AddTimelineItemCommand implements SimpleCommand {
       trackId: timelineItem.trackId,
       mediaType: timelineItem.mediaType,
       timeRange: { ...timelineItem.timeRange },
-      position: { ...timelineItem.position },
-      size: { ...timelineItem.size },
+      x: timelineItem.x,
+      y: timelineItem.y,
+      width: timelineItem.width,
+      height: timelineItem.height,
       rotation: timelineItem.rotation,
       zIndex: timelineItem.zIndex,
       opacity: timelineItem.opacity,
@@ -75,10 +77,10 @@ export class AddTimelineItemCommand implements SimpleCommand {
     newSprite.setTimeRange(this.originalTimelineItemData.timeRange)
 
     // 4. 应用变换属性
-    newSprite.rect.x = this.originalTimelineItemData.position.x
-    newSprite.rect.y = this.originalTimelineItemData.position.y
-    newSprite.rect.w = this.originalTimelineItemData.size.width
-    newSprite.rect.h = this.originalTimelineItemData.size.height
+    newSprite.rect.x = this.originalTimelineItemData.x
+    newSprite.rect.y = this.originalTimelineItemData.y
+    newSprite.rect.w = this.originalTimelineItemData.width
+    newSprite.rect.h = this.originalTimelineItemData.height
     newSprite.rect.angle = this.originalTimelineItemData.rotation
     newSprite.zIndex = this.originalTimelineItemData.zIndex
     newSprite.opacity = this.originalTimelineItemData.opacity
@@ -92,14 +94,10 @@ export class AddTimelineItemCommand implements SimpleCommand {
       timeRange: newSprite.getTimeRange(),
       sprite: markRaw(newSprite),
       thumbnailUrl: this.originalTimelineItemData.thumbnailUrl,
-      position: {
-        x: this.originalTimelineItemData.position.x,
-        y: this.originalTimelineItemData.position.y,
-      },
-      size: {
-        width: this.originalTimelineItemData.size.width,
-        height: this.originalTimelineItemData.size.height,
-      },
+      x: this.originalTimelineItemData.x,
+      y: this.originalTimelineItemData.y,
+      width: this.originalTimelineItemData.width,
+      height: this.originalTimelineItemData.height,
       rotation: this.originalTimelineItemData.rotation,
       zIndex: this.originalTimelineItemData.zIndex,
       opacity: this.originalTimelineItemData.opacity,
@@ -217,14 +215,10 @@ export class RemoveTimelineItemCommand implements SimpleCommand {
         } : {}),
       },
       // 深拷贝变换属性
-      position: {
-        x: timelineItem.position.x,
-        y: timelineItem.position.y,
-      },
-      size: {
-        width: timelineItem.size.width,
-        height: timelineItem.size.height,
-      },
+      x: timelineItem.x,
+      y: timelineItem.y,
+      width: timelineItem.width,
+      height: timelineItem.height,
       rotation: timelineItem.rotation,
       zIndex: timelineItem.zIndex,
       opacity: timelineItem.opacity,
@@ -236,8 +230,10 @@ export class RemoveTimelineItemCommand implements SimpleCommand {
       mediaItemId: this.originalTimelineItemData.mediaItemId,
       mediaType: this.originalTimelineItemData.mediaType,
       timeRange: this.originalTimelineItemData.timeRange,
-      position: this.originalTimelineItemData.position,
-      size: this.originalTimelineItemData.size,
+      x: this.originalTimelineItemData.x,
+      y: this.originalTimelineItemData.y,
+      width: this.originalTimelineItemData.width,
+      height: this.originalTimelineItemData.height,
     })
   }
 
@@ -265,10 +261,10 @@ export class RemoveTimelineItemCommand implements SimpleCommand {
     newSprite.setTimeRange(this.originalTimelineItemData.timeRange)
 
     // 4. 应用变换属性
-    newSprite.rect.x = this.originalTimelineItemData.position.x
-    newSprite.rect.y = this.originalTimelineItemData.position.y
-    newSprite.rect.w = this.originalTimelineItemData.size.width
-    newSprite.rect.h = this.originalTimelineItemData.size.height
+    newSprite.rect.x = this.originalTimelineItemData.x
+    newSprite.rect.y = this.originalTimelineItemData.y
+    newSprite.rect.w = this.originalTimelineItemData.width
+    newSprite.rect.h = this.originalTimelineItemData.height
     newSprite.rect.angle = this.originalTimelineItemData.rotation
     newSprite.zIndex = this.originalTimelineItemData.zIndex
     newSprite.opacity = this.originalTimelineItemData.opacity
@@ -282,14 +278,10 @@ export class RemoveTimelineItemCommand implements SimpleCommand {
       timeRange: this.originalTimelineItemData.timeRange,
       sprite: markRaw(newSprite),
       thumbnailUrl: this.originalTimelineItemData.thumbnailUrl,
-      position: {
-        x: this.originalTimelineItemData.position.x,
-        y: this.originalTimelineItemData.position.y,
-      },
-      size: {
-        width: this.originalTimelineItemData.size.width,
-        height: this.originalTimelineItemData.size.height,
-      },
+      x: this.originalTimelineItemData.x,
+      y: this.originalTimelineItemData.y,
+      width: this.originalTimelineItemData.width,
+      height: this.originalTimelineItemData.height,
       rotation: this.originalTimelineItemData.rotation,
       zIndex: this.originalTimelineItemData.zIndex,
       opacity: this.originalTimelineItemData.opacity,
@@ -398,8 +390,10 @@ export class DuplicateTimelineItemCommand implements SimpleCommand {
       trackId: originalTimelineItem.trackId,
       mediaType: originalTimelineItem.mediaType,
       timeRange: { ...originalTimelineItem.timeRange },
-      position: { ...originalTimelineItem.position },
-      size: { ...originalTimelineItem.size },
+      x: originalTimelineItem.x,
+      y: originalTimelineItem.y,
+      width: originalTimelineItem.width,
+      height: originalTimelineItem.height,
       rotation: originalTimelineItem.rotation,
       zIndex: originalTimelineItem.zIndex,
       opacity: originalTimelineItem.opacity,
@@ -450,10 +444,10 @@ export class DuplicateTimelineItemCommand implements SimpleCommand {
 
     // 设置变换属性
     const rect = newSprite.rect
-    rect.x = this.originalTimelineItemData.position.x
-    rect.y = this.originalTimelineItemData.position.y
-    rect.w = this.originalTimelineItemData.size.width
-    rect.h = this.originalTimelineItemData.size.height
+    rect.x = this.originalTimelineItemData.x
+    rect.y = this.originalTimelineItemData.y
+    rect.w = this.originalTimelineItemData.width
+    rect.h = this.originalTimelineItemData.height
     rect.angle = this.originalTimelineItemData.rotation
 
     // 设置其他属性
@@ -478,8 +472,10 @@ export class DuplicateTimelineItemCommand implements SimpleCommand {
         timelineEndTime: newTimelineEndTime,
         displayDuration: originalDuration * 1000000,
       },
-      position: { ...this.originalTimelineItemData.position },
-      size: { ...this.originalTimelineItemData.size },
+      x: this.originalTimelineItemData.x,
+      y: this.originalTimelineItemData.y,
+      width: this.originalTimelineItemData.width,
+      height: this.originalTimelineItemData.height,
       rotation: this.originalTimelineItemData.rotation,
       zIndex: this.originalTimelineItemData.zIndex,
       opacity: this.originalTimelineItemData.opacity,
@@ -999,14 +995,10 @@ export class SplitTimelineItemCommand implements SimpleCommand {
         } : {}),
       },
       // 深拷贝变换属性
-      position: {
-        x: originalTimelineItem.position.x,
-        y: originalTimelineItem.position.y,
-      },
-      size: {
-        width: originalTimelineItem.size.width,
-        height: originalTimelineItem.size.height,
-      },
+      x: originalTimelineItem.x,
+      y: originalTimelineItem.y,
+      width: originalTimelineItem.width,
+      height: originalTimelineItem.height,
       rotation: originalTimelineItem.rotation,
       zIndex: originalTimelineItem.zIndex,
       opacity: originalTimelineItem.opacity,
@@ -1080,10 +1072,10 @@ export class SplitTimelineItemCommand implements SimpleCommand {
 
     // 4. 应用变换属性到两个sprite
     const applyTransformToSprite = (sprite: VideoVisibleSprite) => {
-      sprite.rect.x = this.originalTimelineItemData.position.x
-      sprite.rect.y = this.originalTimelineItemData.position.y
-      sprite.rect.w = this.originalTimelineItemData.size.width
-      sprite.rect.h = this.originalTimelineItemData.size.height
+      sprite.rect.x = this.originalTimelineItemData.x
+      sprite.rect.y = this.originalTimelineItemData.y
+      sprite.rect.w = this.originalTimelineItemData.width
+      sprite.rect.h = this.originalTimelineItemData.height
       sprite.rect.angle = this.originalTimelineItemData.rotation
       sprite.zIndex = this.originalTimelineItemData.zIndex
       sprite.opacity = this.originalTimelineItemData.opacity
@@ -1101,14 +1093,10 @@ export class SplitTimelineItemCommand implements SimpleCommand {
       timeRange: firstSprite.getTimeRange(),
       sprite: markRaw(firstSprite),
       thumbnailUrl: this.originalTimelineItemData.thumbnailUrl,
-      position: {
-        x: this.originalTimelineItemData.position.x,
-        y: this.originalTimelineItemData.position.y,
-      },
-      size: {
-        width: this.originalTimelineItemData.size.width,
-        height: this.originalTimelineItemData.size.height,
-      },
+      x: this.originalTimelineItemData.x,
+      y: this.originalTimelineItemData.y,
+      width: this.originalTimelineItemData.width,
+      height: this.originalTimelineItemData.height,
       rotation: this.originalTimelineItemData.rotation,
       zIndex: this.originalTimelineItemData.zIndex,
       opacity: this.originalTimelineItemData.opacity,
@@ -1124,14 +1112,10 @@ export class SplitTimelineItemCommand implements SimpleCommand {
       timeRange: secondSprite.getTimeRange(),
       sprite: markRaw(secondSprite),
       thumbnailUrl: this.originalTimelineItemData.thumbnailUrl,
-      position: {
-        x: this.originalTimelineItemData.position.x,
-        y: this.originalTimelineItemData.position.y,
-      },
-      size: {
-        width: this.originalTimelineItemData.size.width,
-        height: this.originalTimelineItemData.size.height,
-      },
+      x: this.originalTimelineItemData.x,
+      y: this.originalTimelineItemData.y,
+      width: this.originalTimelineItemData.width,
+      height: this.originalTimelineItemData.height,
       rotation: this.originalTimelineItemData.rotation,
       zIndex: this.originalTimelineItemData.zIndex,
       opacity: this.originalTimelineItemData.opacity,
@@ -1174,10 +1158,10 @@ export class SplitTimelineItemCommand implements SimpleCommand {
     newSprite.setTimeRange(this.originalTimelineItemData.timeRange)
 
     // 4. 应用变换属性
-    newSprite.rect.x = this.originalTimelineItemData.position.x
-    newSprite.rect.y = this.originalTimelineItemData.position.y
-    newSprite.rect.w = this.originalTimelineItemData.size.width
-    newSprite.rect.h = this.originalTimelineItemData.size.height
+    newSprite.rect.x = this.originalTimelineItemData.x
+    newSprite.rect.y = this.originalTimelineItemData.y
+    newSprite.rect.w = this.originalTimelineItemData.width
+    newSprite.rect.h = this.originalTimelineItemData.height
     newSprite.rect.angle = this.originalTimelineItemData.rotation
     newSprite.zIndex = this.originalTimelineItemData.zIndex
     newSprite.opacity = this.originalTimelineItemData.opacity
@@ -1191,14 +1175,10 @@ export class SplitTimelineItemCommand implements SimpleCommand {
       timeRange: newSprite.getTimeRange(),
       sprite: markRaw(newSprite),
       thumbnailUrl: this.originalTimelineItemData.thumbnailUrl,
-      position: {
-        x: this.originalTimelineItemData.position.x,
-        y: this.originalTimelineItemData.position.y,
-      },
-      size: {
-        width: this.originalTimelineItemData.size.width,
-        height: this.originalTimelineItemData.size.height,
-      },
+      x: this.originalTimelineItemData.x,
+      y: this.originalTimelineItemData.y,
+      width: this.originalTimelineItemData.width,
+      height: this.originalTimelineItemData.height,
       rotation: this.originalTimelineItemData.rotation,
       zIndex: this.originalTimelineItemData.zIndex,
       opacity: this.originalTimelineItemData.opacity,
@@ -1493,8 +1473,10 @@ export class RemoveTrackCommand implements SimpleCommand {
       trackId: item.trackId,
       mediaType: item.mediaType,
       timeRange: { ...item.timeRange },
-      position: { ...item.position },
-      size: { ...item.size },
+      x: item.x,
+      y: item.y,
+      width: item.width,
+      height: item.height,
       rotation: item.rotation,
       zIndex: item.zIndex,
       opacity: item.opacity,
@@ -1541,10 +1523,10 @@ export class RemoveTrackCommand implements SimpleCommand {
 
     // 设置变换属性
     const rect = newSprite.rect
-    rect.x = itemData.position.x
-    rect.y = itemData.position.y
-    rect.w = itemData.size.width
-    rect.h = itemData.size.height
+    rect.x = itemData.x
+    rect.y = itemData.y
+    rect.w = itemData.width
+    rect.h = itemData.height
     rect.angle = itemData.rotation
 
     // 设置其他属性
@@ -1569,8 +1551,10 @@ export class RemoveTrackCommand implements SimpleCommand {
         timelineEndTime: itemData.timeRange.timelineEndTime,
         displayDuration: itemData.timeRange.displayDuration,
       },
-      position: { ...itemData.position },
-      size: { ...itemData.size },
+      x: itemData.x,
+      y: itemData.y,
+      width: itemData.width,
+      height: itemData.height,
       rotation: itemData.rotation,
       zIndex: itemData.zIndex,
       opacity: itemData.opacity,
