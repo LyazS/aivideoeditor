@@ -3,7 +3,7 @@
  * 提供响应式的时间码状态管理和操作
  */
 
-import { ref, computed, watch, type Ref } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { Timecode, type TimecodeInput } from '../types/Timecode'
 import { timecode, formatTimecode, type TimecodeFormatOptions } from '../utils/TimecodeHelpers'
 

@@ -73,6 +73,12 @@ export function createPlaybackModule(frameRate: { value: number }) {
       newTimecode = time
     }
 
+    // 如果需要强制对齐到帧边界，确保时间码是整帧
+    if (forceAlign && typeof time === 'number') {
+      // 对于从秒数转换的时间码，确保对齐到最近的帧
+      newTimecode = Timecode.fromFrames(Math.round(newTimecode.totalFrames), frameRate.value)
+    }
+
     // 确保时间不为负数
     if (newTimecode.totalFrames < 0) {
       newTimecode = Timecode.zero(frameRate.value)
