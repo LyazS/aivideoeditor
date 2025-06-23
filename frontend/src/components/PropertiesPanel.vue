@@ -444,9 +444,9 @@ const multiSelectInfo = computed(() => {
 
   return {
     count: videoStore.selectedTimelineItemIds.size,
-    items: Array.from(videoStore.selectedTimelineItemIds).map(id =>
-      videoStore.getTimelineItem(id)
-    ).filter(Boolean)
+    items: Array.from(videoStore.selectedTimelineItemIds)
+      .map(id => videoStore.getTimelineItem(id))
+      .filter((item): item is NonNullable<typeof item> => item !== null && item !== undefined)
   }
 })
 

@@ -1,5 +1,5 @@
 import type { Ref } from 'vue'
-import { Timecode } from '../../utils/Timecode'
+import { Timecode as TimecodeClass } from '../../utils/Timecode'
 
 // ==================== 时间计算工具 ====================
 
@@ -12,10 +12,10 @@ import { Timecode } from '../../utils/Timecode'
 const STANDARD_FRAME_RATE = 30
 
 /**
- * 时间码对象接口（向后兼容）
+ * 时间码组件接口（向后兼容）
  * @deprecated 请使用 Timecode 类替代
  */
-export interface Timecode {
+export interface TimecodeComponents {
   hours: number
   minutes: number
   seconds: number
@@ -29,8 +29,8 @@ export interface Timecode {
  * @returns 时间码对象
  * @deprecated 请使用 Timecode.fromMicroseconds() 替代
  */
-export function microsecondsToTimecode(microseconds: number, frameRate: number = STANDARD_FRAME_RATE): Timecode {
-  const timecode = Timecode.fromMicroseconds(microseconds, frameRate)
+export function microsecondsToTimecode(microseconds: number, frameRate: number = STANDARD_FRAME_RATE): TimecodeComponents {
+  const timecode = TimecodeClass.fromMicroseconds(microseconds, frameRate)
   return timecode.components
 }
 
@@ -41,8 +41,8 @@ export function microsecondsToTimecode(microseconds: number, frameRate: number =
  * @returns 微秒
  * @deprecated 请使用 Timecode 类的 toMicroseconds() 方法替代
  */
-export function timecodeToMicroseconds(timecode: Timecode, frameRate: number = STANDARD_FRAME_RATE): number {
-  const timecodeObj = new Timecode(timecode, frameRate)
+export function timecodeToMicroseconds(timecode: TimecodeComponents, frameRate: number = STANDARD_FRAME_RATE): number {
+  const timecodeObj = new TimecodeClass(timecode, frameRate)
   return timecodeObj.toMicroseconds()
 }
 
@@ -53,7 +53,7 @@ export function timecodeToMicroseconds(timecode: Timecode, frameRate: number = S
  * @returns 时间码字符串 (HH:MM:SS.FF)
  */
 export function microsecondsToTimecodeString(microseconds: number, frameRate: number = STANDARD_FRAME_RATE): string {
-  const timecode = Timecode.fromMicroseconds(microseconds, frameRate)
+  const timecode = TimecodeClass.fromMicroseconds(microseconds, frameRate)
   return timecode.toString()
 }
 
@@ -64,7 +64,7 @@ export function microsecondsToTimecodeString(microseconds: number, frameRate: nu
  * @returns 微秒
  */
 export function timecodeStringToMicroseconds(timecodeString: string, frameRate: number = STANDARD_FRAME_RATE): number {
-  const timecode = Timecode.fromString(timecodeString, frameRate)
+  const timecode = TimecodeClass.fromString(timecodeString, frameRate)
   return timecode.toMicroseconds()
 }
 
@@ -74,8 +74,8 @@ export function timecodeStringToMicroseconds(timecodeString: string, frameRate: 
  * @returns 格式化的时间码字符串 (HH:MM:SS.FF)
  * @deprecated 请使用 Timecode 类的 toString() 方法替代
  */
-export function formatTimecode(timecode: Timecode): string {
-  const timecodeObj = new Timecode(timecode)
+export function formatTimecode(timecode: TimecodeComponents): string {
+  const timecodeObj = new TimecodeClass(timecode)
   return timecodeObj.toString()
 }
 
@@ -85,8 +85,8 @@ export function formatTimecode(timecode: Timecode): string {
  * @returns 时间码对象
  * @deprecated 请使用 Timecode.fromString() 替代
  */
-export function parseTimecode(timecodeString: string): Timecode {
-  const timecode = Timecode.fromString(timecodeString, STANDARD_FRAME_RATE)
+export function parseTimecode(timecodeString: string): TimecodeComponents {
+  const timecode = TimecodeClass.fromString(timecodeString, STANDARD_FRAME_RATE)
   return timecode.components
 }
 
@@ -97,7 +97,7 @@ export function parseTimecode(timecodeString: string): Timecode {
  * @returns 时间码字符串
  */
 export function secondsToTimecodeString(seconds: number, frameRate: number = STANDARD_FRAME_RATE): string {
-  const timecode = Timecode.fromSeconds(seconds, frameRate)
+  const timecode = TimecodeClass.fromSeconds(seconds, frameRate)
   return timecode.toString()
 }
 
@@ -108,7 +108,7 @@ export function secondsToTimecodeString(seconds: number, frameRate: number = STA
  * @returns 秒
  */
 export function timecodeStringToSeconds(timecodeString: string, frameRate: number = STANDARD_FRAME_RATE): number {
-  const timecode = Timecode.fromString(timecodeString, frameRate)
+  const timecode = TimecodeClass.fromString(timecodeString, frameRate)
   return timecode.toSeconds()
 }
 
@@ -119,7 +119,7 @@ export function timecodeStringToSeconds(timecodeString: string, frameRate: numbe
  * @returns 对齐后的时间
  */
 export function alignTimeToFrame(time: number, frameRate: number): number {
-  const timecode = Timecode.fromSeconds(time, frameRate)
+  const timecode = TimecodeClass.fromSeconds(time, frameRate)
   return timecode.toSeconds() // Timecode内部已经对齐到帧边界
 }
 

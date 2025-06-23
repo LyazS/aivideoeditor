@@ -314,7 +314,7 @@ export async function regenerateThumbnailForTimelineItem(
       if ('clipStartTime' in timeRange) {
         // 使用clip内部的起始时间（微秒）
         thumbnailTime = timeRange.clipStartTime
-        console.log('📍 [ThumbnailGenerator] 使用视频clip起始时间:', thumbnailTime / 1000000, 's')
+        console.log('📍 [ThumbnailGenerator] 使用视频clip起始时间:', (thumbnailTime || 0) / 1000000, 's')
       } else {
         // 如果没有clipStartTime，使用视频中间位置
         const meta = await mediaItem.mp4Clip.ready

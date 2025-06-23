@@ -81,6 +81,7 @@ import { ref, computed, watch } from 'vue'
 import { useVideoStore } from '../stores/videoStore'
 import { useWebAVControls } from '../composables/useWebAVControls'
 import { TimecodeUtils } from '../utils/TimecodeUtils'
+import { Timecode } from '../utils/Timecode'
 import TimecodeInput from './TimecodeInput.vue'
 import TimecodeDisplay from './TimecodeDisplay.vue'
 

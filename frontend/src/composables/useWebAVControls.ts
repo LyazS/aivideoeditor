@@ -45,8 +45,10 @@ interface CanvasBackup {
     trackId: number
     mediaType: 'video' | 'image'
     timeRange: any // VideoTimeRange | ImageTimeRange
-    position: { x: number; y: number }
-    size: { width: number; height: number }
+    x: number
+    y: number
+    width: number
+    height: number
     rotation: number
     zIndex: number
     opacity: number
@@ -471,7 +473,7 @@ export function useWebAVControls() {
     // 备份当前状态 - 只备份元数据，不备份WebAV对象
     const backup: CanvasBackup = {
       timelineItems: [],
-      currentTime: videoStore.currentTime,
+      currentTime: videoStore.currentTimeSeconds,
       isPlaying: videoStore.isPlaying,
     }
 
@@ -484,8 +486,10 @@ export function useWebAVControls() {
         trackId: item.trackId,
         mediaType: item.mediaType,
         timeRange: { ...item.timeRange },
-        position: { ...item.position },
-        size: { ...item.size },
+        x: item.x,
+        y: item.y,
+        width: item.width,
+        height: item.height,
         rotation: item.rotation,
         zIndex: item.zIndex,
         opacity: item.opacity,

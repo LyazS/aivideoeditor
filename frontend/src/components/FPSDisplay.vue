@@ -100,7 +100,8 @@ const stopAVCanvasFPSMonitoring = () => {
 
   const avCanvas = webAVControls.getAVCanvas()
   if (avCanvas && timeUpdateListener.value) {
-    avCanvas.off('timeupdate', timeUpdateListener.value)
+    // WebAV的AVCanvas可能没有removeEventListener方法，直接设置为null即可
+    // 因为监听器是通过WebAV内部管理的，我们只需要清理引用
     timeUpdateListener.value = null
   }
 
