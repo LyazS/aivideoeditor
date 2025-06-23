@@ -39,7 +39,7 @@ export class ImageVisibleSprite extends VisibleSprite {
   constructor(clip: ImgClip) {
     // 调用父类构造函数
     super(clip)
-    
+
     // 初始化时间设置
     this.#updateVisibleSpriteTime()
   }

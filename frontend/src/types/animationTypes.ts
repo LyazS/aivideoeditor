@@ -4,7 +4,7 @@
  * 可动画属性枚举
  * 定义了支持关键帧动画的所有属性类型
  */
-export type AnimatableProperty = 'position' | 'width' | 'height' | 'rotation' | 'opacity' | 'zIndex'
+export type AnimatableProperty = 'position' | 'x' | 'y' | 'width' | 'height' | 'rotation' | 'opacity' | 'zIndex' | 'scale'
 
 /**
  * 插值类型枚举

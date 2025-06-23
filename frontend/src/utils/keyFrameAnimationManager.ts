@@ -23,7 +23,7 @@ export class KeyFrameAnimationManager {
    * @param timelineItem 时间轴项目
    * @param property 动画属性
    * @param time 当前播放时间（秒）
-   * @param value 属性值
+   * @param value 属性值（可以是number或复合对象，如position的{x,y}）
    * @param videoResolution 视频分辨率（用于坐标转换）
    * @returns 操作结果
    */
@@ -31,7 +31,7 @@ export class KeyFrameAnimationManager {
     timelineItem: TimelineItem,
     property: AnimatableProperty,
     time: number,
-    value: number,
+    value: any, // 🆕 修改为any类型以支持复合属性
     videoResolution: { width: number; height: number }
   ): KeyFrameOperationResult {
     // 确保动画配置存在，使用clip时长作为动画duration

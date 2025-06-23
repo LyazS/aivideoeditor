@@ -156,13 +156,15 @@ function toggleKeyFrame(property: AnimatableProperty) {
 
 function getPropertyLabel(property: AnimatableProperty): string {
   const labels: Record<AnimatableProperty, string> = {
+    position: '位置',
     x: 'X位置',
     y: 'Y位置',
     width: '宽度',
     height: '高度',
     rotation: '旋转',
     opacity: '透明度',
-    zIndex: '层级'
+    zIndex: '层级',
+    scale: '缩放'
   }
   return labels[property]
 }

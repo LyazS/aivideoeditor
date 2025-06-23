@@ -9,6 +9,7 @@ import {
   getKeyFrameTimePoints
 } from '../utils/animationUtils'
 import { useVideoStore } from '../stores/videoStore'
+import { useWebAVControls } from './useWebAVControls'
 import type {
   AnimatableProperty,
   KeyFrame,
@@ -222,7 +223,9 @@ export function useKeyFrameAnimation() {
       nextTime = Math.min(...timePoints)
     }
 
-    videoStore.setCurrentTime(nextTime)
+    // 🎬 使用WebAV控制器跳转时间并预览帧
+    const webAVControls = useWebAVControls()
+    webAVControls.seekTo(nextTime)
     console.log('⏭️ [Animation] Jumped to next keyframe:', nextTime, nextPoints.length === 0 ? '(循环到第一个)' : '')
   }
 
@@ -247,7 +250,9 @@ export function useKeyFrameAnimation() {
       prevTime = Math.max(...timePoints)
     }
 
-    videoStore.setCurrentTime(prevTime)
+    // 🎬 使用WebAV控制器跳转时间并预览帧
+    const webAVControls = useWebAVControls()
+    webAVControls.seekTo(prevTime)
     console.log('⏮️ [Animation] Jumped to prev keyframe:', prevTime, prevPoints.length === 0 ? '(循环到最后一个)' : '')
   }
 

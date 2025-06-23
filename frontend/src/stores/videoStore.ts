@@ -1,6 +1,7 @@
 import { computed, type Raw } from 'vue'
 import { defineStore } from 'pinia'
 import { VideoVisibleSprite } from '../utils/VideoVisibleSprite'
+import { webavToProjectCoords, projectToWebavCoords } from '../utils/coordinateTransform'
 import {
   alignTimeToFrame,
   timeToPixel,
@@ -36,6 +37,7 @@ import {
 import type { MediaItem, TimelineItem } from '../types/videoTypes'
 import type { AnimatableProperty } from '../types/animationTypes'
 import { getCurrentPropertyValue } from '../utils/animationUtils'
+import { KeyFrameAnimationManager } from '../utils/keyFrameAnimationManager'
 
 export const useVideoStore = defineStore('video', () => {
   // 创建媒体管理模块
@@ -53,8 +55,19 @@ export const useVideoStore = defineStore('video', () => {
   // 创建WebAV集成模块
   const webavModule = createWebAVModule()
 
-  // 创建时间轴核心管理模块
-  const timelineModule = createTimelineModule(configModule, webavModule as any, mediaModule, trackModule)
+  // 🆕 处理sprite属性变化同步的回调函数（先定义占位符）
+  let handleSpritePropsChange: (timelineItemId: string, changes: any) => void = () => {
+    // 占位符实现，后面会被替换
+  }
+
+  // 创建时间轴核心管理模块，传入sprite事件回调
+  const timelineModule = createTimelineModule(
+    configModule,
+    webavModule as any,
+    mediaModule,
+    trackModule,
+    handleSpritePropsChange
+  )
 
   const totalDuration = computed(() => {
     return calculateTotalDuration(
@@ -84,6 +97,73 @@ export const useVideoStore = defineStore('video', () => {
     historyModule.executeCommand
   )
 
+  // 🆕 简化的sprite属性变化回调实现
+  const handleSpritePropsChangeImpl = (timelineItemId: string, changes: any): void => {
+    // 🆕 如果正在通过关键帧系统更新，跳过处理避免循环
+    if (isUpdatingFromKeyFrame) {
+      console.log(`🔄 [VideoStore] 跳过sprite props change处理（正在通过关键帧系统更新）`)
+      return
+    }
+
+    console.log(`🔄 [VideoStore] Handling sprite props change for ${timelineItemId}:`, changes)
+
+    // 找到对应的TimelineItem
+    const timelineItem = timelineModule.getTimelineItem(timelineItemId)
+    if (!timelineItem) {
+      console.warn(`TimelineItem not found: ${timelineItemId}`)
+      return
+    }
+
+    // 🆕 直接更新TimelineItem的属性值
+    const sprite = timelineItem.sprite
+
+    // 处理位置和尺寸变化（需要坐标转换）
+    if (changes.rect) {
+      const rect = sprite.rect
+      const projectCoords = webavToProjectCoords(
+        rect.x,
+        rect.y,
+        rect.w,
+        rect.h,
+        configModule.videoResolution.value.width,
+        configModule.videoResolution.value.height
+      )
+
+      // 直接更新TimelineItem的响应式属性
+      timelineItem.x = projectCoords.x
+      timelineItem.y = projectCoords.y
+      timelineItem.width = rect.w
+      timelineItem.height = rect.h
+
+      if (rect.angle !== undefined) {
+        timelineItem.rotation = rect.angle
+      }
+    }
+
+    // 处理其他属性变化
+    if (changes.opacity !== undefined) {
+      timelineItem.opacity = sprite.opacity
+    }
+    if (changes.zIndex !== undefined) {
+      timelineItem.zIndex = sprite.zIndex
+    }
+
+    // 处理音量相关属性（仅对视频有效）
+    if (timelineItem.mediaType === 'video' && sprite instanceof VideoVisibleSprite) {
+      if (changes.volume !== undefined) {
+        timelineItem.volume = sprite.getVolume()
+      }
+      if (changes.isMuted !== undefined) {
+        timelineItem.isMuted = sprite.isMuted()
+      }
+    }
+
+    console.log(`✅ [VideoStore] TimelineItem properties updated for ${timelineItemId}`)
+  }
+
+  // 🆕 替换占位符函数为实际实现
+  handleSpritePropsChange = handleSpritePropsChangeImpl
+
   // 创建视频片段操作模块（需要在其他模块之后创建）
   const clipOperationsModule = createClipOperationsModule(
     webavModule as any,
@@ -95,6 +175,166 @@ export const useVideoStore = defineStore('video', () => {
   )
 
   // ==================== 双向数据同步函数 ====================
+
+  // 🆕 防止循环更新的标志
+  let isUpdatingFromKeyFrame = false
+
+  /**
+   * 🆕 更新TimelineItem属性到Sprite（UI → Sprite）
+   * 这个函数处理从UI输入到Sprite属性的更新
+   * 🎬 支持关键帧系统：如果有动画配置，通过关键帧更新；否则直接更新sprite
+   */
+  function updateTimelineItemProperty(timelineItemId: string, property: string, value: any) {
+    const timelineItem = timelineModule.getTimelineItem(timelineItemId)
+    if (!timelineItem) {
+      console.warn(`TimelineItem not found: ${timelineItemId}`)
+      return
+    }
+
+    // 🎬 检查是否有动画配置，如果有则通过关键帧系统更新
+    const hasAnimation = timelineItem.animationConfig !== null
+
+    if (hasAnimation) {
+      console.log(`🎬 [VideoStore] 检测到动画clip，通过关键帧系统更新属性: ${property} = ${value}`)
+
+      // 🆕 设置标志防止循环更新
+      isUpdatingFromKeyFrame = true
+
+      try {
+        // 对于有动画的clip，通过关键帧系统更新
+        // 这里需要将属性名映射到AnimatableProperty
+        const animatablePropertyMap: Record<string, any> = {
+          'x': 'position',
+          'y': 'position',
+          'width': 'width',
+          'height': 'height',
+          'rotation': 'rotation',
+          'opacity': 'opacity',
+          'zIndex': 'zIndex'
+        }
+
+        const animatableProperty = animatablePropertyMap[property]
+        if (animatableProperty) {
+          if (property === 'x' || property === 'y') {
+            // 位置属性需要特殊处理，创建position关键帧
+            const currentX = property === 'x' ? value : timelineItem.x
+            const currentY = property === 'y' ? value : timelineItem.y
+            const positionValue = { x: currentX, y: currentY }
+
+            // 直接调用关键帧管理器创建关键帧
+            KeyFrameAnimationManager.createKeyFrame(
+              timelineItem,
+              'position',
+              playbackModule.currentTime.value,
+              positionValue,
+              configModule.videoResolution.value
+            )
+          } else {
+            // 其他属性直接创建关键帧
+            KeyFrameAnimationManager.createKeyFrame(
+              timelineItem,
+              animatableProperty,
+              playbackModule.currentTime.value,
+              value,
+              configModule.videoResolution.value
+            )
+          }
+
+          console.log(`🎬 [VideoStore] 已通过关键帧系统更新属性: ${property} = ${value}`)
+          return
+        }
+      } finally {
+        // 🆕 重置标志
+        isUpdatingFromKeyFrame = false
+      }
+    }
+
+    // 📄 对于非动画clip或不支持动画的属性，直接更新sprite
+    console.log(`📄 [VideoStore] 直接更新sprite属性: ${property} = ${value}`)
+    const sprite = timelineItem.sprite
+
+    switch (property) {
+      case 'x':
+      case 'y':
+        // 位置更新需要坐标转换
+        const currentX = property === 'x' ? value : timelineItem.x
+        const currentY = property === 'y' ? value : timelineItem.y
+        const webavCoords = projectToWebavCoords(
+          currentX,
+          currentY,
+          sprite.rect.w,
+          sprite.rect.h,
+          configModule.videoResolution.value.width,
+          configModule.videoResolution.value.height
+        )
+        sprite.rect.x = webavCoords.x
+        sprite.rect.y = webavCoords.y
+        break
+
+      case 'width':
+        // 保持中心点不变的宽度缩放
+        const centerX = timelineItem.x
+        const centerY = timelineItem.y
+        sprite.rect.w = value
+        const webavCoordsW = projectToWebavCoords(
+          centerX,
+          centerY,
+          value,
+          sprite.rect.h,
+          configModule.videoResolution.value.width,
+          configModule.videoResolution.value.height
+        )
+        sprite.rect.x = webavCoordsW.x
+        sprite.rect.y = webavCoordsW.y
+        break
+
+      case 'height':
+        // 保持中心点不变的高度缩放
+        const centerXH = timelineItem.x
+        const centerYH = timelineItem.y
+        sprite.rect.h = value
+        const webavCoordsH = projectToWebavCoords(
+          centerXH,
+          centerYH,
+          sprite.rect.w,
+          value,
+          configModule.videoResolution.value.width,
+          configModule.videoResolution.value.height
+        )
+        sprite.rect.x = webavCoordsH.x
+        sprite.rect.y = webavCoordsH.y
+        break
+
+      case 'rotation':
+        sprite.rect.angle = value
+        break
+
+      case 'opacity':
+        sprite.opacity = Math.max(0, Math.min(1, value))
+        break
+
+      case 'zIndex':
+        sprite.zIndex = value
+        break
+
+      case 'volume':
+        if (timelineItem.mediaType === 'video' && sprite instanceof VideoVisibleSprite) {
+          sprite.setVolume(Math.max(0, Math.min(1, value)))
+        }
+        break
+
+      case 'isMuted':
+        if (timelineItem.mediaType === 'video' && sprite instanceof VideoVisibleSprite) {
+          sprite.setMuted(value)
+        }
+        break
+
+      default:
+        console.warn(`Unknown property: ${property}`)
+    }
+
+    console.log(`🔄 [VideoStore] Updated sprite property ${property} = ${value} for ${timelineItemId}`)
+  }
 
   // ==================== 素材管理方法 ====================
   // 使用媒体模块的方法，但需要包装以提供额外的依赖
@@ -1035,6 +1275,8 @@ export const useVideoStore = defineStore('video', () => {
     mediaModule.updateMediaItem(mediaItem)
   }
 
+
+
   // ==================== 视频元素管理方法 ====================
   // 使用媒体模块的视频元素管理方法
   function setVideoElement(clipId: string, videoElement: HTMLVideoElement | null) {
@@ -1252,5 +1494,8 @@ export const useVideoStore = defineStore('video', () => {
     // 批量操作方法
     startBatch: historyModule.startBatch,
     executeBatchCommand: historyModule.executeBatchCommand,
+    // 🆕 Sprite事件同步方法
+    handleSpritePropsChange: handleSpritePropsChangeImpl,
+    updateTimelineItemProperty,
   }
 })

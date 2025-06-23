@@ -1,6 +1,7 @@
 import { ref, type Raw, type Ref } from 'vue'
 import { VideoVisibleSprite } from '../../utils/VideoVisibleSprite'
 import { ImageVisibleSprite } from '../../utils/ImageVisibleSprite'
+import { SpriteEventSyncManager } from '../../utils/spriteEventSync'
 import { printDebugInfo, syncTimeRange } from '../utils/storeUtils'
 import type {
   TimelineItem,
@@ -11,6 +12,7 @@ import type {
 /**
  * 时间轴核心管理模块
  * 负责时间轴项目的完整生命周期管理，包括CRUD操作、双向数据同步、变换属性更新
+ * 🆕 支持sprite事件监听和双向数据同步
  */
 export function createTimelineModule(
   configModule: { videoResolution: { value: VideoResolution } },
@@ -20,6 +22,8 @@ export function createTimelineModule(
     mediaItems: Ref<MediaItem[]>
   },
   trackModule?: { tracks: Ref<{ id: number; name: string; isVisible: boolean; isMuted: boolean }[]> },
+  // 🆕 添加sprite属性变化回调
+  onSpritePropsChange?: (timelineItemId: string, changes: any) => void
 ) {
   // ==================== 状态定义 ====================
 
@@ -58,6 +62,11 @@ export function createTimelineModule(
 
     timelineItems.value.push(timelineItem)
 
+    // 🆕 设置sprite事件监听
+    if (onSpritePropsChange) {
+      SpriteEventSyncManager.setupSpriteEventListeners(timelineItem, onSpritePropsChange)
+    }
+
     const mediaItem = mediaModule.getMediaItem(timelineItem.mediaItemId)
     printDebugInfo(
       '添加素材到时间轴',
@@ -84,6 +93,9 @@ export function createTimelineModule(
     if (index > -1) {
       const item = timelineItems.value[index]
       const mediaItem = mediaModule.getMediaItem(item.mediaItemId)
+
+      // 🆕 清理sprite事件监听器
+      SpriteEventSyncManager.removeSpriteEventListenersWithSprite(item)
 
       // 清理sprite资源
       try {

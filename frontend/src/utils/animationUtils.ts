@@ -129,6 +129,10 @@ export function getCurrentPropertyValue(timelineItem: TimelineItem, property: An
   switch (property) {
     case 'position':
       return { x: timelineItem.x, y: timelineItem.y }
+    case 'x':
+      return timelineItem.x
+    case 'y':
+      return timelineItem.y
     case 'width':
       return timelineItem.width
     case 'height':
@@ -139,6 +143,9 @@ export function getCurrentPropertyValue(timelineItem: TimelineItem, property: An
       return timelineItem.opacity
     case 'zIndex':
       return timelineItem.zIndex
+    case 'scale':
+      // 假设scale是基于width的比例，这里需要根据实际需求调整
+      return 1.0 // 默认缩放比例
     default:
       return 0
   }
@@ -162,6 +169,12 @@ export function setCurrentPropertyValue(
         timelineItem.y = value.y
       }
       break
+    case 'x':
+      timelineItem.x = value
+      break
+    case 'y':
+      timelineItem.y = value
+      break
     case 'width':
       timelineItem.width = value
       break
@@ -176,6 +189,15 @@ export function setCurrentPropertyValue(
       break
     case 'zIndex':
       timelineItem.zIndex = value
+      break
+    case 'scale':
+      // scale是复合属性，需要同时设置width和height
+      if (typeof value === 'number') {
+        const originalWidth = timelineItem.width
+        const originalHeight = timelineItem.height
+        timelineItem.width = originalWidth * value
+        timelineItem.height = originalHeight * value
+      }
       break
   }
 }

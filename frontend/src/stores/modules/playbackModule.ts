@@ -84,6 +84,7 @@ export function createPlaybackModule(frameRate: { value: number }) {
 
   /**
    * 跳转到下一帧
+   * 注意：这个方法主要用于内部逻辑，UI应该使用webAVControls.seekTo()来触发预览
    */
   function nextFrame() {
     const frameDuration = 1 / frameRate.value
@@ -93,6 +94,7 @@ export function createPlaybackModule(frameRate: { value: number }) {
 
   /**
    * 跳转到上一帧
+   * 注意：这个方法主要用于内部逻辑，UI应该使用webAVControls.seekTo()来触发预览
    */
   function previousFrame() {
     const frameDuration = 1 / frameRate.value
