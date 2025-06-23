@@ -422,6 +422,7 @@ import { computed } from 'vue'
 import { useVideoStore } from '../stores/videoStore'
 import { isVideoTimeRange } from '../types/videoTypes'
 import { uiDegreesToWebAVRadians, webAVRadiansToUIDegrees } from '../utils/rotationTransform'
+import { Timecode } from '../utils/Timecode'
 import NumberInput from './NumberInput.vue'
 import TimecodeInput from './TimecodeInput.vue'
 
@@ -455,20 +456,26 @@ const selectedMediaItem = computed(() => {
   return videoStore.getMediaItem(selectedTimelineItem.value.mediaItemId) || null
 })
 
-// 时间轴时长
-const timelineDuration = computed(() => {
-  if (!selectedTimelineItem.value) return 0
-  // 直接从timelineItem.timeRange获取，与videostore的同步机制保持一致
+// 时间轴时长（Timecode对象）
+const timelineDurationTimecode = computed(() => {
+  if (!selectedTimelineItem.value) return Timecode.zero(videoStore.frameRate)
+
+  // 从timeRange计算时长
   const timeRange = selectedTimelineItem.value.timeRange
-  return (timeRange.timelineEndTime - timeRange.timelineStartTime) / 1000000 // 转换为秒
+  const startTimecode = Timecode.fromMicroseconds(timeRange.timelineStartTime, videoStore.frameRate)
+  const endTimecode = Timecode.fromMicroseconds(timeRange.timelineEndTime, videoStore.frameRate)
+  return endTimecode.subtract(startTimecode)
 })
+
+// 时间轴时长（秒数，用于向后兼容）
+const timelineDuration = computed(() => timelineDurationTimecode.value.toSeconds())
 
 // 目标时长 - 与timelineDuration相同，直接使用timelineDuration
 const targetDuration = computed(() => timelineDuration.value)
 
 // 目标时长的微秒值（用于TimecodeInput）
 const targetDurationMicroseconds = computed(() => {
-  return Math.round(targetDuration.value * 1000000)
+  return timelineDurationTimecode.value.toMicroseconds()
 })
 
 // 倍速分段配置
@@ -688,7 +695,8 @@ const updateTargetDuration = async (newTargetDuration: number) => {
 
 // 从时间码更新目标时长
 const updateTargetDurationFromTimecode = async (microseconds: number) => {
-  const newTargetDuration = microseconds / 1000000 // 转换为秒
+  const timecode = Timecode.fromMicroseconds(microseconds, videoStore.frameRate)
+  const newTargetDuration = timecode.toSeconds()
   await updateTargetDuration(newTargetDuration)
 }
 

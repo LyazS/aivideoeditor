@@ -266,10 +266,9 @@ export function useWebAVControls() {
 
       isUpdatingTime = true
       try {
-        // 将微秒转换为秒
-        // console.log('WebAV timeupdate:', time)
-        const timeInSeconds = time / 1000000
-        videoStore.setCurrentTime(timeInSeconds, false) // 不强制对齐帧，保持流畅
+        // WebAV返回的是微秒值，直接传递给videoStore
+        // videoStore内部会使用setCurrentTimeMicroseconds处理Timecode转换
+        videoStore.setCurrentTimeMicroseconds(time, false) // 不强制对齐帧，保持流畅
       } finally {
         isUpdatingTime = false
       }
@@ -378,7 +377,8 @@ export function useWebAVControls() {
   const play = (startTime?: number, endTime?: number): void => {
     if (!globalAVCanvas) return
 
-    const start = (startTime || videoStore.currentTime) * 1000000 // 转换为微秒
+    // 使用videoStore的微秒值，避免精度损失
+    const start = startTime ? startTime * 1000000 : videoStore.currentTimeMicroseconds
 
     // 构建播放参数
     const playOptions: PlayOptions = {

@@ -1,4 +1,5 @@
 import type { Ref } from 'vue'
+import { Timecode } from '../../utils/Timecode'
 
 // ==================== 时间计算工具 ====================
 
@@ -11,7 +12,8 @@ import type { Ref } from 'vue'
 const STANDARD_FRAME_RATE = 30
 
 /**
- * 时间码对象接口
+ * 时间码对象接口（向后兼容）
+ * @deprecated 请使用 Timecode 类替代
  */
 export interface Timecode {
   hours: number
@@ -21,41 +23,27 @@ export interface Timecode {
 }
 
 /**
- * 将微秒转换为时间码对象
+ * 将微秒转换为时间码对象（向后兼容）
  * @param microseconds 微秒
  * @param frameRate 帧率（默认30fps）
  * @returns 时间码对象
+ * @deprecated 请使用 Timecode.fromMicroseconds() 替代
  */
 export function microsecondsToTimecode(microseconds: number, frameRate: number = STANDARD_FRAME_RATE): Timecode {
-  // 将微秒转换为秒
-  const totalSeconds = microseconds / 1000000
-
-  // 计算各个时间单位
-  const hours = Math.floor(totalSeconds / 3600)
-  const minutes = Math.floor((totalSeconds % 3600) / 60)
-  const seconds = Math.floor(totalSeconds % 60)
-
-  // 计算帧数：取小数部分乘以帧率
-  const fractionalSeconds = totalSeconds % 1
-  const frames = Math.floor(fractionalSeconds * frameRate)
-
-  return { hours, minutes, seconds, frames }
+  const timecode = Timecode.fromMicroseconds(microseconds, frameRate)
+  return timecode.components
 }
 
 /**
- * 将时间码对象转换为微秒
+ * 将时间码对象转换为微秒（向后兼容）
  * @param timecode 时间码对象
  * @param frameRate 帧率（默认30fps）
  * @returns 微秒
+ * @deprecated 请使用 Timecode 类的 toMicroseconds() 方法替代
  */
 export function timecodeToMicroseconds(timecode: Timecode, frameRate: number = STANDARD_FRAME_RATE): number {
-  const { hours, minutes, seconds, frames } = timecode
-
-  // 计算总秒数
-  const totalSeconds = hours * 3600 + minutes * 60 + seconds + (frames / frameRate)
-
-  // 转换为微秒
-  return Math.round(totalSeconds * 1000000)
+  const timecodeObj = new Timecode(timecode, frameRate)
+  return timecodeObj.toMicroseconds()
 }
 
 /**
@@ -65,8 +53,8 @@ export function timecodeToMicroseconds(timecode: Timecode, frameRate: number = S
  * @returns 时间码字符串 (HH:MM:SS.FF)
  */
 export function microsecondsToTimecodeString(microseconds: number, frameRate: number = STANDARD_FRAME_RATE): string {
-  const timecode = microsecondsToTimecode(microseconds, frameRate)
-  return formatTimecode(timecode)
+  const timecode = Timecode.fromMicroseconds(microseconds, frameRate)
+  return timecode.toString()
 }
 
 /**
@@ -76,54 +64,30 @@ export function microsecondsToTimecodeString(microseconds: number, frameRate: nu
  * @returns 微秒
  */
 export function timecodeStringToMicroseconds(timecodeString: string, frameRate: number = STANDARD_FRAME_RATE): number {
-  const timecode = parseTimecode(timecodeString)
-  return timecodeToMicroseconds(timecode, frameRate)
+  const timecode = Timecode.fromString(timecodeString, frameRate)
+  return timecode.toMicroseconds()
 }
 
 /**
- * 格式化时间码对象为字符串
+ * 格式化时间码对象为字符串（向后兼容）
  * @param timecode 时间码对象
  * @returns 格式化的时间码字符串 (HH:MM:SS.FF)
+ * @deprecated 请使用 Timecode 类的 toString() 方法替代
  */
 export function formatTimecode(timecode: Timecode): string {
-  const { hours, minutes, seconds, frames } = timecode
-
-  if (hours > 0) {
-    // 有小时时显示完整格式
-    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}.${frames.toString().padStart(2, '0')}`
-  } else {
-    // 无小时时显示简化格式
-    return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}.${frames.toString().padStart(2, '0')}`
-  }
+  const timecodeObj = new Timecode(timecode)
+  return timecodeObj.toString()
 }
 
 /**
- * 解析时间码字符串为时间码对象
+ * 解析时间码字符串为时间码对象（向后兼容）
  * @param timecodeString 时间码字符串 (支持 HH:MM:SS.FF 或 MM:SS.FF 格式)
  * @returns 时间码对象
+ * @deprecated 请使用 Timecode.fromString() 替代
  */
 export function parseTimecode(timecodeString: string): Timecode {
-  // 移除空格并转换为大写
-  const cleaned = timecodeString.trim()
-
-  // 匹配时间码格式：可选的小时:分钟:秒.帧
-  const match = cleaned.match(/^(?:(\d{1,2}):)?(\d{1,2}):(\d{1,2})\.(\d{1,2})$/)
-
-  if (!match) {
-    throw new Error(`无效的时间码格式: ${timecodeString}。请使用 HH:MM:SS.FF 或 MM:SS.FF 格式`)
-  }
-
-  const hours = match[1] ? parseInt(match[1], 10) : 0
-  const minutes = parseInt(match[2], 10)
-  const seconds = parseInt(match[3], 10)
-  const frames = parseInt(match[4], 10)
-
-  // 验证范围
-  if (minutes >= 60 || seconds >= 60 || frames >= STANDARD_FRAME_RATE) {
-    throw new Error(`时间码值超出范围: ${timecodeString}`)
-  }
-
-  return { hours, minutes, seconds, frames }
+  const timecode = Timecode.fromString(timecodeString, STANDARD_FRAME_RATE)
+  return timecode.components
 }
 
 /**
@@ -133,8 +97,8 @@ export function parseTimecode(timecodeString: string): Timecode {
  * @returns 时间码字符串
  */
 export function secondsToTimecodeString(seconds: number, frameRate: number = STANDARD_FRAME_RATE): string {
-  const microseconds = seconds * 1000000
-  return microsecondsToTimecodeString(microseconds, frameRate)
+  const timecode = Timecode.fromSeconds(seconds, frameRate)
+  return timecode.toString()
 }
 
 /**
@@ -144,8 +108,8 @@ export function secondsToTimecodeString(seconds: number, frameRate: number = STA
  * @returns 秒
  */
 export function timecodeStringToSeconds(timecodeString: string, frameRate: number = STANDARD_FRAME_RATE): number {
-  const microseconds = timecodeStringToMicroseconds(timecodeString, frameRate)
-  return microseconds / 1000000
+  const timecode = Timecode.fromString(timecodeString, frameRate)
+  return timecode.toSeconds()
 }
 
 /**
@@ -155,8 +119,8 @@ export function timecodeStringToSeconds(timecodeString: string, frameRate: numbe
  * @returns 对齐后的时间
  */
 export function alignTimeToFrame(time: number, frameRate: number): number {
-  const frameDuration = 1 / frameRate
-  return Math.floor(time / frameDuration) * frameDuration
+  const timecode = Timecode.fromSeconds(time, frameRate)
+  return timecode.toSeconds() // Timecode内部已经对齐到帧边界
 }
 
 /**

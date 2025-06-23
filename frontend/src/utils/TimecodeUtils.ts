@@ -1,21 +1,22 @@
 /**
  * 时间码工具类
- * 提供时间码和微秒之间的转换，以及相关的工具方法
- * 统一使用30fps作为标准帧率
+ * 提供WebAV集成和高级时间码操作功能
+ * 基于新的Timecode类实现
  */
 
-import { 
-  microsecondsToTimecode, 
-  timecodeToMicroseconds, 
-  microsecondsToTimecodeString,
-  timecodeStringToMicroseconds,
-  formatTimecode,
-  parseTimecode,
-  type Timecode 
-} from '../stores/utils/storeUtils'
+import { Timecode } from './Timecode'
+import type { TimecodeComponents } from './Timecode'
 
+// 重新导出核心类型
+export { Timecode, type TimecodeComponents }
+
+/**
+ * 时间码工具类 - 提供WebAV集成和便捷方法
+ */
 export class TimecodeUtils {
   private static readonly STANDARD_FRAME_RATE = 30
+
+  // ==================== WebAV集成方法 ====================
 
   /**
    * WebAV时间转换：将WebAV返回的微秒转换为UI显示的时间码字符串
@@ -24,7 +25,8 @@ export class TimecodeUtils {
    * @returns 时间码字符串 (HH:MM:SS.FF)
    */
   static webAVToTimecode(microseconds: number, frameRate: number = TimecodeUtils.STANDARD_FRAME_RATE): string {
-    return microsecondsToTimecodeString(microseconds, frameRate)
+    const timecode = Timecode.fromMicroseconds(microseconds, frameRate)
+    return timecode.toString()
   }
 
   /**
@@ -34,52 +36,62 @@ export class TimecodeUtils {
    * @returns WebAV需要的微秒值
    */
   static timecodeToWebAV(timecodeString: string, frameRate: number = TimecodeUtils.STANDARD_FRAME_RATE): number {
-    return timecodeStringToMicroseconds(timecodeString, frameRate)
+    const timecode = Timecode.fromString(timecodeString, frameRate)
+    return timecode.toMicroseconds()
   }
+
+  /**
+   * WebAV时间转换：将WebAV返回的微秒转换为Timecode对象
+   * @param microseconds WebAV返回的微秒值
+   * @param frameRate 帧率（默认30fps）
+   * @returns Timecode对象
+   */
+  static webAVToTimecodeObject(microseconds: number, frameRate: number = TimecodeUtils.STANDARD_FRAME_RATE): Timecode {
+    return Timecode.fromMicroseconds(microseconds, frameRate)
+  }
+
+  /**
+   * Timecode对象转换为WebAV微秒值
+   * @param timecode Timecode对象
+   * @returns WebAV需要的微秒值
+   */
+  static timecodeObjectToWebAV(timecode: Timecode): number {
+    return timecode.toMicroseconds()
+  }
+
+  // ==================== 时间码运算方法 ====================
 
   /**
    * 时间码加法运算
    * @param timecode1 时间码1
    * @param timecode2 时间码2
-   * @param frameRate 帧率
    * @returns 相加后的时间码
    */
-  static addTimecodes(timecode1: Timecode, timecode2: Timecode, frameRate: number = TimecodeUtils.STANDARD_FRAME_RATE): Timecode {
-    const microseconds1 = timecodeToMicroseconds(timecode1, frameRate)
-    const microseconds2 = timecodeToMicroseconds(timecode2, frameRate)
-    const resultMicroseconds = microseconds1 + microseconds2
-    return microsecondsToTimecode(resultMicroseconds, frameRate)
+  static addTimecodes(timecode1: Timecode, timecode2: Timecode): Timecode {
+    return timecode1.add(timecode2)
   }
 
   /**
    * 时间码减法运算
    * @param timecode1 被减数时间码
    * @param timecode2 减数时间码
-   * @param frameRate 帧率
    * @returns 相减后的时间码（如果结果为负数，返回零时间码）
    */
-  static subtractTimecodes(timecode1: Timecode, timecode2: Timecode, frameRate: number = TimecodeUtils.STANDARD_FRAME_RATE): Timecode {
-    const microseconds1 = timecodeToMicroseconds(timecode1, frameRate)
-    const microseconds2 = timecodeToMicroseconds(timecode2, frameRate)
-    const resultMicroseconds = Math.max(0, microseconds1 - microseconds2)
-    return microsecondsToTimecode(resultMicroseconds, frameRate)
+  static subtractTimecodes(timecode1: Timecode, timecode2: Timecode): Timecode {
+    return timecode1.subtract(timecode2)
   }
 
   /**
    * 比较两个时间码
    * @param timecode1 时间码1
    * @param timecode2 时间码2
-   * @param frameRate 帧率
    * @returns -1: timecode1 < timecode2, 0: 相等, 1: timecode1 > timecode2
    */
-  static compareTimecodes(timecode1: Timecode, timecode2: Timecode, frameRate: number = TimecodeUtils.STANDARD_FRAME_RATE): number {
-    const microseconds1 = timecodeToMicroseconds(timecode1, frameRate)
-    const microseconds2 = timecodeToMicroseconds(timecode2, frameRate)
-    
-    if (microseconds1 < microseconds2) return -1
-    if (microseconds1 > microseconds2) return 1
-    return 0
+  static compareTimecodes(timecode1: Timecode, timecode2: Timecode): number {
+    return timecode1.compare(timecode2)
   }
+
+  // ==================== 实用工具方法 ====================
 
   /**
    * 将时间码对齐到帧边界
@@ -88,19 +100,17 @@ export class TimecodeUtils {
    * @returns 对齐后的微秒值
    */
   static alignToFrame(microseconds: number, frameRate: number = TimecodeUtils.STANDARD_FRAME_RATE): number {
-    const timecode = microsecondsToTimecode(microseconds, frameRate)
-    return timecodeToMicroseconds(timecode, frameRate)
+    const timecode = Timecode.fromMicroseconds(microseconds, frameRate)
+    return timecode.toMicroseconds()
   }
 
   /**
    * 获取时间码的总帧数
    * @param timecode 时间码对象
-   * @param frameRate 帧率
    * @returns 总帧数
    */
-  static getTotalFrames(timecode: Timecode, frameRate: number = TimecodeUtils.STANDARD_FRAME_RATE): number {
-    const { hours, minutes, seconds, frames } = timecode
-    return (hours * 3600 + minutes * 60 + seconds) * frameRate + frames
+  static getTotalFrames(timecode: Timecode): number {
+    return timecode.totalFrames
   }
 
   /**
@@ -110,14 +120,7 @@ export class TimecodeUtils {
    * @returns 时间码对象
    */
   static fromTotalFrames(totalFrames: number, frameRate: number = TimecodeUtils.STANDARD_FRAME_RATE): Timecode {
-    const totalSeconds = Math.floor(totalFrames / frameRate)
-    const frames = totalFrames % frameRate
-    
-    const hours = Math.floor(totalSeconds / 3600)
-    const minutes = Math.floor((totalSeconds % 3600) / 60)
-    const seconds = totalSeconds % 60
-    
-    return { hours, minutes, seconds, frames }
+    return Timecode.fromFrames(totalFrames, frameRate)
   }
 
   /**
@@ -127,7 +130,7 @@ export class TimecodeUtils {
    */
   static isValidTimecodeString(timecodeString: string): boolean {
     try {
-      parseTimecode(timecodeString)
+      new Timecode(timecodeString)
       return true
     } catch {
       return false
@@ -136,10 +139,11 @@ export class TimecodeUtils {
 
   /**
    * 创建零时间码
+   * @param frameRate 帧率
    * @returns 零时间码对象
    */
-  static zero(): Timecode {
-    return { hours: 0, minutes: 0, seconds: 0, frames: 0 }
+  static zero(frameRate: number = TimecodeUtils.STANDARD_FRAME_RATE): Timecode {
+    return Timecode.zero(frameRate)
   }
 
   /**
@@ -148,7 +152,7 @@ export class TimecodeUtils {
    * @returns 是否为零时间码
    */
   static isZero(timecode: Timecode): boolean {
-    return timecode.hours === 0 && timecode.minutes === 0 && timecode.seconds === 0 && timecode.frames === 0
+    return timecode.isZero()
   }
 
   /**
@@ -166,8 +170,8 @@ export class TimecodeUtils {
    * @returns 格式化的字符串
    */
   static formatTimecodeAs(timecode: Timecode, format: 'standard' | 'compact' | 'verbose'): string {
-    const { hours, minutes, seconds, frames } = timecode
-    
+    const { hours, minutes, seconds, frames } = timecode.components
+
     switch (format) {
       case 'compact':
         // 紧凑格式：省略前导零
@@ -176,7 +180,7 @@ export class TimecodeUtils {
         } else {
           return `${minutes}:${seconds.toString().padStart(2, '0')}.${frames.toString().padStart(2, '0')}`
         }
-      
+
       case 'verbose':
         // 详细格式：包含单位
         if (hours > 0) {
@@ -184,13 +188,56 @@ export class TimecodeUtils {
         } else {
           return `${minutes}m ${seconds}s ${frames}f`
         }
-      
+
       case 'standard':
       default:
-        return formatTimecode(timecode)
+        return timecode.toString()
     }
   }
-}
 
-// 导出类型
-export type { Timecode }
+  // ==================== 向后兼容方法 ====================
+
+  /**
+   * 从秒数创建时间码字符串（向后兼容）
+   * @param seconds 秒数
+   * @param frameRate 帧率
+   * @returns 时间码字符串
+   */
+  static secondsToTimecodeString(seconds: number, frameRate: number = TimecodeUtils.STANDARD_FRAME_RATE): string {
+    const timecode = Timecode.fromSeconds(seconds, frameRate)
+    return timecode.toString()
+  }
+
+  /**
+   * 从时间码字符串转换为秒数（向后兼容）
+   * @param timecodeString 时间码字符串
+   * @param frameRate 帧率
+   * @returns 秒数
+   */
+  static timecodeStringToSeconds(timecodeString: string, frameRate: number = TimecodeUtils.STANDARD_FRAME_RATE): number {
+    const timecode = Timecode.fromString(timecodeString, frameRate)
+    return timecode.toSeconds()
+  }
+
+  /**
+   * 从微秒转换为时间码字符串（向后兼容）
+   * @param microseconds 微秒
+   * @param frameRate 帧率
+   * @returns 时间码字符串
+   */
+  static microsecondsToTimecodeString(microseconds: number, frameRate: number = TimecodeUtils.STANDARD_FRAME_RATE): string {
+    const timecode = Timecode.fromMicroseconds(microseconds, frameRate)
+    return timecode.toString()
+  }
+
+  /**
+   * 从时间码字符串转换为微秒（向后兼容）
+   * @param timecodeString 时间码字符串
+   * @param frameRate 帧率
+   * @returns 微秒
+   */
+  static timecodeStringToMicroseconds(timecodeString: string, frameRate: number = TimecodeUtils.STANDARD_FRAME_RATE): number {
+    const timecode = Timecode.fromString(timecodeString, frameRate)
+    return timecode.toMicroseconds()
+  }
+}

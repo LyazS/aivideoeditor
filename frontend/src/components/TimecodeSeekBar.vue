@@ -94,7 +94,7 @@ const frameRate = computed(() => videoStore.frameRate)
 
 // 当前时间（微秒）
 const currentTimeMicroseconds = computed({
-  get: () => Math.round(videoStore.currentTime * 1000000),
+  get: () => videoStore.currentTimeMicroseconds,
   set: (value: number) => {
     // 通过WebAV设置时间
     const seconds = value / 1000000
@@ -119,33 +119,35 @@ const progressPercentage = computed(() => {
 const timecodeMarkers = computed(() => {
   const total = totalDurationMicroseconds.value
   if (total === 0) return []
-  
+
   const markers = []
-  const duration = total / 1000000 // 转换为秒
-  
+  const totalTimecode = Timecode.fromMicroseconds(total, frameRate.value)
+  const totalSeconds = totalTimecode.toSeconds()
+
   // 每30秒一个标记
   const interval = 30
-  for (let i = 0; i <= duration; i += interval) {
-    const timeMicroseconds = i * 1000000
+  for (let i = 0; i <= totalSeconds; i += interval) {
+    const markerTimecode = Timecode.fromSeconds(i, frameRate.value)
+    const timeMicroseconds = markerTimecode.toMicroseconds()
     const position = (timeMicroseconds / total) * 100
-    const timecode = TimecodeUtils.webAVToTimecode(timeMicroseconds, frameRate.value)
-    
+
     markers.push({
       time: i,
       position,
-      timecode
+      timecode: markerTimecode.toString()
     })
   }
-  
+
   return markers
 })
 
 // 处理时间变化
 const handleTimeChange = (microseconds: number) => {
+  const timecode = Timecode.fromMicroseconds(microseconds, frameRate.value)
   console.log('时间码输入变化:', {
     microseconds,
-    seconds: microseconds / 1000000,
-    timecode: TimecodeUtils.webAVToTimecode(microseconds, frameRate.value)
+    seconds: timecode.toSeconds(),
+    timecode: timecode.toString()
   })
 }
 
@@ -179,13 +181,13 @@ const seekToEnd = () => {
 }
 
 const seekBackward = () => {
-  const currentSeconds = videoStore.currentTime
+  const currentSeconds = videoStore.currentTimeSeconds
   const newTime = Math.max(0, currentSeconds - 10)
   webAVControls.seekTo(newTime)
 }
 
 const seekForward = () => {
-  const currentSeconds = videoStore.currentTime
+  const currentSeconds = videoStore.currentTimeSeconds
   const maxTime = videoStore.contentEndTime || videoStore.totalDuration
   const newTime = Math.min(maxTime, currentSeconds + 10)
   webAVControls.seekTo(newTime)

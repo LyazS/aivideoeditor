@@ -949,6 +949,10 @@ export const useVideoStore = defineStore('video', () => {
     autoArrangeTrackItems: (trackId: number) => autoArrangeTrackItems(timelineModule.timelineItems, trackId),
     // 播放控制方法
     setCurrentTime: playbackModule.setCurrentTime,
+    setCurrentTimecode: playbackModule.setCurrentTimecode,
+    setCurrentTimeMicroseconds: playbackModule.setCurrentTimeMicroseconds,
+    currentTimeSeconds: playbackModule.currentTimeSeconds,
+    currentTimeMicroseconds: playbackModule.currentTimeMicroseconds,
     setPlaybackRate: playbackModule.setPlaybackRate,
     seekTo: playbackModule.seekTo,
     seekBy: playbackModule.seekBy,

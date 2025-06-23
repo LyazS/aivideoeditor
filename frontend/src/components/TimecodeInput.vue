@@ -17,11 +17,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, nextTick } from 'vue'
-import { 
-  timecodeStringToMicroseconds, 
-  microsecondsToTimecodeString,
-  parseTimecode 
-} from '../stores/utils/storeUtils'
+import { Timecode } from '../utils/Timecode'
 
 interface Props {
   /** 当前时间值（微秒） */
@@ -56,7 +52,8 @@ const isFocused = ref(false)
 // 将微秒值转换为时间码字符串显示
 const updateDisplayValue = () => {
   if (!isFocused.value) {
-    displayValue.value = microsecondsToTimecodeString(props.modelValue, props.frameRate)
+    const timecode = Timecode.fromMicroseconds(props.modelValue, props.frameRate)
+    displayValue.value = timecode.toString()
   }
 }
 
@@ -108,7 +105,8 @@ const validateAndEmit = () => {
     }
 
     // 尝试解析时间码
-    const microseconds = timecodeStringToMicroseconds(displayValue.value, props.frameRate)
+    const timecode = Timecode.fromString(displayValue.value, props.frameRate)
+    const microseconds = timecode.toMicroseconds()
     
     // 验证成功，发送新值
     emit('update:modelValue', microseconds)

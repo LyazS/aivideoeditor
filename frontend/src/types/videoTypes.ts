@@ -2,6 +2,9 @@ import type { Raw } from 'vue'
 import type { MP4Clip, ImgClip, Rect } from '@webav/av-cliper'
 import type { VideoVisibleSprite, VideoTimeRange } from '../utils/VideoVisibleSprite'
 import type { ImageVisibleSprite, ImageTimeRange } from '../utils/ImageVisibleSprite'
+import type { Timecode } from '../utils/Timecode'
+import type { TimecodeVideoTimeRange, TimecodeImageTimeRange } from './timecodeTypes'
+import type { TimecodeClipKeyframes } from './keyframeTypes'
 
 // 定义WebAV属性变化事件的类型
 export interface PropsChangeEvent {
@@ -51,6 +54,31 @@ export interface TimelineItem {
   isMuted: boolean // 静音状态
 }
 
+// 基于Timecode的时间轴项目接口（新版本，将逐步替换上面的接口）
+export interface TimecodeTimelineItem {
+  id: string
+  mediaItemId: string // 引用MediaItem的ID
+  trackId: number
+  mediaType: 'video' | 'image' // 媒体类型：视频或图片
+  timeRange: TimecodeVideoTimeRange | TimecodeImageTimeRange // 基于Timecode的时间范围信息
+  sprite: Raw<VideoVisibleSprite | ImageVisibleSprite> // 视频或图片sprite
+  thumbnailUrl?: string // 时间轴clip的缩略图URL
+  // Sprite位置和大小属性（响应式）
+  x: number
+  y: number
+  width: number
+  height: number
+  // 其他sprite属性（响应式）
+  rotation: number // 旋转角度（弧度）
+  zIndex: number
+  opacity: number
+  // 音频属性（仅对视频有效）
+  volume: number // 音量（0-1之间）
+  isMuted: boolean // 静音状态
+  // 关键帧数据（可选）
+  keyframes?: TimecodeClipKeyframes
+}
+
 export interface VideoResolution {
   name: string
   width: number
@@ -95,6 +123,37 @@ export function isVideoTimelineItem(item: TimelineItem): item is TimelineItem & 
  */
 export function isImageTimelineItem(item: TimelineItem): item is TimelineItem & { timeRange: ImageTimeRange; sprite: Raw<ImageVisibleSprite> } {
   return item.mediaType === 'image' && isImageTimeRange(item.timeRange)
+}
+
+// ==================== Timecode版本的类型守卫函数 ====================
+
+/**
+ * 检查时间轴项目是否为Timecode版本
+ * @param item 时间轴项目
+ * @returns 是否为Timecode版本
+ */
+export function isTimecodeTimelineItem(item: TimelineItem | TimecodeTimelineItem): item is TimecodeTimelineItem {
+  // 检查timeRange是否包含Timecode对象
+  const timeRange = item.timeRange as any
+  return timeRange && typeof timeRange.timelineStartTime === 'object' && 'totalFrames' in timeRange.timelineStartTime
+}
+
+/**
+ * 检查Timecode时间轴项目是否为视频类型
+ * @param item Timecode时间轴项目
+ * @returns 是否为视频类型
+ */
+export function isTimecodeVideoTimelineItem(item: TimecodeTimelineItem): item is TimecodeTimelineItem & { timeRange: TimecodeVideoTimeRange; sprite: Raw<VideoVisibleSprite> } {
+  return item.mediaType === 'video' && 'clipStartTime' in item.timeRange
+}
+
+/**
+ * 检查Timecode时间轴项目是否为图片类型
+ * @param item Timecode时间轴项目
+ * @returns 是否为图片类型
+ */
+export function isTimecodeImageTimelineItem(item: TimecodeTimelineItem): item is TimecodeTimelineItem & { timeRange: TimecodeImageTimeRange; sprite: Raw<ImageVisibleSprite> } {
+  return item.mediaType === 'image' && 'displayDuration' in item.timeRange
 }
 
 export interface Track {

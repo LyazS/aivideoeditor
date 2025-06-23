@@ -3,12 +3,15 @@
     <div class="video-container">
       <!-- WebAV渲染器 -->
       <WebAVRenderer />
+      <!-- 帧率显示 -->
+      <FPSDisplay />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import WebAVRenderer from './WebAVRenderer.vue'
+import FPSDisplay from './FPSDisplay.vue'
 </script>
 
 <style scoped>

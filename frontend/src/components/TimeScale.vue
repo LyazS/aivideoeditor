@@ -32,6 +32,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useVideoStore } from '../stores/videoStore'
 import { useWebAVControls } from '../composables/useWebAVControls'
 import { usePlaybackControls } from '../composables/usePlaybackControls'
+import { Timecode } from '../utils/Timecode'
 import {
   calculatePixelsPerSecond,
   calculateVisibleTimeRange,
@@ -49,7 +50,8 @@ const containerWidth = ref(800)
 const isDraggingPlayhead = ref(false)
 
 interface TimeMark {
-  time: number
+  time: number // 保留秒数用于像素计算
+  timecode: Timecode // 添加Timecode对象用于精确时间管理
   position: number
   isMajor: boolean
   isFrame?: boolean // 标记是否为帧级别的刻度
@@ -146,6 +148,7 @@ const timeMarks = computed((): TimeMark[] => {
     if (position >= -50 && position <= containerWidth.value + 50) {
       marks.push({
         time,
+        timecode: Timecode.fromSeconds(time, videoStore.frameRate),
         position,
         isMajor,
         isFrame: isFrameLevel && Math.abs(time % adjustedMinorInterval) < 0.001,
@@ -161,17 +164,18 @@ function alignTimeToFrame(time: number): number {
   return alignTimeToFrameUtil(time, videoStore.frameRate)
 }
 
-// 播放头位置 - 直接使用WebAV返回的精确时间
+// 播放头位置 - 使用Timecode对象的秒数进行像素计算
 const playheadPosition = computed(() => {
-  const currentTime = videoStore.currentTime
-  const position = videoStore.timeToPixel(currentTime, containerWidth.value)
+  const currentTimeSeconds = videoStore.currentTimeSeconds
+  const position = videoStore.timeToPixel(currentTimeSeconds, containerWidth.value)
 
   return position
 })
 
 function formatTime(seconds: number): string {
-  // 始终使用时间码格式显示
-  return formatTimeWithAutoPrecision(seconds, 1000, videoStore.frameRate) // 使用高精度强制显示时间码
+  // 使用Timecode对象进行格式化
+  const timecode = Timecode.fromSeconds(seconds, videoStore.frameRate)
+  return timecode.toString()
 }
 
 function updateContainerWidth() {

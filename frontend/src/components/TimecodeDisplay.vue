@@ -6,7 +6,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { microsecondsToTimecodeString } from '../stores/utils/storeUtils'
+import { Timecode } from '../utils/Timecode'
 
 interface Props {
   /** 当前时间值（微秒） */
@@ -27,14 +27,16 @@ const props = withDefaults(defineProps<Props>(), {
 
 // 格式化时间码显示
 const formattedTimecode = computed(() => {
+  const timecode = Timecode.fromMicroseconds(props.value, props.frameRate)
+
   if (props.showMilliseconds) {
     // 显示毫秒格式
-    const seconds = props.value / 1000000
+    const seconds = timecode.toSeconds()
     const hours = Math.floor(seconds / 3600)
     const mins = Math.floor((seconds % 3600) / 60)
     const secs = Math.floor(seconds % 60)
     const ms = Math.floor((seconds % 1) * 1000)
-    
+
     if (hours > 0) {
       return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}.${ms.toString().padStart(3, '0')}`
     } else {
@@ -42,7 +44,7 @@ const formattedTimecode = computed(() => {
     }
   } else {
     // 显示时间码格式（帧）
-    return microsecondsToTimecodeString(props.value, props.frameRate)
+    return timecode.toString()
   }
 })
 </script>
