@@ -34,6 +34,7 @@
           :key="item.id"
           class="media-item"
           :class="{ 'parsing': !item.isReady }"
+          :data-media-item-id="item.id"
           :draggable="item.isReady"
           @dragstart="handleItemDragStart($event, item)"
           @dragend="handleItemDragEnd"
@@ -58,7 +59,7 @@
 
             <!-- 右上角时长标签（只有视频才显示） -->
             <div v-if="item.mediaType === 'video'" class="duration-badge">
-              {{ formatDuration(item.duration) }}
+              {{ formatTime(item.duration, 'seconds') }}
             </div>
           </div>
 
@@ -99,12 +100,15 @@ import { ref, markRaw } from 'vue'
 import { useVideoStore } from '../stores/videoStore'
 import { useWebAVControls } from '../composables/useWebAVControls'
 import { useDialogs } from '../composables/useDialogs'
+import { useDragUtils } from '../composables/useDragUtils'
+import { formatTime, formatFileSize } from '../stores/utils/timeUtils'
 import type { MediaItem } from '../types/videoTypes'
 import { generateThumbnailForMediaItem } from '../utils/thumbnailGenerator'
 
 const videoStore = useVideoStore()
 const webAVControls = useWebAVControls()
 const dialogs = useDialogs()
+const dragUtils = useDragUtils()
 const fileInput = ref<HTMLInputElement>()
 const isDragOver = ref(false)
 
@@ -423,48 +427,27 @@ const handleItemDragStart = (event: DragEvent, item: MediaItem) => {
     return
   }
 
-  // 设置拖拽数据，不包含 File 对象（因为不能序列化）
-  const dragData = {
-    id: item.id,
-    url: item.url,
-    name: item.name,
-    duration: item.duration,
-    type: item.type,
-    mediaType: item.mediaType,
-    // 存储文件的基本信息，而不是整个 File 对象
-    fileInfo: {
-      name: item.file.name,
-      size: item.file.size,
-      type: item.file.type,
-      lastModified: item.file.lastModified,
-    },
-  }
+  // 使用统一的拖拽工具设置精简的拖拽数据
+  const dragData = dragUtils.setMediaItemDragData(
+    event,
+    item.id,
+    item.name,
+    item.duration,
+    item.mediaType
+  )
 
-  console.log('📦 [MediaLibrary] 设置拖拽数据:', dragData)
-
-  event.dataTransfer!.setData('application/media-item', JSON.stringify(dragData))
-  event.dataTransfer!.effectAllowed = 'copy'
-
-  // 设置全局拖拽状态（类似时间轴项目拖拽）
-  ;(window as any).__mediaDragData = dragData
-
+  console.log('📦 [MediaLibrary] 使用统一格式设置拖拽数据:', dragData)
   console.log('✅ [MediaLibrary] 拖拽数据设置完成，类型:', event.dataTransfer!.types)
 }
 
 const handleItemDragEnd = () => {
   console.log('🏁 [MediaLibrary] 拖拽结束，清理全局状态')
-  // 清理全局拖拽状态
-  ;(window as any).__mediaDragData = null
+  // 使用统一的拖拽工具清理状态
+  dragUtils.clearDragData()
 }
 
 
 
-// 格式化时长
-const formatDuration = (seconds: number): string => {
-  const mins = Math.floor(seconds / 60)
-  const secs = Math.floor(seconds % 60)
-  return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
-}
 
 // 获取状态文本
 const getStatusText = (status: string): string => {
@@ -482,14 +465,7 @@ const getStatusText = (status: string): string => {
   }
 }
 
-// 格式化文件大小
-const formatFileSize = (bytes: number): string => {
-  if (bytes === 0) return '0 B'
-  const k = 1024
-  const sizes = ['B', 'KB', 'MB', 'GB']
-  const i = Math.floor(Math.log(bytes) / Math.log(k))
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i]
-}
+
 </script>
 
 <style scoped>

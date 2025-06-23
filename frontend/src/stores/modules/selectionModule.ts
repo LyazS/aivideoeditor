@@ -1,5 +1,5 @@
 import { ref, computed, type Raw, type Ref } from 'vue'
-import type { TimelineItem } from '../../types/videoTypes'
+import type { TimelineItem, MediaItem } from '../../types/videoTypes'
 import { findTimelineItemBySprite } from '../utils/storeUtils'
 
 // 定义VideoVisibleSprite类型（避免循环依赖）
@@ -10,14 +10,18 @@ type VideoVisibleSprite = {
 
 /**
  * 选择管理模块
- * 负责管理时间轴和AVCanvas的选择状态同步
+ * 负责管理时间轴项目的选择状态
  */
-export function createSelectionModule(timelineItems: Ref<TimelineItem[]>, avCanvas: Ref<{ activeSprite: unknown } | null>) {
+export function createSelectionModule(
+  timelineItems: Ref<TimelineItem[]>,
+  getTimelineItem: (id: string) => TimelineItem | undefined,
+  getMediaItem: (id: string) => MediaItem | undefined,
+  executeCommand: (command: any) => Promise<void>
+) {
   // ==================== 状态定义 ====================
 
   // 统一选择状态：使用单一集合管理所有选择
   const selectedTimelineItemIds = ref<Set<string>>(new Set()) // 选中项目ID集合
-  const selectedAVCanvasSprite = ref<Raw<VideoVisibleSprite> | null>(null) // 当前在AVCanvas中选中的sprite
 
   // 计算属性：从集合派生的状态
   const selectedTimelineItemId = computed(() => {
@@ -36,8 +40,9 @@ export function createSelectionModule(timelineItems: Ref<TimelineItem[]>, avCanv
    * 统一的时间轴项目选择方法
    * @param itemIds 要操作的项目ID数组
    * @param mode 操作模式：'replace'替换选择，'toggle'切换选择状态
+   * @param withHistory 是否记录到操作历史，默认为true
    */
-  function selectTimelineItems(itemIds: string[], mode: 'replace' | 'toggle' = 'replace') {
+  function selectTimelineItems(itemIds: string[], mode: 'replace' | 'toggle' = 'replace', withHistory: boolean = true) {
     const oldSelection = new Set(selectedTimelineItemIds.value)
 
     if (mode === 'replace') {
@@ -58,6 +63,7 @@ export function createSelectionModule(timelineItems: Ref<TimelineItem[]>, avCanv
     console.log('🎯 统一选择操作:', {
       mode,
       itemIds,
+      withHistory,
       oldSize: oldSelection.size,
       newSize: selectedTimelineItemIds.value.size,
       isMultiSelect: isMultiSelectMode.value,
@@ -70,22 +76,114 @@ export function createSelectionModule(timelineItems: Ref<TimelineItem[]>, avCanv
   }
 
   /**
-   * AVCanvas选择同步逻辑
+   * AVCanvas选择同步逻辑（已简化，不再管理AVCanvas状态）
    */
   function syncAVCanvasSelection() {
-    if (selectedTimelineItemIds.value.size === 1) {
-      // 单选：同步到AVCanvas
-      const itemId = Array.from(selectedTimelineItemIds.value)[0]
-      const timelineItem = getTimelineItem(itemId)
-      if (timelineItem) {
-        selectAVCanvasSprite(timelineItem.sprite as any, false)
-        console.log('🔗 单选模式：同步AVCanvas sprite')
+    // 注意：由于不再支持AVCanvas选择，这个函数现在只是一个占位符
+    // 保留是为了兼容性，避免破坏现有的调用
+    console.log('🔗 选择状态已更新（不再同步到AVCanvas）')
+  }
+
+  // 防抖机制：避免短时间内重复执行相同的选择操作
+  let lastSelectionCommand: { itemIds: string[], mode: string, timestamp: number } | null = null
+  const SELECTION_DEBOUNCE_TIME = 100 // 100毫秒内的重复操作会被忽略
+
+  /**
+   * 带历史记录的时间轴项目选择方法
+   * @param itemIds 要操作的项目ID数组
+   * @param mode 操作模式：'replace'替换选择，'toggle'切换选择状态
+   */
+  async function selectTimelineItemsWithHistory(itemIds: string[], mode: 'replace' | 'toggle' = 'replace') {
+    const now = Date.now()
+
+    // 检查是否是重复的操作（防抖）
+    if (lastSelectionCommand) {
+      const timeDiff = now - lastSelectionCommand.timestamp
+      const isSameOperation =
+        lastSelectionCommand.mode === mode &&
+        arraysEqual(lastSelectionCommand.itemIds, itemIds)
+
+      if (isSameOperation && timeDiff < SELECTION_DEBOUNCE_TIME) {
+        console.log('🎯 检测到重复选择操作，跳过历史记录', { timeDiff, itemIds, mode })
+        return
       }
-    } else {
-      // 无选择或多选：清除AVCanvas选择
-      selectAVCanvasSprite(null, false)
-      console.log('🔗 多选/无选择模式：清除AVCanvas选择')
     }
+
+    // 检查是否有实际的选择变化
+    const currentSelection = new Set(selectedTimelineItemIds.value)
+    const newSelection = calculateNewSelection(itemIds, mode, currentSelection)
+
+    // 如果选择状态没有变化，不创建历史记录
+    if (setsEqual(currentSelection, newSelection)) {
+      console.log('🎯 选择状态无变化，跳过历史记录')
+      return
+    }
+
+    // 记录当前操作，用于防抖检测
+    lastSelectionCommand = { itemIds: [...itemIds], mode, timestamp: now }
+
+    // 动态导入命令类以避免循环依赖
+    const { SelectTimelineItemsCommand } = await import('./commands/timelineCommands')
+
+    // 创建选择命令
+    const command = new SelectTimelineItemsCommand(
+      itemIds,
+      mode,
+      {
+        selectedTimelineItemIds,
+        selectTimelineItems: (ids: string[], m: 'replace' | 'toggle') => selectTimelineItems(ids, m, false),
+        syncAVCanvasSelection
+      },
+      { getTimelineItem },
+      { getMediaItem }
+    )
+
+    // 执行命令（这会自动添加到历史记录）
+    await executeCommand(command)
+  }
+
+  /**
+   * 计算新的选择状态
+   */
+  function calculateNewSelection(itemIds: string[], mode: 'replace' | 'toggle', currentSelection: Set<string>): Set<string> {
+    const newSelection = new Set(currentSelection)
+
+    if (mode === 'replace') {
+      newSelection.clear()
+      itemIds.forEach(id => newSelection.add(id))
+    } else {
+      itemIds.forEach(id => {
+        if (newSelection.has(id)) {
+          newSelection.delete(id)
+        } else {
+          newSelection.add(id)
+        }
+      })
+    }
+
+    return newSelection
+  }
+
+  /**
+   * 检查两个Set是否相等
+   */
+  function setsEqual(set1: Set<string>, set2: Set<string>): boolean {
+    if (set1.size !== set2.size) return false
+    for (const item of set1) {
+      if (!set2.has(item)) return false
+    }
+    return true
+  }
+
+  /**
+   * 检查两个数组是否相等
+   */
+  function arraysEqual(arr1: string[], arr2: string[]): boolean {
+    if (arr1.length !== arr2.length) return false
+    for (let i = 0; i < arr1.length; i++) {
+      if (arr1[i] !== arr2[i]) return false
+    }
+    return true
   }
 
   /**
@@ -100,81 +198,7 @@ export function createSelectionModule(timelineItems: Ref<TimelineItem[]>, avCanv
     }
   }
 
-  /**
-   * 选择AVCanvas中的sprite
-   * @param sprite VideoVisibleSprite实例或null
-   * @param syncToTimeline 是否同步到时间轴选择
-   */
-  function selectAVCanvasSprite(
-    sprite: Raw<VideoVisibleSprite> | null,
-    syncToTimeline: boolean = true,
-  ) {
-    const oldSprite = selectedAVCanvasSprite.value
-    selectedAVCanvasSprite.value = sprite
 
-    console.log('🎨 选择AVCanvas sprite:', {
-      hasOldSprite: !!oldSprite,
-      hasNewSprite: !!sprite,
-      syncToTimeline,
-      selectionChanged: oldSprite !== sprite,
-    })
-
-    // 获取AVCanvas实例并设置活动sprite
-    const canvas = avCanvas.value
-    if (canvas) {
-      try {
-        // 直接设置activeSprite属性
-        canvas.activeSprite = sprite
-        console.log('✅ 设置AVCanvas活动sprite成功')
-      } catch (error) {
-        console.warn('⚠️ 设置AVCanvas活动sprite失败:', error)
-      }
-    } else {
-      console.warn('⚠️ AVCanvas不可用，无法设置活动sprite')
-    }
-
-    // 同步到时间轴选择（如果需要）
-    if (syncToTimeline) {
-      if (sprite) {
-        // 根据sprite查找对应的timelineItem
-        const timelineItem = findTimelineItemBySprite(sprite, timelineItems.value)
-        if (timelineItem) {
-          // 使用统一API选择对应的时间轴项目
-          selectTimelineItems([timelineItem.id], 'replace')
-          console.log('🔗 同步选择时间轴项目:', timelineItem.id)
-        } else {
-          console.warn('⚠️ 未找到对应的时间轴项目')
-        }
-      }
-      // 注意：当sprite为null时，我们不自动取消时间轴选择，
-      // 因为用户要求"取消avcanvas选中片段的时候，要保留时间轴的选中状态"
-    }
-  }
-
-  /**
-   * 处理来自AVCanvas的sprite选择变化
-   * 这个方法用于响应AVCanvas内部的选择变化事件
-   * @param sprite 新选择的sprite或null
-   */
-  function handleAVCanvasSpriteChange(sprite: Raw<VideoVisibleSprite> | null) {
-    console.log('📡 处理AVCanvas sprite选择变化:', { hasSprite: !!sprite })
-
-    // 更新AVCanvas选择状态，但不触发反向同步（避免循环）
-    selectedAVCanvasSprite.value = sprite
-
-    // 同步到时间轴选择
-    if (sprite) {
-      const timelineItem = findTimelineItemBySprite(sprite, timelineItems.value)
-      if (timelineItem) {
-        // 使用统一API选择对应的时间轴项目
-        selectTimelineItems([timelineItem.id], 'replace')
-        console.log('🔗 同步选择时间轴项目:', timelineItem.id)
-      } else {
-        console.warn('⚠️ 未找到对应的时间轴项目')
-      }
-    }
-    // 注意：当sprite为null时，保留时间轴选择状态
-  }
 
   // ==================== 多选管理方法 ====================
 
@@ -252,14 +276,7 @@ export function createSelectionModule(timelineItems: Ref<TimelineItem[]>, avCanv
     return selectedTimelineItemId.value === timelineItemId
   }
 
-  /**
-   * 检查sprite是否被选中
-   * @param sprite VideoVisibleSprite实例
-   * @returns 是否被选中
-   */
-  function isSpriteSelected(sprite: Raw<VideoVisibleSprite>): boolean {
-    return selectedAVCanvasSprite.value === sprite
-  }
+
 
   /**
    * 获取当前选中的时间轴项目
@@ -278,7 +295,6 @@ export function createSelectionModule(timelineItems: Ref<TimelineItem[]>, avCanv
     const selectedItem = getSelectedTimelineItem()
     return {
       hasTimelineSelection: !!selectedTimelineItemId.value,
-      hasAVCanvasSelection: !!selectedAVCanvasSprite.value,
       selectedTimelineItemId: selectedTimelineItemId.value,
       selectedTimelineItem: selectedItem
         ? {
@@ -289,9 +305,6 @@ export function createSelectionModule(timelineItems: Ref<TimelineItem[]>, avCanv
             endTime: selectedItem.timeRange.timelineEndTime / 1000000,
           }
         : null,
-      selectionsInSync: selectedItem
-        ? (selectedAVCanvasSprite.value as any) === selectedItem.sprite
-        : !selectedAVCanvasSprite.value,
     }
   }
 
@@ -305,37 +318,25 @@ export function createSelectionModule(timelineItems: Ref<TimelineItem[]>, avCanv
 
   // ==================== 辅助方法 ====================
 
-  /**
-   * 根据ID获取时间轴项目
-   * @param timelineItemId 时间轴项目ID
-   * @returns 时间轴项目或undefined
-   */
-  function getTimelineItem(timelineItemId: string): TimelineItem | undefined {
-    return timelineItems.value.find((item) => item.id === timelineItemId)
-  }
-
   // ==================== 导出接口 ====================
 
   return {
     // 状态
     selectedTimelineItemId,
-    selectedAVCanvasSprite,
     selectedTimelineItemIds,
     isMultiSelectMode,
     hasSelection,
 
     // 统一选择API
     selectTimelineItems,
+    selectTimelineItemsWithHistory,
     syncAVCanvasSelection,
 
     // 兼容性方法
     selectTimelineItem,
-    selectAVCanvasSprite,
-    handleAVCanvasSpriteChange,
     clearAllSelections,
     toggleTimelineItemSelection,
     isTimelineItemSelected,
-    isSpriteSelected,
     getSelectedTimelineItem,
     getSelectionSummary,
     resetToDefaults,

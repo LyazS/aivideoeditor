@@ -10,6 +10,7 @@
     }"
     :style="clipStyle"
     :data-media-type="mediaItem?.mediaType"
+    :data-timeline-item-id="timelineItem.id"
     :draggable="true"
     @dragstart="handleDragStart"
     @dragend="handleDragEnd"
@@ -328,13 +329,17 @@ function createSimpleDragPreview(): HTMLElement {
 
   preview.className = 'simple-drag-preview'
 
-  // 简单的预览样式
+  // 获取当前clip的实际尺寸
+  const clipElement = dragUtils.getTimelineItemElement(props.timelineItem.id)
+  const { width: clipWidth, height: clipHeight } = dragUtils.getElementDimensions(clipElement)
+
+  // 简单的预览样式 - 使用与实际clip相同的尺寸
   preview.style.cssText = `
     position: fixed;
     top: -1000px;
     left: -1000px;
-    width: 100px;
-    height: 30px;
+    width: ${clipWidth}px;
+    height: ${clipHeight}px;
     background: rgba(255, 107, 53, 0.8);
     border: 1px solid #ff6b35;
     border-radius: 4px;
@@ -375,7 +380,7 @@ function removeSimpleDragPreview() {
 
 // ==================== 点击选择事件处理 ====================
 
-function selectClip(event: MouseEvent) {
+async function selectClip(event: MouseEvent) {
   // 如果正在拖拽或调整大小，不处理选中
   if (isDragging.value || isResizing.value) return
 
@@ -385,14 +390,24 @@ function selectClip(event: MouseEvent) {
     currentSelections: Array.from(videoStore.selectedTimelineItemIds)
   })
 
-  if (event.ctrlKey) {
-    // Ctrl+点击：切换选择状态
-    console.log('🔄 执行toggle选择')
-    videoStore.selectTimelineItems([props.timelineItem.id], 'toggle')
-  } else {
-    // 普通点击：替换选择
-    console.log('🔄 执行replace选择')
-    videoStore.selectTimelineItems([props.timelineItem.id], 'replace')
+  try {
+    if (event.ctrlKey) {
+      // Ctrl+点击：切换选择状态（带历史记录）
+      console.log('🔄 执行toggle选择（带历史记录）')
+      await videoStore.selectTimelineItemsWithHistory([props.timelineItem.id], 'toggle')
+    } else {
+      // 普通点击：替换选择（带历史记录）
+      console.log('🔄 执行replace选择（带历史记录）')
+      await videoStore.selectTimelineItemsWithHistory([props.timelineItem.id], 'replace')
+    }
+  } catch (error) {
+    console.error('❌ 选择操作失败:', error)
+    // 如果历史记录选择失败，回退到普通选择
+    if (event.ctrlKey) {
+      videoStore.selectTimelineItems([props.timelineItem.id], 'toggle')
+    } else {
+      videoStore.selectTimelineItems([props.timelineItem.id], 'replace')
+    }
   }
 
   event.stopPropagation()

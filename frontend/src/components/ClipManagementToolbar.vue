@@ -3,7 +3,6 @@
   <div class="clip-management-toolbar">
     <!-- 历史管理工具栏 -->
     <div class="toolbar-section">
-      <span class="toolbar-label">历史:</span>
       <button
         class="toolbar-btn undo-btn"
         @click="undo"
@@ -29,7 +28,6 @@
     </div>
 
     <div v-if="timelineItems.length > 0" class="toolbar-section">
-      <span class="toolbar-label">片段管理:</span>
       <button
         v-if="videoStore.selectedTimelineItemId"
         class="toolbar-btn split-btn"
@@ -62,7 +60,8 @@
       </span>
     </div>
 
-    <div class="toolbar-section">
+    <!-- 调试按钮放在最右边 -->
+    <div class="toolbar-section debug-section">
       <button
         class="toolbar-btn debug-btn"
         @click="debugTimeline"
@@ -82,6 +81,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useVideoStore } from '../stores/videoStore'
+import { formatFileSize } from '../stores/utils/timeUtils'
 import type { TimelineItem } from '../types/videoTypes'
 import { isVideoTimeRange } from '../types/videoTypes'
 
@@ -260,14 +260,7 @@ function debugTimeline() {
   console.groupEnd()
 }
 
-// 格式化文件大小
-function formatFileSize(bytes: number): string {
-  if (bytes === 0) return '0 B'
-  const k = 1024
-  const sizes = ['B', 'KB', 'MB', 'GB']
-  const i = Math.floor(Math.log(bytes) / Math.log(k))
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
-}
+
 </script>
 
 <style scoped>
@@ -286,6 +279,10 @@ function formatFileSize(bytes: number): string {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.debug-section {
+  margin-left: auto;
 }
 
 .toolbar-label {

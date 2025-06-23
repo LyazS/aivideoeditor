@@ -1,5 +1,6 @@
 import { useVideoStore } from '../stores/videoStore'
 import type { TimelineItemDragData, MediaItemDragData } from '../types/videoTypes'
+import { alignTimeToFrame } from '../stores/utils/timeUtils'
 
 /**
  * 拖拽工具函数集合
@@ -149,6 +150,12 @@ export function useDragUtils() {
       dropTime = videoStore.pixelToTime(mouseX, timelineWidth)
     }
 
+    // 确保拖拽时间不会小于0（防止clip被拖拽到负数时间轴）
+    dropTime = Math.max(0, dropTime)
+
+    // 对齐到帧边界（与播放头拖拽和时间刻度点击保持一致）
+    dropTime = alignTimeToFrame(dropTime, videoStore.frameRate)
+
     return {
       dropTime,
       targetTrackId,
@@ -173,6 +180,34 @@ export function useDragUtils() {
     }
   }
 
+  /**
+   * 通过数据属性查询DOM元素的实用函数
+   */
+  function getTimelineItemElement(timelineItemId: string): HTMLElement | null {
+    return document.querySelector(`[data-timeline-item-id="${timelineItemId}"]`)
+  }
+
+  function getMediaItemElement(mediaItemId: string): HTMLElement | null {
+    return document.querySelector(`[data-media-item-id="${mediaItemId}"]`)
+  }
+
+  function getTrackElement(trackId: number): HTMLElement | null {
+    return document.querySelector(`[data-track-id="${trackId}"]`)
+  }
+
+  /**
+   * 获取元素的实际尺寸信息
+   */
+  function getElementDimensions(element: HTMLElement | null): { width: number; height: number } {
+    if (!element) {
+      return { width: 100, height: 60 } // 默认尺寸
+    }
+    return {
+      width: element.offsetWidth,
+      height: element.offsetHeight
+    }
+  }
+
   return {
     // 拖拽数据管理
     setTimelineItemDragData,
@@ -191,6 +226,12 @@ export function useDragUtils() {
     calculateDropPosition,
 
     // 类型检查
-    getDragDataType
+    getDragDataType,
+
+    // DOM查询工具
+    getTimelineItemElement,
+    getMediaItemElement,
+    getTrackElement,
+    getElementDimensions,
   }
 }

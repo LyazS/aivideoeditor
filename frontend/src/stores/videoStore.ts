@@ -61,8 +61,19 @@ export const useVideoStore = defineStore('video', () => {
     configModule.timelineDuration,
   )
 
-  // 创建选择管理模块（需要在webavModule之后创建）
-  const selectionModule = createSelectionModule(timelineModule.timelineItems, webavModule.avCanvas)
+  // 创建通知管理模块
+  const notificationModule = createNotificationModule()
+
+  // 创建历史管理模块
+  const historyModule = createHistoryModule(notificationModule)
+
+  // 创建选择管理模块（需要在historyModule之后创建）
+  const selectionModule = createSelectionModule(
+    timelineModule.timelineItems,
+    timelineModule.getTimelineItem,
+    mediaModule.getMediaItem,
+    historyModule.executeCommand
+  )
 
   // 创建视频片段操作模块（需要在其他模块之后创建）
   const clipOperationsModule = createClipOperationsModule(
@@ -72,12 +83,6 @@ export const useVideoStore = defineStore('video', () => {
     selectionModule,
     trackModule,
   )
-
-  // 创建通知管理模块
-  const notificationModule = createNotificationModule()
-
-  // 创建历史管理模块
-  const historyModule = createHistoryModule(notificationModule)
 
   // ==================== 双向数据同步函数 ====================
 
@@ -882,7 +887,6 @@ export const useVideoStore = defineStore('video', () => {
     contentEndTime: viewportModule.contentEndTime,
     playbackRate: playbackModule.playbackRate,
     selectedTimelineItemId: selectionModule.selectedTimelineItemId,
-    selectedAVCanvasSprite: selectionModule.selectedAVCanvasSprite,
     // 多选状态
     selectedTimelineItemIds: selectionModule.selectedTimelineItemIds,
     isMultiSelectMode: selectionModule.isMultiSelectMode,
@@ -916,16 +920,14 @@ export const useVideoStore = defineStore('video', () => {
     updateTimelineItemTransform: timelineModule.updateTimelineItemTransform,
     // 统一选择管理API
     selectTimelineItems: selectionModule.selectTimelineItems,
+    selectTimelineItemsWithHistory: selectionModule.selectTimelineItemsWithHistory,
     syncAVCanvasSelection: selectionModule.syncAVCanvasSelection,
     hasSelection: selectionModule.hasSelection,
     // 兼容性选择方法
     selectTimelineItem: selectionModule.selectTimelineItem,
-    selectAVCanvasSprite: selectionModule.selectAVCanvasSprite,
-    handleAVCanvasSpriteChange: selectionModule.handleAVCanvasSpriteChange,
     clearAllSelections: selectionModule.clearAllSelections,
     toggleTimelineItemSelection: selectionModule.toggleTimelineItemSelection,
     isTimelineItemSelected: selectionModule.isTimelineItemSelected,
-    isSpriteSelected: selectionModule.isSpriteSelected,
     getSelectedTimelineItem: selectionModule.getSelectedTimelineItem,
     getSelectionSummary: selectionModule.getSelectionSummary,
     resetSelectionToDefaults: selectionModule.resetToDefaults,

@@ -161,11 +161,10 @@ function alignTimeToFrame(time: number): number {
   return alignTimeToFrameUtil(time, videoStore.frameRate)
 }
 
-// 播放头位置 - 始终对齐到帧的左边界
+// 播放头位置 - 直接使用WebAV返回的精确时间
 const playheadPosition = computed(() => {
-  const originalTime = videoStore.currentTime
-  const alignedTime = alignTimeToFrame(originalTime)
-  const position = videoStore.timeToPixel(alignedTime, containerWidth.value)
+  const currentTime = videoStore.currentTime
+  const position = videoStore.timeToPixel(currentTime, containerWidth.value)
 
   return position
 })
@@ -198,7 +197,49 @@ function handleClick(event: MouseEvent) {
   const clampedTime = Math.max(0, Math.min(newTime, videoStore.totalDuration))
   const alignedTime = alignTimeToFrame(clampedTime)
 
-  videoStore.setCurrentTime(alignedTime)
+  // 统一时间控制：通过WebAV设置时间，避免直接操作Store
+  // 流程：webAVControls.seekTo() → WebAV.previewFrame() → timeupdate事件 → Store更新
+  webAVControls.seekTo(alignedTime)
+}
+
+function handleMouseDown(event: MouseEvent) {
+  // 如果点击的是播放头，让播放头自己的mousedown处理
+  const target = event.target as HTMLElement
+  if (target.closest('.playhead')) {
+    return
+  }
+
+  // 如果正在拖拽播放头，不处理鼠标按下事件
+  if (isDraggingPlayhead.value) return
+  if (!scaleContainer.value) return
+
+  // 暂停播放以便进行播放头拖拽
+  pauseForEditing('时间轴拖拽')
+
+  const rect = scaleContainer.value.getBoundingClientRect()
+  const mouseX = event.clientX - rect.left
+  const newTime = videoStore.pixelToTime(mouseX, containerWidth.value)
+
+  // 限制在有效范围内并对齐到帧边界
+  const clampedTime = Math.max(0, Math.min(newTime, videoStore.totalDuration))
+  const alignedTime = alignTimeToFrame(clampedTime)
+
+  // 立即跳转播放头到鼠标位置
+  webAVControls.seekTo(alignedTime)
+
+  // 开始拖拽播放头
+  isDraggingPlayhead.value = true
+
+  // 添加拖拽样式类
+  if (scaleContainer.value) {
+    scaleContainer.value.classList.add('dragging')
+  }
+
+  document.addEventListener('mousemove', handleDragPlayhead)
+  document.addEventListener('mouseup', stopDragPlayhead)
+
+  event.preventDefault()
+  event.stopPropagation()
 }
 
 function startDragPlayhead(event: MouseEvent) {
@@ -209,6 +250,11 @@ function startDragPlayhead(event: MouseEvent) {
   pauseForEditing('播放头拖拽')
 
   isDraggingPlayhead.value = true
+
+  // 添加拖拽样式类
+  if (scaleContainer.value) {
+    scaleContainer.value.classList.add('dragging')
+  }
 
   document.addEventListener('mousemove', handleDragPlayhead)
   document.addEventListener('mouseup', stopDragPlayhead)
@@ -225,11 +271,17 @@ function handleDragPlayhead(event: MouseEvent) {
   const clampedTime = Math.max(0, Math.min(newTime, videoStore.totalDuration))
   const alignedTime = alignTimeToFrame(clampedTime)
 
-  videoStore.setCurrentTime(alignedTime)
+  // 统一时间控制：通过WebAV设置时间，确保状态同步
+  webAVControls.seekTo(alignedTime)
 }
 
 function stopDragPlayhead() {
   isDraggingPlayhead.value = false
+
+  // 移除拖拽样式类
+  if (scaleContainer.value) {
+    scaleContainer.value.classList.remove('dragging')
+  }
 
   document.removeEventListener('mousemove', handleDragPlayhead)
   document.removeEventListener('mouseup', stopDragPlayhead)
@@ -289,6 +341,7 @@ onMounted(() => {
 
   if (scaleContainer.value) {
     scaleContainer.value.addEventListener('click', handleClick)
+    scaleContainer.value.addEventListener('mousedown', handleMouseDown)
     scaleContainer.value.addEventListener('wheel', handleWheel, { passive: false })
   }
 })
@@ -298,6 +351,7 @@ onUnmounted(() => {
 
   if (scaleContainer.value) {
     scaleContainer.value.removeEventListener('click', handleClick)
+    scaleContainer.value.removeEventListener('mousedown', handleMouseDown)
     scaleContainer.value.removeEventListener('wheel', handleWheel)
   }
 
@@ -321,6 +375,14 @@ onUnmounted(() => {
   height: 100%;
   position: relative;
   cursor: pointer;
+}
+
+.scale-container.dragging {
+  cursor: grabbing !important;
+}
+
+.scale-container.dragging .playhead {
+  pointer-events: none; /* 拖拽时禁用播放头的指针事件 */
 }
 
 .time-mark {

@@ -48,7 +48,7 @@ import { usePlaybackControls } from '../composables/usePlaybackControls'
 
 const videoStore = useVideoStore()
 const webAVControls = useWebAVControls()
-const { ensureWebAVReady, safePlaybackOperation, restartPlayback } = usePlaybackControls()
+const { safePlaybackOperation, restartPlayback } = usePlaybackControls()
 
 const isPlaying = computed(() => videoStore.isPlaying)
 const playbackRate = computed(() => videoStore.playbackRate)
@@ -70,10 +70,8 @@ function stop() {
   safePlaybackOperation(() => {
     // 暂停播放并跳转到开始位置
     webAVControls.pause()
+    // 只通过WebAV设置时间，WebAV会触发timeupdate事件更新Store
     webAVControls.seekTo(0)
-
-    // 更新store状态
-    videoStore.setCurrentTime(0)
   }, '停止播放')
 }
 

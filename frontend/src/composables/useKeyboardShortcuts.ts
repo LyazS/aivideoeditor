@@ -15,8 +15,26 @@ export function useKeyboardShortcuts() {
   const handleKeyDown = async (event: KeyboardEvent) => {
     // 检查是否在输入框中，如果是则不处理快捷键
     const target = event.target as HTMLElement
-    if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+
+    // 更智能的输入元素检查：
+    // 1. TEXTAREA 和可编辑元素：总是阻止快捷键（用户正在输入文本）
+    // 2. INPUT 元素：根据类型判断
+    //    - text, password, email, number 等输入框：阻止快捷键（用户可能想撤销输入内容）
+    //    - range 滑块：允许快捷键（实时更新，用户希望能快速撤销调整）
+    if (target.tagName === 'TEXTAREA' || target.isContentEditable) {
       return
+    }
+
+    if (target.tagName === 'INPUT') {
+      const inputElement = target as HTMLInputElement
+      const inputType = inputElement.type.toLowerCase()
+
+      // 只有滑块类型允许快捷键，其他输入类型都阻止
+      if (inputType !== 'range') {
+        return
+      }
+
+      // 对于 range 滑块，允许快捷键（用户希望能快速撤销调整）
     }
 
     // 检查修饰键组合
