@@ -1,6 +1,7 @@
 import type { Ref } from 'vue'
 import type { TimelineItem } from '../../types/videoTypes'
 import { isVideoTimeRange } from '../../types/videoTypes'
+import { Timecode } from '../../utils/Timecode'
 
 // ==================== 自动整理工具 ====================
 
@@ -25,31 +26,44 @@ export function autoArrangeTrackItems(timelineItems: Ref<TimelineItem[]>, trackI
     return rangeA.timelineStartTime - rangeB.timelineStartTime
   })
 
-  let currentPosition = 0
+  // 使用Timecode进行精确累加，避免浮点数累积误差
+  const frameRate = 30 // 固定使用30fps
+  let currentPositionTC = Timecode.zero(frameRate)
+
   for (const item of sortedItems) {
     const sprite = item.sprite
     const timeRange = sprite.getTimeRange()
-    const duration = (timeRange.timelineEndTime - timeRange.timelineStartTime) / 1000000 // 转换为秒
+
+    // 使用Timecode计算持续时间，确保帧级精度
+    const startTC = Timecode.fromMicroseconds(timeRange.timelineStartTime, frameRate)
+    const endTC = Timecode.fromMicroseconds(timeRange.timelineEndTime, frameRate)
+    const durationTC = endTC.subtract(startTC)
+
+    // 计算新的结束位置
+    const newEndPositionTC = currentPositionTC.add(durationTC)
 
     // 更新时间轴位置 - 根据媒体类型设置不同的时间范围
     if (item.mediaType === 'video' && isVideoTimeRange(timeRange)) {
       sprite.setTimeRange({
         clipStartTime: timeRange.clipStartTime,
         clipEndTime: timeRange.clipEndTime,
-        timelineStartTime: currentPosition * 1000000, // 转换为微秒
-        timelineEndTime: (currentPosition + duration) * 1000000,
+        timelineStartTime: currentPositionTC.toMicroseconds(),
+        timelineEndTime: newEndPositionTC.toMicroseconds(),
       })
     } else {
       // 图片类型
       sprite.setTimeRange({
-        timelineStartTime: currentPosition * 1000000, // 转换为微秒
-        timelineEndTime: (currentPosition + duration) * 1000000,
-        displayDuration: duration * 1000000,
+        timelineStartTime: currentPositionTC.toMicroseconds(),
+        timelineEndTime: newEndPositionTC.toMicroseconds(),
+        displayDuration: durationTC.toMicroseconds(),
       })
     }
+
     // 从sprite获取更新后的完整timeRange（包含自动计算的effectiveDuration）
     item.timeRange = sprite.getTimeRange()
-    currentPosition += duration
+
+    // 精确累加位置，无累积误差
+    currentPositionTC = newEndPositionTC
   }
 
   console.log(`✅ 轨道 ${trackId} 的片段自动整理完成，共整理 ${sortedItems.length} 个片段`)

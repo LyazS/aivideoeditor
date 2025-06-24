@@ -105,6 +105,7 @@ import { useDragUtils } from '../composables/useDragUtils'
 import { usePlaybackControls } from '../composables/usePlaybackControls'
 import { getDragPreviewManager } from '../composables/useDragPreview'
 import { secondsToTimecodeString } from '../stores/utils/timeUtils'
+import { Timecode } from '../utils/Timecode'
 import type { TimelineItem, Track } from '../types/videoTypes'
 
 interface Props {
@@ -182,9 +183,11 @@ const clipStyle = computed(() => {
     ? tempDuration.value
     : (timeRange.timelineEndTime - timeRange.timelineStartTime) / 1000000 // 转换为秒
 
-  const left = videoStore.timeToPixel(position, props.timelineWidth)
-  const endTime = position + duration
-  const right = videoStore.timeToPixel(endTime, props.timelineWidth)
+  const frameRate = 30 // 固定使用30fps
+  const positionTC = Timecode.fromSeconds(position, frameRate)
+  const endTimeTC = Timecode.fromSeconds(position + duration, frameRate)
+  const left = videoStore.timecodeToPixel(positionTC, props.timelineWidth)
+  const right = videoStore.timecodeToPixel(endTimeTC, props.timelineWidth)
   const width = right - left
 
   return {
@@ -209,9 +212,11 @@ const showDetails = computed(() => {
     ? tempDuration.value
     : (timeRange.timelineEndTime - timeRange.timelineStartTime) / 1000000 // 转换为秒
 
-  const endTime = position + duration
-  const left = videoStore.timeToPixel(position, props.timelineWidth)
-  const right = videoStore.timeToPixel(endTime, props.timelineWidth)
+  const frameRate = 30 // 固定使用30fps
+  const positionTC = Timecode.fromSeconds(position, frameRate)
+  const endTimeTC = Timecode.fromSeconds(position + duration, frameRate)
+  const left = videoStore.timecodeToPixel(positionTC, props.timelineWidth)
+  const right = videoStore.timecodeToPixel(endTimeTC, props.timelineWidth)
   const width = right - left
   return width >= 100 // 宽度大于100px时显示详细信息
 })
@@ -453,18 +458,24 @@ function handleResize(event: MouseEvent) {
 
   if (resizeDirection.value === 'left') {
     // 拖拽左边把柄：调整开始时间和时长
-    const currentLeftPixel = videoStore.timeToPixel(resizeStartPosition.value, props.timelineWidth)
+    const frameRate = 30 // 固定使用30fps
+    const currentLeftTC = Timecode.fromSeconds(resizeStartPosition.value, frameRate)
+    const currentLeftPixel = videoStore.timecodeToPixel(currentLeftTC, props.timelineWidth)
     const newLeftPixel = currentLeftPixel + deltaX
-    const newLeftTime = videoStore.pixelToTime(newLeftPixel, props.timelineWidth)
+    const newLeftTC = videoStore.pixelToTimecode(newLeftPixel, props.timelineWidth)
+    const newLeftTime = newLeftTC.toSeconds()
 
     newTimelinePosition = Math.max(0, newLeftTime)
     newDuration = resizeStartDuration.value + (resizeStartPosition.value - newTimelinePosition)
   } else if (resizeDirection.value === 'right') {
     // 拖拽右边把柄：只调整时长
+    const frameRate = 30 // 固定使用30fps
     const endTime = resizeStartPosition.value + resizeStartDuration.value
-    const currentRightPixel = videoStore.timeToPixel(endTime, props.timelineWidth)
+    const currentRightTC = Timecode.fromSeconds(endTime, frameRate)
+    const currentRightPixel = videoStore.timecodeToPixel(currentRightTC, props.timelineWidth)
     const newRightPixel = currentRightPixel + deltaX
-    const newRightTime = videoStore.pixelToTime(newRightPixel, props.timelineWidth)
+    const newRightTC = videoStore.pixelToTimecode(newRightPixel, props.timelineWidth)
+    const newRightTime = newRightTC.toSeconds()
 
     newDuration = newRightTime - resizeStartPosition.value
   }

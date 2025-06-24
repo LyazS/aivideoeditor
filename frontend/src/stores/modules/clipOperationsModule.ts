@@ -6,6 +6,7 @@ import { regenerateThumbnailForTimelineItem } from '../../utils/thumbnailGenerat
 import { printDebugInfo, syncTimeRange } from '../utils/storeUtils'
 import type { TimelineItem, MediaItem } from '../../types/videoTypes'
 import { isVideoTimeRange } from '../../types/videoTypes'
+import { Timecode } from '../../utils/Timecode'
 
 /**
  * 视频片段操作模块
@@ -226,9 +227,9 @@ export function createClipOperationsModule(
   /**
    * 在指定时间分割时间轴项目
    * @param timelineItemId 要分割的时间轴项目ID
-   * @param splitTime 分割时间点（秒）
+   * @param splitTime 分割时间点（Timecode对象或秒数）
    */
-  async function splitTimelineItemAtTime(timelineItemId: string, splitTime: number) {
+  async function splitTimelineItemAtTime(timelineItemId: string, splitTime: number | Timecode) {
     console.group('🔪 时间轴项目分割调试')
 
     const itemIndex = timelineModule.timelineItems.value.findIndex(
@@ -265,16 +266,24 @@ export function createClipOperationsModule(
       return
     }
 
-    const timelineStartTime = timeRange.timelineStartTime / 1000000 // 转换为秒
-    const timelineEndTime = timeRange.timelineEndTime / 1000000 // 转换为秒
+    // 转换为Timecode对象进行精确计算
+    const frameRate = 30 // 固定使用30fps
+    const timelineStartTC = Timecode.fromMicroseconds(timeRange.timelineStartTime, frameRate)
+    const timelineEndTC = Timecode.fromMicroseconds(timeRange.timelineEndTime, frameRate)
+
+    // 确保splitTime是Timecode对象
+    const splitTimeTC = typeof splitTime === 'number'
+      ? Timecode.fromSeconds(splitTime, frameRate)
+      : splitTime
 
     console.log('📹 原始时间轴项目信息:')
-    console.log('  - 时间轴开始:', timelineStartTime)
-    console.log('  - 时间轴结束:', timelineEndTime)
-    console.log('  - 分割时间:', splitTime)
+    console.log('  - 时间轴开始:', timelineStartTC.toString())
+    console.log('  - 时间轴结束:', timelineEndTC.toString())
+    console.log('  - 分割时间:', splitTimeTC.toString())
 
     // 检查分割时间是否在项目范围内
-    if (splitTime <= timelineStartTime || splitTime >= timelineEndTime) {
+    if (splitTimeTC.lessThan(timelineStartTC) || splitTimeTC.equals(timelineStartTC) ||
+        splitTimeTC.greaterThan(timelineEndTC) || splitTimeTC.equals(timelineEndTC)) {
       console.error('❌ 分割时间不在项目范围内')
       console.groupEnd()
       return
@@ -287,30 +296,36 @@ export function createClipOperationsModule(
       return
     }
 
-    // 计算分割点在素材中的相对位置
-    const timelineDuration = timelineEndTime - timelineStartTime
-    const relativeTimelineTime = splitTime - timelineStartTime
-    const relativeRatio = relativeTimelineTime / timelineDuration
+    // 使用Timecode进行精确计算分割点在素材中的相对位置
+    const timelineDurationTC = timelineEndTC.subtract(timelineStartTC)
+    const relativeTimelineTimeTC = splitTimeTC.subtract(timelineStartTC)
 
-    const clipStartTime = timeRange.clipStartTime / 1000000 // 转换为秒
-    const clipEndTime = timeRange.clipEndTime / 1000000 // 转换为秒
-    const clipDuration = clipEndTime - clipStartTime
-    const splitClipTime = clipStartTime + clipDuration * relativeRatio
+    // 基于帧数计算相对比例，避免浮点数精度问题
+    const relativeRatio = relativeTimelineTimeTC.totalFrames / timelineDurationTC.totalFrames
+
+    const clipStartTC = Timecode.fromMicroseconds(timeRange.clipStartTime, frameRate)
+    const clipEndTC = Timecode.fromMicroseconds(timeRange.clipEndTime, frameRate)
+    const clipDurationTC = clipEndTC.subtract(clipStartTC)
+
+    // 使用帧数比例计算分割点的素材时间
+    const splitClipFrames = clipStartTC.totalFrames + Math.round(clipDurationTC.totalFrames * relativeRatio)
+    const splitClipTC = new Timecode(splitClipFrames, frameRate)
 
     console.log('🎬 素材时间计算:')
-    console.log('  - 素材开始时间:', clipStartTime)
-    console.log('  - 素材结束时间:', clipEndTime)
-    console.log('  - 分割点素材时间:', splitClipTime)
+    console.log('  - 素材开始时间:', clipStartTC.toString())
+    console.log('  - 素材结束时间:', clipEndTC.toString())
+    console.log('  - 分割点素材时间:', splitClipTC.toString())
+    console.log('  - 相对比例:', relativeRatio.toFixed(6))
 
     try {
       // 为每个分割片段从原始素材创建sprite
       // 创建第一个片段的VideoVisibleSprite
       const firstSprite = await createSpriteFromMediaItem(mediaItem) as VideoVisibleSprite
       firstSprite.setTimeRange({
-        clipStartTime: clipStartTime * 1000000,
-        clipEndTime: splitClipTime * 1000000,
-        timelineStartTime: timelineStartTime * 1000000,
-        timelineEndTime: splitTime * 1000000,
+        clipStartTime: clipStartTC.toMicroseconds(),
+        clipEndTime: splitClipTC.toMicroseconds(),
+        timelineStartTime: timelineStartTC.toMicroseconds(),
+        timelineEndTime: splitTimeTC.toMicroseconds(),
       })
 
       // 复制原始sprite的变换属性到第一个片段
@@ -334,10 +349,10 @@ export function createClipOperationsModule(
       // 创建第二个片段的VideoVisibleSprite
       const secondSprite = await createSpriteFromMediaItem(mediaItem) as VideoVisibleSprite
       secondSprite.setTimeRange({
-        clipStartTime: splitClipTime * 1000000,
-        clipEndTime: clipEndTime * 1000000,
-        timelineStartTime: splitTime * 1000000,
-        timelineEndTime: timelineEndTime * 1000000,
+        clipStartTime: splitClipTC.toMicroseconds(),
+        clipEndTime: clipEndTC.toMicroseconds(),
+        timelineStartTime: splitTimeTC.toMicroseconds(),
+        timelineEndTime: timelineEndTC.toMicroseconds(),
       })
 
       // 复制原始sprite的变换属性到第二个片段
@@ -428,7 +443,8 @@ export function createClipOperationsModule(
         '分割时间轴项目',
         {
           originalItemId: timelineItemId,
-          splitTime,
+          splitTime: splitTimeTC.toString(),
+          splitTimeSeconds: splitTimeTC.toSeconds(),
           firstItemId: firstItem.id,
           secondItemId: secondItem.id,
           mediaItemId: originalItem.mediaItemId,

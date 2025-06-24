@@ -155,7 +155,7 @@
           :key="line.time"
           class="grid-line"
           :class="{ 'frame-line': line.isFrame }"
-          :style="{ left: 200 + videoStore.timeToPixel(line.time, timelineWidth) + 'px' }"
+          :style="{ left: 200 + videoStore.timecodeToPixel(Timecode.fromSeconds(line.time, 30), timelineWidth) + 'px' }"
         ></div>
       </div>
     </div>
@@ -174,6 +174,7 @@ import { VideoVisibleSprite } from '../utils/VideoVisibleSprite'
 import { ImageVisibleSprite } from '../utils/ImageVisibleSprite'
 import { createSpriteFromMediaItem } from '../utils/spriteFactory'
 import { webavToProjectCoords } from '../utils/coordinateTransform'
+import { Timecode } from '../utils/Timecode'
 import {
   calculatePixelsPerSecond,
   calculateVisibleTimeRange,
@@ -437,7 +438,7 @@ function handleMediaItemDragOver(event: DragEvent) {
     const previewData = dragUtils.createDragPreviewData(
       mediaDragData.name,
       mediaDragData.duration,
-      dropTime,
+      dropTime.toSeconds(), // 转换为秒数
       targetTrackId,
       isConflict,
       false
@@ -449,7 +450,7 @@ function handleMediaItemDragOver(event: DragEvent) {
     const previewData = dragUtils.createDragPreviewData(
       '素材预览',
       5,
-      dropTime,
+      dropTime.toSeconds(), // 转换为秒数
       targetTrackId,
       false,
       false
@@ -495,7 +496,7 @@ function handleTimelineItemDragOver(event: DragEvent) {
     const previewData = dragUtils.createDragPreviewData(
       name,
       duration,
-      clipStartTime,
+      clipStartTime.toSeconds(), // 转换为秒数
       targetTrackId,
       isConflict,
       currentDragData.selectedItems.length > 1,
@@ -564,7 +565,8 @@ async function handleTimelineItemDrop(event: DragEvent, dragData: TimelineItemDr
 
   console.log('📍 [Timeline] 拖拽目标位置:', {
     dragOffsetX: dragData.dragOffset.x,
-    dropTime: dropTime.toFixed(2),
+    dropTime: dropTime.toString(),
+    dropTimeSeconds: dropTime.toSeconds().toFixed(2),
     targetTrackId,
     selectedItems: dragData.selectedItems
   })
@@ -581,11 +583,11 @@ async function handleTimelineItemDrop(event: DragEvent, dragData: TimelineItemDr
     if (dragData.selectedItems.length > 1) {
       // 多选拖拽
       console.log('🔄 [Timeline] 执行多选项目移动')
-      await moveMultipleItems(dragData.selectedItems, dropTime, targetTrackId, dragData.startTime)
+      await moveMultipleItems(dragData.selectedItems, dropTime.toSeconds(), targetTrackId, dragData.startTime)
     } else {
       // 单个拖拽
       console.log('🔄 [Timeline] 执行单个项目移动')
-      await moveSingleItem(dragData.itemId, dropTime, targetTrackId)
+      await moveSingleItem(dragData.itemId, dropTime.toSeconds(), targetTrackId)
     }
     console.log('✅ [Timeline] 时间轴项目移动完成')
   } catch (error) {
@@ -617,11 +619,11 @@ async function handleMediaItemDrop(event: DragEvent, mediaDragData: MediaItemDra
 
     console.log(`🎯 拖拽素材到时间轴: ${mediaDragData.name}`)
     console.log(
-      `📍 拖拽位置: 对应时间: ${dropTime.toFixed(2)}s, 目标轨道: ${targetTrackId}`,
+      `📍 拖拽位置: 时间码: ${dropTime.toString()}, 对应时间: ${dropTime.toSeconds().toFixed(2)}s, 目标轨道: ${targetTrackId}`,
     )
 
     // 如果拖拽位置超出当前时间轴长度，动态扩展时间轴
-    videoStore.expandTimelineIfNeeded(dropTime + 10) // 预留10秒缓冲
+    videoStore.expandTimelineIfNeeded(dropTime.toSeconds() + 10) // 预留10秒缓冲
 
     // 构建createMediaClipFromMediaItem需要的参数格式
     const mediaItemForCreation = {
@@ -638,7 +640,7 @@ async function handleMediaItemDrop(event: DragEvent, mediaDragData: MediaItemDra
     }
 
     // 从素材库项创建媒体片段（视频或图片）
-    await createMediaClipFromMediaItem(mediaItemForCreation, dropTime, targetTrackId)
+    await createMediaClipFromMediaItem(mediaItemForCreation, dropTime.toSeconds(), targetTrackId)
   } catch (error) {
     console.error('Failed to parse media item data:', error)
     dialogs.showDragDataError()
@@ -654,22 +656,35 @@ async function moveSingleItem(itemId: string, newTime: number, newTrackId: numbe
 async function moveMultipleItems(itemIds: string[], newTime: number, newTrackId: number, originalStartTime: number) {
   console.log('🔄 [Timeline] 开始批量移动项目:', { itemIds, newTime, newTrackId, originalStartTime })
 
-  // 计算时间偏移量
-  const timeOffset = newTime - originalStartTime
+  // 使用Timecode进行精确计算时间偏移量
+  const frameRate = 30 // 固定使用30fps
+  const newTimeTC = Timecode.fromSeconds(newTime, frameRate)
+  const originalStartTimeTC = Timecode.fromSeconds(originalStartTime, frameRate)
+  const timeOffsetTC = newTimeTC.subtract(originalStartTimeTC)
+
+  console.log('🔄 [Timeline] 时间偏移计算:', {
+    newTime: newTimeTC.toString(),
+    originalStartTime: originalStartTimeTC.toString(),
+    timeOffset: timeOffsetTC.toString()
+  })
 
   // 批量移动所有选中的项目
   for (const itemId of itemIds) {
     const item = videoStore.getTimelineItem(itemId)
     if (item) {
-      const currentStartTime = item.timeRange.timelineStartTime / 1000000
-      const newStartTime = currentStartTime + timeOffset
+      // 使用Timecode计算当前开始时间
+      const currentStartTimeTC = Timecode.fromMicroseconds(item.timeRange.timelineStartTime, frameRate)
+      const newStartTimeTC = currentStartTimeTC.add(timeOffsetTC)
 
       // 确保新位置不为负数（防止多选拖拽时某些项目被拖到负数时间轴）
-      const clampedNewStartTime = Math.max(0, newStartTime)
+      const zeroTC = Timecode.zero(frameRate)
+      const clampedNewStartTimeTC = newStartTimeTC.lessThan(zeroTC) ? zeroTC : newStartTimeTC
 
       // 对于第一个项目，使用目标轨道；其他项目保持相对轨道关系
       const targetTrack = itemId === itemIds[0] ? newTrackId : item.trackId
 
+      // 转换为秒数传递给现有的API
+      const clampedNewStartTime = clampedNewStartTimeTC.toSeconds()
       await handleTimelineItemPositionUpdate(itemId, clampedNewStartTime, targetTrack)
     }
   }
@@ -948,7 +963,8 @@ function handleWheel(event: WheelEvent) {
 
     // 获取鼠标在时间轴上的位置（减去轨道控制区域的200px）
     const mouseX = event.clientX - rect.left - 200
-    const mouseTime = videoStore.pixelToTime(mouseX, timelineWidth.value)
+    const mouseTimeTC = videoStore.pixelToTimecode(mouseX, timelineWidth.value)
+    const mouseTime = mouseTimeTC.toSeconds()
 
     // 缩放操作（精简调试信息）
 
@@ -961,7 +977,7 @@ function handleWheel(event: WheelEvent) {
     }
 
     // 调整滚动偏移量，使鼠标位置保持在相同的时间点
-    const newMousePixel = videoStore.timeToPixel(mouseTime, timelineWidth.value)
+    const newMousePixel = videoStore.timecodeToPixel(mouseTimeTC, timelineWidth.value)
     const offsetAdjustment = newMousePixel - mouseX
     const newScrollOffset = videoStore.scrollOffset + offsetAdjustment
 

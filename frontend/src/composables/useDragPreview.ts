@@ -1,5 +1,6 @@
 import { useVideoStore } from '../stores/videoStore'
 import type { DragPreviewData } from '../types/webavTypes'
+import { Timecode } from '../utils/Timecode'
 
 // 统一拖拽预览管理器
 class DragPreviewManager {
@@ -123,9 +124,19 @@ class DragPreviewManager {
    * 定位预览元素
    */
   private positionPreview(preview: HTMLElement, data: DragPreviewData, timelineWidth: number) {
+    // 验证时间数据
+    if (typeof data.startTime !== 'number' || isNaN(data.startTime) ||
+        typeof data.duration !== 'number' || isNaN(data.duration)) {
+      console.warn('⚠️ DragPreview: 无效的时间数据', { startTime: data.startTime, duration: data.duration })
+      return
+    }
+
     // 计算预览位置和尺寸
-    const left = this.videoStore.timeToPixel(data.startTime, timelineWidth)
-    const right = this.videoStore.timeToPixel(data.startTime + data.duration, timelineWidth)
+    const frameRate = 30 // 固定使用30fps
+    const startTimeTC = Timecode.fromSeconds(data.startTime, frameRate)
+    const endTimeTC = Timecode.fromSeconds(data.startTime + data.duration, frameRate)
+    const left = this.videoStore.timecodeToPixel(startTimeTC, timelineWidth)
+    const right = this.videoStore.timecodeToPixel(endTimeTC, timelineWidth)
     const width = Math.max(right - left, 60) // 最小宽度60px
 
     // 获取目标轨道位置

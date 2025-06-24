@@ -18,9 +18,7 @@ export {
 // 坐标转换工具
 export {
   calculateVisibleTimeRange,
-  timeToPixel,
-  pixelToTime,
-  // 新的Timecode支持函数
+  // Timecode支持函数
   timecodeToPixel,
   pixelToTimecode,
 } from './coordinateUtils'

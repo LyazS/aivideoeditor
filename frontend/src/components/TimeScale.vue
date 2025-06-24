@@ -140,7 +140,8 @@ const timeMarks = computed((): TimeMark[] => {
     if (time < 0) continue
 
     const isMajor = Math.abs(time % adjustedMajorInterval) < 0.001 // 使用小的容差来处理浮点数精度问题
-    const position = videoStore.timeToPixel(time, containerWidth.value)
+    const timeTC = Timecode.fromSeconds(time, 30) // 固定使用30fps
+    const position = videoStore.timecodeToPixel(timeTC, containerWidth.value)
 
     // 只添加在可见范围内的刻度
     if (position >= -50 && position <= containerWidth.value + 50) {

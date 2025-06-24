@@ -3,8 +3,6 @@ import { defineStore } from 'pinia'
 import { VideoVisibleSprite } from '../utils/VideoVisibleSprite'
 import {
   alignTimeToFrame,
-  timeToPixel,
-  pixelToTime,
   timecodeToPixel,
   pixelToTimecode,
   expandTimelineIfNeeded,
@@ -159,12 +157,12 @@ export const useVideoStore = defineStore('video', () => {
   /**
    * 带历史记录的移动时间轴项目方法
    * @param timelineItemId 要移动的时间轴项目ID
-   * @param newPosition 新的时间位置（秒）
+   * @param newPosition 新的时间位置（Timecode对象或秒数）
    * @param newTrackId 新的轨道ID（可选）
    */
   async function moveTimelineItemWithHistory(
     timelineItemId: string,
-    newPosition: number,
+    newPosition: number | Timecode,
     newTrackId?: number
   ) {
     // 获取要移动的时间轴项目
@@ -174,13 +172,18 @@ export const useVideoStore = defineStore('video', () => {
       return
     }
 
+    // 统一转换为秒数进行处理
+    const newPositionSeconds = typeof newPosition === 'number'
+      ? newPosition
+      : newPosition.toSeconds()
+
     // 获取当前位置和轨道
     const oldPosition = timelineItem.timeRange.timelineStartTime / 1000000 // 转换为秒
     const oldTrackId = timelineItem.trackId
     const finalNewTrackId = newTrackId !== undefined ? newTrackId : oldTrackId
 
     // 检查是否有实际变化
-    const positionChanged = Math.abs(oldPosition - newPosition) > 0.001 // 允许1毫秒的误差
+    const positionChanged = Math.abs(oldPosition - newPositionSeconds) > 0.001 // 允许1毫秒的误差
     const trackChanged = oldTrackId !== finalNewTrackId
 
     if (!positionChanged && !trackChanged) {
@@ -191,7 +194,7 @@ export const useVideoStore = defineStore('video', () => {
     const command = new MoveTimelineItemCommand(
       timelineItemId,
       oldPosition,
-      newPosition,
+      newPositionSeconds,
       oldTrackId,
       finalNewTrackId,
       {
@@ -204,6 +207,8 @@ export const useVideoStore = defineStore('video', () => {
     )
     await historyModule.executeCommand(command)
   }
+
+
 
   /**
    * 带历史记录的更新变换属性方法
@@ -438,11 +443,11 @@ export const useVideoStore = defineStore('video', () => {
   /**
    * 带历史记录的分割时间轴项目方法
    * @param timelineItemId 要分割的时间轴项目ID
-   * @param splitTime 分割时间点（秒）
+   * @param splitTime 分割时间点（Timecode对象或秒数）
    */
   async function splitTimelineItemAtTimeWithHistory(
     timelineItemId: string,
-    splitTime: number
+    splitTime: number | Timecode
   ) {
     // 获取要分割的时间轴项目
     const timelineItem = timelineModule.getTimelineItem(timelineItemId)
@@ -457,11 +462,16 @@ export const useVideoStore = defineStore('video', () => {
       return
     }
 
+    // 统一转换为秒数进行处理
+    const splitTimeSeconds = typeof splitTime === 'number'
+      ? splitTime
+      : splitTime.toSeconds()
+
     // 检查分割时间是否在项目范围内
     const timelineStartTime = timelineItem.timeRange.timelineStartTime / 1000000 // 转换为秒
     const timelineEndTime = timelineItem.timeRange.timelineEndTime / 1000000 // 转换为秒
 
-    if (splitTime <= timelineStartTime || splitTime >= timelineEndTime) {
+    if (splitTimeSeconds <= timelineStartTime || splitTimeSeconds >= timelineEndTime) {
       console.error('❌ 分割时间不在项目范围内')
       return
     }
@@ -469,7 +479,7 @@ export const useVideoStore = defineStore('video', () => {
     const command = new SplitTimelineItemCommand(
       timelineItemId,
       timelineItem, // 传入完整的timelineItem用于保存重建数据
-      splitTime,
+      splitTimeSeconds,
       {
         addTimelineItem: timelineModule.addTimelineItem,
         removeTimelineItem: timelineModule.removeTimelineItem,
@@ -485,6 +495,8 @@ export const useVideoStore = defineStore('video', () => {
     )
     await historyModule.executeCommand(command)
   }
+
+
 
   /**
    * 带历史记录的复制时间轴项目方法
@@ -1031,22 +1043,7 @@ export const useVideoStore = defineStore('video', () => {
     scrollToTime: viewportModule.scrollToTime,
     resetViewport: viewportModule.resetViewport,
     getViewportSummary: viewportModule.getViewportSummary,
-    timeToPixel: (time: number, timelineWidth: number) =>
-      timeToPixel(
-        time,
-        timelineWidth,
-        totalDuration.value,
-        viewportModule.zoomLevel.value,
-        viewportModule.scrollOffset.value,
-      ),
-    pixelToTime: (pixel: number, timelineWidth: number) =>
-      pixelToTime(
-        pixel,
-        timelineWidth,
-        totalDuration.value,
-        viewportModule.zoomLevel.value,
-        viewportModule.scrollOffset.value,
-      ),
+
     // 新的Timecode支持方法
     timecodeToPixel: (timecode: Timecode, timelineWidth: number) =>
       timecodeToPixel(

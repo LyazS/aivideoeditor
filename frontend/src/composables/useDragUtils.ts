@@ -1,6 +1,7 @@
 import { useVideoStore } from '../stores/videoStore'
 import type { TimelineItemDragData, MediaItemDragData } from '../types/videoTypes'
 import { alignTimeToFrame } from '../stores/utils/timeUtils'
+import { Timecode } from '../utils/Timecode'
 
 /**
  * 拖拽工具函数集合
@@ -122,7 +123,7 @@ export function useDragUtils() {
   }
 
   /**
-   * 计算拖拽目标位置
+   * 计算拖拽目标位置（使用Timecode提供帧级精度）
    */
   function calculateDropPosition(
     event: DragEvent,
@@ -131,7 +132,7 @@ export function useDragUtils() {
   ) {
     const targetElement = event.target as HTMLElement
     const trackContent = targetElement.closest('.track-content')
-    
+
     if (!trackContent) {
       return null
     }
@@ -140,28 +141,34 @@ export function useDragUtils() {
     const mouseX = event.clientX - rect.left
     const targetTrackId = parseInt(trackContent.getAttribute('data-track-id') || '1')
 
-    let dropTime: number
+    let dropTimeTC: Timecode
+    const frameRate = 30 // 固定使用30fps
+
     if (dragOffset) {
       // 考虑拖拽偏移量，计算clip的实际开始位置
       const clipStartX = mouseX - dragOffset.x
-      dropTime = videoStore.pixelToTime(clipStartX, timelineWidth)
+      dropTimeTC = videoStore.pixelToTimecode(clipStartX, timelineWidth)
     } else {
       // 直接使用鼠标位置
-      dropTime = videoStore.pixelToTime(mouseX, timelineWidth)
+      dropTimeTC = videoStore.pixelToTimecode(mouseX, timelineWidth)
     }
 
     // 确保拖拽时间不会小于0（防止clip被拖拽到负数时间轴）
-    dropTime = Math.max(0, dropTime)
+    const zeroTC = Timecode.zero(frameRate)
+    if (dropTimeTC.lessThan(zeroTC)) {
+      dropTimeTC = zeroTC
+    }
 
-    // 对齐到帧边界（与播放头拖拽和时间刻度点击保持一致）
-    dropTime = alignTimeToFrame(dropTime, videoStore.frameRate)
+    // Timecode本身就是帧级精度，无需额外对齐
 
     return {
-      dropTime,
+      dropTime: dropTimeTC,
       targetTrackId,
       trackContent
     }
   }
+
+
 
   /**
    * 检查拖拽数据类型
