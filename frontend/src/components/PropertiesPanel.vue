@@ -53,17 +53,14 @@
           <div class="property-item">
             <label>目标时长</label>
             <div class="duration-controls">
-              <NumberInput
-                :model-value="targetDuration"
-                @change="updateTargetDuration"
-                :min="0.1"
-                :step="0.1"
-                :precision="1"
-                :show-controls="false"
-                placeholder="秒"
-                :input-style="propertyInputStyle"
+              <TimecodeInput
+                :model-value="targetDurationMicroseconds"
+                @change="updateTargetDurationFromTimecode"
+                :frame-rate="videoStore.frameRate"
+                :min-value="100000"
+                placeholder="00:00.03"
+                :show-hint="false"
               />
-              <span class="duration-unit">秒</span>
             </div>
           </div>
 
@@ -427,6 +424,7 @@ import { useVideoStore } from '../stores/videoStore'
 import { isVideoTimeRange } from '../types/videoTypes'
 import { uiDegreesToWebAVRadians, webAVRadiansToUIDegrees } from '../utils/rotationTransform'
 import NumberInput from './NumberInput.vue'
+import TimecodeInput from './timecode/TimecodeInput.vue'
 
 const videoStore = useVideoStore()
 
@@ -468,6 +466,9 @@ const timelineDuration = computed(() => {
 
 // 目标时长 - 与timelineDuration相同，直接使用timelineDuration
 const targetDuration = computed(() => timelineDuration.value)
+
+// 目标时长（微秒）- 用于TimecodeInput组件
+const targetDurationMicroseconds = computed(() => targetDuration.value * 1000000)
 
 // 倍速分段配置
 const speedSegments = [
@@ -625,6 +626,12 @@ const updatePlaybackRate = async (newRate?: number) => {
       videoStore.updateTimelineItemPlaybackRate(selectedTimelineItem.value.id, rate)
     }
   }
+}
+
+// 从时间码输入更新目标时长
+const updateTargetDurationFromTimecode = async (microseconds: number, timecode: string) => {
+  const newTargetDuration = microseconds / 1000000 // 转换为秒
+  await updateTargetDuration(newTargetDuration)
 }
 
 // 更新目标时长 - 使用带历史记录的方法
@@ -991,9 +998,10 @@ const alignVertical = (alignment: 'top' | 'middle' | 'bottom') => {
 /* 时长控制样式 */
 .duration-controls {
   display: flex;
-  align-items: center;
+  align-items: center; /* 垂直居中对齐 */
   gap: var(--spacing-md);
   flex: 1;
+  width: 100%;
 }
 
 .duration-unit {

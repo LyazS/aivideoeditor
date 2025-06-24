@@ -1,4 +1,5 @@
 import type { Ref } from 'vue'
+import { TimecodeUtils } from '@/utils/TimecodeUtils'
 
 // ==================== 时间计算工具 ====================
 
@@ -31,15 +32,20 @@ export function calculatePixelsPerSecond(
 /**
  * 格式化时间显示
  * @param seconds 时间（秒）
- * @param precision 显示精度：'frames' | 'milliseconds' | 'seconds' | 'hours'
- * @param frameRate 帧率（当precision为'frames'时需要）
+ * @param precision 显示精度：'timecode' | 'frames' | 'milliseconds' | 'seconds' | 'hours'
+ * @param frameRate 帧率（当precision为'frames'或'timecode'时需要）
  * @returns 格式化的时间字符串
  */
 export function formatTime(
   seconds: number,
-  precision: 'frames' | 'milliseconds' | 'seconds' | 'hours' = 'seconds',
+  precision: 'timecode' | 'frames' | 'milliseconds' | 'seconds' | 'hours' = 'seconds',
   frameRate: number = 30,
 ): string {
+  // 新增：时间码格式支持
+  if (precision === 'timecode') {
+    return TimecodeUtils.secondsToTimecode(seconds, frameRate)
+  }
+
   const hours = Math.floor(seconds / 3600)
   const mins = Math.floor((seconds % 3600) / 60)
   const secs = Math.floor(seconds % 60)
@@ -82,15 +88,16 @@ export function formatTimeWithAutoPrecision(
   pixelsPerSecond: number,
   frameRate: number = 30,
 ): string {
+  // 统一使用时间码格式，根据缩放级别决定精度
   if (pixelsPerSecond >= 300) {
-    // 高缩放级别：显示帧
-    return formatTime(seconds, 'frames', frameRate)
+    // 高缩放级别：显示完整时间码（包含帧）
+    return formatTime(seconds, 'timecode', frameRate)
   } else if (pixelsPerSecond >= 100) {
-    // 中等缩放级别：显示毫秒
-    return formatTime(seconds, 'milliseconds')
+    // 中等缩放级别：显示时间码（包含帧）
+    return formatTime(seconds, 'timecode', frameRate)
   } else {
-    // 低缩放级别：只显示分秒
-    return formatTime(seconds, 'seconds')
+    // 低缩放级别：显示时间码（包含帧）
+    return formatTime(seconds, 'timecode', frameRate)
   }
 }
 
@@ -104,6 +111,34 @@ export function expandTimelineIfNeeded(targetTime: number, timelineDuration: Ref
     // 扩展到目标时间的1.5倍，确保有足够的空间
     timelineDuration.value = Math.max(targetTime * 1.5, timelineDuration.value)
   }
+}
+
+/**
+ * 将秒数转换为时间码字符串（便捷函数）
+ * @param seconds 时间（秒）
+ * @param frameRate 帧率（默认30fps）
+ * @param includeHours 是否包含小时
+ * @returns 时间码字符串
+ */
+export function secondsToTimecodeString(
+  seconds: number,
+  frameRate: number = 30,
+  includeHours?: boolean
+): string {
+  return TimecodeUtils.secondsToTimecode(seconds, frameRate, includeHours)
+}
+
+/**
+ * 将时间码字符串转换为秒数（便捷函数）
+ * @param timecode 时间码字符串
+ * @param frameRate 帧率（默认30fps）
+ * @returns 时间（秒）
+ */
+export function timecodeStringToSeconds(
+  timecode: string,
+  frameRate: number = 30
+): number {
+  return TimecodeUtils.timecodeToSeconds(timecode, frameRate)
 }
 
 /**

@@ -138,13 +138,14 @@ async function splitSelectedClip() {
     console.log(
       `🔪 开始裁剪时间轴项目: ${mediaItem?.name || '未知'} (ID: ${videoStore.selectedTimelineItemId})`,
     )
-    console.log(`📍 裁剪时间位置: ${videoStore.currentTime.toFixed(2)}s`)
+    const currentTimeSeconds = videoStore.currentTimecode.toSeconds()
+    console.log(`📍 裁剪时间位置: ${currentTimeSeconds.toFixed(2)}s`)
 
     try {
       // 使用带历史记录的分割方法
       await videoStore.splitTimelineItemAtTimeWithHistory(
         videoStore.selectedTimelineItemId,
-        videoStore.currentTime,
+        currentTimeSeconds,
       )
       console.log('✅ 时间轴项目分割成功')
     } catch (error) {
@@ -152,7 +153,7 @@ async function splitSelectedClip() {
       // 如果历史记录分割失败，回退到直接分割
       await videoStore.splitTimelineItemAtTime(
         videoStore.selectedTimelineItemId,
-        videoStore.currentTime,
+        currentTimeSeconds,
       )
     }
   }
@@ -219,7 +220,7 @@ function debugTimeline() {
   console.group('📊 基本配置')
   console.log('总时长 (秒):', videoStore.totalDuration)
   console.log('内容结束时间 (秒):', videoStore.contentEndTime)
-  console.log('当前播放时间 (秒):', videoStore.currentTime)
+  console.log('当前播放时间 (秒):', videoStore.currentTimecode.toSeconds())
   console.log('播放状态:', videoStore.isPlaying ? '播放中' : '已暂停')
   console.log('播放速度:', videoStore.playbackRate + 'x')
   console.groupEnd()

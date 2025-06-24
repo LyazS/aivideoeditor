@@ -33,7 +33,7 @@
           <div class="controls-section">
             <!-- 时间显示 -->
             <div class="time-display">
-              {{ formatTime(videoStore.currentTime) }} /
+              {{ formatTime(videoStore.currentTimecode.toSeconds()) }} /
               {{ formatTime(videoStore.contentEndTime || videoStore.totalDuration) }}
             </div>
             <!-- 中间播放控制 -->
@@ -188,7 +188,7 @@ import PropertiesPanel from './PropertiesPanel.vue'
 import { useVideoStore } from '../stores/videoStore'
 import { useKeyboardShortcuts } from '../composables/useKeyboardShortcuts'
 import { logWebAVReadyStateChange, logComponentLifecycle } from '../utils/webavDebug'
-import { formatTime as formatTimeUtil } from '../stores/utils/storeUtils'
+import { secondsToTimecodeString } from '../stores/utils/timeUtils'
 
 const videoStore = useVideoStore()
 
@@ -398,8 +398,8 @@ const stopRightResize = () => {
 }
 
 function formatTime(seconds: number): string {
-  // 使用统一的时间格式化工具函数
-  return formatTimeUtil(seconds, 'seconds')
+  // 使用时间码格式显示时间
+  return secondsToTimecodeString(seconds, videoStore.frameRate)
 }
 
 // 获取预览样式（根据分辨率比例）

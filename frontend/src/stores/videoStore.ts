@@ -5,6 +5,8 @@ import {
   alignTimeToFrame,
   timeToPixel,
   pixelToTime,
+  timecodeToPixel,
+  pixelToTimecode,
   expandTimelineIfNeeded,
   getTimelineItemAtTime,
   autoArrangeTimelineItems,
@@ -13,6 +15,7 @@ import {
   findTimelineItemBySprite,
   getTimelineItemsByTrack,
 } from './utils/storeUtils'
+import { Timecode } from '@/utils/Timecode'
 import { createMediaModule } from './modules/mediaModule'
 import { createConfigModule } from './modules/configModule'
 import { createTrackModule } from './modules/trackModule'
@@ -52,6 +55,11 @@ export const useVideoStore = defineStore('video', () => {
       timelineModule.timelineItems.value,
       configModule.timelineDuration.value,
     )
+  })
+
+  // 新的Timecode版本的总时长
+  const totalDurationTimecode = computed(() => {
+    return Timecode.fromSeconds(totalDuration.value, configModule.frameRate.value)
   })
 
   // 创建视口管理模块（需要在totalDuration之后创建）
@@ -914,10 +922,11 @@ export const useVideoStore = defineStore('video', () => {
     mediaItems: mediaModule.mediaItems,
     timelineItems: timelineModule.timelineItems,
     tracks: trackModule.tracks,
-    currentTime: playbackModule.currentTime,
+    currentTimecode: playbackModule.currentTimecode,
     isPlaying: playbackModule.isPlaying,
     timelineDuration: configModule.timelineDuration,
     totalDuration,
+    totalDurationTimecode,
     contentEndTime: viewportModule.contentEndTime,
     playbackRate: playbackModule.playbackRate,
     selectedTimelineItemId: selectionModule.selectedTimelineItemId,
@@ -1035,6 +1044,23 @@ export const useVideoStore = defineStore('video', () => {
         pixel,
         timelineWidth,
         totalDuration.value,
+        viewportModule.zoomLevel.value,
+        viewportModule.scrollOffset.value,
+      ),
+    // 新的Timecode支持方法
+    timecodeToPixel: (timecode: Timecode, timelineWidth: number) =>
+      timecodeToPixel(
+        timecode,
+        timelineWidth,
+        totalDurationTimecode.value,
+        viewportModule.zoomLevel.value,
+        viewportModule.scrollOffset.value,
+      ),
+    pixelToTimecode: (pixel: number, timelineWidth: number) =>
+      pixelToTimecode(
+        pixel,
+        timelineWidth,
+        totalDurationTimecode.value,
         viewportModule.zoomLevel.value,
         viewportModule.scrollOffset.value,
       ),

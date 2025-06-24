@@ -35,9 +35,9 @@ import { usePlaybackControls } from '../composables/usePlaybackControls'
 import {
   calculatePixelsPerSecond,
   calculateVisibleTimeRange,
-  formatTimeWithAutoPrecision,
-  alignTimeToFrame as alignTimeToFrameUtil
+  formatTimeWithAutoPrecision
 } from '../stores/utils/storeUtils'
+import { Timecode } from '@/utils/Timecode'
 
 const videoStore = useVideoStore()
 const webAVControls = useWebAVControls()
@@ -156,22 +156,24 @@ const timeMarks = computed((): TimeMark[] => {
   return marks
 })
 
-// 将时间对齐到帧边界（使用统一工具函数）
-function alignTimeToFrame(time: number): number {
-  return alignTimeToFrameUtil(time, videoStore.frameRate)
-}
 
-// 播放头位置 - 直接使用WebAV返回的精确时间
+
+// 播放头位置 - 使用Timecode对象进行精确计算
 const playheadPosition = computed(() => {
-  const currentTime = videoStore.currentTime
-  const position = videoStore.timeToPixel(currentTime, containerWidth.value)
-
-  return position
+  const currentTimecode = videoStore.currentTimecode
+  // 确保currentTimecode是一个真正的Timecode实例
+  if (currentTimecode && typeof currentTimecode.toMicroseconds === 'function') {
+    return videoStore.timecodeToPixel(currentTimecode as Timecode, containerWidth.value)
+  }
+  // 回退到使用totalDurationTimecode的零值
+  return videoStore.timecodeToPixel(Timecode.zero(videoStore.frameRate), containerWidth.value)
 })
 
 function formatTime(seconds: number): string {
-  // 使用统一的时间格式化工具函数
+  // 强制使用时间码格式显示，提供专业的视频编辑体验
   const pixelsPerSecond = calculatePixelsPerSecond(containerWidth.value, videoStore.totalDuration, videoStore.zoomLevel)
+
+  // 使用时间码格式
   return formatTimeWithAutoPrecision(seconds, pixelsPerSecond, videoStore.frameRate)
 }
 
@@ -191,15 +193,18 @@ function handleClick(event: MouseEvent) {
 
   const rect = scaleContainer.value.getBoundingClientRect()
   const clickX = event.clientX - rect.left
-  const newTime = videoStore.pixelToTime(clickX, containerWidth.value)
 
-  // 限制在有效范围内并对齐到帧边界
-  const clampedTime = Math.max(0, Math.min(newTime, videoStore.totalDuration))
-  const alignedTime = alignTimeToFrame(clampedTime)
+  // 使用新的Timecode方法进行像素到时间的转换
+  const newTimecode = videoStore.pixelToTimecode(clickX, containerWidth.value)
+
+  // Timecode对象本身就是帧对齐的，确保不超出总时长
+  const maxFrames = videoStore.totalDurationTimecode.totalFrames
+  const clampedFrames = Math.max(0, Math.min(newTimecode.totalFrames, maxFrames))
+  const finalTimecode = new Timecode(clampedFrames, newTimecode.frameRate)
 
   // 统一时间控制：通过WebAV设置时间，避免直接操作Store
   // 流程：webAVControls.seekTo() → WebAV.previewFrame() → timeupdate事件 → Store更新
-  webAVControls.seekTo(alignedTime)
+  webAVControls.seekTo(finalTimecode)
 }
 
 function handleMouseDown(event: MouseEvent) {
@@ -218,14 +223,17 @@ function handleMouseDown(event: MouseEvent) {
 
   const rect = scaleContainer.value.getBoundingClientRect()
   const mouseX = event.clientX - rect.left
-  const newTime = videoStore.pixelToTime(mouseX, containerWidth.value)
 
-  // 限制在有效范围内并对齐到帧边界
-  const clampedTime = Math.max(0, Math.min(newTime, videoStore.totalDuration))
-  const alignedTime = alignTimeToFrame(clampedTime)
+  // 使用新的Timecode方法进行像素到时间的转换
+  const newTimecode = videoStore.pixelToTimecode(mouseX, containerWidth.value)
+
+  // Timecode对象本身就是帧对齐的，确保不超出总时长
+  const maxFrames = videoStore.totalDurationTimecode.totalFrames
+  const clampedFrames = Math.max(0, Math.min(newTimecode.totalFrames, maxFrames))
+  const finalTimecode = new Timecode(clampedFrames, newTimecode.frameRate)
 
   // 立即跳转播放头到鼠标位置
-  webAVControls.seekTo(alignedTime)
+  webAVControls.seekTo(finalTimecode)
 
   // 开始拖拽播放头
   isDraggingPlayhead.value = true
@@ -265,14 +273,17 @@ function handleDragPlayhead(event: MouseEvent) {
 
   const rect = scaleContainer.value.getBoundingClientRect()
   const mouseX = event.clientX - rect.left
-  const newTime = videoStore.pixelToTime(mouseX, containerWidth.value)
 
-  // 限制在有效范围内并对齐到帧边界
-  const clampedTime = Math.max(0, Math.min(newTime, videoStore.totalDuration))
-  const alignedTime = alignTimeToFrame(clampedTime)
+  // 使用新的Timecode方法进行像素到时间的转换
+  const newTimecode = videoStore.pixelToTimecode(mouseX, containerWidth.value)
+
+  // Timecode对象本身就是帧对齐的，确保不超出总时长
+  const maxFrames = videoStore.totalDurationTimecode.totalFrames
+  const clampedFrames = Math.max(0, Math.min(newTimecode.totalFrames, maxFrames))
+  const finalTimecode = new Timecode(clampedFrames, newTimecode.frameRate)
 
   // 统一时间控制：通过WebAV设置时间，确保状态同步
-  webAVControls.seekTo(alignedTime)
+  webAVControls.seekTo(finalTimecode)
 }
 
 function stopDragPlayhead() {
@@ -303,7 +314,7 @@ function handleWheel(event: WheelEvent) {
 
     // 获取鼠标在时间轴上的位置
     const mouseX = event.clientX - rect.left
-    const mouseTime = videoStore.pixelToTime(mouseX, containerWidth.value)
+    const mouseTimecode = videoStore.pixelToTimecode(mouseX, containerWidth.value)
 
     // 缩放操作（精简调试信息）
 
@@ -316,7 +327,7 @@ function handleWheel(event: WheelEvent) {
     }
 
     // 调整滚动偏移量，使鼠标位置保持在相同的时间点
-    const newMousePixel = videoStore.timeToPixel(mouseTime, containerWidth.value)
+    const newMousePixel = videoStore.timecodeToPixel(mouseTimecode, containerWidth.value)
     const offsetAdjustment = newMousePixel - mouseX
     const newScrollOffset = videoStore.scrollOffset + offsetAdjustment
 

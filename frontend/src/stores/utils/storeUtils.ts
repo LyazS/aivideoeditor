@@ -20,6 +20,9 @@ export {
   calculateVisibleTimeRange,
   timeToPixel,
   pixelToTime,
+  // 新的Timecode支持函数
+  timecodeToPixel,
+  pixelToTimecode,
 } from './coordinateUtils'
 
 // 查找工具

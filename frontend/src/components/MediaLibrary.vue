@@ -59,7 +59,7 @@
 
             <!-- 右上角时长标签（只有视频才显示） -->
             <div v-if="item.mediaType === 'video'" class="duration-badge">
-              {{ formatTime(item.duration, 'seconds') }}
+              {{ formatTime(item.duration, 'timecode') }}
             </div>
           </div>
 

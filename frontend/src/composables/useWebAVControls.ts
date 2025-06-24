@@ -4,6 +4,8 @@ import { MP4Clip, ImgClip } from '@webav/av-cliper'
 import { VideoVisibleSprite, type VideoTimeRange } from '../utils/VideoVisibleSprite'
 import { ImageVisibleSprite, type ImageTimeRange } from '../utils/ImageVisibleSprite'
 import { useVideoStore } from '../stores/videoStore'
+import { Timecode } from '@/utils/Timecode'
+import { TimecodeUtils } from '@/utils/TimecodeUtils'
 import {
   logWebAVInitStart,
   logWebAVInitStep,
@@ -56,7 +58,7 @@ interface CanvasBackup {
     isMuted: boolean
     thumbnailUrl: string
   }>
-  currentTime: number
+  currentTimecode: Timecode
   isPlaying: boolean
 }
 
@@ -268,10 +270,9 @@ export function useWebAVControls() {
 
       isUpdatingTime = true
       try {
-        // 将微秒转换为秒
-        // console.log('WebAV timeupdate:', time)
-        const timeInSeconds = time / 1000000
-        videoStore.setCurrentTime(timeInSeconds, false) // 不强制对齐帧，保持流畅
+        // 直接转换为Timecode对象
+        const timecode = Timecode.fromMicroseconds(time, videoStore.frameRate)
+        videoStore.setCurrentTime(timecode, false) // 不强制对齐帧，保持流畅
       } finally {
         isUpdatingTime = false
       }
@@ -377,23 +378,27 @@ export function useWebAVControls() {
   /**
    * 播放控制
    */
-  const play = (startTime?: number, endTime?: number): void => {
+  const play = (startTime?: Timecode, endTime?: Timecode): void => {
     if (!globalAVCanvas) return
 
-    const start = (startTime || videoStore.currentTime) * 1000000 // 转换为微秒
+    // 处理开始时间
+    const startMicroseconds = startTime
+      ? startTime.toMicroseconds()
+      : videoStore.currentTimecode.toMicroseconds()
 
     // 构建播放参数
     const playOptions: PlayOptions = {
-      start,
+      start: startMicroseconds,
       playbackRate: videoStore.playbackRate,
     }
 
-    // 只有明确指定了结束时间才添加end参数
+    // 处理结束时间
     if (endTime !== undefined) {
-      const end = endTime * 1000000
+      const endMicroseconds = endTime.toMicroseconds()
+
       // 确保结束时间大于开始时间
-      if (end > start) {
-        playOptions.end = end
+      if (endMicroseconds > startMicroseconds) {
+        playOptions.end = endMicroseconds
       } else {
         console.warn('结束时间必须大于开始时间，忽略end参数')
       }
@@ -414,12 +419,14 @@ export function useWebAVControls() {
   /**
    * 跳转到指定时间
    * 这是时间控制的唯一入口点，所有UI时间操作都应该通过此方法
-   * @param time 时间（秒）
+   * @param timecode Timecode对象
    */
-  const seekTo = (time: number): void => {
+  const seekTo = (timecode: Timecode): void => {
     if (!globalAVCanvas) return
-    // console.log('WebAV seekTo:', time)
-    const timeMicroseconds = time * 1000000
+
+    const timeMicroseconds = timecode.toMicroseconds()
+
+    // console.log('WebAV seekTo:', timecode.toString())
     globalAVCanvas.previewFrame(timeMicroseconds)
   }
 
@@ -466,14 +473,14 @@ export function useWebAVControls() {
     logCanvasDestroyStart({
       hasCanvas: !!globalAVCanvas,
       isPlaying: videoStore.isPlaying,
-      currentTime: videoStore.currentTime,
+      currentTime: videoStore.currentTimecode.toSeconds(),
       timelineItemsCount: videoStore.timelineItems.length,
     })
 
     // 备份当前状态 - 只备份元数据，不备份WebAV对象
     const backup: CanvasBackup = {
       timelineItems: [],
-      currentTime: videoStore.currentTime,
+      currentTimecode: videoStore.currentTimecode.clone(), // 克隆Timecode对象
       isPlaying: videoStore.isPlaying,
     }
 
@@ -502,7 +509,7 @@ export function useWebAVControls() {
     logCanvasBackup(backup.timelineItems.length, {
       timelineItems: backup.timelineItems.length,
       isPlaying: backup.isPlaying,
-      currentTime: backup.currentTime,
+      currentTime: backup.currentTimecode.toSeconds(),
     })
 
     try {
@@ -657,10 +664,10 @@ export function useWebAVControls() {
         if (backup.isPlaying) {
           // 延迟一点再播放，确保所有sprite都已添加
           setTimeout(() => {
-            play(backup.currentTime)
+            play(backup.currentTimecode)
           }, 100)
         } else {
-          seekTo(backup.currentTime)
+          seekTo(backup.currentTimecode)
         }
       }
 
@@ -670,7 +677,7 @@ export function useWebAVControls() {
         restoredTimelineItems: backup?.timelineItems.length || 0,
         finalState: {
           isPlaying: backup?.isPlaying || false,
-          currentTime: backup?.currentTime || 0,
+          currentTime: backup?.currentTimecode.toSeconds() || 0,
         },
       })
     } catch (error) {

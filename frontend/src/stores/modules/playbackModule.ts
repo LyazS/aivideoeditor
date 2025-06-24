@@ -1,5 +1,5 @@
-import { ref, computed } from 'vue'
-import { alignTimeToFrame, formatTime as formatTimeUtil } from '../utils/storeUtils'
+import { ref, computed, watch } from 'vue'
+import { Timecode } from '@/utils/Timecode'
 
 /**
  * 播放控制管理模块
@@ -9,19 +9,24 @@ export function createPlaybackModule(frameRate: { value: number }) {
   // ==================== 状态定义 ====================
 
   // 播放相关状态
-  const currentTime = ref(0) // 当前播放时间（秒）
+  const currentTimecode = ref(Timecode.zero(frameRate.value)) // 当前播放时间（Timecode对象）
   const isPlaying = ref(false) // 是否正在播放
   const playbackRate = ref(1) // 播放速度倍率
+
+  // 监听帧率变化，更新当前时间码的帧率
+  watch(() => frameRate.value, (newFrameRate) => {
+    const currentSeconds = currentTimecode.value.toSeconds()
+    currentTimecode.value = Timecode.fromSeconds(currentSeconds, newFrameRate)
+  })
 
   // ==================== 计算属性 ====================
 
   /**
-   * 格式化当前时间为时分秒格式
+   * 格式化当前时间为时间码格式
    */
   const formattedCurrentTime = computed(() => {
-    const time = currentTime.value
-    // 使用统一的时间格式化工具函数，支持小时格式
-    return formatTimeUtil(time, 'hours')
+    // 直接使用Timecode对象的toString方法
+    return currentTimecode.value.toString()
   })
 
   /**
@@ -45,27 +50,37 @@ export function createPlaybackModule(frameRate: { value: number }) {
 
   /**
    * 设置当前播放时间
-   * @param time 时间（秒）
+   * @param timecode Timecode对象
    * @param forceAlign 是否强制对齐到帧边界
    */
-  function setCurrentTime(time: number, forceAlign: boolean = true) {
-    const finalTime = forceAlign ? alignTimeToFrame(time, frameRate.value) : time
+  function setCurrentTime(timecode: Timecode, forceAlign: boolean = true) {
+    let finalTimecode = timecode
+
+    if (forceAlign) {
+      // 如果帧率不匹配则转换帧率
+      if (timecode.frameRate !== frameRate.value) {
+        finalTimecode = timecode.convertFrameRate(frameRate.value)
+      }
+    }
 
     // 确保时间不为负数
-    const clampedTime = Math.max(0, finalTime)
+    if (finalTimecode.totalFrames < 0) {
+      finalTimecode = Timecode.zero(frameRate.value)
+    }
 
-    if (currentTime.value !== clampedTime) {
-      currentTime.value = clampedTime
+    // 只有当时间码真正改变时才更新
+    if (!currentTimecode.value.equals(finalTimecode)) {
+      currentTimecode.value = finalTimecode
     }
   }
 
   /**
    * 跳转到指定时间
-   * @param time 目标时间（秒）
+   * @param timecode 目标时间（Timecode对象）
    */
-  function seekTo(time: number) {
-    setCurrentTime(time, true)
-    console.log('🎯 跳转到时间:', time)
+  function seekTo(timecode: Timecode) {
+    setCurrentTime(timecode, true)
+    console.log('🎯 跳转到时间:', timecode.toString())
   }
 
   /**
@@ -73,12 +88,14 @@ export function createPlaybackModule(frameRate: { value: number }) {
    * @param deltaTime 时间偏移量（秒，可为负数）
    */
   function seekBy(deltaTime: number) {
-    const newTime = currentTime.value + deltaTime
-    setCurrentTime(newTime, true)
+    const deltaFrames = Math.round(deltaTime * frameRate.value)
+    const newTimecode = new Timecode(currentTimecode.value.totalFrames + deltaFrames, frameRate.value)
+    setCurrentTime(newTimecode, true)
     console.log('⏭️ 相对跳转:', {
       deltaTime,
-      oldTime: currentTime.value - deltaTime,
-      newTime: currentTime.value,
+      deltaFrames,
+      oldTime: currentTimecode.value.toString(),
+      newTime: newTimecode.toString(),
     })
   }
 
@@ -86,18 +103,19 @@ export function createPlaybackModule(frameRate: { value: number }) {
    * 跳转到下一帧
    */
   function nextFrame() {
-    const frameDuration = 1 / frameRate.value
-    seekBy(frameDuration)
-    console.log('⏭️ 下一帧')
+    const newTimecode = new Timecode(currentTimecode.value.totalFrames + 1, frameRate.value)
+    setCurrentTime(newTimecode, false) // 不需要强制对齐，因为已经是帧级操作
+    console.log('⏭️ 下一帧:', newTimecode.toString())
   }
 
   /**
    * 跳转到上一帧
    */
   function previousFrame() {
-    const frameDuration = 1 / frameRate.value
-    seekBy(-frameDuration)
-    console.log('⏮️ 上一帧')
+    const newFrames = Math.max(0, currentTimecode.value.totalFrames - 1)
+    const newTimecode = new Timecode(newFrames, frameRate.value)
+    setCurrentTime(newTimecode, false) // 不需要强制对齐，因为已经是帧级操作
+    console.log('⏮️ 上一帧:', newTimecode.toString())
   }
 
   /**
@@ -138,7 +156,7 @@ export function createPlaybackModule(frameRate: { value: number }) {
    */
   function stop() {
     setPlaying(false)
-    setCurrentTime(0)
+    setCurrentTime(Timecode.zero(frameRate.value))
     console.log('⏹️ 停止播放')
   }
 
@@ -176,12 +194,13 @@ export function createPlaybackModule(frameRate: { value: number }) {
    */
   function getPlaybackSummary() {
     return {
-      currentTime: currentTime.value,
+      currentTimecode: currentTimecode.value,
       formattedCurrentTime: formattedCurrentTime.value,
       isPlaying: isPlaying.value,
       playbackRate: playbackRate.value,
       playbackRateText: playbackRateText.value,
       frameRate: frameRate.value,
+      totalFrames: currentTimecode.value.totalFrames,
     }
   }
 
@@ -189,7 +208,7 @@ export function createPlaybackModule(frameRate: { value: number }) {
    * 重置播放状态为默认值
    */
   function resetToDefaults() {
-    currentTime.value = 0
+    currentTimecode.value = Timecode.zero(frameRate.value)
     isPlaying.value = false
     playbackRate.value = 1
     console.log('🔄 播放状态已重置为默认值')
@@ -199,7 +218,7 @@ export function createPlaybackModule(frameRate: { value: number }) {
 
   return {
     // 状态
-    currentTime,
+    currentTimecode,
     isPlaying,
     playbackRate,
 

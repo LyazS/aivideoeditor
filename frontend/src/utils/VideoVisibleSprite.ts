@@ -1,8 +1,9 @@
 import { VisibleSprite, MP4Clip } from '@webav/av-cliper'
 import type { AudioTickData, ExtendedSprite } from '../types/webavTypes'
+import { Timecode } from './Timecode'
 
 /**
- * 时间范围接口定义
+ * 时间范围接口定义（基于微秒）
  */
 export interface VideoTimeRange {
   /** 素材内部开始时间（微秒） - 从素材的哪个时间点开始播放 */
@@ -15,6 +16,24 @@ export interface VideoTimeRange {
   timelineEndTime: number
   /** 有效播放时长（微秒） - 在时间轴上占用的时长，如果与素材内部时长不同则表示变速 */
   effectiveDuration: number
+  /** 播放速度倍率 - 1.0为正常速度，2.0为2倍速，0.5为0.5倍速 */
+  playbackRate: number
+}
+
+/**
+ * 基于Timecode的时间范围接口定义
+ */
+export interface TimecodeVideoTimeRange {
+  /** 素材内部开始时间（Timecode） - 从素材的哪个时间点开始播放 */
+  clipStartTime: Timecode
+  /** 素材内部结束时间（Timecode） - 播放到素材的哪个时间点结束 */
+  clipEndTime: Timecode
+  /** 时间轴开始时间（Timecode） - 素材在整个项目时间轴上的开始位置 */
+  timelineStartTime: Timecode
+  /** 时间轴结束时间（Timecode） - 素材在整个项目时间轴上的结束位置 */
+  timelineEndTime: Timecode
+  /** 有效播放时长（Timecode） - 在时间轴上占用的时长 */
+  effectiveDuration: Timecode
   /** 播放速度倍率 - 1.0为正常速度，2.0为2倍速，0.5为0.5倍速 */
   playbackRate: number
 }

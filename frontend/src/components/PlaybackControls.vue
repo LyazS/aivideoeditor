@@ -45,6 +45,7 @@ import { computed } from 'vue'
 import { useVideoStore } from '../stores/videoStore'
 import { useWebAVControls } from '../composables/useWebAVControls'
 import { usePlaybackControls } from '../composables/usePlaybackControls'
+import { Timecode } from '@/utils/Timecode'
 
 const videoStore = useVideoStore()
 const webAVControls = useWebAVControls()
@@ -71,7 +72,7 @@ function stop() {
     // 暂停播放并跳转到开始位置
     webAVControls.pause()
     // 只通过WebAV设置时间，WebAV会触发timeupdate事件更新Store
-    webAVControls.seekTo(0)
+    webAVControls.seekTo(Timecode.zero(videoStore.frameRate))
   }, '停止播放')
 }
 
