@@ -1,4 +1,5 @@
 import { VisibleSprite, MP4Clip } from '@webav/av-cliper'
+import type { AudioTickData, ExtendedSprite } from '../types/webavTypes'
 
 /**
  * 时间范围接口定义
@@ -362,7 +363,7 @@ export class VideoVisibleSprite extends VisibleSprite {
     const clip = this.getClip()
     if (clip && 'tickInterceptor' in clip) {
       // 设置tickInterceptor来拦截音频数据
-      clip.tickInterceptor = async (_time: number, tickRet: any) => {
+      clip.tickInterceptor = async (_time: number, tickRet: AudioTickData) => {
         // 如果有音频数据，根据静音状态和音量调整
         if (tickRet.audio && tickRet.audio.length > 0) {
           // 检查轨道是否被静音

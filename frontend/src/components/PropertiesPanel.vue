@@ -158,7 +158,7 @@
                 <span class="position-label">X</span>
                 <NumberInput
                   :model-value="transformX"
-                  @change="(value) => updateTransform({ position: { x: value, y: transformY } })"
+                  @change="(value) => updateTransform({ x: value })"
                   :min="-videoStore.videoResolution.width"
                   :max="videoStore.videoResolution.width"
                   :step="1"
@@ -171,7 +171,7 @@
                 <span class="position-label">Y</span>
                 <NumberInput
                   :model-value="transformY"
-                  @change="(value) => updateTransform({ position: { x: transformX, y: value } })"
+                  @change="(value) => updateTransform({ y: value })"
                   :min="-videoStore.videoResolution.height"
                   :max="videoStore.videoResolution.height"
                   :step="1"
@@ -784,8 +784,10 @@ const speedToNormalized = (speed: number) => {
 
 // 更新变换属性 - 使用带历史记录的方法
 const updateTransform = async (transform?: {
-  position?: { x: number; y: number }
-  size?: { width: number; height: number }
+  x?: number
+  y?: number
+  width?: number
+  height?: number
   rotation?: number
   opacity?: number
   zIndex?: number
@@ -794,11 +796,10 @@ const updateTransform = async (transform?: {
 
   // 如果没有提供transform参数，使用当前的响应式值
   const finalTransform = transform || {
-    position: { x: transformX.value, y: transformY.value },
-    size: {
-      width: selectedTimelineItem.value.width,
-      height: selectedTimelineItem.value.height,
-    },
+    x: transformX.value,
+    y: transformY.value,
+    width: selectedTimelineItem.value.width,
+    height: selectedTimelineItem.value.height,
     rotation: rotation.value,
     opacity: opacity.value,
     zIndex: zIndex.value,
@@ -826,7 +827,7 @@ const toggleProportionalScale = () => {
       width: originalResolution.width * scaleX.value,
       height: originalResolution.height * scaleX.value, // 使用X缩放值保持等比
     }
-    updateTransform({ size: newSize })
+    updateTransform({ width: newSize.width, height: newSize.height })
   }
 }
 
@@ -840,7 +841,7 @@ const updateUniformScale = (newScale: number) => {
       width: originalResolution.width * newScale,
       height: originalResolution.height * newScale,
     }
-    updateTransform({ size: newSize })
+    updateTransform({ width: newSize.width, height: newSize.height })
   }
 }
 
@@ -855,7 +856,7 @@ const setScaleX = (value: number) => {
     width: originalResolution.width * newScaleX,
     height: selectedTimelineItem.value.height, // 保持Y尺寸不变
   }
-  updateTransform({ size: newSize })
+  updateTransform({ width: newSize.width, height: newSize.height })
 }
 
 // 设置Y缩放绝对值的方法
@@ -869,7 +870,7 @@ const setScaleY = (value: number) => {
     width: selectedTimelineItem.value.width, // 保持X尺寸不变
     height: originalResolution.height * newScaleY,
   }
-  updateTransform({ size: newSize })
+  updateTransform({ width: newSize.width, height: newSize.height })
 }
 
 // 设置旋转绝对值的方法（输入角度，转换为弧度）
@@ -911,13 +912,9 @@ const alignHorizontal = (alignment: 'left' | 'center' | 'right') => {
         break
     }
 
-    const newPosition = {
-      x: Math.round(newProjectX),
-      y: transformY.value,
-    }
-    updateTransform({ position: newPosition })
+    updateTransform({ x: Math.round(newProjectX) })
 
-    console.log('✅ 水平对齐完成:', alignment, '项目坐标X:', newPosition.x)
+    console.log('✅ 水平对齐完成:', alignment, '项目坐标X:', Math.round(newProjectX))
   } catch (error) {
     console.error('水平对齐失败:', error)
   }
@@ -947,13 +944,9 @@ const alignVertical = (alignment: 'top' | 'middle' | 'bottom') => {
         break
     }
 
-    const newPosition = {
-      x: transformX.value,
-      y: Math.round(newProjectY),
-    }
-    updateTransform({ position: newPosition })
+    updateTransform({ y: Math.round(newProjectY) })
 
-    console.log('✅ 垂直对齐完成:', alignment, '项目坐标Y:', newPosition.y)
+    console.log('✅ 垂直对齐完成:', alignment, '项目坐标Y:', Math.round(newProjectY))
   } catch (error) {
     console.error('垂直对齐失败:', error)
   }

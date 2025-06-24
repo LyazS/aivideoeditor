@@ -102,7 +102,7 @@ export function createTimelineModule(
 
         // 为视频片段设置轨道静音检查函数
         if (timelineItem.mediaType === 'video' && 'setTrackMuteChecker' in timelineItem.sprite) {
-          const sprite = timelineItem.sprite as any // VideoVisibleSprite
+          const sprite = timelineItem.sprite as VideoVisibleSprite // VideoVisibleSprite
           sprite.setTrackMuteChecker(() => track.isMuted)
         }
       }
@@ -298,8 +298,10 @@ export function createTimelineModule(
   function updateTimelineItemTransform(
     timelineItemId: string,
     transform: {
-      position?: { x: number; y: number }
-      size?: { width: number; height: number }
+      x?: number
+      y?: number
+      width?: number
+      height?: number
       rotation?: number
       opacity?: number
       zIndex?: number
@@ -312,12 +314,12 @@ export function createTimelineModule(
 
     try {
       // 更新尺寸时使用中心缩放
-      if (transform.size) {
+      if (transform.width !== undefined || transform.height !== undefined) {
         // 获取当前中心位置（项目坐标系）
         const currentCenterX = item.x
         const currentCenterY = item.y
-        const newWidth = transform.size.width
-        const newHeight = transform.size.height
+        const newWidth = transform.width !== undefined ? transform.width : item.width
+        const newHeight = transform.height !== undefined ? transform.height : item.height
 
         // 中心缩放：保持中心位置不变，更新尺寸
         sprite.rect.w = newWidth
@@ -343,10 +345,12 @@ export function createTimelineModule(
       }
 
       // 更新位置（需要坐标系转换）
-      if (transform.position) {
+      if (transform.x !== undefined || transform.y !== undefined) {
+        const newX = transform.x !== undefined ? transform.x : item.x
+        const newY = transform.y !== undefined ? transform.y : item.y
         const webavCoords = projectToWebavCoords(
-          transform.position.x,
-          transform.position.y,
+          newX,
+          newY,
           item.width,
           item.height,
           configModule.videoResolution.value.width,

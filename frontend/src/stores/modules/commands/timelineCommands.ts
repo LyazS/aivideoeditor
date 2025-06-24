@@ -1,10 +1,58 @@
 import { generateCommandId } from '../../../utils/idGenerator'
 import type { SimpleCommand } from '../historyModule'
 import type { TimelineItem, MediaItem, Track } from '../../../types/videoTypes'
-import { VideoVisibleSprite } from '../../../utils/VideoVisibleSprite'
-import { ImageVisibleSprite } from '../../../utils/ImageVisibleSprite'
+import { VideoVisibleSprite, type VideoTimeRange } from '../../../utils/VideoVisibleSprite'
+import { ImageVisibleSprite, type ImageTimeRange } from '../../../utils/ImageVisibleSprite'
 import { createSpriteFromMediaItem } from '../../../utils/spriteFactory'
-import { markRaw, reactive, type Ref } from 'vue'
+import { markRaw, reactive, ref, type Ref } from 'vue'
+import type { ExtendedSprite } from '../../../types/webavTypes'
+import type { VisibleSprite } from '@webav/av-cliper'
+
+// 辅助函数：检查是否为视频时间范围
+function isVideoTimeRange(timeRange: VideoTimeRange | ImageTimeRange): timeRange is VideoTimeRange {
+  return 'clipStartTime' in timeRange && 'clipEndTime' in timeRange && 'playbackRate' in timeRange
+}
+
+// 辅助函数：检查是否为图片时间范围
+function isImageTimeRange(timeRange: VideoTimeRange | ImageTimeRange): timeRange is ImageTimeRange {
+  return 'displayDuration' in timeRange && !('clipStartTime' in timeRange)
+}
+
+// 定义时间轴项目数据接口，用于命令模式中的数据保存
+interface TimelineItemData {
+  id: string
+  mediaItemId: string
+  trackId: number
+  mediaType: 'video' | 'image'
+  timeRange: VideoTimeRange | ImageTimeRange
+  x: number
+  y: number
+  width: number
+  height: number
+  rotation: number
+  zIndex: number
+  opacity: number
+  volume: number
+  isMuted: boolean
+  thumbnailUrl?: string
+}
+
+
+
+// 定义变换数据接口
+interface TransformData {
+  x?: number
+  y?: number
+  width?: number
+  height?: number
+  rotation?: number
+  opacity?: number
+  zIndex?: number
+  duration?: number
+  playbackRate?: number
+  volume?: number
+  isMuted?: boolean
+}
 
 /**
  * 添加时间轴项目命令
@@ -14,7 +62,7 @@ import { markRaw, reactive, type Ref } from 'vue'
 export class AddTimelineItemCommand implements SimpleCommand {
   public readonly id: string
   public readonly description: string
-  private originalTimelineItemData: any // 保存原始timelineItem数据用于重建
+  private originalTimelineItemData: TimelineItemData // 保存原始timelineItem数据用于重建
 
   constructor(
     timelineItem: TimelineItem, // 注意：不再保存timelineItem引用，只保存重建数据
@@ -24,8 +72,8 @@ export class AddTimelineItemCommand implements SimpleCommand {
       getTimelineItem: (id: string) => TimelineItem | undefined
     },
     private webavModule: {
-      addSprite: (sprite: unknown) => void
-      removeSprite: (sprite: unknown) => void
+      addSprite: (sprite: VisibleSprite) => boolean
+      removeSprite: (sprite: VisibleSprite) => boolean
     },
     private mediaModule: {
       getMediaItem: (id: string) => MediaItem | undefined
@@ -49,6 +97,8 @@ export class AddTimelineItemCommand implements SimpleCommand {
       rotation: timelineItem.rotation,
       zIndex: timelineItem.zIndex,
       opacity: timelineItem.opacity,
+      volume: timelineItem.volume,
+      isMuted: timelineItem.isMuted,
       thumbnailUrl: timelineItem.thumbnailUrl,
     }
   }
@@ -174,7 +224,7 @@ export class AddTimelineItemCommand implements SimpleCommand {
 export class RemoveTimelineItemCommand implements SimpleCommand {
   public readonly id: string
   public readonly description: string
-  private originalTimelineItemData: any // 保存重建所需的完整元数据
+  private originalTimelineItemData: TimelineItemData // 保存重建所需的完整元数据
 
   constructor(
     private timelineItemId: string,
@@ -185,8 +235,8 @@ export class RemoveTimelineItemCommand implements SimpleCommand {
       getTimelineItem: (id: string) => TimelineItem | undefined
     },
     private webavModule: {
-      addSprite: (sprite: unknown) => void
-      removeSprite: (sprite: unknown) => void
+      addSprite: (sprite: VisibleSprite) => boolean
+      removeSprite: (sprite: VisibleSprite) => boolean
     },
     private mediaModule: {
       getMediaItem: (id: string) => MediaItem | undefined
@@ -204,16 +254,7 @@ export class RemoveTimelineItemCommand implements SimpleCommand {
       trackId: timelineItem.trackId,
       mediaType: timelineItem.mediaType,
       // 深拷贝时间范围信息
-      timeRange: {
-        timelineStartTime: timelineItem.timeRange.timelineStartTime,
-        timelineEndTime: timelineItem.timeRange.timelineEndTime,
-        ...(timelineItem.mediaType === 'video' && 'clipStartTime' in timelineItem.timeRange ? {
-          clipStartTime: timelineItem.timeRange.clipStartTime,
-          clipEndTime: timelineItem.timeRange.clipEndTime,
-          playbackRate: timelineItem.timeRange.playbackRate,
-          effectiveDuration: timelineItem.timeRange.effectiveDuration,
-        } : {}),
-      },
+      timeRange: { ...timelineItem.timeRange },
       // 深拷贝变换属性
       x: timelineItem.x,
       y: timelineItem.y,
@@ -222,6 +263,8 @@ export class RemoveTimelineItemCommand implements SimpleCommand {
       rotation: timelineItem.rotation,
       zIndex: timelineItem.zIndex,
       opacity: timelineItem.opacity,
+      volume: timelineItem.volume,
+      isMuted: timelineItem.isMuted,
       thumbnailUrl: timelineItem.thumbnailUrl,
     }
 
@@ -359,7 +402,7 @@ export class RemoveTimelineItemCommand implements SimpleCommand {
 export class DuplicateTimelineItemCommand implements SimpleCommand {
   public readonly id: string
   public readonly description: string
-  private originalTimelineItemData: any // 保存原始项目的重建元数据
+  private originalTimelineItemData: TimelineItemData // 保存原始项目的重建元数据
   public readonly newTimelineItemId: string // 新创建的项目ID
 
   constructor(
@@ -373,8 +416,8 @@ export class DuplicateTimelineItemCommand implements SimpleCommand {
       setupBidirectionalSync: (item: TimelineItem) => void
     },
     private webavModule: {
-      addSprite: (sprite: unknown) => void
-      removeSprite: (sprite: unknown) => void
+      addSprite: (sprite: VisibleSprite) => boolean
+      removeSprite: (sprite: VisibleSprite) => boolean
     },
     private mediaModule: {
       getMediaItem: (id: string) => MediaItem | undefined
@@ -386,6 +429,7 @@ export class DuplicateTimelineItemCommand implements SimpleCommand {
 
     // 保存原始项目的完整重建元数据
     this.originalTimelineItemData = {
+      id: originalTimelineItem.id,
       mediaItemId: originalTimelineItem.mediaItemId,
       trackId: originalTimelineItem.trackId,
       mediaType: originalTimelineItem.mediaType,
@@ -397,6 +441,8 @@ export class DuplicateTimelineItemCommand implements SimpleCommand {
       rotation: originalTimelineItem.rotation,
       zIndex: originalTimelineItem.zIndex,
       opacity: originalTimelineItem.opacity,
+      volume: originalTimelineItem.volume,
+      isMuted: originalTimelineItem.isMuted,
       thumbnailUrl: originalTimelineItem.thumbnailUrl,
     }
 
@@ -427,18 +473,18 @@ export class DuplicateTimelineItemCommand implements SimpleCommand {
     const newTimelineStartTime = this.newPosition * 1000000 // 转换为微秒
     const newTimelineEndTime = newTimelineStartTime + (originalDuration * 1000000)
 
-    if (mediaItem.mediaType === 'video') {
+    if (mediaItem.mediaType === 'video' && isVideoTimeRange(originalTimeRange)) {
       newSprite.setTimeRange({
-        clipStartTime: originalTimeRange.clipStartTime || 0,
-        clipEndTime: originalTimeRange.clipEndTime || mediaItem.duration * 1000000,
+        clipStartTime: originalTimeRange.clipStartTime,
+        clipEndTime: originalTimeRange.clipEndTime,
         timelineStartTime: newTimelineStartTime,
         timelineEndTime: newTimelineEndTime,
       })
-    } else if (mediaItem.mediaType === 'image') {
+    } else if (mediaItem.mediaType === 'image' && isImageTimeRange(originalTimeRange)) {
       newSprite.setTimeRange({
         timelineStartTime: newTimelineStartTime,
         timelineEndTime: newTimelineEndTime,
-        displayDuration: originalDuration * 1000000,
+        displayDuration: originalTimeRange.displayDuration,
       })
     }
 
@@ -460,18 +506,18 @@ export class DuplicateTimelineItemCommand implements SimpleCommand {
       mediaItemId: this.originalTimelineItemData.mediaItemId,
       trackId: this.originalTimelineItemData.trackId,
       mediaType: this.originalTimelineItemData.mediaType,
-      timeRange: mediaItem.mediaType === 'video' ? {
-        clipStartTime: originalTimeRange.clipStartTime || 0,
-        clipEndTime: originalTimeRange.clipEndTime || mediaItem.duration * 1000000,
+      timeRange: mediaItem.mediaType === 'video' && isVideoTimeRange(originalTimeRange) ? {
+        clipStartTime: originalTimeRange.clipStartTime,
+        clipEndTime: originalTimeRange.clipEndTime,
         timelineStartTime: newTimelineStartTime,
         timelineEndTime: newTimelineEndTime,
-        effectiveDuration: originalDuration * 1000000,
-        playbackRate: originalTimeRange.playbackRate || 1.0,
-      } : {
+        effectiveDuration: originalTimeRange.effectiveDuration,
+        playbackRate: originalTimeRange.playbackRate,
+      } : isImageTimeRange(originalTimeRange) ? {
         timelineStartTime: newTimelineStartTime,
         timelineEndTime: newTimelineEndTime,
-        displayDuration: originalDuration * 1000000,
-      },
+        displayDuration: originalTimeRange.displayDuration,
+      } : originalTimeRange,
       x: this.originalTimelineItemData.x,
       y: this.originalTimelineItemData.y,
       width: this.originalTimelineItemData.width,
@@ -655,8 +701,10 @@ export class UpdateTransformCommand implements SimpleCommand {
     private timelineItemId: string,
     private propertyType: 'position' | 'size' | 'rotation' | 'opacity' | 'zIndex' | 'duration' | 'playbackRate' | 'volume' | 'audioState' | 'multiple',
     private oldValues: {
-      position?: { x: number; y: number }
-      size?: { width: number; height: number }
+      x?: number
+      y?: number
+      width?: number
+      height?: number
       rotation?: number
       opacity?: number
       zIndex?: number
@@ -666,8 +714,10 @@ export class UpdateTransformCommand implements SimpleCommand {
       isMuted?: boolean // 静音状态
     },
     private newValues: {
-      position?: { x: number; y: number }
-      size?: { width: number; height: number }
+      x?: number
+      y?: number
+      width?: number
+      height?: number
       rotation?: number
       opacity?: number
       zIndex?: number
@@ -677,7 +727,7 @@ export class UpdateTransformCommand implements SimpleCommand {
       isMuted?: boolean // 静音状态
     },
     private timelineModule: {
-      updateTimelineItemTransform: (id: string, transform: any) => void
+      updateTimelineItemTransform: (id: string, transform: TransformData) => void
       getTimelineItem: (id: string) => TimelineItem | undefined
     },
     private mediaModule: {
@@ -709,16 +759,24 @@ export class UpdateTransformCommand implements SimpleCommand {
   private generateDescription(mediaName: string): string {
     const changes: string[] = []
 
-    if (this.newValues.position && this.oldValues.position) {
-      const oldPos = this.oldValues.position
-      const newPos = this.newValues.position
-      changes.push(`位置: (${oldPos.x.toFixed(0)}, ${oldPos.y.toFixed(0)}) → (${newPos.x.toFixed(0)}, ${newPos.y.toFixed(0)})`)
+    // 检查位置变化
+    if ((this.newValues.x !== undefined && this.oldValues.x !== undefined) ||
+        (this.newValues.y !== undefined && this.oldValues.y !== undefined)) {
+      const oldX = this.oldValues.x ?? 0
+      const oldY = this.oldValues.y ?? 0
+      const newX = this.newValues.x ?? oldX
+      const newY = this.newValues.y ?? oldY
+      changes.push(`位置: (${oldX.toFixed(0)}, ${oldY.toFixed(0)}) → (${newX.toFixed(0)}, ${newY.toFixed(0)})`)
     }
 
-    if (this.newValues.size && this.oldValues.size) {
-      const oldSize = this.oldValues.size
-      const newSize = this.newValues.size
-      changes.push(`大小: ${oldSize.width.toFixed(0)}×${oldSize.height.toFixed(0)} → ${newSize.width.toFixed(0)}×${newSize.height.toFixed(0)}`)
+    // 检查大小变化
+    if ((this.newValues.width !== undefined && this.oldValues.width !== undefined) ||
+        (this.newValues.height !== undefined && this.oldValues.height !== undefined)) {
+      const oldWidth = this.oldValues.width ?? 0
+      const oldHeight = this.oldValues.height ?? 0
+      const newWidth = this.newValues.width ?? oldWidth
+      const newHeight = this.newValues.height ?? oldHeight
+      changes.push(`大小: ${oldWidth.toFixed(0)}×${oldHeight.toFixed(0)} → ${newWidth.toFixed(0)}×${newHeight.toFixed(0)}`)
     }
 
     if (this.newValues.rotation !== undefined && this.oldValues.rotation !== undefined) {
@@ -776,8 +834,10 @@ export class UpdateTransformCommand implements SimpleCommand {
 
       // 应用新的变换属性（位置、大小、旋转、透明度、层级）
       const transformValues = {
-        position: this.newValues.position,
-        size: this.newValues.size,
+        x: this.newValues.x,
+        y: this.newValues.y,
+        width: this.newValues.width,
+        height: this.newValues.height,
         rotation: this.newValues.rotation,
         opacity: this.newValues.opacity,
         zIndex: this.newValues.zIndex,
@@ -808,7 +868,7 @@ export class UpdateTransformCommand implements SimpleCommand {
           timelineItem.volume = this.newValues.volume
           const sprite = timelineItem.sprite
           if (sprite && 'setVolume' in sprite) {
-            ;(sprite as any).setVolume(this.newValues.volume)
+            ;(sprite as ExtendedSprite).setVolume?.(this.newValues.volume)
           }
         }
 
@@ -816,7 +876,7 @@ export class UpdateTransformCommand implements SimpleCommand {
           timelineItem.isMuted = this.newValues.isMuted
           const sprite = timelineItem.sprite
           if (sprite && 'setMuted' in sprite) {
-            ;(sprite as any).setMuted(this.newValues.isMuted)
+            ;(sprite as ExtendedSprite).setMuted?.(this.newValues.isMuted)
           }
         }
       }
@@ -845,8 +905,10 @@ export class UpdateTransformCommand implements SimpleCommand {
 
       // 恢复到旧的变换属性（位置、大小、旋转、透明度、层级）
       const transformValues = {
-        position: this.oldValues.position,
-        size: this.oldValues.size,
+        x: this.oldValues.x,
+        y: this.oldValues.y,
+        width: this.oldValues.width,
+        height: this.oldValues.height,
         rotation: this.oldValues.rotation,
         opacity: this.oldValues.opacity,
         zIndex: this.oldValues.zIndex,
@@ -877,7 +939,7 @@ export class UpdateTransformCommand implements SimpleCommand {
           timelineItem.volume = this.oldValues.volume
           const sprite = timelineItem.sprite
           if (sprite && 'setVolume' in sprite) {
-            ;(sprite as any).setVolume(this.oldValues.volume)
+            ;(sprite as ExtendedSprite).setVolume?.(this.oldValues.volume)
           }
         }
 
@@ -885,7 +947,7 @@ export class UpdateTransformCommand implements SimpleCommand {
           timelineItem.isMuted = this.oldValues.isMuted
           const sprite = timelineItem.sprite
           if (sprite && 'setMuted' in sprite) {
-            ;(sprite as any).setMuted(this.oldValues.isMuted)
+            ;(sprite as ExtendedSprite).setMuted?.(this.oldValues.isMuted)
           }
         }
       }
@@ -951,7 +1013,7 @@ export class UpdateTransformCommand implements SimpleCommand {
 export class SplitTimelineItemCommand implements SimpleCommand {
   public readonly id: string
   public readonly description: string
-  private originalTimelineItemData: any // 保存原始项目的重建数据
+  private originalTimelineItemData: TimelineItemData // 保存原始项目的重建数据
   private firstItemId: string // 分割后第一个项目的ID
   private secondItemId: string // 分割后第二个项目的ID
 
@@ -965,8 +1027,8 @@ export class SplitTimelineItemCommand implements SimpleCommand {
       getTimelineItem: (id: string) => TimelineItem | undefined
     },
     private webavModule: {
-      addSprite: (sprite: unknown) => void
-      removeSprite: (sprite: unknown) => void
+      addSprite: (sprite: VisibleSprite) => boolean
+      removeSprite: (sprite: VisibleSprite) => boolean
     },
     private mediaModule: {
       getMediaItem: (id: string) => MediaItem | undefined
@@ -984,16 +1046,7 @@ export class SplitTimelineItemCommand implements SimpleCommand {
       trackId: originalTimelineItem.trackId,
       mediaType: originalTimelineItem.mediaType,
       // 深拷贝时间范围信息
-      timeRange: {
-        timelineStartTime: originalTimelineItem.timeRange.timelineStartTime,
-        timelineEndTime: originalTimelineItem.timeRange.timelineEndTime,
-        ...(originalTimelineItem.mediaType === 'video' && 'clipStartTime' in originalTimelineItem.timeRange ? {
-          clipStartTime: originalTimelineItem.timeRange.clipStartTime,
-          clipEndTime: originalTimelineItem.timeRange.clipEndTime,
-          playbackRate: originalTimelineItem.timeRange.playbackRate,
-          effectiveDuration: originalTimelineItem.timeRange.effectiveDuration,
-        } : {}),
-      },
+      timeRange: { ...originalTimelineItem.timeRange },
       // 深拷贝变换属性
       x: originalTimelineItem.x,
       y: originalTimelineItem.y,
@@ -1041,6 +1094,9 @@ export class SplitTimelineItemCommand implements SimpleCommand {
 
     // 2. 计算分割点的时间信息
     const originalTimeRange = this.originalTimelineItemData.timeRange
+    if (!isVideoTimeRange(originalTimeRange)) {
+      throw new Error('只能分割视频项目')
+    }
     const timelineStartTime = originalTimeRange.timelineStartTime / 1000000 // 转换为秒
     const timelineEndTime = originalTimeRange.timelineEndTime / 1000000 // 转换为秒
     const clipStartTime = originalTimeRange.clipStartTime / 1000000 // 转换为秒
@@ -1276,7 +1332,7 @@ export class AddTrackCommand implements SimpleCommand {
     private trackName: string | undefined, // 轨道名称（可选）
     private trackModule: {
       addTrack: (name?: string) => Track
-      removeTrack: (trackId: number, timelineItems: any, removeTimelineItemCallback?: any) => void
+      removeTrack: (trackId: number, timelineItems: Ref<TimelineItem[]>, removeTimelineItemCallback?: (id: string) => void) => void
       getTrack: (trackId: number) => Track | undefined
     }
   ) {
@@ -1332,7 +1388,7 @@ export class AddTrackCommand implements SimpleCommand {
 
       // 删除添加的轨道
       // 注意：这里传入空的timelineItems和回调，因为新添加的轨道上不应该有任何项目
-      this.trackModule.removeTrack(this.newTrackId, { value: [] } as any, undefined)
+      this.trackModule.removeTrack(this.newTrackId, ref([]), undefined)
 
       console.log(`↩️ 已撤销添加轨道: ${this.trackData.name}`)
     } catch (error) {
@@ -1429,13 +1485,13 @@ export class RemoveTrackCommand implements SimpleCommand {
   public readonly id: string
   public readonly description: string
   private trackData: Track // 保存被删除的轨道数据
-  private affectedTimelineItems: any[] = [] // 保存被删除的时间轴项目的重建元数据
+  private affectedTimelineItems: TimelineItemData[] = [] // 保存被删除的时间轴项目的重建元数据
 
   constructor(
     private trackId: number,
     private trackModule: {
       addTrack: (name?: string) => Track
-      removeTrack: (trackId: number, timelineItems: any, removeTimelineItemCallback?: any) => void
+      removeTrack: (trackId: number, timelineItems: Ref<TimelineItem[]>, removeTimelineItemCallback?: (id: string) => void) => void
       getTrack: (trackId: number) => Track | undefined
       tracks: { value: Track[] }
     },
@@ -1447,8 +1503,8 @@ export class RemoveTrackCommand implements SimpleCommand {
       timelineItems: { value: TimelineItem[] }
     },
     private webavModule: {
-      addSprite: (sprite: unknown) => void
-      removeSprite: (sprite: unknown) => void
+      addSprite: (sprite: VisibleSprite) => boolean
+      removeSprite: (sprite: VisibleSprite) => boolean
     },
     private mediaModule: {
       getMediaItem: (id: string) => MediaItem | undefined
@@ -1491,7 +1547,7 @@ export class RemoveTrackCommand implements SimpleCommand {
   /**
    * 从原始素材重建时间轴项目
    */
-  private async rebuildTimelineItem(itemData: any): Promise<TimelineItem> {
+  private async rebuildTimelineItem(itemData: TimelineItemData): Promise<TimelineItem> {
     const mediaItem = this.mediaModule.getMediaItem(itemData.mediaItemId)
     if (!mediaItem) {
       throw new Error(`找不到素材项目: ${itemData.mediaItemId}`)
@@ -1506,14 +1562,14 @@ export class RemoveTrackCommand implements SimpleCommand {
     const newSprite = await createSpriteFromMediaItem(mediaItem)
 
     // 设置时间范围
-    if (mediaItem.mediaType === 'video') {
+    if (mediaItem.mediaType === 'video' && isVideoTimeRange(itemData.timeRange)) {
       newSprite.setTimeRange({
-        clipStartTime: itemData.timeRange.clipStartTime || 0,
-        clipEndTime: itemData.timeRange.clipEndTime || mediaItem.duration * 1000000,
+        clipStartTime: itemData.timeRange.clipStartTime,
+        clipEndTime: itemData.timeRange.clipEndTime,
         timelineStartTime: itemData.timeRange.timelineStartTime,
         timelineEndTime: itemData.timeRange.timelineEndTime,
       })
-    } else if (mediaItem.mediaType === 'image') {
+    } else if (mediaItem.mediaType === 'image' && isImageTimeRange(itemData.timeRange)) {
       newSprite.setTimeRange({
         timelineStartTime: itemData.timeRange.timelineStartTime,
         timelineEndTime: itemData.timeRange.timelineEndTime,
@@ -1539,18 +1595,7 @@ export class RemoveTrackCommand implements SimpleCommand {
       mediaItemId: itemData.mediaItemId,
       trackId: itemData.trackId,
       mediaType: itemData.mediaType,
-      timeRange: mediaItem.mediaType === 'video' ? {
-        clipStartTime: itemData.timeRange.clipStartTime || 0,
-        clipEndTime: itemData.timeRange.clipEndTime || mediaItem.duration * 1000000,
-        timelineStartTime: itemData.timeRange.timelineStartTime,
-        timelineEndTime: itemData.timeRange.timelineEndTime,
-        effectiveDuration: itemData.timeRange.effectiveDuration,
-        playbackRate: itemData.timeRange.playbackRate || 1.0,
-      } : {
-        timelineStartTime: itemData.timeRange.timelineStartTime,
-        timelineEndTime: itemData.timeRange.timelineEndTime,
-        displayDuration: itemData.timeRange.displayDuration,
-      },
+      timeRange: { ...itemData.timeRange },
       x: itemData.x,
       y: itemData.y,
       width: itemData.width,
@@ -1589,7 +1634,7 @@ export class RemoveTrackCommand implements SimpleCommand {
       // 删除轨道（这会自动删除轨道上的所有时间轴项目）
       this.trackModule.removeTrack(
         this.trackId,
-        this.timelineModule.timelineItems,
+        ref(this.timelineModule.timelineItems.value),
         this.timelineModule.removeTimelineItem
       )
 
@@ -1657,7 +1702,7 @@ export class ToggleTrackVisibilityCommand implements SimpleCommand {
     private trackId: number,
     private trackModule: {
       getTrack: (trackId: number) => Track | undefined
-      toggleTrackVisibility: (trackId: number, timelineItems?: any) => void
+      toggleTrackVisibility: (trackId: number, timelineItems?: Ref<TimelineItem[]>) => void
     },
     private timelineModule: {
       timelineItems: { value: TimelineItem[] }
@@ -1691,7 +1736,7 @@ export class ToggleTrackVisibilityCommand implements SimpleCommand {
 
       // 调用trackModule的toggleTrackVisibility方法
       // 这会自动同步该轨道上所有TimelineItem的sprite可见性
-      this.trackModule.toggleTrackVisibility(this.trackId, this.timelineModule.timelineItems)
+      this.trackModule.toggleTrackVisibility(this.trackId, ref(this.timelineModule.timelineItems.value))
 
       const newVisibility = track.isVisible
       console.log(`✅ 已切换轨道可见性: ${track.name}, 新状态: ${newVisibility ? '可见' : '隐藏'}`)
@@ -1716,7 +1761,7 @@ export class ToggleTrackVisibilityCommand implements SimpleCommand {
 
       // 如果当前状态与原始状态不同，则再次切换
       if (track.isVisible !== this.previousVisibility) {
-        this.trackModule.toggleTrackVisibility(this.trackId, this.timelineModule.timelineItems)
+        this.trackModule.toggleTrackVisibility(this.trackId, ref(this.timelineModule.timelineItems.value))
       }
 
       console.log(`↩️ 已撤销切换轨道可见性: ${track.name}, 恢复状态: ${this.previousVisibility ? '可见' : '隐藏'}`)
@@ -1982,13 +2027,13 @@ export class AutoArrangeTrackCommand implements SimpleCommand {
 export class ResizeTimelineItemCommand implements SimpleCommand {
   public readonly id: string
   public readonly description: string
-  private originalTimeRange: { timelineStartTime: number; timelineEndTime: number; [key: string]: any }
-  private newTimeRange: { timelineStartTime: number; timelineEndTime: number; [key: string]: any }
+  private originalTimeRange: VideoTimeRange | ImageTimeRange
+  private newTimeRange: VideoTimeRange | ImageTimeRange
 
   constructor(
     private timelineItemId: string,
-    originalTimeRange: any, // 原始时间范围
-    newTimeRange: any, // 新的时间范围
+    originalTimeRange: VideoTimeRange | ImageTimeRange, // 原始时间范围
+    newTimeRange: VideoTimeRange | ImageTimeRange, // 新的时间范围
     private timelineModule: {
       getTimelineItem: (id: string) => TimelineItem | undefined
     },
@@ -2022,7 +2067,7 @@ export class ResizeTimelineItemCommand implements SimpleCommand {
   /**
    * 应用时间范围到sprite和timelineItem
    */
-  private applyTimeRange(timeRange: any): void {
+  private applyTimeRange(timeRange: VideoTimeRange | ImageTimeRange): void {
     const timelineItem = this.timelineModule.getTimelineItem(this.timelineItemId)
     if (!timelineItem) {
       throw new Error(`找不到时间轴项目: ${this.timelineItemId}`)
@@ -2035,21 +2080,20 @@ export class ResizeTimelineItemCommand implements SimpleCommand {
     }
 
     // 根据媒体类型设置时间范围
-    if (mediaItem.mediaType === 'video') {
+    if (mediaItem.mediaType === 'video' && isVideoTimeRange(timeRange)) {
       // 视频类型：保持clipStartTime和clipEndTime，更新timeline时间
       sprite.setTimeRange({
-        clipStartTime: timeRange.clipStartTime || 0,
-        clipEndTime: timeRange.clipEndTime || mediaItem.duration * 1000000,
+        clipStartTime: timeRange.clipStartTime,
+        clipEndTime: timeRange.clipEndTime,
         timelineStartTime: timeRange.timelineStartTime,
         timelineEndTime: timeRange.timelineEndTime,
       })
-    } else if (mediaItem.mediaType === 'image') {
+    } else if (mediaItem.mediaType === 'image' && isImageTimeRange(timeRange)) {
       // 图片类型：设置displayDuration
-      const duration = timeRange.timelineEndTime - timeRange.timelineStartTime
       sprite.setTimeRange({
         timelineStartTime: timeRange.timelineStartTime,
         timelineEndTime: timeRange.timelineEndTime,
-        displayDuration: duration,
+        displayDuration: timeRange.displayDuration,
       })
     }
 

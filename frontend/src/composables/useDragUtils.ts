@@ -34,7 +34,7 @@ export function useDragUtils() {
     event.dataTransfer!.effectAllowed = 'move'
 
     // 设置全局拖拽状态（用于dragover事件中访问）
-    ;(window as any).__timelineDragData = dragData
+    window.__timelineDragData = dragData
 
     return dragData
   }
@@ -62,7 +62,7 @@ export function useDragUtils() {
     event.dataTransfer!.effectAllowed = 'copy'
 
     // 设置全局拖拽状态
-    ;(window as any).__mediaDragData = dragData
+    window.__mediaDragData = dragData
 
     return dragData
   }
@@ -71,22 +71,22 @@ export function useDragUtils() {
    * 获取当前时间轴项目拖拽数据
    */
   function getCurrentTimelineItemDragData(): TimelineItemDragData | null {
-    return (window as any).__timelineDragData || null
+    return window.__timelineDragData || null
   }
 
   /**
    * 获取当前素材库拖拽数据
    */
   function getCurrentMediaItemDragData(): MediaItemDragData | null {
-    return (window as any).__mediaDragData || null
+    return window.__mediaDragData || null
   }
 
   /**
    * 清理拖拽数据
    */
   function clearDragData() {
-    ;(window as any).__timelineDragData = null
-    ;(window as any).__mediaDragData = null
+    window.__timelineDragData = null
+    window.__mediaDragData = null
   }
 
   /**

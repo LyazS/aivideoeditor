@@ -1,20 +1,10 @@
 import { useVideoStore } from '../stores/videoStore'
-
-// 拖拽预览数据接口
-interface DragPreviewData {
-  name: string
-  duration: number
-  startTime: number
-  trackId: number
-  isConflict: boolean
-  isMultiple?: boolean
-  count?: number
-}
+import type { DragPreviewData } from '../types/webavTypes'
 
 // 统一拖拽预览管理器
 class DragPreviewManager {
   private previewElement: HTMLElement | null = null
-  private _videoStore: any = null
+  private _videoStore: ReturnType<typeof useVideoStore> | null = null
   private updateTimer: number | null = null
 
   /**

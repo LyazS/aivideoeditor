@@ -2,10 +2,11 @@ import { generateCommandId } from '../../../utils/idGenerator'
 import { BaseBatchCommand } from '../historyModule'
 import type { SimpleCommand } from '../historyModule'
 import type { TimelineItem, MediaItem, Track } from '../../../types/videoTypes'
-import { 
-  RemoveTimelineItemCommand, 
-  MoveTimelineItemCommand 
+import {
+  RemoveTimelineItemCommand,
+  MoveTimelineItemCommand
 } from './timelineCommands'
+import type { VisibleSprite } from '@webav/av-cliper'
 
 /**
  * 批量删除时间轴项目命令
@@ -21,8 +22,8 @@ export class BatchDeleteCommand extends BaseBatchCommand {
       removeTimelineItem: (id: string) => void
     },
     private webavModule: {
-      addSprite: (sprite: unknown) => void
-      removeSprite: (sprite: unknown) => void
+      addSprite: (sprite: VisibleSprite) => boolean
+      removeSprite: (sprite: VisibleSprite) => boolean
     },
     private mediaModule: {
       getMediaItem: (id: string) => MediaItem | undefined

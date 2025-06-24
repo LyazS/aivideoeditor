@@ -510,18 +510,10 @@ async function stopResize() {
       const newTimeRange = {
         timelineStartTime: newTimelineStartTime,
         timelineEndTime: newTimelineEndTime,
-      }
-
-      // 根据媒体类型添加额外的属性
-      if (mediaItem.mediaType === 'video') {
-        Object.assign(newTimeRange, {
-          clipStartTime: 0,
-          clipEndTime: mediaItem.duration * 1000000,
-        })
-      } else if (mediaItem.mediaType === 'image') {
-        Object.assign(newTimeRange, {
-          displayDuration: newTimelineEndTime - newTimelineStartTime,
-        })
+        clipStartTime: mediaItem.mediaType === 'video' ? 0 : 0,
+        clipEndTime: mediaItem.mediaType === 'video' ? mediaItem.duration * 1000000 : 0,
+        effectiveDuration: newTimelineEndTime - newTimelineStartTime,
+        playbackRate: 1.0,
       }
 
       try {

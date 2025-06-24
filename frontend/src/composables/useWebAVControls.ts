@@ -1,8 +1,8 @@
 import { ref, markRaw, type Raw } from 'vue'
 import { AVCanvas } from '@webav/av-canvas'
 import { MP4Clip, ImgClip } from '@webav/av-cliper'
-import { VideoVisibleSprite } from '../utils/VideoVisibleSprite'
-import { ImageVisibleSprite } from '../utils/ImageVisibleSprite'
+import { VideoVisibleSprite, type VideoTimeRange } from '../utils/VideoVisibleSprite'
+import { ImageVisibleSprite, type ImageTimeRange } from '../utils/ImageVisibleSprite'
 import { useVideoStore } from '../stores/videoStore'
 import {
   logWebAVInitStart,
@@ -44,7 +44,7 @@ interface CanvasBackup {
     mediaItemId: string
     trackId: number
     mediaType: 'video' | 'image'
-    timeRange: any // VideoTimeRange | ImageTimeRange
+    timeRange: VideoTimeRange | ImageTimeRange
     x: number
     y: number
     width: number
@@ -279,7 +279,7 @@ export function useWebAVControls() {
 
     // 注意：不再监听activeSpriteChange事件，因为我们不希望WebAV的activeSprite影响时间轴选择
     // globalAVCanvas.on('activeSpriteChange', (sprite) => {
-    //   videoStore.handleAVCanvasSpriteChange(sprite as any)
+    //   videoStore.handleAVCanvasSpriteChange(sprite)
     // })
 
     // console.log('✅ [WebAV Events] All event listeners registered successfully')

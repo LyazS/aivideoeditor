@@ -1,5 +1,7 @@
 import { ref, markRaw } from 'vue'
 import { AVCanvas } from '@webav/av-canvas'
+import type { VisibleSprite } from '@webav/av-cliper'
+import type { ExtendedAVCanvas } from '../../types/webavTypes'
 
 /**
  * WebAV集成管理模块
@@ -131,14 +133,14 @@ export function createWebAVModule() {
    * 添加sprite到画布
    * @param sprite 要添加的sprite
    */
-  function addSprite(sprite: unknown) {
+  function addSprite(sprite: VisibleSprite) {
     if (!isWebAVAvailable()) {
       console.warn('⚠️ [WebAVModule] WebAV不可用，无法添加sprite')
       return false
     }
 
     try {
-      avCanvas.value!.addSprite(sprite as any)
+      avCanvas.value!.addSprite(sprite)
       console.log('✅ [WebAVModule] 添加sprite成功')
       return true
     } catch (error) {
@@ -153,14 +155,14 @@ export function createWebAVModule() {
    * 从画布移除sprite
    * @param sprite 要移除的sprite
    */
-  function removeSprite(sprite: unknown) {
+  function removeSprite(sprite: VisibleSprite) {
     if (!isWebAVAvailable()) {
       console.warn('⚠️ [WebAVModule] WebAV不可用，无法移除sprite')
       return false
     }
 
     try {
-      avCanvas.value!.removeSprite(sprite as any)
+      avCanvas.value!.removeSprite(sprite)
       console.log('✅ [WebAVModule] 移除sprite成功')
       return true
     } catch (error) {

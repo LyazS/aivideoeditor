@@ -205,8 +205,10 @@ export const useVideoStore = defineStore('video', () => {
   async function updateTimelineItemTransformWithHistory(
     timelineItemId: string,
     newTransform: {
-      position?: { x: number; y: number }
-      size?: { width: number; height: number }
+      x?: number
+      y?: number
+      width?: number
+      height?: number
       rotation?: number
       opacity?: number
       zIndex?: number
@@ -226,18 +228,18 @@ export const useVideoStore = defineStore('video', () => {
     // 获取当前的变换属性
     const oldTransform: typeof newTransform = {}
 
-    if (newTransform.position) {
-      oldTransform.position = {
-        x: timelineItem.x,
-        y: timelineItem.y,
-      }
+    if (newTransform.x !== undefined) {
+      oldTransform.x = timelineItem.x
+    }
+    if (newTransform.y !== undefined) {
+      oldTransform.y = timelineItem.y
     }
 
-    if (newTransform.size) {
-      oldTransform.size = {
-        width: timelineItem.width,
-        height: timelineItem.height,
-      }
+    if (newTransform.width !== undefined) {
+      oldTransform.width = timelineItem.width
+    }
+    if (newTransform.height !== undefined) {
+      oldTransform.height = timelineItem.height
     }
 
     if (newTransform.rotation !== undefined) {
@@ -311,27 +313,46 @@ export const useVideoStore = defineStore('video', () => {
     await historyModule.executeCommand(command)
   }
 
+  // 定义变换对象的类型
+  interface TransformData {
+    x?: number
+    y?: number
+    width?: number
+    height?: number
+    rotation?: number
+    opacity?: number
+    zIndex?: number
+    duration?: number
+    playbackRate?: number
+    volume?: number
+    isMuted?: boolean
+  }
+
   /**
    * 检查变换属性是否有实际变化
    */
   function checkTransformChanges(
-    oldTransform: any,
-    newTransform: any
+    oldTransform: TransformData,
+    newTransform: TransformData
   ): boolean {
     // 检查位置变化
-    if (newTransform.position && oldTransform.position) {
-      const positionChanged =
-        Math.abs(oldTransform.position.x - newTransform.position.x) > 0.1 ||
-        Math.abs(oldTransform.position.y - newTransform.position.y) > 0.1
-      if (positionChanged) return true
+    if ((newTransform.x !== undefined && oldTransform.x !== undefined) ||
+        (newTransform.y !== undefined && oldTransform.y !== undefined)) {
+      const xChanged = newTransform.x !== undefined && oldTransform.x !== undefined &&
+        Math.abs(oldTransform.x - newTransform.x) > 0.1
+      const yChanged = newTransform.y !== undefined && oldTransform.y !== undefined &&
+        Math.abs(oldTransform.y - newTransform.y) > 0.1
+      if (xChanged || yChanged) return true
     }
 
     // 检查大小变化
-    if (newTransform.size && oldTransform.size) {
-      const sizeChanged =
-        Math.abs(oldTransform.size.width - newTransform.size.width) > 0.1 ||
-        Math.abs(oldTransform.size.height - newTransform.size.height) > 0.1
-      if (sizeChanged) return true
+    if ((newTransform.width !== undefined && oldTransform.width !== undefined) ||
+        (newTransform.height !== undefined && oldTransform.height !== undefined)) {
+      const widthChanged = newTransform.width !== undefined && oldTransform.width !== undefined &&
+        Math.abs(oldTransform.width - newTransform.width) > 0.1
+      const heightChanged = newTransform.height !== undefined && oldTransform.height !== undefined &&
+        Math.abs(oldTransform.height - newTransform.height) > 0.1
+      if (widthChanged || heightChanged) return true
     }
 
     // 检查旋转变化
@@ -379,14 +400,17 @@ export const useVideoStore = defineStore('video', () => {
     return false
   }
 
+  // 定义属性类型枚举
+  type PropertyType = 'position' | 'size' | 'rotation' | 'opacity' | 'zIndex' | 'duration' | 'playbackRate' | 'volume' | 'audioState' | 'multiple'
+
   /**
    * 确定属性类型
    */
-  function determinePropertyType(transform: any): 'position' | 'size' | 'rotation' | 'opacity' | 'zIndex' | 'duration' | 'playbackRate' | 'volume' | 'audioState' | 'multiple' {
+  function determinePropertyType(transform: TransformData): PropertyType {
     const changedProperties = []
 
-    if (transform.position) changedProperties.push('position')
-    if (transform.size) changedProperties.push('size')
+    if (transform.x !== undefined || transform.y !== undefined) changedProperties.push('position')
+    if (transform.width !== undefined || transform.height !== undefined) changedProperties.push('size')
     if (transform.rotation !== undefined) changedProperties.push('rotation')
     if (transform.opacity !== undefined) changedProperties.push('opacity')
     if (transform.zIndex !== undefined) changedProperties.push('zIndex')
@@ -400,7 +424,7 @@ export const useVideoStore = defineStore('video', () => {
       return 'audioState'
     }
 
-    return changedProperties.length === 1 ? changedProperties[0] as any : 'multiple'
+    return changedProperties.length === 1 ? (changedProperties[0] as PropertyType) : 'multiple'
   }
 
   /**
@@ -739,9 +763,19 @@ export const useVideoStore = defineStore('video', () => {
    * @param newTimeRange 新的时间范围
    * @returns 是否成功调整
    */
+  // 定义时间范围接口
+  interface TimeRangeData {
+    timelineStartTime: number
+    timelineEndTime: number
+    clipStartTime: number
+    clipEndTime: number
+    effectiveDuration: number
+    playbackRate: number
+  }
+
   async function resizeTimelineItemWithHistory(
     timelineItemId: string,
-    newTimeRange: { timelineStartTime: number; timelineEndTime: number; [key: string]: any }
+    newTimeRange: TimeRangeData
   ): Promise<boolean> {
     // 获取时间轴项目
     const timelineItem = timelineModule.getTimelineItem(timelineItemId)
@@ -837,7 +871,7 @@ export const useVideoStore = defineStore('video', () => {
       mediaItemId,
       timelineModule.timelineItems,
       trackModule.tracks,
-      webavModule.avCanvas.value as any,
+      webavModule.avCanvas.value as any, // WebAV 类型不匹配，需要类型断言
       () => {}, // 清理回调，目前为空
     )
   }

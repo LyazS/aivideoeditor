@@ -1,5 +1,6 @@
 import { ref, type Ref } from 'vue'
 import type { Track, TimelineItem } from '../../types/videoTypes'
+import { VideoVisibleSprite } from '../../utils/VideoVisibleSprite'
 
 /**
  * 轨道管理模块
@@ -141,7 +142,7 @@ export function createTrackModule() {
         trackItems.forEach(item => {
           if (item.sprite && 'setTrackMuteChecker' in item.sprite) {
             // 为每个VideoVisibleSprite设置轨道静音检查函数
-            const sprite = item.sprite as any // VideoVisibleSprite
+            const sprite = item.sprite as VideoVisibleSprite // VideoVisibleSprite
             sprite.setTrackMuteChecker(() => track.isMuted)
           }
         })
