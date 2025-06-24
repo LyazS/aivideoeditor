@@ -351,6 +351,11 @@ async function handleTimelineItemDrop(event: DragEvent, dragData: TimelineItemDr
 
 **问题**: 拖拽数据接口仍使用数字时间，但已通过边界转换解决精度问题
 
+**性能优化建议**: 考虑使用总帧数（整数）替代字符串格式传递时间码：
+- 当前使用字符串格式（如"00:30.15"）需要解析开销
+- 建议使用总帧数（如915帧）直接传递，利用系统固定30fps特性
+- 优势：性能更好、类型更安全、内存更高效、完全避免浮点误差
+
 **解决方案**:
 ```typescript
 // 修改拖拽数据接口 - videoTypes.ts
@@ -497,6 +502,101 @@ console.log(tc.toString())  // "00:10.00" 精确结果 ✅
 const frameTime = new Timecode(1, 30)  // 1帧
 const time = frameTime.multiply(15)    // 15帧
 console.log(time.toString())           // "00:00.15" 精确 ✅
+```
+
+## 🚀 性能优化建议
+
+### 拖拽数据传递优化
+
+**当前问题**: 拖拽系统使用字符串格式传递时间码，存在性能和精度问题：
+
+```typescript
+// ❌ 当前方案：字符串传递
+const previewData = {
+  duration: "00:30.15",  // 需要字符串解析
+  startTime: "00:05.24"  // 需要字符串解析
+}
+
+// 使用时需要重新解析，可能出错
+const durationTC = new Timecode(data.duration, 30)  // 字符串解析开销
+const startTimeTC = new Timecode(data.startTime, 30) // 重复传递帧率
+```
+
+**优化方案**: 使用总帧数（整数）传递，利用系统固定30fps的特性：
+
+```typescript
+// ✅ 优化方案：总帧数传递
+export interface DragPreviewData {
+  name: string
+  durationFrames: number    // 总帧数（整数）
+  startTimeFrames: number   // 总帧数（整数）
+  trackId: number
+  isConflict?: boolean
+  isMultiple?: boolean
+  count?: number
+}
+
+// 创建时直接使用帧数
+function createDragPreviewData(
+  name: string,
+  duration: Timecode,
+  startTime: Timecode,
+  trackId: number,
+  isConflict: boolean = false,
+  isMultiple: boolean = false,
+  count?: number
+) {
+  return {
+    name,
+    durationFrames: duration.totalFrames,   // 直接使用总帧数
+    startTimeFrames: startTime.totalFrames, // 直接使用总帧数
+    trackId,
+    isConflict,
+    isMultiple,
+    count
+  }
+}
+
+// 使用时直接创建，无需解析
+const SYSTEM_FRAME_RATE = 30 // 系统固定帧率常量
+const startTimeTC = new Timecode(data.startTimeFrames, SYSTEM_FRAME_RATE)
+const durationTC = new Timecode(data.durationFrames, SYSTEM_FRAME_RATE)
+```
+
+**优化效果**:
+- 🚀 **性能提升**: 避免字符串解析开销，直接整数创建
+- 🔒 **类型安全**: 整数天然有效，避免格式错误（如"00:30.99"）
+- 💾 **内存效率**: 整数比字符串占用更少内存
+- 🎯 **精度保证**: 完全避免浮点数误差，基于帧数的精确传递
+- 🔧 **代码简化**: 无需重复传递帧率参数，使用系统常量
+- ⚡ **序列化优势**: JSON序列化整数比字符串更快
+
+**实施建议**:
+```typescript
+// 1. 定义系统常量
+export const SYSTEM_FRAME_RATE = 30
+
+// 2. 更新接口定义
+export interface DragPreviewData {
+  durationFrames: number    // 替代 duration: string
+  startTimeFrames: number   // 替代 startTime: string
+  // ... 其他属性保持不变
+}
+
+// 3. 更新验证逻辑
+private positionPreview(preview: HTMLElement, data: DragPreviewData, timelineWidth: number) {
+  // 验证帧数数据（更简单、更可靠）
+  if (typeof data.startTimeFrames !== 'number' || data.startTimeFrames < 0 ||
+      typeof data.durationFrames !== 'number' || data.durationFrames <= 0) {
+    console.warn('⚠️ DragPreview: 无效的帧数数据', data)
+    return
+  }
+
+  // 直接从总帧数创建，性能最优
+  const startTimeTC = new Timecode(data.startTimeFrames, SYSTEM_FRAME_RATE)
+  const durationTC = new Timecode(data.durationFrames, SYSTEM_FRAME_RATE)
+  // ...
+}
 ```
 
 ## ⚡ 快速参考
