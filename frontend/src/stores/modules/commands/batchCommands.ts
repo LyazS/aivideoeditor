@@ -1,5 +1,6 @@
 import { generateCommandId } from '../../../utils/idGenerator'
 import { BaseBatchCommand } from '../historyModule'
+import { framesToSeconds, secondsToFrames } from '../../utils/timeUtils'
 import type { SimpleCommand, TimelineItem, MediaItem, Track } from '../../../types'
 import {
   RemoveTimelineItemCommand,
@@ -101,23 +102,26 @@ export class BatchAutoArrangeTrackCommand extends BaseBatchCommand {
     for (const item of sortedItems) {
       const sprite = item.sprite
       const timeRange = sprite.getTimeRange()
-      const duration = (timeRange.timelineEndTime - timeRange.timelineStartTime) / 1000000 // 转换为秒
+      // 注意：timeRange 中的时间是帧数，currentPosition 是秒数
+      const durationFrames = timeRange.timelineEndTime - timeRange.timelineStartTime // 帧数
+      const duration = framesToSeconds(durationFrames) // 转换为秒数
 
-      // 计算新的时间范围
+      // 计算新的时间范围（使用帧数）
+      const currentPositionFrames = secondsToFrames(currentPosition) // 转换为帧数
       const newTimeRange = {
         ...timeRange,
-        timelineStartTime: currentPosition * 1000000, // 转换为微秒
-        timelineEndTime: (currentPosition + duration) * 1000000,
+        timelineStartTime: currentPositionFrames, // 帧数
+        timelineEndTime: currentPositionFrames + durationFrames, // 帧数
       }
 
       // 检查是否需要移动（避免创建无意义的命令）
-      const positionChanged = Math.abs(timeRange.timelineStartTime - newTimeRange.timelineStartTime) > 1000 // 1毫秒误差容忍
+      const positionChanged = Math.abs(timeRange.timelineStartTime - newTimeRange.timelineStartTime) > 1 // 1帧误差容忍
 
       if (positionChanged) {
         const moveCommand = new MoveTimelineItemCommand(
           item.id,
-          timeRange.timelineStartTime / 1000000, // 原始位置（秒）
-          currentPosition, // 新位置（秒）
+          timeRange.timelineStartTime, // 原始位置（帧数）
+          currentPositionFrames, // 新位置（帧数）
           this.trackId, // 轨道不变
           this.trackId,
           {

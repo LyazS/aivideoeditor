@@ -427,7 +427,6 @@ import { uiDegreesToWebAVRadians, webAVRadiansToUIDegrees } from '../utils/rotat
 import {
   framesToTimecode,
   timecodeToFrames,
-  microsecondsToFrames,
   framesToMicroseconds,
   secondsToFrames,
   framesToSeconds
@@ -468,7 +467,7 @@ const selectedMediaItem = computed(() => {
 const timelineDurationFrames = computed(() => {
   if (!selectedTimelineItem.value) return 0
   const timeRange = selectedTimelineItem.value.timeRange
-  return microsecondsToFrames(timeRange.timelineEndTime - timeRange.timelineStartTime)
+  return timeRange.timelineEndTime - timeRange.timelineStartTime // 已经是帧数，不需要转换
 })
 
 
@@ -675,7 +674,7 @@ const updateTargetDurationFrames = async (newDurationFrames: number) => {
   const alignedDurationFrames = Math.max(1, newDurationFrames) // 最少1帧
   const sprite = selectedTimelineItem.value.sprite
   const timeRange = selectedTimelineItem.value.timeRange
-  const newTimelineEndTime = timeRange.timelineStartTime + framesToMicroseconds(alignedDurationFrames)
+  const newTimelineEndTime = timeRange.timelineStartTime + alignedDurationFrames // 帧数相加，不需要转换
 
   if (selectedTimelineItem.value.mediaType === 'video') {
     if (isVideoTimeRange(timeRange)) {

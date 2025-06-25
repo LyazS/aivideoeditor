@@ -1,5 +1,6 @@
 import { VisibleSprite, MP4Clip } from '@webav/av-cliper'
 import type { VideoTimeRange, AudioState } from '../types'
+import { framesToMicroseconds } from '../stores/utils/timeUtils'
 
 /**
  * 自定义的VisibleSprite类，继承自WebAV的VisibleSprite
@@ -7,7 +8,7 @@ import type { VideoTimeRange, AudioState } from '../types'
  */
 export class VideoVisibleSprite extends VisibleSprite {
   /**
-   * 起始偏移时间（微秒）
+   * 起始偏移时间（帧数）
    */
   #startOffset: number = 0
 
@@ -26,14 +27,14 @@ export class VideoVisibleSprite extends VisibleSprite {
   #trackMuteChecker: (() => boolean) | null = null
 
   /**
-   * 时间范围信息
+   * 时间范围信息（帧数版本）
    */
   #timeRange: VideoTimeRange = {
-    clipStartTime: 0,
-    clipEndTime: 0,
-    timelineStartTime: 0,
-    timelineEndTime: 0,
-    effectiveDuration: 0,
+    clipStartTime: 0, // 帧数
+    clipEndTime: 0, // 帧数
+    timelineStartTime: 0, // 帧数
+    timelineEndTime: 0, // 帧数
+    effectiveDuration: 0, // 帧数
     playbackRate: 1.0,
   }
 
@@ -54,8 +55,9 @@ export class VideoVisibleSprite extends VisibleSprite {
    * @param time 当前时间（微秒）
    */
   public async preFrame(time: number): Promise<void> {
-    // 将startOffset应用到时间上，传递给父类
-    const adjustedTime = time + this.#startOffset
+    // 将startOffset（帧数）转换为微秒后应用到时间上，传递给父类
+    const startOffsetMicroseconds = framesToMicroseconds(this.#startOffset)
+    const adjustedTime = time + startOffsetMicroseconds
     return super.preFrame(adjustedTime)
   }
 
@@ -69,8 +71,9 @@ export class VideoVisibleSprite extends VisibleSprite {
     ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
     time: number,
   ): { audio: Float32Array[] } {
-    // 将startOffset应用到时间上，传递给父类
-    const adjustedTime = time + this.#startOffset
+    // 将startOffset（帧数）转换为微秒后应用到时间上，传递给父类
+    const startOffsetMicroseconds = framesToMicroseconds(this.#startOffset)
+    const adjustedTime = time + startOffsetMicroseconds
     return super.render(ctx, adjustedTime)
   }
 
@@ -280,22 +283,23 @@ export class VideoVisibleSprite extends VisibleSprite {
   /**
    * 更新 VisibleSprite 的 time 属性
    * 根据当前的时间范围设置同步更新父类的时间属性
+   * 内部使用帧数计算，设置WebAV时转换为微秒
    */
   #updateVisibleSpriteTime(): void {
     this.#updateTimeRangeCalculations()
 
     const { clipStartTime, clipEndTime, timelineStartTime, timelineEndTime } = this.#timeRange
 
-    // 计算播放速度和相关参数
+    // 计算播放速度和相关参数（使用帧数）
     let playbackRate = 1
-    let duration = 0
+    let durationFrames = 0
 
-    const clipDuration = clipEndTime - clipStartTime // 素材内部要播放的时长
-    const timelineDuration = timelineEndTime - timelineStartTime // 在时间轴上占用的时长
+    const clipDurationFrames = clipEndTime - clipStartTime // 素材内部要播放的帧数
+    const timelineDurationFrames = timelineEndTime - timelineStartTime // 在时间轴上占用的帧数
 
-    if (clipDuration > 0 && timelineDuration > 0) {
+    if (clipDurationFrames > 0 && timelineDurationFrames > 0) {
       // playbackRate = 素材内部时长 / 时间轴时长
-      playbackRate = clipDuration / timelineDuration
+      playbackRate = clipDurationFrames / timelineDurationFrames
 
       // 修正浮点数精度问题，避免出现1.00000001这样的值
       // 如果非常接近整数，则四舍五入到最近的0.1
@@ -304,21 +308,20 @@ export class VideoVisibleSprite extends VisibleSprite {
         playbackRate = rounded
       }
 
-      // duration 是在时间轴上占用的时长
-      duration = timelineDuration
+      // duration 是在时间轴上占用的帧数
+      durationFrames = timelineDurationFrames
 
-      // 更新 #startOffset 为素材内部的开始位置
+      // 更新 #startOffset 为素材内部的开始位置（帧数）
       this.#startOffset = clipStartTime
     }
 
-    // 设置 VisibleSprite.time 属性
+    // 设置 VisibleSprite.time 属性（转换为微秒给WebAV）
     // offset: 在时间轴上的播放开始位置（微秒）
     // duration: 在时间轴上占用的时长（微秒）
     // playbackRate: 素材播放的速度（根据时间范围计算）
-    // 配合 preFrame/render 中的 adjustedTime = time + this.#startOffset 实现从指定位置开始播放
     this.time = {
-      offset: timelineStartTime,
-      duration: duration,
+      offset: framesToMicroseconds(timelineStartTime),
+      duration: framesToMicroseconds(durationFrames),
       playbackRate: playbackRate,
     }
 

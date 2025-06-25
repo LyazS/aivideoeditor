@@ -9,11 +9,12 @@
 - 全局调试开关管理 (`window.enableTimelineDebug()`, `window.disableTimelineDebug()`)
 
 ### ⏰ 时间计算工具 (`timeUtils.ts`)
-- `alignTimeToFrame(time, frameRate)` - 将时间对齐到帧边界
-- `calculatePixelsPerSecond(timelineWidth, totalDuration, zoomLevel)` - 计算每秒像素数
-- `formatTime(seconds, precision?, frameRate?)` - 格式化时间显示
-- `formatTimeWithAutoPrecision(seconds, pixelsPerSecond, frameRate?)` - 根据缩放级别自动选择时间显示精度
-- `expandTimelineIfNeeded(targetTime, timelineDuration)` - 动态扩展时间轴长度
+- `calculatePixelsPerFrame(timelineWidth, totalDurationFrames, zoomLevel)` - 计算每帧像素数
+- `expandTimelineIfNeededFrames(targetFrames, timelineDurationFrames)` - 动态扩展时间轴长度（帧数版本）
+- `framesToTimecode(frames, frameRate?)` - 将帧数转换为时间码格式
+- `timecodeToFrames(timecode, frameRate?)` - 将时间码转换为帧数
+- `framesToMicroseconds(frames, frameRate?)` - 将帧数转换为微秒（WebAV接口）
+- `microsecondsToFrames(microseconds, frameRate?)` - 将微秒转换为帧数
 
 ### 📐 坐标转换工具 (`coordinateUtils.ts`)
 - `timeToPixel(time, timelineWidth, totalDuration, zoomLevel, scrollOffset)` - 将时间转换为像素位置
@@ -33,14 +34,14 @@
 - `autoArrangeTrackItems(timelineItems, trackId)` - 自动整理单个轨道的时间轴项目
 
 ### 🔍 缩放计算工具 (`zoomUtils.ts`)
-- `getMaxZoomLevel(timelineWidth, frameRate, totalDuration)` - 计算最大缩放级别
-- `getMinZoomLevel(totalDuration, maxVisibleDuration)` - 计算最小缩放级别
-- `getMaxScrollOffset(timelineWidth, zoomLevel, totalDuration, maxVisibleDuration)` - 计算最大滚动偏移量
+- `getMaxZoomLevelFrames(timelineWidth, totalDurationFrames)` - 计算最大缩放级别（帧数版本）
+- `getMinZoomLevelFrames(totalDurationFrames, maxVisibleDurationFrames)` - 计算最小缩放级别（帧数版本）
+- `getMaxScrollOffsetFrames(timelineWidth, zoomLevel, totalDurationFrames, maxVisibleDurationFrames)` - 计算最大滚动偏移量（帧数版本）
 
 ### ⏱️ 时长计算工具 (`durationUtils.ts`)
-- `calculateContentEndTime(timelineItems)` - 计算内容结束时间
-- `calculateTotalDuration(timelineItems, timelineDuration)` - 计算总时长
-- `calculateMaxVisibleDuration(contentEndTime, defaultDuration?)` - 计算最大可见时长
+- `calculateContentEndTimeFrames(timelineItems)` - 计算内容结束时间（帧数版本）
+- `calculateTotalDurationFrames(timelineItems, timelineDurationFrames)` - 计算总时长（帧数版本）
+- `calculateMaxVisibleDurationFrames(contentEndTimeFrames, defaultDurationFrames?)` - 计算最大可见时长（帧数版本）
 
 ### 📏 时间范围工具 (`timeRangeUtils.ts`)
 - `syncTimeRange(timelineItem, newTimeRange?)` - 同步TimelineItem和sprite的timeRange
@@ -67,19 +68,18 @@ import { printDebugInfo } from './utils/debugUtils'
 ### 兼容方式：通过索引文件导入
 
 ```typescript
-// 兼容：通过索引文件导入（仍然有效，但不推荐）
+// 推荐：通过索引文件导入帧数版本函数
 import {
   printDebugInfo,
-  alignTimeToFrame,
-  timeToPixel,
-  pixelToTime,
-  expandTimelineIfNeeded,
+  frameToPixel,
+  pixelToFrame,
+  expandTimelineIfNeededFrames,
   getTimelineItemAtTime,
   autoArrangeTimelineItems,
-  calculatePixelsPerSecond,
-  calculateVisibleTimeRange,
-  formatTime,
-  formatTimeWithAutoPrecision,
+  calculatePixelsPerFrame,
+  calculateVisibleFrameRange,
+  framesToTimecode,
+  timecodeToFrames,
 } from './utils/storeUtils'
 ```
 
@@ -91,10 +91,11 @@ export const useVideoStore = defineStore('video', () => {
   // ... 其他代码
 
   return {
-    // 包装工具函数以提供正确的参数
-    alignTimeToFrame: (time: number) => alignTimeToFrame(time, frameRate.value),
-    timeToPixel: (time: number, timelineWidth: number) =>
-      timeToPixel(time, timelineWidth, totalDuration.value, zoomLevel.value, scrollOffset.value),
+    // 包装工具函数以提供正确的参数（帧数版本）
+    frameToPixel: (frames: number, timelineWidth: number) =>
+      frameToPixel(frames, timelineWidth, totalDurationFrames.value, zoomLevel.value, scrollOffset.value),
+    pixelToFrame: (pixel: number, timelineWidth: number) =>
+      pixelToFrame(pixel, timelineWidth, totalDurationFrames.value, zoomLevel.value, scrollOffset.value),
     // ... 其他函数
   }
 })

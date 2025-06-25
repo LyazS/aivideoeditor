@@ -141,7 +141,7 @@
             :timeline-item="item"
             :track="track"
             :timeline-width="timelineWidth"
-            :total-duration="videoStore.totalDuration"
+            :total-duration-frames="videoStore.totalDurationFrames"
             @update-position="handleTimelineItemPositionUpdate"
             @remove="handleTimelineItemRemove"
           />
@@ -175,10 +175,10 @@ import { ImageVisibleSprite } from '../utils/ImageVisibleSprite'
 import { createSpriteFromMediaItem } from '../utils/spriteFactory'
 import { webavToProjectCoords } from '../utils/coordinateTransform'
 import {
-  calculatePixelsPerSecond
+  calculatePixelsPerFrame
 } from '../stores/utils/storeUtils'
 import { calculateVisibleFrameRange } from '../stores/utils/coordinateUtils'
-import { framesToTimecode, secondsToFrames } from '../stores/utils/timeUtils'
+
 import {
   generateThumbnailForMediaItem,
 } from '../utils/thumbnailGenerator'
@@ -322,60 +322,61 @@ function cancelRename() {
 // 网格线
 const gridLines = computed(() => {
   const lines = []
-  const pixelsPerSecond = calculatePixelsPerSecond(timelineWidth.value, videoStore.totalDuration, videoStore.zoomLevel)
+  const totalDurationFrames = videoStore.totalDurationFrames
+  const pixelsPerFrame = calculatePixelsPerFrame(timelineWidth.value, totalDurationFrames, videoStore.zoomLevel)
+  const pixelsPerSecond = pixelsPerFrame * videoStore.frameRate
 
-  // 根据缩放级别决定网格间隔
-  let interval = 5 // 默认每5秒一条网格线
-  let frameInterval = 0 // 帧间隔
+  // 根据缩放级别决定网格间隔（基于帧数）
+  let intervalFrames = 150 // 默认每5秒一条网格线（150帧）
+  let frameIntervalFrames = 0 // 帧间隔
   let isFrameLevel = false
 
   if (pixelsPerSecond >= 100) {
     // 降低帧级别的阈值
-    interval = 1 // 高缩放：每秒一条线
-    frameInterval = 1 / videoStore.frameRate // 同时显示帧级别的线
+    intervalFrames = 30 // 高缩放：每秒一条线（30帧）
+    frameIntervalFrames = 1 // 同时显示帧级别的线
     isFrameLevel = true
   } else if (pixelsPerSecond >= 50) {
-    interval = 2 // 中等缩放：每2秒一条线
-  } else if (pixelsPerSecond >= 50) {
-    interval = 5 // 正常缩放：每5秒一条线
+    intervalFrames = 60 // 中等缩放：每2秒一条线（60帧）
+  } else if (pixelsPerSecond >= 20) {
+    intervalFrames = 150 // 正常缩放：每5秒一条线（150帧）
   } else {
-    interval = 10 // 低缩放：每10秒一条线
+    intervalFrames = 300 // 低缩放：每10秒一条线（300帧）
   }
 
   // 计算可见时间范围（使用帧数版本）
-  const totalDurationFrames = secondsToFrames(videoStore.totalDuration)
   const { startFrames, endFrames } = calculateVisibleFrameRange(
     timelineWidth.value,
     totalDurationFrames,
     videoStore.zoomLevel,
     videoStore.scrollOffset
   )
-  const startTime = startFrames / 30 // 转换为秒数用于网格计算
-  const endTime = endFrames / 30
 
-  // 生成主网格线（秒级别）
-  const startLine = Math.floor(startTime / interval) * interval
-  const endLine = Math.ceil(endTime / interval) * interval
+  // 生成主网格线（基于帧数）
+  const startLineFrames = Math.floor(startFrames / intervalFrames) * intervalFrames
+  const endLineFrames = Math.ceil(endFrames / intervalFrames) * intervalFrames
 
-  for (let i = startLine; i <= Math.min(endLine, videoStore.totalDuration); i += interval) {
+  for (let i = startLineFrames; i <= Math.min(endLineFrames, totalDurationFrames); i += intervalFrames) {
     if (i >= 0) {
-      lines.push({ time: i, isFrame: false })
+      const timeInSeconds = i / videoStore.frameRate // 转换为秒数用于显示
+      lines.push({ time: timeInSeconds, isFrame: false })
     }
   }
 
   // 在帧级别缩放时，添加帧网格线
-  if (isFrameLevel && frameInterval > 0) {
-    const frameStartTime = Math.floor(startTime / frameInterval) * frameInterval
-    const frameEndTime = Math.ceil(endTime / frameInterval) * frameInterval
+  if (isFrameLevel && frameIntervalFrames > 0) {
+    const frameStartFrames = Math.floor(startFrames / frameIntervalFrames) * frameIntervalFrames
+    const frameEndFrames = Math.ceil(endFrames / frameIntervalFrames) * frameIntervalFrames
 
     for (
-      let i = frameStartTime;
-      i <= Math.min(frameEndTime, videoStore.totalDuration);
-      i += frameInterval
+      let i = frameStartFrames;
+      i <= Math.min(frameEndFrames, totalDurationFrames);
+      i += frameIntervalFrames
     ) {
-      if (i >= 0 && Math.abs(i % interval) > 0.001) {
-        // 避免与主网格线重复
-        lines.push({ time: i, isFrame: true })
+      if (i >= 0 && Math.abs(i % intervalFrames) > 0.5) {
+        // 避免与主网格线重复（使用帧数容差）
+        const timeInSeconds = i / videoStore.frameRate // 转换为秒数用于显示
+        lines.push({ time: timeInSeconds, isFrame: true })
       }
     }
   }
@@ -484,7 +485,7 @@ function handleTimelineItemDragOver(event: DragEvent) {
   // 获取拖拽项目信息
   const draggedItem = videoStore.getTimelineItem(currentDragData.itemId)
   if (draggedItem) {
-    const duration = (draggedItem.timeRange.timelineEndTime - draggedItem.timeRange.timelineStartTime) / 1000000
+    const duration = draggedItem.timeRange.timelineEndTime - draggedItem.timeRange.timelineStartTime // 帧数
 
     // 检测冲突
     const conflicts = detectTimelineConflicts(clipStartTime, targetTrackId, currentDragData)
@@ -620,11 +621,12 @@ async function handleMediaItemDrop(event: DragEvent, mediaDragData: MediaItemDra
 
     console.log(`🎯 拖拽素材到时间轴: ${mediaDragData.name}`)
     console.log(
-      `📍 拖拽位置: 对应时间: ${dropTime.toFixed(2)}s, 目标轨道: ${targetTrackId}`,
+      `📍 拖拽位置: 对应帧数: ${dropTime}, 目标轨道: ${targetTrackId}`,
     )
 
     // 如果拖拽位置超出当前时间轴长度，动态扩展时间轴
-    videoStore.expandTimelineIfNeeded(dropTime + 10) // 预留10秒缓冲
+    const bufferFrames = 300 // 预留10秒缓冲（300帧）
+    videoStore.expandTimelineIfNeededFrames(dropTime + bufferFrames)
 
     // 构建createMediaClipFromMediaItem需要的参数格式
     const mediaItemForCreation = {
@@ -649,31 +651,33 @@ async function handleMediaItemDrop(event: DragEvent, mediaDragData: MediaItemDra
 }
 
 // 移动单个项目
-async function moveSingleItem(itemId: string, newTime: number, newTrackId: number) {
-  await handleTimelineItemPositionUpdate(itemId, newTime, newTrackId)
+async function moveSingleItem(itemId: string, newTimeFrames: number, newTrackId: number) {
+  // newTimeFrames 是帧数，直接传给 handleTimelineItemPositionUpdate
+  await handleTimelineItemPositionUpdate(itemId, newTimeFrames, newTrackId)
 }
 
 // 移动多个项目（保持相对位置）
-async function moveMultipleItems(itemIds: string[], newTime: number, newTrackId: number, originalStartTime: number) {
-  console.log('🔄 [Timeline] 开始批量移动项目:', { itemIds, newTime, newTrackId, originalStartTime })
+async function moveMultipleItems(itemIds: string[], newTimeFrames: number, newTrackId: number, originalStartTimeFrames: number) {
+  console.log('🔄 [Timeline] 开始批量移动项目:', { itemIds, newTimeFrames, newTrackId, originalStartTimeFrames })
 
-  // 计算时间偏移量
-  const timeOffset = newTime - originalStartTime
+  // 计算时间偏移量（帧数）
+  const timeOffsetFrames = newTimeFrames - originalStartTimeFrames
 
   // 批量移动所有选中的项目
   for (const itemId of itemIds) {
     const item = videoStore.getTimelineItem(itemId)
     if (item) {
-      const currentStartTime = item.timeRange.timelineStartTime / 1000000
-      const newStartTime = currentStartTime + timeOffset
+      const currentStartTimeFrames = item.timeRange.timelineStartTime // 帧数
+      const newStartTimeFrames = currentStartTimeFrames + timeOffsetFrames
 
       // 确保新位置不为负数（防止多选拖拽时某些项目被拖到负数时间轴）
-      const clampedNewStartTime = Math.max(0, newStartTime)
+      const clampedNewStartTimeFrames = Math.max(0, newStartTimeFrames)
 
       // 对于第一个项目，使用目标轨道；其他项目保持相对轨道关系
       const targetTrack = itemId === itemIds[0] ? newTrackId : item.trackId
 
-      await handleTimelineItemPositionUpdate(itemId, clampedNewStartTime, targetTrack)
+      // 直接传递帧数给 handleTimelineItemPositionUpdate
+      await handleTimelineItemPositionUpdate(itemId, clampedNewStartTimeFrames, targetTrack)
     }
   }
 }
@@ -684,7 +688,7 @@ async function createMediaClipFromMediaItem(
     id: string
     url: string
     name: string
-    duration: number
+    duration: number // 帧数
     mediaType: 'video' | 'image'
     fileInfo: {
       name: string
@@ -692,7 +696,7 @@ async function createMediaClipFromMediaItem(
       lastModified: number
     }
   },
-  startTime: number,
+  startTimeFrames: number, // 帧数
   trackId: number = 1,
 ): Promise<void> {
   console.log('创建时间轴项目从素材库:', mediaItem)
@@ -749,34 +753,35 @@ async function createMediaClipFromMediaItem(
     })
 
     // 设置时间范围 - 根据媒体类型使用不同的方法
+    // 现在 mediaItem.duration 和 startTimeFrames 都是帧数，直接使用
     if (mediaItem.mediaType === 'video') {
       const timeRangeConfig = {
-        clipStartTime: 0,
-        clipEndTime: mediaItem.duration * 1000000, // 转换为微秒
-        timelineStartTime: startTime * 1000000, // 转换为微秒
-        timelineEndTime: (startTime + mediaItem.duration) * 1000000, // 转换为微秒
+        clipStartTime: 0, // 帧数
+        clipEndTime: mediaItem.duration, // 帧数
+        timelineStartTime: startTimeFrames, // 帧数
+        timelineEndTime: startTimeFrames + mediaItem.duration, // 帧数
       }
 
       console.log('设置视频时间范围:', {
         ...timeRangeConfig,
-        clipDuration: mediaItem.duration,
-        startTime,
-        endTime: startTime + mediaItem.duration,
+        clipDurationFrames: mediaItem.duration,
+        startTimeFrames,
+        endTimeFrames: startTimeFrames + mediaItem.duration,
       })
       ;(sprite as VideoVisibleSprite).setTimeRange(timeRangeConfig)
     } else {
       // 图片使用不同的时间范围设置
       const imageTimeRangeConfig = {
-        timelineStartTime: startTime * 1000000, // 转换为微秒
-        timelineEndTime: (startTime + mediaItem.duration) * 1000000, // 转换为微秒
-        displayDuration: mediaItem.duration * 1000000, // 转换为微秒
+        timelineStartTime: startTimeFrames, // 帧数
+        timelineEndTime: startTimeFrames + mediaItem.duration, // 帧数
+        displayDuration: mediaItem.duration, // 帧数
       }
 
       console.log('设置图片时间范围:', {
         ...imageTimeRangeConfig,
-        displayDuration: mediaItem.duration,
-        startTime,
-        endTime: startTime + mediaItem.duration,
+        displayDurationFrames: mediaItem.duration,
+        startTimeFrames,
+        endTimeFrames: startTimeFrames + mediaItem.duration,
       })
       ;(sprite as ImageVisibleSprite).setTimeRange(imageTimeRangeConfig)
     }
@@ -834,7 +839,7 @@ async function createMediaClipFromMediaItem(
 
     // 添加到store（使用带历史记录的方法）
     console.log(
-      `📝 添加时间轴项目: ${mediaItem.name} -> 轨道${trackId}, 位置${Math.max(0, startTime).toFixed(2)}s`,
+      `📝 添加时间轴项目: ${mediaItem.name} -> 轨道${trackId}, 位置${Math.max(0, startTimeFrames)}帧`,
     )
     await videoStore.addTimelineItemWithHistory(timelineItem)
 
@@ -847,17 +852,17 @@ async function createMediaClipFromMediaItem(
 
 async function handleTimelineItemPositionUpdate(
   timelineItemId: string,
-  newPosition: number,
+  newPositionFrames: number,
   newTrackId?: number,
 ) {
   try {
     // 使用带历史记录的移动方法
-    await videoStore.moveTimelineItemWithHistory(timelineItemId, newPosition, newTrackId)
+    await videoStore.moveTimelineItemWithHistory(timelineItemId, newPositionFrames, newTrackId)
     console.log('✅ 时间轴项目移动成功')
   } catch (error) {
     console.error('❌ 移动时间轴项目失败:', error)
     // 如果历史记录移动失败，回退到直接移动
-    videoStore.updateTimelineItemPosition(timelineItemId, newPosition, newTrackId)
+    videoStore.updateTimelineItemPosition(timelineItemId, newPositionFrames, newTrackId)
   }
 }
 
@@ -1015,8 +1020,8 @@ function detectMediaItemConflicts(dropTime: number, targetTrackId: number, durat
 
   // 检查与其他项目的冲突
   for (const item of trackItems) {
-    const itemStartTime = item.timeRange.timelineStartTime / 1000000
-    const itemEndTime = item.timeRange.timelineEndTime / 1000000
+    const itemStartTime = item.timeRange.timelineStartTime // 帧数
+    const itemEndTime = item.timeRange.timelineEndTime // 帧数
 
     // 检查时间重叠
     const overlapStart = Math.max(dropTime, itemStartTime)
@@ -1048,7 +1053,7 @@ function detectTimelineConflicts(dropTime: number, targetTrackId: number, dragDa
   const draggedItem = videoStore.getTimelineItem(dragData.itemId)
   if (!draggedItem) return conflicts
 
-  const dragDuration = (draggedItem.timeRange.timelineEndTime - draggedItem.timeRange.timelineStartTime) / 1000000
+  const dragDuration = draggedItem.timeRange.timelineEndTime - draggedItem.timeRange.timelineStartTime // 帧数
   const dragEndTime = dropTime + dragDuration
 
   // 检查与其他项目的冲突
@@ -1056,8 +1061,8 @@ function detectTimelineConflicts(dropTime: number, targetTrackId: number, dragDa
     // 跳过正在拖拽的项目
     if (dragData.selectedItems.includes(item.id)) continue
 
-    const itemStartTime = item.timeRange.timelineStartTime / 1000000
-    const itemEndTime = item.timeRange.timelineEndTime / 1000000
+    const itemStartTime = item.timeRange.timelineStartTime // 帧数
+    const itemEndTime = item.timeRange.timelineEndTime // 帧数
 
     // 检查时间重叠
     const overlapStart = Math.max(dropTime, itemStartTime)

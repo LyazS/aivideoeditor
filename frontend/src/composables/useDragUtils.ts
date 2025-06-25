@@ -16,7 +16,7 @@ export function useDragUtils() {
     event: DragEvent,
     itemId: string,
     trackId: number,
-    startTime: number,
+    startTime: number, // 帧数
     selectedItems: string[],
     dragOffset: { x: number, y: number }
   ) {
@@ -46,7 +46,7 @@ export function useDragUtils() {
     event: DragEvent,
     mediaItemId: string,
     name: string,
-    duration: number,
+    duration: number, // 帧数
     mediaType: 'video' | 'image'
   ) {
     const dragData: MediaItemDragData = {
@@ -103,8 +103,8 @@ export function useDragUtils() {
    */
   function createDragPreviewData(
     name: string,
-    duration: number,
-    startTime: number,
+    duration: number, // 帧数
+    startTime: number, // 帧数
     trackId: number,
     isConflict: boolean = false,
     isMultiple: boolean = false,
@@ -157,11 +157,8 @@ export function useDragUtils() {
     // 对齐到帧边界
     dropFrames = alignFramesToFrame(dropFrames)
 
-    // 转换为秒数（向后兼容）
-    const dropTime = framesToSeconds(dropFrames)
-
     return {
-      dropTime,
+      dropTime: dropFrames, // 现在返回帧数
       targetTrackId,
       trackContent
     }

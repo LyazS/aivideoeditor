@@ -1,4 +1,5 @@
 import { generateCommandId } from '../../../utils/idGenerator'
+import { framesToSeconds, secondsToFrames } from '../../utils/timeUtils'
 import type {
   SimpleCommand,
   TimelineItem,
@@ -100,7 +101,7 @@ export class AddTimelineItemCommand implements SimpleCommand {
     newSprite.zIndex = this.originalTimelineItemData.zIndex
     newSprite.opacity = this.originalTimelineItemData.opacity
 
-    // 5. 创建新的TimelineItem
+    // 5. 创建新的TimelineItem（先不设置缩略图）
     const newTimelineItem: TimelineItem = reactive({
       id: this.originalTimelineItemData.id,
       mediaItemId: this.originalTimelineItemData.mediaItemId,
@@ -108,7 +109,7 @@ export class AddTimelineItemCommand implements SimpleCommand {
       mediaType: this.originalTimelineItemData.mediaType,
       timeRange: newSprite.getTimeRange(),
       sprite: markRaw(newSprite),
-      thumbnailUrl: this.originalTimelineItemData.thumbnailUrl,
+      thumbnailUrl: undefined, // 先设为undefined，稍后重新生成
       x: this.originalTimelineItemData.x,
       y: this.originalTimelineItemData.y,
       width: this.originalTimelineItemData.width,
@@ -119,6 +120,9 @@ export class AddTimelineItemCommand implements SimpleCommand {
       volume: this.originalTimelineItemData.volume,
       isMuted: this.originalTimelineItemData.isMuted,
     })
+
+    // 6. 重新生成缩略图（异步执行，不阻塞重建过程）
+    this.regenerateThumbnailForAddedItem(newTimelineItem, mediaItem)
 
     console.log('🔄 重建时间轴项目完成:', {
       id: newTimelineItem.id,
@@ -177,6 +181,27 @@ export class AddTimelineItemCommand implements SimpleCommand {
       const mediaItem = this.mediaModule.getMediaItem(this.originalTimelineItemData.mediaItemId)
       console.error(`❌ 撤销添加时间轴项目失败: ${mediaItem?.name || '未知素材'}`, error)
       throw error
+    }
+  }
+
+  /**
+   * 为添加的项目重新生成缩略图
+   * @param timelineItem 添加的时间轴项目
+   * @param mediaItem 对应的媒体项目
+   */
+  private async regenerateThumbnailForAddedItem(timelineItem: TimelineItem, mediaItem: MediaItem) {
+    try {
+      console.log('🖼️ 开始为添加的项目重新生成缩略图...')
+
+      const { regenerateThumbnailForTimelineItem } = await import('../../../utils/thumbnailGenerator')
+      const thumbnailUrl = await regenerateThumbnailForTimelineItem(timelineItem, mediaItem)
+
+      if (thumbnailUrl) {
+        timelineItem.thumbnailUrl = thumbnailUrl
+        console.log('✅ 添加项目缩略图生成完成')
+      }
+    } catch (error) {
+      console.error('❌ 添加项目缩略图生成失败:', error)
     }
   }
 }
@@ -277,7 +302,7 @@ export class RemoveTimelineItemCommand implements SimpleCommand {
     newSprite.zIndex = this.originalTimelineItemData.zIndex
     newSprite.opacity = this.originalTimelineItemData.opacity
 
-    // 5. 创建新的TimelineItem
+    // 5. 创建新的TimelineItem（先不设置缩略图）
     const newTimelineItem: TimelineItem = reactive({
       id: this.originalTimelineItemData.id,
       mediaItemId: this.originalTimelineItemData.mediaItemId,
@@ -285,7 +310,7 @@ export class RemoveTimelineItemCommand implements SimpleCommand {
       mediaType: this.originalTimelineItemData.mediaType,
       timeRange: this.originalTimelineItemData.timeRange,
       sprite: markRaw(newSprite),
-      thumbnailUrl: this.originalTimelineItemData.thumbnailUrl,
+      thumbnailUrl: undefined, // 先设为undefined，稍后重新生成
       x: this.originalTimelineItemData.x,
       y: this.originalTimelineItemData.y,
       width: this.originalTimelineItemData.width,
@@ -296,6 +321,9 @@ export class RemoveTimelineItemCommand implements SimpleCommand {
       volume: this.originalTimelineItemData.volume,
       isMuted: this.originalTimelineItemData.isMuted,
     })
+
+    // 6. 重新生成缩略图（异步执行，不阻塞重建过程）
+    this.regenerateThumbnailForRemovedItem(newTimelineItem, mediaItem)
 
     console.log('🔄 重建时间轴项目完成:', {
       id: newTimelineItem.id,
@@ -357,6 +385,27 @@ export class RemoveTimelineItemCommand implements SimpleCommand {
       throw error
     }
   }
+
+  /**
+   * 为重建的删除项目重新生成缩略图
+   * @param timelineItem 重建的时间轴项目
+   * @param mediaItem 对应的媒体项目
+   */
+  private async regenerateThumbnailForRemovedItem(timelineItem: TimelineItem, mediaItem: MediaItem) {
+    try {
+      console.log('🖼️ 开始为重建的删除项目重新生成缩略图...')
+
+      const { regenerateThumbnailForTimelineItem } = await import('../../../utils/thumbnailGenerator')
+      const thumbnailUrl = await regenerateThumbnailForTimelineItem(timelineItem, mediaItem)
+
+      if (thumbnailUrl) {
+        timelineItem.thumbnailUrl = thumbnailUrl
+        console.log('✅ 重建删除项目缩略图生成完成')
+      }
+    } catch (error) {
+      console.error('❌ 重建删除项目缩略图生成失败:', error)
+    }
+  }
 }
 
 /**
@@ -373,7 +422,7 @@ export class DuplicateTimelineItemCommand implements SimpleCommand {
   constructor(
     private originalTimelineItemId: string,
     originalTimelineItem: TimelineItem, // 要复制的原始时间轴项目
-    private newPosition: number, // 新项目的时间位置（秒）
+    private newPositionFrames: number, // 新项目的时间位置（帧数）
     private timelineModule: {
       addTimelineItem: (item: TimelineItem) => void
       removeTimelineItem: (id: string) => void
@@ -434,21 +483,22 @@ export class DuplicateTimelineItemCommand implements SimpleCommand {
 
     // 设置时间范围（调整到新位置）
     const originalTimeRange = this.originalTimelineItemData.timeRange
-    const originalDuration = (originalTimeRange.timelineEndTime - originalTimeRange.timelineStartTime) / 1000000 // 转换为秒
-    const newTimelineStartTime = this.newPosition * 1000000 // 转换为微秒
-    const newTimelineEndTime = newTimelineStartTime + (originalDuration * 1000000)
+    // 注意：originalTimeRange 中的时间是帧数，this.newPositionFrames 也是帧数
+    const originalDurationFrames = originalTimeRange.timelineEndTime - originalTimeRange.timelineStartTime // 帧数
+    const newTimelineStartTimeFrames = this.newPositionFrames // 帧数
+    const newTimelineEndTimeFrames = newTimelineStartTimeFrames + originalDurationFrames
 
     if (mediaItem.mediaType === 'video' && isVideoTimeRange(originalTimeRange)) {
       newSprite.setTimeRange({
         clipStartTime: originalTimeRange.clipStartTime,
         clipEndTime: originalTimeRange.clipEndTime,
-        timelineStartTime: newTimelineStartTime,
-        timelineEndTime: newTimelineEndTime,
+        timelineStartTime: newTimelineStartTimeFrames,
+        timelineEndTime: newTimelineEndTimeFrames,
       })
     } else if (mediaItem.mediaType === 'image' && isImageTimeRange(originalTimeRange)) {
       newSprite.setTimeRange({
-        timelineStartTime: newTimelineStartTime,
-        timelineEndTime: newTimelineEndTime,
+        timelineStartTime: newTimelineStartTimeFrames,
+        timelineEndTime: newTimelineEndTimeFrames,
         displayDuration: originalTimeRange.displayDuration,
       })
     }
@@ -493,8 +543,11 @@ export class DuplicateTimelineItemCommand implements SimpleCommand {
       volume: this.originalTimelineItemData.volume,
       isMuted: this.originalTimelineItemData.isMuted,
       sprite: markRaw(newSprite),
-      thumbnailUrl: this.originalTimelineItemData.thumbnailUrl,
+      thumbnailUrl: undefined, // 先设为undefined，稍后重新生成
     })
+
+    // 重新生成缩略图（异步执行，不阻塞重建过程）
+    this.regenerateThumbnailForDuplicatedItem(newTimelineItem, mediaItem)
 
     return newTimelineItem
   }
@@ -546,6 +599,27 @@ export class DuplicateTimelineItemCommand implements SimpleCommand {
       throw error
     }
   }
+
+  /**
+   * 为复制的项目重新生成缩略图
+   * @param timelineItem 复制的时间轴项目
+   * @param mediaItem 对应的媒体项目
+   */
+  private async regenerateThumbnailForDuplicatedItem(timelineItem: TimelineItem, mediaItem: MediaItem) {
+    try {
+      console.log('🖼️ 开始为复制的项目重新生成缩略图...')
+
+      const { regenerateThumbnailForTimelineItem } = await import('../../../utils/thumbnailGenerator')
+      const thumbnailUrl = await regenerateThumbnailForTimelineItem(timelineItem, mediaItem)
+
+      if (thumbnailUrl) {
+        timelineItem.thumbnailUrl = thumbnailUrl
+        console.log('✅ 复制项目缩略图生成完成')
+      }
+    } catch (error) {
+      console.error('❌ 复制项目缩略图生成失败:', error)
+    }
+  }
 }
 
 /**
@@ -559,12 +633,12 @@ export class MoveTimelineItemCommand implements SimpleCommand {
 
   constructor(
     private timelineItemId: string,
-    private oldPosition: number, // 旧的时间位置（秒）
-    private newPosition: number, // 新的时间位置（秒）
+    private oldPositionFrames: number, // 旧的时间位置（帧数）
+    private newPositionFrames: number, // 新的时间位置（帧数）
     private oldTrackId: number, // 旧的轨道ID
     private newTrackId: number, // 新的轨道ID
     private timelineModule: {
-      updateTimelineItemPosition: (id: string, position: number, trackId?: number) => void
+      updateTimelineItemPosition: (id: string, positionFrames: number, trackId?: number) => void
       getTimelineItem: (id: string) => TimelineItem | undefined
     },
     private mediaModule: {
@@ -577,13 +651,13 @@ export class MoveTimelineItemCommand implements SimpleCommand {
     const mediaItem = timelineItem ? this.mediaModule.getMediaItem(timelineItem.mediaItemId) : null
 
     // 生成描述信息
-    const positionChanged = oldPosition !== newPosition
+    const positionChanged = this.oldPositionFrames !== this.newPositionFrames
     const trackChanged = oldTrackId !== newTrackId
 
     if (positionChanged && trackChanged) {
-      this.description = `移动时间轴项目: ${mediaItem?.name || '未知素材'} (位置: ${oldPosition.toFixed(2)}s→${newPosition.toFixed(2)}s, 轨道: ${oldTrackId}→${newTrackId})`
+      this.description = `移动时间轴项目: ${mediaItem?.name || '未知素材'} (位置: ${this.oldPositionFrames}帧→${this.newPositionFrames}帧, 轨道: ${oldTrackId}→${newTrackId})`
     } else if (positionChanged) {
-      this.description = `移动时间轴项目: ${mediaItem?.name || '未知素材'} (位置: ${oldPosition.toFixed(2)}s→${newPosition.toFixed(2)}s)`
+      this.description = `移动时间轴项目: ${mediaItem?.name || '未知素材'} (位置: ${this.oldPositionFrames}帧→${this.newPositionFrames}帧)`
     } else if (trackChanged) {
       this.description = `移动时间轴项目: ${mediaItem?.name || '未知素材'} (轨道: ${oldTrackId}→${newTrackId})`
     } else {
@@ -592,8 +666,8 @@ export class MoveTimelineItemCommand implements SimpleCommand {
 
     console.log('💾 保存移动操作数据:', {
       timelineItemId,
-      oldPosition,
-      newPosition,
+      oldPositionFrames: this.oldPositionFrames,
+      newPositionFrames: this.newPositionFrames,
       oldTrackId,
       newTrackId,
       positionChanged,
@@ -615,10 +689,10 @@ export class MoveTimelineItemCommand implements SimpleCommand {
 
       // 移动到新位置
       const trackIdToSet = this.oldTrackId !== this.newTrackId ? this.newTrackId : undefined
-      this.timelineModule.updateTimelineItemPosition(this.timelineItemId, this.newPosition, trackIdToSet)
+      this.timelineModule.updateTimelineItemPosition(this.timelineItemId, this.newPositionFrames, trackIdToSet)
 
       const mediaItem = this.mediaModule.getMediaItem(timelineItem.mediaItemId)
-      console.log(`🔄 已移动时间轴项目: ${mediaItem?.name || '未知素材'} 到位置 ${this.newPosition.toFixed(2)}s, 轨道 ${this.newTrackId}`)
+      console.log(`🔄 已移动时间轴项目: ${mediaItem?.name || '未知素材'} 到位置 ${this.newPositionFrames}帧, 轨道 ${this.newTrackId}`)
     } catch (error) {
       const timelineItem = this.timelineModule.getTimelineItem(this.timelineItemId)
       const mediaItem = timelineItem ? this.mediaModule.getMediaItem(timelineItem.mediaItemId) : null
@@ -641,10 +715,10 @@ export class MoveTimelineItemCommand implements SimpleCommand {
 
       // 移动回原位置
       const trackIdToSet = this.oldTrackId !== this.newTrackId ? this.oldTrackId : undefined
-      this.timelineModule.updateTimelineItemPosition(this.timelineItemId, this.oldPosition, trackIdToSet)
+      this.timelineModule.updateTimelineItemPosition(this.timelineItemId, this.oldPositionFrames, trackIdToSet)
 
       const mediaItem = this.mediaModule.getMediaItem(timelineItem.mediaItemId)
-      console.log(`↩️ 已撤销移动时间轴项目: ${mediaItem?.name || '未知素材'} 回到位置 ${this.oldPosition.toFixed(2)}s, 轨道 ${this.oldTrackId}`)
+      console.log(`↩️ 已撤销移动时间轴项目: ${mediaItem?.name || '未知素材'} 回到位置 ${this.oldPositionFrames}帧, 轨道 ${this.oldTrackId}`)
     } catch (error) {
       const timelineItem = this.timelineModule.getTimelineItem(this.timelineItemId)
       const mediaItem = timelineItem ? this.mediaModule.getMediaItem(timelineItem.mediaItemId) : null
@@ -1065,10 +1139,14 @@ export class SplitTimelineItemCommand implements SimpleCommand {
     if (!isVideoTimeRange(originalTimeRange)) {
       throw new Error('只能分割视频项目')
     }
-    const timelineStartTime = originalTimeRange.timelineStartTime / 1000000 // 转换为秒
-    const timelineEndTime = originalTimeRange.timelineEndTime / 1000000 // 转换为秒
-    const clipStartTime = originalTimeRange.clipStartTime / 1000000 // 转换为秒
-    const clipEndTime = originalTimeRange.clipEndTime / 1000000 // 转换为秒
+    const timelineStartTimeFrames = originalTimeRange.timelineStartTime // 帧数
+    const timelineEndTimeFrames = originalTimeRange.timelineEndTime // 帧数
+    const clipStartTimeFrames = originalTimeRange.clipStartTime // 帧数
+    const clipEndTimeFrames = originalTimeRange.clipEndTime // 帧数
+    const timelineStartTime = framesToSeconds(timelineStartTimeFrames) // 转换为秒
+    const timelineEndTime = framesToSeconds(timelineEndTimeFrames) // 转换为秒
+    const clipStartTime = framesToSeconds(clipStartTimeFrames) // 转换为秒
+    const clipEndTime = framesToSeconds(clipEndTimeFrames) // 转换为秒
 
     // 计算分割点在素材中的相对位置
     const timelineDuration = timelineEndTime - timelineStartTime
@@ -1080,18 +1158,18 @@ export class SplitTimelineItemCommand implements SimpleCommand {
     // 3. 从原始素材重新创建两个sprite
     const firstSprite = await createSpriteFromMediaItem(mediaItem) as VideoVisibleSprite
     firstSprite.setTimeRange({
-      clipStartTime: clipStartTime * 1000000,
-      clipEndTime: splitClipTime * 1000000,
-      timelineStartTime: timelineStartTime * 1000000,
-      timelineEndTime: this.splitTime * 1000000,
+      clipStartTime: clipStartTimeFrames, // 帧数
+      clipEndTime: secondsToFrames(splitClipTime), // 转换为帧数
+      timelineStartTime: timelineStartTimeFrames, // 帧数
+      timelineEndTime: secondsToFrames(this.splitTime), // 转换为帧数
     })
 
     const secondSprite = await createSpriteFromMediaItem(mediaItem) as VideoVisibleSprite
     secondSprite.setTimeRange({
-      clipStartTime: splitClipTime * 1000000,
-      clipEndTime: clipEndTime * 1000000,
-      timelineStartTime: this.splitTime * 1000000,
-      timelineEndTime: timelineEndTime * 1000000,
+      clipStartTime: secondsToFrames(splitClipTime), // 转换为帧数
+      clipEndTime: clipEndTimeFrames, // 帧数
+      timelineStartTime: secondsToFrames(this.splitTime), // 转换为帧数
+      timelineEndTime: timelineEndTimeFrames, // 帧数
     })
 
     // 4. 应用变换属性到两个sprite
@@ -1108,7 +1186,7 @@ export class SplitTimelineItemCommand implements SimpleCommand {
     applyTransformToSprite(firstSprite)
     applyTransformToSprite(secondSprite)
 
-    // 5. 创建新的TimelineItem
+    // 5. 创建新的TimelineItem（先不设置缩略图）
     const firstItem: TimelineItem = reactive({
       id: this.firstItemId,
       mediaItemId: this.originalTimelineItemData.mediaItemId,
@@ -1116,7 +1194,7 @@ export class SplitTimelineItemCommand implements SimpleCommand {
       mediaType: this.originalTimelineItemData.mediaType,
       timeRange: firstSprite.getTimeRange(),
       sprite: markRaw(firstSprite),
-      thumbnailUrl: this.originalTimelineItemData.thumbnailUrl,
+      thumbnailUrl: undefined, // 先设为undefined，稍后重新生成
       x: this.originalTimelineItemData.x,
       y: this.originalTimelineItemData.y,
       width: this.originalTimelineItemData.width,
@@ -1135,7 +1213,7 @@ export class SplitTimelineItemCommand implements SimpleCommand {
       mediaType: this.originalTimelineItemData.mediaType,
       timeRange: secondSprite.getTimeRange(),
       sprite: markRaw(secondSprite),
-      thumbnailUrl: this.originalTimelineItemData.thumbnailUrl,
+      thumbnailUrl: undefined, // 先设为undefined，稍后重新生成
       x: this.originalTimelineItemData.x,
       y: this.originalTimelineItemData.y,
       width: this.originalTimelineItemData.width,
@@ -1146,6 +1224,9 @@ export class SplitTimelineItemCommand implements SimpleCommand {
       volume: this.originalTimelineItemData.volume,
       isMuted: this.originalTimelineItemData.isMuted,
     })
+
+    // 6. 重新生成缩略图（异步执行，不阻塞重建过程）
+    this.regenerateThumbnailsForSplitItems(firstItem, secondItem, mediaItem)
 
     console.log('🔄 重建分割项目完成:', {
       firstItemId: firstItem.id,
@@ -1190,7 +1271,7 @@ export class SplitTimelineItemCommand implements SimpleCommand {
     newSprite.zIndex = this.originalTimelineItemData.zIndex
     newSprite.opacity = this.originalTimelineItemData.opacity
 
-    // 5. 创建新的TimelineItem
+    // 5. 创建新的TimelineItem（先不设置缩略图）
     const newTimelineItem: TimelineItem = reactive({
       id: this.originalTimelineItemData.id,
       mediaItemId: this.originalTimelineItemData.mediaItemId,
@@ -1198,7 +1279,7 @@ export class SplitTimelineItemCommand implements SimpleCommand {
       mediaType: this.originalTimelineItemData.mediaType,
       timeRange: newSprite.getTimeRange(),
       sprite: markRaw(newSprite),
-      thumbnailUrl: this.originalTimelineItemData.thumbnailUrl,
+      thumbnailUrl: undefined, // 先设为undefined，稍后重新生成
       x: this.originalTimelineItemData.x,
       y: this.originalTimelineItemData.y,
       width: this.originalTimelineItemData.width,
@@ -1210,6 +1291,9 @@ export class SplitTimelineItemCommand implements SimpleCommand {
       isMuted: this.originalTimelineItemData.isMuted,
     })
 
+    // 6. 重新生成缩略图（异步执行，不阻塞重建过程）
+    this.regenerateThumbnailForOriginalItem(newTimelineItem, mediaItem)
+
     console.log('🔄 重建原始项目完成:', {
       id: newTimelineItem.id,
       mediaType: mediaItem.mediaType,
@@ -1217,6 +1301,27 @@ export class SplitTimelineItemCommand implements SimpleCommand {
     })
 
     return newTimelineItem
+  }
+
+  /**
+   * 为重建的原始项目重新生成缩略图
+   * @param timelineItem 重建的时间轴项目
+   * @param mediaItem 对应的媒体项目
+   */
+  private async regenerateThumbnailForOriginalItem(timelineItem: TimelineItem, mediaItem: MediaItem) {
+    try {
+      console.log('🖼️ 开始为重建的原始项目重新生成缩略图...')
+
+      const { regenerateThumbnailForTimelineItem } = await import('../../../utils/thumbnailGenerator')
+      const thumbnailUrl = await regenerateThumbnailForTimelineItem(timelineItem, mediaItem)
+
+      if (thumbnailUrl) {
+        timelineItem.thumbnailUrl = thumbnailUrl
+        console.log('✅ 重建原始项目缩略图生成完成')
+      }
+    } catch (error) {
+      console.error('❌ 重建原始项目缩略图生成失败:', error)
+    }
   }
 
   /**
@@ -1281,6 +1386,40 @@ export class SplitTimelineItemCommand implements SimpleCommand {
       const mediaItem = this.mediaModule.getMediaItem(this.originalTimelineItemData.mediaItemId)
       console.error(`❌ 撤销分割时间轴项目失败: ${mediaItem?.name || '未知素材'}`, error)
       throw error
+    }
+  }
+
+  /**
+   * 为分割后的两个项目重新生成缩略图
+   * @param firstItem 第一个分割片段
+   * @param secondItem 第二个分割片段
+   * @param mediaItem 对应的媒体项目
+   */
+  private async regenerateThumbnailsForSplitItems(
+    firstItem: TimelineItem,
+    secondItem: TimelineItem,
+    mediaItem: MediaItem
+  ) {
+    try {
+      console.log('🖼️ 开始为分割后的项目重新生成缩略图...')
+
+      const { regenerateThumbnailForTimelineItem } = await import('../../../utils/thumbnailGenerator')
+
+      // 为第一个片段生成缩略图
+      const firstThumbnailUrl = await regenerateThumbnailForTimelineItem(firstItem, mediaItem)
+      if (firstThumbnailUrl) {
+        firstItem.thumbnailUrl = firstThumbnailUrl
+        console.log('✅ 第一个分割片段缩略图生成完成')
+      }
+
+      // 为第二个片段生成缩略图
+      const secondThumbnailUrl = await regenerateThumbnailForTimelineItem(secondItem, mediaItem)
+      if (secondThumbnailUrl) {
+        secondItem.thumbnailUrl = secondThumbnailUrl
+        console.log('✅ 第二个分割片段缩略图生成完成')
+      }
+    } catch (error) {
+      console.error('❌ 分割项目缩略图生成失败:', error)
     }
   }
 }

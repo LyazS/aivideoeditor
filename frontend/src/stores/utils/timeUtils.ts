@@ -1,4 +1,4 @@
-import type { Ref } from 'vue'
+import type { Ref, WritableComputedRef } from 'vue'
 
 // ==================== 时间码系统常量 ====================
 
@@ -10,35 +10,39 @@ export const FRAME_RATE = 30
 
 
 /**
- * 计算每秒像素数
+ * 计算每帧像素数（帧数版本）
  * @param timelineWidth 时间轴宽度（像素）
- * @param totalDuration 总时长（秒）
+ * @param totalDurationFrames 总时长（帧数）
  * @param zoomLevel 缩放级别
- * @returns 每秒像素数
+ * @returns 每帧像素数
  */
-export function calculatePixelsPerSecond(
+export function calculatePixelsPerFrame(
   timelineWidth: number,
-  totalDuration: number,
+  totalDurationFrames: number,
   zoomLevel: number,
 ): number {
-  return (timelineWidth * zoomLevel) / totalDuration
+  return (timelineWidth * zoomLevel) / totalDurationFrames
 }
+
+// 移除了 calculatePixelsPerSecond 向后兼容函数，请使用 calculatePixelsPerFrame
 
 
 
 
 
 /**
- * 动态扩展时间轴长度（用于拖拽时预先扩展）
- * @param targetTime 目标时间
- * @param timelineDuration 当前时间轴长度的ref
+ * 动态扩展时间轴长度（帧数版本）
+ * @param targetFrames 目标帧数
+ * @param timelineDurationFrames 当前时间轴长度的ref（帧数）
  */
-export function expandTimelineIfNeeded(targetTime: number, timelineDuration: Ref<number>) {
-  if (targetTime > timelineDuration.value) {
-    // 扩展到目标时间的1.5倍，确保有足够的空间
-    timelineDuration.value = Math.max(targetTime * 1.5, timelineDuration.value)
+export function expandTimelineIfNeededFrames(targetFrames: number, timelineDurationFrames: Ref<number> | WritableComputedRef<number>) {
+  if (targetFrames > timelineDurationFrames.value) {
+    // 扩展到目标帧数的1.5倍，确保有足够的空间
+    timelineDurationFrames.value = Math.max(targetFrames * 1.5, timelineDurationFrames.value)
   }
 }
+
+// 移除了 expandTimelineIfNeeded 向后兼容函数，请使用 expandTimelineIfNeededFrames
 
 /**
  * 格式化文件大小

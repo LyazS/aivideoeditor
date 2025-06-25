@@ -1,5 +1,4 @@
 import type { TimelineItem } from '../../types'
-import { microsecondsToFrames } from './timeUtils'
 
 // ==================== 时长计算工具 ====================
 
@@ -22,7 +21,7 @@ export function calculateContentEndTimeFrames(timelineItems: TimelineItem[]): nu
     ...timelineItems.map((item) => {
       const sprite = item.sprite
       const timeRange = sprite.getTimeRange()
-      return microsecondsToFrames(timeRange.timelineEndTime)
+      return timeRange.timelineEndTime // 已经是帧数，不需要转换
     }),
   )
 }
@@ -42,7 +41,7 @@ export function calculateTotalDurationFrames(
     ...timelineItems.map((item) => {
       const sprite = item.sprite
       const timeRange = sprite.getTimeRange()
-      return microsecondsToFrames(timeRange.timelineEndTime)
+      return timeRange.timelineEndTime // 已经是帧数，不需要转换
     }),
   )
   return Math.max(maxEndTimeFrames, timelineDurationFrames)

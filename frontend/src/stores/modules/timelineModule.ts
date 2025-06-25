@@ -3,6 +3,7 @@ import { VideoVisibleSprite } from '../../utils/VideoVisibleSprite'
 import { ImageVisibleSprite } from '../../utils/ImageVisibleSprite'
 import { webavToProjectCoords, projectToWebavCoords } from '../../utils/coordinateTransform'
 import { printDebugInfo, syncTimeRange } from '../utils/storeUtils'
+import { framesToSeconds, secondsToFrames } from '../utils/timeUtils'
 import type {
   TimelineItem,
   MediaItem,
@@ -190,22 +191,22 @@ export function createTimelineModule(
   /**
    * 更新时间轴项目位置
    * @param timelineItemId 时间轴项目ID
-   * @param newPosition 新位置（秒）
+   * @param newPositionFrames 新位置（帧数）
    * @param newTrackId 新轨道ID（可选）
    */
   function updateTimelineItemPosition(
     timelineItemId: string,
-    newPosition: number,
+    newPositionFrames: number,
     newTrackId?: number,
   ) {
     const item = timelineItems.value.find((item) => item.id === timelineItemId)
     if (item) {
-      const oldPosition = item.timeRange.timelineStartTime / 1000000
+      const oldPositionFrames = item.timeRange.timelineStartTime // 帧数
       const oldTrackId = item.trackId
       const mediaItem = mediaModule.getMediaItem(item.mediaItemId)
 
       // 确保新位置不为负数
-      const clampedNewPosition = Math.max(0, newPosition)
+      const clampedNewPositionFrames = Math.max(0, newPositionFrames)
 
       // 如果指定了新轨道，更新轨道ID并同步可见性
       if (newTrackId !== undefined) {
@@ -223,12 +224,12 @@ export function createTimelineModule(
       // 更新时间轴位置
       const sprite = item.sprite
       const currentTimeRange = sprite.getTimeRange()
-      const duration = currentTimeRange.timelineEndTime - currentTimeRange.timelineStartTime
+      const durationFrames = currentTimeRange.timelineEndTime - currentTimeRange.timelineStartTime // 帧数
 
-      // 使用同步函数更新timeRange
+      // 使用同步函数更新timeRange（使用帧数）
       syncTimeRange(item, {
-        timelineStartTime: clampedNewPosition * 1000000, // 转换为微秒
-        timelineEndTime: clampedNewPosition * 1000000 + duration,
+        timelineStartTime: clampedNewPositionFrames, // 帧数
+        timelineEndTime: clampedNewPositionFrames + durationFrames, // 帧数
       })
 
       printDebugInfo(
@@ -236,14 +237,14 @@ export function createTimelineModule(
         {
           timelineItemId,
           mediaItemName: mediaItem?.name || '未知',
-          oldPosition,
-          newPosition: clampedNewPosition,
-          originalNewPosition: newPosition,
+          oldPositionFrames: oldPositionFrames,
+          newPositionFrames: clampedNewPositionFrames,
+          originalNewPositionFrames: newPositionFrames,
           oldTrackId,
           newTrackId: item.trackId,
-          positionChanged: oldPosition !== clampedNewPosition,
+          positionChanged: oldPositionFrames !== clampedNewPositionFrames,
           trackChanged: oldTrackId !== item.trackId,
-          positionClamped: newPosition !== clampedNewPosition,
+          positionClamped: newPositionFrames !== clampedNewPositionFrames,
         },
         mediaModule.mediaItems.value,
         timelineItems.value,

@@ -4,6 +4,7 @@ import { ImageVisibleSprite } from '../../utils/ImageVisibleSprite'
 import { createSpriteFromMediaItem } from '../../utils/spriteFactory'
 import { regenerateThumbnailForTimelineItem } from '../../utils/thumbnailGenerator'
 import { printDebugInfo, syncTimeRange } from '../utils/storeUtils'
+import { framesToSeconds, secondsToFrames } from '../utils/timeUtils'
 import type { TimelineItem, MediaItem } from '../../types'
 import { isVideoTimeRange } from '../../types'
 
@@ -107,8 +108,11 @@ export function createClipOperationsModule(
       }
 
       // 创建新的TimelineItem，放置在原项目的右侧
-      const duration = (timeRange.timelineEndTime - timeRange.timelineStartTime) / 1000000 // 转换为秒
-      const newTimelinePosition = timeRange.timelineStartTime / 1000000 + duration // 紧接着原项目
+      // 注意：timeRange 中的时间是帧数
+      const durationFrames = timeRange.timelineEndTime - timeRange.timelineStartTime // 帧数
+      const duration = framesToSeconds(durationFrames) // 转换为秒
+      const originalStartTime = framesToSeconds(timeRange.timelineStartTime) // 转换为秒
+      const newTimelinePosition = originalStartTime + duration // 紧接着原项目
 
       const newItem: TimelineItem = reactive({
         id: Date.now().toString() + Math.random().toString(36).substring(2, 11),
@@ -131,18 +135,19 @@ export function createClipOperationsModule(
       })
 
       // 根据媒体类型更新新sprite的时间轴位置
+      const newTimelinePositionFrames = secondsToFrames(newTimelinePosition) // 转换为帧数
       if (mediaItem.mediaType === 'video' && isVideoTimeRange(timeRange)) {
         (newSprite as VideoVisibleSprite).setTimeRange({
           clipStartTime: timeRange.clipStartTime,
           clipEndTime: timeRange.clipEndTime,
-          timelineStartTime: newTimelinePosition * 1000000,
-          timelineEndTime: (newTimelinePosition + duration) * 1000000,
+          timelineStartTime: newTimelinePositionFrames,
+          timelineEndTime: newTimelinePositionFrames + durationFrames,
         })
       } else if (mediaItem.mediaType === 'image') {
         (newSprite as ImageVisibleSprite).setTimeRange({
-          timelineStartTime: newTimelinePosition * 1000000,
-          timelineEndTime: (newTimelinePosition + duration) * 1000000,
-          displayDuration: duration * 1000000,
+          timelineStartTime: newTimelinePositionFrames,
+          timelineEndTime: newTimelinePositionFrames + durationFrames,
+          displayDuration: durationFrames,
         })
       }
 
@@ -265,13 +270,15 @@ export function createClipOperationsModule(
       return
     }
 
-    const timelineStartTime = timeRange.timelineStartTime / 1000000 // 转换为秒
-    const timelineEndTime = timeRange.timelineEndTime / 1000000 // 转换为秒
+    const timelineStartTimeFrames = timeRange.timelineStartTime // 帧数
+    const timelineEndTimeFrames = timeRange.timelineEndTime // 帧数
+    const timelineStartTime = framesToSeconds(timelineStartTimeFrames) // 转换为秒用于比较
+    const timelineEndTime = framesToSeconds(timelineEndTimeFrames) // 转换为秒用于比较
 
     console.log('📹 原始时间轴项目信息:')
-    console.log('  - 时间轴开始:', timelineStartTime)
-    console.log('  - 时间轴结束:', timelineEndTime)
-    console.log('  - 分割时间:', splitTime)
+    console.log('  - 时间轴开始:', timelineStartTime, 's (', timelineStartTimeFrames, '帧)')
+    console.log('  - 时间轴结束:', timelineEndTime, 's (', timelineEndTimeFrames, '帧)')
+    console.log('  - 分割时间:', splitTime, 's')
 
     // 检查分割时间是否在项目范围内
     if (splitTime <= timelineStartTime || splitTime >= timelineEndTime) {
@@ -292,25 +299,27 @@ export function createClipOperationsModule(
     const relativeTimelineTime = splitTime - timelineStartTime
     const relativeRatio = relativeTimelineTime / timelineDuration
 
-    const clipStartTime = timeRange.clipStartTime / 1000000 // 转换为秒
-    const clipEndTime = timeRange.clipEndTime / 1000000 // 转换为秒
+    const clipStartTimeFrames = timeRange.clipStartTime // 帧数
+    const clipEndTimeFrames = timeRange.clipEndTime // 帧数
+    const clipStartTime = framesToSeconds(clipStartTimeFrames) // 转换为秒
+    const clipEndTime = framesToSeconds(clipEndTimeFrames) // 转换为秒
     const clipDuration = clipEndTime - clipStartTime
     const splitClipTime = clipStartTime + clipDuration * relativeRatio
 
     console.log('🎬 素材时间计算:')
-    console.log('  - 素材开始时间:', clipStartTime)
-    console.log('  - 素材结束时间:', clipEndTime)
-    console.log('  - 分割点素材时间:', splitClipTime)
+    console.log('  - 素材开始时间:', clipStartTime, 's (', clipStartTimeFrames, '帧)')
+    console.log('  - 素材结束时间:', clipEndTime, 's (', clipEndTimeFrames, '帧)')
+    console.log('  - 分割点素材时间:', splitClipTime, 's')
 
     try {
       // 为每个分割片段从原始素材创建sprite
       // 创建第一个片段的VideoVisibleSprite
       const firstSprite = await createSpriteFromMediaItem(mediaItem) as VideoVisibleSprite
       firstSprite.setTimeRange({
-        clipStartTime: clipStartTime * 1000000,
-        clipEndTime: splitClipTime * 1000000,
-        timelineStartTime: timelineStartTime * 1000000,
-        timelineEndTime: splitTime * 1000000,
+        clipStartTime: clipStartTimeFrames, // 帧数
+        clipEndTime: secondsToFrames(splitClipTime), // 转换为帧数
+        timelineStartTime: timelineStartTimeFrames, // 帧数
+        timelineEndTime: secondsToFrames(splitTime), // 转换为帧数
       })
 
       // 复制原始sprite的变换属性到第一个片段
@@ -334,10 +343,10 @@ export function createClipOperationsModule(
       // 创建第二个片段的VideoVisibleSprite
       const secondSprite = await createSpriteFromMediaItem(mediaItem) as VideoVisibleSprite
       secondSprite.setTimeRange({
-        clipStartTime: splitClipTime * 1000000,
-        clipEndTime: clipEndTime * 1000000,
-        timelineStartTime: splitTime * 1000000,
-        timelineEndTime: timelineEndTime * 1000000,
+        clipStartTime: secondsToFrames(splitClipTime), // 转换为帧数
+        clipEndTime: clipEndTimeFrames, // 帧数
+        timelineStartTime: secondsToFrames(splitTime), // 转换为帧数
+        timelineEndTime: timelineEndTimeFrames, // 帧数
       })
 
       // 复制原始sprite的变换属性到第二个片段

@@ -32,9 +32,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useVideoStore } from '../stores/videoStore'
 import { useWebAVControls } from '../composables/useWebAVControls'
 import { usePlaybackControls } from '../composables/usePlaybackControls'
-import {
-  calculatePixelsPerSecond
-} from '../stores/utils/storeUtils'
+// 移除了 calculatePixelsPerSecond 导入，因为 TimeScale 已经使用帧数版本的逻辑
 import { calculateVisibleFrameRange } from '../stores/utils/coordinateUtils'
 import {
   framesToTimecode,
@@ -144,10 +142,9 @@ const timeMarks = computed((): TimeMark[] => {
 
     // 只添加在可见范围内的刻度
     if (position >= -50 && position <= containerWidth.value + 50) {
-      // 转换为秒数用于显示（向后兼容）
-      const time = framesToSeconds(frames)
+      // 直接使用帧数（不再转换为秒数）
       marks.push({
-        time,
+        time: frames, // 帧数
         position,
         isMajor,
         isFrame: isFrameLevel && Math.abs(frames % adjustedMinorIntervalFrames) < 0.5,
@@ -168,8 +165,7 @@ const playheadPosition = computed(() => {
   return position
 })
 
-function formatTime(seconds: number): string {
-  const frames = secondsToFrames(seconds)
+function formatTime(frames: number): string {
   return framesToTimecode(frames)
 }
 

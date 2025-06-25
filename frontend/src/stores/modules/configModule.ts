@@ -19,8 +19,8 @@ export function createConfigModule() {
   // 帧率设置
   const frameRate = ref(30) // 假设视频帧率为30fps
 
-  // 时间轴基础时长
-  const timelineDuration = ref(60) // 默认60秒时间轴，确保有足够的刻度线空间
+  // 时间轴基础时长（帧数）
+  const timelineDurationFrames = ref(1800) // 默认1800帧（60秒@30fps），确保有足够的刻度线空间
 
   // 编辑设置
   const proportionalScale = ref(true) // 等比缩放设置
@@ -52,14 +52,14 @@ export function createConfigModule() {
 
   /**
    * 设置时间轴基础时长
-   * @param duration 新的时间轴时长（秒）
+   * @param durationFrames 新的时间轴时长（帧数）
    */
-  function setTimelineDuration(duration: number) {
-    if (duration > 0) {
-      timelineDuration.value = duration
-      console.log('🎬 时间轴时长已设置为:', duration, '秒')
+  function setTimelineDurationFrames(durationFrames: number) {
+    if (durationFrames > 0) {
+      timelineDurationFrames.value = durationFrames
+      console.log('🎬 时间轴时长已设置为:', durationFrames, '帧')
     } else {
-      console.warn('⚠️ 无效的时间轴时长:', duration)
+      console.warn('⚠️ 无效的时间轴时长:', durationFrames)
     }
   }
 
@@ -80,7 +80,7 @@ export function createConfigModule() {
     return {
       videoResolution: videoResolution.value,
       frameRate: frameRate.value,
-      timelineDuration: timelineDuration.value,
+      timelineDurationFrames: timelineDurationFrames.value,
       proportionalScale: proportionalScale.value,
     }
   }
@@ -96,7 +96,7 @@ export function createConfigModule() {
       aspectRatio: '16:9',
     }
     frameRate.value = 30
-    timelineDuration.value = 60
+    timelineDurationFrames.value = 1800 // 60秒@30fps
     proportionalScale.value = true
 
     console.log('🔄 配置已重置为默认值')
@@ -108,13 +108,13 @@ export function createConfigModule() {
     // 状态
     videoResolution,
     frameRate,
-    timelineDuration,
+    timelineDurationFrames,
     proportionalScale,
 
     // 方法
     setVideoResolution,
     setFrameRate,
-    setTimelineDuration,
+    setTimelineDurationFrames,
     setProportionalScale,
     getConfigSummary,
     resetToDefaults,

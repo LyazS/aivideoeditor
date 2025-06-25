@@ -2,7 +2,7 @@ import { computed, type Raw } from 'vue'
 import { defineStore } from 'pinia'
 import { VideoVisibleSprite } from '../utils/VideoVisibleSprite'
 import {
-  expandTimelineIfNeeded,
+  expandTimelineIfNeededFrames,
   getTimelineItemAtTime,
   autoArrangeTimelineItems,
   autoArrangeTrackItems,
@@ -11,7 +11,7 @@ import {
   getTimelineItemsByTrack,
 } from './utils/storeUtils'
 import { frameToPixel, pixelToFrame } from './utils/coordinateUtils'
-import { secondsToFrames } from './utils/timeUtils'
+import { secondsToFrames, framesToSeconds } from './utils/timeUtils'
 import { createMediaModule } from './modules/mediaModule'
 import { createConfigModule } from './modules/configModule'
 import { createTrackModule } from './modules/trackModule'
@@ -50,20 +50,15 @@ export const useVideoStore = defineStore('video', () => {
   const totalDurationFrames = computed(() => {
     return calculateTotalDurationFrames(
       timelineModule.timelineItems.value,
-      secondsToFrames(configModule.timelineDuration.value),
+      configModule.timelineDurationFrames.value,
     )
   })
 
-  // 总时长（秒数版本，用于向后兼容）
-  const totalDuration = computed(() => {
-    return totalDurationFrames.value / 30 // 转换为秒数
-  })
-
-  // 创建视口管理模块（需要在totalDuration之后创建）
+  // 创建视口管理模块（需要在totalDurationFrames之后创建）
   const viewportModule = createViewportModule(
     timelineModule.timelineItems,
-    totalDuration,
-    configModule.timelineDuration,
+    totalDurationFrames,
+    configModule.timelineDurationFrames,
   )
 
   // 创建通知管理模块
@@ -156,12 +151,12 @@ export const useVideoStore = defineStore('video', () => {
   /**
    * 带历史记录的移动时间轴项目方法
    * @param timelineItemId 要移动的时间轴项目ID
-   * @param newPosition 新的时间位置（秒）
+   * @param newPositionFrames 新的时间位置（帧数）
    * @param newTrackId 新的轨道ID（可选）
    */
   async function moveTimelineItemWithHistory(
     timelineItemId: string,
-    newPosition: number,
+    newPositionFrames: number,
     newTrackId?: number
   ) {
     // 获取要移动的时间轴项目
@@ -172,12 +167,12 @@ export const useVideoStore = defineStore('video', () => {
     }
 
     // 获取当前位置和轨道
-    const oldPosition = timelineItem.timeRange.timelineStartTime / 1000000 // 转换为秒
+    const oldPositionFrames = timelineItem.timeRange.timelineStartTime // 帧数
     const oldTrackId = timelineItem.trackId
     const finalNewTrackId = newTrackId !== undefined ? newTrackId : oldTrackId
 
     // 检查是否有实际变化
-    const positionChanged = Math.abs(oldPosition - newPosition) > 0.001 // 允许1毫秒的误差
+    const positionChanged = Math.abs(oldPositionFrames - newPositionFrames) > 1 // 允许1帧的误差
     const trackChanged = oldTrackId !== finalNewTrackId
 
     if (!positionChanged && !trackChanged) {
@@ -187,8 +182,8 @@ export const useVideoStore = defineStore('video', () => {
 
     const command = new MoveTimelineItemCommand(
       timelineItemId,
-      oldPosition,
-      newPosition,
+      oldPositionFrames,
+      newPositionFrames,
       oldTrackId,
       finalNewTrackId,
       {
@@ -441,8 +436,10 @@ export const useVideoStore = defineStore('video', () => {
     }
 
     // 检查分割时间是否在项目范围内
-    const timelineStartTime = timelineItem.timeRange.timelineStartTime / 1000000 // 转换为秒
-    const timelineEndTime = timelineItem.timeRange.timelineEndTime / 1000000 // 转换为秒
+    const timelineStartTimeFrames = timelineItem.timeRange.timelineStartTime // 帧数
+    const timelineEndTimeFrames = timelineItem.timeRange.timelineEndTime // 帧数
+    const timelineStartTime = framesToSeconds(timelineStartTimeFrames) // 转换为秒
+    const timelineEndTime = framesToSeconds(timelineEndTimeFrames) // 转换为秒
 
     if (splitTime <= timelineStartTime || splitTime >= timelineEndTime) {
       console.error('❌ 分割时间不在项目范围内')
@@ -483,13 +480,13 @@ export const useVideoStore = defineStore('video', () => {
     }
 
     // 计算新位置（在原项目后面，避免重叠）
-    const originalEndTime = timelineItem.timeRange.timelineEndTime / 1000000 // 转换为秒
-    const newPosition = originalEndTime + 0.1 // 在原项目结束后0.1秒的位置
+    const originalEndTimeFrames = timelineItem.timeRange.timelineEndTime // 帧数
+    const newPositionFrames = originalEndTimeFrames + 3 // 在原项目结束后3帧的位置（0.1秒@30fps）
 
     const command = new DuplicateTimelineItemCommand(
       timelineItemId,
       timelineItem, // 传入完整的timelineItem用于保存重建数据
-      newPosition,
+      newPositionFrames,
       {
         addTimelineItem: timelineModule.addTimelineItem,
         removeTimelineItem: timelineModule.removeTimelineItem,
@@ -771,8 +768,8 @@ export const useVideoStore = defineStore('video', () => {
     const originalTimeRange = timelineItem.sprite.getTimeRange()
 
     // 检查是否有实际变化
-    const startTimeChanged = Math.abs(originalTimeRange.timelineStartTime - newTimeRange.timelineStartTime) > 1000 // 允许1毫秒的误差
-    const endTimeChanged = Math.abs(originalTimeRange.timelineEndTime - newTimeRange.timelineEndTime) > 1000
+    const startTimeChanged = Math.abs(originalTimeRange.timelineStartTime - newTimeRange.timelineStartTime) > 0.5 // 允许0.5帧的误差
+    const endTimeChanged = Math.abs(originalTimeRange.timelineEndTime - newTimeRange.timelineEndTime) > 0.5
 
     if (!startTimeChanged && !endTimeChanged) {
       console.log('⚠️ 时间范围没有变化，跳过调整操作')
@@ -899,10 +896,9 @@ export const useVideoStore = defineStore('video', () => {
     tracks: trackModule.tracks,
     currentTime: playbackModule.currentTime,
     isPlaying: playbackModule.isPlaying,
-    timelineDuration: configModule.timelineDuration,
-    totalDuration,
+    timelineDurationFrames: configModule.timelineDurationFrames,
     totalDurationFrames,
-    contentEndTime: viewportModule.contentEndTime,
+    contentEndTimeFrames: viewportModule.contentEndTimeFrames,
     playbackRate: playbackModule.playbackRate,
     selectedTimelineItemId: selectionModule.selectedTimelineItemId,
     // 多选状态
@@ -915,8 +911,8 @@ export const useVideoStore = defineStore('video', () => {
     scrollOffset: viewportModule.scrollOffset,
     frameRate: configModule.frameRate,
     minZoomLevel: viewportModule.minZoomLevel,
-    visibleDuration: viewportModule.visibleDuration,
-    maxVisibleDuration: viewportModule.maxVisibleDuration,
+    visibleDurationFrames: viewportModule.visibleDurationFrames,
+    maxVisibleDurationFrames: viewportModule.maxVisibleDurationFrames,
     getMaxZoomLevel: (timelineWidth: number) =>
       viewportModule.getMaxZoomLevelForTimeline(timelineWidth, configModule.frameRate.value),
     getMaxScrollOffset: viewportModule.getMaxScrollOffsetForTimeline,
@@ -966,16 +962,12 @@ export const useVideoStore = defineStore('video', () => {
     autoArrangeTimelineItems: () => autoArrangeTimelineItems(timelineModule.timelineItems),
     autoArrangeTrackItems: (trackId: number) => autoArrangeTrackItems(timelineModule.timelineItems, trackId),
     // 播放控制方法
-    // 帧数控制方法（新增）
+    // 帧数控制方法
     currentFrame: playbackModule.currentFrame,
     setCurrentFrame: playbackModule.setCurrentFrame,
     seekToFrame: playbackModule.seekToFrame,
     seekByFrames: playbackModule.seekByFrames,
-    // 时间控制方法（兼容）
-    setCurrentTime: playbackModule.setCurrentTime,
     setPlaybackRate: playbackModule.setPlaybackRate,
-    seekTo: playbackModule.seekTo,
-    seekBy: playbackModule.seekBy,
     nextFrame: playbackModule.nextFrame,
     previousFrame: playbackModule.previousFrame,
     setPlaying: playbackModule.setPlaying,
@@ -1031,13 +1023,13 @@ export const useVideoStore = defineStore('video', () => {
         viewportModule.scrollOffset.value,
       ),
 
-    expandTimelineIfNeeded: (targetTime: number) =>
-      expandTimelineIfNeeded(targetTime, configModule.timelineDuration),
+    expandTimelineIfNeededFrames: (targetFrames: number) =>
+      expandTimelineIfNeededFrames(targetFrames, configModule.timelineDurationFrames),
     // 分辨率相关
     videoResolution: configModule.videoResolution,
     setVideoResolution: configModule.setVideoResolution,
     // 配置管理
-    setTimelineDuration: configModule.setTimelineDuration,
+    setTimelineDurationFrames: configModule.setTimelineDurationFrames,
     setFrameRate: configModule.setFrameRate,
     setProportionalScale: configModule.setProportionalScale,
     getConfigSummary: configModule.getConfigSummary,

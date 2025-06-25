@@ -33,8 +33,8 @@
           <div class="controls-section">
             <!-- 时间显示 -->
             <div class="time-display">
-              {{ formatTime(videoStore.currentTime) }} /
-              {{ formatTime(videoStore.contentEndTime || videoStore.totalDuration) }}
+              {{ framesToTimecode(videoStore.currentFrame) }} /
+              {{ framesToTimecode(videoStore.contentEndTimeFrames || videoStore.totalDurationFrames) }}
             </div>
             <!-- 中间播放控制 -->
             <div class="center-controls">

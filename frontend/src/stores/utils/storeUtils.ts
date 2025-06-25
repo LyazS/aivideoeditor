@@ -5,10 +5,10 @@
 // 调试工具
 export { printDebugInfo } from './debugUtils'
 
-// 时间计算工具（仅保留有效函数）
+// 时间计算工具（仅保留帧数版本）
 export {
-  calculatePixelsPerSecond,
-  expandTimelineIfNeeded,
+  calculatePixelsPerFrame,
+  expandTimelineIfNeededFrames,
   formatFileSize,
 } from './timeUtils'
 

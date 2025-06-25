@@ -113,8 +113,7 @@ const fileInput = ref<HTMLInputElement>()
 const isDragOver = ref(false)
 
 // 格式化时长显示（使用时间码格式）
-function formatDuration(seconds: number): string {
-  const frames = secondsToFrames(seconds)
+function formatDuration(frames: number): string {
   return framesToTimecode(frames)
 }
 
@@ -235,7 +234,7 @@ const addVideoItem = async (file: File, url: string, mediaItemId: string, startT
         file,
         url,
         name: file.name,
-        duration: video.duration,
+        duration: secondsToFrames(video.duration), // 转换为帧数
         type: file.type,
         mediaType: 'video',
         mp4Clip: null, // 解析中时为null
@@ -320,7 +319,7 @@ const addImageItem = async (file: File, url: string, mediaItemId: string, startT
         file,
         url,
         name: file.name,
-        duration: 5, // 图片默认5秒时长
+        duration: 150, // 图片默认150帧时长（5秒@30fps）
         type: file.type,
         mediaType: 'image',
         mp4Clip: null,

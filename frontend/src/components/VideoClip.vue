@@ -84,7 +84,7 @@
           </div>
           <div class="tooltip-row">
             <span class="tooltip-label">位置:</span>
-            <span class="tooltip-value">{{ formatDurationFromFrames(microsecondsToFrames(props.timelineItem.timeRange.timelineStartTime)) }}</span>
+            <span class="tooltip-value">{{ formatDurationFromFrames(props.timelineItem.timeRange.timelineStartTime) }}</span>
           </div>
           <div v-if="mediaItem?.mediaType === 'video' && Math.abs(playbackSpeed - 1) > 0.001" class="tooltip-row">
             <span class="tooltip-label">倍速:</span>
@@ -107,7 +107,6 @@ import { getDragPreviewManager } from '../composables/useDragPreview'
 
 import {
   framesToTimecode,
-  microsecondsToFrames,
   framesToMicroseconds,
   alignFramesToFrame,
   secondsToFrames
@@ -118,7 +117,7 @@ interface Props {
   timelineItem: TimelineItem
   track?: Track
   timelineWidth: number
-  totalDuration: number
+  totalDurationFrames: number
 }
 
 interface Emits {
@@ -142,8 +141,7 @@ const mediaItem = computed(() => {
 // 获取时间轴时长（帧数）
 const timelineDurationFrames = computed(() => {
   const timeRange = props.timelineItem.timeRange
-  const durationMicroseconds = timeRange.timelineEndTime - timeRange.timelineStartTime
-  return microsecondsToFrames(durationMicroseconds)
+  return timeRange.timelineEndTime - timeRange.timelineStartTime // 已经是帧数，不需要转换
 })
 
 // 获取播放速度（仅对视频有效）
@@ -183,10 +181,10 @@ const clipStyle = computed(() => {
   // 在调整大小时使用临时值，否则使用实际值（帧数）
   const positionFrames = isResizing.value
     ? tempResizePositionFrames.value
-    : microsecondsToFrames(timeRange.timelineStartTime)
+    : timeRange.timelineStartTime // 已经是帧数，不需要转换
   const durationFrames = isResizing.value
     ? tempDurationFrames.value
-    : microsecondsToFrames(timeRange.timelineEndTime - timeRange.timelineStartTime)
+    : timeRange.timelineEndTime - timeRange.timelineStartTime // 已经是帧数，不需要转换
 
   const left = videoStore.frameToPixel(positionFrames, props.timelineWidth)
   const endFrames = positionFrames + durationFrames
@@ -209,10 +207,10 @@ const showDetails = computed(() => {
   // 在调整大小时使用临时值，否则使用实际值（帧数）
   const positionFrames = isResizing.value
     ? tempResizePositionFrames.value
-    : microsecondsToFrames(timeRange.timelineStartTime)
+    : timeRange.timelineStartTime // 已经是帧数，不需要转换
   const durationFrames = isResizing.value
     ? tempDurationFrames.value
-    : microsecondsToFrames(timeRange.timelineEndTime - timeRange.timelineStartTime)
+    : timeRange.timelineEndTime - timeRange.timelineStartTime // 已经是帧数，不需要转换
 
   const endFrames = positionFrames + durationFrames
   const left = videoStore.frameToPixel(positionFrames, props.timelineWidth)
@@ -226,8 +224,8 @@ const isOverlapping = computed(() => {
   const currentItem = props.timelineItem
   // 直接从timelineItem.timeRange获取，与videostore的同步机制保持一致
   const currentRange = currentItem.timeRange
-  const currentStart = currentRange.timelineStartTime / 1000000 // 转换为秒
-  const currentEnd = currentRange.timelineEndTime / 1000000
+  const currentStart = currentRange.timelineStartTime // 帧数
+  const currentEnd = currentRange.timelineEndTime // 帧数
 
   return videoStore.timelineItems.some((otherItem) => {
     if (otherItem.id === currentItem.id || otherItem.trackId !== currentItem.trackId) {
@@ -236,8 +234,8 @@ const isOverlapping = computed(() => {
 
     // 同样从timelineItem.timeRange获取其他项目的时间范围
     const otherRange = otherItem.timeRange
-    const otherStart = otherRange.timelineStartTime / 1000000
-    const otherEnd = otherRange.timelineEndTime / 1000000
+    const otherStart = otherRange.timelineStartTime // 帧数
+    const otherEnd = otherRange.timelineEndTime // 帧数
 
     // 检查是否重叠
     return !(currentEnd <= otherStart || otherEnd <= currentStart)
@@ -302,7 +300,7 @@ function handleDragStart(event: DragEvent) {
     event,
     props.timelineItem.id,
     props.timelineItem.trackId,
-    props.timelineItem.timeRange.timelineStartTime / 1000000,
+    props.timelineItem.timeRange.timelineStartTime, // 直接使用帧数，不需要转换
     Array.from(videoStore.selectedTimelineItemIds),
     dragOffset
   )
@@ -438,8 +436,8 @@ function startResize(direction: 'left' | 'right', event: MouseEvent) {
   const timeRange = props.timelineItem.timeRange
 
   // 使用帧数进行精确计算
-  resizeStartDurationFrames.value = microsecondsToFrames(timeRange.timelineEndTime - timeRange.timelineStartTime)
-  resizeStartPositionFrames.value = microsecondsToFrames(timeRange.timelineStartTime)
+  resizeStartDurationFrames.value = timeRange.timelineEndTime - timeRange.timelineStartTime // 已经是帧数，不需要转换
+  resizeStartPositionFrames.value = timeRange.timelineStartTime // 已经是帧数，不需要转换
 
   // 初始化临时值
   tempDurationFrames.value = resizeStartDurationFrames.value
@@ -483,7 +481,7 @@ function handleResize(event: MouseEvent) {
 
   // 确保最小时长（1帧）和最大时长（原始素材时长的10倍）
   const minDurationFrames = 1
-  const maxDurationFrames = secondsToFrames(mediaItem.duration) * 10 // 使用标准转换函数
+  const maxDurationFrames = mediaItem.duration * 10 // mediaItem.duration 已经是帧数，直接使用
   newDurationFrames = Math.max(minDurationFrames, Math.min(newDurationFrames, maxDurationFrames))
 
   // 更新临时值（帧数）
@@ -497,14 +495,14 @@ async function stopResize() {
 
     if (mediaItem) {
       // 使用帧数计算新的时间范围（更精确）
-      const newTimelineStartTime = framesToMicroseconds(tempResizePositionFrames.value)
-      const newTimelineEndTime = framesToMicroseconds(tempResizePositionFrames.value + tempDurationFrames.value)
+      const newTimelineStartTimeFrames = tempResizePositionFrames.value
+      const newTimelineEndTimeFrames = tempResizePositionFrames.value + tempDurationFrames.value
 
       // 验证时间范围的有效性
-      if (newTimelineEndTime <= newTimelineStartTime) {
+      if (newTimelineEndTimeFrames <= newTimelineStartTimeFrames) {
         console.error('❌ 无效的时间范围:', {
-          start: newTimelineStartTime,
-          end: newTimelineEndTime,
+          startFrames: newTimelineStartTimeFrames,
+          endFrames: newTimelineEndTimeFrames,
           durationFrames: tempDurationFrames.value,
           positionFrames: tempResizePositionFrames.value,
         })
@@ -513,21 +511,23 @@ async function stopResize() {
 
       console.log('🔧 调整大小 - 设置时间范围:', {
         mediaType: mediaItem.mediaType,
-        timelineStartTime: newTimelineStartTime,
-        timelineEndTime: newTimelineEndTime,
+        timelineStartTimeFrames: newTimelineStartTimeFrames,
+        timelineEndTimeFrames: newTimelineEndTimeFrames,
         durationFrames: tempDurationFrames.value,
         positionFrames: tempResizePositionFrames.value,
         timecode: framesToTimecode(tempDurationFrames.value),
       })
 
-      // 构建新的时间范围对象
+      // 构建新的时间范围对象（帧数版本）
+      // 🔧 关键修复：保持原有的clipStartTime和clipEndTime，只更新timeline时间
+      const currentTimeRange = props.timelineItem.timeRange
       const newTimeRange = {
-        timelineStartTime: newTimelineStartTime,
-        timelineEndTime: newTimelineEndTime,
-        clipStartTime: mediaItem.mediaType === 'video' ? 0 : 0,
-        clipEndTime: mediaItem.mediaType === 'video' ? mediaItem.duration * 1000000 : 0,
-        effectiveDuration: newTimelineEndTime - newTimelineStartTime,
-        playbackRate: 1.0,
+        timelineStartTime: newTimelineStartTimeFrames, // 帧数
+        timelineEndTime: newTimelineEndTimeFrames, // 帧数
+        clipStartTime: currentTimeRange.clipStartTime, // 保持原有的素材开始时间
+        clipEndTime: currentTimeRange.clipEndTime, // 保持原有的素材结束时间
+        effectiveDuration: newTimelineEndTimeFrames - newTimelineStartTimeFrames, // 帧数
+        playbackRate: currentTimeRange.playbackRate || 1.0, // 保持原有的播放速度
       }
 
       try {

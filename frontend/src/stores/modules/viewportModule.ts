@@ -8,7 +8,7 @@ import {
   calculateContentEndTimeFrames,
   calculateMaxVisibleDurationFrames,
 } from '../utils/durationUtils'
-import { framesToSeconds, secondsToFrames } from '../utils/timeUtils'
+// 移除秒数转换导入，全部使用帧数
 import type { TimelineItem } from '../../types'
 
 /**
@@ -17,8 +17,8 @@ import type { TimelineItem } from '../../types'
  */
 export function createViewportModule(
   timelineItems: Ref<TimelineItem[]>,
-  totalDuration: Ref<number>,
-  timelineDuration: Ref<number>,
+  totalDurationFrames: Ref<number>,
+  timelineDurationFrames: Ref<number>,
 ) {
   // ==================== 状态定义 ====================
 
@@ -33,32 +33,20 @@ export function createViewportModule(
     return calculateContentEndTimeFrames(timelineItems.value)
   })
 
-  // 计算实际内容的结束时间（向后兼容的秒数版本）
-  const contentEndTime = computed(() => {
-    return framesToSeconds(contentEndTimeFrames.value)
-  })
-
   // 帧数版本的最大可见时长
   const maxVisibleDurationFrames = computed(() => {
-    const timelineDurationFrames = secondsToFrames(timelineDuration.value)
-    return calculateMaxVisibleDurationFrames(contentEndTimeFrames.value, timelineDurationFrames)
-  })
-
-  // 计算最大允许的可见时间范围（向后兼容的秒数版本）
-  const maxVisibleDuration = computed(() => {
-    return framesToSeconds(maxVisibleDurationFrames.value)
+    return calculateMaxVisibleDurationFrames(contentEndTimeFrames.value, timelineDurationFrames.value)
   })
 
   // 缩放相关计算属性（使用帧数版本）
   const minZoomLevel = computed(() => {
-    const totalDurationFrames = secondsToFrames(totalDuration.value)
-    return getMinZoomLevelFrames(totalDurationFrames, maxVisibleDurationFrames.value)
+    return getMinZoomLevelFrames(totalDurationFrames.value, maxVisibleDurationFrames.value)
   })
 
-  // 当前可见时间范围（受最大可见范围限制）
-  const visibleDuration = computed(() => {
-    const calculatedDuration = totalDuration.value / zoomLevel.value
-    return Math.min(calculatedDuration, maxVisibleDuration.value)
+  // 当前可见时间范围（帧数版本）
+  const visibleDurationFrames = computed(() => {
+    const calculatedDurationFrames = totalDurationFrames.value / zoomLevel.value
+    return Math.min(calculatedDurationFrames, maxVisibleDurationFrames.value)
   })
 
   // ==================== 缩放滚动方法 ====================
@@ -69,8 +57,7 @@ export function createViewportModule(
    * @returns 最大缩放级别
    */
   function getMaxZoomLevelForTimeline(timelineWidth: number): number {
-    const totalDurationFrames = secondsToFrames(totalDuration.value)
-    return getMaxZoomLevelFrames(timelineWidth, totalDurationFrames)
+    return getMaxZoomLevelFrames(timelineWidth, totalDurationFrames.value)
   }
 
   /**
@@ -79,11 +66,10 @@ export function createViewportModule(
    * @returns 最大滚动偏移量
    */
   function getMaxScrollOffsetForTimeline(timelineWidth: number): number {
-    const totalDurationFrames = secondsToFrames(totalDuration.value)
     return getMaxScrollOffsetFrames(
       timelineWidth,
       zoomLevel.value,
-      totalDurationFrames,
+      totalDurationFrames.value,
       maxVisibleDurationFrames.value,
     )
   }
@@ -100,7 +86,7 @@ export function createViewportModule(
     const clampedZoom = Math.max(minZoom, Math.min(newZoomLevel, maxZoom))
 
     // 只在达到缩放限制时输出警告信息
-    if (newZoomLevel < minZoom && contentEndTime.value > 0) {
+    if (newZoomLevel < minZoom && contentEndTimeFrames.value > 0) {
       console.warn('⚠️ 已达到最小缩放级别限制')
     }
     if (newZoomLevel > maxZoom) {
@@ -154,12 +140,12 @@ export function createViewportModule(
     setZoomLevel(zoomLevel.value / factor, timelineWidth, frameRate)
 
     // 当缩小时间轴时，确保基础时间轴长度足够大以显示更多刻度线
-    const pixelsPerSecond = (timelineWidth * zoomLevel.value) / totalDuration.value
-    const visibleDurationCalc = timelineWidth / pixelsPerSecond
+    const pixelsPerFrame = (timelineWidth * zoomLevel.value) / totalDurationFrames.value
+    const visibleDurationFrames = timelineWidth / pixelsPerFrame
 
     // 如果可见时间范围超过当前时间轴长度，扩展时间轴
-    if (visibleDurationCalc > timelineDuration.value) {
-      // 这里需要调用外部的设置方法，因为timelineDuration是从配置模块来的
+    if (visibleDurationFrames > timelineDurationFrames.value) {
+      // 这里需要调用外部的设置方法，因为timelineDurationFrames是从配置模块来的
       // 在主store中会处理这个逻辑
     }
   }
@@ -210,10 +196,10 @@ export function createViewportModule(
       zoomLevel: zoomLevel.value,
       scrollOffset: scrollOffset.value,
       minZoomLevel: minZoomLevel.value,
-      visibleDuration: visibleDuration.value,
-      maxVisibleDuration: maxVisibleDuration.value,
-      contentEndTime: contentEndTime.value,
-      totalDuration: totalDuration.value,
+      visibleDurationFrames: visibleDurationFrames.value,
+      maxVisibleDurationFrames: maxVisibleDurationFrames.value,
+      contentEndTimeFrames: contentEndTimeFrames.value,
+      totalDurationFrames: totalDurationFrames.value,
     }
   }
 
@@ -224,11 +210,11 @@ export function createViewportModule(
     zoomLevel,
     scrollOffset,
 
-    // 计算属性
+    // 计算属性（帧数版本）
     minZoomLevel,
-    visibleDuration,
-    maxVisibleDuration,
-    contentEndTime,
+    visibleDurationFrames,
+    maxVisibleDurationFrames,
+    contentEndTimeFrames,
 
     // 方法
     getMaxZoomLevelForTimeline,

@@ -1,5 +1,4 @@
 import { useVideoStore } from '../stores/videoStore'
-import { secondsToFrames } from '../stores/utils/timeUtils'
 import type { DragPreviewData } from '../types'
 
 // 统一拖拽预览管理器
@@ -124,9 +123,9 @@ class DragPreviewManager {
    * 定位预览元素
    */
   private positionPreview(preview: HTMLElement, data: DragPreviewData, timelineWidth: number) {
-    // 计算预览位置和尺寸（转换为帧数）
-    const startFrames = secondsToFrames(data.startTime)
-    const endFrames = secondsToFrames(data.startTime + data.duration)
+    // 计算预览位置和尺寸（data.startTime 和 data.duration 已经是帧数）
+    const startFrames = data.startTime
+    const endFrames = data.startTime + data.duration
     const left = this.videoStore.frameToPixel(startFrames, timelineWidth)
     const right = this.videoStore.frameToPixel(endFrames, timelineWidth)
     const width = Math.max(right - left, 60) // 最小宽度60px

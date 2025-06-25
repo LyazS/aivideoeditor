@@ -123,10 +123,10 @@ function isTimelineItemsOverlapping(item1: TimelineItem, item2: TimelineItem): b
   const range1 = sprite1.getTimeRange()
   const range2 = sprite2.getTimeRange()
 
-  const item1Start = range1.timelineStartTime / 1000000 // 转换为秒
-  const item1End = range1.timelineEndTime / 1000000
-  const item2Start = range2.timelineStartTime / 1000000
-  const item2End = range2.timelineEndTime / 1000000
+  const item1Start = range1.timelineStartTime // 帧数
+  const item1End = range1.timelineEndTime // 帧数
+  const item2Start = range2.timelineStartTime // 帧数
+  const item2End = range2.timelineEndTime // 帧数
 
   return !(item1End <= item2Start || item2End <= item1Start)
 }
@@ -217,8 +217,8 @@ function debugTimeline() {
 
   // 基本配置
   console.group('📊 基本配置')
-  console.log('总时长 (秒):', videoStore.totalDuration)
-  console.log('内容结束时间 (秒):', videoStore.contentEndTime)
+  console.log('总时长 (帧):', videoStore.totalDurationFrames)
+  console.log('内容结束时间 (帧):', videoStore.contentEndTimeFrames)
   console.log('当前播放时间 (秒):', videoStore.currentTime)
   console.log('播放状态:', videoStore.isPlaying ? '播放中' : '已暂停')
   console.log('播放速度:', videoStore.playbackRate + 'x')
@@ -230,7 +230,7 @@ function debugTimeline() {
     console.group(`素材 ${index + 1}: ${item.name}`)
     console.log('ID:', item.id)
     console.log('文件名:', item.name)
-    console.log('时长 (秒):', item.duration.toFixed(2))
+    console.log('时长 (帧):', item.duration)
     console.log('文件大小:', formatFileSize(item.file.size))
     console.log('文件类型:', item.file.type)
     console.groupEnd()
@@ -248,9 +248,9 @@ function debugTimeline() {
     console.log('ID:', item.id)
     console.log('素材ID:', item.mediaItemId)
     console.log('轨道ID:', item.trackId)
-    console.log('时间轴位置 (秒):', (timeRange.timelineStartTime / 1000000).toFixed(2))
-    console.log('时间轴开始 (秒):', (timeRange.timelineStartTime / 1000000).toFixed(2))
-    console.log('时间轴结束 (秒):', (timeRange.timelineEndTime / 1000000).toFixed(2))
+    console.log('时间轴位置 (帧):', timeRange.timelineStartTime)
+    console.log('时间轴开始 (帧):', timeRange.timelineStartTime)
+    console.log('时间轴结束 (帧):', timeRange.timelineEndTime)
     console.log('播放速度:', isVideoTimeRange(timeRange) ? timeRange.playbackRate : '不适用(图片)')
     console.groupEnd()
   })

@@ -1,4 +1,5 @@
 import type { MediaItem, TimelineItem } from '../../types'
+import { framesToSeconds } from './timeUtils'
 
 // ==================== 查找工具 ====================
 
@@ -16,8 +17,9 @@ export function getTimelineItemAtTime(
     timelineItems.find((item) => {
       const sprite = item.sprite
       const timeRange = sprite.getTimeRange()
-      const startTime = timeRange.timelineStartTime / 1000000 // 转换为秒
-      const endTime = timeRange.timelineEndTime / 1000000 // 转换为秒
+      // 注意：timeRange.timelineStartTime 是帧数，需要转换为秒数
+      const startTime = framesToSeconds(timeRange.timelineStartTime)
+      const endTime = framesToSeconds(timeRange.timelineEndTime)
       return time >= startTime && time < endTime
     }) || null
   )
@@ -77,8 +79,9 @@ export function getTimelineItemsAtTime(
   return timelineItems.filter((item) => {
     const sprite = item.sprite
     const timeRange = sprite.getTimeRange()
-    const startTime = timeRange.timelineStartTime / 1000000 // 转换为秒
-    const endTime = timeRange.timelineEndTime / 1000000 // 转换为秒
+    // 注意：timeRange.timelineStartTime 是帧数，需要转换为秒数
+    const startTime = framesToSeconds(timeRange.timelineStartTime)
+    const endTime = framesToSeconds(timeRange.timelineEndTime)
     return time >= startTime && time < endTime
   })
 }
@@ -100,8 +103,9 @@ export function getTimelineItemAtTrackAndTime(
       if (item.trackId !== trackId) return false
       const sprite = item.sprite
       const timeRange = sprite.getTimeRange()
-      const startTime = timeRange.timelineStartTime / 1000000 // 转换为秒
-      const endTime = timeRange.timelineEndTime / 1000000 // 转换为秒
+      // 注意：timeRange.timelineStartTime 是帧数，需要转换为秒数
+      const startTime = framesToSeconds(timeRange.timelineStartTime)
+      const endTime = framesToSeconds(timeRange.timelineEndTime)
       return time >= startTime && time < endTime
     }) || null
   )

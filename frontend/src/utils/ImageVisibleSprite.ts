@@ -1,5 +1,6 @@
 import { VisibleSprite, ImgClip } from '@webav/av-cliper'
 import type { ImageTimeRange } from '../types'
+import { framesToMicroseconds } from '../stores/utils/timeUtils'
 
 /**
  * 自定义的图片VisibleSprite类，继承自WebAV的VisibleSprite
@@ -7,18 +8,18 @@ import type { ImageTimeRange } from '../types'
  */
 export class ImageVisibleSprite extends VisibleSprite {
   /**
-   * 时间范围信息
+   * 时间范围信息（帧数版本）
    */
   #timeRange: ImageTimeRange = {
-    timelineStartTime: 0,
-    timelineEndTime: 5_000_000, // 默认5秒（5,000,000微秒）
-    displayDuration: 5_000_000,
+    timelineStartTime: 0, // 帧数
+    timelineEndTime: 150, // 默认150帧（5秒@30fps）
+    displayDuration: 150, // 帧数
   }
 
   /**
-   * 默认显示时长（微秒） - 5秒
+   * 默认显示时长（帧数） - 150帧（5秒@30fps）
    */
-  public static readonly DEFAULT_DURATION = 5_000_000
+  public static readonly DEFAULT_DURATION = 150
 
   /**
    * 构造函数
@@ -36,7 +37,7 @@ export class ImageVisibleSprite extends VisibleSprite {
 
   /**
    * 设置在时间轴上的开始时间（图片在整个项目时间轴上的位置）
-   * @param startTime 时间轴开始时间（微秒）
+   * @param startTime 时间轴开始时间（帧数）
    */
   public setTimelineStartTime(startTime: number): void {
     const duration = this.#timeRange.displayDuration
@@ -47,7 +48,7 @@ export class ImageVisibleSprite extends VisibleSprite {
 
   /**
    * 设置在时间轴上的结束时间
-   * @param endTime 时间轴结束时间（微秒）
+   * @param endTime 时间轴结束时间（帧数）
    */
   public setTimelineEndTime(endTime: number): void {
     this.#timeRange.timelineEndTime = endTime
@@ -57,7 +58,7 @@ export class ImageVisibleSprite extends VisibleSprite {
 
   /**
    * 设置显示时长
-   * @param duration 显示时长（微秒）
+   * @param duration 显示时长（帧数）
    */
   public setDisplayDuration(duration: number): void {
     if (duration <= 0) {
@@ -71,7 +72,7 @@ export class ImageVisibleSprite extends VisibleSprite {
 
   /**
    * 获取在时间轴上的开始时间
-   * @returns 时间轴开始时间（微秒）
+   * @returns 时间轴开始时间（帧数）
    */
   public getTimelineStartTime(): number {
     return this.#timeRange.timelineStartTime
@@ -79,7 +80,7 @@ export class ImageVisibleSprite extends VisibleSprite {
 
   /**
    * 获取在时间轴上的结束时间
-   * @returns 时间轴结束时间（微秒）
+   * @returns 时间轴结束时间（帧数）
    */
   public getTimelineEndTime(): number {
     return this.#timeRange.timelineEndTime
@@ -87,7 +88,7 @@ export class ImageVisibleSprite extends VisibleSprite {
 
   /**
    * 获取显示时长
-   * @returns 显示时长（微秒）
+   * @returns 显示时长（帧数）
    */
   public getDisplayDuration(): number {
     return this.#timeRange.displayDuration
@@ -182,17 +183,18 @@ export class ImageVisibleSprite extends VisibleSprite {
   /**
    * 更新 VisibleSprite 的 time 属性
    * 根据当前的时间范围设置同步更新父类的时间属性
+   * 内部使用帧数计算，设置WebAV时转换为微秒
    */
   #updateVisibleSpriteTime(): void {
     const { timelineStartTime, displayDuration } = this.#timeRange
 
-    // 设置 VisibleSprite.time 属性
+    // 设置 VisibleSprite.time 属性（转换为微秒给WebAV）
     // offset: 在时间轴上的播放开始位置（微秒）
     // duration: 在时间轴上占用的时长（微秒）
     // 图片不需要playbackRate，保持默认值1.0
     this.time = {
-      offset: timelineStartTime,
-      duration: displayDuration,
+      offset: framesToMicroseconds(timelineStartTime),
+      duration: framesToMicroseconds(displayDuration),
       playbackRate: 1.0, // 图片固定为1.0，没有倍速概念
     }
   }
