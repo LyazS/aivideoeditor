@@ -188,7 +188,8 @@ import PropertiesPanel from './PropertiesPanel.vue'
 import { useVideoStore } from '../stores/videoStore'
 import { useKeyboardShortcuts } from '../composables/useKeyboardShortcuts'
 import { logWebAVReadyStateChange, logComponentLifecycle } from '../utils/webavDebug'
-import { formatTime as formatTimeUtil } from '../stores/utils/storeUtils'
+import { framesToTimecode, secondsToFrames } from '../stores/utils/timeUtils'
+
 
 const videoStore = useVideoStore()
 
@@ -398,8 +399,9 @@ const stopRightResize = () => {
 }
 
 function formatTime(seconds: number): string {
-  // 使用统一的时间格式化工具函数
-  return formatTimeUtil(seconds, 'seconds')
+  // 使用标准的时间码格式化函数
+  const frames = secondsToFrames(seconds)
+  return framesToTimecode(frames)
 }
 
 // 获取预览样式（根据分辨率比例）

@@ -155,7 +155,7 @@
           :key="line.time"
           class="grid-line"
           :class="{ 'frame-line': line.isFrame }"
-          :style="{ left: 200 + videoStore.timeToPixel(line.time, timelineWidth) + 'px' }"
+          :style="{ left: 200 + videoStore.frameToPixel(line.time * 30, timelineWidth) + 'px' }"
         ></div>
       </div>
     </div>
@@ -175,10 +175,10 @@ import { ImageVisibleSprite } from '../utils/ImageVisibleSprite'
 import { createSpriteFromMediaItem } from '../utils/spriteFactory'
 import { webavToProjectCoords } from '../utils/coordinateTransform'
 import {
-  calculatePixelsPerSecond,
-  calculateVisibleTimeRange,
-  formatTime as formatTimeUtil
+  calculatePixelsPerSecond
 } from '../stores/utils/storeUtils'
+import { calculateVisibleFrameRange } from '../stores/utils/coordinateUtils'
+import { framesToTimecode, secondsToFrames } from '../stores/utils/timeUtils'
 import {
   generateThumbnailForMediaItem,
 } from '../utils/thumbnailGenerator'
@@ -342,13 +342,16 @@ const gridLines = computed(() => {
     interval = 10 // 低缩放：每10秒一条线
   }
 
-  // 计算可见时间范围
-  const { startTime, endTime } = calculateVisibleTimeRange(
+  // 计算可见时间范围（使用帧数版本）
+  const totalDurationFrames = secondsToFrames(videoStore.totalDuration)
+  const { startFrames, endFrames } = calculateVisibleFrameRange(
     timelineWidth.value,
-    videoStore.totalDuration,
+    totalDurationFrames,
     videoStore.zoomLevel,
     videoStore.scrollOffset
   )
+  const startTime = startFrames / 30 // 转换为秒数用于网格计算
+  const endTime = endFrames / 30
 
   // 生成主网格线（秒级别）
   const startLine = Math.floor(startTime / interval) * interval
@@ -948,7 +951,7 @@ function handleWheel(event: WheelEvent) {
 
     // 获取鼠标在时间轴上的位置（减去轨道控制区域的200px）
     const mouseX = event.clientX - rect.left - 200
-    const mouseTime = videoStore.pixelToTime(mouseX, timelineWidth.value)
+    const mouseFrames = videoStore.pixelToFrame(mouseX, timelineWidth.value)
 
     // 缩放操作（精简调试信息）
 
@@ -960,8 +963,8 @@ function handleWheel(event: WheelEvent) {
       videoStore.zoomOut(zoomFactor, timelineWidth.value)
     }
 
-    // 调整滚动偏移量，使鼠标位置保持在相同的时间点
-    const newMousePixel = videoStore.timeToPixel(mouseTime, timelineWidth.value)
+    // 调整滚动偏移量，使鼠标位置保持在相同的帧数点
+    const newMousePixel = videoStore.frameToPixel(mouseFrames, timelineWidth.value)
     const offsetAdjustment = newMousePixel - mouseX
     const newScrollOffset = videoStore.scrollOffset + offsetAdjustment
 

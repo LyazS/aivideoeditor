@@ -33,11 +33,15 @@ import { useVideoStore } from '../stores/videoStore'
 import { useWebAVControls } from '../composables/useWebAVControls'
 import { usePlaybackControls } from '../composables/usePlaybackControls'
 import {
-  calculatePixelsPerSecond,
-  calculateVisibleTimeRange,
-  formatTimeWithAutoPrecision,
-  alignTimeToFrame as alignTimeToFrameUtil
+  calculatePixelsPerSecond
 } from '../stores/utils/storeUtils'
+import { calculateVisibleFrameRange } from '../stores/utils/coordinateUtils'
+import {
+  framesToTimecode,
+  secondsToFrames,
+  framesToSeconds,
+  alignFramesToFrame
+} from '../stores/utils/timeUtils'
 import type { TimeMark } from '../types'
 
 const videoStore = useVideoStore()
@@ -51,100 +55,102 @@ const isDraggingPlayhead = ref(false)
 
 // TimeMark 接口已移动到统一类型文件 src/types/index.ts
 
-// 计算时间刻度标记
+// 计算时间刻度标记（基于帧数）
 const timeMarks = computed((): TimeMark[] => {
   const marks: TimeMark[] = []
-  const duration = videoStore.totalDuration
-  const pixelsPerSecond = calculatePixelsPerSecond(containerWidth.value, duration, videoStore.zoomLevel)
+  const durationFrames = videoStore.totalDurationFrames
+  const pixelsPerFrame = (containerWidth.value * videoStore.zoomLevel) / durationFrames
 
-  // 根据缩放级别决定刻度间隔
-  let majorInterval = 10 // 主刻度间隔（秒）
-  let minorInterval = 1 // 次刻度间隔（秒）
+  // 根据缩放级别决定刻度间隔（基于帧数）
+  let majorIntervalFrames = 300 // 主刻度间隔（帧）- 默认10秒
+  let minorIntervalFrames = 30 // 次刻度间隔（帧）- 默认1秒
 
   // 在高缩放级别下，显示更精细的刻度
   let isFrameLevel = false
 
-  if (pixelsPerSecond >= 100) {
-    // 降低帧级别的阈值
-    // 每帧显示刻度（假设30fps）
-    majorInterval = 1
-    minorInterval = 1 / videoStore.frameRate
+  // 基于每帧像素数决定刻度间隔
+  if (pixelsPerFrame >= 3.33) { // 相当于100 pixels/second
+    // 帧级别显示
+    majorIntervalFrames = 30 // 1秒间隔
+    minorIntervalFrames = 1 // 每帧
     isFrameLevel = true
-  } else if (pixelsPerSecond >= 50) {
+  } else if (pixelsPerFrame >= 1.67) { // 相当于50 pixels/second
     // 每0.1秒显示刻度
-    majorInterval = 1
-    minorInterval = 0.1
-  } else if (pixelsPerSecond >= 20) {
+    majorIntervalFrames = 30 // 1秒
+    minorIntervalFrames = 3 // 0.1秒
+  } else if (pixelsPerFrame >= 0.67) { // 相当于20 pixels/second
     // 每0.5秒显示刻度
-    majorInterval = 5
-    minorInterval = 0.5
-  } else if (pixelsPerSecond >= 10) {
-    majorInterval = 10
-    minorInterval = 1
-  } else if (pixelsPerSecond >= 5) {
-    majorInterval = 30
-    minorInterval = 5
-  } else if (pixelsPerSecond >= 2) {
-    majorInterval = 60
-    minorInterval = 10
-  } else if (pixelsPerSecond >= 1) {
+    majorIntervalFrames = 150 // 5秒
+    minorIntervalFrames = 15 // 0.5秒
+  } else if (pixelsPerFrame >= 0.33) { // 相当于10 pixels/second
+    majorIntervalFrames = 300 // 10秒
+    minorIntervalFrames = 30 // 1秒
+  } else if (pixelsPerFrame >= 0.17) { // 相当于5 pixels/second
+    majorIntervalFrames = 900 // 30秒
+    minorIntervalFrames = 150 // 5秒
+  } else if (pixelsPerFrame >= 0.067) { // 相当于2 pixels/second
+    majorIntervalFrames = 1800 // 60秒
+    minorIntervalFrames = 300 // 10秒
+  } else if (pixelsPerFrame >= 0.033) { // 相当于1 pixel/second
     // 极低缩放：每2分钟主刻度，30秒次刻度
-    majorInterval = 120
-    minorInterval = 30
-  } else if (pixelsPerSecond >= 0.5) {
+    majorIntervalFrames = 3600 // 120秒
+    minorIntervalFrames = 900 // 30秒
+  } else if (pixelsPerFrame >= 0.017) { // 相当于0.5 pixels/second
     // 超低缩放：每5分钟主刻度，1分钟次刻度
-    majorInterval = 300
-    minorInterval = 60
+    majorIntervalFrames = 9000 // 300秒
+    minorIntervalFrames = 1800 // 60秒
   } else {
     // 最低缩放：每10分钟主刻度，2分钟次刻度
-    majorInterval = 600
-    minorInterval = 120
+    majorIntervalFrames = 18000 // 600秒
+    minorIntervalFrames = 3600 // 120秒
   }
 
-  // 计算可见时间范围（受最大可见范围限制）
-  const { startTime, endTime } = calculateVisibleTimeRange(
+  // 计算可见帧数范围
+  const maxVisibleDurationFrames = videoStore.maxVisibleDuration ? secondsToFrames(videoStore.maxVisibleDuration) : undefined
+  const { startFrames, endFrames } = calculateVisibleFrameRange(
     containerWidth.value,
-    duration,
+    durationFrames,
     videoStore.zoomLevel,
     videoStore.scrollOffset,
-    videoStore.maxVisibleDuration
+    maxVisibleDurationFrames
   )
 
-  // 生成刻度标记（基于可见范围，不受当前内容长度限制）
+  // 生成刻度标记（基于帧数范围）
 
   // 计算刻度线的最小像素间距，确保不会过于密集
   const minPixelSpacing = 15 // 最小15像素间距
-  const actualMinorPixelSpacing = minorInterval * pixelsPerSecond
+  const actualMinorPixelSpacing = minorIntervalFrames * pixelsPerFrame
 
   // 如果计算出的间距太小，动态调整间隔
-  let adjustedMinorInterval = minorInterval
-  let adjustedMajorInterval = majorInterval
+  let adjustedMinorIntervalFrames = minorIntervalFrames
+  let adjustedMajorIntervalFrames = majorIntervalFrames
 
   if (actualMinorPixelSpacing < minPixelSpacing) {
     const scaleFactor = Math.ceil(minPixelSpacing / actualMinorPixelSpacing)
-    adjustedMinorInterval = minorInterval * scaleFactor
-    adjustedMajorInterval = majorInterval * scaleFactor
+    adjustedMinorIntervalFrames = minorIntervalFrames * scaleFactor
+    adjustedMajorIntervalFrames = majorIntervalFrames * scaleFactor
   }
 
-  // 重新计算起始和结束标记
-  const adjustedStartMark = Math.floor(startTime / adjustedMinorInterval) * adjustedMinorInterval
-  const adjustedEndMark = Math.ceil(endTime / adjustedMinorInterval) * adjustedMinorInterval
+  // 重新计算起始和结束标记（基于帧数）
+  const adjustedStartFrames = Math.floor(startFrames / adjustedMinorIntervalFrames) * adjustedMinorIntervalFrames
+  const adjustedEndFrames = Math.ceil(endFrames / adjustedMinorIntervalFrames) * adjustedMinorIntervalFrames
 
-  // 当缩小时间轴时，允许刻度线扩展到可见范围的末尾，而不是被内容长度限制
-  // 这样用户就可以看到1分钟之后的刻度线，并且可以拖拽视频到那些位置
-  for (let time = adjustedStartMark; time <= adjustedEndMark; time += adjustedMinorInterval) {
-    if (time < 0) continue
+  // 生成帧数刻度标记
+  for (let frames = adjustedStartFrames; frames <= adjustedEndFrames; frames += adjustedMinorIntervalFrames) {
+    if (frames < 0) continue
 
-    const isMajor = Math.abs(time % adjustedMajorInterval) < 0.001 // 使用小的容差来处理浮点数精度问题
-    const position = videoStore.timeToPixel(time, containerWidth.value)
+    const isMajor = Math.abs(frames % adjustedMajorIntervalFrames) < 0.5 // 使用小的容差来处理整数精度问题
+    const position = videoStore.frameToPixel(frames, containerWidth.value)
 
     // 只添加在可见范围内的刻度
     if (position >= -50 && position <= containerWidth.value + 50) {
+      // 转换为秒数用于显示（向后兼容）
+      const time = framesToSeconds(frames)
       marks.push({
         time,
         position,
         isMajor,
-        isFrame: isFrameLevel && Math.abs(time % adjustedMinorInterval) < 0.001,
+        isFrame: isFrameLevel && Math.abs(frames % adjustedMinorIntervalFrames) < 0.5,
       })
     }
   }
@@ -152,23 +158,19 @@ const timeMarks = computed((): TimeMark[] => {
   return marks
 })
 
-// 将时间对齐到帧边界（使用统一工具函数）
-function alignTimeToFrame(time: number): number {
-  return alignTimeToFrameUtil(time, videoStore.frameRate)
-}
 
-// 播放头位置 - 直接使用WebAV返回的精确时间
+
+// 播放头位置 - 使用帧数精确计算
 const playheadPosition = computed(() => {
-  const currentTime = videoStore.currentTime
-  const position = videoStore.timeToPixel(currentTime, containerWidth.value)
+  const currentFrame = videoStore.currentFrame
+  const position = videoStore.frameToPixel(currentFrame, containerWidth.value)
 
   return position
 })
 
 function formatTime(seconds: number): string {
-  // 使用统一的时间格式化工具函数
-  const pixelsPerSecond = calculatePixelsPerSecond(containerWidth.value, videoStore.totalDuration, videoStore.zoomLevel)
-  return formatTimeWithAutoPrecision(seconds, pixelsPerSecond, videoStore.frameRate)
+  const frames = secondsToFrames(seconds)
+  return framesToTimecode(frames)
 }
 
 function updateContainerWidth() {
@@ -187,15 +189,19 @@ function handleClick(event: MouseEvent) {
 
   const rect = scaleContainer.value.getBoundingClientRect()
   const clickX = event.clientX - rect.left
-  const newTime = videoStore.pixelToTime(clickX, containerWidth.value)
 
-  // 限制在有效范围内并对齐到帧边界
-  const clampedTime = Math.max(0, Math.min(newTime, videoStore.totalDuration))
-  const alignedTime = alignTimeToFrame(clampedTime)
+  // 直接转换为帧数
+  const clickFrames = videoStore.pixelToFrame(clickX, containerWidth.value)
+  const clampedFrames = Math.max(0, clickFrames)
+  const alignedFrames = alignFramesToFrame(clampedFrames)
 
-  // 统一时间控制：通过WebAV设置时间，避免直接操作Store
-  // 流程：webAVControls.seekTo() → WebAV.previewFrame() → timeupdate事件 → Store更新
-  webAVControls.seekTo(alignedTime)
+  // 统一时间控制：通过WebAV设置帧数
+  webAVControls.seekTo(alignedFrames)
+
+  console.log('🎯 时间轴点击跳转:', {
+    clickFrames: alignedFrames,
+    timecode: framesToTimecode(alignedFrames)
+  })
 }
 
 function handleMouseDown(event: MouseEvent) {
@@ -214,14 +220,14 @@ function handleMouseDown(event: MouseEvent) {
 
   const rect = scaleContainer.value.getBoundingClientRect()
   const mouseX = event.clientX - rect.left
-  const newTime = videoStore.pixelToTime(mouseX, containerWidth.value)
 
-  // 限制在有效范围内并对齐到帧边界
-  const clampedTime = Math.max(0, Math.min(newTime, videoStore.totalDuration))
-  const alignedTime = alignTimeToFrame(clampedTime)
+  // 直接转换为帧数
+  const mouseFrames = videoStore.pixelToFrame(mouseX, containerWidth.value)
+  const clampedFrames = Math.max(0, mouseFrames)
+  const alignedFrames = alignFramesToFrame(clampedFrames)
 
   // 立即跳转播放头到鼠标位置
-  webAVControls.seekTo(alignedTime)
+  webAVControls.seekTo(alignedFrames)
 
   // 开始拖拽播放头
   isDraggingPlayhead.value = true
@@ -261,14 +267,14 @@ function handleDragPlayhead(event: MouseEvent) {
 
   const rect = scaleContainer.value.getBoundingClientRect()
   const mouseX = event.clientX - rect.left
-  const newTime = videoStore.pixelToTime(mouseX, containerWidth.value)
 
-  // 限制在有效范围内并对齐到帧边界
-  const clampedTime = Math.max(0, Math.min(newTime, videoStore.totalDuration))
-  const alignedTime = alignTimeToFrame(clampedTime)
+  // 直接转换为帧数
+  const dragFrames = videoStore.pixelToFrame(mouseX, containerWidth.value)
+  const clampedFrames = Math.max(0, dragFrames)
+  const alignedFrames = alignFramesToFrame(clampedFrames)
 
-  // 统一时间控制：通过WebAV设置时间，确保状态同步
-  webAVControls.seekTo(alignedTime)
+  // 统一时间控制：通过WebAV设置帧数
+  webAVControls.seekTo(alignedFrames)
 }
 
 function stopDragPlayhead() {
@@ -297,9 +303,9 @@ function handleWheel(event: WheelEvent) {
       return
     }
 
-    // 获取鼠标在时间轴上的位置
+    // 获取鼠标在时间轴上的位置（使用帧数版本）
     const mouseX = event.clientX - rect.left
-    const mouseTime = videoStore.pixelToTime(mouseX, containerWidth.value)
+    const mouseFrames = videoStore.pixelToFrame(mouseX, containerWidth.value)
 
     // 缩放操作（精简调试信息）
 
@@ -311,8 +317,8 @@ function handleWheel(event: WheelEvent) {
       videoStore.zoomOut(zoomFactor, containerWidth.value)
     }
 
-    // 调整滚动偏移量，使鼠标位置保持在相同的时间点
-    const newMousePixel = videoStore.timeToPixel(mouseTime, containerWidth.value)
+    // 调整滚动偏移量，使鼠标位置保持在相同的帧数点
+    const newMousePixel = videoStore.frameToPixel(mouseFrames, containerWidth.value)
     const offsetAdjustment = newMousePixel - mouseX
     const newScrollOffset = videoStore.scrollOffset + offsetAdjustment
 

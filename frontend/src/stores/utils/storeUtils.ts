@@ -5,21 +5,18 @@
 // 调试工具
 export { printDebugInfo } from './debugUtils'
 
-// 时间计算工具
+// 时间计算工具（仅保留有效函数）
 export {
-  alignTimeToFrame,
   calculatePixelsPerSecond,
-  formatTime,
-  formatTimeWithAutoPrecision,
   expandTimelineIfNeeded,
   formatFileSize,
 } from './timeUtils'
 
-// 坐标转换工具
+// 坐标转换工具（仅帧数版本）
 export {
-  calculateVisibleTimeRange,
-  timeToPixel,
-  pixelToTime,
+  calculateVisibleFrameRange,
+  frameToPixel,
+  pixelToFrame,
 } from './coordinateUtils'
 
 // 查找工具
@@ -38,18 +35,18 @@ export {
   autoArrangeTimelineItems,
 } from './timelineArrangementUtils'
 
-// 缩放计算工具
+// 缩放计算工具（仅帧数版本）
 export {
-  getMaxZoomLevel,
-  getMinZoomLevel,
-  getMaxScrollOffset,
+  getMaxZoomLevelFrames,
+  getMinZoomLevelFrames,
+  getMaxScrollOffsetFrames,
 } from './zoomUtils'
 
-// 时长计算工具
+// 时长计算工具（仅帧数版本）
 export {
-  calculateContentEndTime,
-  calculateTotalDuration,
-  calculateMaxVisibleDuration,
+  calculateContentEndTimeFrames,
+  calculateTotalDurationFrames,
+  calculateMaxVisibleDurationFrames,
 } from './durationUtils'
 
 // 时间范围工具

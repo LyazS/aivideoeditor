@@ -1,59 +1,63 @@
-import { calculatePixelsPerSecond } from './timeUtils'
+import { FRAME_RATE } from './timeUtils'
 
 // ==================== 坐标转换工具 ====================
 
 /**
- * 计算可见时间范围
+ * 计算可见时间范围（帧数版本）
  * @param timelineWidth 时间轴宽度（像素）
- * @param totalDuration 总时长（秒）
+ * @param totalDurationFrames 总时长（帧数）
  * @param zoomLevel 缩放级别
  * @param scrollOffset 滚动偏移量（像素）
- * @param maxVisibleDuration 最大可见时长（秒）
- * @returns 可见时间范围 { startTime, endTime }
+ * @param maxVisibleDurationFrames 最大可见时长（帧数）
+ * @returns 可见时间范围 { startFrames, endFrames }
  */
-export function calculateVisibleTimeRange(
+export function calculateVisibleFrameRange(
   timelineWidth: number,
-  totalDuration: number,
+  totalDurationFrames: number,
   zoomLevel: number,
   scrollOffset: number,
-  maxVisibleDuration?: number,
-): { startTime: number; endTime: number } {
-  const pixelsPerSecond = calculatePixelsPerSecond(timelineWidth, totalDuration, zoomLevel)
-  const startTime = scrollOffset / pixelsPerSecond
-  const calculatedEndTime = startTime + timelineWidth / pixelsPerSecond
-  const endTime = maxVisibleDuration ? Math.min(calculatedEndTime, maxVisibleDuration) : calculatedEndTime
+  maxVisibleDurationFrames?: number,
+): { startFrames: number; endFrames: number } {
+  const pixelsPerFrame = (timelineWidth * zoomLevel) / totalDurationFrames
+  const startFrames = Math.floor(scrollOffset / pixelsPerFrame)
+  const calculatedEndFrames = startFrames + Math.ceil(timelineWidth / pixelsPerFrame)
+  const endFrames = maxVisibleDurationFrames
+    ? Math.min(calculatedEndFrames, maxVisibleDurationFrames)
+    : calculatedEndFrames
 
-  return { startTime, endTime }
+  return { startFrames, endFrames }
 }
 
+
+
 /**
- * 将时间转换为像素位置（考虑缩放和滚动）
- * @param time 时间（秒）
+ * 将帧数转换为像素位置（考虑缩放和滚动）
+ * @param frames 帧数
  * @param timelineWidth 时间轴宽度（像素）
- * @param totalDuration 总时长（秒）
+ * @param totalDurationFrames 总时长（帧数）
  * @param zoomLevel 缩放级别
  * @param scrollOffset 滚动偏移量（像素）
  * @returns 像素位置
  */
-export function timeToPixel(
-  time: number,
+export function frameToPixel(
+  frames: number,
   timelineWidth: number,
-  totalDuration: number,
+  totalDurationFrames: number,
   zoomLevel: number,
   scrollOffset: number,
 ): number {
-  const pixelsPerSecond = (timelineWidth * zoomLevel) / totalDuration
-  const pixelPosition = time * pixelsPerSecond - scrollOffset
+  const pixelsPerFrame = (timelineWidth * zoomLevel) / totalDurationFrames
+  const pixelPosition = frames * pixelsPerFrame - scrollOffset
 
   // 只在调试模式下输出详细信息，避免过多日志
   if (window.DEBUG_TIMELINE_CONVERSION) {
-    console.log('⏰➡️📐 [坐标转换] 时间转像素:', {
-      time: time.toFixed(3),
+    console.log('🎬➡️📐 [坐标转换] 帧数转像素:', {
+      frames: frames.toFixed(1),
       timelineWidth,
-      totalDuration: totalDuration.toFixed(2),
+      totalDurationFrames,
       zoomLevel: zoomLevel.toFixed(3),
       scrollOffset: scrollOffset.toFixed(2),
-      pixelsPerSecond: pixelsPerSecond.toFixed(2),
+      pixelsPerFrame: pixelsPerFrame.toFixed(4),
       pixelPosition: pixelPosition.toFixed(2),
     })
   }
@@ -61,37 +65,43 @@ export function timeToPixel(
   return pixelPosition
 }
 
+
+
 /**
- * 将像素位置转换为时间（考虑缩放和滚动）
+ * 将像素位置转换为帧数（考虑缩放和滚动）
  * @param pixel 像素位置
  * @param timelineWidth 时间轴宽度（像素）
- * @param totalDuration 总时长（秒）
+ * @param totalDurationFrames 总时长（帧数）
  * @param zoomLevel 缩放级别
  * @param scrollOffset 滚动偏移量（像素）
- * @returns 时间（秒）
+ * @returns 帧数
  */
-export function pixelToTime(
+export function pixelToFrame(
   pixel: number,
   timelineWidth: number,
-  totalDuration: number,
+  totalDurationFrames: number,
   zoomLevel: number,
   scrollOffset: number,
 ): number {
-  const pixelsPerSecond = (timelineWidth * zoomLevel) / totalDuration
-  const time = (pixel + scrollOffset) / pixelsPerSecond
+  const pixelsPerFrame = (timelineWidth * zoomLevel) / totalDurationFrames
+  const frames = (pixel + scrollOffset) / pixelsPerFrame
 
   // 只在调试模式下输出详细信息，避免过多日志
   if (window.DEBUG_TIMELINE_CONVERSION) {
-    console.log('📐➡️⏰ [坐标转换] 像素转时间:', {
+    console.log('📐➡️🎬 [坐标转换] 像素转帧数:', {
       pixel: pixel.toFixed(2),
       timelineWidth,
-      totalDuration: totalDuration.toFixed(2),
+      totalDurationFrames,
       zoomLevel: zoomLevel.toFixed(3),
       scrollOffset: scrollOffset.toFixed(2),
-      pixelsPerSecond: pixelsPerSecond.toFixed(2),
-      time: time.toFixed(3),
+      pixelsPerFrame: pixelsPerFrame.toFixed(4),
+      frames: frames.toFixed(3),
     })
   }
 
-  return time
+  return frames
 }
+
+
+
+

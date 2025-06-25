@@ -53,17 +53,15 @@
           <div class="property-item">
             <label>目标时长</label>
             <div class="duration-controls">
-              <NumberInput
-                :model-value="targetDuration"
-                @change="updateTargetDuration"
-                :min="0.1"
-                :step="0.1"
-                :precision="1"
-                :show-controls="false"
-                placeholder="秒"
-                :input-style="propertyInputStyle"
+              <input
+                type="text"
+                :value="formattedDuration"
+                @input="updateTargetDurationFromTimecode"
+                placeholder="HH:MM:SS.FF"
+                :style="propertyInputStyle"
+                class="timecode-input"
               />
-              <span class="duration-unit">秒</span>
+              <span class="duration-unit">时间码</span>
             </div>
           </div>
 
@@ -426,6 +424,14 @@ import { computed } from 'vue'
 import { useVideoStore } from '../stores/videoStore'
 import { isVideoTimeRange } from '../types'
 import { uiDegreesToWebAVRadians, webAVRadiansToUIDegrees } from '../utils/rotationTransform'
+import {
+  framesToTimecode,
+  timecodeToFrames,
+  microsecondsToFrames,
+  framesToMicroseconds,
+  secondsToFrames,
+  framesToSeconds
+} from '../stores/utils/timeUtils'
 import NumberInput from './NumberInput.vue'
 
 const videoStore = useVideoStore()
@@ -458,16 +464,19 @@ const selectedMediaItem = computed(() => {
   return videoStore.getMediaItem(selectedTimelineItem.value.mediaItemId) || null
 })
 
-// 时间轴时长
-const timelineDuration = computed(() => {
+// 时间轴时长（帧数）
+const timelineDurationFrames = computed(() => {
   if (!selectedTimelineItem.value) return 0
-  // 直接从timelineItem.timeRange获取，与videostore的同步机制保持一致
   const timeRange = selectedTimelineItem.value.timeRange
-  return (timeRange.timelineEndTime - timeRange.timelineStartTime) / 1000000 // 转换为秒
+  return microsecondsToFrames(timeRange.timelineEndTime - timeRange.timelineStartTime)
 })
 
-// 目标时长 - 与timelineDuration相同，直接使用timelineDuration
-const targetDuration = computed(() => timelineDuration.value)
+
+
+// 格式化时长显示（使用时间码格式）
+const formattedDuration = computed(() => {
+  return framesToTimecode(timelineDurationFrames.value)
+})
 
 // 倍速分段配置
 const speedSegments = [
@@ -627,64 +636,75 @@ const updatePlaybackRate = async (newRate?: number) => {
   }
 }
 
-// 更新目标时长 - 使用带历史记录的方法
-const updateTargetDuration = async (newTargetDuration: number) => {
-  if (
-    !isNaN(newTargetDuration) &&
-    newTargetDuration > 0 &&
-    selectedTimelineItem.value &&
-    selectedMediaItem.value
-  ) {
-    try {
-      // 使用带历史记录的变换属性更新方法
-      await videoStore.updateTimelineItemTransformWithHistory(selectedTimelineItem.value.id, {
-        duration: newTargetDuration
-      })
-      console.log('✅ 时长更新成功')
-    } catch (error) {
-      console.error('❌ 更新时长失败:', error)
-      // 如果历史记录更新失败，回退到直接更新
-      const sprite = selectedTimelineItem.value.sprite
-      const timeRange = selectedTimelineItem.value.timeRange
+// 更新目标时长（从时间码输入）
+const updateTargetDurationFromTimecode = async (event: Event) => {
+  const input = event.target as HTMLInputElement
+  const timecodeValue = input.value.trim()
 
-      // 对于视频，直接更新时间范围
-      if (selectedTimelineItem.value.mediaType === 'video') {
-        // 更新VideoVisibleSprite的时间范围
-        const newTimelineEndTime = timeRange.timelineStartTime + newTargetDuration * 1000000
+  if (!timecodeValue || !selectedTimelineItem.value || !selectedMediaItem.value) {
+    return
+  }
 
-        // 根据媒体类型设置不同的时间范围
-        if (isVideoTimeRange(timeRange)) {
-          sprite.setTimeRange({
-            clipStartTime: timeRange.clipStartTime,
-            clipEndTime: timeRange.clipEndTime,
-            timelineStartTime: timeRange.timelineStartTime,
-            timelineEndTime: newTimelineEndTime,
-            effectiveDuration: timeRange.effectiveDuration,
-            playbackRate: timeRange.playbackRate,
-          })
-        } else {
-          // 图片类型
-          sprite.setTimeRange({
-            timelineStartTime: timeRange.timelineStartTime,
-            timelineEndTime: newTimelineEndTime,
-            displayDuration: newTargetDuration * 1000000,
-          })
-        }
-      } else if (selectedTimelineItem.value.mediaType === 'image') {
-        // 对于图片，直接更新显示时长
-        const newTimelineEndTime = timeRange.timelineStartTime + newTargetDuration * 1000000
-        sprite.setTimeRange({
-          timelineStartTime: timeRange.timelineStartTime,
-          timelineEndTime: newTimelineEndTime,
-          displayDuration: newTargetDuration * 1000000,
-        })
-      }
+  try {
+    // 解析时间码为帧数
+    const newDurationFrames = timecodeToFrames(timecodeValue)
+    const alignedDurationFrames = Math.max(1, newDurationFrames) // 最少1帧
 
-      // 从sprite获取更新后的完整timeRange
-      selectedTimelineItem.value.timeRange = sprite.getTimeRange()
-    }
+    // 更新时长
+    await updateTargetDurationFrames(alignedDurationFrames)
+
+    console.log('✅ 时间码时长更新成功:', {
+      inputTimecode: timecodeValue,
+      parsedFrames: newDurationFrames,
+      alignedFrames: alignedDurationFrames,
+      finalTimecode: framesToTimecode(alignedDurationFrames)
+    })
+  } catch (error) {
+    console.warn('⚠️ 时间码格式无效:', timecodeValue, error)
+    // 恢复到当前值
+    input.value = formattedDuration.value
   }
 }
+
+// 更新目标时长（帧数版本）
+const updateTargetDurationFrames = async (newDurationFrames: number) => {
+  if (!selectedTimelineItem.value || !selectedMediaItem.value) {
+    return
+  }
+
+  const alignedDurationFrames = Math.max(1, newDurationFrames) // 最少1帧
+  const sprite = selectedTimelineItem.value.sprite
+  const timeRange = selectedTimelineItem.value.timeRange
+  const newTimelineEndTime = timeRange.timelineStartTime + framesToMicroseconds(alignedDurationFrames)
+
+  if (selectedTimelineItem.value.mediaType === 'video') {
+    if (isVideoTimeRange(timeRange)) {
+      sprite.setTimeRange({
+        clipStartTime: timeRange.clipStartTime,
+        clipEndTime: timeRange.clipEndTime,
+        timelineStartTime: timeRange.timelineStartTime,
+        timelineEndTime: newTimelineEndTime,
+        playbackRate: timeRange.playbackRate,
+      })
+    }
+  } else if (selectedTimelineItem.value.mediaType === 'image') {
+    sprite.setTimeRange({
+      timelineStartTime: timeRange.timelineStartTime,
+      timelineEndTime: newTimelineEndTime,
+    })
+  }
+
+  // 更新timelineItem的timeRange
+  selectedTimelineItem.value.timeRange = sprite.getTimeRange()
+
+  console.log('✅ 帧数时长更新成功:', {
+    inputFrames: newDurationFrames,
+    alignedFrames: alignedDurationFrames,
+    timecode: framesToTimecode(alignedDurationFrames)
+  })
+}
+
+
 
 // 更新归一化速度
 const updateNormalizedSpeed = (newNormalizedSpeed: number) => {
@@ -1001,7 +1021,31 @@ const alignVertical = (alignment: 'top' | 'middle' | 'bottom') => {
 .duration-unit {
   font-size: var(--font-size-base);
   color: var(--color-text-hint);
-  min-width: 20px;
+  min-width: 50px;
+}
+
+/* 时间码输入框样式 */
+.timecode-input {
+  flex: 1;
+  padding: var(--spacing-sm);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  background: var(--color-bg-secondary);
+  color: var(--color-text);
+  font-family: 'Courier New', monospace;
+  font-size: var(--font-size-base);
+  text-align: center;
+  transition: border-color 0.2s ease;
+}
+
+.timecode-input:focus {
+  outline: none;
+  border-color: var(--color-border-focus);
+}
+
+.timecode-input::placeholder {
+  color: var(--color-text-hint);
+  font-style: italic;
 }
 
 /* 倍速控制样式 */

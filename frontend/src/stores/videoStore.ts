@@ -2,17 +2,16 @@ import { computed, type Raw } from 'vue'
 import { defineStore } from 'pinia'
 import { VideoVisibleSprite } from '../utils/VideoVisibleSprite'
 import {
-  alignTimeToFrame,
-  timeToPixel,
-  pixelToTime,
   expandTimelineIfNeeded,
   getTimelineItemAtTime,
   autoArrangeTimelineItems,
   autoArrangeTrackItems,
-  calculateTotalDuration,
+  calculateTotalDurationFrames,
   findTimelineItemBySprite,
   getTimelineItemsByTrack,
 } from './utils/storeUtils'
+import { frameToPixel, pixelToFrame } from './utils/coordinateUtils'
+import { secondsToFrames } from './utils/timeUtils'
 import { createMediaModule } from './modules/mediaModule'
 import { createConfigModule } from './modules/configModule'
 import { createTrackModule } from './modules/trackModule'
@@ -47,11 +46,17 @@ export const useVideoStore = defineStore('video', () => {
   // 创建时间轴核心管理模块
   const timelineModule = createTimelineModule(configModule, webavModule as any, mediaModule, trackModule)
 
-  const totalDuration = computed(() => {
-    return calculateTotalDuration(
+  // 总时长（帧数版本）
+  const totalDurationFrames = computed(() => {
+    return calculateTotalDurationFrames(
       timelineModule.timelineItems.value,
-      configModule.timelineDuration.value,
+      secondsToFrames(configModule.timelineDuration.value),
     )
+  })
+
+  // 总时长（秒数版本，用于向后兼容）
+  const totalDuration = computed(() => {
+    return totalDurationFrames.value / 30 // 转换为秒数
   })
 
   // 创建视口管理模块（需要在totalDuration之后创建）
@@ -896,6 +901,7 @@ export const useVideoStore = defineStore('video', () => {
     isPlaying: playbackModule.isPlaying,
     timelineDuration: configModule.timelineDuration,
     totalDuration,
+    totalDurationFrames,
     contentEndTime: viewportModule.contentEndTime,
     playbackRate: playbackModule.playbackRate,
     selectedTimelineItemId: selectionModule.selectedTimelineItemId,
@@ -960,6 +966,12 @@ export const useVideoStore = defineStore('video', () => {
     autoArrangeTimelineItems: () => autoArrangeTimelineItems(timelineModule.timelineItems),
     autoArrangeTrackItems: (trackId: number) => autoArrangeTrackItems(timelineModule.timelineItems, trackId),
     // 播放控制方法
+    // 帧数控制方法（新增）
+    currentFrame: playbackModule.currentFrame,
+    setCurrentFrame: playbackModule.setCurrentFrame,
+    seekToFrame: playbackModule.seekToFrame,
+    seekByFrames: playbackModule.seekByFrames,
+    // 时间控制方法（兼容）
     setCurrentTime: playbackModule.setCurrentTime,
     setPlaybackRate: playbackModule.setPlaybackRate,
     seekTo: playbackModule.seekTo,
@@ -1000,23 +1012,25 @@ export const useVideoStore = defineStore('video', () => {
     scrollToTime: viewportModule.scrollToTime,
     resetViewport: viewportModule.resetViewport,
     getViewportSummary: viewportModule.getViewportSummary,
-    timeToPixel: (time: number, timelineWidth: number) =>
-      timeToPixel(
-        time,
+
+    // 帧数坐标转换（新增）
+    frameToPixel: (frames: number, timelineWidth: number) =>
+      frameToPixel(
+        frames,
         timelineWidth,
-        totalDuration.value,
+        totalDurationFrames.value,
         viewportModule.zoomLevel.value,
         viewportModule.scrollOffset.value,
       ),
-    pixelToTime: (pixel: number, timelineWidth: number) =>
-      pixelToTime(
+    pixelToFrame: (pixel: number, timelineWidth: number) =>
+      pixelToFrame(
         pixel,
         timelineWidth,
-        totalDuration.value,
+        totalDurationFrames.value,
         viewportModule.zoomLevel.value,
         viewportModule.scrollOffset.value,
       ),
-    alignTimeToFrame: (time: number) => alignTimeToFrame(time, configModule.frameRate.value),
+
     expandTimelineIfNeeded: (targetTime: number) =>
       expandTimelineIfNeeded(targetTime, configModule.timelineDuration),
     // 分辨率相关

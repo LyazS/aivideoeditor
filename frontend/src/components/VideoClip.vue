@@ -42,8 +42,8 @@
       <!-- 详细信息 - 只在片段足够宽时显示 -->
       <div v-if="showDetails" class="clip-info">
         <div class="clip-name">{{ mediaItem?.name || 'Unknown' }}</div>
-        <!-- 时长信息 - 视频和图片都显示 -->
-        <div class="clip-duration">{{ formatDuration(timelineDuration) }}</div>
+        <!-- 时长信息 - 视频和图片都显示（时间码格式） -->
+        <div class="clip-duration">{{ formatDurationFromFrames(timelineDurationFrames) }}</div>
         <!-- 倍速信息 - 只有视频显示 -->
         <div
           class="clip-speed"
@@ -53,9 +53,9 @@
         </div>
       </div>
 
-      <!-- 简化显示 - 片段较窄时只显示时长 -->
+      <!-- 简化显示 - 片段较窄时只显示时长（时间码格式） -->
       <div v-if="!showDetails" class="clip-simple">
-        <div class="simple-duration">{{ formatDuration(timelineDuration) }}</div>
+        <div class="simple-duration">{{ formatDurationFromFrames(timelineDurationFrames) }}</div>
       </div>
 
       <!-- 调整手柄 -->
@@ -80,11 +80,11 @@
           </div>
           <div class="tooltip-row">
             <span class="tooltip-label">时长:</span>
-            <span class="tooltip-value">{{ formatDuration(timelineDuration) }}</span>
+            <span class="tooltip-value">{{ formatDurationFromFrames(timelineDurationFrames) }}</span>
           </div>
           <div class="tooltip-row">
             <span class="tooltip-label">位置:</span>
-            <span class="tooltip-value">{{ formatDuration(props.timelineItem.timeRange.timelineStartTime / 1000000) }}</span>
+            <span class="tooltip-value">{{ formatDurationFromFrames(microsecondsToFrames(props.timelineItem.timeRange.timelineStartTime)) }}</span>
           </div>
           <div v-if="mediaItem?.mediaType === 'video' && Math.abs(playbackSpeed - 1) > 0.001" class="tooltip-row">
             <span class="tooltip-label">倍速:</span>
@@ -104,7 +104,14 @@ import { regenerateThumbnailForTimelineItem } from '../utils/thumbnailGenerator'
 import { useDragUtils } from '../composables/useDragUtils'
 import { usePlaybackControls } from '../composables/usePlaybackControls'
 import { getDragPreviewManager } from '../composables/useDragPreview'
-import { formatTime as formatTimeUtil } from '../stores/utils/storeUtils'
+
+import {
+  framesToTimecode,
+  microsecondsToFrames,
+  framesToMicroseconds,
+  alignFramesToFrame,
+  secondsToFrames
+} from '../stores/utils/timeUtils'
 import type { TimelineItem, Track } from '../types'
 
 interface Props {
@@ -132,12 +139,11 @@ const mediaItem = computed(() => {
   return videoStore.getMediaItem(props.timelineItem.mediaItemId)
 })
 
-// 获取时间轴时长
-const timelineDuration = computed(() => {
-  // 直接从timelineItem.timeRange获取，与videostore的同步机制保持一致
+// 获取时间轴时长（帧数）
+const timelineDurationFrames = computed(() => {
   const timeRange = props.timelineItem.timeRange
-
-  return (timeRange.timelineEndTime - timeRange.timelineStartTime) / 1000000 // 转换为秒
+  const durationMicroseconds = timeRange.timelineEndTime - timeRange.timelineStartTime
+  return microsecondsToFrames(durationMicroseconds)
 })
 
 // 获取播放速度（仅对视频有效）
@@ -163,28 +169,28 @@ const isDragging = ref(false) // 保留用于原生拖拽状态
 const isResizing = ref(false)
 const resizeDirection = ref<'left' | 'right' | null>(null)
 const resizeStartX = ref(0)
-const resizeStartDuration = ref(0)
-const resizeStartPosition = ref(0)
-const tempDuration = ref(0) // 临时时长，用于调整大小过程中的视觉反馈
-const tempResizePosition = ref(0) // 临时调整位置
+// 调整大小相关变量（帧数）
+const resizeStartDurationFrames = ref(0)
+const resizeStartPositionFrames = ref(0)
+const tempDurationFrames = ref(0) // 临时时长（帧数）
+const tempResizePositionFrames = ref(0) // 临时调整位置（帧数）
 
 // 计算片段样式
 const clipStyle = computed(() => {
   const videoStore = useVideoStore()
-  // 直接从timelineItem.timeRange获取，与videostore的同步机制保持一致
   const timeRange = props.timelineItem.timeRange
 
-  // 在调整大小时使用临时值，否则使用实际值
-  const position = isResizing.value
-    ? tempResizePosition.value
-    : timeRange.timelineStartTime / 1000000 // 转换为秒
-  const duration = isResizing.value
-    ? tempDuration.value
-    : (timeRange.timelineEndTime - timeRange.timelineStartTime) / 1000000 // 转换为秒
+  // 在调整大小时使用临时值，否则使用实际值（帧数）
+  const positionFrames = isResizing.value
+    ? tempResizePositionFrames.value
+    : microsecondsToFrames(timeRange.timelineStartTime)
+  const durationFrames = isResizing.value
+    ? tempDurationFrames.value
+    : microsecondsToFrames(timeRange.timelineEndTime - timeRange.timelineStartTime)
 
-  const left = videoStore.timeToPixel(position, props.timelineWidth)
-  const endTime = position + duration
-  const right = videoStore.timeToPixel(endTime, props.timelineWidth)
+  const left = videoStore.frameToPixel(positionFrames, props.timelineWidth)
+  const endFrames = positionFrames + durationFrames
+  const right = videoStore.frameToPixel(endFrames, props.timelineWidth)
   const width = right - left
 
   return {
@@ -198,20 +204,19 @@ const clipStyle = computed(() => {
 
 // 判断是否应该显示详细信息（当片段足够宽时）
 const showDetails = computed(() => {
-  // 直接从timelineItem.timeRange获取，与videostore的同步机制保持一致
   const timeRange = props.timelineItem.timeRange
 
-  // 在调整大小时使用临时值，否则使用实际值
-  const position = isResizing.value
-    ? tempResizePosition.value
-    : timeRange.timelineStartTime / 1000000 // 转换为秒
-  const duration = isResizing.value
-    ? tempDuration.value
-    : (timeRange.timelineEndTime - timeRange.timelineStartTime) / 1000000 // 转换为秒
+  // 在调整大小时使用临时值，否则使用实际值（帧数）
+  const positionFrames = isResizing.value
+    ? tempResizePositionFrames.value
+    : microsecondsToFrames(timeRange.timelineStartTime)
+  const durationFrames = isResizing.value
+    ? tempDurationFrames.value
+    : microsecondsToFrames(timeRange.timelineEndTime - timeRange.timelineStartTime)
 
-  const endTime = position + duration
-  const left = videoStore.timeToPixel(position, props.timelineWidth)
-  const right = videoStore.timeToPixel(endTime, props.timelineWidth)
+  const endFrames = positionFrames + durationFrames
+  const left = videoStore.frameToPixel(positionFrames, props.timelineWidth)
+  const right = videoStore.frameToPixel(endFrames, props.timelineWidth)
   const width = right - left
   return width >= 100 // 宽度大于100px时显示详细信息
 })
@@ -251,8 +256,14 @@ const isTrackVisible = computed(() => {
 })
 
 function formatDuration(seconds: number): string {
-  // 使用统一的时间格式化工具函数
-  return formatTimeUtil(seconds, 'seconds')
+  // 使用标准转换函数而不是手动计算
+  const frames = secondsToFrames(seconds)
+  return framesToTimecode(frames)
+}
+
+function formatDurationFromFrames(frames: number): string {
+  // 直接使用帧数格式化为时间码
+  return framesToTimecode(frames)
 }
 
 function formatSpeed(rate: number): string {
@@ -424,15 +435,15 @@ function startResize(direction: 'left' | 'right', event: MouseEvent) {
   resizeDirection.value = direction
   resizeStartX.value = event.clientX
 
-  // 直接从timelineItem.timeRange获取，与videostore的同步机制保持一致
   const timeRange = props.timelineItem.timeRange
 
-  resizeStartDuration.value = (timeRange.timelineEndTime - timeRange.timelineStartTime) / 1000000 // 转换为秒
-  resizeStartPosition.value = timeRange.timelineStartTime / 1000000 // 转换为秒
+  // 使用帧数进行精确计算
+  resizeStartDurationFrames.value = microsecondsToFrames(timeRange.timelineEndTime - timeRange.timelineStartTime)
+  resizeStartPositionFrames.value = microsecondsToFrames(timeRange.timelineStartTime)
 
   // 初始化临时值
-  tempDuration.value = resizeStartDuration.value
-  tempResizePosition.value = resizeStartPosition.value
+  tempDurationFrames.value = resizeStartDurationFrames.value
+  tempResizePositionFrames.value = resizeStartPositionFrames.value
 
   document.addEventListener('mousemove', handleResize)
   document.addEventListener('mouseup', stopResize)
@@ -448,35 +459,36 @@ function handleResize(event: MouseEvent) {
 
   if (!mediaItem) return
 
-  let newDuration = resizeStartDuration.value
-  let newTimelinePosition = resizeStartPosition.value
+  // 使用帧数进行精确计算
+  let newDurationFrames = resizeStartDurationFrames.value
+  let newTimelinePositionFrames = resizeStartPositionFrames.value
 
   if (resizeDirection.value === 'left') {
     // 拖拽左边把柄：调整开始时间和时长
-    const currentLeftPixel = videoStore.timeToPixel(resizeStartPosition.value, props.timelineWidth)
+    const currentLeftPixel = videoStore.frameToPixel(resizeStartPositionFrames.value, props.timelineWidth)
     const newLeftPixel = currentLeftPixel + deltaX
-    const newLeftTime = videoStore.pixelToTime(newLeftPixel, props.timelineWidth)
+    const newLeftFrames = videoStore.pixelToFrame(newLeftPixel, props.timelineWidth)
 
-    newTimelinePosition = Math.max(0, newLeftTime)
-    newDuration = resizeStartDuration.value + (resizeStartPosition.value - newTimelinePosition)
+    newTimelinePositionFrames = Math.max(0, alignFramesToFrame(newLeftFrames))
+    newDurationFrames = resizeStartDurationFrames.value + (resizeStartPositionFrames.value - newTimelinePositionFrames)
   } else if (resizeDirection.value === 'right') {
     // 拖拽右边把柄：只调整时长
-    const endTime = resizeStartPosition.value + resizeStartDuration.value
-    const currentRightPixel = videoStore.timeToPixel(endTime, props.timelineWidth)
+    const endFrames = resizeStartPositionFrames.value + resizeStartDurationFrames.value
+    const currentRightPixel = videoStore.frameToPixel(endFrames, props.timelineWidth)
     const newRightPixel = currentRightPixel + deltaX
-    const newRightTime = videoStore.pixelToTime(newRightPixel, props.timelineWidth)
+    const newRightFrames = videoStore.pixelToFrame(newRightPixel, props.timelineWidth)
 
-    newDuration = newRightTime - resizeStartPosition.value
+    newDurationFrames = alignFramesToFrame(newRightFrames) - resizeStartPositionFrames.value
   }
 
-  // 确保最小时长（0.01秒）和最大时长（原始素材时长的10倍）
-  const minDuration = 0.01
-  const maxDuration = mediaItem.duration * 10
-  newDuration = Math.max(minDuration, Math.min(newDuration, maxDuration))
+  // 确保最小时长（1帧）和最大时长（原始素材时长的10倍）
+  const minDurationFrames = 1
+  const maxDurationFrames = secondsToFrames(mediaItem.duration) * 10 // 使用标准转换函数
+  newDurationFrames = Math.max(minDurationFrames, Math.min(newDurationFrames, maxDurationFrames))
 
-  // 只更新临时值，不触发 store 更新
-  tempDuration.value = newDuration
-  tempResizePosition.value = newTimelinePosition
+  // 更新临时值（帧数）
+  tempDurationFrames.value = newDurationFrames
+  tempResizePositionFrames.value = newTimelinePositionFrames
 }
 
 async function stopResize() {
@@ -484,17 +496,17 @@ async function stopResize() {
     const mediaItem = videoStore.getMediaItem(props.timelineItem.mediaItemId)
 
     if (mediaItem) {
-      // 计算新的时间范围
-      const newTimelineStartTime = tempResizePosition.value * 1000000 // 转换为微秒
-      const newTimelineEndTime = (tempResizePosition.value + tempDuration.value) * 1000000 // 转换为微秒
+      // 使用帧数计算新的时间范围（更精确）
+      const newTimelineStartTime = framesToMicroseconds(tempResizePositionFrames.value)
+      const newTimelineEndTime = framesToMicroseconds(tempResizePositionFrames.value + tempDurationFrames.value)
 
       // 验证时间范围的有效性
       if (newTimelineEndTime <= newTimelineStartTime) {
         console.error('❌ 无效的时间范围:', {
           start: newTimelineStartTime,
           end: newTimelineEndTime,
-          duration: tempDuration.value,
-          position: tempResizePosition.value,
+          durationFrames: tempDurationFrames.value,
+          positionFrames: tempResizePositionFrames.value,
         })
         return
       }
@@ -503,7 +515,9 @@ async function stopResize() {
         mediaType: mediaItem.mediaType,
         timelineStartTime: newTimelineStartTime,
         timelineEndTime: newTimelineEndTime,
-        duration: tempDuration.value,
+        durationFrames: tempDurationFrames.value,
+        positionFrames: tempResizePositionFrames.value,
+        timecode: framesToTimecode(tempDurationFrames.value),
       })
 
       // 构建新的时间范围对象

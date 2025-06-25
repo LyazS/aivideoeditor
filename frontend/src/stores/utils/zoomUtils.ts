@@ -1,37 +1,30 @@
 // ==================== 缩放计算工具 ====================
 
 /**
- * 计算最大缩放级别
+ * 计算最大缩放级别（帧数版本）
  * @param timelineWidth 时间轴宽度（像素）
- * @param frameRate 帧率
- * @param totalDuration 总时长（秒）
+ * @param totalDurationFrames 总时长（帧数）
  * @returns 最大缩放级别
  */
-export function getMaxZoomLevel(
+export function getMaxZoomLevelFrames(
   timelineWidth: number,
-  frameRate: number,
-  totalDuration: number,
+  totalDurationFrames: number,
 ): number {
   // 最大缩放级别：一帧占用容器宽度的1/20（即5%）
   const targetFrameWidth = timelineWidth / 20 // 一帧占1/20横幅
-  const frameDuration = 1 / frameRate // 一帧的时长（秒）
-  const requiredPixelsPerSecond = targetFrameWidth / frameDuration
-  const calculatedMaxZoom = (requiredPixelsPerSecond * totalDuration) / timelineWidth
+  const calculatedMaxZoom = (targetFrameWidth * totalDurationFrames) / timelineWidth
   const maxZoom = Math.max(calculatedMaxZoom, 100) // 确保至少有100倍缩放
 
   if (window.DEBUG_TIMELINE_ZOOM) {
-    console.group('🔬 [缩放计算] 计算最大缩放级别')
+    console.group('🔬 [缩放计算] 计算最大缩放级别（帧数版本）')
 
     console.log('📐 最大缩放计算参数:', {
       timelineWidth,
-      frameRate,
-      totalDuration: totalDuration.toFixed(2),
+      totalDurationFrames,
       targetFrameWidth: targetFrameWidth.toFixed(2),
-      frameDuration: frameDuration.toFixed(4),
     })
 
     console.log('📊 最大缩放计算结果:', {
-      requiredPixelsPerSecond: requiredPixelsPerSecond.toFixed(2),
       calculatedMaxZoom: calculatedMaxZoom.toFixed(3),
       finalMaxZoom: maxZoom.toFixed(3),
       limitedByMinimum: maxZoom === 100,
@@ -43,27 +36,29 @@ export function getMaxZoomLevel(
   return maxZoom
 }
 
+
+
 /**
- * 计算最小缩放级别
- * @param totalDuration 总时长（秒）
- * @param maxVisibleDuration 最大可见时长（秒）
+ * 计算最小缩放级别（帧数版本）
+ * @param totalDurationFrames 总时长（帧数）
+ * @param maxVisibleDurationFrames 最大可见时长（帧数）
  * @returns 最小缩放级别
  */
-export function getMinZoomLevel(totalDuration: number, maxVisibleDuration: number): number {
+export function getMinZoomLevelFrames(totalDurationFrames: number, maxVisibleDurationFrames: number): number {
   // 基于最大可见范围计算最小缩放级别
-  const minZoom = totalDuration / maxVisibleDuration
+  const minZoom = totalDurationFrames / maxVisibleDurationFrames
 
   if (window.DEBUG_TIMELINE_ZOOM) {
-    console.group('🔍 [缩放计算] 计算最小缩放级别')
+    console.group('🔍 [缩放计算] 计算最小缩放级别（帧数版本）')
 
     console.log('📐 最小缩放计算参数:', {
-      totalDuration: totalDuration.toFixed(2),
-      maxVisibleDuration: maxVisibleDuration.toFixed(2),
+      totalDurationFrames,
+      maxVisibleDurationFrames,
     })
 
     console.log('📊 最小缩放计算结果:', {
       minZoom: minZoom.toFixed(3),
-      ratio: (totalDuration / maxVisibleDuration).toFixed(3),
+      ratio: (totalDurationFrames / maxVisibleDurationFrames).toFixed(3),
     })
 
     console.groupEnd()
@@ -72,28 +67,30 @@ export function getMinZoomLevel(totalDuration: number, maxVisibleDuration: numbe
   return minZoom
 }
 
+
+
 /**
- * 计算最大滚动偏移量
+ * 计算最大滚动偏移量（帧数版本）
  * @param timelineWidth 时间轴宽度（像素）
  * @param zoomLevel 缩放级别
- * @param totalDuration 总时长（秒）
- * @param maxVisibleDuration 最大可见时长（秒）
+ * @param totalDurationFrames 总时长（帧数）
+ * @param maxVisibleDurationFrames 最大可见时长（帧数）
  * @returns 最大滚动偏移量（像素）
  */
-export function getMaxScrollOffset(
+export function getMaxScrollOffsetFrames(
   timelineWidth: number,
   zoomLevel: number,
-  totalDuration: number,
-  maxVisibleDuration: number,
+  totalDurationFrames: number,
+  maxVisibleDurationFrames: number,
 ): number {
-  // 使用最大可见范围作为滚动范围，允许滚动到内容结束时间*4的位置
-  const effectiveDuration = maxVisibleDuration
-  const pixelsPerSecond = (timelineWidth * zoomLevel) / totalDuration
-  const visibleDuration = timelineWidth / pixelsPerSecond
-  const maxScrollableTime = Math.max(0, effectiveDuration - visibleDuration)
-  const maxScrollOffset = maxScrollableTime * pixelsPerSecond
-
-  // 精简调试信息，只在需要时输出
+  // 使用最大可见范围作为滚动范围
+  const effectiveDurationFrames = maxVisibleDurationFrames
+  const pixelsPerFrame = (timelineWidth * zoomLevel) / totalDurationFrames
+  const visibleDurationFrames = timelineWidth / pixelsPerFrame
+  const maxScrollableFrames = Math.max(0, effectiveDurationFrames - visibleDurationFrames)
+  const maxScrollOffset = maxScrollableFrames * pixelsPerFrame
 
   return maxScrollOffset
 }
+
+

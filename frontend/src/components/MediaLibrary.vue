@@ -59,7 +59,7 @@
 
             <!-- 右上角时长标签（只有视频才显示） -->
             <div v-if="item.mediaType === 'video'" class="duration-badge">
-              {{ formatTime(item.duration, 'seconds') }}
+              {{ formatDuration(item.duration) }}
             </div>
           </div>
 
@@ -101,7 +101,7 @@ import { useVideoStore } from '../stores/videoStore'
 import { useWebAVControls } from '../composables/useWebAVControls'
 import { useDialogs } from '../composables/useDialogs'
 import { useDragUtils } from '../composables/useDragUtils'
-import { formatTime, formatFileSize } from '../stores/utils/timeUtils'
+import { formatFileSize, framesToTimecode, secondsToFrames } from '../stores/utils/timeUtils'
 import type { MediaItem } from '../types'
 import { generateThumbnailForMediaItem } from '../utils/thumbnailGenerator'
 
@@ -111,6 +111,12 @@ const dialogs = useDialogs()
 const dragUtils = useDragUtils()
 const fileInput = ref<HTMLInputElement>()
 const isDragOver = ref(false)
+
+// 格式化时长显示（使用时间码格式）
+function formatDuration(seconds: number): string {
+  const frames = secondsToFrames(seconds)
+  return framesToTimecode(frames)
+}
 
 // 触发文件选择
 const triggerFileInput = () => {

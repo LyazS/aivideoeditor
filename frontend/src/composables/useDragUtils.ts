@@ -1,6 +1,6 @@
 import { useVideoStore } from '../stores/videoStore'
 import type { TimelineItemDragData, MediaItemDragData } from '../types'
-import { alignTimeToFrame } from '../stores/utils/timeUtils'
+import { alignFramesToFrame, secondsToFrames, framesToSeconds } from '../stores/utils/timeUtils'
 
 /**
  * 拖拽工具函数集合
@@ -140,21 +140,25 @@ export function useDragUtils() {
     const mouseX = event.clientX - rect.left
     const targetTrackId = parseInt(trackContent.getAttribute('data-track-id') || '1')
 
-    let dropTime: number
+    // 使用帧数进行精确计算
+    let dropFrames: number
     if (dragOffset) {
       // 考虑拖拽偏移量，计算clip的实际开始位置
       const clipStartX = mouseX - dragOffset.x
-      dropTime = videoStore.pixelToTime(clipStartX, timelineWidth)
+      dropFrames = videoStore.pixelToFrame(clipStartX, timelineWidth)
     } else {
       // 直接使用鼠标位置
-      dropTime = videoStore.pixelToTime(mouseX, timelineWidth)
+      dropFrames = videoStore.pixelToFrame(mouseX, timelineWidth)
     }
 
-    // 确保拖拽时间不会小于0（防止clip被拖拽到负数时间轴）
-    dropTime = Math.max(0, dropTime)
+    // 确保拖拽帧数不会小于0
+    dropFrames = Math.max(0, dropFrames)
 
-    // 对齐到帧边界（与播放头拖拽和时间刻度点击保持一致）
-    dropTime = alignTimeToFrame(dropTime, videoStore.frameRate)
+    // 对齐到帧边界
+    dropFrames = alignFramesToFrame(dropFrames)
+
+    // 转换为秒数（向后兼容）
+    const dropTime = framesToSeconds(dropFrames)
 
     return {
       dropTime,

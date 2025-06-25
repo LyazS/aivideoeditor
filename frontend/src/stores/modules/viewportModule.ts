@@ -1,11 +1,14 @@
 import { ref, computed, type Ref } from 'vue'
 import {
-  getMaxZoomLevel,
-  getMinZoomLevel,
-  getMaxScrollOffset,
-  calculateMaxVisibleDuration,
-  calculateContentEndTime,
+  getMaxZoomLevelFrames,
+  getMinZoomLevelFrames,
+  getMaxScrollOffsetFrames,
 } from '../utils/storeUtils'
+import {
+  calculateContentEndTimeFrames,
+  calculateMaxVisibleDurationFrames,
+} from '../utils/durationUtils'
+import { framesToSeconds, secondsToFrames } from '../utils/timeUtils'
 import type { TimelineItem } from '../../types'
 
 /**
@@ -25,19 +28,31 @@ export function createViewportModule(
 
   // ==================== 计算属性 ====================
 
-  // 计算实际内容的结束时间（最后一个视频片段的结束时间）
+  // 帧数版本的内容结束时间
+  const contentEndTimeFrames = computed(() => {
+    return calculateContentEndTimeFrames(timelineItems.value)
+  })
+
+  // 计算实际内容的结束时间（向后兼容的秒数版本）
   const contentEndTime = computed(() => {
-    return calculateContentEndTime(timelineItems.value)
+    return framesToSeconds(contentEndTimeFrames.value)
   })
 
-  // 计算最大允许的可见时间范围（基于视频内容长度）
+  // 帧数版本的最大可见时长
+  const maxVisibleDurationFrames = computed(() => {
+    const timelineDurationFrames = secondsToFrames(timelineDuration.value)
+    return calculateMaxVisibleDurationFrames(contentEndTimeFrames.value, timelineDurationFrames)
+  })
+
+  // 计算最大允许的可见时间范围（向后兼容的秒数版本）
   const maxVisibleDuration = computed(() => {
-    return calculateMaxVisibleDuration(contentEndTime.value, timelineDuration.value)
+    return framesToSeconds(maxVisibleDurationFrames.value)
   })
 
-  // 缩放相关计算属性
+  // 缩放相关计算属性（使用帧数版本）
   const minZoomLevel = computed(() => {
-    return getMinZoomLevel(totalDuration.value, maxVisibleDuration.value)
+    const totalDurationFrames = secondsToFrames(totalDuration.value)
+    return getMinZoomLevelFrames(totalDurationFrames, maxVisibleDurationFrames.value)
   })
 
   // 当前可见时间范围（受最大可见范围限制）
@@ -49,26 +64,27 @@ export function createViewportModule(
   // ==================== 缩放滚动方法 ====================
 
   /**
-   * 计算最大缩放级别的函数（需要时间轴宽度参数）
+   * 计算最大缩放级别的函数（使用帧数版本）
    * @param timelineWidth 时间轴宽度（像素）
-   * @param frameRate 帧率
    * @returns 最大缩放级别
    */
-  function getMaxZoomLevelForTimeline(timelineWidth: number, frameRate: number): number {
-    return getMaxZoomLevel(timelineWidth, frameRate, totalDuration.value)
+  function getMaxZoomLevelForTimeline(timelineWidth: number): number {
+    const totalDurationFrames = secondsToFrames(totalDuration.value)
+    return getMaxZoomLevelFrames(timelineWidth, totalDurationFrames)
   }
 
   /**
-   * 计算最大滚动偏移量的函数（需要时间轴宽度参数）
+   * 计算最大滚动偏移量的函数（使用帧数版本）
    * @param timelineWidth 时间轴宽度（像素）
    * @returns 最大滚动偏移量
    */
   function getMaxScrollOffsetForTimeline(timelineWidth: number): number {
-    return getMaxScrollOffset(
+    const totalDurationFrames = secondsToFrames(totalDuration.value)
+    return getMaxScrollOffsetFrames(
       timelineWidth,
       zoomLevel.value,
-      totalDuration.value,
-      maxVisibleDuration.value,
+      totalDurationFrames,
+      maxVisibleDurationFrames.value,
     )
   }
 
@@ -79,7 +95,7 @@ export function createViewportModule(
    * @param frameRate 帧率
    */
   function setZoomLevel(newZoomLevel: number, timelineWidth: number = 800, frameRate: number = 30) {
-    const maxZoom = getMaxZoomLevelForTimeline(timelineWidth, frameRate)
+    const maxZoom = getMaxZoomLevelForTimeline(timelineWidth)
     const minZoom = minZoomLevel.value
     const clampedZoom = Math.max(minZoom, Math.min(newZoomLevel, maxZoom))
 

@@ -6,6 +6,12 @@ import { ImageVisibleSprite } from '../utils/ImageVisibleSprite'
 import type { VideoTimeRange, ImageTimeRange } from '../types'
 import { useVideoStore } from '../stores/videoStore'
 import {
+  framesToMicroseconds,
+  microsecondsToFrames,
+  framesToTimecode,
+  secondsToFrames
+} from '../stores/utils/timeUtils'
+import {
   logWebAVInitStart,
   logWebAVInitStep,
   logWebAVInitSuccess,
@@ -232,7 +238,7 @@ export function useWebAVControls() {
     })
 
     // 时间更新事件
-    globalAVCanvas.on('timeupdate', (time: number) => {
+    globalAVCanvas.on('timeupdate', (microseconds: number) => {
       // 使用时间同步锁防止循环调用
       if (isUpdatingTime) {
         // 静默跳过，避免日志污染
@@ -241,10 +247,9 @@ export function useWebAVControls() {
 
       isUpdatingTime = true
       try {
-        // 将微秒转换为秒
-        // console.log('WebAV timeupdate:', time)
-        const timeInSeconds = time / 1000000
-        videoStore.setCurrentTime(timeInSeconds, false) // 不强制对齐帧，保持流畅
+        // 将微秒转换为帧数
+        const frames = microsecondsToFrames(microseconds)
+        videoStore.setCurrentFrame(frames, false) // 传入帧数，不强制对齐保持流畅
       } finally {
         isUpdatingTime = false
       }
@@ -348,32 +353,38 @@ export function useWebAVControls() {
   }
 
   /**
-   * 播放控制
+   * 播放控制（帧数接口）
    */
-  const play = (startTime?: number, endTime?: number): void => {
+  const play = (startFrames?: number, endFrames?: number): void => {
     if (!globalAVCanvas) return
 
-    const start = (startTime || videoStore.currentTime) * 1000000 // 转换为微秒
+    // 帧数转换为微秒
+    const start = framesToMicroseconds(startFrames || videoStore.currentFrame)
 
-    // 构建播放参数
     const playOptions: PlayOptions = {
       start,
       playbackRate: videoStore.playbackRate,
     }
 
-    // 只有明确指定了结束时间才添加end参数
-    if (endTime !== undefined) {
-      const end = endTime * 1000000
-      // 确保结束时间大于开始时间
+    if (endFrames !== undefined) {
+      const end = framesToMicroseconds(endFrames)
       if (end > start) {
         playOptions.end = end
       } else {
-        console.warn('结束时间必须大于开始时间，忽略end参数')
+        console.warn('结束帧必须大于开始帧，忽略end参数')
       }
     }
 
-    // console.log('WebAV play options:', playOptions)
     globalAVCanvas.play(playOptions)
+  }
+
+  /**
+   * 播放控制（向后兼容的秒数接口）
+   */
+  const playSeconds = (startTime?: number, endTime?: number): void => {
+    const startFrames = startTime ? secondsToFrames(startTime) : undefined
+    const endFrames = endTime ? secondsToFrames(endTime) : undefined
+    play(startFrames, endFrames)
   }
 
   /**
@@ -385,15 +396,43 @@ export function useWebAVControls() {
   }
 
   /**
-   * 跳转到指定时间
+   * 跳转到指定帧数
    * 这是时间控制的唯一入口点，所有UI时间操作都应该通过此方法
+   * @param frames 帧数
+   */
+  const seekTo = (frames: number): void => {
+    if (!globalAVCanvas) return
+
+    // 设置时间同步锁，防止循环调用
+    isUpdatingTime = true
+
+    try {
+      const microseconds = framesToMicroseconds(frames)
+      globalAVCanvas.previewFrame(microseconds)
+
+      console.log('🎯 WebAV seekTo:', {
+        frames,
+        timecode: framesToTimecode(frames),
+        microseconds
+      })
+
+      // 直接更新store状态，因为previewFrame可能不会触发timeupdate事件
+      videoStore.setCurrentFrame(frames, false)
+    } finally {
+      // 延迟重置锁，确保任何可能的timeupdate事件被处理
+      setTimeout(() => {
+        isUpdatingTime = false
+      }, 10)
+    }
+  }
+
+  /**
+   * 跳转到指定时间（向后兼容的秒数接口）
    * @param time 时间（秒）
    */
-  const seekTo = (time: number): void => {
-    if (!globalAVCanvas) return
-    // console.log('WebAV seekTo:', time)
-    const timeMicroseconds = time * 1000000
-    globalAVCanvas.previewFrame(timeMicroseconds)
+  const seekToSeconds = (time: number): void => {
+    const frames = secondsToFrames(time)
+    seekTo(frames)
   }
 
 
@@ -668,9 +707,11 @@ export function useWebAVControls() {
     createImgClip,
     cloneMP4Clip,
     cloneImgClip,
-    play,
+    play, // 重构后的帧数接口
+    playSeconds, // 兼容的秒数接口
     pause,
-    seekTo,
+    seekTo, // 重构后的帧数接口
+    seekToSeconds, // 兼容的秒数接口
     destroy,
     getAVCanvas,
     getCanvasContainer,
