@@ -1,26 +1,5 @@
 import { ref } from 'vue'
-
-/**
- * 通知管理器接口
- * 定义历史管理器需要的通知功能
- */
-interface NotificationManager {
-  showSuccess(title: string, message?: string, duration?: number): string
-  showError(title: string, message?: string, duration?: number): string
-  showWarning(title: string, message?: string, duration?: number): string
-  showInfo(title: string, message?: string, duration?: number): string
-}
-
-/**
- * 简单命令接口
- * 阶段1的最简实现，只包含基础的execute和undo方法
- */
-export interface SimpleCommand {
-  id: string
-  description: string
-  execute(): void | Promise<void>
-  undo(): void | Promise<void>
-}
+import type { SimpleCommand, NotificationManager } from '../../types'
 
 /**
  * 批量命令基类

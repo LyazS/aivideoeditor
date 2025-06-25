@@ -1,7 +1,5 @@
-import type { TimelineItem } from '../../types/videoTypes'
-import type { VideoTimeRange } from '../../utils/VideoVisibleSprite'
-import type { ImageTimeRange } from '../../utils/ImageVisibleSprite'
-import { isVideoTimeRange } from '../../types/videoTypes'
+import type { TimelineItem, VideoTimeRange, ImageTimeRange } from '../../types'
+import { isVideoTimeRange } from '../../types'
 
 // ==================== 时间范围工具 ====================
 

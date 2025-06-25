@@ -1,5 +1,5 @@
 import { useVideoStore } from '../stores/videoStore'
-import type { TimelineItemDragData, MediaItemDragData } from '../types/videoTypes'
+import type { TimelineItemDragData, MediaItemDragData } from '../types'
 import { alignTimeToFrame } from '../stores/utils/timeUtils'
 
 /**

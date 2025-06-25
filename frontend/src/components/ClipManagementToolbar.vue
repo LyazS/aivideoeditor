@@ -82,8 +82,8 @@
 import { computed } from 'vue'
 import { useVideoStore } from '../stores/videoStore'
 import { formatFileSize } from '../stores/utils/timeUtils'
-import type { TimelineItem } from '../types/videoTypes'
-import { isVideoTimeRange } from '../types/videoTypes'
+import type { TimelineItem } from '../types'
+import { isVideoTimeRange } from '../types'
 
 const videoStore = useVideoStore()
 

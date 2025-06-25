@@ -1,22 +1,7 @@
 import { ref } from 'vue'
+import type { Notification, NotificationType } from '../../types'
 
-/**
- * 通知类型
- */
-export type NotificationType = 'success' | 'error' | 'warning' | 'info'
-
-/**
- * 通知接口
- */
-export interface Notification {
-  id: string
-  type: NotificationType
-  title: string
-  message?: string
-  duration?: number // 显示时长（毫秒），0表示不自动消失
-  timestamp?: number // 创建时间戳
-  persistent?: boolean // 是否持久化（不会被批量清除）
-}
+// Notification 和 NotificationType 接口已移动到统一类型文件 src/types/index.ts
 
 /**
  * 通知管理器

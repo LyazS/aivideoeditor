@@ -1,6 +1,6 @@
 import type { Ref } from 'vue'
-import type { TimelineItem } from '../../types/videoTypes'
-import { isVideoTimeRange } from '../../types/videoTypes'
+import type { TimelineItem } from '../../types'
+import { isVideoTimeRange } from '../../types'
 
 // ==================== 自动整理工具 ====================
 
@@ -38,6 +38,8 @@ export function autoArrangeTrackItems(timelineItems: Ref<TimelineItem[]>, trackI
         clipEndTime: timeRange.clipEndTime,
         timelineStartTime: currentPosition * 1000000, // 转换为微秒
         timelineEndTime: (currentPosition + duration) * 1000000,
+        effectiveDuration: timeRange.effectiveDuration,
+        playbackRate: timeRange.playbackRate,
       })
     } else {
       // 图片类型

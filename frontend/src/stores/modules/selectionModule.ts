@@ -1,12 +1,5 @@
 import { ref, computed, type Raw, type Ref } from 'vue'
-import type { TimelineItem, MediaItem } from '../../types/videoTypes'
-import { findTimelineItemBySprite } from '../utils/storeUtils'
-
-// 定义VideoVisibleSprite类型（避免循环依赖）
-type VideoVisibleSprite = {
-  destroy: () => void
-  [key: string]: unknown
-}
+import type { TimelineItem, MediaItem } from '../../types'
 
 /**
  * 选择管理模块

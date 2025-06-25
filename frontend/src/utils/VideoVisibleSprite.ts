@@ -1,33 +1,5 @@
 import { VisibleSprite, MP4Clip } from '@webav/av-cliper'
-import type { AudioTickData, ExtendedSprite } from '../types/webavTypes'
-
-/**
- * 时间范围接口定义
- */
-export interface VideoTimeRange {
-  /** 素材内部开始时间（微秒） - 从素材的哪个时间点开始播放 */
-  clipStartTime: number
-  /** 素材内部结束时间（微秒） - 播放到素材的哪个时间点结束 */
-  clipEndTime: number
-  /** 时间轴开始时间（微秒） - 素材在整个项目时间轴上的开始位置 */
-  timelineStartTime: number
-  /** 时间轴结束时间（微秒） - 素材在整个项目时间轴上的结束位置 */
-  timelineEndTime: number
-  /** 有效播放时长（微秒） - 在时间轴上占用的时长，如果与素材内部时长不同则表示变速 */
-  effectiveDuration: number
-  /** 播放速度倍率 - 1.0为正常速度，2.0为2倍速，0.5为0.5倍速 */
-  playbackRate: number
-}
-
-/**
- * 音频状态接口
- */
-export interface AudioState {
-  /** 音量（0-1之间，0为静音，1为最大音量） */
-  volume: number
-  /** 静音状态标记 */
-  isMuted: boolean
-}
+import type { VideoTimeRange, AudioState } from '../types'
 
 /**
  * 自定义的VisibleSprite类，继承自WebAV的VisibleSprite
@@ -360,10 +332,14 @@ export class VideoVisibleSprite extends VisibleSprite {
    * 设置音频拦截器来控制音量
    */
   #setupVolumeInterceptor(): void {
-    const clip = this.getClip()
+    const clip = this.getClip() as MP4Clip
     if (clip && 'tickInterceptor' in clip) {
       // 设置tickInterceptor来拦截音频数据
-      clip.tickInterceptor = async (_time: number, tickRet: AudioTickData) => {
+      // 使用正确的类型：接受和返回 MP4Clip.tick 方法的返回类型
+      clip.tickInterceptor = async <T extends Awaited<ReturnType<MP4Clip['tick']>>>(
+        _time: number,
+        tickRet: T
+      ): Promise<T> => {
         // 如果有音频数据，根据静音状态和音量调整
         if (tickRet.audio && tickRet.audio.length > 0) {
           // 检查轨道是否被静音

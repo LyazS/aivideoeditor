@@ -1,4 +1,4 @@
-import type { MediaItem } from '../types/videoTypes'
+import type { MediaItem } from '../types'
 import { VideoVisibleSprite } from './VideoVisibleSprite'
 import { ImageVisibleSprite } from './ImageVisibleSprite'
 import { useWebAVControls } from '../composables/useWebAVControls'

@@ -254,46 +254,8 @@ export function canvasToBlob(canvas: HTMLCanvasElement, quality: number = 0.8): 
   })
 }
 
-// 定义媒体项目接口，用于缩略图生成
-interface MediaItemForThumbnail {
-  mediaType: 'video' | 'image'
-  mp4Clip?: import('@webav/av-cliper').MP4Clip | null
-  imgClip?: import('@webav/av-cliper').ImgClip | null
-}
-
-// 定义时间轴项目接口，用于缩略图重新生成
-interface TimelineItemForThumbnail {
-  id: string
-  mediaItemId: string
-  trackId: number
-  mediaType: 'video' | 'image'
-  timeRange: VideoTimeRange | ImageTimeRange
-  thumbnailUrl?: string
-}
-
-// 导入时间范围类型
-interface VideoTimeRange {
-  clipStartTime: number
-  clipEndTime: number
-  timelineStartTime: number
-  timelineEndTime: number
-  effectiveDuration: number
-  playbackRate: number
-}
-
-interface ImageTimeRange {
-  timelineStartTime: number
-  timelineEndTime: number
-  displayDuration: number
-}
-
-// 定义媒体项目接口，用于缩略图重新生成
-interface MediaItemForThumbnailRegeneration {
-  id: string
-  mediaType: 'video' | 'image'
-  mp4Clip?: import('@webav/av-cliper').MP4Clip | null
-  imgClip?: import('@webav/av-cliper').ImgClip | null
-}
+// 从统一类型文件导入所需类型
+import type { MediaItem, TimelineItem, MediaItemForThumbnail } from '../types'
 
 /**
  * 统一的缩略图生成函数 - 根据媒体类型自动选择合适的生成方法
@@ -337,8 +299,8 @@ export async function generateThumbnailForMediaItem(
  * @returns Promise<string | undefined> 新的缩略图URL
  */
 export async function regenerateThumbnailForTimelineItem(
-  timelineItem: TimelineItemForThumbnail,
-  mediaItem: MediaItemForThumbnailRegeneration
+  timelineItem: TimelineItem,
+  mediaItem: MediaItem
 ): Promise<string | undefined> {
   try {
     console.log('🔄 [ThumbnailGenerator] 重新生成时间轴clip缩略图:', {

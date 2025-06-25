@@ -1,8 +1,9 @@
 import { ref, markRaw, type Raw } from 'vue'
 import { AVCanvas } from '@webav/av-canvas'
 import { MP4Clip, ImgClip } from '@webav/av-cliper'
-import { VideoVisibleSprite, type VideoTimeRange } from '../utils/VideoVisibleSprite'
-import { ImageVisibleSprite, type ImageTimeRange } from '../utils/ImageVisibleSprite'
+import { VideoVisibleSprite } from '../utils/VideoVisibleSprite'
+import { ImageVisibleSprite } from '../utils/ImageVisibleSprite'
+import type { VideoTimeRange, ImageTimeRange } from '../types'
 import { useVideoStore } from '../stores/videoStore'
 import {
   logWebAVInitStart,
@@ -22,12 +23,7 @@ import {
   debugError,
 } from '../utils/webavDebug'
 
-// 定义播放选项接口
-interface PlayOptions {
-  start: number
-  playbackRate: number
-  end?: number
-}
+import type { PlayOptions, CanvasBackup } from '../types'
 
 // 全局WebAV状态 - 确保单例模式
 let globalAVCanvas: AVCanvas | null = null
@@ -36,29 +32,6 @@ const globalError = ref<string | null>(null)
 
 // 时间同步锁，防止循环调用
 let isUpdatingTime = false
-
-// 画布重新创建时的内容备份 - 只备份元数据，不备份WebAV对象
-interface CanvasBackup {
-  timelineItems: Array<{
-    id: string
-    mediaItemId: string
-    trackId: number
-    mediaType: 'video' | 'image'
-    timeRange: VideoTimeRange | ImageTimeRange
-    x: number
-    y: number
-    width: number
-    height: number
-    rotation: number
-    zIndex: number
-    opacity: number
-    volume: number
-    isMuted: boolean
-    thumbnailUrl: string
-  }>
-  currentTime: number
-  isPlaying: boolean
-}
 
 /**
  * WebAV控制器 - 管理AVCanvas和相关操作

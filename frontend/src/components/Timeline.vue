@@ -182,7 +182,7 @@ import {
 import {
   generateThumbnailForMediaItem,
 } from '../utils/thumbnailGenerator'
-import type { TimelineItem, TimelineItemDragData, MediaItemDragData } from '../types/videoTypes'
+import type { TimelineItem, TimelineItemDragData, MediaItemDragData, ConflictInfo } from '../types'
 import VideoClip from './VideoClip.vue'
 import TimeScale from './TimeScale.vue'
 
@@ -999,15 +999,7 @@ function handleKeyDown(event: KeyboardEvent) {
 // ==================== 视觉反馈系统 ====================
 // 注意：拖拽预览现在统一使用 DragPreviewManager (useDragPreview.ts)
 
-// 冲突检测
-interface ConflictInfo {
-  itemId: string
-  itemName: string
-  startTime: number
-  endTime: number
-  overlapStart: number
-  overlapEnd: number
-}
+// ConflictInfo 接口已移动到统一类型文件 src/types/index.ts
 
 // 检测素材库拖拽的重叠冲突
 function detectMediaItemConflicts(dropTime: number, targetTrackId: number, duration: number): ConflictInfo[] {

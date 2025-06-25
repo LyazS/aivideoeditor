@@ -8,7 +8,7 @@ import type {
   MediaItem,
   PropsChangeEvent,
   VideoResolution,
-} from '../../types/videoTypes'
+} from '../../types'
 
 /**
  * 时间轴核心管理模块

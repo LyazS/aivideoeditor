@@ -1,5 +1,5 @@
 import { ref } from 'vue'
-import type { VideoResolution } from '../../types/videoTypes'
+import type { VideoResolution } from '../../types'
 
 /**
  * 项目配置管理模块

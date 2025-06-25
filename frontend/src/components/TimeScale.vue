@@ -38,6 +38,7 @@ import {
   formatTimeWithAutoPrecision,
   alignTimeToFrame as alignTimeToFrameUtil
 } from '../stores/utils/storeUtils'
+import type { TimeMark } from '../types'
 
 const videoStore = useVideoStore()
 const webAVControls = useWebAVControls()
@@ -48,12 +49,7 @@ const containerWidth = ref(800)
 // 播放头拖拽状态
 const isDraggingPlayhead = ref(false)
 
-interface TimeMark {
-  time: number
-  position: number
-  isMajor: boolean
-  isFrame?: boolean // 标记是否为帧级别的刻度
-}
+// TimeMark 接口已移动到统一类型文件 src/types/index.ts
 
 // 计算时间刻度标记
 const timeMarks = computed((): TimeMark[] => {

@@ -6,7 +6,7 @@ import {
   calculateMaxVisibleDuration,
   calculateContentEndTime,
 } from '../utils/storeUtils'
-import type { TimelineItem } from '../../types/videoTypes'
+import type { TimelineItem } from '../../types'
 
 /**
  * 缩放滚动管理模块

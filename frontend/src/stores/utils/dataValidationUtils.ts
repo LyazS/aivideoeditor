@@ -1,5 +1,5 @@
 import type { Ref } from 'vue'
-import type { MediaItem, TimelineItem, Track } from '../../types/videoTypes'
+import type { MediaItem, TimelineItem, Track } from '../../types'
 import { findOrphanedTimelineItems } from './timelineSearchUtils'
 import { validateTimeRange, calculateTimeRangeOverlap } from './timeRangeUtils'
 

@@ -1,5 +1,5 @@
 import { useVideoStore } from '../stores/videoStore'
-import type { DragPreviewData } from '../types/webavTypes'
+import type { DragPreviewData } from '../types'
 
 // 统一拖拽预览管理器
 class DragPreviewManager {

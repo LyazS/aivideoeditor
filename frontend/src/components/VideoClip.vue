@@ -105,7 +105,7 @@ import { useDragUtils } from '../composables/useDragUtils'
 import { usePlaybackControls } from '../composables/usePlaybackControls'
 import { getDragPreviewManager } from '../composables/useDragPreview'
 import { formatTime as formatTimeUtil } from '../stores/utils/storeUtils'
-import type { TimelineItem, Track } from '../types/videoTypes'
+import type { TimelineItem, Track } from '../types'
 
 interface Props {
   timelineItem: TimelineItem

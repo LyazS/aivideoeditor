@@ -3,42 +3,9 @@
  * 用于在WebAV初始化流程中添加详细的调试信息
  */
 
-/**
- * 调试日志前缀和分组
- */
-export const DEBUG_GROUPS = {
-  // 🚀 初始化相关
-  INIT: {
-    PREFIX: '🚀 [WebAV Init]',
-    CONTAINER: '📦 [Container]',
-    CANVAS: '🎨 [Canvas]',
-    EVENTS: '🎧 [Events]',
-  },
-
-  // 🔄 画布重建相关
-  REBUILD: {
-    PREFIX: '🔄 [Canvas Rebuild]',
-    DESTROY: '💥 [Destroy]',
-    BACKUP: '📦 [Backup]',
-    RESTORE: '🔄 [Restore]',
-    COORDS: '📐 [Coordinates]',
-  },
-
-  // 🎬 组件生命周期相关
-  LIFECYCLE: {
-    PREFIX: '🎬 [Lifecycle]',
-    RENDERER: '🖼️ [Renderer]',
-    ENGINE: '⚙️ [Engine]',
-    STORE: '🏪 [Store]',
-  },
-
-  // ⚡ 性能监控相关
-  PERFORMANCE: {
-    PREFIX: '⚡ [Performance]',
-    TIMER: '⏱️ [Timer]',
-    STATS: '📊 [Stats]',
-  },
-} as const
+// 从统一类型文件导入调试分组常量
+import { DEBUG_GROUPS } from '../types'
+export { DEBUG_GROUPS }
 
 // ==================== 🚀 初始化相关调试函数 ====================
 

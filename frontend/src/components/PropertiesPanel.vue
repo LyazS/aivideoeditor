@@ -424,7 +424,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useVideoStore } from '../stores/videoStore'
-import { isVideoTimeRange } from '../types/videoTypes'
+import { isVideoTimeRange } from '../types'
 import { uiDegreesToWebAVRadians, webAVRadiansToUIDegrees } from '../utils/rotationTransform'
 import NumberInput from './NumberInput.vue'
 
@@ -659,6 +659,8 @@ const updateTargetDuration = async (newTargetDuration: number) => {
             clipEndTime: timeRange.clipEndTime,
             timelineStartTime: timeRange.timelineStartTime,
             timelineEndTime: newTimelineEndTime,
+            effectiveDuration: timeRange.effectiveDuration,
+            playbackRate: timeRange.playbackRate,
           })
         } else {
           // 图片类型

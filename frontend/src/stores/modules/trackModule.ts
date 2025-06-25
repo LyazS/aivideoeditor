@@ -1,5 +1,5 @@
 import { ref, type Ref } from 'vue'
-import type { Track, TimelineItem } from '../../types/videoTypes'
+import type { Track, TimelineItem } from '../../types'
 import { VideoVisibleSprite } from '../../utils/VideoVisibleSprite'
 
 /**

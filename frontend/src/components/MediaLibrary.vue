@@ -102,7 +102,7 @@ import { useWebAVControls } from '../composables/useWebAVControls'
 import { useDialogs } from '../composables/useDialogs'
 import { useDragUtils } from '../composables/useDragUtils'
 import { formatTime, formatFileSize } from '../stores/utils/timeUtils'
-import type { MediaItem } from '../types/videoTypes'
+import type { MediaItem } from '../types'
 import { generateThumbnailForMediaItem } from '../utils/thumbnailGenerator'
 
 const videoStore = useVideoStore()

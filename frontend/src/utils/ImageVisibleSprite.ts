@@ -1,17 +1,5 @@
 import { VisibleSprite, ImgClip } from '@webav/av-cliper'
-
-/**
- * 图片时间范围接口定义
- * 图片没有倍速概念，所以不包含playbackRate
- */
-export interface ImageTimeRange {
-  /** 时间轴开始时间（微秒） - 图片在整个项目时间轴上的开始位置 */
-  timelineStartTime: number
-  /** 时间轴结束时间（微秒） - 图片在整个项目时间轴上的结束位置 */
-  timelineEndTime: number
-  /** 显示时长（微秒） - 图片在时间轴上显示的时长 */
-  displayDuration: number
-}
+import type { ImageTimeRange } from '../types'
 
 /**
  * 自定义的图片VisibleSprite类，继承自WebAV的VisibleSprite

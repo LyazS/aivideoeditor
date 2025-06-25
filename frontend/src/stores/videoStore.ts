@@ -26,7 +26,7 @@ import { createHistoryModule } from './modules/historyModule'
 import { createNotificationModule } from './modules/notificationModule'
 import { AddTimelineItemCommand, RemoveTimelineItemCommand, MoveTimelineItemCommand, UpdateTransformCommand, SplitTimelineItemCommand, DuplicateTimelineItemCommand, AddTrackCommand, RemoveTrackCommand, RenameTrackCommand, AutoArrangeTrackCommand, ToggleTrackVisibilityCommand, ToggleTrackMuteCommand, ResizeTimelineItemCommand } from './modules/commands/timelineCommands'
 import { BatchDeleteCommand, BatchAutoArrangeTrackCommand, BatchUpdatePropertiesCommand } from './modules/commands/batchCommands'
-import type { MediaItem, TimelineItem } from '../types/videoTypes'
+import type { MediaItem, TimelineItem, TransformData, VideoTimeRange, PropertyType } from '../types'
 
 export const useVideoStore = defineStore('video', () => {
   // 创建媒体管理模块
@@ -313,20 +313,7 @@ export const useVideoStore = defineStore('video', () => {
     await historyModule.executeCommand(command)
   }
 
-  // 定义变换对象的类型
-  interface TransformData {
-    x?: number
-    y?: number
-    width?: number
-    height?: number
-    rotation?: number
-    opacity?: number
-    zIndex?: number
-    duration?: number
-    playbackRate?: number
-    volume?: number
-    isMuted?: boolean
-  }
+  // 使用统一类型文件中的 TransformData 接口
 
   /**
    * 检查变换属性是否有实际变化
@@ -400,8 +387,7 @@ export const useVideoStore = defineStore('video', () => {
     return false
   }
 
-  // 定义属性类型枚举
-  type PropertyType = 'position' | 'size' | 'rotation' | 'opacity' | 'zIndex' | 'duration' | 'playbackRate' | 'volume' | 'audioState' | 'multiple'
+  // PropertyType 类型已移动到统一类型文件 src/types/index.ts
 
   /**
    * 确定属性类型
@@ -763,19 +749,11 @@ export const useVideoStore = defineStore('video', () => {
    * @param newTimeRange 新的时间范围
    * @returns 是否成功调整
    */
-  // 定义时间范围接口
-  interface TimeRangeData {
-    timelineStartTime: number
-    timelineEndTime: number
-    clipStartTime: number
-    clipEndTime: number
-    effectiveDuration: number
-    playbackRate: number
-  }
+  // 使用统一类型文件中的 VideoTimeRange 接口
 
   async function resizeTimelineItemWithHistory(
     timelineItemId: string,
-    newTimeRange: TimeRangeData
+    newTimeRange: VideoTimeRange
   ): Promise<boolean> {
     // 获取时间轴项目
     const timelineItem = timelineModule.getTimelineItem(timelineItemId)

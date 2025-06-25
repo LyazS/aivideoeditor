@@ -19,7 +19,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useVideoStore } from '../stores/videoStore'
-import type { VideoResolution } from '../types/videoTypes'
+import type { VideoResolution } from '../types'
 import { useWebAVControls } from '../composables/useWebAVControls'
 import {
   logRendererState,

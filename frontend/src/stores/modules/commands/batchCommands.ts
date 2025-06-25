@@ -1,7 +1,6 @@
 import { generateCommandId } from '../../../utils/idGenerator'
 import { BaseBatchCommand } from '../historyModule'
-import type { SimpleCommand } from '../historyModule'
-import type { TimelineItem, MediaItem, Track } from '../../../types/videoTypes'
+import type { SimpleCommand, TimelineItem, MediaItem, Track } from '../../../types'
 import {
   RemoveTimelineItemCommand,
   MoveTimelineItemCommand

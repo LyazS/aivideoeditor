@@ -1,7 +1,6 @@
 import { ref, markRaw } from 'vue'
 import { AVCanvas } from '@webav/av-canvas'
 import type { VisibleSprite } from '@webav/av-cliper'
-import type { ExtendedAVCanvas } from '../../types/webavTypes'
 
 /**
  * WebAV集成管理模块

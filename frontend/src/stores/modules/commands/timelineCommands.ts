@@ -1,58 +1,23 @@
 import { generateCommandId } from '../../../utils/idGenerator'
-import type { SimpleCommand } from '../historyModule'
-import type { TimelineItem, MediaItem, Track } from '../../../types/videoTypes'
-import { VideoVisibleSprite, type VideoTimeRange } from '../../../utils/VideoVisibleSprite'
-import { ImageVisibleSprite, type ImageTimeRange } from '../../../utils/ImageVisibleSprite'
+import type {
+  SimpleCommand,
+  TimelineItem,
+  MediaItem,
+  Track,
+  VideoTimeRange,
+  ImageTimeRange,
+  TimelineItemData,
+  TransformData
+} from '../../../types'
+import {
+  isVideoTimeRange,
+  isImageTimeRange
+} from '../../../types'
+import { VideoVisibleSprite } from '../../../utils/VideoVisibleSprite'
+import { ImageVisibleSprite } from '../../../utils/ImageVisibleSprite'
 import { createSpriteFromMediaItem } from '../../../utils/spriteFactory'
 import { markRaw, reactive, ref, type Ref } from 'vue'
-import type { ExtendedSprite } from '../../../types/webavTypes'
 import type { VisibleSprite } from '@webav/av-cliper'
-
-// 辅助函数：检查是否为视频时间范围
-function isVideoTimeRange(timeRange: VideoTimeRange | ImageTimeRange): timeRange is VideoTimeRange {
-  return 'clipStartTime' in timeRange && 'clipEndTime' in timeRange && 'playbackRate' in timeRange
-}
-
-// 辅助函数：检查是否为图片时间范围
-function isImageTimeRange(timeRange: VideoTimeRange | ImageTimeRange): timeRange is ImageTimeRange {
-  return 'displayDuration' in timeRange && !('clipStartTime' in timeRange)
-}
-
-// 定义时间轴项目数据接口，用于命令模式中的数据保存
-interface TimelineItemData {
-  id: string
-  mediaItemId: string
-  trackId: number
-  mediaType: 'video' | 'image'
-  timeRange: VideoTimeRange | ImageTimeRange
-  x: number
-  y: number
-  width: number
-  height: number
-  rotation: number
-  zIndex: number
-  opacity: number
-  volume: number
-  isMuted: boolean
-  thumbnailUrl?: string
-}
-
-
-
-// 定义变换数据接口
-interface TransformData {
-  x?: number
-  y?: number
-  width?: number
-  height?: number
-  rotation?: number
-  opacity?: number
-  zIndex?: number
-  duration?: number
-  playbackRate?: number
-  volume?: number
-  isMuted?: boolean
-}
 
 /**
  * 添加时间轴项目命令
@@ -868,7 +833,7 @@ export class UpdateTransformCommand implements SimpleCommand {
           timelineItem.volume = this.newValues.volume
           const sprite = timelineItem.sprite
           if (sprite && 'setVolume' in sprite) {
-            ;(sprite as ExtendedSprite).setVolume?.(this.newValues.volume)
+            ;(sprite as VideoVisibleSprite).setVolume?.(this.newValues.volume)
           }
         }
 
@@ -876,7 +841,7 @@ export class UpdateTransformCommand implements SimpleCommand {
           timelineItem.isMuted = this.newValues.isMuted
           const sprite = timelineItem.sprite
           if (sprite && 'setMuted' in sprite) {
-            ;(sprite as ExtendedSprite).setMuted?.(this.newValues.isMuted)
+            ;(sprite as VideoVisibleSprite).setMuted?.(this.newValues.isMuted)
           }
         }
       }
@@ -939,7 +904,7 @@ export class UpdateTransformCommand implements SimpleCommand {
           timelineItem.volume = this.oldValues.volume
           const sprite = timelineItem.sprite
           if (sprite && 'setVolume' in sprite) {
-            ;(sprite as ExtendedSprite).setVolume?.(this.oldValues.volume)
+            ;(sprite as VideoVisibleSprite).setVolume?.(this.oldValues.volume)
           }
         }
 
@@ -947,7 +912,7 @@ export class UpdateTransformCommand implements SimpleCommand {
           timelineItem.isMuted = this.oldValues.isMuted
           const sprite = timelineItem.sprite
           if (sprite && 'setMuted' in sprite) {
-            ;(sprite as ExtendedSprite).setMuted?.(this.oldValues.isMuted)
+            ;(sprite as VideoVisibleSprite).setMuted?.(this.oldValues.isMuted)
           }
         }
       }
@@ -980,16 +945,19 @@ export class UpdateTransformCommand implements SimpleCommand {
     // 计算新的时间轴结束时间
     const newTimelineEndTime = timeRange.timelineStartTime + newDuration * 1000000
 
-    if (timelineItem.mediaType === 'video') {
+    if (timelineItem.mediaType === 'video' && isVideoTimeRange(timeRange)) {
       // 对于视频，通过调整倍速来实现时长变化
-      const videoTimeRange = timeRange as import('../../../utils/VideoVisibleSprite').VideoTimeRange
+      const clipDuration = timeRange.clipEndTime - timeRange.clipStartTime
+      const newPlaybackRate = clipDuration / newDuration / 1000000
 
       // 更新sprite的时间范围
       sprite.setTimeRange({
-        clipStartTime: videoTimeRange.clipStartTime || 0,
-        clipEndTime: videoTimeRange.clipEndTime || mediaItem.duration * 1000000,
+        clipStartTime: timeRange.clipStartTime || 0,
+        clipEndTime: timeRange.clipEndTime || mediaItem.duration * 1000000,
         timelineStartTime: timeRange.timelineStartTime,
         timelineEndTime: newTimelineEndTime,
+        effectiveDuration: newDuration * 1000000,
+        playbackRate: newPlaybackRate,
       })
     } else if (timelineItem.mediaType === 'image') {
       // 对于图片，直接更新显示时长
@@ -1937,12 +1905,14 @@ export class AutoArrangeTrackCommand implements SimpleCommand {
         const duration = (timeRange.timelineEndTime - timeRange.timelineStartTime) / 1000000 // 转换为秒
 
         // 更新时间轴位置 - 根据媒体类型设置不同的时间范围
-        if (item.mediaType === 'video' && 'clipStartTime' in timeRange) {
+        if (item.mediaType === 'video' && isVideoTimeRange(timeRange)) {
           sprite.setTimeRange({
             clipStartTime: timeRange.clipStartTime,
             clipEndTime: timeRange.clipEndTime,
             timelineStartTime: currentPosition * 1000000, // 转换为微秒
             timelineEndTime: (currentPosition + duration) * 1000000,
+            effectiveDuration: timeRange.effectiveDuration,
+            playbackRate: timeRange.playbackRate,
           })
         } else {
           // 图片类型
@@ -1988,12 +1958,14 @@ export class AutoArrangeTrackCommand implements SimpleCommand {
         const currentTimeRange = sprite.getTimeRange()
 
         // 根据媒体类型恢复时间范围
-        if (item.mediaType === 'video' && 'clipStartTime' in currentTimeRange) {
+        if (item.mediaType === 'video' && isVideoTimeRange(currentTimeRange)) {
           sprite.setTimeRange({
             clipStartTime: currentTimeRange.clipStartTime,
             clipEndTime: currentTimeRange.clipEndTime,
             timelineStartTime: originalPosition.timelineStartTime,
             timelineEndTime: originalPosition.timelineEndTime,
+            effectiveDuration: currentTimeRange.effectiveDuration,
+            playbackRate: currentTimeRange.playbackRate,
           })
         } else {
           // 图片类型
@@ -2087,6 +2059,8 @@ export class ResizeTimelineItemCommand implements SimpleCommand {
         clipEndTime: timeRange.clipEndTime,
         timelineStartTime: timeRange.timelineStartTime,
         timelineEndTime: timeRange.timelineEndTime,
+        effectiveDuration: timeRange.effectiveDuration,
+        playbackRate: timeRange.playbackRate,
       })
     } else if (mediaItem.mediaType === 'image' && isImageTimeRange(timeRange)) {
       // 图片类型：设置displayDuration

@@ -4,8 +4,8 @@ import { ImageVisibleSprite } from '../../utils/ImageVisibleSprite'
 import { createSpriteFromMediaItem } from '../../utils/spriteFactory'
 import { regenerateThumbnailForTimelineItem } from '../../utils/thumbnailGenerator'
 import { printDebugInfo, syncTimeRange } from '../utils/storeUtils'
-import type { TimelineItem, MediaItem } from '../../types/videoTypes'
-import { isVideoTimeRange } from '../../types/videoTypes'
+import type { TimelineItem, MediaItem } from '../../types'
+import { isVideoTimeRange } from '../../types'
 
 /**
  * 视频片段操作模块

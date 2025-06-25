@@ -1,6 +1,6 @@
 import { ref, type Ref } from 'vue'
 import { printDebugInfo } from '../utils/storeUtils'
-import type { MediaItem, TimelineItem, Track } from '../../types/videoTypes'
+import type { MediaItem, TimelineItem, Track } from '../../types'
 
 /**
  * 媒体管理模块

@@ -1,4 +1,4 @@
-import type { TimelineItem } from '../../types/videoTypes'
+import type { TimelineItem } from '../../types'
 
 // ==================== 时长计算工具 ====================
 

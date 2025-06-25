@@ -1,4 +1,4 @@
-import type { MediaItem, TimelineItem } from '../../types/videoTypes'
+import type { MediaItem, TimelineItem } from '../../types'
 
 // ==================== 查找工具 ====================
 
