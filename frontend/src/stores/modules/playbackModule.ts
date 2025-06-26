@@ -1,9 +1,7 @@
 import { ref, computed } from 'vue'
 import {
   alignFramesToFrame,
-  framesToTimecode,
-  framesToSeconds,
-  secondsToFrames
+  framesToTimecode
 } from '../utils/timeUtils'
 
 /**
@@ -27,12 +25,7 @@ export function createPlaybackModule(frameRate: { value: number }) {
     return framesToTimecode(currentFrame.value)
   })
 
-  /**
-   * 当前时间（秒）- 向后兼容
-   */
-  const currentTime = computed(() => {
-    return framesToSeconds(currentFrame.value)
-  })
+
 
   /**
    * 播放速度的显示文本
@@ -67,15 +60,7 @@ export function createPlaybackModule(frameRate: { value: number }) {
     }
   }
 
-  /**
-   * 设置当前播放时间（向后兼容）
-   * @param time 时间（秒）
-   * @param forceAlign 是否强制对齐到帧边界
-   */
-  function setCurrentTime(time: number, forceAlign: boolean = true) {
-    const frames = secondsToFrames(time)
-    setCurrentFrame(frames, forceAlign)
-  }
+
 
   /**
    * 跳转到指定帧数
@@ -86,14 +71,7 @@ export function createPlaybackModule(frameRate: { value: number }) {
     console.log('🎯 跳转到帧:', frames, `(${framesToTimecode(frames)})`)
   }
 
-  /**
-   * 跳转到指定时间（向后兼容）
-   * @param time 目标时间（秒）
-   */
-  function seekTo(time: number) {
-    setCurrentTime(time, true)
-    console.log('🎯 跳转到时间:', time)
-  }
+
 
   /**
    * 相对跳转（帧数）
@@ -110,14 +88,7 @@ export function createPlaybackModule(frameRate: { value: number }) {
     })
   }
 
-  /**
-   * 相对跳转（向后兼容）
-   * @param deltaTime 时间偏移量（秒，可为负数）
-   */
-  function seekBy(deltaTime: number) {
-    const deltaFrames = secondsToFrames(deltaTime)
-    seekByFrames(deltaFrames)
-  }
+
 
   /**
    * 跳转到下一帧
@@ -173,7 +144,7 @@ export function createPlaybackModule(frameRate: { value: number }) {
    */
   function stop() {
     setPlaying(false)
-    setCurrentTime(0)
+    setCurrentFrame(0)
     console.log('⏹️ 停止播放')
   }
 
@@ -211,7 +182,7 @@ export function createPlaybackModule(frameRate: { value: number }) {
    */
   function getPlaybackSummary() {
     return {
-      currentTime: currentTime.value,
+      currentFrame: currentFrame.value,
       formattedCurrentTime: formattedCurrentTime.value,
       isPlaying: isPlaying.value,
       playbackRate: playbackRate.value,
@@ -234,8 +205,7 @@ export function createPlaybackModule(frameRate: { value: number }) {
 
   return {
     // 状态
-    currentFrame, // 新增：当前帧数
-    currentTime, // 兼容：当前时间（秒）
+    currentFrame,
     isPlaying,
     playbackRate,
 
@@ -243,17 +213,12 @@ export function createPlaybackModule(frameRate: { value: number }) {
     formattedCurrentTime,
     playbackRateText,
 
-    // 帧数控制方法（新增）
+    // 帧数控制方法
     setCurrentFrame,
     seekToFrame,
     seekByFrames,
     nextFrame,
     previousFrame,
-
-    // 时间控制方法（兼容）
-    setCurrentTime,
-    seekTo,
-    seekBy,
 
     // 播放控制方法
     setPlaying,

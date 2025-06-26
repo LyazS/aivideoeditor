@@ -1,5 +1,8 @@
 import { generateCommandId } from '../../../utils/idGenerator'
-import { framesToSeconds, secondsToFrames } from '../../utils/timeUtils'
+import {
+  framesToMicroseconds,
+  framesToTimecode
+} from '../../utils/timeUtils'
 import type {
   SimpleCommand,
   TimelineItem,
@@ -524,13 +527,13 @@ export class DuplicateTimelineItemCommand implements SimpleCommand {
       timeRange: mediaItem.mediaType === 'video' && isVideoTimeRange(originalTimeRange) ? {
         clipStartTime: originalTimeRange.clipStartTime,
         clipEndTime: originalTimeRange.clipEndTime,
-        timelineStartTime: newTimelineStartTime,
-        timelineEndTime: newTimelineEndTime,
+        timelineStartTime: newTimelineStartTimeFrames,
+        timelineEndTime: newTimelineEndTimeFrames,
         effectiveDuration: originalTimeRange.effectiveDuration,
         playbackRate: originalTimeRange.playbackRate,
       } : isImageTimeRange(originalTimeRange) ? {
-        timelineStartTime: newTimelineStartTime,
-        timelineEndTime: newTimelineEndTime,
+        timelineStartTime: newTimelineStartTimeFrames,
+        timelineEndTime: newTimelineEndTimeFrames,
         displayDuration: originalTimeRange.displayDuration,
       } : originalTimeRange,
       x: this.originalTimelineItemData.x,
@@ -747,7 +750,7 @@ export class UpdateTransformCommand implements SimpleCommand {
       rotation?: number
       opacity?: number
       zIndex?: number
-      duration?: number // 时长（秒）
+      duration?: number // 时长（帧数）
       playbackRate?: number // 倍速
       volume?: number // 音量（0-1之间）
       isMuted?: boolean // 静音状态
@@ -760,7 +763,7 @@ export class UpdateTransformCommand implements SimpleCommand {
       rotation?: number
       opacity?: number
       zIndex?: number
-      duration?: number // 时长（秒）
+      duration?: number // 时长（帧数）
       playbackRate?: number // 倍速
       volume?: number // 音量（0-1之间）
       isMuted?: boolean // 静音状态
@@ -836,7 +839,7 @@ export class UpdateTransformCommand implements SimpleCommand {
     }
 
     if (this.newValues.duration !== undefined && this.oldValues.duration !== undefined) {
-      changes.push(`时长: ${this.oldValues.duration.toFixed(1)}s → ${this.newValues.duration.toFixed(1)}s`)
+      changes.push(`时长: ${framesToTimecode(this.oldValues.duration)} → ${framesToTimecode(this.newValues.duration)}`)
     }
 
     if (this.newValues.playbackRate !== undefined && this.oldValues.playbackRate !== undefined) {
@@ -1004,9 +1007,9 @@ export class UpdateTransformCommand implements SimpleCommand {
   /**
    * 更新时间轴项目的时长
    * @param timelineItemId 时间轴项目ID
-   * @param newDuration 新的时长（秒）
+   * @param newDurationFrames 新的时长（帧数）
    */
-  private updateTimelineItemDuration(timelineItemId: string, newDuration: number): void {
+  private updateTimelineItemDuration(timelineItemId: string, newDurationFrames: number): void {
     const timelineItem = this.timelineModule.getTimelineItem(timelineItemId)
     if (!timelineItem) return
 
@@ -1016,29 +1019,29 @@ export class UpdateTransformCommand implements SimpleCommand {
 
     if (!mediaItem) return
 
-    // 计算新的时间轴结束时间
-    const newTimelineEndTime = timeRange.timelineStartTime + newDuration * 1000000
+    // 直接使用帧数进行计算，timeRange中的时间已经是帧数
+    const timelineStartFrames = timeRange.timelineStartTime
+    const newTimelineEndFrames = timelineStartFrames + newDurationFrames
+    const newTimelineEndTime = framesToMicroseconds(newTimelineEndFrames)
 
     if (timelineItem.mediaType === 'video' && isVideoTimeRange(timeRange)) {
       // 对于视频，通过调整倍速来实现时长变化
-      const clipDuration = timeRange.clipEndTime - timeRange.clipStartTime
-      const newPlaybackRate = clipDuration / newDuration / 1000000
+      const clipDurationFrames = timeRange.clipEndTime - timeRange.clipStartTime
+      const newPlaybackRate = clipDurationFrames / newDurationFrames
 
       // 更新sprite的时间范围
       sprite.setTimeRange({
         clipStartTime: timeRange.clipStartTime || 0,
-        clipEndTime: timeRange.clipEndTime || mediaItem.duration * 1000000,
+        clipEndTime: timeRange.clipEndTime || mediaItem.duration,
         timelineStartTime: timeRange.timelineStartTime,
         timelineEndTime: newTimelineEndTime,
-        effectiveDuration: newDuration * 1000000,
-        playbackRate: newPlaybackRate,
       })
     } else if (timelineItem.mediaType === 'image') {
-      // 对于图片，直接更新显示时长
+      // 对于图片，直接更新显示时长（使用帧数）
       sprite.setTimeRange({
         timelineStartTime: timeRange.timelineStartTime,
         timelineEndTime: newTimelineEndTime,
-        displayDuration: newDuration * 1000000,
+        displayDuration: newDurationFrames,
       })
     }
 
@@ -1062,7 +1065,7 @@ export class SplitTimelineItemCommand implements SimpleCommand {
   constructor(
     private originalTimelineItemId: string,
     originalTimelineItem: TimelineItem, // 要分割的原始时间轴项目
-    private splitTime: number, // 分割时间点（秒）
+    private splitTimeFrames: number, // 分割时间点（帧数）
     private timelineModule: {
       addTimelineItem: (item: TimelineItem) => void
       removeTimelineItem: (id: string) => void
@@ -1079,7 +1082,7 @@ export class SplitTimelineItemCommand implements SimpleCommand {
     this.id = generateCommandId()
 
     const mediaItem = this.mediaModule.getMediaItem(originalTimelineItem.mediaItemId)
-    this.description = `分割时间轴项目: ${mediaItem?.name || '未知素材'} (在 ${splitTime.toFixed(2)}s)`
+    this.description = `分割时间轴项目: ${mediaItem?.name || '未知素材'} (在 ${framesToTimecode(splitTimeFrames)})`
 
     // 🎯 关键：保存原始项目的完整重建元数据
     this.originalTimelineItemData = {
@@ -1110,7 +1113,7 @@ export class SplitTimelineItemCommand implements SimpleCommand {
       originalId: this.originalTimelineItemData.id,
       mediaItemId: this.originalTimelineItemData.mediaItemId,
       mediaType: this.originalTimelineItemData.mediaType,
-      splitTime,
+      splitTimeFrames: this.splitTimeFrames,
       timeRange: this.originalTimelineItemData.timeRange,
       firstItemId: this.firstItemId,
       secondItemId: this.secondItemId,
@@ -1134,42 +1137,40 @@ export class SplitTimelineItemCommand implements SimpleCommand {
       throw new Error(`素材尚未解析完成或不是视频: ${mediaItem.name}`)
     }
 
-    // 2. 计算分割点的时间信息
+    // 2. 计算分割点的时间信息（直接使用帧数）
     const originalTimeRange = this.originalTimelineItemData.timeRange
     if (!isVideoTimeRange(originalTimeRange)) {
       throw new Error('只能分割视频项目')
     }
-    const timelineStartTimeFrames = originalTimeRange.timelineStartTime // 帧数
-    const timelineEndTimeFrames = originalTimeRange.timelineEndTime // 帧数
-    const clipStartTimeFrames = originalTimeRange.clipStartTime // 帧数
-    const clipEndTimeFrames = originalTimeRange.clipEndTime // 帧数
-    const timelineStartTime = framesToSeconds(timelineStartTimeFrames) // 转换为秒
-    const timelineEndTime = framesToSeconds(timelineEndTimeFrames) // 转换为秒
-    const clipStartTime = framesToSeconds(clipStartTimeFrames) // 转换为秒
-    const clipEndTime = framesToSeconds(clipEndTimeFrames) // 转换为秒
+    // originalTimeRange 中的时间已经是帧数
+    const timelineStartTimeFrames = originalTimeRange.timelineStartTime
+    const timelineEndTimeFrames = originalTimeRange.timelineEndTime
+    const clipStartTimeFrames = originalTimeRange.clipStartTime
+    const clipEndTimeFrames = originalTimeRange.clipEndTime
+    const splitTimeFrames = this.splitTimeFrames // 分割时间点（帧数）
 
-    // 计算分割点在素材中的相对位置
-    const timelineDuration = timelineEndTime - timelineStartTime
-    const relativeTimelineTime = this.splitTime - timelineStartTime
-    const relativeRatio = relativeTimelineTime / timelineDuration
-    const clipDuration = clipEndTime - clipStartTime
-    const splitClipTime = clipStartTime + clipDuration * relativeRatio
+    // 计算分割点在素材中的相对位置（使用帧数）
+    const timelineDurationFrames = timelineEndTimeFrames - timelineStartTimeFrames
+    const relativeTimelineFrames = splitTimeFrames - timelineStartTimeFrames
+    const relativeRatio = relativeTimelineFrames / timelineDurationFrames
+    const clipDurationFrames = clipEndTimeFrames - clipStartTimeFrames
+    const splitClipTimeFrames = clipStartTimeFrames + Math.round(clipDurationFrames * relativeRatio)
 
     // 3. 从原始素材重新创建两个sprite
     const firstSprite = await createSpriteFromMediaItem(mediaItem) as VideoVisibleSprite
     firstSprite.setTimeRange({
-      clipStartTime: clipStartTimeFrames, // 帧数
-      clipEndTime: secondsToFrames(splitClipTime), // 转换为帧数
-      timelineStartTime: timelineStartTimeFrames, // 帧数
-      timelineEndTime: secondsToFrames(this.splitTime), // 转换为帧数
+      clipStartTime: clipStartTimeFrames,
+      clipEndTime: splitClipTimeFrames,
+      timelineStartTime: timelineStartTimeFrames,
+      timelineEndTime: splitTimeFrames, // 分割点时间（帧数）
     })
 
     const secondSprite = await createSpriteFromMediaItem(mediaItem) as VideoVisibleSprite
     secondSprite.setTimeRange({
-      clipStartTime: secondsToFrames(splitClipTime), // 转换为帧数
-      clipEndTime: clipEndTimeFrames, // 帧数
-      timelineStartTime: secondsToFrames(this.splitTime), // 转换为帧数
-      timelineEndTime: timelineEndTimeFrames, // 帧数
+      clipStartTime: splitClipTimeFrames,
+      clipEndTime: clipEndTimeFrames,
+      timelineStartTime: splitTimeFrames, // 分割点时间（帧数）
+      timelineEndTime: timelineEndTimeFrames,
     })
 
     // 4. 应用变换属性到两个sprite
@@ -1231,7 +1232,7 @@ export class SplitTimelineItemCommand implements SimpleCommand {
     console.log('🔄 重建分割项目完成:', {
       firstItemId: firstItem.id,
       secondItemId: secondItem.id,
-      splitTime: this.splitTime,
+      splitTimeFrames: this.splitTimeFrames,
       firstTimeRange: firstItem.timeRange,
       secondTimeRange: secondItem.timeRange,
     })
@@ -1351,7 +1352,7 @@ export class SplitTimelineItemCommand implements SimpleCommand {
       this.webavModule.addSprite(secondItem.sprite)
 
       const mediaItem = this.mediaModule.getMediaItem(this.originalTimelineItemData.mediaItemId)
-      console.log(`🔪 已分割时间轴项目: ${mediaItem?.name || '未知素材'} 在 ${this.splitTime.toFixed(2)}s`)
+      console.log(`🔪 已分割时间轴项目: ${mediaItem?.name || '未知素材'} 在 ${framesToTimecode(this.splitTimeFrames)}`)
     } catch (error) {
       const mediaItem = this.mediaModule.getMediaItem(this.originalTimelineItemData.mediaItemId)
       console.error(`❌ 分割时间轴项目失败: ${mediaItem?.name || '未知素材'}`, error)
@@ -2037,34 +2038,32 @@ export class AutoArrangeTrackCommand implements SimpleCommand {
         return rangeA.timelineStartTime - rangeB.timelineStartTime
       })
 
-      let currentPosition = 0
+      let currentPositionFrames = 0
       for (const item of sortedItems) {
         const sprite = item.sprite
         const timeRange = sprite.getTimeRange()
-        const duration = (timeRange.timelineEndTime - timeRange.timelineStartTime) / 1000000 // 转换为秒
+        const durationFrames = timeRange.timelineEndTime - timeRange.timelineStartTime
 
-        // 更新时间轴位置 - 根据媒体类型设置不同的时间范围
+        // 更新时间轴位置 - 根据媒体类型设置不同的时间范围（使用帧数）
         if (item.mediaType === 'video' && isVideoTimeRange(timeRange)) {
           sprite.setTimeRange({
             clipStartTime: timeRange.clipStartTime,
             clipEndTime: timeRange.clipEndTime,
-            timelineStartTime: currentPosition * 1000000, // 转换为微秒
-            timelineEndTime: (currentPosition + duration) * 1000000,
-            effectiveDuration: timeRange.effectiveDuration,
-            playbackRate: timeRange.playbackRate,
+            timelineStartTime: currentPositionFrames,
+            timelineEndTime: currentPositionFrames + durationFrames,
           })
         } else {
           // 图片类型
           sprite.setTimeRange({
-            timelineStartTime: currentPosition * 1000000, // 转换为微秒
-            timelineEndTime: (currentPosition + duration) * 1000000,
-            displayDuration: duration * 1000000,
+            timelineStartTime: currentPositionFrames,
+            timelineEndTime: currentPositionFrames + durationFrames,
+            displayDuration: durationFrames,
           })
         }
 
         // 从sprite获取更新后的完整timeRange（包含自动计算的effectiveDuration）
         item.timeRange = sprite.getTimeRange()
-        currentPosition += duration
+        currentPositionFrames += durationFrames
       }
 
       const track = this.trackModule.getTrack(this.trackId)
@@ -2103,8 +2102,6 @@ export class AutoArrangeTrackCommand implements SimpleCommand {
             clipEndTime: currentTimeRange.clipEndTime,
             timelineStartTime: originalPosition.timelineStartTime,
             timelineEndTime: originalPosition.timelineEndTime,
-            effectiveDuration: currentTimeRange.effectiveDuration,
-            playbackRate: currentTimeRange.playbackRate,
           })
         } else {
           // 图片类型
@@ -2162,16 +2159,19 @@ export class ResizeTimelineItemCommand implements SimpleCommand {
     const timelineItem = this.timelineModule.getTimelineItem(timelineItemId)
     const mediaItem = timelineItem ? this.mediaModule.getMediaItem(timelineItem.mediaItemId) : null
 
-    const originalDuration = (this.originalTimeRange.timelineEndTime - this.originalTimeRange.timelineStartTime) / 1000000
-    const newDuration = (this.newTimeRange.timelineEndTime - this.newTimeRange.timelineStartTime) / 1000000
+    // 使用帧数计算时长，提供更精确的显示
+    const originalDurationFrames = this.originalTimeRange.timelineEndTime - this.originalTimeRange.timelineStartTime
+    const newDurationFrames = this.newTimeRange.timelineEndTime - this.newTimeRange.timelineStartTime
+    const originalStartFrames = this.originalTimeRange.timelineStartTime
+    const newStartFrames = this.newTimeRange.timelineStartTime
 
-    this.description = `调整时间范围: ${mediaItem?.name || '未知素材'} (${originalDuration.toFixed(2)}s → ${newDuration.toFixed(2)}s)`
+    this.description = `调整时间范围: ${mediaItem?.name || '未知素材'} (${framesToTimecode(originalDurationFrames)} → ${framesToTimecode(newDurationFrames)})`
 
     console.log(`📋 准备调整时间范围: ${mediaItem?.name || '未知素材'}`, {
-      原始时长: originalDuration.toFixed(2) + 's',
-      新时长: newDuration.toFixed(2) + 's',
-      原始位置: (this.originalTimeRange.timelineStartTime / 1000000).toFixed(2) + 's',
-      新位置: (this.newTimeRange.timelineStartTime / 1000000).toFixed(2) + 's',
+      原始时长: framesToTimecode(originalDurationFrames),
+      新时长: framesToTimecode(newDurationFrames),
+      原始位置: framesToTimecode(originalStartFrames),
+      新位置: framesToTimecode(newStartFrames),
     })
   }
 
@@ -2198,8 +2198,6 @@ export class ResizeTimelineItemCommand implements SimpleCommand {
         clipEndTime: timeRange.clipEndTime,
         timelineStartTime: timeRange.timelineStartTime,
         timelineEndTime: timeRange.timelineEndTime,
-        effectiveDuration: timeRange.effectiveDuration,
-        playbackRate: timeRange.playbackRate,
       })
     } else if (mediaItem.mediaType === 'image' && isImageTimeRange(timeRange)) {
       // 图片类型：设置displayDuration
@@ -2225,9 +2223,9 @@ export class ResizeTimelineItemCommand implements SimpleCommand {
 
       const timelineItem = this.timelineModule.getTimelineItem(this.timelineItemId)
       const mediaItem = timelineItem ? this.mediaModule.getMediaItem(timelineItem.mediaItemId) : null
-      const newDuration = (this.newTimeRange.timelineEndTime - this.newTimeRange.timelineStartTime) / 1000000
+      const newDurationFrames = this.newTimeRange.timelineEndTime - this.newTimeRange.timelineStartTime
 
-      console.log(`✅ 已调整时间范围: ${mediaItem?.name || '未知素材'} → ${newDuration.toFixed(2)}s`)
+      console.log(`✅ 已调整时间范围: ${mediaItem?.name || '未知素材'} → ${framesToTimecode(newDurationFrames)}`)
     } catch (error) {
       const timelineItem = this.timelineModule.getTimelineItem(this.timelineItemId)
       const mediaItem = timelineItem ? this.mediaModule.getMediaItem(timelineItem.mediaItemId) : null
@@ -2247,9 +2245,9 @@ export class ResizeTimelineItemCommand implements SimpleCommand {
 
       const timelineItem = this.timelineModule.getTimelineItem(this.timelineItemId)
       const mediaItem = timelineItem ? this.mediaModule.getMediaItem(timelineItem.mediaItemId) : null
-      const originalDuration = (this.originalTimeRange.timelineEndTime - this.originalTimeRange.timelineStartTime) / 1000000
+      const originalDurationFrames = this.originalTimeRange.timelineEndTime - this.originalTimeRange.timelineStartTime
 
-      console.log(`↩️ 已撤销调整时间范围: ${mediaItem?.name || '未知素材'} → ${originalDuration.toFixed(2)}s`)
+      console.log(`↩️ 已撤销调整时间范围: ${mediaItem?.name || '未知素材'} → ${framesToTimecode(originalDurationFrames)}`)
     } catch (error) {
       const timelineItem = this.timelineModule.getTimelineItem(this.timelineItemId)
       const mediaItem = timelineItem ? this.mediaModule.getMediaItem(timelineItem.mediaItemId) : null

@@ -81,7 +81,7 @@ export class VideoVisibleSprite extends VisibleSprite {
 
   /**
    * 设置素材内部的开始时间（从素材的哪个时间点开始播放）
-   * @param startTime 开始时间（微秒）
+   * @param startTime 开始时间（帧数）
    */
   public setClipStartTime(startTime: number): void {
     this.#timeRange.clipStartTime = startTime
@@ -90,7 +90,7 @@ export class VideoVisibleSprite extends VisibleSprite {
 
   /**
    * 设置素材内部的结束时间（播放到素材的哪个时间点结束）
-   * @param endTime 结束时间（微秒）
+   * @param endTime 结束时间（帧数）
    */
   public setClipEndTime(endTime: number): void {
     this.#timeRange.clipEndTime = endTime
@@ -99,7 +99,7 @@ export class VideoVisibleSprite extends VisibleSprite {
 
   /**
    * 获取素材内部的开始时间
-   * @returns 开始时间（微秒）
+   * @returns 开始时间（帧数）
    */
   public getClipStartTime(): number {
     return this.#timeRange.clipStartTime
@@ -107,7 +107,7 @@ export class VideoVisibleSprite extends VisibleSprite {
 
   /**
    * 获取素材内部的结束时间
-   * @returns 结束时间（微秒）
+   * @returns 结束时间（帧数）
    */
   public getClipEndTime(): number {
     return this.#timeRange.clipEndTime
@@ -115,7 +115,7 @@ export class VideoVisibleSprite extends VisibleSprite {
 
   /**
    * 设置在时间轴上的开始时间（素材在整个项目时间轴上的位置）
-   * @param startTime 时间轴开始时间（微秒）
+   * @param startTime 时间轴开始时间（帧数）
    */
   public setTimelineStartTime(startTime: number): void {
     this.#timeRange.timelineStartTime = startTime
@@ -124,7 +124,7 @@ export class VideoVisibleSprite extends VisibleSprite {
 
   /**
    * 设置在时间轴上的结束时间
-   * @param endTime 时间轴结束时间（微秒）
+   * @param endTime 时间轴结束时间（帧数）
    */
   public setTimelineEndTime(endTime: number): void {
     this.#timeRange.timelineEndTime = endTime
@@ -133,7 +133,7 @@ export class VideoVisibleSprite extends VisibleSprite {
 
   /**
    * 获取在时间轴上的开始时间
-   * @returns 时间轴开始时间（微秒）
+   * @returns 时间轴开始时间（帧数）
    */
   public getTimelineStartTime(): number {
     return this.#timeRange.timelineStartTime
@@ -141,7 +141,7 @@ export class VideoVisibleSprite extends VisibleSprite {
 
   /**
    * 获取在时间轴上的结束时间
-   * @returns 时间轴结束时间（微秒）
+   * @returns 时间轴结束时间（帧数）
    */
   public getTimelineEndTime(): number {
     return this.#timeRange.timelineEndTime
@@ -149,7 +149,7 @@ export class VideoVisibleSprite extends VisibleSprite {
 
   /**
    * 同时设置内部素材和时间轴的时间范围
-   * @param options 时间范围配置
+   * @param options 时间范围配置（所有时间参数都是帧数）
    */
   public setTimeRange(options: {
     clipStartTime?: number

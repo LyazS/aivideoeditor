@@ -1,4 +1,5 @@
 import type { MediaItem, TimelineItem } from '../../types'
+import { framesToTimecode } from './timeUtils'
 
 // ==================== 调试开关 ====================
 
@@ -73,7 +74,7 @@ export function printDebugInfo(
       id: item.id,
       mediaItemId: item.mediaItemId,
       trackId: item.trackId,
-      position: `${(item.timeRange.timelineStartTime / 1000000).toFixed(2)}s`,
+      position: framesToTimecode(item.timeRange.timelineStartTime), // timelineStartTime 已经是帧数，不需要转换
       hasSprite: !!item.sprite,
     })),
   )

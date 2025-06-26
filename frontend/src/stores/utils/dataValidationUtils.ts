@@ -57,7 +57,8 @@ export function validateDataIntegrity(
       for (let j = i + 1; j < trackItems.length; j++) {
         const overlap = calculateTimeRangeOverlap(trackItems[i].timeRange, trackItems[j].timeRange)
         if (overlap > 0) {
-          warnings.push(`轨道 ${trackId} 中发现重叠项目，重叠时长 ${overlap.toFixed(2)} 秒`)
+          const overlapSeconds = (overlap / 30).toFixed(2) // 将帧数转换为秒数显示
+          warnings.push(`轨道 ${trackId} 中发现重叠项目，重叠时长 ${overlapSeconds} 秒`)
         }
       }
     }

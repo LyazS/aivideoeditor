@@ -4,7 +4,7 @@
  */
 
 import type { Raw } from 'vue'
-import type { MP4Clip, ImgClip, Rect, VisibleSprite } from '@webav/av-cliper'
+import type { MP4Clip, ImgClip, Rect } from '@webav/av-cliper'
 
 // ==================== 基础类型定义 ====================
 
@@ -52,37 +52,7 @@ export interface ImageTimeRange {
   displayDuration: number
 }
 
-/**
- * WebAV兼容的视频时间范围接口（微秒版本）
- * 仅在WebAV边界处使用，用于与WebAV API的兼容
- */
-export interface WebAVVideoTimeRange {
-  /** 素材内部开始时间（微秒） - 从素材的哪个时间点开始播放 */
-  clipStartTime: number
-  /** 素材内部结束时间（微秒） - 播放到素材的哪个时间点结束 */
-  clipEndTime: number
-  /** 时间轴开始时间（微秒） - 素材在整个项目时间轴上的开始位置 */
-  timelineStartTime: number
-  /** 时间轴结束时间（微秒） - 素材在整个项目时间轴上的结束位置 */
-  timelineEndTime: number
-  /** 有效播放时长（微秒） - 在时间轴上占用的时长，如果与素材内部时长不同则表示变速 */
-  effectiveDuration: number
-  /** 播放速度倍率 - 1.0为正常速度，2.0为2倍速，0.5为0.5倍速 */
-  playbackRate: number
-}
 
-/**
- * WebAV兼容的图片时间范围接口（微秒版本）
- * 仅在WebAV边界处使用，用于与WebAV API的兼容
- */
-export interface WebAVImageTimeRange {
-  /** 时间轴开始时间（微秒） - 图片在整个项目时间轴上的开始位置 */
-  timelineStartTime: number
-  /** 时间轴结束时间（微秒） - 图片在整个项目时间轴上的结束位置 */
-  timelineEndTime: number
-  /** 显示时长（微秒） - 图片在时间轴上显示的时长 */
-  displayDuration: number
-}
 
 /**
  * 音频状态接口
@@ -125,7 +95,7 @@ export interface TimelineItem {
   trackId: number
   mediaType: MediaType
   timeRange: VideoTimeRange | ImageTimeRange // 时间范围信息（视频包含倍速，图片不包含）
-  sprite: Raw<VisibleSprite> // 视频或图片sprite
+  sprite: Raw<CustomSprite> // 自定义的视频或图片sprite
   thumbnailUrl?: string // 时间轴clip的缩略图URL
   // Sprite位置和大小属性（响应式）
   x: number
@@ -204,7 +174,7 @@ export interface CanvasBackup {
     isMuted: boolean
     thumbnailUrl: string
   }>
-  currentTime: number // 当前播放时间（帧数）
+  currentFrame: number // 当前播放帧数
   isPlaying: boolean
 }
 
@@ -425,61 +395,7 @@ export const DEBUG_GROUPS = {
   },
 } as const
 
-// ==================== 时间范围转换函数 ====================
 
-/**
- * 将帧数版本的视频时间范围转换为WebAV兼容的微秒版本
- */
-export function videoTimeRangeToWebAV(frameRange: VideoTimeRange): WebAVVideoTimeRange {
-  const FRAME_RATE = 30
-  return {
-    clipStartTime: Math.round((frameRange.clipStartTime / FRAME_RATE) * 1_000_000),
-    clipEndTime: Math.round((frameRange.clipEndTime / FRAME_RATE) * 1_000_000),
-    timelineStartTime: Math.round((frameRange.timelineStartTime / FRAME_RATE) * 1_000_000),
-    timelineEndTime: Math.round((frameRange.timelineEndTime / FRAME_RATE) * 1_000_000),
-    effectiveDuration: Math.round((frameRange.effectiveDuration / FRAME_RATE) * 1_000_000),
-    playbackRate: frameRange.playbackRate
-  }
-}
-
-/**
- * 将WebAV的微秒版本视频时间范围转换为帧数版本
- */
-export function videoTimeRangeFromWebAV(webavRange: WebAVVideoTimeRange): VideoTimeRange {
-  const FRAME_RATE = 30
-  return {
-    clipStartTime: Math.floor((webavRange.clipStartTime / 1_000_000) * FRAME_RATE),
-    clipEndTime: Math.floor((webavRange.clipEndTime / 1_000_000) * FRAME_RATE),
-    timelineStartTime: Math.floor((webavRange.timelineStartTime / 1_000_000) * FRAME_RATE),
-    timelineEndTime: Math.floor((webavRange.timelineEndTime / 1_000_000) * FRAME_RATE),
-    effectiveDuration: Math.floor((webavRange.effectiveDuration / 1_000_000) * FRAME_RATE),
-    playbackRate: webavRange.playbackRate
-  }
-}
-
-/**
- * 将帧数版本的图片时间范围转换为WebAV兼容的微秒版本
- */
-export function imageTimeRangeToWebAV(frameRange: ImageTimeRange): WebAVImageTimeRange {
-  const FRAME_RATE = 30
-  return {
-    timelineStartTime: Math.round((frameRange.timelineStartTime / FRAME_RATE) * 1_000_000),
-    timelineEndTime: Math.round((frameRange.timelineEndTime / FRAME_RATE) * 1_000_000),
-    displayDuration: Math.round((frameRange.displayDuration / FRAME_RATE) * 1_000_000)
-  }
-}
-
-/**
- * 将WebAV的微秒版本图片时间范围转换为帧数版本
- */
-export function imageTimeRangeFromWebAV(webavRange: WebAVImageTimeRange): ImageTimeRange {
-  const FRAME_RATE = 30
-  return {
-    timelineStartTime: Math.floor((webavRange.timelineStartTime / 1_000_000) * FRAME_RATE),
-    timelineEndTime: Math.floor((webavRange.timelineEndTime / 1_000_000) * FRAME_RATE),
-    displayDuration: Math.floor((webavRange.displayDuration / 1_000_000) * FRAME_RATE)
-  }
-}
 
 // ==================== 类型守卫函数 ====================
 
@@ -519,16 +435,14 @@ export function isImageTimelineItem(item: TimelineItem): item is TimelineItem & 
   return item.mediaType === 'image' && isImageTimeRange(item.timeRange)
 }
 
-// ==================== 类型声明扩展 ====================
+// ==================== 自定义 Sprite 类型 ====================
+
+// 导入我们的自定义 Sprite 类
+import type { VideoVisibleSprite } from '../utils/VideoVisibleSprite'
+import type { ImageVisibleSprite } from '../utils/ImageVisibleSprite'
 
 /**
- * 扩展 WebAV 的 VisibleSprite 类型
- * 添加我们自定义的方法签名
- * 注意：这些方法在我们的实现中返回帧数版本，但在WebAV边界处进行转换
+ * 自定义 Sprite 联合类型
+ * 表示我们扩展的 VideoVisibleSprite 或 ImageVisibleSprite
  */
-declare module '@webav/av-cliper' {
-  interface VisibleSprite {
-    getTimeRange(): VideoTimeRange | ImageTimeRange
-    setTimeRange(timeRange: VideoTimeRange | ImageTimeRange): void
-  }
-}
+export type CustomSprite = VideoVisibleSprite | ImageVisibleSprite

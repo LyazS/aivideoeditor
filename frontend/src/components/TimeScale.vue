@@ -36,8 +36,6 @@ import { usePlaybackControls } from '../composables/usePlaybackControls'
 import { calculateVisibleFrameRange } from '../stores/utils/coordinateUtils'
 import {
   framesToTimecode,
-  secondsToFrames,
-  framesToSeconds,
   alignFramesToFrame
 } from '../stores/utils/timeUtils'
 import type { TimeMark } from '../types'
@@ -104,7 +102,7 @@ const timeMarks = computed((): TimeMark[] => {
   }
 
   // 计算可见帧数范围
-  const maxVisibleDurationFrames = videoStore.maxVisibleDuration ? secondsToFrames(videoStore.maxVisibleDuration) : undefined
+  const maxVisibleDurationFrames = videoStore.maxVisibleDurationFrames
   const { startFrames, endFrames } = calculateVisibleFrameRange(
     containerWidth.value,
     durationFrames,
@@ -142,7 +140,7 @@ const timeMarks = computed((): TimeMark[] => {
 
     // 只添加在可见范围内的刻度
     if (position >= -50 && position <= containerWidth.value + 50) {
-      // 直接使用帧数（不再转换为秒数）
+      // 直接使用帧数
       marks.push({
         time: frames, // 帧数
         position,

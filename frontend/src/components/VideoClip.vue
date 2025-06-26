@@ -108,10 +108,10 @@ import { getDragPreviewManager } from '../composables/useDragPreview'
 import {
   framesToTimecode,
   framesToMicroseconds,
-  alignFramesToFrame,
-  secondsToFrames
+  alignFramesToFrame
 } from '../stores/utils/timeUtils'
-import type { TimelineItem, Track } from '../types'
+import type { TimelineItem, Track, VideoTimeRange, ImageTimeRange } from '../types'
+import { isVideoTimeRange } from '../types'
 
 interface Props {
   timelineItem: TimelineItem
@@ -253,11 +253,7 @@ const isTrackVisible = computed(() => {
   return track ? track.isVisible : true
 })
 
-function formatDuration(seconds: number): string {
-  // 使用标准转换函数而不是手动计算
-  const frames = secondsToFrames(seconds)
-  return framesToTimecode(frames)
-}
+
 
 function formatDurationFromFrames(frames: number): string {
   // 直接使用帧数格式化为时间码
@@ -521,13 +517,25 @@ async function stopResize() {
       // 构建新的时间范围对象（帧数版本）
       // 🔧 关键修复：保持原有的clipStartTime和clipEndTime，只更新timeline时间
       const currentTimeRange = props.timelineItem.timeRange
-      const newTimeRange = {
-        timelineStartTime: newTimelineStartTimeFrames, // 帧数
-        timelineEndTime: newTimelineEndTimeFrames, // 帧数
-        clipStartTime: currentTimeRange.clipStartTime, // 保持原有的素材开始时间
-        clipEndTime: currentTimeRange.clipEndTime, // 保持原有的素材结束时间
-        effectiveDuration: newTimelineEndTimeFrames - newTimelineStartTimeFrames, // 帧数
-        playbackRate: currentTimeRange.playbackRate || 1.0, // 保持原有的播放速度
+
+      let newTimeRange: VideoTimeRange | ImageTimeRange
+
+      if (props.timelineItem.mediaType === 'video' && isVideoTimeRange(currentTimeRange)) {
+        newTimeRange = {
+          timelineStartTime: newTimelineStartTimeFrames, // 帧数
+          timelineEndTime: newTimelineEndTimeFrames, // 帧数
+          clipStartTime: currentTimeRange.clipStartTime, // 保持原有的素材开始时间
+          clipEndTime: currentTimeRange.clipEndTime, // 保持原有的素材结束时间
+          effectiveDuration: newTimelineEndTimeFrames - newTimelineStartTimeFrames, // 帧数
+          playbackRate: currentTimeRange.playbackRate || 1.0, // 保持原有的播放速度
+        }
+      } else {
+        // 图片类型
+        newTimeRange = {
+          timelineStartTime: newTimelineStartTimeFrames, // 帧数
+          timelineEndTime: newTimelineEndTimeFrames, // 帧数
+          displayDuration: newTimelineEndTimeFrames - newTimelineStartTimeFrames, // 帧数
+        }
       }
 
       try {

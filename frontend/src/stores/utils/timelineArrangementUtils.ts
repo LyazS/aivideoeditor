@@ -1,7 +1,6 @@
 import type { Ref } from 'vue'
 import type { TimelineItem } from '../../types'
 import { isVideoTimeRange } from '../../types'
-import { framesToSeconds, secondsToFrames } from './timeUtils'
 
 // ==================== 自动整理工具 ====================
 
@@ -26,36 +25,31 @@ export function autoArrangeTrackItems(timelineItems: Ref<TimelineItem[]>, trackI
     return rangeA.timelineStartTime - rangeB.timelineStartTime
   })
 
-  let currentPosition = 0
+  let currentPositionFrames = 0
   for (const item of sortedItems) {
     const sprite = item.sprite
     const timeRange = sprite.getTimeRange()
-    // 注意：timeRange 中的时间是帧数，currentPosition 是秒数
+    // 使用帧数进行所有计算
     const durationFrames = timeRange.timelineEndTime - timeRange.timelineStartTime // 帧数
-    const duration = framesToSeconds(durationFrames) // 转换为秒数
 
     // 更新时间轴位置 - 根据媒体类型设置不同的时间范围
-    const currentPositionFrames = secondsToFrames(currentPosition) // 转换为帧数
     if (item.mediaType === 'video' && isVideoTimeRange(timeRange)) {
       sprite.setTimeRange({
         clipStartTime: timeRange.clipStartTime,
         clipEndTime: timeRange.clipEndTime,
         timelineStartTime: currentPositionFrames, // 帧数
         timelineEndTime: currentPositionFrames + durationFrames, // 帧数
-        effectiveDuration: timeRange.effectiveDuration,
-        playbackRate: timeRange.playbackRate,
       })
     } else {
       // 图片类型
       sprite.setTimeRange({
         timelineStartTime: currentPositionFrames, // 帧数
         timelineEndTime: currentPositionFrames + durationFrames, // 帧数
-        displayDuration: durationFrames, // 帧数
       })
     }
     // 从sprite获取更新后的完整timeRange（包含自动计算的effectiveDuration）
     item.timeRange = sprite.getTimeRange()
-    currentPosition += duration
+    currentPositionFrames += durationFrames
   }
 
   console.log(`✅ 轨道 ${trackId} 的片段自动整理完成，共整理 ${sortedItems.length} 个片段`)

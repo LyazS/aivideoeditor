@@ -155,7 +155,7 @@
           :key="line.time"
           class="grid-line"
           :class="{ 'frame-line': line.isFrame }"
-          :style="{ left: 200 + videoStore.frameToPixel(line.time * 30, timelineWidth) + 'px' }"
+          :style="{ left: 200 + videoStore.frameToPixel(line.time, timelineWidth) + 'px' }"
         ></div>
       </div>
     </div>
@@ -358,8 +358,7 @@ const gridLines = computed(() => {
 
   for (let i = startLineFrames; i <= Math.min(endLineFrames, totalDurationFrames); i += intervalFrames) {
     if (i >= 0) {
-      const timeInSeconds = i / videoStore.frameRate // 转换为秒数用于显示
-      lines.push({ time: timeInSeconds, isFrame: false })
+      lines.push({ time: i, isFrame: false }) // 直接使用帧数
     }
   }
 
@@ -375,8 +374,7 @@ const gridLines = computed(() => {
     ) {
       if (i >= 0 && Math.abs(i % intervalFrames) > 0.5) {
         // 避免与主网格线重复（使用帧数容差）
-        const timeInSeconds = i / videoStore.frameRate // 转换为秒数用于显示
-        lines.push({ time: timeInSeconds, isFrame: true })
+        lines.push({ time: i, isFrame: true }) // 直接使用帧数
       }
     }
   }

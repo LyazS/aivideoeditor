@@ -1,6 +1,5 @@
 import { generateCommandId } from '../../../utils/idGenerator'
 import { BaseBatchCommand } from '../historyModule'
-import { framesToSeconds, secondsToFrames } from '../../utils/timeUtils'
 import type { SimpleCommand, TimelineItem, MediaItem, Track } from '../../../types'
 import {
   RemoveTimelineItemCommand,
@@ -98,16 +97,14 @@ export class BatchAutoArrangeTrackCommand extends BaseBatchCommand {
       return rangeA.timelineStartTime - rangeB.timelineStartTime
     })
 
-    let currentPosition = 0
+    let currentPositionFrames = 0
     for (const item of sortedItems) {
       const sprite = item.sprite
       const timeRange = sprite.getTimeRange()
-      // 注意：timeRange 中的时间是帧数，currentPosition 是秒数
+      // 使用帧数进行所有计算
       const durationFrames = timeRange.timelineEndTime - timeRange.timelineStartTime // 帧数
-      const duration = framesToSeconds(durationFrames) // 转换为秒数
 
       // 计算新的时间范围（使用帧数）
-      const currentPositionFrames = secondsToFrames(currentPosition) // 转换为帧数
       const newTimeRange = {
         ...timeRange,
         timelineStartTime: currentPositionFrames, // 帧数
@@ -135,7 +132,7 @@ export class BatchAutoArrangeTrackCommand extends BaseBatchCommand {
         this.addCommand(moveCommand)
       }
 
-      currentPosition += duration
+      currentPositionFrames += durationFrames
     }
 
     const track = this.trackModule.getTrack(this.trackId)

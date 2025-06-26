@@ -157,7 +157,7 @@ export class ImageVisibleSprite extends VisibleSprite {
 
     // 检查时间范围的一致性
     const calculatedDuration = timelineEndTime - timelineStartTime
-    if (Math.abs(calculatedDuration - displayDuration) > 1) return false // 允许1微秒的误差
+    if (Math.abs(calculatedDuration - displayDuration) > 1) return false // 允许1帧的误差
 
     return true
   }

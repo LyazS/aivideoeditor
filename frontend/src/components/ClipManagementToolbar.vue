@@ -81,7 +81,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useVideoStore } from '../stores/videoStore'
-import { formatFileSize } from '../stores/utils/timeUtils'
+import { formatFileSize, framesToSeconds } from '../stores/utils/timeUtils'
 import type { TimelineItem } from '../types'
 import { isVideoTimeRange } from '../types'
 
@@ -138,21 +138,21 @@ async function splitSelectedClip() {
     console.log(
       `🔪 开始裁剪时间轴项目: ${mediaItem?.name || '未知'} (ID: ${videoStore.selectedTimelineItemId})`,
     )
-    console.log(`📍 裁剪时间位置: ${videoStore.currentTime.toFixed(2)}s`)
+    console.log(`📍 裁剪时间位置: ${videoStore.currentFrame}帧 (${videoStore.formattedCurrentTime})`)
 
     try {
-      // 使用带历史记录的分割方法
+      // 使用带历史记录的分割方法（传入帧数）
       await videoStore.splitTimelineItemAtTimeWithHistory(
         videoStore.selectedTimelineItemId,
-        videoStore.currentTime,
+        videoStore.currentFrame,
       )
       console.log('✅ 时间轴项目分割成功')
     } catch (error) {
       console.error('❌ 分割时间轴项目失败:', error)
-      // 如果历史记录分割失败，回退到直接分割
+      // 如果历史记录分割失败，回退到直接分割（传入帧数）
       await videoStore.splitTimelineItemAtTime(
         videoStore.selectedTimelineItemId,
-        videoStore.currentTime,
+        videoStore.currentFrame,
       )
     }
   }
@@ -219,7 +219,7 @@ function debugTimeline() {
   console.group('📊 基本配置')
   console.log('总时长 (帧):', videoStore.totalDurationFrames)
   console.log('内容结束时间 (帧):', videoStore.contentEndTimeFrames)
-  console.log('当前播放时间 (秒):', videoStore.currentTime)
+  console.log(`当前播放时间 ${framesToSeconds(videoStore.currentFrame)}秒 (${videoStore.currentFrame}帧)` )
   console.log('播放状态:', videoStore.isPlaying ? '播放中' : '已暂停')
   console.log('播放速度:', videoStore.playbackRate + 'x')
   console.groupEnd()

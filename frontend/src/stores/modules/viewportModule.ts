@@ -8,7 +8,6 @@ import {
   calculateContentEndTimeFrames,
   calculateMaxVisibleDurationFrames,
 } from '../utils/durationUtils'
-// 移除秒数转换导入，全部使用帧数
 import type { TimelineItem } from '../../types'
 
 /**
@@ -169,13 +168,13 @@ export function createViewportModule(
   }
 
   /**
-   * 滚动到指定时间位置
-   * @param time 目标时间（秒）
+   * 滚动到指定帧数位置
+   * @param frames 目标帧数
    * @param timelineWidth 时间轴宽度（像素）
    */
-  function scrollToTime(time: number, timelineWidth: number = 800) {
-    const pixelsPerSecond = (timelineWidth * zoomLevel.value) / totalDuration.value
-    const targetOffset = time * pixelsPerSecond - timelineWidth / 2 // 居中显示
+  function scrollToFrame(frames: number, timelineWidth: number = 800) {
+    const pixelsPerFrame = (timelineWidth * zoomLevel.value) / totalDurationFrames.value
+    const targetOffset = frames * pixelsPerFrame - timelineWidth / 2 // 居中显示
     setScrollOffset(targetOffset, timelineWidth)
   }
 
@@ -225,7 +224,7 @@ export function createViewportModule(
     zoomOut,
     scrollLeft,
     scrollRight,
-    scrollToTime,
+    scrollToFrame,
     resetViewport,
     getViewportSummary,
   }

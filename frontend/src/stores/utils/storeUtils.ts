@@ -19,14 +19,15 @@ export {
   pixelToFrame,
 } from './coordinateUtils'
 
-// 查找工具
+// 查找工具（帧数版本优先）
 export {
-  getTimelineItemAtTime,
+  getTimelineItemAtFrames,
+  getTimelineItemsAtFrames,
+  getTimelineItemAtTrackAndFrames,
   getTimelineItemsByTrack,
   findOrphanedTimelineItems,
   findTimelineItemBySprite,
-  getTimelineItemsAtTime,
-  getTimelineItemAtTrackAndTime,
+
 } from './timelineSearchUtils'
 
 // 自动整理工具

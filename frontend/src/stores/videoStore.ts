@@ -3,7 +3,7 @@ import { defineStore } from 'pinia'
 import { VideoVisibleSprite } from '../utils/VideoVisibleSprite'
 import {
   expandTimelineIfNeededFrames,
-  getTimelineItemAtTime,
+
   autoArrangeTimelineItems,
   autoArrangeTrackItems,
   calculateTotalDurationFrames,
@@ -11,7 +11,8 @@ import {
   getTimelineItemsByTrack,
 } from './utils/storeUtils'
 import { frameToPixel, pixelToFrame } from './utils/coordinateUtils'
-import { secondsToFrames, framesToSeconds } from './utils/timeUtils'
+import { microsecondsToFrames, secondsToFrames } from './utils/timeUtils'
+import { getTimelineItemAtFrames } from './utils/timelineSearchUtils'
 import { createMediaModule } from './modules/mediaModule'
 import { createConfigModule } from './modules/configModule'
 import { createTrackModule } from './modules/trackModule'
@@ -23,9 +24,9 @@ import { createTimelineModule } from './modules/timelineModule'
 import { createClipOperationsModule } from './modules/clipOperationsModule'
 import { createHistoryModule } from './modules/historyModule'
 import { createNotificationModule } from './modules/notificationModule'
-import { AddTimelineItemCommand, RemoveTimelineItemCommand, MoveTimelineItemCommand, UpdateTransformCommand, SplitTimelineItemCommand, DuplicateTimelineItemCommand, AddTrackCommand, RemoveTrackCommand, RenameTrackCommand, AutoArrangeTrackCommand, ToggleTrackVisibilityCommand, ToggleTrackMuteCommand, ResizeTimelineItemCommand } from './modules/commands/timelineCommands'
-import { BatchDeleteCommand, BatchAutoArrangeTrackCommand, BatchUpdatePropertiesCommand } from './modules/commands/batchCommands'
-import type { MediaItem, TimelineItem, TransformData, VideoTimeRange, PropertyType } from '../types'
+import { AddTimelineItemCommand, RemoveTimelineItemCommand, MoveTimelineItemCommand, UpdateTransformCommand, SplitTimelineItemCommand, DuplicateTimelineItemCommand, AddTrackCommand, RemoveTrackCommand, RenameTrackCommand, ToggleTrackVisibilityCommand, ToggleTrackMuteCommand, ResizeTimelineItemCommand } from './modules/commands/timelineCommands'
+import { BatchDeleteCommand, BatchAutoArrangeTrackCommand } from './modules/commands/batchCommands'
+import type { MediaItem, TimelineItem, TransformData, VideoTimeRange, ImageTimeRange, PropertyType } from '../types'
 
 export const useVideoStore = defineStore('video', () => {
   // 创建媒体管理模块
@@ -212,7 +213,7 @@ export const useVideoStore = defineStore('video', () => {
       rotation?: number
       opacity?: number
       zIndex?: number
-      duration?: number // 时长（秒）
+      duration?: number // 时长（帧数）
       playbackRate?: number // 倍速
       volume?: number // 音量（0-1之间）
       isMuted?: boolean // 静音状态
@@ -255,10 +256,10 @@ export const useVideoStore = defineStore('video', () => {
     }
 
     if (newTransform.duration !== undefined) {
-      // 计算当前时长
+      // 计算当前时长（帧数）
       const timeRange = timelineItem.timeRange
-      const currentDuration = (timeRange.timelineEndTime - timeRange.timelineStartTime) / 1000000 // 转换为秒
-      oldTransform.duration = currentDuration
+      const currentDurationFrames = microsecondsToFrames(timeRange.timelineEndTime - timeRange.timelineStartTime)
+      oldTransform.duration = currentDurationFrames
     }
 
     if (newTransform.playbackRate !== undefined) {
@@ -416,11 +417,11 @@ export const useVideoStore = defineStore('video', () => {
   /**
    * 带历史记录的分割时间轴项目方法
    * @param timelineItemId 要分割的时间轴项目ID
-   * @param splitTime 分割时间点（秒）
+   * @param splitTimeFrames 分割时间点（帧数）
    */
   async function splitTimelineItemAtTimeWithHistory(
     timelineItemId: string,
-    splitTime: number
+    splitTimeFrames: number
   ) {
     // 获取要分割的时间轴项目
     const timelineItem = timelineModule.getTimelineItem(timelineItemId)
@@ -435,21 +436,20 @@ export const useVideoStore = defineStore('video', () => {
       return
     }
 
-    // 检查分割时间是否在项目范围内
+    // 检查分割时间是否在项目范围内（使用帧数）
     const timelineStartTimeFrames = timelineItem.timeRange.timelineStartTime // 帧数
     const timelineEndTimeFrames = timelineItem.timeRange.timelineEndTime // 帧数
-    const timelineStartTime = framesToSeconds(timelineStartTimeFrames) // 转换为秒
-    const timelineEndTime = framesToSeconds(timelineEndTimeFrames) // 转换为秒
 
-    if (splitTime <= timelineStartTime || splitTime >= timelineEndTime) {
+    if (splitTimeFrames <= timelineStartTimeFrames || splitTimeFrames >= timelineEndTimeFrames) {
       console.error('❌ 分割时间不在项目范围内')
       return
     }
 
+    // 直接传递帧数给命令（避免不必要的转换）
     const command = new SplitTimelineItemCommand(
       timelineItemId,
       timelineItem, // 传入完整的timelineItem用于保存重建数据
-      splitTime,
+      splitTimeFrames,
       {
         addTimelineItem: timelineModule.addTimelineItem,
         removeTimelineItem: timelineModule.removeTimelineItem,
@@ -755,7 +755,7 @@ export const useVideoStore = defineStore('video', () => {
 
   async function resizeTimelineItemWithHistory(
     timelineItemId: string,
-    newTimeRange: VideoTimeRange
+    newTimeRange: VideoTimeRange | ImageTimeRange
   ): Promise<boolean> {
     // 获取时间轴项目
     const timelineItem = timelineModule.getTimelineItem(timelineItemId)
@@ -894,7 +894,7 @@ export const useVideoStore = defineStore('video', () => {
     mediaItems: mediaModule.mediaItems,
     timelineItems: timelineModule.timelineItems,
     tracks: trackModule.tracks,
-    currentTime: playbackModule.currentTime,
+    currentFrame: playbackModule.currentFrame,
     isPlaying: playbackModule.isPlaying,
     timelineDurationFrames: configModule.timelineDurationFrames,
     totalDurationFrames,
@@ -914,7 +914,7 @@ export const useVideoStore = defineStore('video', () => {
     visibleDurationFrames: viewportModule.visibleDurationFrames,
     maxVisibleDurationFrames: viewportModule.maxVisibleDurationFrames,
     getMaxZoomLevel: (timelineWidth: number) =>
-      viewportModule.getMaxZoomLevelForTimeline(timelineWidth, configModule.frameRate.value),
+      viewportModule.getMaxZoomLevelForTimeline(timelineWidth),
     getMaxScrollOffset: viewportModule.getMaxScrollOffsetForTimeline,
     // 素材管理方法
     addMediaItem,
@@ -957,13 +957,13 @@ export const useVideoStore = defineStore('video', () => {
     duplicateTimelineItem: clipOperationsModule.duplicateTimelineItem,
     splitTimelineItemAtTime: clipOperationsModule.splitTimelineItemAtTime,
     updateTimelineItemPlaybackRate: clipOperationsModule.updateTimelineItemPlaybackRate,
-    getTimelineItemAtTime: (time: number) =>
-      getTimelineItemAtTime(time, timelineModule.timelineItems.value),
+    getTimelineItemAtTime: (time: number) => {
+      const frames = secondsToFrames(time)
+      return getTimelineItemAtFrames(frames, timelineModule.timelineItems.value)
+    },
     autoArrangeTimelineItems: () => autoArrangeTimelineItems(timelineModule.timelineItems),
     autoArrangeTrackItems: (trackId: number) => autoArrangeTrackItems(timelineModule.timelineItems, trackId),
     // 播放控制方法
-    // 帧数控制方法
-    currentFrame: playbackModule.currentFrame,
     setCurrentFrame: playbackModule.setCurrentFrame,
     seekToFrame: playbackModule.seekToFrame,
     seekByFrames: playbackModule.seekByFrames,
@@ -1001,7 +1001,7 @@ export const useVideoStore = defineStore('video', () => {
       viewportModule.zoomOut(factor, timelineWidth, configModule.frameRate.value),
     scrollLeft: viewportModule.scrollLeft,
     scrollRight: viewportModule.scrollRight,
-    scrollToTime: viewportModule.scrollToTime,
+    scrollToFrame: viewportModule.scrollToFrame,
     resetViewport: viewportModule.resetViewport,
     getViewportSummary: viewportModule.getViewportSummary,
 

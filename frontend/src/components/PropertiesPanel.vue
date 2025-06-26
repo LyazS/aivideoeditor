@@ -426,10 +426,7 @@ import { isVideoTimeRange } from '../types'
 import { uiDegreesToWebAVRadians, webAVRadiansToUIDegrees } from '../utils/rotationTransform'
 import {
   framesToTimecode,
-  timecodeToFrames,
-  framesToMicroseconds,
-  secondsToFrames,
-  framesToSeconds
+  timecodeToFrames
 } from '../stores/utils/timeUtils'
 import NumberInput from './NumberInput.vue'
 
@@ -683,7 +680,6 @@ const updateTargetDurationFrames = async (newDurationFrames: number) => {
         clipEndTime: timeRange.clipEndTime,
         timelineStartTime: timeRange.timelineStartTime,
         timelineEndTime: newTimelineEndTime,
-        playbackRate: timeRange.playbackRate,
       })
     }
   } else if (selectedTimelineItem.value.mediaType === 'image') {

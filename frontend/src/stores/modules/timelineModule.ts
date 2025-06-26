@@ -3,7 +3,7 @@ import { VideoVisibleSprite } from '../../utils/VideoVisibleSprite'
 import { ImageVisibleSprite } from '../../utils/ImageVisibleSprite'
 import { webavToProjectCoords, projectToWebavCoords } from '../../utils/coordinateTransform'
 import { printDebugInfo, syncTimeRange } from '../utils/storeUtils'
-import { framesToSeconds, secondsToFrames } from '../utils/timeUtils'
+import { microsecondsToFrames } from '../utils/timeUtils'
 import type {
   TimelineItem,
   MediaItem,
@@ -170,7 +170,7 @@ export function createTimelineModule(
           mediaItemId: item.mediaItemId,
           mediaItemName: mediaItem?.name || '未知',
           trackId: item.trackId,
-          position: item.timeRange.timelineStartTime / 1000000,
+          position: item.timeRange.timelineStartTime / 30, // timelineStartTime 是帧数，除以30得到秒数
         },
         mediaModule.mediaItems.value,
         timelineItems.value,
@@ -281,7 +281,7 @@ export function createTimelineModule(
           timelineItemId,
           mediaItemName: mediaItem?.name || '未知',
           trackId: item.trackId,
-          position: item.timeRange.timelineStartTime / 1000000,
+          position: microsecondsToFrames(item.timeRange.timelineStartTime),
         },
         mediaModule.mediaItems.value,
         timelineItems.value,

@@ -8,8 +8,7 @@ import { useVideoStore } from '../stores/videoStore'
 import {
   framesToMicroseconds,
   microsecondsToFrames,
-  framesToTimecode,
-  secondsToFrames
+  framesToTimecode
 } from '../stores/utils/timeUtils'
 import {
   logWebAVInitStart,
@@ -378,14 +377,7 @@ export function useWebAVControls() {
     globalAVCanvas.play(playOptions)
   }
 
-  /**
-   * 播放控制（向后兼容的秒数接口）
-   */
-  const playSeconds = (startTime?: number, endTime?: number): void => {
-    const startFrames = startTime ? secondsToFrames(startTime) : undefined
-    const endFrames = endTime ? secondsToFrames(endTime) : undefined
-    play(startFrames, endFrames)
-  }
+
 
   /**
    * 暂停播放
@@ -426,14 +418,7 @@ export function useWebAVControls() {
     }
   }
 
-  /**
-   * 跳转到指定时间（向后兼容的秒数接口）
-   * @param time 时间（秒）
-   */
-  const seekToSeconds = (time: number): void => {
-    const frames = secondsToFrames(time)
-    seekTo(frames)
-  }
+
 
 
 
@@ -478,14 +463,14 @@ export function useWebAVControls() {
     logCanvasDestroyStart({
       hasCanvas: !!globalAVCanvas,
       isPlaying: videoStore.isPlaying,
-      currentTime: videoStore.currentTime,
+      currentFrame: videoStore.currentFrame,
       timelineItemsCount: videoStore.timelineItems.length,
     })
 
     // 备份当前状态 - 只备份元数据，不备份WebAV对象
     const backup: CanvasBackup = {
       timelineItems: [],
-      currentTime: videoStore.currentTime,
+      currentFrame: videoStore.currentFrame,
       isPlaying: videoStore.isPlaying,
     }
 
@@ -514,7 +499,7 @@ export function useWebAVControls() {
     logCanvasBackup(backup.timelineItems.length, {
       timelineItems: backup.timelineItems.length,
       isPlaying: backup.isPlaying,
-      currentTime: backup.currentTime,
+      currentFrame: backup.currentFrame,
     })
 
     try {
@@ -669,10 +654,10 @@ export function useWebAVControls() {
         if (backup.isPlaying) {
           // 延迟一点再播放，确保所有sprite都已添加
           setTimeout(() => {
-            play(backup.currentTime)
+            play(backup.currentFrame)
           }, 100)
         } else {
-          seekTo(backup.currentTime)
+          seekTo(backup.currentFrame)
         }
       }
 
@@ -682,7 +667,7 @@ export function useWebAVControls() {
         restoredTimelineItems: backup?.timelineItems.length || 0,
         finalState: {
           isPlaying: backup?.isPlaying || false,
-          currentTime: backup?.currentTime || 0,
+          currentFrame: backup?.currentFrame || 0,
         },
       })
     } catch (error) {
@@ -707,11 +692,9 @@ export function useWebAVControls() {
     createImgClip,
     cloneMP4Clip,
     cloneImgClip,
-    play, // 重构后的帧数接口
-    playSeconds, // 兼容的秒数接口
+    play,
     pause,
-    seekTo, // 重构后的帧数接口
-    seekToSeconds, // 兼容的秒数接口
+    seekTo,
     destroy,
     getAVCanvas,
     getCanvasContainer,

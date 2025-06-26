@@ -1,6 +1,6 @@
 import { useVideoStore } from '../stores/videoStore'
 import type { TimelineItemDragData, MediaItemDragData } from '../types'
-import { alignFramesToFrame, secondsToFrames, framesToSeconds } from '../stores/utils/timeUtils'
+import { alignFramesToFrame } from '../stores/utils/timeUtils'
 
 /**
  * 拖拽工具函数集合
