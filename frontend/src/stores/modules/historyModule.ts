@@ -139,7 +139,7 @@ class SimpleHistoryManager {
       // 显示错误通知
       this.notificationManager.showError(
         '操作执行失败',
-        `无法执行操作: ${command.description}。${error instanceof Error ? error.message : '未知错误'}`
+        `无法执行操作: ${command.description}。${error instanceof Error ? error.message : '未知错误'}`,
       )
 
       throw error
@@ -175,7 +175,7 @@ class SimpleHistoryManager {
       // 显示错误通知
       this.notificationManager.showError(
         '撤销失败',
-        `撤销操作时发生错误。${error instanceof Error ? error.message : '未知错误'}`
+        `撤销操作时发生错误。${error instanceof Error ? error.message : '未知错误'}`,
       )
 
       return false
@@ -212,7 +212,7 @@ class SimpleHistoryManager {
       // 显示错误通知
       this.notificationManager.showError(
         '重做失败',
-        `重做操作时发生错误。${error instanceof Error ? error.message : '未知错误'}`
+        `重做操作时发生错误。${error instanceof Error ? error.message : '未知错误'}`,
       )
 
       return false
@@ -272,17 +272,13 @@ class SimpleHistoryManager {
       console.log(`✅ 批量命令已执行: ${batchCommand.getBatchSummary()}`)
 
       // 显示批量操作成功通知
-      this.notificationManager.showSuccess(
-        '批量操作完成',
-        batchCommand.getBatchSummary()
-      )
-
+      this.notificationManager.showSuccess('批量操作完成', batchCommand.getBatchSummary())
     } catch (error) {
       console.error(`❌ 批量命令执行失败: ${batchCommand.description}`, error)
 
       this.notificationManager.showError(
         '批量操作失败',
-        `${batchCommand.description}执行失败。${error instanceof Error ? error.message : '未知错误'}`
+        `${batchCommand.description}执行失败。${error instanceof Error ? error.message : '未知错误'}`,
       )
 
       throw error
@@ -305,8 +301,8 @@ class SimpleHistoryManager {
         isCurrent: index === this.currentIndex,
         isExecuted: index <= this.currentIndex,
         isBatch: cmd instanceof BaseBatchCommand,
-        batchSummary: cmd instanceof BaseBatchCommand ? cmd.getBatchSummary() : undefined
-      }))
+        batchSummary: cmd instanceof BaseBatchCommand ? cmd.getBatchSummary() : undefined,
+      })),
     }
   }
 }

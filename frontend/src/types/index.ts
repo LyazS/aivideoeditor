@@ -52,8 +52,6 @@ export interface ImageTimeRange {
   displayDuration: number
 }
 
-
-
 /**
  * 音频状态接口
  */
@@ -188,8 +186,8 @@ export interface TimelineItemDragData {
   itemId: string
   trackId: number
   startTime: number // 开始时间（帧数）
-  selectedItems: string[]  // 多选支持
-  dragOffset: { x: number, y: number }  // 拖拽偏移
+  selectedItems: string[] // 多选支持
+  dragOffset: { x: number; y: number } // 拖拽偏移
 }
 
 /**
@@ -314,7 +312,17 @@ export interface TransformData {
  * 属性类型枚举
  * 用于标识可修改的时间轴项目属性类型
  */
-export type PropertyType = 'position' | 'size' | 'rotation' | 'opacity' | 'zIndex' | 'duration' | 'playbackRate' | 'volume' | 'audioState' | 'multiple'
+export type PropertyType =
+  | 'position'
+  | 'size'
+  | 'rotation'
+  | 'opacity'
+  | 'zIndex'
+  | 'duration'
+  | 'playbackRate'
+  | 'volume'
+  | 'audioState'
+  | 'multiple'
 
 // ==================== Store模块类型 ====================
 
@@ -395,8 +403,6 @@ export const DEBUG_GROUPS = {
   },
 } as const
 
-
-
 // ==================== 类型守卫函数 ====================
 
 /**
@@ -404,8 +410,15 @@ export const DEBUG_GROUPS = {
  * @param timeRange 时间范围对象
  * @returns 是否为视频时间范围
  */
-export function isVideoTimeRange(timeRange: VideoTimeRange | ImageTimeRange): timeRange is VideoTimeRange {
-  return 'clipStartTime' in timeRange && 'clipEndTime' in timeRange && 'effectiveDuration' in timeRange && 'playbackRate' in timeRange
+export function isVideoTimeRange(
+  timeRange: VideoTimeRange | ImageTimeRange,
+): timeRange is VideoTimeRange {
+  return (
+    'clipStartTime' in timeRange &&
+    'clipEndTime' in timeRange &&
+    'effectiveDuration' in timeRange &&
+    'playbackRate' in timeRange
+  )
 }
 
 /**
@@ -413,7 +426,9 @@ export function isVideoTimeRange(timeRange: VideoTimeRange | ImageTimeRange): ti
  * @param timeRange 时间范围对象
  * @returns 是否为图片时间范围
  */
-export function isImageTimeRange(timeRange: VideoTimeRange | ImageTimeRange): timeRange is ImageTimeRange {
+export function isImageTimeRange(
+  timeRange: VideoTimeRange | ImageTimeRange,
+): timeRange is ImageTimeRange {
   return 'displayDuration' in timeRange && !('clipStartTime' in timeRange)
 }
 
@@ -422,7 +437,9 @@ export function isImageTimeRange(timeRange: VideoTimeRange | ImageTimeRange): ti
  * @param item 时间轴项目
  * @returns 是否为视频类型
  */
-export function isVideoTimelineItem(item: TimelineItem): item is TimelineItem & { timeRange: VideoTimeRange } {
+export function isVideoTimelineItem(
+  item: TimelineItem,
+): item is TimelineItem & { timeRange: VideoTimeRange } {
   return item.mediaType === 'video' && isVideoTimeRange(item.timeRange)
 }
 
@@ -431,7 +448,9 @@ export function isVideoTimelineItem(item: TimelineItem): item is TimelineItem & 
  * @param item 时间轴项目
  * @returns 是否为图片类型
  */
-export function isImageTimelineItem(item: TimelineItem): item is TimelineItem & { timeRange: ImageTimeRange } {
+export function isImageTimelineItem(
+  item: TimelineItem,
+): item is TimelineItem & { timeRange: ImageTimeRange } {
   return item.mediaType === 'image' && isImageTimeRange(item.timeRange)
 }
 

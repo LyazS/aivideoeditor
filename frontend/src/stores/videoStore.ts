@@ -3,7 +3,6 @@ import { defineStore } from 'pinia'
 import { VideoVisibleSprite } from '../utils/VideoVisibleSprite'
 import {
   expandTimelineIfNeededFrames,
-
   autoArrangeTimelineItems,
   autoArrangeTrackItems,
   calculateTotalDurationFrames,
@@ -24,9 +23,29 @@ import { createTimelineModule } from './modules/timelineModule'
 import { createClipOperationsModule } from './modules/clipOperationsModule'
 import { createHistoryModule } from './modules/historyModule'
 import { createNotificationModule } from './modules/notificationModule'
-import { AddTimelineItemCommand, RemoveTimelineItemCommand, MoveTimelineItemCommand, UpdateTransformCommand, SplitTimelineItemCommand, DuplicateTimelineItemCommand, AddTrackCommand, RemoveTrackCommand, RenameTrackCommand, ToggleTrackVisibilityCommand, ToggleTrackMuteCommand, ResizeTimelineItemCommand } from './modules/commands/timelineCommands'
+import {
+  AddTimelineItemCommand,
+  RemoveTimelineItemCommand,
+  MoveTimelineItemCommand,
+  UpdateTransformCommand,
+  SplitTimelineItemCommand,
+  DuplicateTimelineItemCommand,
+  AddTrackCommand,
+  RemoveTrackCommand,
+  RenameTrackCommand,
+  ToggleTrackVisibilityCommand,
+  ToggleTrackMuteCommand,
+  ResizeTimelineItemCommand,
+} from './modules/commands/timelineCommands'
 import { BatchDeleteCommand, BatchAutoArrangeTrackCommand } from './modules/commands/batchCommands'
-import type { MediaItem, TimelineItem, TransformData, VideoTimeRange, ImageTimeRange, PropertyType } from '../types'
+import type {
+  MediaItem,
+  TimelineItem,
+  TransformData,
+  VideoTimeRange,
+  ImageTimeRange,
+  PropertyType,
+} from '../types'
 
 export const useVideoStore = defineStore('video', () => {
   // 创建媒体管理模块
@@ -45,7 +64,12 @@ export const useVideoStore = defineStore('video', () => {
   const webavModule = createWebAVModule()
 
   // 创建时间轴核心管理模块
-  const timelineModule = createTimelineModule(configModule, webavModule as any, mediaModule, trackModule)
+  const timelineModule = createTimelineModule(
+    configModule,
+    webavModule as any,
+    mediaModule,
+    trackModule,
+  )
 
   // 总时长（帧数版本）
   const totalDurationFrames = computed(() => {
@@ -73,7 +97,7 @@ export const useVideoStore = defineStore('video', () => {
     timelineModule.timelineItems,
     timelineModule.getTimelineItem,
     mediaModule.getMediaItem,
-    historyModule.executeCommand
+    historyModule.executeCommand,
   )
 
   // 创建视频片段操作模块（需要在其他模块之后创建）
@@ -113,7 +137,7 @@ export const useVideoStore = defineStore('video', () => {
       },
       {
         getMediaItem: mediaModule.getMediaItem,
-      }
+      },
     )
     await historyModule.executeCommand(command)
   }
@@ -144,7 +168,7 @@ export const useVideoStore = defineStore('video', () => {
       },
       {
         getMediaItem: mediaModule.getMediaItem,
-      }
+      },
     )
     await historyModule.executeCommand(command)
   }
@@ -158,7 +182,7 @@ export const useVideoStore = defineStore('video', () => {
   async function moveTimelineItemWithHistory(
     timelineItemId: string,
     newPositionFrames: number,
-    newTrackId?: number
+    newTrackId?: number,
   ) {
     // 获取要移动的时间轴项目
     const timelineItem = timelineModule.getTimelineItem(timelineItemId)
@@ -193,7 +217,7 @@ export const useVideoStore = defineStore('video', () => {
       },
       {
         getMediaItem: mediaModule.getMediaItem,
-      }
+      },
     )
     await historyModule.executeCommand(command)
   }
@@ -217,7 +241,7 @@ export const useVideoStore = defineStore('video', () => {
       playbackRate?: number // 倍速
       volume?: number // 音量（0-1之间）
       isMuted?: boolean // 静音状态
-    }
+    },
   ) {
     // 获取要更新的时间轴项目
     const timelineItem = timelineModule.getTimelineItem(timelineItemId)
@@ -258,7 +282,9 @@ export const useVideoStore = defineStore('video', () => {
     if (newTransform.duration !== undefined) {
       // 计算当前时长（帧数）
       const timeRange = timelineItem.timeRange
-      const currentDurationFrames = microsecondsToFrames(timeRange.timelineEndTime - timeRange.timelineStartTime)
+      const currentDurationFrames = microsecondsToFrames(
+        timeRange.timelineEndTime - timeRange.timelineStartTime,
+      )
       oldTransform.duration = currentDurationFrames
     }
 
@@ -309,7 +335,7 @@ export const useVideoStore = defineStore('video', () => {
       },
       {
         updateTimelineItemPlaybackRate: clipOperationsModule.updateTimelineItemPlaybackRate,
-      }
+      },
     )
     await historyModule.executeCommand(command)
   }
@@ -321,24 +347,36 @@ export const useVideoStore = defineStore('video', () => {
    */
   function checkTransformChanges(
     oldTransform: TransformData,
-    newTransform: TransformData
+    newTransform: TransformData,
   ): boolean {
     // 检查位置变化
-    if ((newTransform.x !== undefined && oldTransform.x !== undefined) ||
-        (newTransform.y !== undefined && oldTransform.y !== undefined)) {
-      const xChanged = newTransform.x !== undefined && oldTransform.x !== undefined &&
+    if (
+      (newTransform.x !== undefined && oldTransform.x !== undefined) ||
+      (newTransform.y !== undefined && oldTransform.y !== undefined)
+    ) {
+      const xChanged =
+        newTransform.x !== undefined &&
+        oldTransform.x !== undefined &&
         Math.abs(oldTransform.x - newTransform.x) > 0.1
-      const yChanged = newTransform.y !== undefined && oldTransform.y !== undefined &&
+      const yChanged =
+        newTransform.y !== undefined &&
+        oldTransform.y !== undefined &&
         Math.abs(oldTransform.y - newTransform.y) > 0.1
       if (xChanged || yChanged) return true
     }
 
     // 检查大小变化
-    if ((newTransform.width !== undefined && oldTransform.width !== undefined) ||
-        (newTransform.height !== undefined && oldTransform.height !== undefined)) {
-      const widthChanged = newTransform.width !== undefined && oldTransform.width !== undefined &&
+    if (
+      (newTransform.width !== undefined && oldTransform.width !== undefined) ||
+      (newTransform.height !== undefined && oldTransform.height !== undefined)
+    ) {
+      const widthChanged =
+        newTransform.width !== undefined &&
+        oldTransform.width !== undefined &&
         Math.abs(oldTransform.width - newTransform.width) > 0.1
-      const heightChanged = newTransform.height !== undefined && oldTransform.height !== undefined &&
+      const heightChanged =
+        newTransform.height !== undefined &&
+        oldTransform.height !== undefined &&
         Math.abs(oldTransform.height - newTransform.height) > 0.1
       if (widthChanged || heightChanged) return true
     }
@@ -369,7 +407,8 @@ export const useVideoStore = defineStore('video', () => {
 
     // 检查倍速变化
     if (newTransform.playbackRate !== undefined && oldTransform.playbackRate !== undefined) {
-      const playbackRateChanged = Math.abs(oldTransform.playbackRate - newTransform.playbackRate) > 0.01 // 0.01倍速误差容忍
+      const playbackRateChanged =
+        Math.abs(oldTransform.playbackRate - newTransform.playbackRate) > 0.01 // 0.01倍速误差容忍
       if (playbackRateChanged) return true
     }
 
@@ -397,7 +436,8 @@ export const useVideoStore = defineStore('video', () => {
     const changedProperties = []
 
     if (transform.x !== undefined || transform.y !== undefined) changedProperties.push('position')
-    if (transform.width !== undefined || transform.height !== undefined) changedProperties.push('size')
+    if (transform.width !== undefined || transform.height !== undefined)
+      changedProperties.push('size')
     if (transform.rotation !== undefined) changedProperties.push('rotation')
     if (transform.opacity !== undefined) changedProperties.push('opacity')
     if (transform.zIndex !== undefined) changedProperties.push('zIndex')
@@ -421,7 +461,7 @@ export const useVideoStore = defineStore('video', () => {
    */
   async function splitTimelineItemAtTimeWithHistory(
     timelineItemId: string,
-    splitTimeFrames: number
+    splitTimeFrames: number,
   ) {
     // 获取要分割的时间轴项目
     const timelineItem = timelineModule.getTimelineItem(timelineItemId)
@@ -461,7 +501,7 @@ export const useVideoStore = defineStore('video', () => {
       },
       {
         getMediaItem: mediaModule.getMediaItem,
-      }
+      },
     )
     await historyModule.executeCommand(command)
   }
@@ -499,7 +539,7 @@ export const useVideoStore = defineStore('video', () => {
       },
       {
         getMediaItem: mediaModule.getMediaItem,
-      }
+      },
     )
 
     try {
@@ -518,14 +558,11 @@ export const useVideoStore = defineStore('video', () => {
    * @returns 新创建的轨道ID，失败时返回null
    */
   async function addTrackWithHistory(name?: string): Promise<number | null> {
-    const command = new AddTrackCommand(
-      name,
-      {
-        addTrack: trackModule.addTrack,
-        removeTrack: trackModule.removeTrack,
-        getTrack: trackModule.getTrack,
-      }
-    )
+    const command = new AddTrackCommand(name, {
+      addTrack: trackModule.addTrack,
+      removeTrack: trackModule.removeTrack,
+      getTrack: trackModule.getTrack,
+    })
 
     try {
       await historyModule.executeCommand(command)
@@ -577,7 +614,7 @@ export const useVideoStore = defineStore('video', () => {
       },
       {
         getMediaItem: mediaModule.getMediaItem,
-      }
+      },
     )
 
     try {
@@ -615,14 +652,10 @@ export const useVideoStore = defineStore('video', () => {
       return true
     }
 
-    const command = new RenameTrackCommand(
-      trackId,
-      newName.trim(),
-      {
-        renameTrack: trackModule.renameTrack,
-        getTrack: trackModule.getTrack,
-      }
-    )
+    const command = new RenameTrackCommand(trackId, newName.trim(), {
+      renameTrack: trackModule.renameTrack,
+      getTrack: trackModule.getTrack,
+    })
 
     try {
       await historyModule.executeCommand(command)
@@ -647,7 +680,7 @@ export const useVideoStore = defineStore('video', () => {
     }
 
     // 检查轨道是否有项目
-    const trackItems = timelineModule.timelineItems.value.filter(item => item.trackId === trackId)
+    const trackItems = timelineModule.timelineItems.value.filter((item) => item.trackId === trackId)
     if (trackItems.length === 0) {
       console.log(`⚠️ 轨道 ${trackId} 没有片段需要整理`)
       return false
@@ -667,7 +700,7 @@ export const useVideoStore = defineStore('video', () => {
       },
       {
         getTrack: trackModule.getTrack,
-      }
+      },
     )
 
     try {
@@ -700,7 +733,7 @@ export const useVideoStore = defineStore('video', () => {
       },
       {
         timelineItems: timelineModule.timelineItems,
-      }
+      },
     )
 
     try {
@@ -733,7 +766,7 @@ export const useVideoStore = defineStore('video', () => {
       },
       {
         timelineItems: timelineModule.timelineItems,
-      }
+      },
     )
 
     try {
@@ -755,7 +788,7 @@ export const useVideoStore = defineStore('video', () => {
 
   async function resizeTimelineItemWithHistory(
     timelineItemId: string,
-    newTimeRange: VideoTimeRange | ImageTimeRange
+    newTimeRange: VideoTimeRange | ImageTimeRange,
   ): Promise<boolean> {
     // 获取时间轴项目
     const timelineItem = timelineModule.getTimelineItem(timelineItemId)
@@ -768,8 +801,10 @@ export const useVideoStore = defineStore('video', () => {
     const originalTimeRange = timelineItem.sprite.getTimeRange()
 
     // 检查是否有实际变化
-    const startTimeChanged = Math.abs(originalTimeRange.timelineStartTime - newTimeRange.timelineStartTime) > 0.5 // 允许0.5帧的误差
-    const endTimeChanged = Math.abs(originalTimeRange.timelineEndTime - newTimeRange.timelineEndTime) > 0.5
+    const startTimeChanged =
+      Math.abs(originalTimeRange.timelineStartTime - newTimeRange.timelineStartTime) > 0.5 // 允许0.5帧的误差
+    const endTimeChanged =
+      Math.abs(originalTimeRange.timelineEndTime - newTimeRange.timelineEndTime) > 0.5
 
     if (!startTimeChanged && !endTimeChanged) {
       console.log('⚠️ 时间范围没有变化，跳过调整操作')
@@ -785,7 +820,7 @@ export const useVideoStore = defineStore('video', () => {
       },
       {
         getMediaItem: mediaModule.getMediaItem,
-      }
+      },
     )
 
     try {
@@ -809,14 +844,16 @@ export const useVideoStore = defineStore('video', () => {
     }
 
     // 验证所有项目是否存在
-    const validItemIds = timelineItemIds.filter(id => timelineModule.getTimelineItem(id))
+    const validItemIds = timelineItemIds.filter((id) => timelineModule.getTimelineItem(id))
     if (validItemIds.length === 0) {
       console.warn('⚠️ 所有选中的时间轴项目都不存在')
       return false
     }
 
     if (validItemIds.length !== timelineItemIds.length) {
-      console.warn(`⚠️ ${timelineItemIds.length - validItemIds.length} 个时间轴项目不存在，将删除其余 ${validItemIds.length} 个项目`)
+      console.warn(
+        `⚠️ ${timelineItemIds.length - validItemIds.length} 个时间轴项目不存在，将删除其余 ${validItemIds.length} 个项目`,
+      )
     }
 
     // 创建批量删除命令
@@ -834,7 +871,7 @@ export const useVideoStore = defineStore('video', () => {
       },
       {
         getMediaItem: mediaModule.getMediaItem,
-      }
+      },
     )
 
     try {
@@ -962,7 +999,8 @@ export const useVideoStore = defineStore('video', () => {
       return getTimelineItemAtFrames(frames, timelineModule.timelineItems.value)
     },
     autoArrangeTimelineItems: () => autoArrangeTimelineItems(timelineModule.timelineItems),
-    autoArrangeTrackItems: (trackId: number) => autoArrangeTrackItems(timelineModule.timelineItems, trackId),
+    autoArrangeTrackItems: (trackId: number) =>
+      autoArrangeTrackItems(timelineModule.timelineItems, trackId),
     // 播放控制方法
     setCurrentFrame: playbackModule.setCurrentFrame,
     seekToFrame: playbackModule.seekToFrame,
@@ -983,9 +1021,15 @@ export const useVideoStore = defineStore('video', () => {
     // 轨道管理方法
     addTrack: (name?: string) => trackModule.addTrack(name),
     removeTrack: (trackId: number) =>
-      trackModule.removeTrack(trackId, timelineModule.timelineItems, timelineModule.removeTimelineItem),
-    toggleTrackVisibility: (trackId: number) => trackModule.toggleTrackVisibility(trackId, timelineModule.timelineItems),
-    toggleTrackMute: (trackId: number) => trackModule.toggleTrackMute(trackId, timelineModule.timelineItems),
+      trackModule.removeTrack(
+        trackId,
+        timelineModule.timelineItems,
+        timelineModule.removeTimelineItem,
+      ),
+    toggleTrackVisibility: (trackId: number) =>
+      trackModule.toggleTrackVisibility(trackId, timelineModule.timelineItems),
+    toggleTrackMute: (trackId: number) =>
+      trackModule.toggleTrackMute(trackId, timelineModule.timelineItems),
     renameTrack: trackModule.renameTrack,
     setTrackHeight: trackModule.setTrackHeight,
     getTrack: trackModule.getTrack,

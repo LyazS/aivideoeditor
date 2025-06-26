@@ -341,7 +341,7 @@ export class VideoVisibleSprite extends VisibleSprite {
       // 使用正确的类型：接受和返回 MP4Clip.tick 方法的返回类型
       clip.tickInterceptor = async <T extends Awaited<ReturnType<MP4Clip['tick']>>>(
         _time: number,
-        tickRet: T
+        tickRet: T,
       ): Promise<T> => {
         // 如果有音频数据，根据静音状态和音量调整
         if (tickRet.audio && tickRet.audio.length > 0) {
@@ -349,7 +349,8 @@ export class VideoVisibleSprite extends VisibleSprite {
           const isTrackMuted = this.#trackMuteChecker ? this.#trackMuteChecker() : false
 
           // 计算实际音量：轨道静音或片段静音时为0，否则使用当前音量
-          const effectiveVolume = (this.#audioState.isMuted || isTrackMuted) ? 0 : this.#audioState.volume
+          const effectiveVolume =
+            this.#audioState.isMuted || isTrackMuted ? 0 : this.#audioState.volume
 
           if (effectiveVolume !== 1) {
             // 对每个声道的PCM数据进行音量调整
@@ -460,5 +461,4 @@ export class VideoVisibleSprite extends VisibleSprite {
   public isEffectivelyMuted(): boolean {
     return this.#audioState.isMuted || this.isTrackMuted()
   }
-
 }

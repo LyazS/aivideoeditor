@@ -7,8 +7,6 @@ export const FRAME_RATE = 30
 
 // ==================== 时间计算工具 ====================
 
-
-
 /**
  * 计算每帧像素数（帧数版本）
  * @param timelineWidth 时间轴宽度（像素）
@@ -24,25 +22,20 @@ export function calculatePixelsPerFrame(
   return (timelineWidth * zoomLevel) / totalDurationFrames
 }
 
-// 移除了 calculatePixelsPerSecond 向后兼容函数，请使用 calculatePixelsPerFrame
-
-
-
-
-
 /**
  * 动态扩展时间轴长度（帧数版本）
  * @param targetFrames 目标帧数
  * @param timelineDurationFrames 当前时间轴长度的ref（帧数）
  */
-export function expandTimelineIfNeededFrames(targetFrames: number, timelineDurationFrames: Ref<number> | WritableComputedRef<number>) {
+export function expandTimelineIfNeededFrames(
+  targetFrames: number,
+  timelineDurationFrames: Ref<number> | WritableComputedRef<number>,
+) {
   if (targetFrames > timelineDurationFrames.value) {
     // 扩展到目标帧数的1.5倍，确保有足够的空间
     timelineDurationFrames.value = Math.max(targetFrames * 1.5, timelineDurationFrames.value)
   }
 }
-
-// 移除了 expandTimelineIfNeeded 向后兼容函数，请使用 expandTimelineIfNeededFrames
 
 /**
  * 格式化文件大小

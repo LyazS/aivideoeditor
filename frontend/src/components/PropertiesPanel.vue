@@ -8,20 +8,18 @@
       <!-- 多选状态 -->
       <div v-if="multiSelectInfo" class="multi-select-state">
         <svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M9,20.42L2.79,14.21L5.62,11.38L9,14.77L18.88,4.88L21.71,7.71L9,20.42Z"/>
+          <path d="M9,20.42L2.79,14.21L5.62,11.38L9,14.77L18.88,4.88L21.71,7.71L9,20.42Z" />
         </svg>
         <p>已选择 {{ multiSelectInfo.count }} 个片段</p>
         <p class="hint">批量操作功能开发中...</p>
 
         <!-- 选中项目列表 -->
         <div class="selected-items-list">
-          <div
-            v-for="item in multiSelectInfo.items"
-            :key="item?.id"
-            class="selected-item"
-          >
+          <div v-for="item in multiSelectInfo.items" :key="item?.id" class="selected-item">
             <span class="item-name">
-              {{ item ? videoStore.getMediaItem(item.mediaItemId)?.name || '未知素材' : '未知素材' }}
+              {{
+                item ? videoStore.getMediaItem(item.mediaItemId)?.name || '未知素材' : '未知素材'
+              }}
             </span>
             <span class="item-type">{{ item?.mediaType === 'video' ? '视频' : '图片' }}</span>
           </div>
@@ -46,7 +44,13 @@
         </div>
 
         <!-- 播放设置 - 视频和图片都显示 -->
-        <div v-if="selectedTimelineItem?.mediaType === 'video' || selectedTimelineItem?.mediaType === 'image'" class="property-section">
+        <div
+          v-if="
+            selectedTimelineItem?.mediaType === 'video' ||
+            selectedTimelineItem?.mediaType === 'image'
+          "
+          class="property-section"
+        >
           <h4>播放设置</h4>
 
           <!-- 精确时长控制 -->
@@ -135,10 +139,14 @@
                 :title="isMuted ? '取消静音' : '静音'"
               >
                 <svg v-if="!isMuted" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M3,9V15H7L12,20V4L7,9H3M16.5,12C16.5,10.23 15.5,8.71 14,7.97V16C15.5,15.29 16.5,13.76 16.5,12M14,3.23V5.29C16.89,6.15 19,8.83 19,12C19,15.17 16.89,17.84 14,18.7V20.77C18,19.86 21,16.28 21,12C21,7.72 18,4.14 14,3.23Z"/>
+                  <path
+                    d="M3,9V15H7L12,20V4L7,9H3M16.5,12C16.5,10.23 15.5,8.71 14,7.97V16C15.5,15.29 16.5,13.76 16.5,12M14,3.23V5.29C16.89,6.15 19,8.83 19,12C19,15.17 16.89,17.84 14,18.7V20.77C18,19.86 21,16.28 21,12C21,7.72 18,4.14 14,3.23Z"
+                  />
                 </svg>
                 <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12,4L9.91,6.09L12,8.18M4.27,3L3,4.27L7.73,9H3V15H7L12,20V13.27L16.25,17.53C15.58,18.04 14.83,18.46 14,18.7V20.77C15.38,20.45 16.63,19.82 17.68,18.96L19.73,21L21,19.73L12,10.73M19,12C19,12.94 18.8,13.82 18.46,14.64L19.97,16.15C20.62,14.91 21,13.5 21,12C21,7.72 18,4.14 14,3.23V5.29C16.89,6.15 19,8.83 19,12M16.5,12C16.5,10.23 15.5,8.71 14,7.97V10.18L16.45,12.63C16.5,12.43 16.5,12.21 16.5,12Z"/>
+                  <path
+                    d="M12,4L9.91,6.09L12,8.18M4.27,3L3,4.27L7.73,9H3V15H7L12,20V13.27L16.25,17.53C15.58,18.04 14.83,18.46 14,18.7V20.77C15.38,20.45 16.63,19.82 17.68,18.96L19.73,21L21,19.73L12,10.73M19,12C19,12.94 18.8,13.82 18.46,14.64L19.97,16.15C20.62,14.91 21,13.5 21,12C21,7.72 18,4.14 14,3.23V5.29C16.89,6.15 19,8.83 19,12M16.5,12C16.5,10.23 15.5,8.71 14,7.97V10.18L16.45,12.63C16.5,12.43 16.5,12.21 16.5,12Z"
+                  />
                 </svg>
               </button>
             </div>
@@ -424,10 +432,7 @@ import { computed } from 'vue'
 import { useVideoStore } from '../stores/videoStore'
 import { isVideoTimeRange } from '../types'
 import { uiDegreesToWebAVRadians, webAVRadiansToUIDegrees } from '../utils/rotationTransform'
-import {
-  framesToTimecode,
-  timecodeToFrames
-} from '../stores/utils/timeUtils'
+import { framesToTimecode, timecodeToFrames } from '../stores/utils/timeUtils'
 import NumberInput from './NumberInput.vue'
 
 const videoStore = useVideoStore()
@@ -448,9 +453,9 @@ const multiSelectInfo = computed(() => {
 
   return {
     count: videoStore.selectedTimelineItemIds.size,
-    items: Array.from(videoStore.selectedTimelineItemIds).map(id =>
-      videoStore.getTimelineItem(id)
-    ).filter(Boolean)
+    items: Array.from(videoStore.selectedTimelineItemIds)
+      .map((id) => videoStore.getTimelineItem(id))
+      .filter(Boolean),
   }
 })
 
@@ -466,8 +471,6 @@ const timelineDurationFrames = computed(() => {
   const timeRange = selectedTimelineItem.value.timeRange
   return timeRange.timelineEndTime - timeRange.timelineStartTime // 已经是帧数，不需要转换
 })
-
-
 
 // 格式化时长显示（使用时间码格式）
 const formattedDuration = computed(() => {
@@ -488,16 +491,18 @@ const transformX = computed(() => selectedTimelineItem.value?.x || 0)
 const transformY = computed(() => selectedTimelineItem.value?.y || 0)
 const scaleX = computed(() => {
   if (!selectedTimelineItem.value || !selectedMediaItem.value) return 1
-  const originalResolution = selectedMediaItem.value.mediaType === 'video'
-    ? videoStore.getVideoOriginalResolution(selectedMediaItem.value.id)
-    : videoStore.getImageOriginalResolution(selectedMediaItem.value.id)
+  const originalResolution =
+    selectedMediaItem.value.mediaType === 'video'
+      ? videoStore.getVideoOriginalResolution(selectedMediaItem.value.id)
+      : videoStore.getImageOriginalResolution(selectedMediaItem.value.id)
   return selectedTimelineItem.value.width / originalResolution.width
 })
 const scaleY = computed(() => {
   if (!selectedTimelineItem.value || !selectedMediaItem.value) return 1
-  const originalResolution = selectedMediaItem.value.mediaType === 'video'
-    ? videoStore.getVideoOriginalResolution(selectedMediaItem.value.id)
-    : videoStore.getImageOriginalResolution(selectedMediaItem.value.id)
+  const originalResolution =
+    selectedMediaItem.value.mediaType === 'video'
+      ? videoStore.getVideoOriginalResolution(selectedMediaItem.value.id)
+      : videoStore.getImageOriginalResolution(selectedMediaItem.value.id)
   return selectedTimelineItem.value.height / originalResolution.height
 })
 const rotation = computed(() => {
@@ -621,7 +626,7 @@ const updatePlaybackRate = async (newRate?: number) => {
     try {
       // 使用带历史记录的变换属性更新方法
       await videoStore.updateTimelineItemTransformWithHistory(selectedTimelineItem.value.id, {
-        playbackRate: rate
+        playbackRate: rate,
       })
       console.log('✅ 倍速更新成功')
     } catch (error) {
@@ -653,7 +658,7 @@ const updateTargetDurationFromTimecode = async (event: Event) => {
       inputTimecode: timecodeValue,
       parsedFrames: newDurationFrames,
       alignedFrames: alignedDurationFrames,
-      finalTimecode: framesToTimecode(alignedDurationFrames)
+      finalTimecode: framesToTimecode(alignedDurationFrames),
     })
   } catch (error) {
     console.warn('⚠️ 时间码格式无效:', timecodeValue, error)
@@ -695,11 +700,9 @@ const updateTargetDurationFrames = async (newDurationFrames: number) => {
   console.log('✅ 帧数时长更新成功:', {
     inputFrames: newDurationFrames,
     alignedFrames: alignedDurationFrames,
-    timecode: framesToTimecode(alignedDurationFrames)
+    timecode: framesToTimecode(alignedDurationFrames),
   })
 }
-
-
 
 // 更新归一化速度
 const updateNormalizedSpeed = (newNormalizedSpeed: number) => {
@@ -734,13 +737,13 @@ const updateVolume = (newVolume: number) => {
   if (clampedVolume === 0) {
     // 设为静音，但保留原音量值
     videoStore.updateTimelineItemTransformWithHistory(selectedTimelineItem.value.id, {
-      isMuted: true
+      isMuted: true,
     })
   } else {
     // 更新音量值并取消静音
     videoStore.updateTimelineItemTransformWithHistory(selectedTimelineItem.value.id, {
       volume: clampedVolume,
-      isMuted: false
+      isMuted: false,
     })
   }
 
@@ -763,10 +766,15 @@ const toggleMute = () => {
 
   // 使用历史记录系统切换静音状态
   videoStore.updateTimelineItemTransformWithHistory(selectedTimelineItem.value.id, {
-    isMuted: newMutedState
+    isMuted: newMutedState,
   })
 
-  console.log('✅ 静音状态切换:', newMutedState ? '静音' : '有声', '音量保持:', selectedTimelineItem.value.volume)
+  console.log(
+    '✅ 静音状态切换:',
+    newMutedState ? '静音' : '有声',
+    '音量保持:',
+    selectedTimelineItem.value.volume,
+  )
 }
 
 // 将归一化值(0-100)转换为实际播放速度
@@ -824,7 +832,10 @@ const updateTransform = async (transform?: {
 
   try {
     // 使用带历史记录的变换属性更新方法
-    await videoStore.updateTimelineItemTransformWithHistory(selectedTimelineItem.value.id, finalTransform)
+    await videoStore.updateTimelineItemTransformWithHistory(
+      selectedTimelineItem.value.id,
+      finalTransform,
+    )
     console.log('✅ 变换属性更新成功')
   } catch (error) {
     console.error('❌ 更新变换属性失败:', error)
@@ -837,9 +848,10 @@ const updateTransform = async (transform?: {
 const toggleProportionalScale = () => {
   if (proportionalScale.value && selectedTimelineItem.value && selectedMediaItem.value) {
     // 开启等比缩放时，使用当前X缩放值作为统一缩放值，同时更新Y缩放
-    const originalResolution = selectedMediaItem.value.mediaType === 'video'
-      ? videoStore.getVideoOriginalResolution(selectedMediaItem.value.id)
-      : videoStore.getImageOriginalResolution(selectedMediaItem.value.id)
+    const originalResolution =
+      selectedMediaItem.value.mediaType === 'video'
+        ? videoStore.getVideoOriginalResolution(selectedMediaItem.value.id)
+        : videoStore.getImageOriginalResolution(selectedMediaItem.value.id)
     const newSize = {
       width: originalResolution.width * scaleX.value,
       height: originalResolution.height * scaleX.value, // 使用X缩放值保持等比
@@ -851,9 +863,10 @@ const toggleProportionalScale = () => {
 // 更新统一缩放
 const updateUniformScale = (newScale: number) => {
   if (proportionalScale.value && selectedTimelineItem.value && selectedMediaItem.value) {
-    const originalResolution = selectedMediaItem.value.mediaType === 'video'
-      ? videoStore.getVideoOriginalResolution(selectedMediaItem.value.id)
-      : videoStore.getImageOriginalResolution(selectedMediaItem.value.id)
+    const originalResolution =
+      selectedMediaItem.value.mediaType === 'video'
+        ? videoStore.getVideoOriginalResolution(selectedMediaItem.value.id)
+        : videoStore.getImageOriginalResolution(selectedMediaItem.value.id)
     const newSize = {
       width: originalResolution.width * newScale,
       height: originalResolution.height * newScale,
@@ -865,9 +878,10 @@ const updateUniformScale = (newScale: number) => {
 // 设置X缩放绝对值的方法
 const setScaleX = (value: number) => {
   if (!selectedTimelineItem.value || !selectedMediaItem.value) return
-  const originalResolution = selectedMediaItem.value.mediaType === 'video'
-    ? videoStore.getVideoOriginalResolution(selectedMediaItem.value.id)
-    : videoStore.getImageOriginalResolution(selectedMediaItem.value.id)
+  const originalResolution =
+    selectedMediaItem.value.mediaType === 'video'
+      ? videoStore.getVideoOriginalResolution(selectedMediaItem.value.id)
+      : videoStore.getImageOriginalResolution(selectedMediaItem.value.id)
   const newScaleX = Math.max(0.01, Math.min(5, value))
   const newSize = {
     width: originalResolution.width * newScaleX,
@@ -879,9 +893,10 @@ const setScaleX = (value: number) => {
 // 设置Y缩放绝对值的方法
 const setScaleY = (value: number) => {
   if (!selectedTimelineItem.value || !selectedMediaItem.value) return
-  const originalResolution = selectedMediaItem.value.mediaType === 'video'
-    ? videoStore.getVideoOriginalResolution(selectedMediaItem.value.id)
-    : videoStore.getImageOriginalResolution(selectedMediaItem.value.id)
+  const originalResolution =
+    selectedMediaItem.value.mediaType === 'video'
+      ? videoStore.getVideoOriginalResolution(selectedMediaItem.value.id)
+      : videoStore.getImageOriginalResolution(selectedMediaItem.value.id)
   const newScaleY = Math.max(0.01, Math.min(5, value))
   const newSize = {
     width: selectedTimelineItem.value.width, // 保持X尺寸不变
@@ -901,8 +916,6 @@ const setOpacity = (value: number) => {
   const newOpacity = Math.max(0, Math.min(1, value))
   updateTransform({ opacity: newOpacity })
 }
-
-
 
 // 实现对齐功能（基于项目坐标系：中心为原点）
 const alignHorizontal = (alignment: 'left' | 'center' | 'right') => {

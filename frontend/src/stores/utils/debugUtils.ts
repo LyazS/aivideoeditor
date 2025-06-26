@@ -74,7 +74,7 @@ export function printDebugInfo(
       id: item.id,
       mediaItemId: item.mediaItemId,
       trackId: item.trackId,
-      position: framesToTimecode(item.timeRange.timelineStartTime), // timelineStartTime 已经是帧数，不需要转换
+      position: framesToTimecode(item.timeRange.timelineStartTime),
       hasSprite: !!item.sprite,
     })),
   )

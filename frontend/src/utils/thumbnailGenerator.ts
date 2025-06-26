@@ -13,7 +13,12 @@ import { MP4Clip, ImgClip } from '@webav/av-cliper'
  * @param containerHeight 容器高度（60px）
  * @returns 缩略图尺寸和位置信息
  */
-function calculateThumbnailSize(originalWidth: number, originalHeight: number, containerWidth: number = 100, containerHeight: number = 60) {
+function calculateThumbnailSize(
+  originalWidth: number,
+  originalHeight: number,
+  containerWidth: number = 100,
+  containerHeight: number = 60,
+) {
   const aspectRatio = originalWidth / originalHeight
   const containerAspectRatio = containerWidth / containerHeight
 
@@ -40,7 +45,7 @@ function calculateThumbnailSize(originalWidth: number, originalHeight: number, c
     drawWidth,
     drawHeight,
     offsetX,
-    offsetY
+    offsetY,
   }
 }
 
@@ -59,7 +64,7 @@ function createThumbnailCanvas(
     drawHeight: number
     offsetX: number
     offsetY: number
-  }
+  },
 ): HTMLCanvasElement {
   const canvas = document.createElement('canvas')
   const ctx = canvas.getContext('2d')
@@ -82,7 +87,7 @@ function createThumbnailCanvas(
     sizeInfo.offsetX,
     sizeInfo.offsetY,
     sizeInfo.drawWidth,
-    sizeInfo.drawHeight
+    sizeInfo.drawHeight,
   )
 
   return canvas
@@ -96,7 +101,7 @@ function createThumbnailCanvas(
  */
 export async function generateVideoThumbnail(
   mp4Clip: MP4Clip,
-  timePosition?: number
+  timePosition?: number,
 ): Promise<HTMLCanvasElement> {
   let clonedClip: MP4Clip | null = null
 
@@ -109,7 +114,7 @@ export async function generateVideoThumbnail(
     console.log('✅ [ThumbnailGenerator] MP4Clip准备完成:', {
       duration: meta.duration,
       width: meta.width,
-      height: meta.height
+      height: meta.height,
     })
 
     // 克隆MP4Clip以避免影响原始实例
@@ -118,7 +123,7 @@ export async function generateVideoThumbnail(
     console.log('✅ [ThumbnailGenerator] MP4Clip克隆完成')
 
     // 如果没有指定时间位置，使用视频中间位置
-    const tickTime = timePosition ?? (meta.duration / 2)
+    const tickTime = timePosition ?? meta.duration / 2
     console.log('⏰ [ThumbnailGenerator] 获取视频帧时间位置:', tickTime)
 
     // 使用克隆的clip获取指定时间的帧
@@ -126,7 +131,7 @@ export async function generateVideoThumbnail(
     const tickResult = await clonedClip.tick(tickTime)
     console.log('📸 [ThumbnailGenerator] tick结果:', {
       state: tickResult.state,
-      hasVideo: !!tickResult.video
+      hasVideo: !!tickResult.video,
     })
 
     if (tickResult.state !== 'success' || !tickResult.video) {
@@ -139,7 +144,7 @@ export async function generateVideoThumbnail(
       original: `${meta.width}x${meta.height}`,
       container: `${sizeInfo.containerWidth}x${sizeInfo.containerHeight}`,
       draw: `${sizeInfo.drawWidth}x${sizeInfo.drawHeight}`,
-      offset: `${sizeInfo.offsetX},${sizeInfo.offsetY}`
+      offset: `${sizeInfo.offsetX},${sizeInfo.offsetY}`,
     })
 
     // 创建缩略图canvas
@@ -182,7 +187,7 @@ export async function generateImageThumbnail(imgClip: ImgClip): Promise<HTMLCanv
     const meta = await imgClip.ready
     console.log('✅ [ThumbnailGenerator] ImgClip准备完成:', {
       width: meta.width,
-      height: meta.height
+      height: meta.height,
     })
 
     // 克隆ImgClip以避免影响原始实例
@@ -195,7 +200,7 @@ export async function generateImageThumbnail(imgClip: ImgClip): Promise<HTMLCanv
     const tickResult = await clonedClip.tick(0)
     console.log('📸 [ThumbnailGenerator] tick结果:', {
       state: tickResult.state,
-      hasVideo: !!tickResult.video
+      hasVideo: !!tickResult.video,
     })
 
     if (tickResult.state !== 'success' || !tickResult.video) {
@@ -208,7 +213,7 @@ export async function generateImageThumbnail(imgClip: ImgClip): Promise<HTMLCanv
       original: `${meta.width}x${meta.height}`,
       container: `${sizeInfo.containerWidth}x${sizeInfo.containerHeight}`,
       draw: `${sizeInfo.drawWidth}x${sizeInfo.drawHeight}`,
-      offset: `${sizeInfo.offsetX},${sizeInfo.offsetY}`
+      offset: `${sizeInfo.offsetX},${sizeInfo.offsetY}`,
     })
 
     // 创建缩略图canvas
@@ -243,14 +248,18 @@ export async function generateImageThumbnail(imgClip: ImgClip): Promise<HTMLCanv
  */
 export function canvasToBlob(canvas: HTMLCanvasElement, quality: number = 0.8): Promise<string> {
   return new Promise((resolve, reject) => {
-    canvas.toBlob((blob) => {
-      if (blob) {
-        const url = URL.createObjectURL(blob)
-        resolve(url)
-      } else {
-        reject(new Error('无法创建Blob'))
-      }
-    }, 'image/jpeg', quality)
+    canvas.toBlob(
+      (blob) => {
+        if (blob) {
+          const url = URL.createObjectURL(blob)
+          resolve(url)
+        } else {
+          reject(new Error('无法创建Blob'))
+        }
+      },
+      'image/jpeg',
+      quality,
+    )
   })
 }
 
@@ -265,7 +274,7 @@ import type { MediaItem, TimelineItem, MediaItemForThumbnail } from '../types'
  */
 export async function generateThumbnailForMediaItem(
   mediaItem: MediaItemForThumbnail,
-  timePosition?: number
+  timePosition?: number,
 ): Promise<string | undefined> {
   try {
     let canvas: HTMLCanvasElement
@@ -300,12 +309,12 @@ export async function generateThumbnailForMediaItem(
  */
 export async function regenerateThumbnailForTimelineItem(
   timelineItem: TimelineItem,
-  mediaItem: MediaItem
+  mediaItem: MediaItem,
 ): Promise<string | undefined> {
   try {
     console.log('🔄 [ThumbnailGenerator] 重新生成时间轴clip缩略图:', {
       timelineItemId: timelineItem.id,
-      mediaType: mediaItem.mediaType
+      mediaType: mediaItem.mediaType,
     })
 
     let thumbnailTime: number | undefined
@@ -317,7 +326,11 @@ export async function regenerateThumbnailForTimelineItem(
       if ('clipStartTime' in timeRange) {
         // 使用clip内部的起始时间（微秒）
         thumbnailTime = timeRange.clipStartTime
-        console.log('📍 [ThumbnailGenerator] 使用视频clip起始时间:', (thumbnailTime ?? 0) / 1000000, 's')
+        console.log(
+          '📍 [ThumbnailGenerator] 使用视频clip起始时间:',
+          (thumbnailTime ?? 0) / 1000000,
+          's',
+        )
       } else {
         // 如果没有clipStartTime，使用视频中间位置
         const meta = await mediaItem.mp4Clip.ready
@@ -334,7 +347,6 @@ export async function regenerateThumbnailForTimelineItem(
     }
 
     return thumbnailUrl
-
   } catch (error) {
     console.error('❌ [ThumbnailGenerator] 重新生成时间轴clip缩略图失败:', error)
     return undefined

@@ -24,8 +24,6 @@ export function getTimelineItemAtFrames(
   )
 }
 
-
-
 /**
  * 根据轨道ID查找时间轴项目
  * @param trackId 轨道ID
@@ -87,8 +85,6 @@ export function getTimelineItemsAtFrames(
   })
 }
 
-
-
 /**
  * 根据轨道和时间查找时间轴项目（帧数版本）
  * @param trackId 轨道ID
@@ -113,5 +109,3 @@ export function getTimelineItemAtTrackAndFrames(
     }) || null
   )
 }
-
-

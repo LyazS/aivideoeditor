@@ -4,12 +4,7 @@ import { ImageVisibleSprite } from '../../utils/ImageVisibleSprite'
 import { webavToProjectCoords, projectToWebavCoords } from '../../utils/coordinateTransform'
 import { printDebugInfo, syncTimeRange } from '../utils/storeUtils'
 import { microsecondsToFrames } from '../utils/timeUtils'
-import type {
-  TimelineItem,
-  MediaItem,
-  PropsChangeEvent,
-  VideoResolution,
-} from '../../types'
+import type { TimelineItem, MediaItem, PropsChangeEvent, VideoResolution } from '../../types'
 
 /**
  * 时间轴核心管理模块
@@ -22,7 +17,9 @@ export function createTimelineModule(
     getMediaItem: (id: string) => MediaItem | undefined
     mediaItems: Ref<MediaItem[]>
   },
-  trackModule?: { tracks: Ref<{ id: number; name: string; isVisible: boolean; isMuted: boolean }[]> },
+  trackModule?: {
+    tracks: Ref<{ id: number; name: string; isVisible: boolean; isMuted: boolean }[]>
+  },
 ) {
   // ==================== 状态定义 ====================
 
@@ -96,7 +93,7 @@ export function createTimelineModule(
 
     // 根据轨道的可见性和静音状态设置sprite属性
     if (trackModule) {
-      const track = trackModule.tracks.value.find(t => t.id === timelineItem.trackId)
+      const track = trackModule.tracks.value.find((t) => t.id === timelineItem.trackId)
       if (track && timelineItem.sprite) {
         // 设置可见性
         timelineItem.sprite.visible = track.isVisible
@@ -214,7 +211,7 @@ export function createTimelineModule(
 
         // 根据新轨道的可见性设置sprite的visible属性
         if (trackModule) {
-          const newTrack = trackModule.tracks.value.find(t => t.id === newTrackId)
+          const newTrack = trackModule.tracks.value.find((t) => t.id === newTrackId)
           if (newTrack && item.sprite) {
             item.sprite.visible = newTrack.isVisible
           }
@@ -258,7 +255,10 @@ export function createTimelineModule(
    * @param timelineItemId 时间轴项目ID
    * @param newSprite 新的sprite实例
    */
-  function updateTimelineItemSprite(timelineItemId: string, newSprite: Raw<VideoVisibleSprite | ImageVisibleSprite>) {
+  function updateTimelineItemSprite(
+    timelineItemId: string,
+    newSprite: Raw<VideoVisibleSprite | ImageVisibleSprite>,
+  ) {
     const item = timelineItems.value.find((item) => item.id === timelineItemId)
     if (item) {
       const mediaItem = mediaModule.getMediaItem(item.mediaItemId)

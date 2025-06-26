@@ -83,7 +83,11 @@ export function useDialogs() {
    * @param additionalInfo 额外信息
    * @returns 用户是否确认删除
    */
-  function confirmDelete(itemName: string, itemType: string = '项目', additionalInfo?: string): boolean {
+  function confirmDelete(
+    itemName: string,
+    itemType: string = '项目',
+    additionalInfo?: string,
+  ): boolean {
     let message = `确定要删除${itemType} "${itemName}" 吗？`
     if (additionalInfo) {
       message += `\n\n${additionalInfo}`
@@ -147,14 +151,14 @@ export function useDialogs() {
     showWarning,
     showSuccess,
     confirm,
-    
+
     // 专用提示方法
     showFileTypeError,
     showOperationError,
     showMinTrackWarning,
     showDragDataError,
     showInvalidDragWarning,
-    
+
     // 确认对话框方法
     confirmDelete,
     confirmTrackDelete,

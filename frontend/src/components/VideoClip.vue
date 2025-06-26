@@ -31,10 +31,7 @@
           alt="缩略图"
         />
         <!-- 缩略图加载中的占位符 -->
-        <div
-          v-else
-          class="thumbnail-placeholder"
-        >
+        <div v-else class="thumbnail-placeholder">
           <div class="loading-spinner"></div>
         </div>
       </div>
@@ -76,17 +73,26 @@
         <div class="tooltip-info">
           <div class="tooltip-row">
             <span class="tooltip-label">类型:</span>
-            <span class="tooltip-value">{{ mediaItem?.mediaType === 'video' ? '视频' : '图片' }}</span>
+            <span class="tooltip-value">{{
+              mediaItem?.mediaType === 'video' ? '视频' : '图片'
+            }}</span>
           </div>
           <div class="tooltip-row">
             <span class="tooltip-label">时长:</span>
-            <span class="tooltip-value">{{ formatDurationFromFrames(timelineDurationFrames) }}</span>
+            <span class="tooltip-value">{{
+              formatDurationFromFrames(timelineDurationFrames)
+            }}</span>
           </div>
           <div class="tooltip-row">
             <span class="tooltip-label">位置:</span>
-            <span class="tooltip-value">{{ formatDurationFromFrames(props.timelineItem.timeRange.timelineStartTime) }}</span>
+            <span class="tooltip-value">{{
+              formatDurationFromFrames(props.timelineItem.timeRange.timelineStartTime)
+            }}</span>
           </div>
-          <div v-if="mediaItem?.mediaType === 'video' && Math.abs(playbackSpeed - 1) > 0.001" class="tooltip-row">
+          <div
+            v-if="mediaItem?.mediaType === 'video' && Math.abs(playbackSpeed - 1) > 0.001"
+            class="tooltip-row"
+          >
             <span class="tooltip-label">倍速:</span>
             <span class="tooltip-value">{{ formatSpeed(playbackSpeed) }}</span>
           </div>
@@ -108,7 +114,7 @@ import { getDragPreviewManager } from '../composables/useDragPreview'
 import {
   framesToTimecode,
   framesToMicroseconds,
-  alignFramesToFrame
+  alignFramesToFrame,
 } from '../stores/utils/timeUtils'
 import type { TimelineItem, Track, VideoTimeRange, ImageTimeRange } from '../types'
 import { isVideoTimeRange } from '../types'
@@ -253,8 +259,6 @@ const isTrackVisible = computed(() => {
   return track ? track.isVisible : true
 })
 
-
-
 function formatDurationFromFrames(frames: number): string {
   // 直接使用帧数格式化为时间码
   return framesToTimecode(frames)
@@ -298,7 +302,7 @@ function handleDragStart(event: DragEvent) {
     props.timelineItem.trackId,
     props.timelineItem.timeRange.timelineStartTime, // 直接使用帧数，不需要转换
     Array.from(videoStore.selectedTimelineItemIds),
-    dragOffset
+    dragOffset,
   )
 
   console.log('📦 [原生拖拽] 设置拖拽数据:', dragData)
@@ -392,7 +396,7 @@ async function selectClip(event: MouseEvent) {
   console.log('🖱️ selectClip被调用:', {
     ctrlKey: event.ctrlKey,
     itemId: props.timelineItem.id,
-    currentSelections: Array.from(videoStore.selectedTimelineItemIds)
+    currentSelections: Array.from(videoStore.selectedTimelineItemIds),
   })
 
   try {
@@ -459,12 +463,17 @@ function handleResize(event: MouseEvent) {
 
   if (resizeDirection.value === 'left') {
     // 拖拽左边把柄：调整开始时间和时长
-    const currentLeftPixel = videoStore.frameToPixel(resizeStartPositionFrames.value, props.timelineWidth)
+    const currentLeftPixel = videoStore.frameToPixel(
+      resizeStartPositionFrames.value,
+      props.timelineWidth,
+    )
     const newLeftPixel = currentLeftPixel + deltaX
     const newLeftFrames = videoStore.pixelToFrame(newLeftPixel, props.timelineWidth)
 
     newTimelinePositionFrames = Math.max(0, alignFramesToFrame(newLeftFrames))
-    newDurationFrames = resizeStartDurationFrames.value + (resizeStartPositionFrames.value - newTimelinePositionFrames)
+    newDurationFrames =
+      resizeStartDurationFrames.value +
+      (resizeStartPositionFrames.value - newTimelinePositionFrames)
   } else if (resizeDirection.value === 'right') {
     // 拖拽右边把柄：只调整时长
     const endFrames = resizeStartPositionFrames.value + resizeStartDurationFrames.value
@@ -540,7 +549,10 @@ async function stopResize() {
 
       try {
         // 使用带历史记录的调整方法
-        const success = await videoStore.resizeTimelineItemWithHistory(props.timelineItem.id, newTimeRange)
+        const success = await videoStore.resizeTimelineItemWithHistory(
+          props.timelineItem.id,
+          newTimeRange,
+        )
         if (success) {
           console.log('✅ 时间范围调整成功')
           // 重新生成缩略图（异步执行，不阻塞UI）
@@ -814,8 +826,12 @@ onUnmounted(() => {
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 .clip-info {

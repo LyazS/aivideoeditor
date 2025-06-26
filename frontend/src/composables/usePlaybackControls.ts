@@ -46,7 +46,7 @@ export function usePlaybackControls() {
     if (!ensureWebAVReady(operationName)) {
       return false
     }
-    
+
     try {
       operation()
       return true

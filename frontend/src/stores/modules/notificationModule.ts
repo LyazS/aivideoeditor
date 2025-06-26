@@ -28,7 +28,7 @@ class NotificationManager {
 
     // 如果通知数量超过限制，移除最旧的非持久化通知
     if (this.notifications.value.length >= this.maxNotifications) {
-      const oldestNonPersistent = this.notifications.value.find(n => !n.persistent)
+      const oldestNonPersistent = this.notifications.value.find((n) => !n.persistent)
       if (oldestNonPersistent) {
         this.remove(oldestNonPersistent.id)
       }
@@ -51,7 +51,7 @@ class NotificationManager {
    * @param id 通知ID
    */
   remove(id: string): void {
-    const index = this.notifications.value.findIndex(n => n.id === id)
+    const index = this.notifications.value.findIndex((n) => n.id === id)
     if (index > -1) {
       this.notifications.value.splice(index, 1)
     }
@@ -65,7 +65,7 @@ class NotificationManager {
     if (includePersistent) {
       this.notifications.value = []
     } else {
-      this.notifications.value = this.notifications.value.filter(n => n.persistent)
+      this.notifications.value = this.notifications.value.filter((n) => n.persistent)
     }
   }
 
@@ -74,7 +74,7 @@ class NotificationManager {
    * @param type 通知类型
    */
   removeByType(type: NotificationType): void {
-    this.notifications.value = this.notifications.value.filter(n => n.type !== type)
+    this.notifications.value = this.notifications.value.filter((n) => n.type !== type)
   }
 
   /**
@@ -82,7 +82,7 @@ class NotificationManager {
    * @param type 通知类型
    */
   getCountByType(type: NotificationType): number {
-    return this.notifications.value.filter(n => n.type === type).length
+    return this.notifications.value.filter((n) => n.type === type).length
   }
 
   /**
@@ -91,9 +91,7 @@ class NotificationManager {
    * @param message 消息
    */
   hasDuplicate(title: string, message?: string): boolean {
-    return this.notifications.value.some(n =>
-      n.title === title && n.message === message
-    )
+    return this.notifications.value.some((n) => n.title === title && n.message === message)
   }
 
   /**
@@ -106,7 +104,12 @@ class NotificationManager {
   /**
    * 显示成功通知
    */
-  success(title: string, message?: string, duration?: number, options?: { persistent?: boolean }): string {
+  success(
+    title: string,
+    message?: string,
+    duration?: number,
+    options?: { persistent?: boolean },
+  ): string {
     // 检查重复通知
     if (this.hasDuplicate(title, message)) {
       console.log('🔄 跳过重复的成功通知:', title)
@@ -117,28 +120,38 @@ class NotificationManager {
       title,
       message,
       duration: duration || 3000,
-      persistent: options?.persistent || false
+      persistent: options?.persistent || false,
     })
   }
 
   /**
    * 显示错误通知
    */
-  error(title: string, message?: string, duration?: number, options?: { persistent?: boolean }): string {
+  error(
+    title: string,
+    message?: string,
+    duration?: number,
+    options?: { persistent?: boolean },
+  ): string {
     // 错误通知不检查重复，因为可能需要多次显示
     return this.show({
       type: 'error',
       title,
       message,
       duration: duration || 8000, // 错误通知显示更久
-      persistent: options?.persistent || false
+      persistent: options?.persistent || false,
     })
   }
 
   /**
    * 显示警告通知
    */
-  warning(title: string, message?: string, duration?: number, options?: { persistent?: boolean }): string {
+  warning(
+    title: string,
+    message?: string,
+    duration?: number,
+    options?: { persistent?: boolean },
+  ): string {
     if (this.hasDuplicate(title, message)) {
       console.log('🔄 跳过重复的警告通知:', title)
       return ''
@@ -148,14 +161,19 @@ class NotificationManager {
       title,
       message,
       duration: duration || 6000,
-      persistent: options?.persistent || false
+      persistent: options?.persistent || false,
     })
   }
 
   /**
    * 显示信息通知
    */
-  info(title: string, message?: string, duration?: number, options?: { persistent?: boolean }): string {
+  info(
+    title: string,
+    message?: string,
+    duration?: number,
+    options?: { persistent?: boolean },
+  ): string {
     if (this.hasDuplicate(title, message)) {
       console.log('🔄 跳过重复的信息通知:', title)
       return ''
@@ -165,7 +183,7 @@ class NotificationManager {
       title,
       message,
       duration: duration || 5000,
-      persistent: options?.persistent || false
+      persistent: options?.persistent || false,
     })
   }
 }
@@ -225,28 +243,48 @@ export function createNotificationModule() {
   /**
    * 显示成功通知
    */
-  function showSuccess(title: string, message?: string, duration?: number, options?: { persistent?: boolean }): string {
+  function showSuccess(
+    title: string,
+    message?: string,
+    duration?: number,
+    options?: { persistent?: boolean },
+  ): string {
     return notificationManager.success(title, message, duration, options)
   }
 
   /**
    * 显示错误通知
    */
-  function showError(title: string, message?: string, duration?: number, options?: { persistent?: boolean }): string {
+  function showError(
+    title: string,
+    message?: string,
+    duration?: number,
+    options?: { persistent?: boolean },
+  ): string {
     return notificationManager.error(title, message, duration, options)
   }
 
   /**
    * 显示警告通知
    */
-  function showWarning(title: string, message?: string, duration?: number, options?: { persistent?: boolean }): string {
+  function showWarning(
+    title: string,
+    message?: string,
+    duration?: number,
+    options?: { persistent?: boolean },
+  ): string {
     return notificationManager.warning(title, message, duration, options)
   }
 
   /**
    * 显示信息通知
    */
-  function showInfo(title: string, message?: string, duration?: number, options?: { persistent?: boolean }): string {
+  function showInfo(
+    title: string,
+    message?: string,
+    duration?: number,
+    options?: { persistent?: boolean },
+  ): string {
     return notificationManager.info(title, message, duration, options)
   }
 

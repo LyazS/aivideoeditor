@@ -174,19 +174,13 @@ import { VideoVisibleSprite } from '../utils/VideoVisibleSprite'
 import { ImageVisibleSprite } from '../utils/ImageVisibleSprite'
 import { createSpriteFromMediaItem } from '../utils/spriteFactory'
 import { webavToProjectCoords } from '../utils/coordinateTransform'
-import {
-  calculatePixelsPerFrame
-} from '../stores/utils/storeUtils'
+import { calculatePixelsPerFrame } from '../stores/utils/storeUtils'
 import { calculateVisibleFrameRange } from '../stores/utils/coordinateUtils'
 
-import {
-  generateThumbnailForMediaItem,
-} from '../utils/thumbnailGenerator'
+import { generateThumbnailForMediaItem } from '../utils/thumbnailGenerator'
 import type { TimelineItem, TimelineItemDragData, MediaItemDragData, ConflictInfo } from '../types'
 import VideoClip from './VideoClip.vue'
 import TimeScale from './TimeScale.vue'
-
-
 
 // Component name for Vue DevTools
 defineOptions({
@@ -323,7 +317,11 @@ function cancelRename() {
 const gridLines = computed(() => {
   const lines = []
   const totalDurationFrames = videoStore.totalDurationFrames
-  const pixelsPerFrame = calculatePixelsPerFrame(timelineWidth.value, totalDurationFrames, videoStore.zoomLevel)
+  const pixelsPerFrame = calculatePixelsPerFrame(
+    timelineWidth.value,
+    totalDurationFrames,
+    videoStore.zoomLevel,
+  )
   const pixelsPerSecond = pixelsPerFrame * videoStore.frameRate
 
   // 根据缩放级别决定网格间隔（基于帧数）
@@ -349,14 +347,18 @@ const gridLines = computed(() => {
     timelineWidth.value,
     totalDurationFrames,
     videoStore.zoomLevel,
-    videoStore.scrollOffset
+    videoStore.scrollOffset,
   )
 
   // 生成主网格线（基于帧数）
   const startLineFrames = Math.floor(startFrames / intervalFrames) * intervalFrames
   const endLineFrames = Math.ceil(endFrames / intervalFrames) * intervalFrames
 
-  for (let i = startLineFrames; i <= Math.min(endLineFrames, totalDurationFrames); i += intervalFrames) {
+  for (
+    let i = startLineFrames;
+    i <= Math.min(endLineFrames, totalDurationFrames);
+    i += intervalFrames
+  ) {
     if (i >= 0) {
       lines.push({ time: i, isFrame: false }) // 直接使用帧数
     }
@@ -442,7 +444,7 @@ function handleMediaItemDragOver(event: DragEvent) {
       dropTime,
       targetTrackId,
       isConflict,
-      false
+      false,
     )
 
     dragPreviewManager.updatePreview(previewData, timelineWidth.value)
@@ -454,7 +456,7 @@ function handleMediaItemDragOver(event: DragEvent) {
       dropTime,
       targetTrackId,
       false,
-      false
+      false,
     )
 
     dragPreviewManager.updatePreview(previewData, timelineWidth.value)
@@ -471,7 +473,11 @@ function handleTimelineItemDragOver(event: DragEvent) {
   }
 
   // 使用统一的拖拽工具计算目标位置（考虑拖拽偏移量）
-  const dropPosition = dragUtils.calculateDropPosition(event, timelineWidth.value, currentDragData.dragOffset)
+  const dropPosition = dragUtils.calculateDropPosition(
+    event,
+    timelineWidth.value,
+    currentDragData.dragOffset,
+  )
 
   if (!dropPosition) {
     dragPreviewManager.hidePreview()
@@ -501,7 +507,7 @@ function handleTimelineItemDragOver(event: DragEvent) {
       targetTrackId,
       isConflict,
       currentDragData.selectedItems.length > 1,
-      currentDragData.selectedItems.length
+      currentDragData.selectedItems.length,
     )
 
     dragPreviewManager.updatePreview(previewData, timelineWidth.value)
@@ -555,7 +561,11 @@ async function handleTimelineItemDrop(event: DragEvent, dragData: TimelineItemDr
   console.log('🎯 [Timeline] 处理时间轴项目拖拽放置:', dragData)
 
   // 使用统一的拖拽工具计算目标位置（考虑拖拽偏移量）
-  const dropPosition = dragUtils.calculateDropPosition(event, timelineWidth.value, dragData.dragOffset)
+  const dropPosition = dragUtils.calculateDropPosition(
+    event,
+    timelineWidth.value,
+    dragData.dragOffset,
+  )
 
   if (!dropPosition) {
     console.error('❌ [Timeline] 无法找到目标轨道')
@@ -568,15 +578,8 @@ async function handleTimelineItemDrop(event: DragEvent, dragData: TimelineItemDr
     dragOffsetX: dragData.dragOffset.x,
     dropTime: dropTime.toFixed(2),
     targetTrackId,
-    selectedItems: dragData.selectedItems
+    selectedItems: dragData.selectedItems,
   })
-
-  // TODO: 检测冲突
-  // const conflicts = detectTimelineConflicts(dropTime, targetTrackId, dragData.selectedItems)
-  // if (conflicts.length > 0) {
-  //   const shouldContinue = await showConflictDialog(conflicts)
-  //   if (!shouldContinue) return
-  // }
 
   // 执行移动操作
   try {
@@ -618,9 +621,7 @@ async function handleMediaItemDrop(event: DragEvent, mediaDragData: MediaItemDra
     const { dropTime, targetTrackId } = dropPosition
 
     console.log(`🎯 拖拽素材到时间轴: ${mediaDragData.name}`)
-    console.log(
-      `📍 拖拽位置: 对应帧数: ${dropTime}, 目标轨道: ${targetTrackId}`,
-    )
+    console.log(`📍 拖拽位置: 对应帧数: ${dropTime}, 目标轨道: ${targetTrackId}`)
 
     // 如果拖拽位置超出当前时间轴长度，动态扩展时间轴
     const bufferFrames = 300 // 预留10秒缓冲（300帧）
@@ -637,7 +638,7 @@ async function handleMediaItemDrop(event: DragEvent, mediaDragData: MediaItemDra
         name: mediaItem.file.name,
         type: mediaItem.file.type,
         lastModified: mediaItem.file.lastModified,
-      }
+      },
     }
 
     // 从素材库项创建媒体片段（视频或图片）
@@ -655,8 +656,18 @@ async function moveSingleItem(itemId: string, newTimeFrames: number, newTrackId:
 }
 
 // 移动多个项目（保持相对位置）
-async function moveMultipleItems(itemIds: string[], newTimeFrames: number, newTrackId: number, originalStartTimeFrames: number) {
-  console.log('🔄 [Timeline] 开始批量移动项目:', { itemIds, newTimeFrames, newTrackId, originalStartTimeFrames })
+async function moveMultipleItems(
+  itemIds: string[],
+  newTimeFrames: number,
+  newTrackId: number,
+  originalStartTimeFrames: number,
+) {
+  console.log('🔄 [Timeline] 开始批量移动项目:', {
+    itemIds,
+    newTimeFrames,
+    newTrackId,
+    originalStartTimeFrames,
+  })
 
   // 计算时间偏移量（帧数）
   const timeOffsetFrames = newTimeFrames - originalStartTimeFrames
@@ -791,7 +802,7 @@ async function createMediaClipFromMediaItem(
     const thumbnailUrl = await generateThumbnailForMediaItem({
       mediaType: mediaItem.mediaType,
       mp4Clip: storeMediaItem.mp4Clip,
-      imgClip: storeMediaItem.imgClip
+      imgClip: storeMediaItem.imgClip,
     })
 
     // 创建TimelineItem - 使用markRaw包装VideoVisibleSprite
@@ -1008,7 +1019,11 @@ function handleKeyDown(event: KeyboardEvent) {
 // ConflictInfo 接口已移动到统一类型文件 src/types/index.ts
 
 // 检测素材库拖拽的重叠冲突
-function detectMediaItemConflicts(dropTime: number, targetTrackId: number, duration: number): ConflictInfo[] {
+function detectMediaItemConflicts(
+  dropTime: number,
+  targetTrackId: number,
+  duration: number,
+): ConflictInfo[] {
   const conflicts: ConflictInfo[] = []
 
   // 获取目标轨道上的所有项目
@@ -1033,7 +1048,7 @@ function detectMediaItemConflicts(dropTime: number, targetTrackId: number, durat
         startTime: itemStartTime,
         endTime: itemEndTime,
         overlapStart,
-        overlapEnd
+        overlapEnd,
       })
     }
   }
@@ -1041,7 +1056,11 @@ function detectMediaItemConflicts(dropTime: number, targetTrackId: number, durat
   return conflicts
 }
 
-function detectTimelineConflicts(dropTime: number, targetTrackId: number, dragData: TimelineItemDragData): ConflictInfo[] {
+function detectTimelineConflicts(
+  dropTime: number,
+  targetTrackId: number,
+  dragData: TimelineItemDragData,
+): ConflictInfo[] {
   const conflicts: ConflictInfo[] = []
 
   // 获取目标轨道上的所有项目
@@ -1051,7 +1070,8 @@ function detectTimelineConflicts(dropTime: number, targetTrackId: number, dragDa
   const draggedItem = videoStore.getTimelineItem(dragData.itemId)
   if (!draggedItem) return conflicts
 
-  const dragDuration = draggedItem.timeRange.timelineEndTime - draggedItem.timeRange.timelineStartTime // 帧数
+  const dragDuration =
+    draggedItem.timeRange.timelineEndTime - draggedItem.timeRange.timelineStartTime // 帧数
   const dragEndTime = dropTime + dragDuration
 
   // 检查与其他项目的冲突
@@ -1074,19 +1094,13 @@ function detectTimelineConflicts(dropTime: number, targetTrackId: number, dragDa
         startTime: itemStartTime,
         endTime: itemEndTime,
         overlapStart,
-        overlapEnd
+        overlapEnd,
       })
     }
   }
 
   return conflicts
 }
-
-
-
-
-
-
 
 // 处理拖拽离开事件
 function handleDragLeave(event: DragEvent) {

@@ -9,7 +9,7 @@ export function createSelectionModule(
   timelineItems: Ref<TimelineItem[]>,
   getTimelineItem: (id: string) => TimelineItem | undefined,
   getMediaItem: (id: string) => MediaItem | undefined,
-  executeCommand: (command: any) => Promise<void>
+  executeCommand: (command: any) => Promise<void>,
 ) {
   // ==================== 状态定义 ====================
 
@@ -35,16 +35,20 @@ export function createSelectionModule(
    * @param mode 操作模式：'replace'替换选择，'toggle'切换选择状态
    * @param withHistory 是否记录到操作历史，默认为true
    */
-  function selectTimelineItems(itemIds: string[], mode: 'replace' | 'toggle' = 'replace', withHistory: boolean = true) {
+  function selectTimelineItems(
+    itemIds: string[],
+    mode: 'replace' | 'toggle' = 'replace',
+    withHistory: boolean = true,
+  ) {
     const oldSelection = new Set(selectedTimelineItemIds.value)
 
     if (mode === 'replace') {
       // 替换模式：清空现有选择，设置新选择
       selectedTimelineItemIds.value.clear()
-      itemIds.forEach(id => selectedTimelineItemIds.value.add(id))
+      itemIds.forEach((id) => selectedTimelineItemIds.value.add(id))
     } else {
       // 切换模式：切换每个项目的选择状态
-      itemIds.forEach(id => {
+      itemIds.forEach((id) => {
         if (selectedTimelineItemIds.value.has(id)) {
           selectedTimelineItemIds.value.delete(id)
         } else {
@@ -61,7 +65,7 @@ export function createSelectionModule(
       newSize: selectedTimelineItemIds.value.size,
       isMultiSelect: isMultiSelectMode.value,
       oldSelection: Array.from(oldSelection),
-      newSelection: Array.from(selectedTimelineItemIds.value)
+      newSelection: Array.from(selectedTimelineItemIds.value),
     })
 
     // 统一的AVCanvas同步逻辑
@@ -78,7 +82,7 @@ export function createSelectionModule(
   }
 
   // 防抖机制：避免短时间内重复执行相同的选择操作
-  let lastSelectionCommand: { itemIds: string[], mode: string, timestamp: number } | null = null
+  let lastSelectionCommand: { itemIds: string[]; mode: string; timestamp: number } | null = null
   const SELECTION_DEBOUNCE_TIME = 100 // 100毫秒内的重复操作会被忽略
 
   /**
@@ -86,15 +90,17 @@ export function createSelectionModule(
    * @param itemIds 要操作的项目ID数组
    * @param mode 操作模式：'replace'替换选择，'toggle'切换选择状态
    */
-  async function selectTimelineItemsWithHistory(itemIds: string[], mode: 'replace' | 'toggle' = 'replace') {
+  async function selectTimelineItemsWithHistory(
+    itemIds: string[],
+    mode: 'replace' | 'toggle' = 'replace',
+  ) {
     const now = Date.now()
 
     // 检查是否是重复的操作（防抖）
     if (lastSelectionCommand) {
       const timeDiff = now - lastSelectionCommand.timestamp
       const isSameOperation =
-        lastSelectionCommand.mode === mode &&
-        arraysEqual(lastSelectionCommand.itemIds, itemIds)
+        lastSelectionCommand.mode === mode && arraysEqual(lastSelectionCommand.itemIds, itemIds)
 
       if (isSameOperation && timeDiff < SELECTION_DEBOUNCE_TIME) {
         console.log('🎯 检测到重复选择操作，跳过历史记录', { timeDiff, itemIds, mode })
@@ -124,11 +130,12 @@ export function createSelectionModule(
       mode,
       {
         selectedTimelineItemIds,
-        selectTimelineItems: (ids: string[], m: 'replace' | 'toggle') => selectTimelineItems(ids, m, false),
-        syncAVCanvasSelection
+        selectTimelineItems: (ids: string[], m: 'replace' | 'toggle') =>
+          selectTimelineItems(ids, m, false),
+        syncAVCanvasSelection,
       },
       { getTimelineItem },
-      { getMediaItem }
+      { getMediaItem },
     )
 
     // 执行命令（这会自动添加到历史记录）
@@ -138,14 +145,18 @@ export function createSelectionModule(
   /**
    * 计算新的选择状态
    */
-  function calculateNewSelection(itemIds: string[], mode: 'replace' | 'toggle', currentSelection: Set<string>): Set<string> {
+  function calculateNewSelection(
+    itemIds: string[],
+    mode: 'replace' | 'toggle',
+    currentSelection: Set<string>,
+  ): Set<string> {
     const newSelection = new Set(currentSelection)
 
     if (mode === 'replace') {
       newSelection.clear()
-      itemIds.forEach(id => newSelection.add(id))
+      itemIds.forEach((id) => newSelection.add(id))
     } else {
-      itemIds.forEach(id => {
+      itemIds.forEach((id) => {
         if (newSelection.has(id)) {
           newSelection.delete(id)
         } else {
@@ -190,8 +201,6 @@ export function createSelectionModule(
       selectTimelineItems([], 'replace')
     }
   }
-
-
 
   // ==================== 多选管理方法 ====================
 
@@ -268,8 +277,6 @@ export function createSelectionModule(
   function isTimelineItemSelected(timelineItemId: string): boolean {
     return selectedTimelineItemId.value === timelineItemId
   }
-
-
 
   /**
    * 获取当前选中的时间轴项目

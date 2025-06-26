@@ -6,10 +6,7 @@
  * @param totalDurationFrames 总时长（帧数）
  * @returns 最大缩放级别
  */
-export function getMaxZoomLevelFrames(
-  timelineWidth: number,
-  totalDurationFrames: number,
-): number {
+export function getMaxZoomLevelFrames(timelineWidth: number, totalDurationFrames: number): number {
   // 最大缩放级别：一帧占用容器宽度的1/20（即5%）
   const targetFrameWidth = timelineWidth / 20 // 一帧占1/20横幅
   const calculatedMaxZoom = (targetFrameWidth * totalDurationFrames) / timelineWidth
@@ -36,15 +33,16 @@ export function getMaxZoomLevelFrames(
   return maxZoom
 }
 
-
-
 /**
  * 计算最小缩放级别（帧数版本）
  * @param totalDurationFrames 总时长（帧数）
  * @param maxVisibleDurationFrames 最大可见时长（帧数）
  * @returns 最小缩放级别
  */
-export function getMinZoomLevelFrames(totalDurationFrames: number, maxVisibleDurationFrames: number): number {
+export function getMinZoomLevelFrames(
+  totalDurationFrames: number,
+  maxVisibleDurationFrames: number,
+): number {
   // 基于最大可见范围计算最小缩放级别
   const minZoom = totalDurationFrames / maxVisibleDurationFrames
 
@@ -66,8 +64,6 @@ export function getMinZoomLevelFrames(totalDurationFrames: number, maxVisibleDur
 
   return minZoom
 }
-
-
 
 /**
  * 计算最大滚动偏移量（帧数版本）
@@ -92,5 +88,3 @@ export function getMaxScrollOffsetFrames(
 
   return maxScrollOffset
 }
-
-

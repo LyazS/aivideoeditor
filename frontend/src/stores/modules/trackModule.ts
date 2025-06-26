@@ -51,7 +51,7 @@ export function createTrackModule() {
   function removeTrack(
     trackId: number,
     timelineItems: Ref<TimelineItem[]>,
-    removeTimelineItemCallback?: (timelineItemId: string) => void
+    removeTimelineItemCallback?: (timelineItemId: string) => void,
   ) {
     // 不能删除最后一个轨道
     if (tracks.value.length <= 1) {
@@ -101,8 +101,8 @@ export function createTrackModule() {
 
       // 同步该轨道上所有TimelineItem的sprite可见性
       if (timelineItems) {
-        const trackItems = timelineItems.value.filter(item => item.trackId === trackId)
-        trackItems.forEach(item => {
+        const trackItems = timelineItems.value.filter((item) => item.trackId === trackId)
+        trackItems.forEach((item) => {
           if (item.sprite) {
             item.sprite.visible = track.isVisible
           }
@@ -138,8 +138,10 @@ export function createTrackModule() {
 
       // 同步该轨道上所有TimelineItem的sprite静音状态
       if (timelineItems) {
-        const trackItems = timelineItems.value.filter(item => item.trackId === trackId && item.mediaType === 'video')
-        trackItems.forEach(item => {
+        const trackItems = timelineItems.value.filter(
+          (item) => item.trackId === trackId && item.mediaType === 'video',
+        )
+        trackItems.forEach((item) => {
           if (item.sprite && 'setTrackMuteChecker' in item.sprite) {
             // 为每个VideoVisibleSprite设置轨道静音检查函数
             const sprite = item.sprite as VideoVisibleSprite // VideoVisibleSprite

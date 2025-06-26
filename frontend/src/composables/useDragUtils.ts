@@ -18,7 +18,7 @@ export function useDragUtils() {
     trackId: number,
     startTime: number, // 帧数
     selectedItems: string[],
-    dragOffset: { x: number, y: number }
+    dragOffset: { x: number; y: number },
   ) {
     const dragData: TimelineItemDragData = {
       type: 'timeline-item',
@@ -26,7 +26,7 @@ export function useDragUtils() {
       trackId,
       startTime,
       selectedItems,
-      dragOffset
+      dragOffset,
     }
 
     // 设置拖拽数据
@@ -47,14 +47,14 @@ export function useDragUtils() {
     mediaItemId: string,
     name: string,
     duration: number, // 帧数
-    mediaType: 'video' | 'image'
+    mediaType: 'video' | 'image',
   ) {
     const dragData: MediaItemDragData = {
       type: 'media-item',
       mediaItemId,
       name,
       duration,
-      mediaType
+      mediaType,
     }
 
     // 设置拖拽数据
@@ -108,7 +108,7 @@ export function useDragUtils() {
     trackId: number,
     isConflict: boolean = false,
     isMultiple: boolean = false,
-    count?: number
+    count?: number,
   ) {
     return {
       name,
@@ -117,7 +117,7 @@ export function useDragUtils() {
       trackId,
       isConflict,
       isMultiple,
-      count
+      count,
     }
   }
 
@@ -127,11 +127,11 @@ export function useDragUtils() {
   function calculateDropPosition(
     event: DragEvent,
     timelineWidth: number,
-    dragOffset?: { x: number, y: number }
+    dragOffset?: { x: number; y: number },
   ) {
     const targetElement = event.target as HTMLElement
     const trackContent = targetElement.closest('.track-content')
-    
+
     if (!trackContent) {
       return null
     }
@@ -160,7 +160,7 @@ export function useDragUtils() {
     return {
       dropTime: dropFrames, // 现在返回帧数
       targetTrackId,
-      trackContent
+      trackContent,
     }
   }
 
@@ -169,7 +169,7 @@ export function useDragUtils() {
    */
   function getDragDataType(event: DragEvent): 'timeline-item' | 'media-item' | 'files' | 'unknown' {
     const types = event.dataTransfer?.types || []
-    
+
     if (types.includes('application/timeline-item')) {
       return 'timeline-item'
     } else if (types.includes('application/media-item')) {
@@ -205,7 +205,7 @@ export function useDragUtils() {
     }
     return {
       width: element.offsetWidth,
-      height: element.offsetHeight
+      height: element.offsetHeight,
     }
   }
 

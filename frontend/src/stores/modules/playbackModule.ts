@@ -1,8 +1,5 @@
 import { ref, computed } from 'vue'
-import {
-  alignFramesToFrame,
-  framesToTimecode
-} from '../utils/timeUtils'
+import { alignFramesToFrame, framesToTimecode } from '../utils/timeUtils'
 
 /**
  * 播放控制管理模块
@@ -24,8 +21,6 @@ export function createPlaybackModule(frameRate: { value: number }) {
   const formattedCurrentTime = computed(() => {
     return framesToTimecode(currentFrame.value)
   })
-
-
 
   /**
    * 播放速度的显示文本
@@ -60,8 +55,6 @@ export function createPlaybackModule(frameRate: { value: number }) {
     }
   }
 
-
-
   /**
    * 跳转到指定帧数
    * @param frames 目标帧数
@@ -70,8 +63,6 @@ export function createPlaybackModule(frameRate: { value: number }) {
     setCurrentFrame(frames, true)
     console.log('🎯 跳转到帧:', frames, `(${framesToTimecode(frames)})`)
   }
-
-
 
   /**
    * 相对跳转（帧数）
@@ -84,11 +75,9 @@ export function createPlaybackModule(frameRate: { value: number }) {
       deltaFrames,
       oldFrame: currentFrame.value - deltaFrames,
       newFrame: currentFrame.value,
-      timecode: framesToTimecode(currentFrame.value)
+      timecode: framesToTimecode(currentFrame.value),
     })
   }
-
-
 
   /**
    * 跳转到下一帧

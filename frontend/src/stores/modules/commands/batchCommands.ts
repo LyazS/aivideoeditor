@@ -1,10 +1,7 @@
 import { generateCommandId } from '../../../utils/idGenerator'
 import { BaseBatchCommand } from '../historyModule'
 import type { SimpleCommand, TimelineItem, MediaItem, Track } from '../../../types'
-import {
-  RemoveTimelineItemCommand,
-  MoveTimelineItemCommand
-} from './timelineCommands'
+import { RemoveTimelineItemCommand, MoveTimelineItemCommand } from './timelineCommands'
 import type { VisibleSprite } from '@webav/av-cliper'
 
 /**
@@ -26,7 +23,7 @@ export class BatchDeleteCommand extends BaseBatchCommand {
     },
     private mediaModule: {
       getMediaItem: (id: string) => MediaItem | undefined
-    }
+    },
   ) {
     super(`批量删除 ${timelineItemIds.length} 个时间轴项目`)
     this.buildDeleteCommands()
@@ -44,7 +41,7 @@ export class BatchDeleteCommand extends BaseBatchCommand {
           item,
           this.timelineModule,
           this.webavModule,
-          this.mediaModule
+          this.mediaModule,
         )
         this.addCommand(deleteCommand)
       }
@@ -52,8 +49,6 @@ export class BatchDeleteCommand extends BaseBatchCommand {
 
     console.log(`📋 准备批量删除 ${this.subCommands.length} 个时间轴项目`)
   }
-
-
 }
 
 /**
@@ -74,7 +69,7 @@ export class BatchAutoArrangeTrackCommand extends BaseBatchCommand {
     },
     private trackModule: {
       getTrack: (trackId: number) => Track | undefined
-    }
+    },
   ) {
     const track = trackModule.getTrack(trackId)
     super(`自动排列轨道: ${track?.name || `轨道 ${trackId}`}`)
@@ -112,7 +107,8 @@ export class BatchAutoArrangeTrackCommand extends BaseBatchCommand {
       }
 
       // 检查是否需要移动（避免创建无意义的命令）
-      const positionChanged = Math.abs(timeRange.timelineStartTime - newTimeRange.timelineStartTime) > 1 // 1帧误差容忍
+      const positionChanged =
+        Math.abs(timeRange.timelineStartTime - newTimeRange.timelineStartTime) > 1 // 1帧误差容忍
 
       if (positionChanged) {
         const moveCommand = new MoveTimelineItemCommand(
@@ -127,7 +123,7 @@ export class BatchAutoArrangeTrackCommand extends BaseBatchCommand {
           },
           {
             getMediaItem: this.mediaModule.getMediaItem,
-          }
+          },
         )
         this.addCommand(moveCommand)
       }
@@ -136,10 +132,10 @@ export class BatchAutoArrangeTrackCommand extends BaseBatchCommand {
     }
 
     const track = this.trackModule.getTrack(this.trackId)
-    console.log(`📋 准备自动排列轨道: ${track?.name || `轨道 ${this.trackId}`}, 需要移动 ${this.subCommands.length} 个项目`)
+    console.log(
+      `📋 准备自动排列轨道: ${track?.name || `轨道 ${this.trackId}`}, 需要移动 ${this.subCommands.length} 个项目`,
+    )
   }
-
-
 }
 
 /**
@@ -147,17 +143,12 @@ export class BatchAutoArrangeTrackCommand extends BaseBatchCommand {
  * 将多个属性修改操作组合为一个批量操作
  */
 export class BatchUpdatePropertiesCommand extends BaseBatchCommand {
-  constructor(
-    targetItemIds: string[],
-    updateCommands: SimpleCommand[]
-  ) {
+  constructor(targetItemIds: string[], updateCommands: SimpleCommand[]) {
     super(`批量修改 ${targetItemIds.length} 个项目的属性`)
 
     // 添加所有更新命令
-    updateCommands.forEach(command => this.addCommand(command))
+    updateCommands.forEach((command) => this.addCommand(command))
 
     console.log(`📋 准备批量修改 ${this.subCommands.length} 个属性`)
   }
-
-
 }

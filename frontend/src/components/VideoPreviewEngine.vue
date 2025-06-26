@@ -34,7 +34,9 @@
             <!-- 时间显示 -->
             <div class="time-display">
               {{ framesToTimecode(videoStore.currentFrame) }} /
-              {{ framesToTimecode(videoStore.contentEndTimeFrames || videoStore.totalDurationFrames) }}
+              {{
+                framesToTimecode(videoStore.contentEndTimeFrames || videoStore.totalDurationFrames)
+              }}
             </div>
             <!-- 中间播放控制 -->
             <div class="center-controls">
@@ -189,7 +191,6 @@ import { useVideoStore } from '../stores/videoStore'
 import { useKeyboardShortcuts } from '../composables/useKeyboardShortcuts'
 import { logWebAVReadyStateChange, logComponentLifecycle } from '../utils/webavDebug'
 import { framesToTimecode, secondsToFrames } from '../stores/utils/timeUtils'
-
 
 const videoStore = useVideoStore()
 

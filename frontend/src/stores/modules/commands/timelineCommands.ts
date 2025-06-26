@@ -1,8 +1,5 @@
 import { generateCommandId } from '../../../utils/idGenerator'
-import {
-  framesToMicroseconds,
-  framesToTimecode
-} from '../../utils/timeUtils'
+import { framesToMicroseconds, framesToTimecode } from '../../utils/timeUtils'
 import type {
   SimpleCommand,
   TimelineItem,
@@ -11,12 +8,9 @@ import type {
   VideoTimeRange,
   ImageTimeRange,
   TimelineItemData,
-  TransformData
+  TransformData,
 } from '../../../types'
-import {
-  isVideoTimeRange,
-  isImageTimeRange
-} from '../../../types'
+import { isVideoTimeRange, isImageTimeRange } from '../../../types'
 import { VideoVisibleSprite } from '../../../utils/VideoVisibleSprite'
 import { ImageVisibleSprite } from '../../../utils/ImageVisibleSprite'
 import { createSpriteFromMediaItem } from '../../../utils/spriteFactory'
@@ -46,7 +40,7 @@ export class AddTimelineItemCommand implements SimpleCommand {
     },
     private mediaModule: {
       getMediaItem: (id: string) => MediaItem | undefined
-    }
+    },
   ) {
     this.id = generateCommandId()
     const mediaItem = this.mediaModule.getMediaItem(timelineItem.mediaItemId)
@@ -132,7 +126,7 @@ export class AddTimelineItemCommand implements SimpleCommand {
       mediaType: mediaItem.mediaType,
       timeRange: this.originalTimelineItemData.timeRange,
       position: { x: newSprite.rect.x, y: newSprite.rect.y },
-      size: { w: newSprite.rect.w, h: newSprite.rect.h }
+      size: { w: newSprite.rect.w, h: newSprite.rect.h },
     })
 
     return newTimelineItem
@@ -196,7 +190,9 @@ export class AddTimelineItemCommand implements SimpleCommand {
     try {
       console.log('🖼️ 开始为添加的项目重新生成缩略图...')
 
-      const { regenerateThumbnailForTimelineItem } = await import('../../../utils/thumbnailGenerator')
+      const { regenerateThumbnailForTimelineItem } = await import(
+        '../../../utils/thumbnailGenerator'
+      )
       const thumbnailUrl = await regenerateThumbnailForTimelineItem(timelineItem, mediaItem)
 
       if (thumbnailUrl) {
@@ -233,7 +229,7 @@ export class RemoveTimelineItemCommand implements SimpleCommand {
     },
     private mediaModule: {
       getMediaItem: (id: string) => MediaItem | undefined
-    }
+    },
   ) {
     this.id = generateCommandId()
 
@@ -333,7 +329,7 @@ export class RemoveTimelineItemCommand implements SimpleCommand {
       mediaType: mediaItem.mediaType,
       timeRange: this.originalTimelineItemData.timeRange,
       position: { x: newSprite.rect.x, y: newSprite.rect.y },
-      size: { w: newSprite.rect.w, h: newSprite.rect.h }
+      size: { w: newSprite.rect.w, h: newSprite.rect.h },
     })
 
     return newTimelineItem
@@ -394,11 +390,16 @@ export class RemoveTimelineItemCommand implements SimpleCommand {
    * @param timelineItem 重建的时间轴项目
    * @param mediaItem 对应的媒体项目
    */
-  private async regenerateThumbnailForRemovedItem(timelineItem: TimelineItem, mediaItem: MediaItem) {
+  private async regenerateThumbnailForRemovedItem(
+    timelineItem: TimelineItem,
+    mediaItem: MediaItem,
+  ) {
     try {
       console.log('🖼️ 开始为重建的删除项目重新生成缩略图...')
 
-      const { regenerateThumbnailForTimelineItem } = await import('../../../utils/thumbnailGenerator')
+      const { regenerateThumbnailForTimelineItem } = await import(
+        '../../../utils/thumbnailGenerator'
+      )
       const thumbnailUrl = await regenerateThumbnailForTimelineItem(timelineItem, mediaItem)
 
       if (thumbnailUrl) {
@@ -438,7 +439,7 @@ export class DuplicateTimelineItemCommand implements SimpleCommand {
     },
     private mediaModule: {
       getMediaItem: (id: string) => MediaItem | undefined
-    }
+    },
   ) {
     this.id = generateCommandId()
     const mediaItem = this.mediaModule.getMediaItem(originalTimelineItem.mediaItemId)
@@ -487,7 +488,8 @@ export class DuplicateTimelineItemCommand implements SimpleCommand {
     // 设置时间范围（调整到新位置）
     const originalTimeRange = this.originalTimelineItemData.timeRange
     // 注意：originalTimeRange 中的时间是帧数，this.newPositionFrames 也是帧数
-    const originalDurationFrames = originalTimeRange.timelineEndTime - originalTimeRange.timelineStartTime // 帧数
+    const originalDurationFrames =
+      originalTimeRange.timelineEndTime - originalTimeRange.timelineStartTime // 帧数
     const newTimelineStartTimeFrames = this.newPositionFrames // 帧数
     const newTimelineEndTimeFrames = newTimelineStartTimeFrames + originalDurationFrames
 
@@ -524,18 +526,23 @@ export class DuplicateTimelineItemCommand implements SimpleCommand {
       mediaItemId: this.originalTimelineItemData.mediaItemId,
       trackId: this.originalTimelineItemData.trackId,
       mediaType: this.originalTimelineItemData.mediaType,
-      timeRange: mediaItem.mediaType === 'video' && isVideoTimeRange(originalTimeRange) ? {
-        clipStartTime: originalTimeRange.clipStartTime,
-        clipEndTime: originalTimeRange.clipEndTime,
-        timelineStartTime: newTimelineStartTimeFrames,
-        timelineEndTime: newTimelineEndTimeFrames,
-        effectiveDuration: originalTimeRange.effectiveDuration,
-        playbackRate: originalTimeRange.playbackRate,
-      } : isImageTimeRange(originalTimeRange) ? {
-        timelineStartTime: newTimelineStartTimeFrames,
-        timelineEndTime: newTimelineEndTimeFrames,
-        displayDuration: originalTimeRange.displayDuration,
-      } : originalTimeRange,
+      timeRange:
+        mediaItem.mediaType === 'video' && isVideoTimeRange(originalTimeRange)
+          ? {
+              clipStartTime: originalTimeRange.clipStartTime,
+              clipEndTime: originalTimeRange.clipEndTime,
+              timelineStartTime: newTimelineStartTimeFrames,
+              timelineEndTime: newTimelineEndTimeFrames,
+              effectiveDuration: originalTimeRange.effectiveDuration,
+              playbackRate: originalTimeRange.playbackRate,
+            }
+          : isImageTimeRange(originalTimeRange)
+            ? {
+                timelineStartTime: newTimelineStartTimeFrames,
+                timelineEndTime: newTimelineEndTimeFrames,
+                displayDuration: originalTimeRange.displayDuration,
+              }
+            : originalTimeRange,
       x: this.originalTimelineItemData.x,
       y: this.originalTimelineItemData.y,
       width: this.originalTimelineItemData.width,
@@ -608,11 +615,16 @@ export class DuplicateTimelineItemCommand implements SimpleCommand {
    * @param timelineItem 复制的时间轴项目
    * @param mediaItem 对应的媒体项目
    */
-  private async regenerateThumbnailForDuplicatedItem(timelineItem: TimelineItem, mediaItem: MediaItem) {
+  private async regenerateThumbnailForDuplicatedItem(
+    timelineItem: TimelineItem,
+    mediaItem: MediaItem,
+  ) {
     try {
       console.log('🖼️ 开始为复制的项目重新生成缩略图...')
 
-      const { regenerateThumbnailForTimelineItem } = await import('../../../utils/thumbnailGenerator')
+      const { regenerateThumbnailForTimelineItem } = await import(
+        '../../../utils/thumbnailGenerator'
+      )
       const thumbnailUrl = await regenerateThumbnailForTimelineItem(timelineItem, mediaItem)
 
       if (thumbnailUrl) {
@@ -646,7 +658,7 @@ export class MoveTimelineItemCommand implements SimpleCommand {
     },
     private mediaModule: {
       getMediaItem: (id: string) => MediaItem | undefined
-    }
+    },
   ) {
     this.id = generateCommandId()
 
@@ -692,13 +704,21 @@ export class MoveTimelineItemCommand implements SimpleCommand {
 
       // 移动到新位置
       const trackIdToSet = this.oldTrackId !== this.newTrackId ? this.newTrackId : undefined
-      this.timelineModule.updateTimelineItemPosition(this.timelineItemId, this.newPositionFrames, trackIdToSet)
+      this.timelineModule.updateTimelineItemPosition(
+        this.timelineItemId,
+        this.newPositionFrames,
+        trackIdToSet,
+      )
 
       const mediaItem = this.mediaModule.getMediaItem(timelineItem.mediaItemId)
-      console.log(`🔄 已移动时间轴项目: ${mediaItem?.name || '未知素材'} 到位置 ${this.newPositionFrames}帧, 轨道 ${this.newTrackId}`)
+      console.log(
+        `🔄 已移动时间轴项目: ${mediaItem?.name || '未知素材'} 到位置 ${this.newPositionFrames}帧, 轨道 ${this.newTrackId}`,
+      )
     } catch (error) {
       const timelineItem = this.timelineModule.getTimelineItem(this.timelineItemId)
-      const mediaItem = timelineItem ? this.mediaModule.getMediaItem(timelineItem.mediaItemId) : null
+      const mediaItem = timelineItem
+        ? this.mediaModule.getMediaItem(timelineItem.mediaItemId)
+        : null
       console.error(`❌ 移动时间轴项目失败: ${mediaItem?.name || '未知素材'}`, error)
       throw error
     }
@@ -718,13 +738,21 @@ export class MoveTimelineItemCommand implements SimpleCommand {
 
       // 移动回原位置
       const trackIdToSet = this.oldTrackId !== this.newTrackId ? this.oldTrackId : undefined
-      this.timelineModule.updateTimelineItemPosition(this.timelineItemId, this.oldPositionFrames, trackIdToSet)
+      this.timelineModule.updateTimelineItemPosition(
+        this.timelineItemId,
+        this.oldPositionFrames,
+        trackIdToSet,
+      )
 
       const mediaItem = this.mediaModule.getMediaItem(timelineItem.mediaItemId)
-      console.log(`↩️ 已撤销移动时间轴项目: ${mediaItem?.name || '未知素材'} 回到位置 ${this.oldPositionFrames}帧, 轨道 ${this.oldTrackId}`)
+      console.log(
+        `↩️ 已撤销移动时间轴项目: ${mediaItem?.name || '未知素材'} 回到位置 ${this.oldPositionFrames}帧, 轨道 ${this.oldTrackId}`,
+      )
     } catch (error) {
       const timelineItem = this.timelineModule.getTimelineItem(this.timelineItemId)
-      const mediaItem = timelineItem ? this.mediaModule.getMediaItem(timelineItem.mediaItemId) : null
+      const mediaItem = timelineItem
+        ? this.mediaModule.getMediaItem(timelineItem.mediaItemId)
+        : null
       console.error(`❌ 撤销移动时间轴项目失败: ${mediaItem?.name || '未知素材'}`, error)
       throw error
     }
@@ -741,7 +769,17 @@ export class UpdateTransformCommand implements SimpleCommand {
 
   constructor(
     private timelineItemId: string,
-    private propertyType: 'position' | 'size' | 'rotation' | 'opacity' | 'zIndex' | 'duration' | 'playbackRate' | 'volume' | 'audioState' | 'multiple',
+    private propertyType:
+      | 'position'
+      | 'size'
+      | 'rotation'
+      | 'opacity'
+      | 'zIndex'
+      | 'duration'
+      | 'playbackRate'
+      | 'volume'
+      | 'audioState'
+      | 'multiple',
     private oldValues: {
       x?: number
       y?: number
@@ -777,7 +815,7 @@ export class UpdateTransformCommand implements SimpleCommand {
     },
     private clipOperationsModule?: {
       updateTimelineItemPlaybackRate: (id: string, rate: number) => void
-    }
+    },
   ) {
     this.id = generateCommandId()
 
@@ -802,29 +840,37 @@ export class UpdateTransformCommand implements SimpleCommand {
     const changes: string[] = []
 
     // 检查位置变化
-    if ((this.newValues.x !== undefined && this.oldValues.x !== undefined) ||
-        (this.newValues.y !== undefined && this.oldValues.y !== undefined)) {
+    if (
+      (this.newValues.x !== undefined && this.oldValues.x !== undefined) ||
+      (this.newValues.y !== undefined && this.oldValues.y !== undefined)
+    ) {
       const oldX = this.oldValues.x ?? 0
       const oldY = this.oldValues.y ?? 0
       const newX = this.newValues.x ?? oldX
       const newY = this.newValues.y ?? oldY
-      changes.push(`位置: (${oldX.toFixed(0)}, ${oldY.toFixed(0)}) → (${newX.toFixed(0)}, ${newY.toFixed(0)})`)
+      changes.push(
+        `位置: (${oldX.toFixed(0)}, ${oldY.toFixed(0)}) → (${newX.toFixed(0)}, ${newY.toFixed(0)})`,
+      )
     }
 
     // 检查大小变化
-    if ((this.newValues.width !== undefined && this.oldValues.width !== undefined) ||
-        (this.newValues.height !== undefined && this.oldValues.height !== undefined)) {
+    if (
+      (this.newValues.width !== undefined && this.oldValues.width !== undefined) ||
+      (this.newValues.height !== undefined && this.oldValues.height !== undefined)
+    ) {
       const oldWidth = this.oldValues.width ?? 0
       const oldHeight = this.oldValues.height ?? 0
       const newWidth = this.newValues.width ?? oldWidth
       const newHeight = this.newValues.height ?? oldHeight
-      changes.push(`大小: ${oldWidth.toFixed(0)}×${oldHeight.toFixed(0)} → ${newWidth.toFixed(0)}×${newHeight.toFixed(0)}`)
+      changes.push(
+        `大小: ${oldWidth.toFixed(0)}×${oldHeight.toFixed(0)} → ${newWidth.toFixed(0)}×${newHeight.toFixed(0)}`,
+      )
     }
 
     if (this.newValues.rotation !== undefined && this.oldValues.rotation !== undefined) {
       // 将弧度转换为角度显示
-      const oldDegrees = (this.oldValues.rotation * 180 / Math.PI).toFixed(1)
-      const newDegrees = (this.newValues.rotation * 180 / Math.PI).toFixed(1)
+      const oldDegrees = ((this.oldValues.rotation * 180) / Math.PI).toFixed(1)
+      const newDegrees = ((this.newValues.rotation * 180) / Math.PI).toFixed(1)
       changes.push(`旋转: ${oldDegrees}° → ${newDegrees}°`)
     }
 
@@ -839,11 +885,15 @@ export class UpdateTransformCommand implements SimpleCommand {
     }
 
     if (this.newValues.duration !== undefined && this.oldValues.duration !== undefined) {
-      changes.push(`时长: ${framesToTimecode(this.oldValues.duration)} → ${framesToTimecode(this.newValues.duration)}`)
+      changes.push(
+        `时长: ${framesToTimecode(this.oldValues.duration)} → ${framesToTimecode(this.newValues.duration)}`,
+      )
     }
 
     if (this.newValues.playbackRate !== undefined && this.oldValues.playbackRate !== undefined) {
-      changes.push(`倍速: ${this.oldValues.playbackRate.toFixed(1)}x → ${this.newValues.playbackRate.toFixed(1)}x`)
+      changes.push(
+        `倍速: ${this.oldValues.playbackRate.toFixed(1)}x → ${this.newValues.playbackRate.toFixed(1)}x`,
+      )
     }
 
     if (this.newValues.volume !== undefined && this.oldValues.volume !== undefined) {
@@ -887,7 +937,7 @@ export class UpdateTransformCommand implements SimpleCommand {
 
       // 过滤掉undefined的值
       const filteredTransform = Object.fromEntries(
-        Object.entries(transformValues).filter(([_, value]) => value !== undefined)
+        Object.entries(transformValues).filter(([_, value]) => value !== undefined),
       )
 
       if (Object.keys(filteredTransform).length > 0) {
@@ -896,7 +946,10 @@ export class UpdateTransformCommand implements SimpleCommand {
 
       // 处理倍速更新（仅对视频有效）
       if (this.newValues.playbackRate !== undefined && this.clipOperationsModule) {
-        this.clipOperationsModule.updateTimelineItemPlaybackRate(this.timelineItemId, this.newValues.playbackRate)
+        this.clipOperationsModule.updateTimelineItemPlaybackRate(
+          this.timelineItemId,
+          this.newValues.playbackRate,
+        )
       }
 
       // 处理时长更新（通过直接操作sprite的timeRange）
@@ -927,7 +980,9 @@ export class UpdateTransformCommand implements SimpleCommand {
       console.log(`🎯 已更新变换属性: ${mediaItem?.name || '未知素材'}`)
     } catch (error) {
       const timelineItem = this.timelineModule.getTimelineItem(this.timelineItemId)
-      const mediaItem = timelineItem ? this.mediaModule.getMediaItem(timelineItem.mediaItemId) : null
+      const mediaItem = timelineItem
+        ? this.mediaModule.getMediaItem(timelineItem.mediaItemId)
+        : null
       console.error(`❌ 更新变换属性失败: ${mediaItem?.name || '未知素材'}`, error)
       throw error
     }
@@ -958,7 +1013,7 @@ export class UpdateTransformCommand implements SimpleCommand {
 
       // 过滤掉undefined的值
       const filteredTransform = Object.fromEntries(
-        Object.entries(transformValues).filter(([_, value]) => value !== undefined)
+        Object.entries(transformValues).filter(([_, value]) => value !== undefined),
       )
 
       if (Object.keys(filteredTransform).length > 0) {
@@ -967,7 +1022,10 @@ export class UpdateTransformCommand implements SimpleCommand {
 
       // 处理倍速恢复（仅对视频有效）
       if (this.oldValues.playbackRate !== undefined && this.clipOperationsModule) {
-        this.clipOperationsModule.updateTimelineItemPlaybackRate(this.timelineItemId, this.oldValues.playbackRate)
+        this.clipOperationsModule.updateTimelineItemPlaybackRate(
+          this.timelineItemId,
+          this.oldValues.playbackRate,
+        )
       }
 
       // 处理时长恢复（通过直接操作sprite的timeRange）
@@ -998,7 +1056,9 @@ export class UpdateTransformCommand implements SimpleCommand {
       console.log(`↩️ 已撤销变换属性更新: ${mediaItem?.name || '未知素材'}`)
     } catch (error) {
       const timelineItem = this.timelineModule.getTimelineItem(this.timelineItemId)
-      const mediaItem = timelineItem ? this.mediaModule.getMediaItem(timelineItem.mediaItemId) : null
+      const mediaItem = timelineItem
+        ? this.mediaModule.getMediaItem(timelineItem.mediaItemId)
+        : null
       console.error(`❌ 撤销变换属性更新失败: ${mediaItem?.name || '未知素材'}`, error)
       throw error
     }
@@ -1077,7 +1137,7 @@ export class SplitTimelineItemCommand implements SimpleCommand {
     },
     private mediaModule: {
       getMediaItem: (id: string) => MediaItem | undefined
-    }
+    },
   ) {
     this.id = generateCommandId()
 
@@ -1124,7 +1184,10 @@ export class SplitTimelineItemCommand implements SimpleCommand {
    * 从原始素材重建分割后的两个sprite和timelineItem
    * 遵循"从源头重建"原则，每次都完全重新创建
    */
-  private async rebuildSplitItems(): Promise<{ firstItem: TimelineItem; secondItem: TimelineItem }> {
+  private async rebuildSplitItems(): Promise<{
+    firstItem: TimelineItem
+    secondItem: TimelineItem
+  }> {
     console.log('🔄 开始从源头重建分割后的时间轴项目...')
 
     // 1. 获取原始素材
@@ -1157,7 +1220,7 @@ export class SplitTimelineItemCommand implements SimpleCommand {
     const splitClipTimeFrames = clipStartTimeFrames + Math.round(clipDurationFrames * relativeRatio)
 
     // 3. 从原始素材重新创建两个sprite
-    const firstSprite = await createSpriteFromMediaItem(mediaItem) as VideoVisibleSprite
+    const firstSprite = (await createSpriteFromMediaItem(mediaItem)) as VideoVisibleSprite
     firstSprite.setTimeRange({
       clipStartTime: clipStartTimeFrames,
       clipEndTime: splitClipTimeFrames,
@@ -1165,7 +1228,7 @@ export class SplitTimelineItemCommand implements SimpleCommand {
       timelineEndTime: splitTimeFrames, // 分割点时间（帧数）
     })
 
-    const secondSprite = await createSpriteFromMediaItem(mediaItem) as VideoVisibleSprite
+    const secondSprite = (await createSpriteFromMediaItem(mediaItem)) as VideoVisibleSprite
     secondSprite.setTimeRange({
       clipStartTime: splitClipTimeFrames,
       clipEndTime: clipEndTimeFrames,
@@ -1258,7 +1321,7 @@ export class SplitTimelineItemCommand implements SimpleCommand {
     }
 
     // 2. 从原始素材重新创建sprite
-    const newSprite = await createSpriteFromMediaItem(mediaItem) as VideoVisibleSprite
+    const newSprite = (await createSpriteFromMediaItem(mediaItem)) as VideoVisibleSprite
 
     // 3. 设置原始时间范围
     newSprite.setTimeRange(this.originalTimelineItemData.timeRange)
@@ -1309,11 +1372,16 @@ export class SplitTimelineItemCommand implements SimpleCommand {
    * @param timelineItem 重建的时间轴项目
    * @param mediaItem 对应的媒体项目
    */
-  private async regenerateThumbnailForOriginalItem(timelineItem: TimelineItem, mediaItem: MediaItem) {
+  private async regenerateThumbnailForOriginalItem(
+    timelineItem: TimelineItem,
+    mediaItem: MediaItem,
+  ) {
     try {
       console.log('🖼️ 开始为重建的原始项目重新生成缩略图...')
 
-      const { regenerateThumbnailForTimelineItem } = await import('../../../utils/thumbnailGenerator')
+      const { regenerateThumbnailForTimelineItem } = await import(
+        '../../../utils/thumbnailGenerator'
+      )
       const thumbnailUrl = await regenerateThumbnailForTimelineItem(timelineItem, mediaItem)
 
       if (thumbnailUrl) {
@@ -1352,7 +1420,9 @@ export class SplitTimelineItemCommand implements SimpleCommand {
       this.webavModule.addSprite(secondItem.sprite)
 
       const mediaItem = this.mediaModule.getMediaItem(this.originalTimelineItemData.mediaItemId)
-      console.log(`🔪 已分割时间轴项目: ${mediaItem?.name || '未知素材'} 在 ${framesToTimecode(this.splitTimeFrames)}`)
+      console.log(
+        `🔪 已分割时间轴项目: ${mediaItem?.name || '未知素材'} 在 ${framesToTimecode(this.splitTimeFrames)}`,
+      )
     } catch (error) {
       const mediaItem = this.mediaModule.getMediaItem(this.originalTimelineItemData.mediaItemId)
       console.error(`❌ 分割时间轴项目失败: ${mediaItem?.name || '未知素材'}`, error)
@@ -1399,12 +1469,14 @@ export class SplitTimelineItemCommand implements SimpleCommand {
   private async regenerateThumbnailsForSplitItems(
     firstItem: TimelineItem,
     secondItem: TimelineItem,
-    mediaItem: MediaItem
+    mediaItem: MediaItem,
   ) {
     try {
       console.log('🖼️ 开始为分割后的项目重新生成缩略图...')
 
-      const { regenerateThumbnailForTimelineItem } = await import('../../../utils/thumbnailGenerator')
+      const { regenerateThumbnailForTimelineItem } = await import(
+        '../../../utils/thumbnailGenerator'
+      )
 
       // 为第一个片段生成缩略图
       const firstThumbnailUrl = await regenerateThumbnailForTimelineItem(firstItem, mediaItem)
@@ -1440,9 +1512,13 @@ export class AddTrackCommand implements SimpleCommand {
     private trackName: string | undefined, // 轨道名称（可选）
     private trackModule: {
       addTrack: (name?: string) => Track
-      removeTrack: (trackId: number, timelineItems: Ref<TimelineItem[]>, removeTimelineItemCallback?: (id: string) => void) => void
+      removeTrack: (
+        trackId: number,
+        timelineItems: Ref<TimelineItem[]>,
+        removeTimelineItemCallback?: (id: string) => void,
+      ) => void
       getTrack: (trackId: number) => Track | undefined
-    }
+    },
   ) {
     this.id = generateCommandId()
     this.description = `添加轨道: ${trackName || '新轨道'}`
@@ -1522,7 +1598,7 @@ export class RenameTrackCommand implements SimpleCommand {
     private trackModule: {
       renameTrack: (trackId: number, newName: string) => void
       getTrack: (trackId: number) => Track | undefined
-    }
+    },
   ) {
     this.id = generateCommandId()
     this.description = `重命名轨道: ${newName}`
@@ -1599,7 +1675,11 @@ export class RemoveTrackCommand implements SimpleCommand {
     private trackId: number,
     private trackModule: {
       addTrack: (name?: string) => Track
-      removeTrack: (trackId: number, timelineItems: Ref<TimelineItem[]>, removeTimelineItemCallback?: (id: string) => void) => void
+      removeTrack: (
+        trackId: number,
+        timelineItems: Ref<TimelineItem[]>,
+        removeTimelineItemCallback?: (id: string) => void,
+      ) => void
       getTrack: (trackId: number) => Track | undefined
       tracks: { value: Track[] }
     },
@@ -1616,7 +1696,7 @@ export class RemoveTrackCommand implements SimpleCommand {
     },
     private mediaModule: {
       getMediaItem: (id: string) => MediaItem | undefined
-    }
+    },
   ) {
     this.id = generateCommandId()
 
@@ -1630,8 +1710,10 @@ export class RemoveTrackCommand implements SimpleCommand {
     this.description = `删除轨道: ${track.name}`
 
     // 保存该轨道上所有时间轴项目的重建元数据
-    const affectedItems = this.timelineModule.timelineItems.value.filter(item => item.trackId === trackId)
-    this.affectedTimelineItems = affectedItems.map(item => ({
+    const affectedItems = this.timelineModule.timelineItems.value.filter(
+      (item) => item.trackId === trackId,
+    )
+    this.affectedTimelineItems = affectedItems.map((item) => ({
       id: item.id,
       mediaItemId: item.mediaItemId,
       trackId: item.trackId,
@@ -1649,7 +1731,9 @@ export class RemoveTrackCommand implements SimpleCommand {
       thumbnailUrl: item.thumbnailUrl,
     }))
 
-    console.log(`📋 准备删除轨道: ${track.name}, 受影响的时间轴项目: ${this.affectedTimelineItems.length}个`)
+    console.log(
+      `📋 准备删除轨道: ${track.name}, 受影响的时间轴项目: ${this.affectedTimelineItems.length}个`,
+    )
   }
 
   /**
@@ -1743,10 +1827,12 @@ export class RemoveTrackCommand implements SimpleCommand {
       this.trackModule.removeTrack(
         this.trackId,
         ref(this.timelineModule.timelineItems.value),
-        this.timelineModule.removeTimelineItem
+        this.timelineModule.removeTimelineItem,
       )
 
-      console.log(`✅ 已删除轨道: ${this.trackData.name}, 删除了 ${this.affectedTimelineItems.length} 个时间轴项目`)
+      console.log(
+        `✅ 已删除轨道: ${this.trackData.name}, 删除了 ${this.affectedTimelineItems.length} 个时间轴项目`,
+      )
     } catch (error) {
       console.error(`❌ 删除轨道失败: ${this.trackData.name}`, error)
       throw error
@@ -1765,7 +1851,7 @@ export class RemoveTrackCommand implements SimpleCommand {
       // 注意：我们需要手动重建轨道，保持原有的ID和属性
       // 找到正确的插入位置（按ID排序）
       const tracks = this.trackModule.tracks.value
-      const insertIndex = tracks.findIndex(track => track.id > this.trackData.id)
+      const insertIndex = tracks.findIndex((track) => track.id > this.trackData.id)
       if (insertIndex === -1) {
         tracks.push({ ...this.trackData })
       } else {
@@ -1788,7 +1874,9 @@ export class RemoveTrackCommand implements SimpleCommand {
         this.webavModule.addSprite(newTimelineItem.sprite)
       }
 
-      console.log(`↩️ 已撤销删除轨道: ${this.trackData.name}, 恢复了 ${this.affectedTimelineItems.length} 个时间轴项目`)
+      console.log(
+        `↩️ 已撤销删除轨道: ${this.trackData.name}, 恢复了 ${this.affectedTimelineItems.length} 个时间轴项目`,
+      )
     } catch (error) {
       console.error(`❌ 撤销删除轨道失败: ${this.trackData.name}`, error)
       throw error
@@ -1814,7 +1902,7 @@ export class ToggleTrackVisibilityCommand implements SimpleCommand {
     },
     private timelineModule: {
       timelineItems: { value: TimelineItem[] }
-    }
+    },
   ) {
     this.id = generateCommandId()
 
@@ -1827,7 +1915,9 @@ export class ToggleTrackVisibilityCommand implements SimpleCommand {
     this.previousVisibility = track.isVisible
     this.description = `${track.isVisible ? '隐藏' : '显示'}轨道: ${track.name}`
 
-    console.log(`📋 准备切换轨道可见性: ${track.name}, 当前状态: ${track.isVisible ? '可见' : '隐藏'}`)
+    console.log(
+      `📋 准备切换轨道可见性: ${track.name}, 当前状态: ${track.isVisible ? '可见' : '隐藏'}`,
+    )
   }
 
   /**
@@ -1844,7 +1934,10 @@ export class ToggleTrackVisibilityCommand implements SimpleCommand {
 
       // 调用trackModule的toggleTrackVisibility方法
       // 这会自动同步该轨道上所有TimelineItem的sprite可见性
-      this.trackModule.toggleTrackVisibility(this.trackId, ref(this.timelineModule.timelineItems.value))
+      this.trackModule.toggleTrackVisibility(
+        this.trackId,
+        ref(this.timelineModule.timelineItems.value),
+      )
 
       const newVisibility = track.isVisible
       console.log(`✅ 已切换轨道可见性: ${track.name}, 新状态: ${newVisibility ? '可见' : '隐藏'}`)
@@ -1869,10 +1962,15 @@ export class ToggleTrackVisibilityCommand implements SimpleCommand {
 
       // 如果当前状态与原始状态不同，则再次切换
       if (track.isVisible !== this.previousVisibility) {
-        this.trackModule.toggleTrackVisibility(this.trackId, ref(this.timelineModule.timelineItems.value))
+        this.trackModule.toggleTrackVisibility(
+          this.trackId,
+          ref(this.timelineModule.timelineItems.value),
+        )
       }
 
-      console.log(`↩️ 已撤销切换轨道可见性: ${track.name}, 恢复状态: ${this.previousVisibility ? '可见' : '隐藏'}`)
+      console.log(
+        `↩️ 已撤销切换轨道可见性: ${track.name}, 恢复状态: ${this.previousVisibility ? '可见' : '隐藏'}`,
+      )
     } catch (error) {
       const track = this.trackModule.getTrack(this.trackId)
       console.error(`❌ 撤销切换轨道可见性失败: ${track?.name || `轨道 ${this.trackId}`}`, error)
@@ -1899,7 +1997,7 @@ export class ToggleTrackMuteCommand implements SimpleCommand {
     },
     private timelineModule: {
       timelineItems: Ref<TimelineItem[]>
-    }
+    },
   ) {
     this.id = `toggle-track-mute-${trackId}-${Date.now()}`
 
@@ -1955,173 +2053,12 @@ export class ToggleTrackMuteCommand implements SimpleCommand {
         this.trackModule.toggleTrackMute(this.trackId, this.timelineModule.timelineItems)
       }
 
-      console.log(`✅ 已撤销轨道静音状态: ${track.name}, 恢复状态: ${this.previousMuteState ? '静音' : '有声'}`)
+      console.log(
+        `✅ 已撤销轨道静音状态: ${track.name}, 恢复状态: ${this.previousMuteState ? '静音' : '有声'}`,
+      )
     } catch (error) {
       const track = this.trackModule.getTrack(this.trackId)
       console.error(`❌ 撤销轨道静音状态失败: ${track?.name || `轨道 ${this.trackId}`}`, error)
-      throw error
-    }
-  }
-}
-
-/**
- * 自动排列轨道命令（已弃用，使用BatchAutoArrangeTrackCommand替代）
- *
- * @deprecated 此类已被BatchAutoArrangeTrackCommand替代，新的实现基于批量操作架构
- * 保留此类是为了向后兼容，建议使用新的批量命令实现
- *
- * 支持单轨道自动排列的撤销/重做操作
- * 保存排列前的所有时间轴项目位置，撤销时恢复原始位置
- */
-export class AutoArrangeTrackCommand implements SimpleCommand {
-  public readonly id: string
-  public readonly description: string
-  private originalPositions: Map<string, { timelineStartTime: number; timelineEndTime: number }> = new Map()
-  private affectedItemIds: string[] = []
-
-  constructor(
-    private trackId: number,
-    private timelineModule: {
-      timelineItems: { value: TimelineItem[] }
-      getTimelineItem: (id: string) => TimelineItem | undefined
-    },
-    private trackModule: {
-      getTrack: (trackId: number) => Track | undefined
-    }
-  ) {
-    this.id = generateCommandId()
-
-    // 获取轨道信息
-    const track = this.trackModule.getTrack(trackId)
-    this.description = `自动排列轨道: ${track?.name || `轨道 ${trackId}`} (传统模式)`
-
-    // 获取该轨道的所有时间轴项目
-    const trackItems = this.timelineModule.timelineItems.value.filter(item => item.trackId === trackId)
-
-    if (trackItems.length === 0) {
-      console.log(`⚠️ 轨道 ${trackId} 没有片段需要整理`)
-      return
-    }
-
-    // 保存原始位置
-    trackItems.forEach(item => {
-      const timeRange = item.sprite.getTimeRange()
-      this.originalPositions.set(item.id, {
-        timelineStartTime: timeRange.timelineStartTime,
-        timelineEndTime: timeRange.timelineEndTime,
-      })
-      this.affectedItemIds.push(item.id)
-    })
-
-    console.log(`📋 准备自动排列轨道: ${track?.name || `轨道 ${trackId}`}, 受影响的项目: ${this.affectedItemIds.length}个`)
-  }
-
-  /**
-   * 执行命令：自动排列轨道上的所有时间轴项目
-   */
-  async execute(): Promise<void> {
-    try {
-      console.log(`🔄 执行自动排列轨道操作: 轨道 ${this.trackId}...`)
-
-      // 获取该轨道的所有项目
-      const trackItems = this.timelineModule.timelineItems.value.filter(item => item.trackId === this.trackId)
-
-      if (trackItems.length === 0) {
-        console.log(`⚠️ 轨道 ${this.trackId} 没有片段需要整理`)
-        return
-      }
-
-      // 按时间轴开始时间排序
-      const sortedItems = trackItems.sort((a, b) => {
-        const rangeA = a.sprite.getTimeRange()
-        const rangeB = b.sprite.getTimeRange()
-        return rangeA.timelineStartTime - rangeB.timelineStartTime
-      })
-
-      let currentPositionFrames = 0
-      for (const item of sortedItems) {
-        const sprite = item.sprite
-        const timeRange = sprite.getTimeRange()
-        const durationFrames = timeRange.timelineEndTime - timeRange.timelineStartTime
-
-        // 更新时间轴位置 - 根据媒体类型设置不同的时间范围（使用帧数）
-        if (item.mediaType === 'video' && isVideoTimeRange(timeRange)) {
-          sprite.setTimeRange({
-            clipStartTime: timeRange.clipStartTime,
-            clipEndTime: timeRange.clipEndTime,
-            timelineStartTime: currentPositionFrames,
-            timelineEndTime: currentPositionFrames + durationFrames,
-          })
-        } else {
-          // 图片类型
-          sprite.setTimeRange({
-            timelineStartTime: currentPositionFrames,
-            timelineEndTime: currentPositionFrames + durationFrames,
-            displayDuration: durationFrames,
-          })
-        }
-
-        // 从sprite获取更新后的完整timeRange（包含自动计算的effectiveDuration）
-        item.timeRange = sprite.getTimeRange()
-        currentPositionFrames += durationFrames
-      }
-
-      const track = this.trackModule.getTrack(this.trackId)
-      console.log(`✅ 轨道 ${track?.name || `轨道 ${this.trackId}`} 的片段自动整理完成，共整理 ${sortedItems.length} 个片段`)
-    } catch (error) {
-      const track = this.trackModule.getTrack(this.trackId)
-      console.error(`❌ 自动排列轨道失败: ${track?.name || `轨道 ${this.trackId}`}`, error)
-      throw error
-    }
-  }
-
-  /**
-   * 撤销命令：恢复所有时间轴项目的原始位置
-   */
-  async undo(): Promise<void> {
-    try {
-      console.log(`🔄 撤销自动排列轨道操作：恢复轨道 ${this.trackId} 的原始布局...`)
-
-      // 恢复每个项目的原始位置
-      for (const itemId of this.affectedItemIds) {
-        const item = this.timelineModule.getTimelineItem(itemId)
-        const originalPosition = this.originalPositions.get(itemId)
-
-        if (!item || !originalPosition) {
-          console.warn(`⚠️ 无法找到项目或原始位置: ${itemId}`)
-          continue
-        }
-
-        const sprite = item.sprite
-        const currentTimeRange = sprite.getTimeRange()
-
-        // 根据媒体类型恢复时间范围
-        if (item.mediaType === 'video' && isVideoTimeRange(currentTimeRange)) {
-          sprite.setTimeRange({
-            clipStartTime: currentTimeRange.clipStartTime,
-            clipEndTime: currentTimeRange.clipEndTime,
-            timelineStartTime: originalPosition.timelineStartTime,
-            timelineEndTime: originalPosition.timelineEndTime,
-          })
-        } else {
-          // 图片类型
-          const duration = originalPosition.timelineEndTime - originalPosition.timelineStartTime
-          sprite.setTimeRange({
-            timelineStartTime: originalPosition.timelineStartTime,
-            timelineEndTime: originalPosition.timelineEndTime,
-            displayDuration: duration,
-          })
-        }
-
-        // 从sprite获取更新后的完整timeRange
-        item.timeRange = sprite.getTimeRange()
-      }
-
-      const track = this.trackModule.getTrack(this.trackId)
-      console.log(`↩️ 已撤销自动排列轨道: ${track?.name || `轨道 ${this.trackId}`}, 恢复了 ${this.affectedItemIds.length} 个项目的位置`)
-    } catch (error) {
-      const track = this.trackModule.getTrack(this.trackId)
-      console.error(`❌ 撤销自动排列轨道失败: ${track?.name || `轨道 ${this.trackId}`}`, error)
       throw error
     }
   }
@@ -2147,7 +2084,7 @@ export class ResizeTimelineItemCommand implements SimpleCommand {
     },
     private mediaModule: {
       getMediaItem: (id: string) => MediaItem | undefined
-    }
+    },
   ) {
     this.id = generateCommandId()
 
@@ -2160,8 +2097,10 @@ export class ResizeTimelineItemCommand implements SimpleCommand {
     const mediaItem = timelineItem ? this.mediaModule.getMediaItem(timelineItem.mediaItemId) : null
 
     // 使用帧数计算时长，提供更精确的显示
-    const originalDurationFrames = this.originalTimeRange.timelineEndTime - this.originalTimeRange.timelineStartTime
-    const newDurationFrames = this.newTimeRange.timelineEndTime - this.newTimeRange.timelineStartTime
+    const originalDurationFrames =
+      this.originalTimeRange.timelineEndTime - this.originalTimeRange.timelineStartTime
+    const newDurationFrames =
+      this.newTimeRange.timelineEndTime - this.newTimeRange.timelineStartTime
     const originalStartFrames = this.originalTimeRange.timelineStartTime
     const newStartFrames = this.newTimeRange.timelineStartTime
 
@@ -2222,13 +2161,20 @@ export class ResizeTimelineItemCommand implements SimpleCommand {
       this.applyTimeRange(this.newTimeRange)
 
       const timelineItem = this.timelineModule.getTimelineItem(this.timelineItemId)
-      const mediaItem = timelineItem ? this.mediaModule.getMediaItem(timelineItem.mediaItemId) : null
-      const newDurationFrames = this.newTimeRange.timelineEndTime - this.newTimeRange.timelineStartTime
+      const mediaItem = timelineItem
+        ? this.mediaModule.getMediaItem(timelineItem.mediaItemId)
+        : null
+      const newDurationFrames =
+        this.newTimeRange.timelineEndTime - this.newTimeRange.timelineStartTime
 
-      console.log(`✅ 已调整时间范围: ${mediaItem?.name || '未知素材'} → ${framesToTimecode(newDurationFrames)}`)
+      console.log(
+        `✅ 已调整时间范围: ${mediaItem?.name || '未知素材'} → ${framesToTimecode(newDurationFrames)}`,
+      )
     } catch (error) {
       const timelineItem = this.timelineModule.getTimelineItem(this.timelineItemId)
-      const mediaItem = timelineItem ? this.mediaModule.getMediaItem(timelineItem.mediaItemId) : null
+      const mediaItem = timelineItem
+        ? this.mediaModule.getMediaItem(timelineItem.mediaItemId)
+        : null
       console.error(`❌ 调整时间范围失败: ${mediaItem?.name || '未知素材'}`, error)
       throw error
     }
@@ -2244,13 +2190,20 @@ export class ResizeTimelineItemCommand implements SimpleCommand {
       this.applyTimeRange(this.originalTimeRange)
 
       const timelineItem = this.timelineModule.getTimelineItem(this.timelineItemId)
-      const mediaItem = timelineItem ? this.mediaModule.getMediaItem(timelineItem.mediaItemId) : null
-      const originalDurationFrames = this.originalTimeRange.timelineEndTime - this.originalTimeRange.timelineStartTime
+      const mediaItem = timelineItem
+        ? this.mediaModule.getMediaItem(timelineItem.mediaItemId)
+        : null
+      const originalDurationFrames =
+        this.originalTimeRange.timelineEndTime - this.originalTimeRange.timelineStartTime
 
-      console.log(`↩️ 已撤销调整时间范围: ${mediaItem?.name || '未知素材'} → ${framesToTimecode(originalDurationFrames)}`)
+      console.log(
+        `↩️ 已撤销调整时间范围: ${mediaItem?.name || '未知素材'} → ${framesToTimecode(originalDurationFrames)}`,
+      )
     } catch (error) {
       const timelineItem = this.timelineModule.getTimelineItem(this.timelineItemId)
-      const mediaItem = timelineItem ? this.mediaModule.getMediaItem(timelineItem.mediaItemId) : null
+      const mediaItem = timelineItem
+        ? this.mediaModule.getMediaItem(timelineItem.mediaItemId)
+        : null
       console.error(`❌ 撤销调整时间范围失败: ${mediaItem?.name || '未知素材'}`, error)
       throw error
     }
@@ -2281,7 +2234,7 @@ export class SelectTimelineItemsCommand implements SimpleCommand {
     },
     private mediaModule: {
       getMediaItem: (id: string) => MediaItem | undefined
-    }
+    },
   ) {
     this.id = generateCommandId()
 
@@ -2311,10 +2264,10 @@ export class SelectTimelineItemsCommand implements SimpleCommand {
     if (this.mode === 'replace') {
       // 替换模式：清空现有选择，设置新选择
       newSelection.clear()
-      this.itemIds.forEach(id => newSelection.add(id))
+      this.itemIds.forEach((id) => newSelection.add(id))
     } else {
       // 切换模式：切换每个项目的选择状态
-      this.itemIds.forEach(id => {
+      this.itemIds.forEach((id) => {
         if (newSelection.has(id)) {
           newSelection.delete(id)
         } else {
@@ -2330,9 +2283,11 @@ export class SelectTimelineItemsCommand implements SimpleCommand {
    * 生成操作描述
    */
   private generateDescription(): string {
-    const itemNames = this.itemIds.map(id => {
+    const itemNames = this.itemIds.map((id) => {
       const timelineItem = this.timelineModule.getTimelineItem(id)
-      const mediaItem = timelineItem ? this.mediaModule.getMediaItem(timelineItem.mediaItemId) : null
+      const mediaItem = timelineItem
+        ? this.mediaModule.getMediaItem(timelineItem.mediaItemId)
+        : null
       return mediaItem?.name || '未知素材'
     })
 
@@ -2395,7 +2350,7 @@ export class SelectTimelineItemsCommand implements SimpleCommand {
   private applySelection(selection: Set<string>): void {
     // 直接更新选择状态，不通过selectTimelineItems方法以避免循环调用
     this.selectionModule.selectedTimelineItemIds.value.clear()
-    selection.forEach(id => this.selectionModule.selectedTimelineItemIds.value.add(id))
+    selection.forEach((id) => this.selectionModule.selectedTimelineItemIds.value.add(id))
 
     // 手动触发AVCanvas同步逻辑
     this.selectionModule.syncAVCanvasSelection()

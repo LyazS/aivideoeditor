@@ -8,7 +8,7 @@ import { useVideoStore } from '../stores/videoStore'
 import {
   framesToMicroseconds,
   microsecondsToFrames,
-  framesToTimecode
+  framesToTimecode,
 } from '../stores/utils/timeUtils'
 import {
   logWebAVInitStart,
@@ -377,8 +377,6 @@ export function useWebAVControls() {
     globalAVCanvas.play(playOptions)
   }
 
-
-
   /**
    * 暂停播放
    */
@@ -405,7 +403,7 @@ export function useWebAVControls() {
       console.log('🎯 WebAV seekTo:', {
         frames,
         timecode: framesToTimecode(frames),
-        microseconds
+        microseconds,
       })
 
       // 直接更新store状态，因为previewFrame可能不会触发timeupdate事件
@@ -417,10 +415,6 @@ export function useWebAVControls() {
       }, 10)
     }
   }
-
-
-
-
 
   /**
    * 销毁WebAV实例

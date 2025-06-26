@@ -4,10 +4,7 @@
       <div
         v-for="notification in notifications"
         :key="notification.id"
-        :class="[
-          'notification',
-          `notification--${notification.type}`
-        ]"
+        :class="['notification', `notification--${notification.type}`]"
         @click="removeNotification(notification.id)"
         role="alert"
         :aria-live="notification.type === 'error' ? 'assertive' : 'polite'"

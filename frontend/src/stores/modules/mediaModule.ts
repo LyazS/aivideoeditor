@@ -144,7 +144,7 @@ export function createMediaModule() {
    * @param updatedMediaItem 更新后的媒体项目
    */
   function updateMediaItem(updatedMediaItem: MediaItem) {
-    const index = mediaItems.value.findIndex(item => item.id === updatedMediaItem.id)
+    const index = mediaItems.value.findIndex((item) => item.id === updatedMediaItem.id)
     if (index !== -1) {
       mediaItems.value[index] = updatedMediaItem
       console.log(`媒体项目已更新: ${updatedMediaItem.id} -> ${updatedMediaItem.name}`)

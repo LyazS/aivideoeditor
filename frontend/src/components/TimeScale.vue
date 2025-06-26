@@ -32,12 +32,9 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useVideoStore } from '../stores/videoStore'
 import { useWebAVControls } from '../composables/useWebAVControls'
 import { usePlaybackControls } from '../composables/usePlaybackControls'
-// 移除了 calculatePixelsPerSecond 导入，因为 TimeScale 已经使用帧数版本的逻辑
+
 import { calculateVisibleFrameRange } from '../stores/utils/coordinateUtils'
-import {
-  framesToTimecode,
-  alignFramesToFrame
-} from '../stores/utils/timeUtils'
+import { framesToTimecode, alignFramesToFrame } from '../stores/utils/timeUtils'
 import type { TimeMark } from '../types'
 
 const videoStore = useVideoStore()
@@ -65,33 +62,41 @@ const timeMarks = computed((): TimeMark[] => {
   let isFrameLevel = false
 
   // 基于每帧像素数决定刻度间隔
-  if (pixelsPerFrame >= 3.33) { // 相当于100 pixels/second
+  if (pixelsPerFrame >= 3.33) {
+    // 相当于100 pixels/second
     // 帧级别显示
     majorIntervalFrames = 30 // 1秒间隔
     minorIntervalFrames = 1 // 每帧
     isFrameLevel = true
-  } else if (pixelsPerFrame >= 1.67) { // 相当于50 pixels/second
+  } else if (pixelsPerFrame >= 1.67) {
+    // 相当于50 pixels/second
     // 每0.1秒显示刻度
     majorIntervalFrames = 30 // 1秒
     minorIntervalFrames = 3 // 0.1秒
-  } else if (pixelsPerFrame >= 0.67) { // 相当于20 pixels/second
+  } else if (pixelsPerFrame >= 0.67) {
+    // 相当于20 pixels/second
     // 每0.5秒显示刻度
     majorIntervalFrames = 150 // 5秒
     minorIntervalFrames = 15 // 0.5秒
-  } else if (pixelsPerFrame >= 0.33) { // 相当于10 pixels/second
+  } else if (pixelsPerFrame >= 0.33) {
+    // 相当于10 pixels/second
     majorIntervalFrames = 300 // 10秒
     minorIntervalFrames = 30 // 1秒
-  } else if (pixelsPerFrame >= 0.17) { // 相当于5 pixels/second
+  } else if (pixelsPerFrame >= 0.17) {
+    // 相当于5 pixels/second
     majorIntervalFrames = 900 // 30秒
     minorIntervalFrames = 150 // 5秒
-  } else if (pixelsPerFrame >= 0.067) { // 相当于2 pixels/second
+  } else if (pixelsPerFrame >= 0.067) {
+    // 相当于2 pixels/second
     majorIntervalFrames = 1800 // 60秒
     minorIntervalFrames = 300 // 10秒
-  } else if (pixelsPerFrame >= 0.033) { // 相当于1 pixel/second
+  } else if (pixelsPerFrame >= 0.033) {
+    // 相当于1 pixel/second
     // 极低缩放：每2分钟主刻度，30秒次刻度
     majorIntervalFrames = 3600 // 120秒
     minorIntervalFrames = 900 // 30秒
-  } else if (pixelsPerFrame >= 0.017) { // 相当于0.5 pixels/second
+  } else if (pixelsPerFrame >= 0.017) {
+    // 相当于0.5 pixels/second
     // 超低缩放：每5分钟主刻度，1分钟次刻度
     majorIntervalFrames = 9000 // 300秒
     minorIntervalFrames = 1800 // 60秒
@@ -108,7 +113,7 @@ const timeMarks = computed((): TimeMark[] => {
     durationFrames,
     videoStore.zoomLevel,
     videoStore.scrollOffset,
-    maxVisibleDurationFrames
+    maxVisibleDurationFrames,
   )
 
   // 生成刻度标记（基于帧数范围）
@@ -128,11 +133,17 @@ const timeMarks = computed((): TimeMark[] => {
   }
 
   // 重新计算起始和结束标记（基于帧数）
-  const adjustedStartFrames = Math.floor(startFrames / adjustedMinorIntervalFrames) * adjustedMinorIntervalFrames
-  const adjustedEndFrames = Math.ceil(endFrames / adjustedMinorIntervalFrames) * adjustedMinorIntervalFrames
+  const adjustedStartFrames =
+    Math.floor(startFrames / adjustedMinorIntervalFrames) * adjustedMinorIntervalFrames
+  const adjustedEndFrames =
+    Math.ceil(endFrames / adjustedMinorIntervalFrames) * adjustedMinorIntervalFrames
 
   // 生成帧数刻度标记
-  for (let frames = adjustedStartFrames; frames <= adjustedEndFrames; frames += adjustedMinorIntervalFrames) {
+  for (
+    let frames = adjustedStartFrames;
+    frames <= adjustedEndFrames;
+    frames += adjustedMinorIntervalFrames
+  ) {
     if (frames < 0) continue
 
     const isMajor = Math.abs(frames % adjustedMajorIntervalFrames) < 0.5 // 使用小的容差来处理整数精度问题
@@ -152,8 +163,6 @@ const timeMarks = computed((): TimeMark[] => {
 
   return marks
 })
-
-
 
 // 播放头位置 - 使用帧数精确计算
 const playheadPosition = computed(() => {
@@ -194,7 +203,7 @@ function handleClick(event: MouseEvent) {
 
   console.log('🎯 时间轴点击跳转:', {
     clickFrames: alignedFrames,
-    timecode: framesToTimecode(alignedFrames)
+    timecode: framesToTimecode(alignedFrames),
   })
 }
 

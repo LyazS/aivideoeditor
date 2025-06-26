@@ -10,7 +10,9 @@
         title="撤销上一个操作 (Ctrl+Z)"
       >
         <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M12.5,8C9.85,8 7.45,9 5.6,10.6L2,7V16H11L7.38,12.38C8.77,11.22 10.54,10.5 12.5,10.5C16.04,10.5 19.05,12.81 20.1,16L22.47,15.22C21.08,11.03 17.15,8 12.5,8Z" />
+          <path
+            d="M12.5,8C9.85,8 7.45,9 5.6,10.6L2,7V16H11L7.38,12.38C8.77,11.22 10.54,10.5 12.5,10.5C16.04,10.5 19.05,12.81 20.1,16L22.47,15.22C21.08,11.03 17.15,8 12.5,8Z"
+          />
         </svg>
         撤销
       </button>
@@ -21,7 +23,9 @@
         title="重做下一个操作 (Ctrl+Y)"
       >
         <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M18.4,10.6C16.55,9 14.15,8 11.5,8C6.85,8 2.92,11.03 1.53,15.22L3.9,16C4.95,12.81 7.96,10.5 11.5,10.5C13.46,10.5 15.23,11.22 16.62,12.38L13,16H22V7L18.4,10.6Z" />
+          <path
+            d="M18.4,10.6C16.55,9 14.15,8 11.5,8C6.85,8 2.92,11.03 1.53,15.22L3.9,16C4.95,12.81 7.96,10.5 11.5,10.5C13.46,10.5 15.23,11.22 16.62,12.38L13,16H22V7L18.4,10.6Z"
+          />
         </svg>
         重做
       </button>
@@ -138,7 +142,9 @@ async function splitSelectedClip() {
     console.log(
       `🔪 开始裁剪时间轴项目: ${mediaItem?.name || '未知'} (ID: ${videoStore.selectedTimelineItemId})`,
     )
-    console.log(`📍 裁剪时间位置: ${videoStore.currentFrame}帧 (${videoStore.formattedCurrentTime})`)
+    console.log(
+      `📍 裁剪时间位置: ${videoStore.currentFrame}帧 (${videoStore.formattedCurrentTime})`,
+    )
 
     try {
       // 使用带历史记录的分割方法（传入帧数）
@@ -219,7 +225,9 @@ function debugTimeline() {
   console.group('📊 基本配置')
   console.log('总时长 (帧):', videoStore.totalDurationFrames)
   console.log('内容结束时间 (帧):', videoStore.contentEndTimeFrames)
-  console.log(`当前播放时间 ${framesToSeconds(videoStore.currentFrame)}秒 (${videoStore.currentFrame}帧)` )
+  console.log(
+    `当前播放时间 ${framesToSeconds(videoStore.currentFrame)}秒 (${videoStore.currentFrame}帧)`,
+  )
   console.log('播放状态:', videoStore.isPlaying ? '播放中' : '已暂停')
   console.log('播放速度:', videoStore.playbackRate + 'x')
   console.groupEnd()
@@ -259,8 +267,6 @@ function debugTimeline() {
   console.log('✅ 调试信息输出完成')
   console.groupEnd()
 }
-
-
 </script>
 
 <style scoped>

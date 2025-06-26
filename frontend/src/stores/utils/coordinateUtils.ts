@@ -28,8 +28,6 @@ export function calculateVisibleFrameRange(
   return { startFrames, endFrames }
 }
 
-
-
 /**
  * 将帧数转换为像素位置（考虑缩放和滚动）
  * @param frames 帧数
@@ -65,8 +63,6 @@ export function frameToPixel(
   return pixelPosition
 }
 
-
-
 /**
  * 将像素位置转换为帧数（考虑缩放和滚动）
  * @param pixel 像素位置
@@ -101,7 +97,3 @@ export function pixelToFrame(
 
   return frames
 }
-
-
-
-

@@ -9,7 +9,10 @@ import { isVideoTimeRange } from '../../types'
  * @param timelineItem TimelineItem实例
  * @param newTimeRange 新的时间范围（可选，如果不提供则从sprite获取）
  */
-export function syncTimeRange(timelineItem: TimelineItem, newTimeRange?: Partial<VideoTimeRange>): void {
+export function syncTimeRange(
+  timelineItem: TimelineItem,
+  newTimeRange?: Partial<VideoTimeRange>,
+): void {
   const sprite = timelineItem.sprite
 
   if (newTimeRange) {
@@ -47,16 +50,13 @@ export function syncTimeRange(timelineItem: TimelineItem, newTimeRange?: Partial
  */
 export function validateTimeRange(timeRange: VideoTimeRange | ImageTimeRange): boolean {
   // 通用验证：时间轴时间范围
-  const basicValid = (
-    timeRange.timelineStartTime >= 0 &&
-    timeRange.timelineEndTime > timeRange.timelineStartTime
-  )
+  const basicValid =
+    timeRange.timelineStartTime >= 0 && timeRange.timelineEndTime > timeRange.timelineStartTime
 
   // 视频特有验证
   if (isVideoTimeRange(timeRange)) {
-    return basicValid && (
-      timeRange.clipStartTime >= 0 &&
-      timeRange.clipEndTime > timeRange.clipStartTime
+    return (
+      basicValid && timeRange.clipStartTime >= 0 && timeRange.clipEndTime > timeRange.clipStartTime
     )
   }
 
@@ -70,7 +70,10 @@ export function validateTimeRange(timeRange: VideoTimeRange | ImageTimeRange): b
  * @param range2 时间范围2
  * @returns 重叠时长（帧数）
  */
-export function calculateTimeRangeOverlap(range1: VideoTimeRange | ImageTimeRange, range2: VideoTimeRange | ImageTimeRange): number {
+export function calculateTimeRangeOverlap(
+  range1: VideoTimeRange | ImageTimeRange,
+  range2: VideoTimeRange | ImageTimeRange,
+): number {
   const start1 = range1.timelineStartTime // 帧数
   const end1 = range1.timelineEndTime // 帧数
   const start2 = range2.timelineStartTime // 帧数

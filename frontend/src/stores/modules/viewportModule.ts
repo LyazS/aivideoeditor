@@ -34,7 +34,10 @@ export function createViewportModule(
 
   // 帧数版本的最大可见时长
   const maxVisibleDurationFrames = computed(() => {
-    return calculateMaxVisibleDurationFrames(contentEndTimeFrames.value, timelineDurationFrames.value)
+    return calculateMaxVisibleDurationFrames(
+      contentEndTimeFrames.value,
+      timelineDurationFrames.value,
+    )
   })
 
   // 缩放相关计算属性（使用帧数版本）

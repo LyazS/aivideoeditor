@@ -33,7 +33,7 @@
           v-for="item in videoStore.mediaItems"
           :key="item.id"
           class="media-item"
-          :class="{ 'parsing': !item.isReady }"
+          :class="{ parsing: !item.isReady }"
           :data-media-item-id="item.id"
           :draggable="item.isReady"
           @dragstart="handleItemDragStart($event, item)"
@@ -53,7 +53,10 @@
             </div>
 
             <!-- 左上角状态标签 -->
-            <div class="status-badge" :class="`status-${item.status || (item.isReady ? 'ready' : 'parsing')}`">
+            <div
+              class="status-badge"
+              :class="`status-${item.status || (item.isReady ? 'ready' : 'parsing')}`"
+            >
               {{ getStatusText(item.status || (item.isReady ? 'ready' : 'parsing')) }}
             </div>
 
@@ -157,8 +160,8 @@ const handleDrop = (event: DragEvent) => {
 
 // 处理文件 - 并行处理，限制最大并发数为5
 const processFiles = async (files: File[]) => {
-  const mediaFiles = files.filter((file) =>
-    file.type.startsWith('video/') || file.type.startsWith('image/')
+  const mediaFiles = files.filter(
+    (file) => file.type.startsWith('video/') || file.type.startsWith('image/'),
   )
 
   if (mediaFiles.length === 0) {
@@ -224,7 +227,13 @@ const addMediaItem = async (file: File): Promise<void> => {
 }
 
 // 添加视频素材项
-const addVideoItem = async (file: File, url: string, mediaItemId: string, startTime: number, resolve: () => void) => {
+const addVideoItem = async (
+  file: File,
+  url: string,
+  mediaItemId: string,
+  startTime: number,
+  resolve: () => void,
+) => {
   const video = document.createElement('video')
 
   video.onloadedmetadata = async () => {
@@ -257,7 +266,7 @@ const addVideoItem = async (file: File, url: string, mediaItemId: string, startT
       console.log(`🖼️ 生成视频缩略图: ${file.name}`)
       const thumbnailUrl = await generateThumbnailForMediaItem({
         mediaType: 'video',
-        mp4Clip
+        mp4Clip,
       })
 
       // 更新MediaItem为完成状态
@@ -285,7 +294,10 @@ const addVideoItem = async (file: File, url: string, mediaItemId: string, startT
       resolve()
     } catch (error) {
       const processingTime = ((Date.now() - startTime) / 1000).toFixed(2)
-      console.error(`❌ [并发处理] 视频文件处理失败: ${file.name} (耗时: ${processingTime}s)`, error)
+      console.error(
+        `❌ [并发处理] 视频文件处理失败: ${file.name} (耗时: ${processingTime}s)`,
+        error,
+      )
       // 如果解析失败，从store中移除该项目
       videoStore.removeMediaItem(mediaItemId)
       URL.revokeObjectURL(url)
@@ -309,7 +321,13 @@ const addVideoItem = async (file: File, url: string, mediaItemId: string, startT
 }
 
 // 添加图片素材项
-const addImageItem = async (file: File, url: string, mediaItemId: string, startTime: number, resolve: () => void) => {
+const addImageItem = async (
+  file: File,
+  url: string,
+  mediaItemId: string,
+  startTime: number,
+  resolve: () => void,
+) => {
   const img = document.createElement('img')
 
   img.onload = async () => {
@@ -342,7 +360,7 @@ const addImageItem = async (file: File, url: string, mediaItemId: string, startT
       console.log(`🖼️ 生成图片缩略图: ${file.name}`)
       const thumbnailUrl = await generateThumbnailForMediaItem({
         mediaType: 'image',
-        imgClip
+        imgClip,
       })
 
       // 更新MediaItem为完成状态
@@ -370,7 +388,10 @@ const addImageItem = async (file: File, url: string, mediaItemId: string, startT
       resolve()
     } catch (error) {
       const processingTime = ((Date.now() - startTime) / 1000).toFixed(2)
-      console.error(`❌ [并发处理] 图片文件处理失败: ${file.name} (耗时: ${processingTime}s)`, error)
+      console.error(
+        `❌ [并发处理] 图片文件处理失败: ${file.name} (耗时: ${processingTime}s)`,
+        error,
+      )
       // 如果解析失败，从store中移除该项目
       videoStore.removeMediaItem(mediaItemId)
       URL.revokeObjectURL(url)
@@ -399,7 +420,7 @@ const removeMediaItem = (id: string) => {
   if (item) {
     // 检查是否有相关的时间轴项目
     const relatedTimelineItems = videoStore.timelineItems.filter(
-      (timelineItem) => timelineItem.mediaItemId === id
+      (timelineItem) => timelineItem.mediaItemId === id,
     )
 
     if (dialogs.confirmMediaDelete(item.name, relatedTimelineItems.length)) {
@@ -438,7 +459,7 @@ const handleItemDragStart = (event: DragEvent, item: MediaItem) => {
     item.id,
     item.name,
     item.duration,
-    item.mediaType
+    item.mediaType,
   )
 
   console.log('📦 [MediaLibrary] 使用统一格式设置拖拽数据:', dragData)
@@ -450,9 +471,6 @@ const handleItemDragEnd = () => {
   // 使用统一的拖拽工具清理状态
   dragUtils.clearDragData()
 }
-
-
-
 
 // 获取状态文本
 const getStatusText = (status: string): string => {
@@ -469,8 +487,6 @@ const getStatusText = (status: string): string => {
       return '未知'
   }
 }
-
-
 </script>
 
 <style scoped>
@@ -635,8 +651,12 @@ const getStatusText = (status: string): string => {
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 .duration-badge {
@@ -684,8 +704,12 @@ const getStatusText = (status: string): string => {
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 /* 素材名称样式 */

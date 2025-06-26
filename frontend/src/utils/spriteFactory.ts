@@ -6,13 +6,13 @@ import { useWebAVControls } from '../composables/useWebAVControls'
 /**
  * 从媒体项目创建对应的 Sprite 实例
  * 统一的工厂函数，避免在多个地方重复相同的创建逻辑
- * 
+ *
  * @param mediaItem 媒体项目
  * @returns 创建的 Sprite 实例
  * @throws 当媒体项目未准备好或类型不支持时抛出错误
  */
 export async function createSpriteFromMediaItem(
-  mediaItem: MediaItem
+  mediaItem: MediaItem,
 ): Promise<VideoVisibleSprite | ImageVisibleSprite> {
   // 检查媒体项目是否已准备好
   if (!mediaItem.isReady) {

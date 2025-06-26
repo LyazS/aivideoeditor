@@ -28,7 +28,7 @@ export class ImageVisibleSprite extends VisibleSprite {
   constructor(clip: ImgClip) {
     // 调用父类构造函数
     super(clip)
-    
+
     // 初始化时间设置
     this.#updateVisibleSpriteTime()
   }
@@ -64,7 +64,7 @@ export class ImageVisibleSprite extends VisibleSprite {
     if (duration <= 0) {
       throw new Error('显示时长必须大于0')
     }
-    
+
     this.#timeRange.displayDuration = duration
     this.#timeRange.timelineEndTime = this.#timeRange.timelineStartTime + duration
     this.#updateVisibleSpriteTime()
@@ -112,14 +112,16 @@ export class ImageVisibleSprite extends VisibleSprite {
     if (options.displayDuration !== undefined) {
       this.#timeRange.displayDuration = options.displayDuration
     }
-    
+
     // 确保时间范围的一致性
     if (options.displayDuration !== undefined && options.timelineStartTime !== undefined) {
-      this.#timeRange.timelineEndTime = this.#timeRange.timelineStartTime + this.#timeRange.displayDuration
+      this.#timeRange.timelineEndTime =
+        this.#timeRange.timelineStartTime + this.#timeRange.displayDuration
     } else if (options.timelineStartTime !== undefined && options.timelineEndTime !== undefined) {
-      this.#timeRange.displayDuration = this.#timeRange.timelineEndTime - this.#timeRange.timelineStartTime
+      this.#timeRange.displayDuration =
+        this.#timeRange.timelineEndTime - this.#timeRange.timelineStartTime
     }
-    
+
     this.#updateVisibleSpriteTime()
   }
 
@@ -172,7 +174,7 @@ export class ImageVisibleSprite extends VisibleSprite {
       const meta = clip.meta
       return {
         width: meta.width,
-        height: meta.height
+        height: meta.height,
       }
     }
     return { width: 0, height: 0 }
@@ -198,5 +200,4 @@ export class ImageVisibleSprite extends VisibleSprite {
       playbackRate: 1.0, // 图片固定为1.0，没有倍速概念
     }
   }
-
 }

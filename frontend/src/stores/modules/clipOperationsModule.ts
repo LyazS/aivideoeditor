@@ -4,10 +4,7 @@ import { ImageVisibleSprite } from '../../utils/ImageVisibleSprite'
 import { createSpriteFromMediaItem } from '../../utils/spriteFactory'
 import { regenerateThumbnailForTimelineItem } from '../../utils/thumbnailGenerator'
 import { printDebugInfo, syncTimeRange } from '../utils/storeUtils'
-import {
-  microsecondsToFrames,
-  framesToTimecode
-} from '../utils/timeUtils'
+import { microsecondsToFrames, framesToTimecode } from '../utils/timeUtils'
 import type { TimelineItem, MediaItem } from '../../types'
 import { isVideoTimeRange } from '../../types'
 
@@ -16,7 +13,14 @@ import { isVideoTimeRange } from '../../types'
  * 负责复杂的视频片段编辑操作，包括复制、分割、播放速度调整等
  */
 export function createClipOperationsModule(
-  webavModule: { avCanvas: { value: { addSprite: (sprite: unknown) => void; removeSprite: (sprite: unknown) => void } | null } },
+  webavModule: {
+    avCanvas: {
+      value: {
+        addSprite: (sprite: unknown) => void
+        removeSprite: (sprite: unknown) => void
+      } | null
+    }
+  },
   mediaModule: {
     getMediaItem: (id: string) => MediaItem | undefined
     mediaItems: Ref<MediaItem[]>
@@ -72,14 +76,14 @@ export function createClipOperationsModule(
 
       // 根据媒体类型复制时间范围设置
       if (mediaItem.mediaType === 'video' && isVideoTimeRange(timeRange)) {
-        (newSprite as VideoVisibleSprite).setTimeRange({
+        ;(newSprite as VideoVisibleSprite).setTimeRange({
           clipStartTime: timeRange.clipStartTime,
           clipEndTime: timeRange.clipEndTime,
           timelineStartTime: timeRange.timelineStartTime,
           timelineEndTime: timeRange.timelineEndTime,
         })
       } else if (mediaItem.mediaType === 'image') {
-        (newSprite as ImageVisibleSprite).setTimeRange({
+        ;(newSprite as ImageVisibleSprite).setTimeRange({
           timelineStartTime: timeRange.timelineStartTime,
           timelineEndTime: timeRange.timelineEndTime,
           displayDuration: timeRange.timelineEndTime - timeRange.timelineStartTime,
@@ -137,14 +141,14 @@ export function createClipOperationsModule(
 
       // 根据媒体类型更新新sprite的时间轴位置
       if (mediaItem.mediaType === 'video' && isVideoTimeRange(timeRange)) {
-        (newSprite as VideoVisibleSprite).setTimeRange({
+        ;(newSprite as VideoVisibleSprite).setTimeRange({
           clipStartTime: timeRange.clipStartTime,
           clipEndTime: timeRange.clipEndTime,
           timelineStartTime: newTimelinePositionFrames,
           timelineEndTime: newTimelinePositionFrames + durationFrames,
         })
       } else if (mediaItem.mediaType === 'image') {
-        (newSprite as ImageVisibleSprite).setTimeRange({
+        ;(newSprite as ImageVisibleSprite).setTimeRange({
           timelineStartTime: newTimelinePositionFrames,
           timelineEndTime: newTimelinePositionFrames + durationFrames,
           displayDuration: durationFrames,
@@ -212,8 +216,12 @@ export function createClipOperationsModule(
 
       // 只有视频才记录详细的时间范围信息
       if (item.mediaType === 'video' && isVideoTimeRange(item.timeRange)) {
-        const clipDurationFrames = microsecondsToFrames(item.timeRange.clipEndTime - item.timeRange.clipStartTime)
-        const timelineDurationFrames = microsecondsToFrames(item.timeRange.timelineEndTime - item.timeRange.timelineStartTime)
+        const clipDurationFrames = microsecondsToFrames(
+          item.timeRange.clipEndTime - item.timeRange.clipStartTime,
+        )
+        const timelineDurationFrames = microsecondsToFrames(
+          item.timeRange.timelineEndTime - item.timeRange.timelineStartTime,
+        )
         const effectiveDurationFrames = microsecondsToFrames(item.timeRange.effectiveDuration)
 
         console.log('🎬 播放速度更新:', {
@@ -313,7 +321,7 @@ export function createClipOperationsModule(
     try {
       // 为每个分割片段从原始素材创建sprite
       // 创建第一个片段的VideoVisibleSprite
-      const firstSprite = await createSpriteFromMediaItem(mediaItem) as VideoVisibleSprite
+      const firstSprite = (await createSpriteFromMediaItem(mediaItem)) as VideoVisibleSprite
       firstSprite.setTimeRange({
         clipStartTime: clipStartTimeFrames, // 帧数
         clipEndTime: splitClipTimeFrames, // 帧数
@@ -340,7 +348,7 @@ export function createClipOperationsModule(
       })
 
       // 创建第二个片段的VideoVisibleSprite
-      const secondSprite = await createSpriteFromMediaItem(mediaItem) as VideoVisibleSprite
+      const secondSprite = (await createSpriteFromMediaItem(mediaItem)) as VideoVisibleSprite
       secondSprite.setTimeRange({
         clipStartTime: splitClipTimeFrames, // 帧数
         clipEndTime: clipEndTimeFrames, // 帧数
@@ -486,7 +494,7 @@ export function createClipOperationsModule(
   async function regenerateThumbnailsAfterSplit(
     firstItem: TimelineItem,
     secondItem: TimelineItem,
-    mediaItem: MediaItem
+    mediaItem: MediaItem,
   ) {
     try {
       console.log('🖼️ 开始为分割后的片段重新生成缩略图...')

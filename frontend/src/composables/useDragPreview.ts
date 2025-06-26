@@ -22,12 +22,12 @@ class DragPreviewManager {
    */
   showPreview(data: DragPreviewData, timelineWidth: number) {
     this.hidePreview() // 先清理现有预览
-    
+
     const preview = this.createPreviewElement(data)
     this.positionPreview(preview, data, timelineWidth)
     document.body.appendChild(preview)
     this.previewElement = preview
-    
+
     console.log('🎨 [DragPreview] 显示预览:', data)
   }
 
@@ -77,7 +77,7 @@ class DragPreviewManager {
   private createPreviewElement(data: DragPreviewData): HTMLElement {
     const preview = document.createElement('div')
     preview.className = 'unified-drag-preview'
-    
+
     // 基础样式 - 使用高性能的CSS属性，高度与clip一致
     preview.style.cssText = `
       position: fixed;
@@ -100,10 +100,10 @@ class DragPreviewManager {
       opacity: 0.9;
       will-change: transform;
     `
-    
+
     // 设置内容
     this.updatePreviewContent(preview, data)
-    
+
     return preview
   }
 
@@ -159,10 +159,8 @@ class DragPreviewManager {
   private updatePreviewStyle(preview: HTMLElement, data: DragPreviewData) {
     // 更新冲突状态
     const borderColor = data.isConflict ? '#ff4444' : '#888888'
-    const backgroundColor = data.isConflict 
-      ? 'rgba(255, 68, 68, 0.6)' 
-      : 'rgba(128, 128, 128, 0.6)'
-    
+    const backgroundColor = data.isConflict ? 'rgba(255, 68, 68, 0.6)' : 'rgba(128, 128, 128, 0.6)'
+
     if (preview.style.borderColor !== borderColor) {
       preview.style.borderColor = borderColor
       preview.style.background = backgroundColor
