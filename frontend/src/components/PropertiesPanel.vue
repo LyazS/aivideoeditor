@@ -59,13 +59,13 @@
             <div class="duration-controls">
               <input
                 type="text"
-                :value="formattedDuration"
-                @input="updateTargetDurationFromTimecode"
+                v-model="timecodeInput"
+                @blur="updateTargetDurationFromTimecode"
+                @keyup.enter="updateTargetDurationFromTimecode"
                 placeholder="HH:MM:SS.FF"
                 :style="propertyInputStyle"
                 class="timecode-input"
               />
-              <span class="duration-unit">时间码</span>
             </div>
           </div>
 
@@ -477,6 +477,14 @@ const formattedDuration = computed(() => {
   return framesToTimecode(timelineDurationFrames.value)
 })
 
+// 时间码输入框的临时值
+const timecodeInput = computed({
+  get: () => formattedDuration.value,
+  set: (value) => {
+    // 这里不做任何操作，只在失焦或回车时更新
+  }
+})
+
 // 倍速分段配置
 const speedSegments = [
   { min: 0.1, max: 1, normalizedStart: 0, normalizedEnd: 20 }, // 0-20%: 0.1-1x
@@ -581,8 +589,8 @@ const isMuted = computed(() => {
 
 // NumberInput 样式定义
 const propertyInputStyle = {
-  maxWidth: '80px',
-  textAlign: 'right' as const,
+  maxWidth: '120px',
+  textAlign: 'center' as const,
 }
 
 const speedInputStyle = {
@@ -643,6 +651,8 @@ const updateTargetDurationFromTimecode = async (event: Event) => {
   const timecodeValue = input.value.trim()
 
   if (!timecodeValue || !selectedTimelineItem.value || !selectedMediaItem.value) {
+    // 如果输入为空，恢复到当前值
+    input.value = formattedDuration.value
     return
   }
 
@@ -662,8 +672,39 @@ const updateTargetDurationFromTimecode = async (event: Event) => {
     })
   } catch (error) {
     console.warn('⚠️ 时间码格式无效:', timecodeValue, error)
+
+    // 根据错误类型提供具体的错误信息
+    let errorMessage = '请使用正确的时间码格式：HH:MM:SS.FF'
+    const errorStr = error instanceof Error ? error.message : String(error)
+
+    if (errorStr.includes('Invalid timecode format')) {
+      // 格式错误
+      errorMessage = `格式错误：请使用 HH:MM:SS.FF 格式
+示例：00:01:30.15（1分30秒15帧）
+当前输入：${timecodeValue}`
+    } else if (errorStr.includes('Invalid timecode values')) {
+      // 数值范围错误
+      errorMessage = `数值超出范围：
+• 分钟和秒数应小于60
+• 帧数应小于30（30fps）
+当前输入：${timecodeValue}`
+    } else {
+      // 其他错误
+      errorMessage = `时间码解析失败
+请检查格式：HH:MM:SS.FF
+当前输入：${timecodeValue}`
+    }
+
+    // 显示错误通知
+    videoStore.showError(
+      '时间码格式错误',
+      errorMessage,
+      8000 // 显示8秒，给用户足够时间阅读
+    )
+
     // 恢复到当前值
     input.value = formattedDuration.value
+
   }
 }
 
@@ -1022,33 +1063,28 @@ const alignVertical = (alignment: 'top' | 'middle' | 'bottom') => {
 .duration-controls {
   display: flex;
   align-items: center;
-  gap: var(--spacing-md);
   flex: 1;
-}
-
-.duration-unit {
-  font-size: var(--font-size-base);
-  color: var(--color-text-hint);
-  min-width: 50px;
 }
 
 /* 时间码输入框样式 */
 .timecode-input {
-  flex: 1;
-  padding: var(--spacing-sm);
-  border: 1px solid var(--color-border);
-  border-radius: var(--border-radius);
+  width: 100%;
+  padding: var(--spacing-md);
+  border: 1px solid var(--color-border-secondary);
+  border-radius: var(--border-radius-medium);
   background: var(--color-bg-secondary);
-  color: var(--color-text);
+  color: var(--color-text-primary);
   font-family: 'Courier New', monospace;
-  font-size: var(--font-size-base);
+  font-size: var(--font-size-lg);
   text-align: center;
   transition: border-color 0.2s ease;
+  min-height: 30px;
 }
 
 .timecode-input:focus {
   outline: none;
-  border-color: var(--color-border-focus);
+  border-color: var(--color-accent-secondary);
+  box-shadow: 0 0 0 2px rgba(192, 192, 192, 0.2);
 }
 
 .timecode-input::placeholder {
@@ -1088,17 +1124,17 @@ const alignVertical = (alignment: 'top' | 'middle' | 'bottom') => {
 
 .segmented-speed-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
-  width: 16px;
-  height: 16px;
-  background: var(--color-text-primary);
+  width: 12px;
+  height: 12px;
+  background: var(--color-accent-secondary);
   border-radius: 50%;
   cursor: pointer;
 }
 
 .segmented-speed-slider::-moz-range-thumb {
-  width: 16px;
-  height: 16px;
-  background: var(--color-text-primary);
+  width: 12px;
+  height: 12px;
+  background: var(--color-accent-secondary);
   border-radius: 50%;
   border: none;
   cursor: pointer;

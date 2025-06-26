@@ -15,7 +15,7 @@
     @dragstart="handleDragStart"
     @dragend="handleDragEnd"
     @click="selectClip"
-    @contextmenu="showContextMenu"
+
     @mouseenter="showTooltip"
     @mousemove="updateTooltipPosition"
     @mouseleave="hideTooltip"
@@ -58,12 +58,6 @@
       <!-- 调整手柄 -->
       <div class="resize-handle left" @mousedown.stop="startResize('left', $event)"></div>
       <div class="resize-handle right" @mousedown.stop="startResize('right', $event)"></div>
-    </div>
-
-    <!-- 右键菜单 -->
-    <div v-if="showMenu" class="context-menu" :style="menuStyle" @click.stop>
-      <div class="menu-item" @click="removeClip">删除</div>
-      <div class="menu-item" @click="duplicateClip">复制</div>
     </div>
 
     <!-- Tooltip -->
@@ -162,8 +156,7 @@ const playbackSpeed = computed(() => {
   return 'playbackRate' in timeRange ? timeRange.playbackRate || 1 : 1
 })
 
-const showMenu = ref(false)
-const menuStyle = ref({})
+
 
 // Tooltip相关状态
 const showTooltipFlag = ref(false)
@@ -602,45 +595,7 @@ async function regenerateThumbnailAfterResize() {
   }
 }
 
-function showContextMenu(event: MouseEvent) {
-  event.preventDefault()
-  showMenu.value = true
 
-  menuStyle.value = {
-    left: `${event.offsetX}px`,
-    top: `${event.offsetY}px`,
-  }
-
-  // 点击其他地方关闭菜单
-  setTimeout(() => {
-    document.addEventListener('click', hideContextMenu, { once: true })
-  }, 0)
-}
-
-function hideContextMenu() {
-  showMenu.value = false
-}
-
-function removeClip() {
-  emit('remove', props.timelineItem.id)
-  hideContextMenu()
-}
-
-async function duplicateClip() {
-  console.log('Duplicate timeline item:', props.timelineItem.id)
-  hideContextMenu()
-
-  try {
-    const newItemId = await videoStore.duplicateTimelineItemWithHistory(props.timelineItem.id)
-    if (newItemId) {
-      console.log('✅ 时间轴项目复制成功，新项目ID:', newItemId)
-    } else {
-      console.error('❌ 时间轴项目复制失败')
-    }
-  } catch (error) {
-    console.error('❌ 复制时间轴项目时出错:', error)
-  }
-}
 
 // Tooltip相关方法
 function showTooltip(event: MouseEvent) {
@@ -906,31 +861,7 @@ onUnmounted(() => {
   opacity: 1;
 }
 
-.context-menu {
-  position: absolute;
-  background-color: #333;
-  border: 1px solid #555;
-  border-radius: 4px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
-  z-index: 1000;
-  min-width: 120px;
-}
 
-.menu-item {
-  padding: 8px 12px;
-  cursor: pointer;
-  color: white;
-  font-size: 14px;
-  border-bottom: 1px solid #555;
-}
-
-.menu-item:last-child {
-  border-bottom: none;
-}
-
-.menu-item:hover {
-  background-color: #444;
-}
 
 /* Tooltip样式 */
 .clip-tooltip {

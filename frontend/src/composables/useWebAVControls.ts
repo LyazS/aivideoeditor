@@ -400,11 +400,11 @@ export function useWebAVControls() {
       const microseconds = framesToMicroseconds(frames)
       globalAVCanvas.previewFrame(microseconds)
 
-      console.log('🎯 WebAV seekTo:', {
-        frames,
-        timecode: framesToTimecode(frames),
-        microseconds,
-      })
+      // console.log('🎯 WebAV seekTo:', {
+      //   frames,
+      //   timecode: framesToTimecode(frames),
+      //   microseconds,
+      // })
 
       // 直接更新store状态，因为previewFrame可能不会触发timeupdate事件
       videoStore.setCurrentFrame(frames, false)
