@@ -122,10 +122,9 @@ const overlappingCount = computed(() => {
 
 // 检测两个时间轴项目是否重叠
 function isTimelineItemsOverlapping(item1: TimelineItem, item2: TimelineItem): boolean {
-  const sprite1 = item1.sprite
-  const sprite2 = item2.sprite
-  const range1 = sprite1.getTimeRange()
-  const range2 = sprite2.getTimeRange()
+  // 直接使用item.timeRange，确保与videoStore的同步机制保持一致
+  const range1 = item1.timeRange
+  const range2 = item2.timeRange
 
   const item1Start = range1.timelineStartTime // 帧数
   const item1End = range1.timelineEndTime // 帧数
