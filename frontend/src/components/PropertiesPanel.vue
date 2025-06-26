@@ -41,6 +41,13 @@
               class="property-input"
             />
           </div>
+          <!-- 分辨率显示 -->
+          <div class="property-item">
+            <label>分辨率</label>
+            <div class="resolution-display">
+              {{ currentResolution.width }} × {{ currentResolution.height }}
+            </div>
+          </div>
         </div>
 
         <!-- 播放设置 - 视频和图片都显示 -->
@@ -155,7 +162,24 @@
 
         <!-- 位置大小 -->
         <div class="property-section">
-          <h4>位置大小</h4>
+          <div class="section-header">
+            <h4>位置大小</h4>
+            <!-- 变换动画钻石框（位置+大小） -->
+            <button
+              class="animation-toggle"
+              :class="{
+                active: isPropertyRecording('transform'),
+                hasKeyframes: propertyHasKeyframes('transform'),
+                dirty: isPropertyDirty('transform')
+              }"
+              @click="togglePropertyRecording('transform')"
+              title="位置大小动画"
+            >
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M8 2L14 8L8 14L2 8L8 2Z" fill="currentColor" stroke="white" stroke-width="1"/>
+              </svg>
+            </button>
+          </div>
           <!-- 位置：XY在同一行 -->
           <div class="property-item">
             <label>位置</label>
@@ -223,6 +247,7 @@
                 :input-style="scaleInputStyle"
               />
             </div>
+
           </div>
 
           <!-- 非等比缩放时的独立XY缩放控制 -->
@@ -272,21 +297,9 @@
                   :input-style="scaleInputStyle"
                 />
               </div>
+
             </div>
           </template>
-
-          <!-- 分辨率显示 -->
-          <div class="property-item">
-            <label>分辨率</label>
-            <div class="resolution-display">
-              {{ currentResolution.width }} × {{ currentResolution.height }}
-            </div>
-          </div>
-        </div>
-
-        <!-- 布局控制 -->
-        <div class="property-section">
-          <h4>布局控制</h4>
 
           <!-- 水平对齐 -->
           <div class="property-item">
@@ -375,6 +388,21 @@
                 :input-style="scaleInputStyle"
               />
             </div>
+            <!-- 旋转动画钻石框 -->
+            <button
+              class="animation-toggle"
+              :class="{
+                active: isPropertyRecording('rotation'),
+                hasKeyframes: propertyHasKeyframes('rotation'),
+                dirty: isPropertyDirty('rotation')
+              }"
+              @click="togglePropertyRecording('rotation')"
+              title="旋转动画"
+            >
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M8 2L14 8L8 14L2 8L8 2Z" fill="currentColor" stroke="white" stroke-width="1"/>
+              </svg>
+            </button>
           </div>
           <div class="property-item">
             <label>透明度</label>
@@ -398,6 +426,21 @@
                 :input-style="scaleInputStyle"
               />
             </div>
+            <!-- 透明度动画钻石框 -->
+            <button
+              class="animation-toggle"
+              :class="{
+                active: isPropertyRecording('opacity'),
+                hasKeyframes: propertyHasKeyframes('opacity'),
+                dirty: isPropertyDirty('opacity')
+              }"
+              @click="togglePropertyRecording('opacity')"
+              title="透明度动画"
+            >
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M8 2L14 8L8 14L2 8L8 2Z" fill="currentColor" stroke="white" stroke-width="1"/>
+              </svg>
+            </button>
           </div>
           <div class="property-item">
             <label>层级</label>
@@ -433,6 +476,7 @@ import { useVideoStore } from '../stores/videoStore'
 import { isVideoTimeRange } from '../types'
 import { uiDegreesToWebAVRadians, webAVRadiansToUIDegrees } from '../utils/rotationTransform'
 import { framesToTimecode, timecodeToFrames } from '../stores/utils/timeUtils'
+import { useAnimationUI } from '../composables/useAnimationUI'
 import NumberInput from './NumberInput.vue'
 
 const videoStore = useVideoStore()
@@ -446,6 +490,22 @@ const selectedTimelineItem = computed(() => {
   if (!videoStore.selectedTimelineItemId) return null
   return videoStore.getTimelineItem(videoStore.selectedTimelineItemId) || null
 })
+
+// 当前播放帧数
+const currentFrame = computed(() => videoStore.currentFrame)
+
+// 动画UI管理
+const {
+  animationState,
+  hasRecordingProperties,
+  hasAnyAnimation,
+  togglePropertyRecording,
+  clearPropertyAnimation,
+  isPropertyRecording,
+  propertyHasKeyframes,
+  isPropertyDirty,
+  getRecordingProperties,
+} = useAnimationUI(selectedTimelineItem, currentFrame)
 
 // 多选状态信息
 const multiSelectInfo = computed(() => {
@@ -848,6 +908,61 @@ const speedToNormalized = (speed: number) => {
   return 20 // 默认值对应1x
 }
 
+// 处理关键帧录制逻辑
+const handleKeyframeRecording = async (transform: {
+  x?: number
+  y?: number
+  width?: number
+  height?: number
+  rotation?: number
+  opacity?: number
+  zIndex?: number
+}) => {
+  if (!selectedTimelineItem.value) return
+
+  const currentFrameValue = currentFrame.value
+  const recordingProperties = getRecordingProperties()
+
+  // 如果没有属性在录制，直接返回
+  if (recordingProperties.length === 0) return
+
+  // 导入关键帧工具函数
+  const { setTransformKeyframe, setRotationKeyframe, setOpacityKeyframe } = await import('../utils/keyframeUtils')
+
+  // 为每个录制中的属性创建关键帧
+  recordingProperties.forEach(property => {
+    switch (property) {
+      case 'transform':
+        // 获取完整的变换信息
+        const x = transform.x ?? selectedTimelineItem.value!.x
+        const y = transform.y ?? selectedTimelineItem.value!.y
+        const width = transform.width ?? selectedTimelineItem.value!.width
+        const height = transform.height ?? selectedTimelineItem.value!.height
+        setTransformKeyframe(selectedTimelineItem.value!, currentFrameValue, x, y, width, height)
+        console.log('🎬 [Animation] Created transform keyframe:', { frame: currentFrameValue, x, y, width, height })
+        break
+      case 'rotation':
+        if (transform.rotation !== undefined) {
+          setRotationKeyframe(selectedTimelineItem.value!, currentFrameValue, transform.rotation)
+          console.log('🎬 [Animation] Created rotation keyframe:', { frame: currentFrameValue, rotation: transform.rotation })
+        }
+        break
+      case 'opacity':
+        if (transform.opacity !== undefined) {
+          setOpacityKeyframe(selectedTimelineItem.value!, currentFrameValue, transform.opacity)
+          console.log('🎬 [Animation] Created opacity keyframe:', { frame: currentFrameValue, opacity: transform.opacity })
+        }
+        break
+    }
+  })
+
+  // 更新WebAV动画
+  if (recordingProperties.length > 0) {
+    const { updateWebAVAnimation } = await import('../utils/webavAnimationManager')
+    await updateWebAVAnimation(selectedTimelineItem.value!)
+  }
+}
+
 // 更新变换属性 - 使用带历史记录的方法
 const updateTransform = async (transform?: {
   x?: number
@@ -870,6 +985,9 @@ const updateTransform = async (transform?: {
     opacity: opacity.value,
     zIndex: zIndex.value,
   }
+
+  // 检查是否有属性处于录制状态，如果有则创建关键帧
+  await handleKeyframeRecording(finalTransform)
 
   try {
     // 使用带历史记录的变换属性更新方法
@@ -1374,5 +1492,100 @@ const alignVertical = (alignment: 'top' | 'middle' | 'bottom') => {
   color: var(--color-text-hint);
   font-size: var(--font-size-xs);
   flex-shrink: 0;
+}
+
+/* 动画钻石框样式 */
+.animation-toggle {
+  background: none;
+  border: none;
+  color: #000000; /* 默认黑色，对比明显 */
+  cursor: pointer;
+  padding: 4px;
+  margin-left: var(--spacing-sm);
+  border-radius: var(--border-radius-small);
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 24px;
+}
+
+.animation-toggle:hover {
+  background: var(--color-bg-quaternary);
+  color: #000000; /* 悬停时更深的黑色 */
+  transform: scale(1.1); /* 悬停时稍微放大 */
+}
+
+/* 钻石框激活状态（录制中） - 金色 */
+.animation-toggle.active {
+  color: #ffd700 !important; /* 金色，使用!important确保优先级 */
+  background: rgba(255, 215, 0, 0.15);
+  box-shadow: 0 0 12px rgba(255, 215, 0, 0.4);
+  transform: scale(1.1);
+}
+
+.animation-toggle.active:hover {
+  background: rgba(255, 215, 0, 0.25);
+  box-shadow: 0 0 16px rgba(255, 215, 0, 0.6);
+}
+
+/* 钻石框有关键帧状态 - 蓝色 */
+.animation-toggle.hasKeyframes {
+  color: #007acc !important; /* 明亮的蓝色 */
+  background: rgba(0, 122, 204, 0.15);
+  box-shadow: 0 0 8px rgba(0, 122, 204, 0.3);
+}
+
+.animation-toggle.hasKeyframes:hover {
+  background: rgba(0, 122, 204, 0.25);
+  box-shadow: 0 0 12px rgba(0, 122, 204, 0.5);
+}
+
+/* 钻石框脏状态（值已修改但未保存） - 橙色 */
+.animation-toggle.dirty {
+  color: #ff8c00 !important; /* 明亮的橙色 */
+  background: rgba(255, 140, 0, 0.15);
+  box-shadow: 0 0 8px rgba(255, 140, 0, 0.3);
+}
+
+.animation-toggle.dirty:hover {
+  background: rgba(255, 140, 0, 0.25);
+  box-shadow: 0 0 12px rgba(255, 140, 0, 0.5);
+}
+
+
+
+/* 属性项布局调整，为钻石框留出空间 */
+.property-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.property-item label {
+  flex-shrink: 0;
+  min-width: 60px;
+}
+
+/* 区域标题头部布局 */
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--spacing-sm);
+}
+
+.section-header h4 {
+  margin: 0;
+  flex: 1;
+}
+
+.property-item .position-controls,
+.property-item .scale-controls,
+.property-item .rotation-controls,
+.property-item .opacity-controls {
+  flex: 1;
 }
 </style>

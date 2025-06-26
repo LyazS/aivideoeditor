@@ -285,11 +285,7 @@ function convertToWebAVAnimation(animationConfig: AnimationConfig, timeRange: Vi
 - 预留接口支持缓动函数
 - 支持自定义动画曲线
 
-### 9.2 动画模板
-- 支持保存和加载动画预设
-- 提供常用动画模板库
-
-### 9.3 高级功能
+### 9.2 高级功能
 - 支持动画分组
 - 支持动画继承和覆盖
 - 支持动画事件回调

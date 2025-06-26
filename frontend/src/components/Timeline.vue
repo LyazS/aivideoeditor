@@ -275,14 +275,14 @@ const getTrackMenuItems = (): MenuItem[] => {
 
   return [
     {
-      label: '重命名轨道',
-      icon: 'M20.71,7.04C21.1,6.65 21.1,6 20.71,5.63L18.37,3.29C18,2.9 17.35,2.9 16.96,3.29L15.12,5.12L18.87,8.87M3,17.25V21H6.75L17.81,9.93L14.06,6.18L3,17.25Z',
-      onClick: () => renameTrack(),
-    },
-    {
       label: hasClips ? '自动排列片段' : '自动排列片段（无片段）',
       icon: 'M3,3H21V5H3V3M3,7H15V9H3V7M3,11H21V13H3V11M3,15H15V17H3V15M3,19H21V21H3V19Z',
       onClick: hasClips ? () => autoArrangeTrack(trackId) : () => {},
+    },
+    {
+      label: '重命名轨道',
+      icon: 'M20.71,7.04C21.1,6.65 21.1,6 20.71,5.63L18.37,3.29C18,2.9 17.35,2.9 16.96,3.29L15.12,5.12L18.87,8.87M3,17.25V21H6.75L17.81,9.93L14.06,6.18L3,17.25Z',
+      onClick: () => renameTrack(),
     },
     {
       label: track.isVisible ? '隐藏轨道' : '显示轨道',

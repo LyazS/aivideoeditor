@@ -5,6 +5,7 @@ import { webavToProjectCoords, projectToWebavCoords } from '../../utils/coordina
 import { printDebugInfo } from '../utils/debugUtils'
 import { syncTimeRange } from '../utils/timeRangeUtils'
 import { microsecondsToFrames } from '../utils/timeUtils'
+import { globalWebAVAnimationManager } from '../../utils/webavAnimationManager'
 import type { TimelineItem, MediaItem, PropsChangeEvent, VideoResolution } from '../../types'
 
 /**
@@ -110,6 +111,9 @@ export function createTimelineModule(
     // 设置双向数据同步
     setupBidirectionalSync(timelineItem)
 
+    // 初始化动画管理器
+    globalWebAVAnimationManager.addManager(timelineItem)
+
     timelineItems.value.push(timelineItem)
 
     const mediaItem = mediaModule.getMediaItem(timelineItem.mediaItemId)
@@ -157,6 +161,9 @@ export function createTimelineModule(
       } catch (error) {
         console.warn('从WebAV画布移除sprite时出错:', error)
       }
+
+      // 清理动画管理器
+      globalWebAVAnimationManager.removeManager(timelineItemId)
 
       // 从数组中移除
       timelineItems.value.splice(index, 1)

@@ -107,6 +107,8 @@ export interface TimelineItem {
   // 音频属性（仅对视频有效）
   volume: number // 音量（0-1之间）
   isMuted: boolean // 静音状态
+  // 新增：动画配置（可选）
+  animation?: AnimationConfig // 动画配置
 }
 
 /**
@@ -465,3 +467,84 @@ import type { ImageVisibleSprite } from '../utils/ImageVisibleSprite'
  * 表示我们扩展的 VideoVisibleSprite 或 ImageVisibleSprite
  */
 export type CustomSprite = VideoVisibleSprite | ImageVisibleSprite
+
+// ==================== 关键帧动画系统类型 ====================
+
+/**
+ * 可动画的属性类型
+ * 定义哪些属性支持关键帧动画
+ */
+export type AnimatableProperty = 'transform' | 'rotation' | 'opacity'
+
+/**
+ * 关键帧数据结构
+ * 一个关键帧可以包含多个属性的值
+ */
+export interface Keyframe {
+  /** 关键帧位置（帧数） */
+  frame: number
+  /** 该关键帧包含的所有属性值 */
+  properties: {
+    /** 变换属性（位置、尺寸作为整体） */
+    transform?: {
+      x: number;
+      y: number;
+      width: number;
+      height: number
+    }
+    /** 旋转角度（弧度） */
+    rotation?: number
+    /** 透明度（0-1） */
+    opacity?: number
+  }
+}
+
+/**
+ * 动画配置
+ * 包含该TimelineItem的所有动画信息
+ */
+export interface AnimationConfig {
+  /** 关键帧数组 */
+  keyframes: Keyframe[]
+  /** 是否启用动画 */
+  isEnabled: boolean
+  /** 动画总时长（帧数） */
+  duration: number
+  /** 缓动函数（预留） */
+  easing?: string
+  /** 是否循环（预留） */
+  loop?: boolean
+}
+
+/**
+ * 属性动画状态（UI层面）
+ * 用于管理属性面板的钻石框状态
+ */
+export interface PropertyAnimationState {
+  [propertyName: string]: {
+    /** 该属性是否在任何关键帧中有值 */
+    hasKeyframes: boolean
+    /** 是否处于录制状态（钻石框选中） */
+    isRecording: boolean
+    /** 属性值是否已修改但未保存为关键帧 */
+    isDirty: boolean
+  }
+}
+
+/**
+ * WebAV动画配置格式
+ * 用于转换给WebAV的setAnimation接口
+ */
+export interface WebAVAnimationConfig {
+  /** 关键帧配置 { '0%': { x: 100, y: 100 }, '50%': { x: 200, y: 200 } } */
+  keyframes: Record<string, Record<string, number>>
+  /** 动画选项 */
+  options: {
+    /** 动画时长（微秒） */
+    duration: number
+    /** 迭代次数 */
+    iterCount: number
+    /** 缓动函数 */
+    easing?: string
+  }
+}
