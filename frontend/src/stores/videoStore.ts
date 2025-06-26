@@ -1,17 +1,12 @@
 import { computed, type Raw } from 'vue'
 import { defineStore } from 'pinia'
 import { VideoVisibleSprite } from '../utils/VideoVisibleSprite'
-import {
-  expandTimelineIfNeededFrames,
-  autoArrangeTimelineItems,
-  autoArrangeTrackItems,
-  calculateTotalDurationFrames,
-  findTimelineItemBySprite,
-  getTimelineItemsByTrack,
-} from './utils/storeUtils'
+import { expandTimelineIfNeededFrames } from './utils/timeUtils'
+import { autoArrangeTimelineItems, autoArrangeTrackItems } from './utils/timelineArrangementUtils'
+import { calculateTotalDurationFrames } from './utils/durationUtils'
+import { findTimelineItemBySprite, getTimelineItemsByTrack, getTimelineItemAtFrames } from './utils/timelineSearchUtils'
 import { frameToPixel, pixelToFrame } from './utils/coordinateUtils'
 import { microsecondsToFrames, secondsToFrames } from './utils/timeUtils'
-import { getTimelineItemAtFrames } from './utils/timelineSearchUtils'
 import { createMediaModule } from './modules/mediaModule'
 import { createConfigModule } from './modules/configModule'
 import { createTrackModule } from './modules/trackModule'

@@ -1,5 +1,5 @@
 import { ref, type Ref } from 'vue'
-import { printDebugInfo } from '../utils/storeUtils'
+import { printDebugInfo } from '../utils/debugUtils'
 import type { MediaItem, TimelineItem, Track } from '../../types'
 
 /**

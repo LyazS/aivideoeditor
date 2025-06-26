@@ -174,7 +174,7 @@ import { VideoVisibleSprite } from '../utils/VideoVisibleSprite'
 import { ImageVisibleSprite } from '../utils/ImageVisibleSprite'
 import { createSpriteFromMediaItem } from '../utils/spriteFactory'
 import { webavToProjectCoords } from '../utils/coordinateTransform'
-import { calculatePixelsPerFrame } from '../stores/utils/storeUtils'
+import { calculatePixelsPerFrame } from '../stores/utils/timeUtils'
 import { calculateVisibleFrameRange } from '../stores/utils/coordinateUtils'
 
 import { generateThumbnailForMediaItem } from '../utils/thumbnailGenerator'

@@ -13,6 +13,7 @@
     "format": "prettier --write src/"
   },
   "dependencies": {
+    "@imengyu/vue3-context-menu": "^1.5.1",
     "@webav/av-canvas": "^1.1.5",
     "@webav/av-cliper": "^1.1.5",
     "pinia": "^3.0.1",

@@ -206,16 +206,36 @@ watch(
   { immediate: true },
 )
 
+// 窗口大小变化时调整面板宽度
+const adjustPanelWidths = () => {
+  const mainContent = document.querySelector('.main-content')
+  const containerWidth = mainContent ? mainContent.clientWidth : window.innerWidth
+
+  // 计算最大允许宽度
+  const totalPanelWidth = leftPanelWidth.value + rightPanelWidth.value
+  const availableWidth = containerWidth - 220 // 减去分割器和最小预览区域宽度
+
+  if (totalPanelWidth > availableWidth) {
+    // 按比例缩小两个面板
+    const ratio = availableWidth / totalPanelWidth
+    leftPanelWidth.value = Math.max(100, leftPanelWidth.value * ratio)
+    rightPanelWidth.value = Math.max(100, rightPanelWidth.value * ratio)
+  }
+}
+
 onMounted(() => {
   logComponentLifecycle('VideoPreviewEngine', 'mounted', {
     isWebAVReady: videoStore.isWebAVReady,
     hasAVCanvas: !!videoStore.avCanvas,
   })
+
+  // 添加窗口大小变化监听器
+  window.addEventListener('resize', adjustPanelWidths)
 })
 
 // 响应式数据
-const previewHeight = ref(60) // 默认预览窗口占60%
-const timelineHeight = ref(40) // 默认时间轴占40%
+const previewHeight = ref(45) // 默认预览窗口占45%
+const timelineHeight = ref(55) // 默认时间轴占55%
 const isDragging = ref(false)
 
 // 分辨率相关
@@ -353,8 +373,16 @@ const handleLeftResize = (event: MouseEvent) => {
   const deltaX = event.clientX - startX
   let newWidth = startLeftWidth + deltaX
 
-  // 限制最小宽度，允许更大的最大宽度
-  newWidth = Math.max(100, Math.min(600, newWidth))
+  // 获取主内容区域的宽度
+  const mainContent = document.querySelector('.main-content')
+  const containerWidth = mainContent ? mainContent.clientWidth : window.innerWidth
+
+  // 计算可用宽度（总宽度减去右侧面板宽度和分割器宽度）
+  const availableWidth = containerWidth - rightPanelWidth.value - 20 // 20px为分割器宽度
+
+  // 限制最小宽度和最大宽度，确保不超出可用空间
+  const maxAllowedWidth = Math.min(800, availableWidth - 200) // 至少保留200px给中间预览区域
+  newWidth = Math.max(100, Math.min(maxAllowedWidth, newWidth))
 
   leftPanelWidth.value = newWidth
 }
@@ -385,8 +413,16 @@ const handleRightResize = (event: MouseEvent) => {
   const deltaX = event.clientX - startX
   let newWidth = startRightWidth - deltaX // 注意：右侧是反向的
 
-  // 限制最小宽度，允许更大的最大宽度
-  newWidth = Math.max(100, Math.min(600, newWidth))
+  // 获取主内容区域的宽度
+  const mainContent = document.querySelector('.main-content')
+  const containerWidth = mainContent ? mainContent.clientWidth : window.innerWidth
+
+  // 计算可用宽度（总宽度减去左侧面板宽度和分割器宽度）
+  const availableWidth = containerWidth - leftPanelWidth.value - 20 // 20px为分割器宽度
+
+  // 限制最小宽度和最大宽度，确保不超出可用空间
+  const maxAllowedWidth = Math.min(800, availableWidth - 200) // 至少保留200px给中间预览区域
+  newWidth = Math.max(100, Math.min(maxAllowedWidth, newWidth))
 
   rightPanelWidth.value = newWidth
 }
@@ -497,6 +533,7 @@ onUnmounted(() => {
   document.removeEventListener('mouseup', stopLeftResize)
   document.removeEventListener('mousemove', handleRightResize)
   document.removeEventListener('mouseup', stopRightResize)
+  window.removeEventListener('resize', adjustPanelWidths)
 })
 </script>
 
@@ -561,7 +598,7 @@ onUnmounted(() => {
   background-color: var(--color-bg-secondary);
   border-radius: var(--border-radius-medium);
   min-width: 100px;
-  max-width: 600px;
+  max-width: 800px;
 }
 
 /* 使用通用的 splitter 样式 */
@@ -582,7 +619,7 @@ onUnmounted(() => {
   background-color: var(--color-bg-secondary);
   border-radius: var(--border-radius-medium);
   min-width: 100px;
-  max-width: 600px;
+  max-width: 800px;
 }
 
 /* 使用通用的 splitter 样式 */

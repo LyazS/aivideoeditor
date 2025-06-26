@@ -3,7 +3,7 @@ import {
   getMaxZoomLevelFrames,
   getMinZoomLevelFrames,
   getMaxScrollOffsetFrames,
-} from '../utils/storeUtils'
+} from '../utils/zoomUtils'
 import {
   calculateContentEndTimeFrames,
   calculateMaxVisibleDurationFrames,
