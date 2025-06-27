@@ -74,11 +74,15 @@ export function createTimelineModule(
       // 同步zIndex属性（propsChange事件包含此属性）
       if (changedProps.zIndex !== undefined) {
         timelineItem.zIndex = changedProps.zIndex
-        // console.log('🔄 VisibleSprite → TimelineItem 同步 zIndex:', changedProps.zIndex)
       }
-
-      // 注意：opacity属性没有propsChange回调，需要在直接设置sprite.opacity的地方手动同步
     })
+
+    // 设置opacity变化回调（用于我们自定义的opacity监控）
+    if (sprite instanceof VideoVisibleSprite || sprite instanceof ImageVisibleSprite) {
+      sprite.setOpacityChangeCallback((opacity: number) => {
+        timelineItem.opacity = opacity
+      })
+    }
   }
 
   // ==================== 时间轴管理方法 ====================
@@ -142,6 +146,18 @@ export function createTimelineModule(
     if (index > -1) {
       const item = timelineItems.value[index]
       const mediaItem = mediaModule.getMediaItem(item.mediaItemId)
+
+      // 清理opacity回调
+      try {
+        if (
+          item.sprite instanceof VideoVisibleSprite ||
+          item.sprite instanceof ImageVisibleSprite
+        ) {
+          item.sprite.removeOpacityChangeCallback()
+        }
+      } catch (error) {
+        console.warn('清理opacity回调时出错:', error)
+      }
 
       // 清理sprite资源
       try {
@@ -345,23 +361,22 @@ export function createTimelineModule(
         )
         sprite.rect.x = webavCoords.x
         sprite.rect.y = webavCoords.y
-
-        console.log('🎯 中心缩放:', {
-          newSize: { width: newWidth, height: newHeight },
-          centerPosition: { x: currentCenterX, y: currentCenterY },
-          webavCoords: { x: webavCoords.x, y: webavCoords.y },
-        })
       }
 
       // 更新位置（需要坐标系转换）
       if (transform.x !== undefined || transform.y !== undefined) {
         const newX = transform.x !== undefined ? transform.x : item.x
         const newY = transform.y !== undefined ? transform.y : item.y
+
+        // 🔧 使用当前的尺寸（可能已经在上面更新过）
+        const currentWidth = transform.width !== undefined ? transform.width : item.width
+        const currentHeight = transform.height !== undefined ? transform.height : item.height
+
         const webavCoords = projectToWebavCoords(
           newX,
           newY,
-          item.width,
-          item.height,
+          currentWidth,
+          currentHeight,
           configModule.videoResolution.value.width,
           configModule.videoResolution.value.height,
         )
@@ -383,18 +398,6 @@ export function createTimelineModule(
       if (transform.rotation !== undefined) {
         sprite.rect.angle = transform.rotation
       }
-
-      console.log('✅ 属性面板 → VisibleSprite 更新完成:', {
-        timelineItemId,
-        transform,
-        webavRect: {
-          x: sprite.rect.x,
-          y: sprite.rect.y,
-          w: sprite.rect.w,
-          h: sprite.rect.h,
-          angle: sprite.rect.angle,
-        },
-      })
     } catch (error) {
       console.error('更新VisibleSprite变换属性失败:', error)
     }

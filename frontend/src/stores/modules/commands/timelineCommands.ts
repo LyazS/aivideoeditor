@@ -1107,6 +1107,20 @@ export class UpdateTransformCommand implements SimpleCommand {
 
     // 同步timeRange到TimelineItem
     timelineItem.timeRange = sprite.getTimeRange()
+
+    // 如果有动画，需要重新设置WebAV动画时长
+    if (timelineItem.animation && timelineItem.animation.isEnabled) {
+      // 异步更新动画，不阻塞命令执行
+      import('../../../utils/webavAnimationManager').then(({ updateWebAVAnimation }) => {
+        updateWebAVAnimation(timelineItem)
+          .then(() => {
+            console.log('🎬 [Command] Animation duration updated after duration change')
+          })
+          .catch((error) => {
+            console.error('🎬 [Command] Failed to update animation duration:', error)
+          })
+      })
+    }
   }
 }
 

@@ -15,7 +15,6 @@
     @dragstart="handleDragStart"
     @dragend="handleDragEnd"
     @click="selectClip"
-
     @mouseenter="showTooltip"
     @mousemove="updateTooltipPosition"
     @mouseleave="hideTooltip"
@@ -155,8 +154,6 @@ const playbackSpeed = computed(() => {
   const timeRange = props.timelineItem.timeRange
   return 'playbackRate' in timeRange ? timeRange.playbackRate || 1 : 1
 })
-
-
 
 // Tooltip相关状态
 const showTooltipFlag = ref(false)
@@ -541,6 +538,20 @@ async function stopResize() {
       }
 
       try {
+        // 🎯 关键帧位置调整：在调整时间范围之前先调整关键帧位置
+        const oldDurationFrames =
+          currentTimeRange.timelineEndTime - currentTimeRange.timelineStartTime
+        const newDurationFrames = newTimeRange.timelineEndTime - newTimeRange.timelineStartTime
+
+        if (props.timelineItem.animation && props.timelineItem.animation.keyframes.length > 0) {
+          const { adjustKeyframesForDurationChange } = await import('../utils/unifiedKeyframeUtils')
+          adjustKeyframesForDurationChange(props.timelineItem, oldDurationFrames, newDurationFrames)
+          console.log('🎬 [Resize] Keyframes adjusted for duration change:', {
+            oldDuration: oldDurationFrames,
+            newDuration: newDurationFrames,
+          })
+        }
+
         // 使用带历史记录的调整方法
         const success = await videoStore.resizeTimelineItemWithHistory(
           props.timelineItem.id,
@@ -548,6 +559,14 @@ async function stopResize() {
         )
         if (success) {
           console.log('✅ 时间范围调整成功')
+
+          // 如果有动画，需要重新设置WebAV动画时长
+          if (props.timelineItem.animation && props.timelineItem.animation.isEnabled) {
+            const { updateWebAVAnimation } = await import('../utils/webavAnimationManager')
+            await updateWebAVAnimation(props.timelineItem)
+            console.log('🎬 [Resize] Animation duration updated after clip resize')
+          }
+
           // 重新生成缩略图（异步执行，不阻塞UI）
           regenerateThumbnailAfterResize()
         } else {
@@ -594,8 +613,6 @@ async function regenerateThumbnailAfterResize() {
     console.error('❌ 重新生成缩略图失败:', error)
   }
 }
-
-
 
 // Tooltip相关方法
 function showTooltip(event: MouseEvent) {
@@ -860,8 +877,6 @@ onUnmounted(() => {
 .video-clip:hover .resize-handle {
   opacity: 1;
 }
-
-
 
 /* Tooltip样式 */
 .clip-tooltip {

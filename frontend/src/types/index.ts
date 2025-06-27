@@ -144,6 +144,15 @@ export interface PropsChangeEvent {
 }
 
 /**
+ * 扩展的WebAV属性变化事件类型
+ * 在原有PropsChangeEvent基础上添加opacity属性支持
+ */
+export interface ExtendedPropsChangeEvent extends PropsChangeEvent {
+  opacity?: number
+  // 未来可扩展其他属性
+}
+
+/**
  * 播放选项接口
  */
 export interface PlayOptions {
@@ -471,64 +480,62 @@ export type CustomSprite = VideoVisibleSprite | ImageVisibleSprite
 // ==================== 关键帧动画系统类型 ====================
 
 /**
- * 可动画的属性类型
- * 定义哪些属性支持关键帧动画
+ * 关键帧属性集合
+ * 统一关键帧系统中每个关键帧包含的所有可动画属性
  */
-export type AnimatableProperty = 'transform' | 'rotation' | 'opacity'
+export interface KeyframeProperties {
+  /** 水平位置 */
+  x: number
+  /** 垂直位置 */
+  y: number
+  /** 宽度 */
+  width: number
+  /** 高度 */
+  height: number
+  /** 旋转角度（弧度） */
+  rotation: number
+  /** 透明度（0-1） */
+  opacity: number
+}
 
 /**
- * 关键帧数据结构
- * 一个关键帧可以包含多个属性的值
+ * 关键帧数据结构（统一关键帧系统）
+ * 每个关键帧包含所有可动画属性的完整状态
  */
 export interface Keyframe {
-  /** 关键帧位置（帧数） */
-  frame: number
-  /** 该关键帧包含的所有属性值 */
-  properties: {
-    /** 变换属性（位置、尺寸作为整体） */
-    transform?: {
-      x: number;
-      y: number;
-      width: number;
-      height: number
-    }
-    /** 旋转角度（弧度） */
-    rotation?: number
-    /** 透明度（0-1） */
-    opacity?: number
-  }
+  /** 关键帧位置（相对于clip开始的帧数） */
+  framePosition: number
+  /** 包含所有可动画属性的完整状态 */
+  properties: KeyframeProperties
 }
 
 /**
  * 动画配置
  * 包含该TimelineItem的所有动画信息
+ * 动画总时长等于clip时长，轮次总是1
  */
 export interface AnimationConfig {
   /** 关键帧数组 */
   keyframes: Keyframe[]
   /** 是否启用动画 */
   isEnabled: boolean
-  /** 动画总时长（帧数） */
-  duration: number
   /** 缓动函数（预留） */
   easing?: string
-  /** 是否循环（预留） */
-  loop?: boolean
 }
 
 /**
- * 属性动画状态（UI层面）
- * 用于管理属性面板的钻石框状态
+ * 关键帧按钮状态
  */
-export interface PropertyAnimationState {
-  [propertyName: string]: {
-    /** 该属性是否在任何关键帧中有值 */
-    hasKeyframes: boolean
-    /** 是否处于录制状态（钻石框选中） */
-    isRecording: boolean
-    /** 属性值是否已修改但未保存为关键帧 */
-    isDirty: boolean
-  }
+export type KeyframeButtonState = 'none' | 'on-keyframe' | 'between-keyframes'
+
+/**
+ * 关键帧UI状态
+ */
+export interface KeyframeUIState {
+  /** 是否有动画 */
+  hasAnimation: boolean
+  /** 当前帧是否在关键帧位置 */
+  isOnKeyframe: boolean
 }
 
 /**
