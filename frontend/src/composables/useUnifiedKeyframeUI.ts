@@ -11,6 +11,7 @@ import type {
   KeyframeProperties,
 } from '../types'
 import { useWebAVControls } from './useWebAVControls'
+import { useVideoStore } from '../stores/videoStore'
 import {
   hasAnimation,
   isCurrentFrameOnKeyframe,
@@ -24,6 +25,7 @@ import {
   updateKeyframeProperty as updateKeyframePropertyWithCommand,
   clearAllKeyframes as clearAllKeyframesWithCommand,
 } from '../utils/keyframeCommandUtils'
+import { isPlayheadInTimelineItem } from '../utils/timeOverlapUtils'
 
 /**
  * 统一关键帧UI管理 Composable
@@ -36,6 +38,9 @@ export function useUnifiedKeyframeUI(
 ) {
   // WebAV控制器，用于正确的时间跳转
   const webAVControls = useWebAVControls()
+
+  // 视频存储，用于显示通知
+  const videoStore = useVideoStore()
 
   // ==================== 状态定义 ====================
 
@@ -90,6 +95,21 @@ export function useUnifiedKeyframeUI(
     return getNextKeyframeFrame(timelineItem.value, currentFrame.value) !== null
   })
 
+  /**
+   * 播放头是否在当前选中clip的时间范围内
+   */
+  const isPlayheadInClip = computed(() => {
+    if (!timelineItem.value) return false
+    return isPlayheadInTimelineItem(timelineItem.value, currentFrame.value)
+  })
+
+  /**
+   * 关键帧操作是否可用（播放头必须在clip时间范围内）
+   */
+  const canOperateKeyframes = computed(() => {
+    return isPlayheadInClip.value
+  })
+
   // ==================== 方法定义 ====================
 
   /**
@@ -104,6 +124,25 @@ export function useUnifiedKeyframeUI(
    */
   const toggleKeyframeState = async () => {
     if (!timelineItem.value) return
+
+    // 检查播放头是否在clip时间范围内
+    if (!canOperateKeyframes.value) {
+      // 使用通知系统显示用户友好的警告
+      videoStore.showWarning(
+        '无法操作关键帧',
+        '播放头不在当前视频片段的时间范围内。请将播放头移动到片段内再尝试操作关键帧。'
+      )
+
+      console.warn('🎬 [Unified Keyframe UI] 播放头不在当前clip时间范围内，无法操作关键帧:', {
+        itemId: timelineItem.value.id,
+        currentFrame: currentFrame.value,
+        clipTimeRange: {
+          start: timelineItem.value.timeRange.timelineStartTime,
+          end: timelineItem.value.timeRange.timelineEndTime,
+        },
+      })
+      return
+    }
 
     try {
       // 使用命令系统切换关键帧
@@ -127,6 +166,27 @@ export function useUnifiedKeyframeUI(
    */
   const handlePropertyChangeWrapper = async (property: string, value: any) => {
     if (!timelineItem.value) return
+
+    // 检查播放头是否在clip时间范围内
+    if (!canOperateKeyframes.value) {
+      // 使用通知系统显示用户友好的警告
+      videoStore.showWarning(
+        '无法修改属性',
+        '播放头不在当前视频片段的时间范围内。请将播放头移动到片段内再尝试修改属性。'
+      )
+
+      console.warn('🎬 [Unified Keyframe UI] 播放头不在当前clip时间范围内，无法操作关键帧属性:', {
+        itemId: timelineItem.value.id,
+        currentFrame: currentFrame.value,
+        property,
+        value,
+        clipTimeRange: {
+          start: timelineItem.value.timeRange.timelineStartTime,
+          end: timelineItem.value.timeRange.timelineEndTime,
+        },
+      })
+      return
+    }
 
     try {
       // 使用命令系统处理属性修改
@@ -252,6 +312,8 @@ export function useUnifiedKeyframeUI(
     buttonState: readonly(buttonState),
     hasPreviousKeyframe: readonly(hasPreviousKeyframe),
     hasNextKeyframe: readonly(hasNextKeyframe),
+    isPlayheadInClip: readonly(isPlayheadInClip),
+    canOperateKeyframes: readonly(canOperateKeyframes),
 
     // 方法
     toggleKeyframe: toggleKeyframeState,

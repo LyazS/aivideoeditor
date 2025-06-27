@@ -122,6 +122,29 @@ export class CreateKeyframeCommand implements SimpleCommand {
       throw new Error(`时间轴项目不存在: ${this.timelineItemId}`)
     }
 
+    // 检查播放头是否在clip时间范围内
+    const { isPlayheadInTimelineItem } = await import('../../../utils/timeOverlapUtils')
+    if (!isPlayheadInTimelineItem(item, this.frame)) {
+      // 使用通知系统显示用户友好的警告
+      const { useVideoStore } = await import('../../../stores/videoStore')
+      const videoStore = useVideoStore()
+
+      videoStore.showWarning(
+        '无法创建关键帧',
+        '播放头不在当前视频片段的时间范围内。请将播放头移动到片段内再尝试创建关键帧。'
+      )
+
+      console.warn('🎬 [Create Keyframe Command] 播放头不在当前clip时间范围内，无法创建关键帧:', {
+        itemId: this.timelineItemId,
+        frame: this.frame,
+        clipTimeRange: {
+          start: item.timeRange.timelineStartTime,
+          end: item.timeRange.timelineEndTime,
+        },
+      })
+      throw new Error('播放头不在当前clip时间范围内，无法创建关键帧')
+    }
+
     try {
       // 动态导入关键帧工具函数
       const { createKeyframe, enableAnimation, initializeAnimation } = await import(
@@ -288,6 +311,29 @@ export class DeleteKeyframeCommand implements SimpleCommand {
       throw new Error(`时间轴项目不存在: ${this.timelineItemId}`)
     }
 
+    // 检查播放头是否在clip时间范围内
+    const { isPlayheadInTimelineItem } = await import('../../../utils/timeOverlapUtils')
+    if (!isPlayheadInTimelineItem(item, this.frame)) {
+      // 使用通知系统显示用户友好的警告
+      const { useVideoStore } = await import('../../../stores/videoStore')
+      const videoStore = useVideoStore()
+
+      videoStore.showWarning(
+        '无法删除关键帧',
+        '播放头不在当前视频片段的时间范围内。请将播放头移动到片段内再尝试删除关键帧。'
+      )
+
+      console.warn('🎬 [Delete Keyframe Command] 播放头不在当前clip时间范围内，无法删除关键帧:', {
+        itemId: this.timelineItemId,
+        frame: this.frame,
+        clipTimeRange: {
+          start: item.timeRange.timelineStartTime,
+          end: item.timeRange.timelineEndTime,
+        },
+      })
+      throw new Error('播放头不在当前clip时间范围内，无法删除关键帧')
+    }
+
     try {
       // 动态导入关键帧工具函数
       const { removeKeyframeAtFrame, disableAnimation } = await import(
@@ -447,6 +493,31 @@ export class UpdateKeyframePropertyCommand implements SimpleCommand {
     const item = this.timelineModule.getTimelineItem(this.timelineItemId)
     if (!item) {
       throw new Error(`时间轴项目不存在: ${this.timelineItemId}`)
+    }
+
+    // 检查播放头是否在clip时间范围内
+    const { isPlayheadInTimelineItem } = await import('../../../utils/timeOverlapUtils')
+    if (!isPlayheadInTimelineItem(item, this.frame)) {
+      // 使用通知系统显示用户友好的警告
+      const { useVideoStore } = await import('../../../stores/videoStore')
+      const videoStore = useVideoStore()
+
+      videoStore.showWarning(
+        '无法更新关键帧属性',
+        '播放头不在当前视频片段的时间范围内。请将播放头移动到片段内再尝试修改属性。'
+      )
+
+      console.warn('🎬 [Update Keyframe Property Command] 播放头不在当前clip时间范围内，无法更新关键帧属性:', {
+        itemId: this.timelineItemId,
+        frame: this.frame,
+        property: this.property,
+        value: this.newValue,
+        clipTimeRange: {
+          start: item.timeRange.timelineStartTime,
+          end: item.timeRange.timelineEndTime,
+        },
+      })
+      throw new Error('播放头不在当前clip时间范围内，无法更新关键帧属性')
     }
 
     try {
@@ -763,6 +834,29 @@ export class ToggleKeyframeCommand implements SimpleCommand {
     const item = this.timelineModule.getTimelineItem(this.timelineItemId)
     if (!item) {
       throw new Error(`时间轴项目不存在: ${this.timelineItemId}`)
+    }
+
+    // 检查播放头是否在clip时间范围内
+    const { isPlayheadInTimelineItem } = await import('../../../utils/timeOverlapUtils')
+    if (!isPlayheadInTimelineItem(item, this.frame)) {
+      // 使用通知系统显示用户友好的警告
+      const { useVideoStore } = await import('../../../stores/videoStore')
+      const videoStore = useVideoStore()
+
+      videoStore.showWarning(
+        '无法切换关键帧',
+        '播放头不在当前视频片段的时间范围内。请将播放头移动到片段内再尝试切换关键帧。'
+      )
+
+      console.warn('🎬 [Toggle Keyframe Command] 播放头不在当前clip时间范围内，无法切换关键帧:', {
+        itemId: this.timelineItemId,
+        frame: this.frame,
+        clipTimeRange: {
+          start: item.timeRange.timelineStartTime,
+          end: item.timeRange.timelineEndTime,
+        },
+      })
+      throw new Error('播放头不在当前clip时间范围内，无法切换关键帧')
     }
 
     try {

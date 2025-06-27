@@ -177,6 +177,7 @@
                 'state-between-keyframes': unifiedKeyframeButtonState === 'between-keyframes',
               }"
               @click="toggleUnifiedKeyframe"
+              :disabled="!canOperateUnifiedKeyframes"
               :title="getUnifiedKeyframeTooltip()"
             >
               <svg
@@ -199,7 +200,7 @@
             <!-- 上一个关键帧 -->
             <button
               @click="goToPreviousUnifiedKeyframe"
-              :disabled="!hasUnifiedPreviousKeyframe"
+              :disabled="!hasUnifiedPreviousKeyframe || !canOperateUnifiedKeyframes"
               class="keyframe-nav-btn"
               title="上一个关键帧"
             >
@@ -212,7 +213,7 @@
             <!-- 下一个关键帧 -->
             <button
               @click="goToNextUnifiedKeyframe"
-              :disabled="!hasUnifiedNextKeyframe"
+              :disabled="!hasUnifiedNextKeyframe || !canOperateUnifiedKeyframes"
               class="keyframe-nav-btn"
               title="下一个关键帧"
             >
@@ -222,8 +223,13 @@
               </svg>
             </button>
 
-            <!-- 调试按钮 -->
-            <button @click="debugUnifiedKeyframes" class="debug-btn" title="输出统一关键帧调试信息">
+            <!-- 调试按钮 - 暂时隐藏 -->
+            <button
+              @click="debugUnifiedKeyframes"
+              class="debug-btn"
+              title="输出统一关键帧调试信息"
+              style="display: none;"
+            >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
                 <path
                   d="M9,3V4H4V6H5V19A2,2 0 0,0 7,21H17A2,2 0 0,0 19,19V6H20V4H15V3H9M7,6H17V19H7V6M9,8V17H11V8H9M13,8V17H15V8H13Z"
@@ -532,6 +538,8 @@ const {
   hasPreviousKeyframe: hasUnifiedPreviousKeyframe,
   hasNextKeyframe: hasUnifiedNextKeyframe,
   clearAllKeyframes: clearUnifiedKeyframes,
+  isPlayheadInClip: isUnifiedPlayheadInClip,
+  canOperateKeyframes: canOperateUnifiedKeyframes,
 } = useUnifiedKeyframeUI(selectedTimelineItem, currentFrame)
 
 // 多选状态信息
@@ -1106,6 +1114,11 @@ const setOpacity = (value: number) => {
  * 获取统一关键帧按钮的提示文本
  */
 const getUnifiedKeyframeTooltip = () => {
+  // 如果播放头不在clip时间范围内，显示相应提示
+  if (!canOperateUnifiedKeyframes.value) {
+    return '播放头不在当前clip时间范围内，无法操作关键帧'
+  }
+
   switch (unifiedKeyframeButtonState.value) {
     case 'none':
       return '点击创建关键帧动画'
@@ -1651,46 +1664,51 @@ const alignVertical = (alignment: 'top' | 'middle' | 'bottom') => {
 .unified-keyframe-toggle {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 8px 12px;
-  border: 2px solid transparent;
-  border-radius: 6px;
+  gap: 0px;
+  padding: 0px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
   background: var(--color-bg-secondary);
   cursor: pointer;
   transition: all 0.2s ease;
-  font-size: 13px;
+  font-size: 11px;
   font-weight: 500;
-  color: #000000; /* 默认黑色 */
-  min-height: 36px;
+  color: var(--color-text-primary); /* 默认白色 */
+  height: 36px; /* 改为固定高度，与导航按钮一致 */
   position: relative;
 }
 
 .unified-keyframe-toggle:hover {
   background: var(--color-bg-tertiary);
-  transform: scale(1.02);
+  border-color: var(--color-border-hover);
+  transform: translateY(-1px);
 }
 
 /* 状态样式 */
 .unified-keyframe-toggle.state-none {
-  color: #000000; /* 黑色 */
-  border-color: #666;
+  color: var(--color-text-primary); /* 白色 */
+  border-color: var(--color-border);
 }
 
 .unified-keyframe-toggle.state-none:hover {
-  border-color: #888;
+  border-color: var(--color-border-hover);
   background: var(--color-bg-tertiary);
 }
 
 .unified-keyframe-toggle.state-on-keyframe {
-  color: #007acc; /* 蓝色 */
-  background: rgba(0, 122, 204, 0.15);
-  border-color: #007acc;
-  box-shadow: 0 0 8px rgba(0, 122, 204, 0.3);
+  color: var(--color-text-primary); /* 白色字体 */
+  background: rgba(64, 158, 255, 0.2);
+  border-color: #409eff;
+  box-shadow: 0 0 8px rgba(64, 158, 255, 0.4);
+}
+
+.unified-keyframe-toggle.state-on-keyframe svg {
+  color: #409eff; /* 钻石图标保持更亮的蓝色 */
 }
 
 .unified-keyframe-toggle.state-on-keyframe:hover {
-  background: rgba(0, 122, 204, 0.25);
-  box-shadow: 0 0 12px rgba(0, 122, 204, 0.5);
+  background: rgba(64, 158, 255, 0.3);
+  box-shadow: 0 0 12px rgba(64, 158, 255, 0.6);
 }
 
 .unified-keyframe-toggle.state-between-keyframes {
@@ -1703,6 +1721,23 @@ const alignVertical = (alignment: 'top' | 'middle' | 'bottom') => {
 .unified-keyframe-toggle.state-between-keyframes:hover {
   background: rgba(255, 215, 0, 0.25);
   box-shadow: 0 0 12px rgba(255, 215, 0, 0.5);
+}
+
+/* 禁用状态样式 */
+.unified-keyframe-toggle:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  background: var(--color-bg-disabled);
+  color: var(--color-text-disabled);
+  border-color: var(--color-border-disabled);
+  box-shadow: none;
+}
+
+.unified-keyframe-toggle:disabled:hover {
+  background: var(--color-bg-disabled);
+  border-color: var(--color-border-disabled);
+  transform: none;
+  box-shadow: none;
 }
 
 /* 关键帧控制按钮行 */
@@ -1719,6 +1754,8 @@ const alignVertical = (alignment: 'top' | 'middle' | 'bottom') => {
   flex: 1 1 auto; /* 主按钮占据更多空间 */
   min-width: 90px;
   max-width: 120px;
+  font-size: 14px; /* 与导航按钮保持一致 */
+  height: 36px; /* 确保与导航按钮高度一致 */
 }
 
 /* 导航和调试按钮 */
@@ -1757,7 +1794,8 @@ const alignVertical = (alignment: 'top' | 'middle' | 'bottom') => {
 }
 
 .keyframe-controls-row .keyframe-nav-btn span,
-.keyframe-controls-row .debug-btn span {
+.keyframe-controls-row .debug-btn span,
+.keyframe-controls-row .unified-keyframe-toggle span {
   font-size: 10px;
   white-space: nowrap;
 }

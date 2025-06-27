@@ -95,6 +95,17 @@ export function extractTimeRange(item: TimelineItem): TimeRange {
 }
 
 /**
+ * 检测播放头是否在TimelineItem的时间范围内
+ * @param item 时间轴项目
+ * @param currentFrame 当前播放帧数
+ * @returns 是否在时间范围内
+ */
+export function isPlayheadInTimelineItem(item: TimelineItem, currentFrame: number): boolean {
+  const timeRange = extractTimeRange(item)
+  return currentFrame >= timeRange.start && currentFrame < timeRange.end
+}
+
+/**
  * 检测两个TimelineItem是否重叠
  * @param item1 时间轴项目1
  * @param item2 时间轴项目2

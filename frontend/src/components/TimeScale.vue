@@ -290,6 +290,22 @@ function stopDragPlayhead() {
 
   document.removeEventListener('mousemove', handleDragPlayhead)
   document.removeEventListener('mouseup', stopDragPlayhead)
+
+  // 添加一个临时的click事件监听器来阻止拖拽结束后可能触发的click事件
+  // 这可以防止Timeline组件意外清除选择状态
+  const preventClick = (e: MouseEvent) => {
+    e.stopPropagation()
+    e.preventDefault()
+    document.removeEventListener('click', preventClick, true)
+  }
+
+  // 使用capture模式确保在其他事件处理器之前捕获
+  document.addEventListener('click', preventClick, true)
+
+  // 50ms后移除监听器，以防万一没有click事件触发
+  setTimeout(() => {
+    document.removeEventListener('click', preventClick, true)
+  }, 50)
 }
 
 function handleWheel(event: WheelEvent) {
