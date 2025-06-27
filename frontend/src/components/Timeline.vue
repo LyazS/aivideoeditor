@@ -176,6 +176,7 @@ import { createSpriteFromMediaItem } from '../utils/spriteFactory'
 import { webavToProjectCoords } from '../utils/coordinateTransform'
 import { calculatePixelsPerFrame } from '../stores/utils/timeUtils'
 import { calculateVisibleFrameRange } from '../stores/utils/coordinateUtils'
+import { detectTrackConflicts } from '../utils/timeOverlapUtils'
 
 import { generateThumbnailForMediaItem } from '../utils/thumbnailGenerator'
 import type { TimelineItem, TimelineItemDragData, MediaItemDragData, ConflictInfo } from '../types'
@@ -1139,36 +1140,21 @@ function detectMediaItemConflicts(
   targetTrackId: number,
   duration: number,
 ): ConflictInfo[] {
-  const conflicts: ConflictInfo[] = []
-
   // 获取目标轨道上的所有项目
   const trackItems = videoStore.getTimelineItemsForTrack(targetTrackId)
-
   const dragEndTime = dropTime + duration
 
-  // 检查与其他项目的冲突
-  for (const item of trackItems) {
-    const itemStartTime = item.timeRange.timelineStartTime // 帧数
-    const itemEndTime = item.timeRange.timelineEndTime // 帧数
-
-    // 检查时间重叠
-    const overlapStart = Math.max(dropTime, itemStartTime)
-    const overlapEnd = Math.min(dragEndTime, itemEndTime)
-
-    if (overlapStart < overlapEnd) {
+  // 使用统一的冲突检测工具
+  return detectTrackConflicts(
+    dropTime,
+    dragEndTime,
+    trackItems,
+    [], // 没有需要排除的项目
+    (item) => {
       const mediaItem = videoStore.getMediaItem(item.mediaItemId)
-      conflicts.push({
-        itemId: item.id,
-        itemName: mediaItem?.name || 'Unknown',
-        startTime: itemStartTime,
-        endTime: itemEndTime,
-        overlapStart,
-        overlapEnd,
-      })
+      return mediaItem?.name || 'Unknown'
     }
-  }
-
-  return conflicts
+  )
 }
 
 function detectTimelineConflicts(
@@ -1176,45 +1162,28 @@ function detectTimelineConflicts(
   targetTrackId: number,
   dragData: TimelineItemDragData,
 ): ConflictInfo[] {
-  const conflicts: ConflictInfo[] = []
-
   // 获取目标轨道上的所有项目
   const trackItems = videoStore.getTimelineItemsForTrack(targetTrackId)
 
   // 计算拖拽项目的时长
   const draggedItem = videoStore.getTimelineItem(dragData.itemId)
-  if (!draggedItem) return conflicts
+  if (!draggedItem) return []
 
   const dragDuration =
     draggedItem.timeRange.timelineEndTime - draggedItem.timeRange.timelineStartTime // 帧数
   const dragEndTime = dropTime + dragDuration
 
-  // 检查与其他项目的冲突
-  for (const item of trackItems) {
-    // 跳过正在拖拽的项目
-    if (dragData.selectedItems.includes(item.id)) continue
-
-    const itemStartTime = item.timeRange.timelineStartTime // 帧数
-    const itemEndTime = item.timeRange.timelineEndTime // 帧数
-
-    // 检查时间重叠
-    const overlapStart = Math.max(dropTime, itemStartTime)
-    const overlapEnd = Math.min(dragEndTime, itemEndTime)
-
-    if (overlapStart < overlapEnd) {
+  // 使用统一的冲突检测工具
+  return detectTrackConflicts(
+    dropTime,
+    dragEndTime,
+    trackItems,
+    dragData.selectedItems, // 排除正在拖拽的项目
+    (item) => {
       const mediaItem = videoStore.getMediaItem(item.mediaItemId)
-      conflicts.push({
-        itemId: item.id,
-        itemName: mediaItem?.name || 'Unknown',
-        startTime: itemStartTime,
-        endTime: itemEndTime,
-        overlapStart,
-        overlapEnd,
-      })
+      return mediaItem?.name || 'Unknown'
     }
-  }
-
-  return conflicts
+  )
 }
 
 // 处理拖拽离开事件

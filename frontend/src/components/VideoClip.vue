@@ -109,6 +109,7 @@ import {
   framesToMicroseconds,
   alignFramesToFrame,
 } from '../stores/utils/timeUtils'
+import { hasOverlapInTrack } from '../utils/timeOverlapUtils'
 import type { TimelineItem, Track, VideoTimeRange, ImageTimeRange } from '../types'
 import { isVideoTimeRange } from '../types'
 
@@ -218,24 +219,10 @@ const showDetails = computed(() => {
 // 检查当前时间轴项目是否与同轨道的其他项目重叠
 const isOverlapping = computed(() => {
   const currentItem = props.timelineItem
-  // 直接从timelineItem.timeRange获取，与videostore的同步机制保持一致
-  const currentRange = currentItem.timeRange
-  const currentStart = currentRange.timelineStartTime // 帧数
-  const currentEnd = currentRange.timelineEndTime // 帧数
+  const trackItems = videoStore.getTimelineItemsForTrack(currentItem.trackId)
 
-  return videoStore.timelineItems.some((otherItem) => {
-    if (otherItem.id === currentItem.id || otherItem.trackId !== currentItem.trackId) {
-      return false // 跳过自己和不同轨道的项目
-    }
-
-    // 同样从timelineItem.timeRange获取其他项目的时间范围
-    const otherRange = otherItem.timeRange
-    const otherStart = otherRange.timelineStartTime // 帧数
-    const otherEnd = otherRange.timelineEndTime // 帧数
-
-    // 检查是否重叠
-    return !(currentEnd <= otherStart || otherEnd <= currentStart)
-  })
+  // 使用统一的重叠检测工具
+  return hasOverlapInTrack(currentItem, trackItems)
 })
 
 // 统一的选择状态计算

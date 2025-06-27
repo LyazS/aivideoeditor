@@ -1205,17 +1205,18 @@ const updateUnifiedProperty = async (property: string, value: any) => {
       } else if (property === 'rotation') {
         transform.angle = value
       } else if (property === 'opacity') {
-        transform.opacity = value
+        // 透明度属性需要直接设置到sprite，而不是sprite.rect
+        sprite.opacity = value
       }
 
       // 更新sprite属性（这会触发propsChange事件和实时渲染）
       if (Object.keys(transform).length > 0) {
         Object.assign(sprite.rect, transform)
-
-        // 手动触发preframe以确保立即更新渲染
-        const currentTime = videoStore.currentFrame * (1000000 / 30) // 转换为微秒
-        sprite.preFrame(currentTime)
       }
+
+      // 手动触发preframe以确保立即更新渲染
+      const currentTime = videoStore.currentFrame * (1000000 / 30) // 转换为微秒
+      sprite.preFrame(currentTime)
     }
 
     console.log('🎬 [Unified Property] Property updated with real-time rendering:', {
