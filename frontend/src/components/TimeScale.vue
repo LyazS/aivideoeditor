@@ -14,13 +14,12 @@
         </div>
       </div>
 
-      <!-- 播放头 -->
+      <!-- 播放头交互区域（仅保留拖拽手柄，竖线由Timeline全局显示） -->
       <div
         class="playhead"
         :style="{ left: playheadPosition + 'px' }"
         @mousedown="startDragPlayhead"
       >
-        <div class="playhead-line"></div>
         <div class="playhead-handle"></div>
       </div>
     </div>
@@ -448,13 +447,6 @@ onUnmounted(() => {
 
 .playhead:active {
   cursor: grabbing; /* 拖拽时的光标 */
-}
-
-.playhead-line {
-  width: 2px;
-  height: 100%;
-  background-color: #ff4444;
-  margin-left: -1px;
 }
 
 .playhead-handle {

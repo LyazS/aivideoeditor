@@ -139,7 +139,14 @@
           :style="{ left: 150 + videoStore.frameToPixel(line.time, timelineWidth) + 'px' }"
         ></div>
       </div>
+
     </div>
+
+    <!-- 全局播放头竖线 - 覆盖整个时间轴 -->
+    <div
+      class="global-playhead-line"
+      :style="{ left: 150 + videoStore.frameToPixel(videoStore.currentFrame, timelineWidth) + 'px' }"
+    ></div>
   </div>
 
   <!-- 统一右键菜单 -->
@@ -1589,6 +1596,17 @@ onUnmounted(() => {
   bottom: 0;
   pointer-events: none;
   z-index: 0;
+}
+
+.global-playhead-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background-color: #ff4444;
+  pointer-events: none;
+  z-index: 20; /* 确保在所有内容之上 */
+  margin-left: -1px; /* 居中对齐 */
 }
 
 .grid-line {

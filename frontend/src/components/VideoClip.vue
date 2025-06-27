@@ -54,6 +54,20 @@
         <div class="simple-duration">{{ formatDurationFromFrames(timelineDurationFrames) }}</div>
       </div>
 
+      <!-- 关键帧标记 -->
+      <div v-if="hasKeyframes" class="keyframes-container">
+        <div
+          v-for="keyframe in visibleKeyframes"
+          :key="keyframe.framePosition"
+          class="keyframe-marker"
+          :style="{ left: keyframe.pixelPosition - 7.0 + 'px', transform: 'translateY(-50%)' }"
+          :title="`关键帧 - 帧 ${keyframe.absoluteFrame} (点击跳转)`"
+          @click.stop="jumpToKeyframe(keyframe.absoluteFrame)"
+        >
+          <div class="keyframe-diamond"></div>
+        </div>
+      </div>
+
       <!-- 调整手柄 -->
       <div class="resize-handle left" @mousedown.stop="startResize('left', $event)"></div>
       <div class="resize-handle right" @mousedown.stop="startResize('right', $event)"></div>
@@ -110,7 +124,8 @@ import {
   alignFramesToFrame,
 } from '../stores/utils/timeUtils'
 import { hasOverlapInTrack } from '../utils/timeOverlapUtils'
-import type { TimelineItem, Track, VideoTimeRange, ImageTimeRange } from '../types'
+import { relativeFrameToAbsoluteFrame } from '../utils/unifiedKeyframeUtils'
+import type { TimelineItem, Track, VideoTimeRange, ImageTimeRange, Keyframe } from '../types'
 import { isVideoTimeRange } from '../types'
 
 interface Props {
@@ -236,6 +251,51 @@ const isTrackVisible = computed(() => {
   return track ? track.isVisible : true
 })
 
+// 关键帧相关计算
+const hasKeyframes = computed(() => {
+  return !!(
+    props.timelineItem.animation &&
+    props.timelineItem.animation.isEnabled &&
+    props.timelineItem.animation.keyframes.length > 0
+  )
+})
+
+// 计算在clip上可见的关键帧
+const visibleKeyframes = computed(() => {
+  if (!hasKeyframes.value) return []
+
+  const keyframes = props.timelineItem.animation!.keyframes
+  const timeRange = props.timelineItem.timeRange
+  const clipStartFrame = timeRange.timelineStartTime
+  const clipEndFrame = timeRange.timelineEndTime
+
+  // 计算clip在时间轴上的像素位置和宽度
+  const clipLeft = videoStore.frameToPixel(clipStartFrame, props.timelineWidth)
+  const clipRight = videoStore.frameToPixel(clipEndFrame, props.timelineWidth)
+  const clipWidth = clipRight - clipLeft
+
+  return keyframes
+    .map((keyframe) => {
+      // 将相对帧数转换为绝对帧数
+      const absoluteFrame = relativeFrameToAbsoluteFrame(keyframe.framePosition, timeRange)
+
+      // 计算关键帧在整个时间轴上的像素位置
+      const absolutePixelPosition = videoStore.frameToPixel(absoluteFrame, props.timelineWidth)
+
+      // 关键帧标记应该使用相对于clip容器的位置
+      // 但是要考虑到clip容器本身在时间轴上的偏移
+      const relativePixelPosition = absolutePixelPosition - clipLeft
+
+      return {
+        framePosition: keyframe.framePosition,
+        absoluteFrame,
+        pixelPosition: relativePixelPosition,
+        isVisible: relativePixelPosition >= 0 && relativePixelPosition <= clipWidth,
+      }
+    })
+    .filter((kf) => kf.isVisible)
+})
+
 function formatDurationFromFrames(frames: number): string {
   // 直接使用帧数格式化为时间码
   return framesToTimecode(frames)
@@ -251,6 +311,25 @@ function formatSpeed(rate: number): string {
     return `${rate.toFixed(1)}x 慢速`
   }
   return '正常速度'
+}
+
+// ==================== 关键帧交互 ====================
+
+/**
+ * 跳转到指定关键帧
+ */
+function jumpToKeyframe(absoluteFrame: number) {
+  // 暂停播放以便进行时间跳转
+  pauseForEditing('关键帧跳转')
+
+  // 通过WebAV控制器跳转到指定帧
+  webAVControls.seekTo(absoluteFrame)
+
+  console.log('🎯 [关键帧跳转] 跳转到关键帧:', {
+    itemId: props.timelineItem.id,
+    targetFrame: absoluteFrame,
+    timecode: framesToTimecode(absoluteFrame),
+  })
 }
 
 // ==================== 原生拖拽API事件处理 ====================
@@ -863,6 +942,50 @@ onUnmounted(() => {
 
 .video-clip:hover .resize-handle {
   opacity: 1;
+}
+
+/* 关键帧标记样式 */
+.keyframes-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none; /* 不阻挡clip的交互 */
+  z-index: 5; /* 在clip内容之上，但在调整手柄之下 */
+}
+
+.keyframe-marker {
+  position: absolute;
+  top: 50%;
+  width: 10px;
+  height: 10px;
+  z-index: 6;
+  pointer-events: auto; /* 允许点击 */
+  cursor: pointer;
+}
+
+.keyframe-diamond {
+  width: 10px;
+  height: 10px;
+  background-color: #00ff88; /* 明亮的绿色 */
+  border: 2px solid #ffffff;
+  border-radius: 2px;
+  transform: rotate(45deg);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+  transition: all 0.2s ease;
+}
+
+.keyframe-marker:hover .keyframe-diamond {
+  background-color: #00cc6a; /* 悬停时稍微深一点的绿色 */
+  transform: rotate(45deg) scale(1.3);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.5);
+  border-color: #ffffff;
+}
+
+.keyframe-marker:active .keyframe-diamond {
+  background-color: #00aa55; /* 点击时更深的绿色 */
+  transform: rotate(45deg) scale(1.1);
 }
 
 /* Tooltip样式 */

@@ -45,8 +45,8 @@ export function relativeFrameToAbsoluteFrame(relativeFrame: number, timeRange: a
  * @returns 精度阈值（帧数）
  */
 export function getKeyframePositionTolerance(timeRange: any): number {
-  // 使用1帧作为基本精度，对于任何时长的clip都是合理的
-  return 1
+  // 使用0帧作为精确匹配，确保只有完全相同的帧数才被认为是关键帧位置
+  return 0
 }
 
 // ==================== 关键帧基础操作 ====================
