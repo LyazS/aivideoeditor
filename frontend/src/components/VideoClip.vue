@@ -746,7 +746,6 @@ onUnmounted(() => {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
   z-index: 10; /* 确保视频片段在网格线上方 */
   border: 2px solid transparent;
-  transition: all 0.2s;
 }
 
 /* 图片片段使用与视频相同的背景色 */
