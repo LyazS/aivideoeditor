@@ -71,11 +71,11 @@ export function validateTimeRange(timeRange: VideoTimeRange | ImageTimeRange): b
  * @returns 重叠时长（帧数）
  * @deprecated 请使用 timeOverlapUtils.calculateTimeRangeOverlap 替代
  */
-export function calculateTimeRangeOverlap(
+export async function calculateTimeRangeOverlap(
   range1: VideoTimeRange | ImageTimeRange,
   range2: VideoTimeRange | ImageTimeRange,
-): number {
+): Promise<number> {
   // 重定向到新的统一工具
-  const { calculateTimeRangeOverlap: newCalculateTimeRangeOverlap } = require('../../utils/timeOverlapUtils')
+  const { calculateTimeRangeOverlap: newCalculateTimeRangeOverlap } = await import('../../utils/timeOverlapUtils')
   return newCalculateTimeRangeOverlap(range1, range2)
 }

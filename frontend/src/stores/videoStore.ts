@@ -44,6 +44,7 @@ import type {
   VideoTimeRange,
   ImageTimeRange,
   PropertyType,
+  TrackType,
 } from '../types'
 
 export const useVideoStore = defineStore('video', () => {
@@ -553,11 +554,12 @@ export const useVideoStore = defineStore('video', () => {
 
   /**
    * 带历史记录的添加轨道方法
+   * @param type 轨道类型
    * @param name 轨道名称（可选）
    * @returns 新创建的轨道ID，失败时返回null
    */
-  async function addTrackWithHistory(name?: string): Promise<number | null> {
-    const command = new AddTrackCommand(name, {
+  async function addTrackWithHistory(type: TrackType = 'video', name?: string): Promise<number | null> {
+    const command = new AddTrackCommand(type, name, {
       addTrack: trackModule.addTrack,
       removeTrack: trackModule.removeTrack,
       getTrack: trackModule.getTrack,
@@ -595,7 +597,7 @@ export const useVideoStore = defineStore('video', () => {
     const command = new RemoveTrackCommand(
       trackId,
       {
-        addTrack: trackModule.addTrack,
+        addTrack: (type: TrackType, name?: string) => trackModule.addTrack(type, name),
         removeTrack: trackModule.removeTrack,
         getTrack: trackModule.getTrack,
         tracks: trackModule.tracks,
@@ -1018,7 +1020,7 @@ export const useVideoStore = defineStore('video', () => {
     getPlaybackSummary: playbackModule.getPlaybackSummary,
     resetPlaybackToDefaults: playbackModule.resetToDefaults,
     // 轨道管理方法
-    addTrack: (name?: string) => trackModule.addTrack(name),
+    addTrack: (type: TrackType = 'video', name?: string) => trackModule.addTrack(type, name),
     removeTrack: (trackId: number) =>
       trackModule.removeTrack(
         trackId,

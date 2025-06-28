@@ -18,6 +18,11 @@ export type MediaStatus = 'parsing' | 'ready' | 'error' | 'missing'
  */
 export type MediaType = 'video' | 'image'
 
+/**
+ * 轨道类型
+ */
+export type TrackType = 'video' | 'audio' | 'subtitle'
+
 // ==================== 时间范围接口 ====================
 
 /**
@@ -117,6 +122,7 @@ export interface TimelineItem {
 export interface Track {
   id: number
   name: string
+  type: TrackType // 轨道类型
   isVisible: boolean
   isMuted: boolean
   height: number // 轨道高度

@@ -4,7 +4,7 @@
     <div class="timeline-header">
       <div class="track-manager-header">
         <h3>轨道</h3>
-        <button class="add-track-btn" @click="addNewTrack" title="添加新轨道">
+        <button class="add-track-btn" @click="showAddTrackMenu($event)" title="添加新轨道">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
             <path d="M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z" />
           </svg>
@@ -28,6 +28,13 @@
         <div class="track-controls">
           <!-- 轨道名称 -->
           <div class="track-name">
+            <!-- 轨道类型图标 -->
+            <div class="track-type-icon" :title="`${getTrackTypeLabel(track.type)}轨道`">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                <path :d="getTrackTypeIcon(track.type)" />
+              </svg>
+            </div>
+
             <input
               v-if="editingTrackId === track.id"
               v-model="editingTrackName"
@@ -75,8 +82,9 @@
                 </svg>
               </button>
 
-              <!-- 静音切换按钮 -->
+              <!-- 静音切换按钮 - 字幕轨道不显示 -->
               <button
+                v-if="track.type !== 'subtitle'"
                 class="status-btn"
                 :class="{ active: !track.isMuted }"
                 :title="track.isMuted ? '取消静音' : '静音轨道'"
@@ -108,7 +116,10 @@
         <!-- 右侧轨道内容区域 -->
         <div
           class="track-content"
-          :class="{ 'track-hidden': !track.isVisible }"
+          :class="{
+            'track-hidden': !track.isVisible,
+            [`track-type-${track.type}`]: true
+          }"
           :data-track-id="track.id"
           @dragover="handleDragOver"
           @drop="handleDrop"
@@ -186,7 +197,7 @@ import { calculateVisibleFrameRange } from '../stores/utils/coordinateUtils'
 import { detectTrackConflicts } from '../utils/timeOverlapUtils'
 
 import { generateThumbnailForMediaItem } from '../utils/thumbnailGenerator'
-import type { TimelineItem, TimelineItemDragData, MediaItemDragData, ConflictInfo } from '../types'
+import type { TimelineItem, TimelineItemDragData, MediaItemDragData, ConflictInfo, TrackType, MediaType } from '../types'
 import VideoClip from './VideoClip.vue'
 import TimeScale from './TimeScale.vue'
 import { ContextMenu, ContextMenuItem, ContextMenuSeparator } from '@imengyu/vue3-context-menu'
@@ -263,9 +274,19 @@ const menuConfigs: Record<string, MenuItem[]> = {
   track: [], // 轨道菜单使用动态配置
   empty: [
     {
-      label: '添加新轨道',
-      icon: 'M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z',
-      onClick: () => addNewTrack(),
+      label: '添加视频轨道',
+      icon: 'M17,10.5V7A1,1 0 0,0 16,6H4A1,1 0 0,0 3,7V17A1,1 0 0,0 4,18H16A1,1 0 0,0 17,17V13.5L21,17.5V6.5L17,10.5Z',
+      onClick: () => addNewTrack('video'),
+    },
+    {
+      label: '添加音频轨道',
+      icon: 'M14,3.23V5.29C16.89,6.15 19,8.83 19,12C19,15.17 16.89,17.85 14,18.71V20.77C18,19.86 21,16.28 21,12C21,7.72 18,4.14 14,3.23M16.5,12C16.5,10.23 15.5,8.71 14,7.97V16C15.5,15.29 16.5,13.76 16.5,12Z',
+      onClick: () => addNewTrack('audio'),
+    },
+    {
+      label: '添加字幕轨道',
+      icon: 'M18,11H16.5V10.5H14.5V13.5H16.5V13H18V14A1,1 0 0,1 17,15H14A1,1 0 0,1 13,14V10A1,1 0 0,1 14,9H17A1,1 0 0,1 18,10V11M11,15H9V9H11V15M8,9H6V15H8V9Z',
+      onClick: () => addNewTrack('subtitle'),
     },
   ],
 }
@@ -333,17 +354,82 @@ function getClipsForTrack(trackId: number) {
 }
 
 // 轨道管理方法
-async function addNewTrack() {
+async function addNewTrack(type: TrackType = 'video') {
   try {
-    const newTrackId = await videoStore.addTrackWithHistory()
+    // 检查轨道类型限制
+    if (type === 'audio' || type === 'subtitle') {
+      dialogs.showOperationError('添加轨道', `${type === 'audio' ? '音频' : '字幕'}轨道功能暂未实现，敬请期待！`)
+      return
+    }
+
+    const newTrackId = await videoStore.addTrackWithHistory(type)
     if (newTrackId) {
-      console.log('✅ 轨道添加成功，新轨道ID:', newTrackId)
+      console.log('✅ 轨道添加成功，新轨道ID:', newTrackId, '类型:', type)
     } else {
       console.error('❌ 轨道添加失败')
     }
   } catch (error) {
     console.error('❌ 添加轨道时出错:', error)
   }
+}
+
+// 显示添加轨道菜单
+function showAddTrackMenu(event?: MouseEvent) {
+  // 如果是点击按钮触发，获取按钮位置
+  if (event) {
+    const button = event.currentTarget as HTMLElement
+    const rect = button.getBoundingClientRect()
+    contextMenuOptions.value.x = rect.left
+    contextMenuOptions.value.y = rect.bottom + 5
+  } else {
+    // 默认位置
+    contextMenuOptions.value.x = 100
+    contextMenuOptions.value.y = 100
+  }
+
+  contextMenuType.value = 'empty'
+  contextMenuTarget.value = {}
+  showContextMenu.value = true
+}
+
+// 获取轨道类型图标
+function getTrackTypeIcon(type: TrackType): string {
+  const icons = {
+    video: 'M17,10.5V7A1,1 0 0,0 16,6H4A1,1 0 0,0 3,7V17A1,1 0 0,0 4,18H16A1,1 0 0,0 17,17V13.5L21,17.5V6.5L17,10.5Z',
+    audio: 'M14,3.23V5.29C16.89,6.15 19,8.83 19,12C19,15.17 16.89,17.85 14,18.71V20.77C18,19.86 21,16.28 21,12C21,7.72 18,4.14 14,3.23M16.5,12C16.5,10.23 15.5,8.71 14,7.97V16C15.5,15.29 16.5,13.76 16.5,12Z',
+    subtitle: 'M18,11H16.5V10.5H14.5V13.5H16.5V13H18V14A1,1 0 0,1 17,15H14A1,1 0 0,1 13,14V10A1,1 0 0,1 14,9H17A1,1 0 0,1 18,10V11M11,15H9V9H11V15M8,9H6V15H8V9Z'
+  }
+  return icons[type] || icons.video
+}
+
+// 获取轨道类型标签
+function getTrackTypeLabel(type: TrackType): string {
+  const labels = {
+    video: '视频',
+    audio: '音频',
+    subtitle: '字幕'
+  }
+  return labels[type] || '视频'
+}
+
+// 检查媒体类型与轨道类型的兼容性
+function isMediaCompatibleWithTrack(mediaType: MediaType, trackType: TrackType): boolean {
+  // 目前只有视频轨道支持视频和图片素材
+  if (trackType === 'video') {
+    return mediaType === 'video' || mediaType === 'image'
+  }
+
+  // 音频轨道暂时不支持任何素材（占位符）
+  if (trackType === 'audio') {
+    return false
+  }
+
+  // 字幕轨道暂时不支持任何素材（占位符）
+  if (trackType === 'subtitle') {
+    return false
+  }
+
+  return false
 }
 
 async function removeTrack(trackId: number) {
@@ -697,6 +783,21 @@ async function handleTimelineItemDrop(event: DragEvent, dragData: TimelineItemDr
 
   const { dropTime, targetTrackId } = dropPosition
 
+  // 验证轨道类型兼容性
+  const draggedItem = videoStore.getTimelineItem(dragData.itemId)
+  if (draggedItem) {
+    const targetTrack = tracks.value.find(t => t.id === targetTrackId)
+    if (targetTrack && !isMediaCompatibleWithTrack(draggedItem.mediaType, targetTrack.type)) {
+      const mediaTypeLabel = draggedItem.mediaType === 'video' ? '视频' : '图片'
+      const trackTypeLabel = getTrackTypeLabel(targetTrack.type)
+      dialogs.showOperationError(
+        '拖拽失败',
+        `${mediaTypeLabel}片段不能拖拽到${trackTypeLabel}轨道上。\n请将${mediaTypeLabel}片段拖拽到视频轨道。`
+      )
+      return
+    }
+  }
+
   console.log('📍 [Timeline] 拖拽目标位置:', {
     dragOffsetX: dragData.dragOffset.x,
     dropTime: dropTime.toFixed(2),
@@ -738,6 +839,24 @@ async function handleMediaItemDrop(event: DragEvent, mediaDragData: MediaItemDra
 
     if (!dropPosition) {
       console.error('无法获取轨道区域信息')
+      return
+    }
+
+    // 验证轨道类型兼容性
+    const targetTrack = tracks.value.find(t => t.id === dropPosition.targetTrackId)
+    if (!targetTrack) {
+      console.error('❌ 目标轨道不存在:', dropPosition.targetTrackId)
+      return
+    }
+
+    // 检查素材类型与轨道类型的兼容性
+    if (!isMediaCompatibleWithTrack(mediaItem.mediaType, targetTrack.type)) {
+      const mediaTypeLabel = mediaItem.mediaType === 'video' ? '视频' : '图片'
+      const trackTypeLabel = getTrackTypeLabel(targetTrack.type)
+      dialogs.showOperationError(
+        '拖拽失败',
+        `${mediaTypeLabel}素材不能拖拽到${trackTypeLabel}轨道上。\n请将${mediaTypeLabel}素材拖拽到视频轨道。`
+      )
       return
     }
 
@@ -1480,8 +1599,38 @@ onUnmounted(() => {
   opacity: 0.8;
 }
 
+/* 轨道类型样式 */
+.track-content.track-type-video {
+  border-left: 3px solid rgba(76, 175, 80, 0.3); /* 绿色边框 */
+}
+
+.track-content.track-type-audio {
+  border-left: 3px solid rgba(33, 150, 243, 0.3); /* 蓝色边框 */
+  background-color: rgba(33, 150, 243, 0.05); /* 淡蓝色背景 */
+}
+
+.track-content.track-type-subtitle {
+  border-left: 3px solid rgba(255, 193, 7, 0.3); /* 黄色边框 */
+  background-color: rgba(255, 193, 7, 0.05); /* 淡黄色背景 */
+}
+
 .track-name {
   flex: 1;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.track-type-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: var(--border-radius-small);
+  background-color: rgba(156, 163, 175, 0.15);
+  color: #9ca3af;
+  flex-shrink: 0;
 }
 
 .track-name-text {

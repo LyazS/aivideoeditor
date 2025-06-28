@@ -5,6 +5,7 @@ import type {
   TimelineItem,
   MediaItem,
   Track,
+  TrackType,
   VideoTimeRange,
   ImageTimeRange,
   TimelineItemData,
@@ -1523,9 +1524,10 @@ export class AddTrackCommand implements SimpleCommand {
   private trackData: Track // 保存轨道数据
 
   constructor(
+    private trackType: TrackType, // 轨道类型
     private trackName: string | undefined, // 轨道名称（可选）
     private trackModule: {
-      addTrack: (name?: string) => Track
+      addTrack: (type: TrackType, name?: string) => Track
       removeTrack: (
         trackId: number,
         timelineItems: Ref<TimelineItem[]>,
@@ -1535,7 +1537,7 @@ export class AddTrackCommand implements SimpleCommand {
     },
   ) {
     this.id = generateCommandId()
-    this.description = `添加轨道: ${trackName || '新轨道'}`
+    this.description = `添加轨道: ${trackName || `${trackType}轨道`}`
 
     // 预先计算新轨道ID（模拟trackModule的逻辑）
     // 注意：这里我们无法直接访问tracks数组，所以在execute时会获取实际的轨道数据
@@ -1543,6 +1545,7 @@ export class AddTrackCommand implements SimpleCommand {
     this.trackData = {
       id: 0,
       name: '',
+      type: trackType,
       isVisible: true,
       isMuted: false,
       height: 80,
@@ -1564,15 +1567,15 @@ export class AddTrackCommand implements SimpleCommand {
       console.log(`🔄 执行添加轨道操作...`)
 
       // 调用trackModule的addTrack方法
-      const newTrack = this.trackModule.addTrack(this.trackName)
+      const newTrack = this.trackModule.addTrack(this.trackType, this.trackName)
 
       // 保存轨道数据用于撤销
       this.newTrackId = newTrack.id
       this.trackData = { ...newTrack }
 
-      console.log(`✅ 已添加轨道: ${newTrack.name} (ID: ${newTrack.id})`)
+      console.log(`✅ 已添加轨道: ${newTrack.name} (ID: ${newTrack.id}, 类型: ${newTrack.type})`)
     } catch (error) {
-      console.error(`❌ 添加轨道失败: ${this.trackName || '新轨道'}`, error)
+      console.error(`❌ 添加轨道失败: ${this.trackName || `${this.trackType}轨道`}`, error)
       throw error
     }
   }
@@ -1688,7 +1691,7 @@ export class RemoveTrackCommand implements SimpleCommand {
   constructor(
     private trackId: number,
     private trackModule: {
-      addTrack: (name?: string) => Track
+      addTrack: (type: TrackType, name?: string) => Track
       removeTrack: (
         trackId: number,
         timelineItems: Ref<TimelineItem[]>,
