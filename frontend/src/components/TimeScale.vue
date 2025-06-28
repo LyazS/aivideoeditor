@@ -14,14 +14,14 @@
         </div>
       </div>
 
-      <!-- 播放头交互区域（仅保留拖拽手柄，竖线由Timeline全局显示） -->
-      <div
-        class="playhead"
-        :style="{ left: playheadPosition + 'px' }"
-        @mousedown="startDragPlayhead"
-      >
-        <div class="playhead-handle"></div>
-      </div>
+      <!-- 播放头组件 -->
+      <Playhead
+        ref="playheadRef"
+        :timeline-width="containerWidth"
+        :track-control-width="0"
+        :handle-container="scaleContainer"
+        :enable-container-click="true"
+      />
     </div>
   </div>
 </template>
@@ -29,21 +29,15 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useVideoStore } from '../stores/videoStore'
-import { useWebAVControls } from '../composables/useWebAVControls'
-import { usePlaybackControls } from '../composables/usePlaybackControls'
-
 import { calculateVisibleFrameRange } from '../stores/utils/coordinateUtils'
-import { framesToTimecode, alignFramesToFrame } from '../stores/utils/timeUtils'
+import { framesToTimecode } from '../stores/utils/timeUtils'
 import type { TimeMark } from '../types'
+import Playhead from './Playhead.vue'
 
 const videoStore = useVideoStore()
-const webAVControls = useWebAVControls()
-const { pauseForEditing } = usePlaybackControls()
 const scaleContainer = ref<HTMLElement>()
+const playheadRef = ref<InstanceType<typeof Playhead>>()
 const containerWidth = ref(800)
-
-// 播放头拖拽状态
-const isDraggingPlayhead = ref(false)
 
 // TimeMark 接口已移动到统一类型文件 src/types/index.ts
 
@@ -163,14 +157,6 @@ const timeMarks = computed((): TimeMark[] => {
   return marks
 })
 
-// 播放头位置 - 使用帧数精确计算
-const playheadPosition = computed(() => {
-  const currentFrame = videoStore.currentFrame
-  const position = videoStore.frameToPixel(currentFrame, containerWidth.value)
-
-  return position
-})
-
 function formatTime(frames: number): string {
   return framesToTimecode(frames)
 }
@@ -179,132 +165,6 @@ function updateContainerWidth() {
   if (scaleContainer.value) {
     containerWidth.value = scaleContainer.value.clientWidth
   }
-}
-
-function handleClick(event: MouseEvent) {
-  // 如果正在拖拽播放头，不处理点击事件
-  if (isDraggingPlayhead.value) return
-  if (!scaleContainer.value) return
-
-  // 暂停播放以便进行时间跳转
-  pauseForEditing('时间刻度点击')
-
-  const rect = scaleContainer.value.getBoundingClientRect()
-  const clickX = event.clientX - rect.left
-
-  // 直接转换为帧数
-  const clickFrames = videoStore.pixelToFrame(clickX, containerWidth.value)
-  const clampedFrames = Math.max(0, clickFrames)
-  const alignedFrames = alignFramesToFrame(clampedFrames)
-
-  // 统一时间控制：通过WebAV设置帧数
-  webAVControls.seekTo(alignedFrames)
-
-  console.log('🎯 时间轴点击跳转:', {
-    clickFrames: alignedFrames,
-    timecode: framesToTimecode(alignedFrames),
-  })
-}
-
-function handleMouseDown(event: MouseEvent) {
-  // 如果点击的是播放头，让播放头自己的mousedown处理
-  const target = event.target as HTMLElement
-  if (target.closest('.playhead')) {
-    return
-  }
-
-  // 如果正在拖拽播放头，不处理鼠标按下事件
-  if (isDraggingPlayhead.value) return
-  if (!scaleContainer.value) return
-
-  // 暂停播放以便进行播放头拖拽
-  pauseForEditing('时间轴拖拽')
-
-  const rect = scaleContainer.value.getBoundingClientRect()
-  const mouseX = event.clientX - rect.left
-
-  // 直接转换为帧数
-  const mouseFrames = videoStore.pixelToFrame(mouseX, containerWidth.value)
-  const clampedFrames = Math.max(0, mouseFrames)
-  const alignedFrames = alignFramesToFrame(clampedFrames)
-
-  // 立即跳转播放头到鼠标位置
-  webAVControls.seekTo(alignedFrames)
-
-  // 开始拖拽播放头
-  isDraggingPlayhead.value = true
-
-  // 添加拖拽样式类
-  if (scaleContainer.value) {
-    scaleContainer.value.classList.add('dragging')
-  }
-
-  document.addEventListener('mousemove', handleDragPlayhead)
-  document.addEventListener('mouseup', stopDragPlayhead)
-
-  event.preventDefault()
-  event.stopPropagation()
-}
-
-function startDragPlayhead(event: MouseEvent) {
-  event.preventDefault()
-  event.stopPropagation()
-
-  // 暂停播放以便进行播放头拖拽
-  pauseForEditing('播放头拖拽')
-
-  isDraggingPlayhead.value = true
-
-  // 添加拖拽样式类
-  if (scaleContainer.value) {
-    scaleContainer.value.classList.add('dragging')
-  }
-
-  document.addEventListener('mousemove', handleDragPlayhead)
-  document.addEventListener('mouseup', stopDragPlayhead)
-}
-
-function handleDragPlayhead(event: MouseEvent) {
-  if (!isDraggingPlayhead.value || !scaleContainer.value) return
-
-  const rect = scaleContainer.value.getBoundingClientRect()
-  const mouseX = event.clientX - rect.left
-
-  // 直接转换为帧数
-  const dragFrames = videoStore.pixelToFrame(mouseX, containerWidth.value)
-  const clampedFrames = Math.max(0, dragFrames)
-  const alignedFrames = alignFramesToFrame(clampedFrames)
-
-  // 统一时间控制：通过WebAV设置帧数
-  webAVControls.seekTo(alignedFrames)
-}
-
-function stopDragPlayhead() {
-  isDraggingPlayhead.value = false
-
-  // 移除拖拽样式类
-  if (scaleContainer.value) {
-    scaleContainer.value.classList.remove('dragging')
-  }
-
-  document.removeEventListener('mousemove', handleDragPlayhead)
-  document.removeEventListener('mouseup', stopDragPlayhead)
-
-  // 添加一个临时的click事件监听器来阻止拖拽结束后可能触发的click事件
-  // 这可以防止Timeline组件意外清除选择状态
-  const preventClick = (e: MouseEvent) => {
-    e.stopPropagation()
-    e.preventDefault()
-    document.removeEventListener('click', preventClick, true)
-  }
-
-  // 使用capture模式确保在其他事件处理器之前捕获
-  document.addEventListener('click', preventClick, true)
-
-  // 50ms后移除监听器，以防万一没有click事件触发
-  setTimeout(() => {
-    document.removeEventListener('click', preventClick, true)
-  }, 50)
 }
 
 function handleWheel(event: WheelEvent) {
@@ -360,8 +220,6 @@ onMounted(() => {
   window.addEventListener('resize', updateContainerWidth)
 
   if (scaleContainer.value) {
-    scaleContainer.value.addEventListener('click', handleClick)
-    scaleContainer.value.addEventListener('mousedown', handleMouseDown)
     scaleContainer.value.addEventListener('wheel', handleWheel, { passive: false })
   }
 })
@@ -370,14 +228,8 @@ onUnmounted(() => {
   window.removeEventListener('resize', updateContainerWidth)
 
   if (scaleContainer.value) {
-    scaleContainer.value.removeEventListener('click', handleClick)
-    scaleContainer.value.removeEventListener('mousedown', handleMouseDown)
     scaleContainer.value.removeEventListener('wheel', handleWheel)
   }
-
-  // 清理播放头拖拽事件监听器
-  document.removeEventListener('mousemove', handleDragPlayhead)
-  document.removeEventListener('mouseup', stopDragPlayhead)
 })
 </script>
 
@@ -395,14 +247,6 @@ onUnmounted(() => {
   height: 100%;
   position: relative;
   cursor: pointer;
-}
-
-.scale-container.dragging {
-  cursor: grabbing !important;
-}
-
-.scale-container.dragging .playhead {
-  pointer-events: none; /* 拖拽时禁用播放头的指针事件 */
 }
 
 .time-mark {
@@ -434,39 +278,5 @@ onUnmounted(() => {
   color: #ccc;
   white-space: nowrap;
   font-family: monospace;
-}
-
-.playhead {
-  position: absolute;
-  top: 0;
-  height: 100%;
-  pointer-events: auto; /* 允许交互 */
-  z-index: 10;
-  cursor: grab; /* 显示可拖拽的光标 */
-}
-
-.playhead:active {
-  cursor: grabbing; /* 拖拽时的光标 */
-}
-
-.playhead-handle {
-  width: 14px;
-  height: 14px;
-  background-color: #ff4444;
-  border-radius: 50%;
-  position: absolute;
-  top: -7px;
-  left: -7px;
-  border: 2px solid white;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
-  transition: all 0.2s ease;
-}
-
-.playhead:hover .playhead-handle {
-  width: 16px;
-  height: 16px;
-  top: -8px;
-  left: -8px;
-  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.5);
 }
 </style>

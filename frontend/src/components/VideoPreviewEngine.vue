@@ -4,7 +4,7 @@
     <div class="status-bar-container">
       <div class="status-bar">
         <div class="status-content">
-          <span class="app-title">AI编辑器</span>
+          <span class="app-title">光影绘梦</span>
         </div>
       </div>
     </div>

@@ -52,17 +52,9 @@
               <div class="loading-spinner"></div>
             </div>
 
-            <!-- 左上角状态标签 -->
-            <div
-              class="status-badge"
-              :class="`status-${item.status || (item.isReady ? 'ready' : 'parsing')}`"
-            >
-              {{ getStatusText(item.status || (item.isReady ? 'ready' : 'parsing')) }}
-            </div>
-
             <!-- 右上角时长标签（只有视频才显示） -->
             <div v-if="item.mediaType === 'video'" class="duration-badge">
-              {{ formatDuration(item.duration) }}
+              {{ item.isReady ? formatDuration(item.duration) : '分析中' }}
             </div>
           </div>
 
@@ -472,21 +464,7 @@ const handleItemDragEnd = () => {
   dragUtils.clearDragData()
 }
 
-// 获取状态文本
-const getStatusText = (status: string): string => {
-  switch (status) {
-    case 'parsing':
-      return '解析中'
-    case 'ready':
-      return '已添加'
-    case 'error':
-      return '错误'
-    case 'missing':
-      return '已丢失'
-    default:
-      return '未知'
-  }
-}
+
 </script>
 
 <style scoped>
@@ -517,10 +495,10 @@ const getStatusText = (status: string): string => {
 }
 
 .import-btn {
-  background: var(--color-accent-primary);
+  background: #555;
   border: none;
   border-radius: var(--border-radius-medium);
-  color: var(--color-text-primary);
+  color: #ccc;
   padding: var(--spacing-sm);
   cursor: pointer;
   display: flex;
@@ -530,7 +508,8 @@ const getStatusText = (status: string): string => {
 }
 
 .import-btn:hover {
-  background: var(--color-accent-primary-hover);
+  background: #666;
+  color: white;
 }
 
 .drop-zone {
@@ -549,26 +528,26 @@ const getStatusText = (status: string): string => {
 
 .media-list {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-  gap: var(--spacing-md);
-  padding: var(--spacing-md);
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: var(--spacing-xs);
+  padding: var(--spacing-sm);
 }
 
 .media-item {
-  background-color: var(--color-bg-tertiary);
-  border-radius: var(--border-radius-large);
-  padding: var(--spacing-sm);
+  background-color: transparent;
+  border-radius: var(--border-radius-medium);
+  padding: var(--spacing-xs);
   display: flex;
   flex-direction: column;
   align-items: center;
   cursor: grab;
   transition: background-color var(--transition-fast);
   position: relative;
-  min-height: 100px;
+  min-height: 85px;
 }
 
 .media-item:hover {
-  background-color: var(--color-bg-hover);
+  background-color: var(--color-bg-tertiary);
 }
 
 .media-item:active {
@@ -587,10 +566,10 @@ const getStatusText = (status: string): string => {
 }
 
 .media-thumbnail {
-  width: 100px;
-  height: 60px;
+  width: 85px;
+  height: 50px;
   background-color: #000;
-  border-radius: var(--border-radius-medium);
+  border-radius: var(--border-radius-small);
   position: relative;
   overflow: hidden;
   flex-shrink: 0;
@@ -621,34 +600,7 @@ const getStatusText = (status: string): string => {
   animation: spin 1s linear infinite;
 }
 
-/* 状态标签样式 */
-.status-badge {
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  background-color: rgba(0, 0, 0, 0.8);
-  color: white;
-  font-size: 10px;
-  padding: 2px 4px;
-  border-radius: 3px;
-  z-index: 2;
-}
 
-.status-badge.status-parsing {
-  background-color: rgba(255, 165, 0, 0.9);
-}
-
-.status-badge.status-ready {
-  background-color: rgba(34, 197, 94, 0.9);
-}
-
-.status-badge.status-error {
-  background-color: rgba(239, 68, 68, 0.9);
-}
-
-.status-badge.status-missing {
-  background-color: rgba(156, 163, 175, 0.9);
-}
 
 @keyframes spin {
   0% {
@@ -721,9 +673,9 @@ const getStatusText = (status: string): string => {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  margin-top: var(--spacing-xs);
+  margin-top: 2px;
   padding: 0 2px;
-  line-height: 1.2;
+  line-height: 1.1;
   max-width: 100px;
 }
 

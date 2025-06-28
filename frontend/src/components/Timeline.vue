@@ -153,11 +153,11 @@
 
     </div>
 
-    <!-- 全局播放头竖线 - 覆盖整个时间轴 -->
-    <div
-      class="global-playhead-line"
-      :style="{ left: 150 + videoStore.frameToPixel(videoStore.currentFrame, timelineWidth) + 'px' }"
-    ></div>
+    <!-- 全局播放头组件 - 覆盖整个时间轴 -->
+    <Playhead
+      :timeline-width="timelineWidth"
+      :track-control-width="150"
+    />
   </div>
 
   <!-- 统一右键菜单 -->
@@ -197,6 +197,7 @@ import { calculateVisibleFrameRange } from '../stores/utils/coordinateUtils'
 import { detectTrackConflicts } from '../utils/timeOverlapUtils'
 
 import { generateThumbnailForMediaItem } from '../utils/thumbnailGenerator'
+import Playhead from './Playhead.vue'
 import type { TimelineItem, TimelineItemDragData, MediaItemDragData, ConflictInfo, TrackType, MediaType } from '../types'
 import VideoClip from './VideoClip.vue'
 import TimeScale from './TimeScale.vue'
@@ -1747,16 +1748,7 @@ onUnmounted(() => {
   z-index: 0;
 }
 
-.global-playhead-line {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  width: 2px;
-  background-color: #ff4444;
-  pointer-events: none;
-  z-index: 20; /* 确保在所有内容之上 */
-  margin-left: -1px; /* 居中对齐 */
-}
+
 
 .grid-line {
   position: absolute;

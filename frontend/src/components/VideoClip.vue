@@ -60,7 +60,7 @@
           v-for="keyframe in visibleKeyframes"
           :key="keyframe.framePosition"
           class="keyframe-marker"
-          :style="{ left: keyframe.pixelPosition - 7.0 + 'px', transform: 'translateY(-50%)' }"
+          :style="{ left: keyframe.pixelPosition - 10.0 + 'px', transform: 'translateY(-50%)' }"
           :title="`关键帧 - 帧 ${keyframe.absoluteFrame} (点击跳转)`"
           @click.stop="jumpToKeyframe(keyframe.absoluteFrame)"
         >
@@ -73,40 +73,22 @@
       <div class="resize-handle right" @mousedown.stop="startResize('right', $event)"></div>
     </div>
 
-    <!-- Tooltip -->
-    <div v-if="showTooltipFlag" class="clip-tooltip" :style="tooltipStyle">
-      <div class="tooltip-content">
-        <div class="tooltip-title">{{ mediaItem?.name || 'Unknown' }}</div>
-        <div class="tooltip-info">
-          <div class="tooltip-row">
-            <span class="tooltip-label">类型:</span>
-            <span class="tooltip-value">{{
-              mediaItem?.mediaType === 'video' ? '视频' : '图片'
-            }}</span>
-          </div>
-          <div class="tooltip-row">
-            <span class="tooltip-label">时长:</span>
-            <span class="tooltip-value">{{
-              formatDurationFromFrames(timelineDurationFrames)
-            }}</span>
-          </div>
-          <div class="tooltip-row">
-            <span class="tooltip-label">位置:</span>
-            <span class="tooltip-value">{{
-              formatDurationFromFrames(props.timelineItem.timeRange.timelineStartTime)
-            }}</span>
-          </div>
-          <div
-            v-if="mediaItem?.mediaType === 'video' && Math.abs(playbackSpeed - 1) > 0.001"
-            class="tooltip-row"
-          >
-            <span class="tooltip-label">倍速:</span>
-            <span class="tooltip-value">{{ formatSpeed(playbackSpeed) }}</span>
-          </div>
-        </div>
-      </div>
-    </div>
+
   </div>
+
+  <!-- Tooltip组件 -->
+  <ClipTooltip
+    :visible="showTooltipFlag"
+    :title="mediaItem?.name || 'Unknown'"
+    :media-type="mediaItem?.mediaType || 'video'"
+    :duration="formatDurationFromFrames(timelineDurationFrames)"
+    :position="formatDurationFromFrames(props.timelineItem.timeRange.timelineStartTime)"
+    :speed="formatSpeed(playbackSpeed)"
+    :show-speed="mediaItem?.mediaType === 'video' && Math.abs(playbackSpeed - 1) > 0.001"
+    :mouse-x="tooltipMouseX"
+    :mouse-y="tooltipMouseY"
+    :clip-top="tooltipClipTop"
+  />
 </template>
 
 <script setup lang="ts">
@@ -117,15 +99,15 @@ import { regenerateThumbnailForTimelineItem } from '../utils/thumbnailGenerator'
 import { useDragUtils } from '../composables/useDragUtils'
 import { usePlaybackControls } from '../composables/usePlaybackControls'
 import { getDragPreviewManager } from '../composables/useDragPreview'
+import ClipTooltip from './ClipTooltip.vue'
 
 import {
   framesToTimecode,
-  framesToMicroseconds,
   alignFramesToFrame,
 } from '../stores/utils/timeUtils'
 import { hasOverlapInTrack } from '../utils/timeOverlapUtils'
 import { relativeFrameToAbsoluteFrame } from '../utils/unifiedKeyframeUtils'
-import type { TimelineItem, Track, VideoTimeRange, ImageTimeRange, Keyframe } from '../types'
+import type { TimelineItem, Track, VideoTimeRange, ImageTimeRange } from '../types'
 import { isVideoTimeRange } from '../types'
 
 interface Props {
@@ -173,7 +155,9 @@ const playbackSpeed = computed(() => {
 
 // Tooltip相关状态
 const showTooltipFlag = ref(false)
-const tooltipStyle = ref({})
+const tooltipMouseX = ref(0)
+const tooltipMouseY = ref(0)
+const tooltipClipTop = ref(0)
 
 const isDragging = ref(false) // 保留用于原生拖拽状态
 const isResizing = ref(false)
@@ -691,14 +675,10 @@ function showTooltip(event: MouseEvent) {
   const clipElement = event.currentTarget as HTMLElement
   const clipRect = clipElement.getBoundingClientRect()
 
-  // 将tooltip定位在鼠标位置的上方
-  tooltipStyle.value = {
-    position: 'fixed',
-    left: `${event.clientX}px`, // 使用鼠标的X坐标
-    bottom: `${window.innerHeight - clipRect.top + 10}px`, // 在clip上方10px
-    transform: 'translateX(-50%)', // 水平居中对齐鼠标位置
-    zIndex: 1001,
-  }
+  // 更新tooltip位置数据
+  tooltipMouseX.value = event.clientX
+  tooltipMouseY.value = event.clientY
+  tooltipClipTop.value = clipRect.top
 }
 
 function updateTooltipPosition(event: MouseEvent) {
@@ -711,14 +691,10 @@ function updateTooltipPosition(event: MouseEvent) {
   const clipElement = event.currentTarget as HTMLElement
   const clipRect = clipElement.getBoundingClientRect()
 
-  // 更新tooltip位置，跟随鼠标的横向位置
-  tooltipStyle.value = {
-    position: 'fixed',
-    left: `${event.clientX}px`, // 使用鼠标的X坐标
-    bottom: `${window.innerHeight - clipRect.top + 10}px`, // 在clip上方10px
-    transform: 'translateX(-50%)', // 水平居中对齐鼠标位置
-    zIndex: 1001,
-  }
+  // 更新tooltip位置数据
+  tooltipMouseX.value = event.clientX
+  tooltipMouseY.value = event.clientY
+  tooltipClipTop.value = clipRect.top
 }
 
 function hideTooltip() {
@@ -987,64 +963,5 @@ onUnmounted(() => {
   transform: rotate(45deg) scale(1.1);
 }
 
-/* Tooltip样式 */
-.clip-tooltip {
-  position: fixed;
-  background-color: rgba(0, 0, 0, 0.9);
-  border: 1px solid #555;
-  border-radius: 6px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
-  z-index: 1001;
-  pointer-events: none; /* 防止tooltip阻挡鼠标事件 */
-  max-width: 250px;
-  min-width: 180px;
-}
 
-.tooltip-content {
-  padding: 12px;
-}
-
-.tooltip-title {
-  font-size: 14px;
-  font-weight: bold;
-  color: white;
-  margin-bottom: 8px;
-  word-break: break-word;
-}
-
-.tooltip-info {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.tooltip-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 12px;
-}
-
-.tooltip-label {
-  color: rgba(255, 255, 255, 0.7);
-  font-weight: 500;
-  min-width: 40px;
-}
-
-.tooltip-value {
-  color: white;
-  font-weight: 600;
-  text-align: right;
-}
-
-/* 添加一个小箭头指向clip */
-.clip-tooltip::after {
-  content: '';
-  position: absolute;
-  top: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  border: 6px solid transparent;
-  border-top-color: rgba(0, 0, 0, 0.9);
-}
 </style>

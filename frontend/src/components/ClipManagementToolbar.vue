@@ -263,8 +263,8 @@ function debugTimeline() {
 }
 
 .toolbar-btn {
-  background-color: #4a90e2;
-  color: white;
+  background-color: #555;
+  color: #ccc;
   border: none;
   border-radius: 4px;
   padding: 6px 12px;
@@ -277,7 +277,8 @@ function debugTimeline() {
 }
 
 .toolbar-btn:hover {
-  background-color: #357abd;
+  background-color: #666;
+  color: white;
 }
 
 .toolbar-btn.debug-btn {
@@ -291,35 +292,43 @@ function debugTimeline() {
 }
 
 .toolbar-btn.split-btn {
-  background-color: #28a745;
+  background-color: #555;
+  color: #ccc;
 }
 
 .toolbar-btn.split-btn:hover {
-  background-color: #218838;
+  background-color: #666;
+  color: white;
 }
 
 .toolbar-btn.delete-btn {
   background-color: #dc3545;
+  color: white;
 }
 
 .toolbar-btn.delete-btn:hover {
   background-color: #c82333;
+  color: white;
 }
 
 .toolbar-btn.undo-btn {
-  background-color: #6f42c1;
+  background-color: #555;
+  color: #ccc;
 }
 
 .toolbar-btn.undo-btn:hover {
-  background-color: #5a32a3;
+  background-color: #666;
+  color: white;
 }
 
 .toolbar-btn.redo-btn {
-  background-color: #6f42c1;
+  background-color: #555;
+  color: #ccc;
 }
 
 .toolbar-btn.redo-btn:hover {
-  background-color: #5a32a3;
+  background-color: #666;
+  color: white;
 }
 
 .toolbar-btn:disabled {
