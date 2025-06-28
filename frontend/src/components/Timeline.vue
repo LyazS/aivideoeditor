@@ -118,7 +118,7 @@
           class="track-content"
           :class="{
             'track-hidden': !track.isVisible,
-            [`track-type-${track.type}`]: true
+            [`track-type-${track.type}`]: true,
           }"
           :data-track-id="track.id"
           @dragover="handleDragOver"
@@ -150,15 +150,10 @@
           :style="{ left: 150 + videoStore.frameToPixel(line.time, timelineWidth) + 'px' }"
         ></div>
       </div>
-
     </div>
 
     <!-- 全局播放头组件 - 覆盖整个时间轴 -->
-    <Playhead
-      :timeline-width="timelineWidth"
-      :track-control-width="150"
-      :enable-snapping="true"
-    />
+    <Playhead :timeline-width="timelineWidth" :track-control-width="150" :enable-snapping="true" />
   </div>
 
   <!-- 统一右键菜单 -->
@@ -199,7 +194,14 @@ import { detectTrackConflicts } from '../utils/timeOverlapUtils'
 
 import { generateThumbnailForMediaItem } from '../utils/thumbnailGenerator'
 import Playhead from './Playhead.vue'
-import type { TimelineItem, TimelineItemDragData, MediaItemDragData, ConflictInfo, TrackType, MediaType } from '../types'
+import type {
+  TimelineItem,
+  TimelineItemDragData,
+  MediaItemDragData,
+  ConflictInfo,
+  TrackType,
+  MediaType,
+} from '../types'
 import VideoClip from './VideoClip.vue'
 import TimeScale from './TimeScale.vue'
 import { ContextMenu, ContextMenuItem, ContextMenuSeparator } from '@imengyu/vue3-context-menu'
@@ -360,7 +362,10 @@ async function addNewTrack(type: TrackType = 'video') {
   try {
     // 检查轨道类型限制
     if (type === 'audio' || type === 'subtitle') {
-      dialogs.showOperationError('添加轨道', `${type === 'audio' ? '音频' : '字幕'}轨道功能暂未实现，敬请期待！`)
+      dialogs.showOperationError(
+        '添加轨道',
+        `${type === 'audio' ? '音频' : '字幕'}轨道功能暂未实现，敬请期待！`,
+      )
       return
     }
 
@@ -397,9 +402,12 @@ function showAddTrackMenu(event?: MouseEvent) {
 // 获取轨道类型图标
 function getTrackTypeIcon(type: TrackType): string {
   const icons = {
-    video: 'M17,10.5V7A1,1 0 0,0 16,6H4A1,1 0 0,0 3,7V17A1,1 0 0,0 4,18H16A1,1 0 0,0 17,17V13.5L21,17.5V6.5L17,10.5Z',
-    audio: 'M14,3.23V5.29C16.89,6.15 19,8.83 19,12C19,15.17 16.89,17.85 14,18.71V20.77C18,19.86 21,16.28 21,12C21,7.72 18,4.14 14,3.23M16.5,12C16.5,10.23 15.5,8.71 14,7.97V16C15.5,15.29 16.5,13.76 16.5,12Z',
-    subtitle: 'M18,11H16.5V10.5H14.5V13.5H16.5V13H18V14A1,1 0 0,1 17,15H14A1,1 0 0,1 13,14V10A1,1 0 0,1 14,9H17A1,1 0 0,1 18,10V11M11,15H9V9H11V15M8,9H6V15H8V9Z'
+    video:
+      'M17,10.5V7A1,1 0 0,0 16,6H4A1,1 0 0,0 3,7V17A1,1 0 0,0 4,18H16A1,1 0 0,0 17,17V13.5L21,17.5V6.5L17,10.5Z',
+    audio:
+      'M14,3.23V5.29C16.89,6.15 19,8.83 19,12C19,15.17 16.89,17.85 14,18.71V20.77C18,19.86 21,16.28 21,12C21,7.72 18,4.14 14,3.23M16.5,12C16.5,10.23 15.5,8.71 14,7.97V16C15.5,15.29 16.5,13.76 16.5,12Z',
+    subtitle:
+      'M18,11H16.5V10.5H14.5V13.5H16.5V13H18V14A1,1 0 0,1 17,15H14A1,1 0 0,1 13,14V10A1,1 0 0,1 14,9H17A1,1 0 0,1 18,10V11M11,15H9V9H11V15M8,9H6V15H8V9Z',
   }
   return icons[type] || icons.video
 }
@@ -409,7 +417,7 @@ function getTrackTypeLabel(type: TrackType): string {
   const labels = {
     video: '视频',
     audio: '音频',
-    subtitle: '字幕'
+    subtitle: '字幕',
   }
   return labels[type] || '视频'
 }
@@ -788,13 +796,13 @@ async function handleTimelineItemDrop(event: DragEvent, dragData: TimelineItemDr
   // 验证轨道类型兼容性
   const draggedItem = videoStore.getTimelineItem(dragData.itemId)
   if (draggedItem) {
-    const targetTrack = tracks.value.find(t => t.id === targetTrackId)
+    const targetTrack = tracks.value.find((t) => t.id === targetTrackId)
     if (targetTrack && !isMediaCompatibleWithTrack(draggedItem.mediaType, targetTrack.type)) {
       const mediaTypeLabel = draggedItem.mediaType === 'video' ? '视频' : '图片'
       const trackTypeLabel = getTrackTypeLabel(targetTrack.type)
       dialogs.showOperationError(
         '拖拽失败',
-        `${mediaTypeLabel}片段不能拖拽到${trackTypeLabel}轨道上。\n请将${mediaTypeLabel}片段拖拽到视频轨道。`
+        `${mediaTypeLabel}片段不能拖拽到${trackTypeLabel}轨道上。\n请将${mediaTypeLabel}片段拖拽到视频轨道。`,
       )
       return
     }
@@ -845,7 +853,7 @@ async function handleMediaItemDrop(event: DragEvent, mediaDragData: MediaItemDra
     }
 
     // 验证轨道类型兼容性
-    const targetTrack = tracks.value.find(t => t.id === dropPosition.targetTrackId)
+    const targetTrack = tracks.value.find((t) => t.id === dropPosition.targetTrackId)
     if (!targetTrack) {
       console.error('❌ 目标轨道不存在:', dropPosition.targetTrackId)
       return
@@ -857,7 +865,7 @@ async function handleMediaItemDrop(event: DragEvent, mediaDragData: MediaItemDra
       const trackTypeLabel = getTrackTypeLabel(targetTrack.type)
       dialogs.showOperationError(
         '拖拽失败',
-        `${mediaTypeLabel}素材不能拖拽到${trackTypeLabel}轨道上。\n请将${mediaTypeLabel}素材拖拽到视频轨道。`
+        `${mediaTypeLabel}素材不能拖拽到${trackTypeLabel}轨道上。\n请将${mediaTypeLabel}素材拖拽到视频轨道。`,
       )
       return
     }
@@ -1281,7 +1289,7 @@ function detectMediaItemConflicts(
     (item) => {
       const mediaItem = videoStore.getMediaItem(item.mediaItemId)
       return mediaItem?.name || 'Unknown'
-    }
+    },
   )
 }
 
@@ -1310,7 +1318,7 @@ function detectTimelineConflicts(
     (item) => {
       const mediaItem = videoStore.getMediaItem(item.mediaItemId)
       return mediaItem?.name || 'Unknown'
-    }
+    },
   )
 }
 
@@ -1748,8 +1756,6 @@ onUnmounted(() => {
   pointer-events: none;
   z-index: 0;
 }
-
-
 
 .grid-line {
   position: absolute;

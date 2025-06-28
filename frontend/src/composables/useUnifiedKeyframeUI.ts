@@ -130,7 +130,7 @@ export function useUnifiedKeyframeUI(
       // 使用通知系统显示用户友好的警告
       videoStore.showWarning(
         '无法操作关键帧',
-        '播放头不在当前视频片段的时间范围内。请将播放头移动到片段内再尝试操作关键帧。'
+        '播放头不在当前视频片段的时间范围内。请将播放头移动到片段内再尝试操作关键帧。',
       )
 
       console.warn('🎬 [Unified Keyframe UI] 播放头不在当前clip时间范围内，无法操作关键帧:', {
@@ -172,7 +172,7 @@ export function useUnifiedKeyframeUI(
       // 使用通知系统显示用户友好的警告
       videoStore.showWarning(
         '无法修改属性',
-        '播放头不在当前视频片段的时间范围内。请将播放头移动到片段内再尝试修改属性。'
+        '播放头不在当前视频片段的时间范围内。请将播放头移动到片段内再尝试修改属性。',
       )
 
       console.warn('🎬 [Unified Keyframe UI] 播放头不在当前clip时间范围内，无法操作关键帧属性:', {

@@ -11,18 +11,18 @@ import type { TimelineItem, VideoTimeRange, ImageTimeRange } from '../types'
  * 时间范围接口 - 统一的时间范围表示
  */
 export interface TimeRange {
-  start: number  // 开始时间（帧数）
-  end: number    // 结束时间（帧数）
+  start: number // 开始时间（帧数）
+  end: number // 结束时间（帧数）
 }
 
 /**
  * 重叠检测结果
  */
 export interface OverlapResult {
-  hasOverlap: boolean      // 是否有重叠
-  overlapStart: number     // 重叠开始时间（帧数）
-  overlapEnd: number       // 重叠结束时间（帧数）
-  overlapDuration: number  // 重叠时长（帧数）
+  hasOverlap: boolean // 是否有重叠
+  overlapStart: number // 重叠开始时间（帧数）
+  overlapEnd: number // 重叠结束时间（帧数）
+  overlapDuration: number // 重叠时长（帧数）
 }
 
 /**
@@ -49,12 +49,12 @@ export function detectTimeRangeOverlap(range1: TimeRange, range2: TimeRange): Ov
   const overlapStart = Math.max(range1.start, range2.start)
   const overlapEnd = Math.min(range1.end, range2.end)
   const hasOverlap = overlapStart < overlapEnd
-  
+
   return {
     hasOverlap,
     overlapStart,
     overlapEnd,
-    overlapDuration: hasOverlap ? overlapEnd - overlapStart : 0
+    overlapDuration: hasOverlap ? overlapEnd - overlapStart : 0,
   }
 }
 
@@ -90,7 +90,7 @@ export function calculateOverlapDuration(range1: TimeRange, range2: TimeRange): 
 export function extractTimeRange(item: TimelineItem): TimeRange {
   return {
     start: item.timeRange.timelineStartTime,
-    end: item.timeRange.timelineEndTime
+    end: item.timeRange.timelineEndTime,
   }
 }
 
@@ -125,9 +125,9 @@ export function isTimelineItemsOverlapping(item1: TimelineItem, item2: TimelineI
  * @returns 重叠检测结果
  */
 export function detectTimelineItemOverlap(
-  item: TimelineItem, 
-  startTime: number, 
-  endTime: number
+  item: TimelineItem,
+  startTime: number,
+  endTime: number,
 ): OverlapResult {
   const itemRange = extractTimeRange(item)
   const targetRange: TimeRange = { start: startTime, end: endTime }
@@ -146,16 +146,16 @@ export function detectTimelineItemOverlap(
 export function hasOverlapInTrack(
   targetItem: TimelineItem,
   trackItems: TimelineItem[],
-  excludeIds: string[] = []
+  excludeIds: string[] = [],
 ): boolean {
   const targetRange = extractTimeRange(targetItem)
-  
-  return trackItems.some(item => {
+
+  return trackItems.some((item) => {
     // 跳过自己和排除的项目
     if (item.id === targetItem.id || excludeIds.includes(item.id)) {
       return false
     }
-    
+
     const itemRange = extractTimeRange(item)
     return isTimeRangeOverlapping(targetRange, itemRange)
   })
@@ -175,18 +175,18 @@ export function detectTrackConflicts(
   endTime: number,
   trackItems: TimelineItem[],
   excludeIds: string[] = [],
-  getItemName: (item: TimelineItem) => string = (item) => `Item ${item.id}`
+  getItemName: (item: TimelineItem) => string = (item) => `Item ${item.id}`,
 ): ConflictInfo[] {
   const conflicts: ConflictInfo[] = []
   const targetRange: TimeRange = { start: startTime, end: endTime }
-  
+
   for (const item of trackItems) {
     // 跳过排除的项目
     if (excludeIds.includes(item.id)) continue
-    
+
     const itemRange = extractTimeRange(item)
     const overlap = detectTimeRangeOverlap(targetRange, itemRange)
-    
+
     if (overlap.hasOverlap) {
       conflicts.push({
         itemId: item.id,
@@ -194,11 +194,11 @@ export function detectTrackConflicts(
         startTime: itemRange.start,
         endTime: itemRange.end,
         overlapStart: overlap.overlapStart,
-        overlapEnd: overlap.overlapEnd
+        overlapEnd: overlap.overlapEnd,
       })
     }
   }
-  
+
   return conflicts
 }
 
@@ -243,7 +243,7 @@ export function countOverlappingItems(timelineItems: TimelineItem[]): number {
  */
 export function getAllOverlappingPairs(
   timelineItems: TimelineItem[],
-  getItemName: (item: TimelineItem) => string = (item) => `Item ${item.id}`
+  getItemName: (item: TimelineItem) => string = (item) => `Item ${item.id}`,
 ): Array<{
   trackId: number
   item1: { id: string; name: string; range: TimeRange }
@@ -282,7 +282,7 @@ export function getAllOverlappingPairs(
             trackId,
             item1: { id: item1.id, name: getItemName(item1), range: range1 },
             item2: { id: item2.id, name: getItemName(item2), range: range2 },
-            overlap
+            overlap,
           })
         }
       }
@@ -306,11 +306,11 @@ export function calculateTimeRangeOverlap(
 ): number {
   const timeRange1: TimeRange = {
     start: range1.timelineStartTime,
-    end: range1.timelineEndTime
+    end: range1.timelineEndTime,
   }
   const timeRange2: TimeRange = {
     start: range2.timelineStartTime,
-    end: range2.timelineEndTime
+    end: range2.timelineEndTime,
   }
 
   return calculateOverlapDuration(timeRange1, timeRange2)

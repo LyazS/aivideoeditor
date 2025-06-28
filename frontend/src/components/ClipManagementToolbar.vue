@@ -65,7 +65,7 @@
     </div>
 
     <!-- 调试按钮放在最右边 - 暂时隐藏 -->
-    <div class="toolbar-section debug-section" style="display: none;">
+    <div class="toolbar-section debug-section" style="display: none">
       <button
         class="toolbar-btn debug-btn"
         @click="debugTimeline"

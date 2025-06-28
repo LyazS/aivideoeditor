@@ -55,7 +55,7 @@ interface ClipTooltipProps {
 
 const props = withDefaults(defineProps<ClipTooltipProps>(), {
   speed: '1.0x',
-  showSpeed: false
+  showSpeed: false,
 })
 
 // 计算tooltip样式

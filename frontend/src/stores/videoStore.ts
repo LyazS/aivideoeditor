@@ -558,7 +558,10 @@ export const useVideoStore = defineStore('video', () => {
    * @param name 轨道名称（可选）
    * @returns 新创建的轨道ID，失败时返回null
    */
-  async function addTrackWithHistory(type: TrackType = 'video', name?: string): Promise<number | null> {
+  async function addTrackWithHistory(
+    type: TrackType = 'video',
+    name?: string,
+  ): Promise<number | null> {
     const command = new AddTrackCommand(type, name, {
       addTrack: trackModule.addTrack,
       removeTrack: trackModule.removeTrack,

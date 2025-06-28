@@ -5,7 +5,7 @@
     @mousedown="handleContainerMouseDown"
     :class="{
       'container-interactive': enableContainerClick,
-      'dragging': isDragging && enableContainerClick
+      dragging: isDragging && enableContainerClick,
     }"
   >
     <!-- 播放头手柄 -->
@@ -20,10 +20,7 @@
     </div>
 
     <!-- 播放竖线 - 覆盖整个时间轴 -->
-    <div
-      class="playhead-line"
-      :style="{ left: playheadLinePosition + 'px' }"
-    ></div>
+    <div class="playhead-line" :style="{ left: playheadLinePosition + 'px' }"></div>
   </div>
 </template>
 
@@ -51,7 +48,7 @@ const props = withDefaults(defineProps<PlayheadProps>(), {
   trackControlWidth: 150,
   handleContainer: null,
   enableContainerClick: false,
-  enableSnapping: true
+  enableSnapping: true,
 })
 
 const videoStore = useVideoStore()
@@ -77,7 +74,7 @@ const clipBoundaryFrames = computed(() => {
   boundaries.push(0)
 
   // 遍历所有时间轴项目，收集开始和结束帧
-  videoStore.timelineItems.forEach(item => {
+  videoStore.timelineItems.forEach((item) => {
     const timeRange = item.timeRange
     boundaries.push(timeRange.timelineStartTime)
     boundaries.push(timeRange.timelineEndTime)
@@ -92,7 +89,7 @@ const clipBoundaryFrames = computed(() => {
     console.log('🔄 更新clip边界点缓存:', {
       边界点数量: result.length,
       边界点: result,
-      时间轴项目数: videoStore.timelineItems.length
+      时间轴项目数: videoStore.timelineItems.length,
     })
     lastBoundariesString = currentBoundariesString
   }
@@ -110,8 +107,9 @@ function applySnapToClips(targetFrames: number): number {
   }
 
   const boundaries = clipBoundaryFrames.value
-  const snapThresholdFrames = videoStore.pixelToFrame(SNAP_THRESHOLD_PIXELS, props.timelineWidth) -
-                              videoStore.pixelToFrame(0, props.timelineWidth)
+  const snapThresholdFrames =
+    videoStore.pixelToFrame(SNAP_THRESHOLD_PIXELS, props.timelineWidth) -
+    videoStore.pixelToFrame(0, props.timelineWidth)
 
   // 找到最近的边界点
   let closestBoundary = targetFrames
@@ -132,7 +130,7 @@ function applySnapToClips(targetFrames: number): number {
       吸附到: closestBoundary,
       吸附距离: Math.abs(targetFrames - closestBoundary),
       阈值: Math.abs(snapThresholdFrames),
-      边界点: boundaries
+      边界点: boundaries,
     })
   }
 
@@ -312,7 +310,7 @@ function handleTimelineClick(event: MouseEvent) {
 // 暴露方法给父组件
 defineExpose({
   handleTimelineClick,
-  isDragging: computed(() => isDragging.value)
+  isDragging: computed(() => isDragging.value),
 })
 
 onUnmounted(() => {

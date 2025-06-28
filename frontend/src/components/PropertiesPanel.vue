@@ -228,7 +228,7 @@
               @click="debugUnifiedKeyframes"
               class="debug-btn"
               title="输出统一关键帧调试信息"
-              style="display: none;"
+              style="display: none"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
                 <path

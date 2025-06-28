@@ -463,8 +463,6 @@ const handleItemDragEnd = () => {
   // 使用统一的拖拽工具清理状态
   dragUtils.clearDragData()
 }
-
-
 </script>
 
 <style scoped>
@@ -599,8 +597,6 @@ const handleItemDragEnd = () => {
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }
-
-
 
 @keyframes spin {
   0% {

@@ -76,6 +76,8 @@ export async function calculateTimeRangeOverlap(
   range2: VideoTimeRange | ImageTimeRange,
 ): Promise<number> {
   // 重定向到新的统一工具
-  const { calculateTimeRangeOverlap: newCalculateTimeRangeOverlap } = await import('../../utils/timeOverlapUtils')
+  const { calculateTimeRangeOverlap: newCalculateTimeRangeOverlap } = await import(
+    '../../utils/timeOverlapUtils'
+  )
   return newCalculateTimeRangeOverlap(range1, range2)
 }

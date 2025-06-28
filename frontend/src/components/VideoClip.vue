@@ -72,8 +72,6 @@
       <div class="resize-handle left" @mousedown.stop="startResize('left', $event)"></div>
       <div class="resize-handle right" @mousedown.stop="startResize('right', $event)"></div>
     </div>
-
-
   </div>
 
   <!-- Tooltip组件 -->
@@ -101,10 +99,7 @@ import { usePlaybackControls } from '../composables/usePlaybackControls'
 import { getDragPreviewManager } from '../composables/useDragPreview'
 import ClipTooltip from './ClipTooltip.vue'
 
-import {
-  framesToTimecode,
-  alignFramesToFrame,
-} from '../stores/utils/timeUtils'
+import { framesToTimecode, alignFramesToFrame } from '../stores/utils/timeUtils'
 import { hasOverlapInTrack } from '../utils/timeOverlapUtils'
 import { relativeFrameToAbsoluteFrame } from '../utils/unifiedKeyframeUtils'
 import type { TimelineItem, Track, VideoTimeRange, ImageTimeRange } from '../types'
@@ -962,6 +957,4 @@ onUnmounted(() => {
   background-color: #00aa55; /* 点击时更深的绿色 */
   transform: rotate(45deg) scale(1.1);
 }
-
-
 </style>

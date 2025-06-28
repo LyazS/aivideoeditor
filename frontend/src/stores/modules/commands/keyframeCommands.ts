@@ -131,7 +131,7 @@ export class CreateKeyframeCommand implements SimpleCommand {
 
       videoStore.showWarning(
         '无法创建关键帧',
-        '播放头不在当前视频片段的时间范围内。请将播放头移动到片段内再尝试创建关键帧。'
+        '播放头不在当前视频片段的时间范围内。请将播放头移动到片段内再尝试创建关键帧。',
       )
 
       console.warn('🎬 [Create Keyframe Command] 播放头不在当前clip时间范围内，无法创建关键帧:', {
@@ -320,7 +320,7 @@ export class DeleteKeyframeCommand implements SimpleCommand {
 
       videoStore.showWarning(
         '无法删除关键帧',
-        '播放头不在当前视频片段的时间范围内。请将播放头移动到片段内再尝试删除关键帧。'
+        '播放头不在当前视频片段的时间范围内。请将播放头移动到片段内再尝试删除关键帧。',
       )
 
       console.warn('🎬 [Delete Keyframe Command] 播放头不在当前clip时间范围内，无法删除关键帧:', {
@@ -504,19 +504,22 @@ export class UpdateKeyframePropertyCommand implements SimpleCommand {
 
       videoStore.showWarning(
         '无法更新关键帧属性',
-        '播放头不在当前视频片段的时间范围内。请将播放头移动到片段内再尝试修改属性。'
+        '播放头不在当前视频片段的时间范围内。请将播放头移动到片段内再尝试修改属性。',
       )
 
-      console.warn('🎬 [Update Keyframe Property Command] 播放头不在当前clip时间范围内，无法更新关键帧属性:', {
-        itemId: this.timelineItemId,
-        frame: this.frame,
-        property: this.property,
-        value: this.newValue,
-        clipTimeRange: {
-          start: item.timeRange.timelineStartTime,
-          end: item.timeRange.timelineEndTime,
+      console.warn(
+        '🎬 [Update Keyframe Property Command] 播放头不在当前clip时间范围内，无法更新关键帧属性:',
+        {
+          itemId: this.timelineItemId,
+          frame: this.frame,
+          property: this.property,
+          value: this.newValue,
+          clipTimeRange: {
+            start: item.timeRange.timelineStartTime,
+            end: item.timeRange.timelineEndTime,
+          },
         },
-      })
+      )
       throw new Error('播放头不在当前clip时间范围内，无法更新关键帧属性')
     }
 
@@ -845,7 +848,7 @@ export class ToggleKeyframeCommand implements SimpleCommand {
 
       videoStore.showWarning(
         '无法切换关键帧',
-        '播放头不在当前视频片段的时间范围内。请将播放头移动到片段内再尝试切换关键帧。'
+        '播放头不在当前视频片段的时间范围内。请将播放头移动到片段内再尝试切换关键帧。',
       )
 
       console.warn('🎬 [Toggle Keyframe Command] 播放头不在当前clip时间范围内，无法切换关键帧:', {

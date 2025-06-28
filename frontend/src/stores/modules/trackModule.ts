@@ -30,14 +30,14 @@ export function createTrackModule() {
     const typeNames = {
       video: '视频轨道',
       audio: '音频轨道',
-      subtitle: '字幕轨道'
+      subtitle: '字幕轨道',
     }
 
     // 根据轨道类型设置默认高度
     const defaultHeights = {
-      video: 80,    // 视频轨道标准高度
-      audio: 60,    // 音频轨道较矮
-      subtitle: 50  // 字幕轨道最矮
+      video: 80, // 视频轨道标准高度
+      audio: 60, // 音频轨道较矮
+      subtitle: 50, // 字幕轨道最矮
     }
 
     const newTrack: Track = {
@@ -276,7 +276,7 @@ export function createTrackModule() {
     const defaultHeights = {
       video: 80,
       audio: 60,
-      subtitle: 50
+      subtitle: 50,
     }
 
     tracks.value.forEach((track) => {
