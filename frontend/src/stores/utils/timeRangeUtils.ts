@@ -64,20 +64,4 @@ export function validateTimeRange(timeRange: VideoTimeRange | ImageTimeRange): b
   return basicValid && timeRange.displayDuration > 0
 }
 
-/**
- * 计算时间范围重叠
- * @param range1 时间范围1
- * @param range2 时间范围2
- * @returns 重叠时长（帧数）
- * @deprecated 请使用 timeOverlapUtils.calculateTimeRangeOverlap 替代
- */
-export async function calculateTimeRangeOverlap(
-  range1: VideoTimeRange | ImageTimeRange,
-  range2: VideoTimeRange | ImageTimeRange,
-): Promise<number> {
-  // 重定向到新的统一工具
-  const { calculateTimeRangeOverlap: newCalculateTimeRangeOverlap } = await import(
-    '../../utils/timeOverlapUtils'
-  )
-  return newCalculateTimeRangeOverlap(range1, range2)
-}
+

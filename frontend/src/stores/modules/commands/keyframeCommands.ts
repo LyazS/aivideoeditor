@@ -123,7 +123,7 @@ export class CreateKeyframeCommand implements SimpleCommand {
     }
 
     // 检查播放头是否在clip时间范围内
-    const { isPlayheadInTimelineItem } = await import('../../../utils/timeOverlapUtils')
+    const { isPlayheadInTimelineItem } = await import('../../utils/timelineSearchUtils')
     if (!isPlayheadInTimelineItem(item, this.frame)) {
       // 使用通知系统显示用户友好的警告
       const { useVideoStore } = await import('../../../stores/videoStore')
@@ -312,7 +312,7 @@ export class DeleteKeyframeCommand implements SimpleCommand {
     }
 
     // 检查播放头是否在clip时间范围内
-    const { isPlayheadInTimelineItem } = await import('../../../utils/timeOverlapUtils')
+    const { isPlayheadInTimelineItem } = await import('../../utils/timelineSearchUtils')
     if (!isPlayheadInTimelineItem(item, this.frame)) {
       // 使用通知系统显示用户友好的警告
       const { useVideoStore } = await import('../../../stores/videoStore')
@@ -496,7 +496,7 @@ export class UpdateKeyframePropertyCommand implements SimpleCommand {
     }
 
     // 检查播放头是否在clip时间范围内
-    const { isPlayheadInTimelineItem } = await import('../../../utils/timeOverlapUtils')
+    const { isPlayheadInTimelineItem } = await import('../../utils/timelineSearchUtils')
     if (!isPlayheadInTimelineItem(item, this.frame)) {
       // 使用通知系统显示用户友好的警告
       const { useVideoStore } = await import('../../../stores/videoStore')
@@ -840,7 +840,7 @@ export class ToggleKeyframeCommand implements SimpleCommand {
     }
 
     // 检查播放头是否在clip时间范围内
-    const { isPlayheadInTimelineItem } = await import('../../../utils/timeOverlapUtils')
+    const { isPlayheadInTimelineItem } = await import('../../utils/timelineSearchUtils')
     if (!isPlayheadInTimelineItem(item, this.frame)) {
       // 使用通知系统显示用户友好的警告
       const { useVideoStore } = await import('../../../stores/videoStore')

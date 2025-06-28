@@ -95,19 +95,6 @@ export function extractTimeRange(item: TimelineItem): TimeRange {
 }
 
 /**
- * 检测播放头是否在TimelineItem的时间范围内
- * @param item 时间轴项目
- * @param currentFrame 当前播放帧数
- * @returns 是否在时间范围内
- */
-export function isPlayheadInTimelineItem(item: TimelineItem, currentFrame: number): boolean {
-  const timeRange = extractTimeRange(item)
-  // 允许播放头在clip结束位置进行关键帧操作，这样用户可以在第4帧位置操作3帧的视频
-  // 这主要是为了配合播放头吸附功能，用户习惯在clip结束后的位置进行操作
-  return currentFrame >= timeRange.start && currentFrame <= timeRange.end
-}
-
-/**
  * 检测两个TimelineItem是否重叠
  * @param item1 时间轴项目1
  * @param item2 时间轴项目2

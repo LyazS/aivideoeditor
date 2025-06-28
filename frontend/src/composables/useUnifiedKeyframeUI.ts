@@ -25,7 +25,7 @@ import {
   updateKeyframeProperty as updateKeyframePropertyWithCommand,
   clearAllKeyframes as clearAllKeyframesWithCommand,
 } from '../utils/keyframeCommandUtils'
-import { isPlayheadInTimelineItem } from '../utils/timeOverlapUtils'
+import { isPlayheadInTimelineItem } from '../stores/utils/timelineSearchUtils'
 
 /**
  * 统一关键帧UI管理 Composable

@@ -26,12 +26,13 @@
 
 ### 🔍 查找工具 (`timelineSearchUtils.ts`)
 
-- `getTimelineItemAtTime(time, timelineItems)` - 根据时间查找对应的时间轴项目
+- `getTimelineItemAtFrames(frames, timelineItems)` - 根据时间查找对应的时间轴项目（帧数版本）
 - `getTimelineItemsByTrack(trackId, timelineItems)` - 根据轨道ID查找时间轴项目
 - `findTimelineItemBySprite(sprite, timelineItems)` - 根据sprite查找时间轴项目
-- `getTimelineItemsAtTime(time, timelineItems)` - 根据时间查找所有重叠的时间轴项目
-- `getTimelineItemAtTrackAndTime(trackId, time, timelineItems)` - 根据轨道和时间查找时间轴项目
+- `getTimelineItemsAtFrames(frames, timelineItems)` - 根据时间查找所有重叠的时间轴项目（帧数版本）
+- `getTimelineItemAtTrackAndFrames(trackId, frames, timelineItems)` - 根据轨道和时间查找时间轴项目（帧数版本）
 - `findOrphanedTimelineItems(timelineItems, mediaItems)` - 查找孤立的时间轴项目
+- `isPlayheadInTimelineItem(item, currentFrame)` - 检测播放头是否在TimelineItem的时间范围内
 
 ### 🔧 自动整理工具 (`timelineArrangementUtils.ts`)
 
@@ -54,7 +55,6 @@
 
 - `syncTimeRange(timelineItem, newTimeRange?)` - 同步TimelineItem和sprite的timeRange
 - `validateTimeRange(timeRange)` - 验证时间范围是否有效
-- `calculateTimeRangeOverlap(range1, range2)` - 计算时间范围重叠
 
 ### ✅ 数据验证工具 (`dataValidationUtils.ts`)
 
