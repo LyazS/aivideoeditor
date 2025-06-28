@@ -43,12 +43,15 @@ interface PlayheadProps {
   handleContainer?: HTMLElement | null
   /** 是否启用整个容器区域的点击交互 */
   enableContainerClick?: boolean
+  /** 是否启用吸附功能 */
+  enableSnapping?: boolean
 }
 
 const props = withDefaults(defineProps<PlayheadProps>(), {
   trackControlWidth: 150,
   handleContainer: null,
-  enableContainerClick: false
+  enableContainerClick: false,
+  enableSnapping: true
 })
 
 const videoStore = useVideoStore()
@@ -57,6 +60,84 @@ const { pauseForEditing } = usePlaybackControls()
 
 const playheadContainer = ref<HTMLElement>()
 const isDragging = ref(false)
+
+// 吸附设置
+const SNAP_THRESHOLD_PIXELS = 10 // 吸附阈值（像素）
+
+// 用于检测边界点变化的缓存
+let lastBoundariesString = ''
+
+/**
+ * 计算所有clip的边界帧数（开始和结束帧）- 使用computed自动缓存
+ */
+const clipBoundaryFrames = computed(() => {
+  const boundaries: number[] = []
+
+  // 添加时间轴开始位置（0帧）
+  boundaries.push(0)
+
+  // 遍历所有时间轴项目，收集开始和结束帧
+  videoStore.timelineItems.forEach(item => {
+    const timeRange = item.timeRange
+    boundaries.push(timeRange.timelineStartTime)
+    boundaries.push(timeRange.timelineEndTime)
+  })
+
+  // 去重并排序
+  const result = [...new Set(boundaries)].sort((a, b) => a - b)
+
+  // 只在边界点发生变化时输出调试信息
+  const currentBoundariesString = result.join(',')
+  if (currentBoundariesString !== lastBoundariesString) {
+    console.log('🔄 更新clip边界点缓存:', {
+      边界点数量: result.length,
+      边界点: result,
+      时间轴项目数: videoStore.timelineItems.length
+    })
+    lastBoundariesString = currentBoundariesString
+  }
+
+  return result
+})
+
+/**
+ * 应用吸附逻辑到目标帧数
+ */
+function applySnapToClips(targetFrames: number): number {
+  // 如果未启用吸附，直接返回原始帧数
+  if (!props.enableSnapping) {
+    return targetFrames
+  }
+
+  const boundaries = clipBoundaryFrames.value
+  const snapThresholdFrames = videoStore.pixelToFrame(SNAP_THRESHOLD_PIXELS, props.timelineWidth) -
+                              videoStore.pixelToFrame(0, props.timelineWidth)
+
+  // 找到最近的边界点
+  let closestBoundary = targetFrames
+  let minDistance = Infinity
+
+  for (const boundary of boundaries) {
+    const distance = Math.abs(targetFrames - boundary)
+    if (distance < minDistance && distance <= Math.abs(snapThresholdFrames)) {
+      minDistance = distance
+      closestBoundary = boundary
+    }
+  }
+
+  // 调试信息：如果发生了吸附，输出日志
+  if (closestBoundary !== targetFrames) {
+    console.log('🧲 播放头吸附:', {
+      原始帧数: targetFrames,
+      吸附到: closestBoundary,
+      吸附距离: Math.abs(targetFrames - closestBoundary),
+      阈值: Math.abs(snapThresholdFrames),
+      边界点: boundaries
+    })
+  }
+
+  return closestBoundary
+}
 
 // 播放头手柄位置（相对于时间刻度区域）
 const playheadPosition = computed(() => {
@@ -111,7 +192,10 @@ function jumpToClickPosition(event: MouseEvent) {
   // 转换为帧数
   const clickFrames = videoStore.pixelToFrame(timelinePixelX, props.timelineWidth)
   const clampedFrames = Math.max(0, clickFrames)
-  const alignedFrames = alignFramesToFrame(clampedFrames)
+
+  // 应用吸附逻辑
+  const snappedFrames = applySnapToClips(clampedFrames)
+  const alignedFrames = alignFramesToFrame(snappedFrames)
 
   // 通过WebAV设置帧数
   webAVControls.seekTo(alignedFrames)
@@ -164,7 +248,10 @@ function handleDragPlayhead(event: MouseEvent) {
   // 转换为帧数
   const dragFrames = videoStore.pixelToFrame(timelinePixelX, props.timelineWidth)
   const clampedFrames = Math.max(0, dragFrames)
-  const alignedFrames = alignFramesToFrame(clampedFrames)
+
+  // 应用吸附逻辑
+  const snappedFrames = applySnapToClips(clampedFrames)
+  const alignedFrames = alignFramesToFrame(snappedFrames)
 
   // 通过WebAV设置帧数
   webAVControls.seekTo(alignedFrames)
@@ -213,7 +300,10 @@ function handleTimelineClick(event: MouseEvent) {
   // 转换为帧数
   const clickFrames = videoStore.pixelToFrame(timelinePixelX, props.timelineWidth)
   const clampedFrames = Math.max(0, clickFrames)
-  const alignedFrames = alignFramesToFrame(clampedFrames)
+
+  // 应用吸附逻辑
+  const snappedFrames = applySnapToClips(clampedFrames)
+  const alignedFrames = alignFramesToFrame(snappedFrames)
 
   // 通过WebAV设置帧数
   webAVControls.seekTo(alignedFrames)

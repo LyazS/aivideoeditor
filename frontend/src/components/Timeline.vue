@@ -157,6 +157,7 @@
     <Playhead
       :timeline-width="timelineWidth"
       :track-control-width="150"
+      :enable-snapping="true"
     />
   </div>
 

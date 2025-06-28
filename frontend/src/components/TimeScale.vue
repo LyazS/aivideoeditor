@@ -21,6 +21,7 @@
         :track-control-width="0"
         :handle-container="scaleContainer"
         :enable-container-click="true"
+        :enable-snapping="true"
       />
     </div>
   </div>
