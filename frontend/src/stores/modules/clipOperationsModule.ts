@@ -206,6 +206,31 @@ export function createClipOperationsModule(
       // 确保播放速度在合理范围内（扩展到0.1-100倍）
       const clampedRate = Math.max(0.1, Math.min(100, newRate))
 
+      // 🎯 关键帧位置调整：在更新播放速度之前计算时长变化
+      let oldDurationFrames = 0
+      let newDurationFrames = 0
+
+      if (item.mediaType === 'video' && isVideoTimeRange(item.timeRange)) {
+        const clipDurationFrames = item.timeRange.clipEndTime - item.timeRange.clipStartTime
+        oldDurationFrames = item.timeRange.timelineEndTime - item.timeRange.timelineStartTime
+        newDurationFrames = Math.round(clipDurationFrames / clampedRate)
+
+        // 如果有关键帧，先调整位置
+        if (item.animation && item.animation.keyframes.length > 0) {
+          import('../../utils/unifiedKeyframeUtils').then(
+            ({ adjustKeyframesForDurationChange }) => {
+              adjustKeyframesForDurationChange(item, oldDurationFrames, newDurationFrames)
+              console.log('🎬 [Playback Rate] Keyframes adjusted for speed change:', {
+                oldRate: isVideoTimeRange(item.timeRange) ? item.timeRange.playbackRate : 1,
+                newRate: clampedRate,
+                oldDuration: oldDurationFrames,
+                newDuration: newDurationFrames,
+              })
+            },
+          )
+        }
+      }
+
       // 更新sprite的播放速度（这会自动更新sprite内部的timeRange）
       // 只有视频sprite才有setPlaybackSpeed方法
       if (item.mediaType === 'video') {
@@ -214,6 +239,22 @@ export function createClipOperationsModule(
 
       // 使用同步函数更新TimelineItem的timeRange
       syncTimeRange(item)
+
+      // 如果有动画，需要重新设置WebAV动画时长
+      if (item.animation && item.animation.isEnabled) {
+        // 异步更新动画，不阻塞播放速度调整
+        import('../../utils/webavAnimationManager').then(({ updateWebAVAnimation }) => {
+          updateWebAVAnimation(item)
+            .then(() => {
+              console.log(
+                '🎬 [Playback Rate] Animation duration updated after playback rate change',
+              )
+            })
+            .catch((error) => {
+              console.error('🎬 [Playback Rate] Failed to update animation duration:', error)
+            })
+        })
+      }
 
       // 只有视频才记录详细的时间范围信息
       if (item.mediaType === 'video' && isVideoTimeRange(item.timeRange)) {

@@ -1,7 +1,8 @@
 import type { Ref } from 'vue'
 import type { MediaItem, TimelineItem, Track } from '../../types'
 import { findOrphanedTimelineItems } from './timelineSearchUtils'
-import { validateTimeRange, calculateTimeRangeOverlap } from './timeRangeUtils'
+import { validateTimeRange } from './timeRangeUtils'
+import { getAllOverlappingPairs } from '../../utils/timeOverlapUtils'
 
 // ==================== 验证和清理工具 ====================
 
@@ -44,24 +45,10 @@ export function validateDataIntegrity(
   }
 
   // 检查重叠项目（同一轨道内）
-  const trackGroups = new Map<number, TimelineItem[]>()
-  timelineItems.forEach((item) => {
-    if (!trackGroups.has(item.trackId)) {
-      trackGroups.set(item.trackId, [])
-    }
-    trackGroups.get(item.trackId)!.push(item)
-  })
-
-  trackGroups.forEach((trackItems, trackId) => {
-    for (let i = 0; i < trackItems.length; i++) {
-      for (let j = i + 1; j < trackItems.length; j++) {
-        const overlap = calculateTimeRangeOverlap(trackItems[i].timeRange, trackItems[j].timeRange)
-        if (overlap > 0) {
-          const overlapSeconds = (overlap / 30).toFixed(2) // 将帧数转换为秒数显示
-          warnings.push(`轨道 ${trackId} 中发现重叠项目，重叠时长 ${overlapSeconds} 秒`)
-        }
-      }
-    }
+  const overlappingPairs = getAllOverlappingPairs(timelineItems)
+  overlappingPairs.forEach(({ trackId, overlap }) => {
+    const overlapSeconds = (overlap.overlapDuration / 30).toFixed(2) // 将帧数转换为秒数显示
+    warnings.push(`轨道 ${trackId} 中发现重叠项目，重叠时长 ${overlapSeconds} 秒`)
   })
 
   return {

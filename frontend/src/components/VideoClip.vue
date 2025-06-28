@@ -15,7 +15,6 @@
     @dragstart="handleDragStart"
     @dragend="handleDragEnd"
     @click="selectClip"
-
     @mouseenter="showTooltip"
     @mousemove="updateTooltipPosition"
     @mouseleave="hideTooltip"
@@ -53,6 +52,20 @@
       <!-- 简化显示 - 片段较窄时只显示时长（时间码格式） -->
       <div v-if="!showDetails" class="clip-simple">
         <div class="simple-duration">{{ formatDurationFromFrames(timelineDurationFrames) }}</div>
+      </div>
+
+      <!-- 关键帧标记 -->
+      <div v-if="hasKeyframes" class="keyframes-container">
+        <div
+          v-for="keyframe in visibleKeyframes"
+          :key="keyframe.framePosition"
+          class="keyframe-marker"
+          :style="{ left: keyframe.pixelPosition - 7.0 + 'px', transform: 'translateY(-50%)' }"
+          :title="`关键帧 - 帧 ${keyframe.absoluteFrame} (点击跳转)`"
+          @click.stop="jumpToKeyframe(keyframe.absoluteFrame)"
+        >
+          <div class="keyframe-diamond"></div>
+        </div>
       </div>
 
       <!-- 调整手柄 -->
@@ -110,7 +123,9 @@ import {
   framesToMicroseconds,
   alignFramesToFrame,
 } from '../stores/utils/timeUtils'
-import type { TimelineItem, Track, VideoTimeRange, ImageTimeRange } from '../types'
+import { hasOverlapInTrack } from '../utils/timeOverlapUtils'
+import { relativeFrameToAbsoluteFrame } from '../utils/unifiedKeyframeUtils'
+import type { TimelineItem, Track, VideoTimeRange, ImageTimeRange, Keyframe } from '../types'
 import { isVideoTimeRange } from '../types'
 
 interface Props {
@@ -155,8 +170,6 @@ const playbackSpeed = computed(() => {
   const timeRange = props.timelineItem.timeRange
   return 'playbackRate' in timeRange ? timeRange.playbackRate || 1 : 1
 })
-
-
 
 // Tooltip相关状态
 const showTooltipFlag = ref(false)
@@ -221,24 +234,10 @@ const showDetails = computed(() => {
 // 检查当前时间轴项目是否与同轨道的其他项目重叠
 const isOverlapping = computed(() => {
   const currentItem = props.timelineItem
-  // 直接从timelineItem.timeRange获取，与videostore的同步机制保持一致
-  const currentRange = currentItem.timeRange
-  const currentStart = currentRange.timelineStartTime // 帧数
-  const currentEnd = currentRange.timelineEndTime // 帧数
+  const trackItems = videoStore.getTimelineItemsForTrack(currentItem.trackId)
 
-  return videoStore.timelineItems.some((otherItem) => {
-    if (otherItem.id === currentItem.id || otherItem.trackId !== currentItem.trackId) {
-      return false // 跳过自己和不同轨道的项目
-    }
-
-    // 同样从timelineItem.timeRange获取其他项目的时间范围
-    const otherRange = otherItem.timeRange
-    const otherStart = otherRange.timelineStartTime // 帧数
-    const otherEnd = otherRange.timelineEndTime // 帧数
-
-    // 检查是否重叠
-    return !(currentEnd <= otherStart || otherEnd <= currentStart)
-  })
+  // 使用统一的重叠检测工具
+  return hasOverlapInTrack(currentItem, trackItems)
 })
 
 // 统一的选择状态计算
@@ -250,6 +249,51 @@ const isSelected = computed(() => {
 const isTrackVisible = computed(() => {
   const track = videoStore.getTrack(props.timelineItem.trackId)
   return track ? track.isVisible : true
+})
+
+// 关键帧相关计算
+const hasKeyframes = computed(() => {
+  return !!(
+    props.timelineItem.animation &&
+    props.timelineItem.animation.isEnabled &&
+    props.timelineItem.animation.keyframes.length > 0
+  )
+})
+
+// 计算在clip上可见的关键帧
+const visibleKeyframes = computed(() => {
+  if (!hasKeyframes.value) return []
+
+  const keyframes = props.timelineItem.animation!.keyframes
+  const timeRange = props.timelineItem.timeRange
+  const clipStartFrame = timeRange.timelineStartTime
+  const clipEndFrame = timeRange.timelineEndTime
+
+  // 计算clip在时间轴上的像素位置和宽度
+  const clipLeft = videoStore.frameToPixel(clipStartFrame, props.timelineWidth)
+  const clipRight = videoStore.frameToPixel(clipEndFrame, props.timelineWidth)
+  const clipWidth = clipRight - clipLeft
+
+  return keyframes
+    .map((keyframe) => {
+      // 将相对帧数转换为绝对帧数
+      const absoluteFrame = relativeFrameToAbsoluteFrame(keyframe.framePosition, timeRange)
+
+      // 计算关键帧在整个时间轴上的像素位置
+      const absolutePixelPosition = videoStore.frameToPixel(absoluteFrame, props.timelineWidth)
+
+      // 关键帧标记应该使用相对于clip容器的位置
+      // 但是要考虑到clip容器本身在时间轴上的偏移
+      const relativePixelPosition = absolutePixelPosition - clipLeft
+
+      return {
+        framePosition: keyframe.framePosition,
+        absoluteFrame,
+        pixelPosition: relativePixelPosition,
+        isVisible: relativePixelPosition >= 0 && relativePixelPosition <= clipWidth,
+      }
+    })
+    .filter((kf) => kf.isVisible)
 })
 
 function formatDurationFromFrames(frames: number): string {
@@ -267,6 +311,25 @@ function formatSpeed(rate: number): string {
     return `${rate.toFixed(1)}x 慢速`
   }
   return '正常速度'
+}
+
+// ==================== 关键帧交互 ====================
+
+/**
+ * 跳转到指定关键帧
+ */
+function jumpToKeyframe(absoluteFrame: number) {
+  // 暂停播放以便进行时间跳转
+  pauseForEditing('关键帧跳转')
+
+  // 通过WebAV控制器跳转到指定帧
+  webAVControls.seekTo(absoluteFrame)
+
+  console.log('🎯 [关键帧跳转] 跳转到关键帧:', {
+    itemId: props.timelineItem.id,
+    targetFrame: absoluteFrame,
+    timecode: framesToTimecode(absoluteFrame),
+  })
 }
 
 // ==================== 原生拖拽API事件处理 ====================
@@ -541,6 +604,20 @@ async function stopResize() {
       }
 
       try {
+        // 🎯 关键帧位置调整：在调整时间范围之前先调整关键帧位置
+        const oldDurationFrames =
+          currentTimeRange.timelineEndTime - currentTimeRange.timelineStartTime
+        const newDurationFrames = newTimeRange.timelineEndTime - newTimeRange.timelineStartTime
+
+        if (props.timelineItem.animation && props.timelineItem.animation.keyframes.length > 0) {
+          const { adjustKeyframesForDurationChange } = await import('../utils/unifiedKeyframeUtils')
+          adjustKeyframesForDurationChange(props.timelineItem, oldDurationFrames, newDurationFrames)
+          console.log('🎬 [Resize] Keyframes adjusted for duration change:', {
+            oldDuration: oldDurationFrames,
+            newDuration: newDurationFrames,
+          })
+        }
+
         // 使用带历史记录的调整方法
         const success = await videoStore.resizeTimelineItemWithHistory(
           props.timelineItem.id,
@@ -548,6 +625,14 @@ async function stopResize() {
         )
         if (success) {
           console.log('✅ 时间范围调整成功')
+
+          // 如果有动画，需要重新设置WebAV动画时长
+          if (props.timelineItem.animation && props.timelineItem.animation.isEnabled) {
+            const { updateWebAVAnimation } = await import('../utils/webavAnimationManager')
+            await updateWebAVAnimation(props.timelineItem)
+            console.log('🎬 [Resize] Animation duration updated after clip resize')
+          }
+
           // 重新生成缩略图（异步执行，不阻塞UI）
           regenerateThumbnailAfterResize()
         } else {
@@ -594,8 +679,6 @@ async function regenerateThumbnailAfterResize() {
     console.error('❌ 重新生成缩略图失败:', error)
   }
 }
-
-
 
 // Tooltip相关方法
 function showTooltip(event: MouseEvent) {
@@ -663,7 +746,6 @@ onUnmounted(() => {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
   z-index: 10; /* 确保视频片段在网格线上方 */
   border: 2px solid transparent;
-  transition: all 0.2s;
 }
 
 /* 图片片段使用与视频相同的背景色 */
@@ -861,7 +943,49 @@ onUnmounted(() => {
   opacity: 1;
 }
 
+/* 关键帧标记样式 */
+.keyframes-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none; /* 不阻挡clip的交互 */
+  z-index: 5; /* 在clip内容之上，但在调整手柄之下 */
+}
 
+.keyframe-marker {
+  position: absolute;
+  top: 50%;
+  width: 10px;
+  height: 10px;
+  z-index: 6;
+  pointer-events: auto; /* 允许点击 */
+  cursor: pointer;
+}
+
+.keyframe-diamond {
+  width: 10px;
+  height: 10px;
+  background-color: #00ff88; /* 明亮的绿色 */
+  border: 2px solid #ffffff;
+  border-radius: 2px;
+  transform: rotate(45deg);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+  transition: all 0.2s ease;
+}
+
+.keyframe-marker:hover .keyframe-diamond {
+  background-color: #00cc6a; /* 悬停时稍微深一点的绿色 */
+  transform: rotate(45deg) scale(1.3);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.5);
+  border-color: #ffffff;
+}
+
+.keyframe-marker:active .keyframe-diamond {
+  background-color: #00aa55; /* 点击时更深的绿色 */
+  transform: rotate(45deg) scale(1.1);
+}
 
 /* Tooltip样式 */
 .clip-tooltip {

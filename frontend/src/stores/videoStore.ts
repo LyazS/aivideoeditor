@@ -4,7 +4,11 @@ import { VideoVisibleSprite } from '../utils/VideoVisibleSprite'
 import { expandTimelineIfNeededFrames } from './utils/timeUtils'
 import { autoArrangeTimelineItems, autoArrangeTrackItems } from './utils/timelineArrangementUtils'
 import { calculateTotalDurationFrames } from './utils/durationUtils'
-import { findTimelineItemBySprite, getTimelineItemsByTrack, getTimelineItemAtFrames } from './utils/timelineSearchUtils'
+import {
+  findTimelineItemBySprite,
+  getTimelineItemsByTrack,
+  getTimelineItemAtFrames,
+} from './utils/timelineSearchUtils'
 import { frameToPixel, pixelToFrame } from './utils/coordinateUtils'
 import { microsecondsToFrames, secondsToFrames } from './utils/timeUtils'
 import { createMediaModule } from './modules/mediaModule'
@@ -1099,6 +1103,7 @@ export const useVideoStore = defineStore('video', () => {
     redo: historyModule.redo,
     clearHistory: historyModule.clear,
     getHistorySummary: historyModule.getHistorySummary,
+    executeCommand: historyModule.executeCommand,
     // 通知管理方法和状态
     notifications: notificationModule.notifications,
     showNotification: notificationModule.showNotification,

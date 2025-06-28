@@ -107,6 +107,8 @@ export interface TimelineItem {
   // 音频属性（仅对视频有效）
   volume: number // 音量（0-1之间）
   isMuted: boolean // 静音状态
+  // 新增：动画配置（可选）
+  animation?: AnimationConfig // 动画配置
 }
 
 /**
@@ -139,6 +141,15 @@ export interface VideoResolution {
 export interface PropsChangeEvent {
   rect?: Partial<Rect>
   zIndex?: number
+}
+
+/**
+ * 扩展的WebAV属性变化事件类型
+ * 在原有PropsChangeEvent基础上添加opacity属性支持
+ */
+export interface ExtendedPropsChangeEvent extends PropsChangeEvent {
+  opacity?: number
+  // 未来可扩展其他属性
 }
 
 /**
@@ -465,3 +476,82 @@ import type { ImageVisibleSprite } from '../utils/ImageVisibleSprite'
  * 表示我们扩展的 VideoVisibleSprite 或 ImageVisibleSprite
  */
 export type CustomSprite = VideoVisibleSprite | ImageVisibleSprite
+
+// ==================== 关键帧动画系统类型 ====================
+
+/**
+ * 关键帧属性集合
+ * 统一关键帧系统中每个关键帧包含的所有可动画属性
+ */
+export interface KeyframeProperties {
+  /** 水平位置 */
+  x: number
+  /** 垂直位置 */
+  y: number
+  /** 宽度 */
+  width: number
+  /** 高度 */
+  height: number
+  /** 旋转角度（弧度） */
+  rotation: number
+  /** 透明度（0-1） */
+  opacity: number
+}
+
+/**
+ * 关键帧数据结构（统一关键帧系统）
+ * 每个关键帧包含所有可动画属性的完整状态
+ */
+export interface Keyframe {
+  /** 关键帧位置（相对于clip开始的帧数） */
+  framePosition: number
+  /** 包含所有可动画属性的完整状态 */
+  properties: KeyframeProperties
+}
+
+/**
+ * 动画配置
+ * 包含该TimelineItem的所有动画信息
+ * 动画总时长等于clip时长，轮次总是1
+ */
+export interface AnimationConfig {
+  /** 关键帧数组 */
+  keyframes: Keyframe[]
+  /** 是否启用动画 */
+  isEnabled: boolean
+  /** 缓动函数（预留） */
+  easing?: string
+}
+
+/**
+ * 关键帧按钮状态
+ */
+export type KeyframeButtonState = 'none' | 'on-keyframe' | 'between-keyframes'
+
+/**
+ * 关键帧UI状态
+ */
+export interface KeyframeUIState {
+  /** 是否有动画 */
+  hasAnimation: boolean
+  /** 当前帧是否在关键帧位置 */
+  isOnKeyframe: boolean
+}
+
+/**
+ * WebAV动画配置格式
+ * 用于转换给WebAV的setAnimation接口
+ */
+export interface WebAVAnimationConfig {
+  /** 关键帧配置 { '0%': { x: 100, y: 100 }, '50%': { x: 200, y: 200 } } */
+  keyframes: Record<string, Record<string, number>>
+  /** 动画选项 */
+  options: {
+    /** 动画时长（微秒） */
+    duration: number
+    /** 迭代次数 */
+    iterCount: number
+    /** 缓动函数 */
+    easing?: string
+  }
+}

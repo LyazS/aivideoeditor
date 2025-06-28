@@ -251,11 +251,11 @@ watch(
       canvasContainer.style.width = `${newSize.width}px`
       canvasContainer.style.height = `${newSize.height}px`
 
-      console.log('Canvas container size updated:', {
-        newSize,
-        containerElement: canvasContainer.tagName,
-        actualSize: `${canvasContainer.clientWidth}x${canvasContainer.clientHeight}`,
-      })
+      // console.log('Canvas container size updated:', {
+      //   newSize,
+      //   containerElement: canvasContainer.tagName,
+      //   actualSize: `${canvasContainer.clientWidth}x${canvasContainer.clientHeight}`,
+      // })
     }
   },
   { deep: true },

@@ -64,8 +64,8 @@
       </span>
     </div>
 
-    <!-- 调试按钮放在最右边 -->
-    <div class="toolbar-section debug-section">
+    <!-- 调试按钮放在最右边 - 暂时隐藏 -->
+    <div class="toolbar-section debug-section" style="display: none;">
       <button
         class="toolbar-btn debug-btn"
         @click="debugTimeline"
@@ -86,6 +86,7 @@
 import { computed } from 'vue'
 import { useVideoStore } from '../stores/videoStore'
 import { formatFileSize, framesToSeconds } from '../stores/utils/timeUtils'
+import { countOverlappingItems } from '../utils/timeOverlapUtils'
 import type { TimelineItem } from '../types'
 import { isVideoTimeRange } from '../types'
 
@@ -95,44 +96,9 @@ const timelineItems = computed(() => videoStore.timelineItems)
 
 // 计算重叠时间轴项目数量（只计算同轨道内的重叠）
 const overlappingCount = computed(() => {
-  let count = 0
-  const tracks = new Map<number, TimelineItem[]>()
-
-  // 按轨道分组
-  videoStore.timelineItems.forEach((item) => {
-    if (!tracks.has(item.trackId)) {
-      tracks.set(item.trackId, [])
-    }
-    tracks.get(item.trackId)!.push(item)
-  })
-
-  // 检查每个轨道内的重叠
-  tracks.forEach((trackItems) => {
-    for (let i = 0; i < trackItems.length; i++) {
-      for (let j = i + 1; j < trackItems.length; j++) {
-        if (isTimelineItemsOverlapping(trackItems[i], trackItems[j])) {
-          count++
-        }
-      }
-    }
-  })
-
-  return count
+  // 使用统一的重叠检测工具
+  return countOverlappingItems(videoStore.timelineItems)
 })
-
-// 检测两个时间轴项目是否重叠
-function isTimelineItemsOverlapping(item1: TimelineItem, item2: TimelineItem): boolean {
-  // 直接使用item.timeRange，确保与videoStore的同步机制保持一致
-  const range1 = item1.timeRange
-  const range2 = item2.timeRange
-
-  const item1Start = range1.timelineStartTime // 帧数
-  const item1End = range1.timelineEndTime // 帧数
-  const item2Start = range2.timelineStartTime // 帧数
-  const item2End = range2.timelineEndTime // 帧数
-
-  return !(item1End <= item2Start || item2End <= item1Start)
-}
 
 async function splitSelectedClip() {
   if (videoStore.selectedTimelineItemId) {

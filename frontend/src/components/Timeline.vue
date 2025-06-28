@@ -139,7 +139,14 @@
           :style="{ left: 150 + videoStore.frameToPixel(line.time, timelineWidth) + 'px' }"
         ></div>
       </div>
+
     </div>
+
+    <!-- 全局播放头竖线 - 覆盖整个时间轴 -->
+    <div
+      class="global-playhead-line"
+      :style="{ left: 150 + videoStore.frameToPixel(videoStore.currentFrame, timelineWidth) + 'px' }"
+    ></div>
   </div>
 
   <!-- 统一右键菜单 -->
@@ -176,6 +183,7 @@ import { createSpriteFromMediaItem } from '../utils/spriteFactory'
 import { webavToProjectCoords } from '../utils/coordinateTransform'
 import { calculatePixelsPerFrame } from '../stores/utils/timeUtils'
 import { calculateVisibleFrameRange } from '../stores/utils/coordinateUtils'
+import { detectTrackConflicts } from '../utils/timeOverlapUtils'
 
 import { generateThumbnailForMediaItem } from '../utils/thumbnailGenerator'
 import type { TimelineItem, TimelineItemDragData, MediaItemDragData, ConflictInfo } from '../types'
@@ -275,14 +283,14 @@ const getTrackMenuItems = (): MenuItem[] => {
 
   return [
     {
-      label: '重命名轨道',
-      icon: 'M20.71,7.04C21.1,6.65 21.1,6 20.71,5.63L18.37,3.29C18,2.9 17.35,2.9 16.96,3.29L15.12,5.12L18.87,8.87M3,17.25V21H6.75L17.81,9.93L14.06,6.18L3,17.25Z',
-      onClick: () => renameTrack(),
-    },
-    {
       label: hasClips ? '自动排列片段' : '自动排列片段（无片段）',
       icon: 'M3,3H21V5H3V3M3,7H15V9H3V7M3,11H21V13H3V11M3,15H15V17H3V15M3,19H21V21H3V19Z',
       onClick: hasClips ? () => autoArrangeTrack(trackId) : () => {},
+    },
+    {
+      label: '重命名轨道',
+      icon: 'M20.71,7.04C21.1,6.65 21.1,6 20.71,5.63L18.37,3.29C18,2.9 17.35,2.9 16.96,3.29L15.12,5.12L18.87,8.87M3,17.25V21H6.75L17.81,9.93L14.06,6.18L3,17.25Z',
+      onClick: () => renameTrack(),
     },
     {
       label: track.isVisible ? '隐藏轨道' : '显示轨道',
@@ -1139,36 +1147,21 @@ function detectMediaItemConflicts(
   targetTrackId: number,
   duration: number,
 ): ConflictInfo[] {
-  const conflicts: ConflictInfo[] = []
-
   // 获取目标轨道上的所有项目
   const trackItems = videoStore.getTimelineItemsForTrack(targetTrackId)
-
   const dragEndTime = dropTime + duration
 
-  // 检查与其他项目的冲突
-  for (const item of trackItems) {
-    const itemStartTime = item.timeRange.timelineStartTime // 帧数
-    const itemEndTime = item.timeRange.timelineEndTime // 帧数
-
-    // 检查时间重叠
-    const overlapStart = Math.max(dropTime, itemStartTime)
-    const overlapEnd = Math.min(dragEndTime, itemEndTime)
-
-    if (overlapStart < overlapEnd) {
+  // 使用统一的冲突检测工具
+  return detectTrackConflicts(
+    dropTime,
+    dragEndTime,
+    trackItems,
+    [], // 没有需要排除的项目
+    (item) => {
       const mediaItem = videoStore.getMediaItem(item.mediaItemId)
-      conflicts.push({
-        itemId: item.id,
-        itemName: mediaItem?.name || 'Unknown',
-        startTime: itemStartTime,
-        endTime: itemEndTime,
-        overlapStart,
-        overlapEnd,
-      })
+      return mediaItem?.name || 'Unknown'
     }
-  }
-
-  return conflicts
+  )
 }
 
 function detectTimelineConflicts(
@@ -1176,45 +1169,28 @@ function detectTimelineConflicts(
   targetTrackId: number,
   dragData: TimelineItemDragData,
 ): ConflictInfo[] {
-  const conflicts: ConflictInfo[] = []
-
   // 获取目标轨道上的所有项目
   const trackItems = videoStore.getTimelineItemsForTrack(targetTrackId)
 
   // 计算拖拽项目的时长
   const draggedItem = videoStore.getTimelineItem(dragData.itemId)
-  if (!draggedItem) return conflicts
+  if (!draggedItem) return []
 
   const dragDuration =
     draggedItem.timeRange.timelineEndTime - draggedItem.timeRange.timelineStartTime // 帧数
   const dragEndTime = dropTime + dragDuration
 
-  // 检查与其他项目的冲突
-  for (const item of trackItems) {
-    // 跳过正在拖拽的项目
-    if (dragData.selectedItems.includes(item.id)) continue
-
-    const itemStartTime = item.timeRange.timelineStartTime // 帧数
-    const itemEndTime = item.timeRange.timelineEndTime // 帧数
-
-    // 检查时间重叠
-    const overlapStart = Math.max(dropTime, itemStartTime)
-    const overlapEnd = Math.min(dragEndTime, itemEndTime)
-
-    if (overlapStart < overlapEnd) {
+  // 使用统一的冲突检测工具
+  return detectTrackConflicts(
+    dropTime,
+    dragEndTime,
+    trackItems,
+    dragData.selectedItems, // 排除正在拖拽的项目
+    (item) => {
       const mediaItem = videoStore.getMediaItem(item.mediaItemId)
-      conflicts.push({
-        itemId: item.id,
-        itemName: mediaItem?.name || 'Unknown',
-        startTime: itemStartTime,
-        endTime: itemEndTime,
-        overlapStart,
-        overlapEnd,
-      })
+      return mediaItem?.name || 'Unknown'
     }
-  }
-
-  return conflicts
+  )
 }
 
 // 处理拖拽离开事件
@@ -1620,6 +1596,17 @@ onUnmounted(() => {
   bottom: 0;
   pointer-events: none;
   z-index: 0;
+}
+
+.global-playhead-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background-color: #ff4444;
+  pointer-events: none;
+  z-index: 20; /* 确保在所有内容之上 */
+  margin-left: -1px; /* 居中对齐 */
 }
 
 .grid-line {
