@@ -20,6 +20,7 @@
         :timeline-width="containerWidth"
         :track-control-width="0"
         :handle-container="scaleContainer"
+        :wheel-container="scaleContainer"
         :enable-container-click="true"
         :enable-snapping="true"
       />

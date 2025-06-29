@@ -60,7 +60,7 @@
           v-for="keyframe in visibleKeyframes"
           :key="keyframe.framePosition"
           class="keyframe-marker"
-          :style="{ left: keyframe.pixelPosition - 10.0 + 'px', transform: 'translateY(-50%)' }"
+          :style="{ left: keyframe.pixelPosition - 6.5 + 'px', transform: 'translateY(-50%)' }"
           :title="`关键帧 - 帧 ${keyframe.absoluteFrame} (点击跳转)`"
           @click.stop="jumpToKeyframe(keyframe.absoluteFrame)"
         >
@@ -183,7 +183,7 @@ const clipStyle = computed(() => {
   const width = right - left
 
   return {
-    left: `${left}px`,
+    left: `${left - 3}px`, // 补偿track-content的border-left宽度（3px），确保与网格线对齐
     width: `${Math.max(width, 20)}px`, // 最小宽度20px，确保可见但不影响时间准确性
     top: '10px', // 相对于轨道的顶部间距
     height: '60px', // 片段高度
@@ -898,6 +898,7 @@ onUnmounted(() => {
   background-color: rgba(255, 255, 255, 0.2);
   opacity: 0;
   transition: opacity 0.2s;
+  z-index: 5; /* 调整手柄在关键帧标记之下 */
 }
 
 .resize-handle.left {
@@ -922,7 +923,7 @@ onUnmounted(() => {
   right: 0;
   bottom: 0;
   pointer-events: none; /* 不阻挡clip的交互 */
-  z-index: 5; /* 在clip内容之上，但在调整手柄之下 */
+  z-index: 8; /* 在调整手柄之上 */
 }
 
 .keyframe-marker {
@@ -930,7 +931,7 @@ onUnmounted(() => {
   top: 50%;
   width: 10px;
   height: 10px;
-  z-index: 6;
+  z-index: 10; /* 在调整手柄之上，确保关键帧标记可见性最高 */
   pointer-events: auto; /* 允许点击 */
   cursor: pointer;
 }

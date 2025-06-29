@@ -3,6 +3,7 @@
     class="playhead-container"
     ref="playheadContainer"
     @mousedown="handleContainerMouseDown"
+    @wheel="handleWheel"
     :class="{
       'container-interactive': enableContainerClick,
       dragging: isDragging && enableContainerClick,
@@ -30,6 +31,7 @@ import { useVideoStore } from '../stores/videoStore'
 import { useWebAVControls } from '../composables/useWebAVControls'
 import { usePlaybackControls } from '../composables/usePlaybackControls'
 import { alignFramesToFrame } from '../stores/utils/timeUtils'
+import { relativeFrameToAbsoluteFrame } from '../utils/unifiedKeyframeUtils'
 
 interface PlayheadProps {
   /** 时间轴容器宽度 */
@@ -38,6 +40,8 @@ interface PlayheadProps {
   trackControlWidth?: number
   /** 播放头手柄的容器元素（用于计算相对位置） */
   handleContainer?: HTMLElement | null
+  /** 滚轮事件的目标容器元素 */
+  wheelContainer?: HTMLElement | null
   /** 是否启用整个容器区域的点击交互 */
   enableContainerClick?: boolean
   /** 是否启用吸附功能 */
@@ -47,6 +51,7 @@ interface PlayheadProps {
 const props = withDefaults(defineProps<PlayheadProps>(), {
   trackControlWidth: 150,
   handleContainer: null,
+  wheelContainer: null,
   enableContainerClick: false,
   enableSnapping: true,
 })
@@ -98,7 +103,35 @@ const clipBoundaryFrames = computed(() => {
 })
 
 /**
- * 应用吸附逻辑到目标帧数
+ * 计算所有关键帧的绝对位置 - 使用computed自动缓存
+ */
+const keyframePositions = computed(() => {
+  const positions: number[] = []
+
+  // 遍历所有时间轴项目，收集关键帧位置
+  videoStore.timelineItems.forEach((item) => {
+    if (item.animation && item.animation.keyframes.length > 0) {
+      item.animation.keyframes.forEach((keyframe) => {
+        // 将相对帧数转换为绝对帧数
+        const absoluteFrame = relativeFrameToAbsoluteFrame(keyframe.framePosition, item.timeRange)
+        positions.push(absoluteFrame)
+      })
+    }
+  })
+
+  // 去重并排序
+  const result = [...new Set(positions)].sort((a, b) => a - b)
+
+  console.log('🎯 更新关键帧位置缓存:', {
+    关键帧数量: result.length,
+    关键帧位置: result,
+  })
+
+  return result
+})
+
+/**
+ * 应用吸附逻辑到目标帧数（包括clip边界和关键帧）
  */
 function applySnapToClips(targetFrames: number): number {
   // 如果未启用吸附，直接返回原始帧数
@@ -106,35 +139,48 @@ function applySnapToClips(targetFrames: number): number {
     return targetFrames
   }
 
-  const boundaries = clipBoundaryFrames.value
+  // 合并clip边界和关键帧位置
+  const allSnapPoints = [...clipBoundaryFrames.value, ...keyframePositions.value]
+  const uniqueSnapPoints = [...new Set(allSnapPoints)].sort((a, b) => a - b)
+
   const snapThresholdFrames =
     videoStore.pixelToFrame(SNAP_THRESHOLD_PIXELS, props.timelineWidth) -
     videoStore.pixelToFrame(0, props.timelineWidth)
 
-  // 找到最近的边界点
-  let closestBoundary = targetFrames
+  // 找到最近的吸附点
+  let closestSnapPoint = targetFrames
   let minDistance = Infinity
+  let snapType = ''
 
-  for (const boundary of boundaries) {
-    const distance = Math.abs(targetFrames - boundary)
+  for (const snapPoint of uniqueSnapPoints) {
+    const distance = Math.abs(targetFrames - snapPoint)
     if (distance < minDistance && distance <= Math.abs(snapThresholdFrames)) {
       minDistance = distance
-      closestBoundary = boundary
+      closestSnapPoint = snapPoint
+
+      // 判断吸附点类型
+      if (clipBoundaryFrames.value.includes(snapPoint)) {
+        snapType = keyframePositions.value.includes(snapPoint) ? 'clip边界+关键帧' : 'clip边界'
+      } else {
+        snapType = '关键帧'
+      }
     }
   }
 
   // 调试信息：如果发生了吸附，输出日志
-  if (closestBoundary !== targetFrames) {
+  if (closestSnapPoint !== targetFrames) {
     console.log('🧲 播放头吸附:', {
       原始帧数: targetFrames,
-      吸附到: closestBoundary,
-      吸附距离: Math.abs(targetFrames - closestBoundary),
+      吸附到: closestSnapPoint,
+      吸附类型: snapType,
+      吸附距离: Math.abs(targetFrames - closestSnapPoint),
       阈值: Math.abs(snapThresholdFrames),
-      边界点: boundaries,
+      clip边界点: clipBoundaryFrames.value,
+      关键帧位置: keyframePositions.value,
     })
   }
 
-  return closestBoundary
+  return closestSnapPoint
 }
 
 // 播放头手柄位置（相对于时间刻度区域）
@@ -305,6 +351,39 @@ function handleTimelineClick(event: MouseEvent) {
 
   // 通过WebAV设置帧数
   webAVControls.seekTo(alignedFrames)
+}
+
+/**
+ * 处理滚轮事件 - 将事件传播给父组件处理
+ */
+function handleWheel(event: WheelEvent) {
+  if (!props.wheelContainer) {
+    return
+  }
+
+  // 阻止当前事件的默认行为和冒泡
+  event.preventDefault()
+  event.stopPropagation()
+
+  // 创建一个新的滚轮事件并在目标容器上触发
+  const newEvent = new WheelEvent('wheel', {
+    deltaX: event.deltaX,
+    deltaY: event.deltaY,
+    deltaZ: event.deltaZ,
+    deltaMode: event.deltaMode,
+    clientX: event.clientX,
+    clientY: event.clientY,
+    screenX: event.screenX,
+    screenY: event.screenY,
+    ctrlKey: event.ctrlKey,
+    shiftKey: event.shiftKey,
+    altKey: event.altKey,
+    metaKey: event.metaKey,
+    bubbles: true,
+    cancelable: true,
+  })
+
+  props.wheelContainer.dispatchEvent(newEvent)
 }
 
 // 暴露方法给父组件

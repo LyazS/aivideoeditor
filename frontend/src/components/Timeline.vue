@@ -16,7 +16,7 @@
     </div>
 
     <!-- 主体区域：每个轨道一行，包含左侧控制和右侧内容 -->
-    <div class="timeline-body" ref="timelineBody">
+    <div class="timeline-body" ref="timelineBody" @wheel="handleWheel">
       <!-- 每个轨道一行 -->
       <div
         v-for="track in tracks"
@@ -153,7 +153,12 @@
     </div>
 
     <!-- 全局播放头组件 - 覆盖整个时间轴 -->
-    <Playhead :timeline-width="timelineWidth" :track-control-width="150" :enable-snapping="true" />
+    <Playhead
+      :timeline-width="timelineWidth"
+      :track-control-width="150"
+      :wheel-container="timelineBody"
+      :enable-snapping="true"
+    />
   </div>
 
   <!-- 统一右键菜单 -->
