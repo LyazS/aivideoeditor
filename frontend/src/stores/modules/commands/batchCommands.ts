@@ -57,18 +57,18 @@ export class BatchDeleteCommand extends BaseBatchCommand {
  */
 export class BatchAutoArrangeTrackCommand extends BaseBatchCommand {
   constructor(
-    private trackId: number,
+    private trackId: string,
     private timelineItems: TimelineItem[],
     private timelineModule: {
       getTimelineItem: (id: string) => TimelineItem | undefined
       timelineItems: { value: TimelineItem[] }
-      updateTimelineItemPosition: (id: string, position: number, trackId?: number) => void
+      updateTimelineItemPosition: (id: string, position: number, trackId?: string) => void
     },
     private mediaModule: {
       getMediaItem: (id: string) => MediaItem | undefined
     },
     private trackModule: {
-      getTrack: (trackId: number) => Track | undefined
+      getTrack: (trackId: string) => Track | undefined
     },
   ) {
     const track = trackModule.getTrack(trackId)

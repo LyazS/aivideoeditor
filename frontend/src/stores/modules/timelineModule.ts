@@ -20,7 +20,7 @@ export function createTimelineModule(
     mediaItems: Ref<MediaItem[]>
   },
   trackModule?: {
-    tracks: Ref<{ id: number; name: string; isVisible: boolean; isMuted: boolean }[]>
+    tracks: Ref<{ id: string; name: string; isVisible: boolean; isMuted: boolean }[]>
   },
 ) {
   // ==================== 状态定义 ====================
@@ -93,8 +93,11 @@ export function createTimelineModule(
    */
   function addTimelineItem(timelineItem: TimelineItem) {
     // 如果没有指定轨道，默认分配到第一个轨道
-    if (!timelineItem.trackId) {
-      timelineItem.trackId = 1
+    if (!timelineItem.trackId && trackModule) {
+      const firstTrack = trackModule.tracks.value[0]
+      if (firstTrack) {
+        timelineItem.trackId = firstTrack.id
+      }
     }
 
     // 根据轨道的可见性和静音状态设置sprite属性
@@ -218,7 +221,7 @@ export function createTimelineModule(
   function updateTimelineItemPosition(
     timelineItemId: string,
     newPositionFrames: number,
-    newTrackId?: number,
+    newTrackId?: string,
   ) {
     const item = timelineItems.value.find((item) => item.id === timelineItemId)
     if (item) {

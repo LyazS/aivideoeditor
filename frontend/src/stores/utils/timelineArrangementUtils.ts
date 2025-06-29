@@ -9,7 +9,7 @@ import { isVideoTimeRange } from '../../types'
  * @param timelineItems 时间轴项目数组的ref
  * @param trackId 要整理的轨道ID
  */
-export function autoArrangeTrackItems(timelineItems: Ref<TimelineItem[]>, trackId: number) {
+export function autoArrangeTrackItems(timelineItems: Ref<TimelineItem[]>, trackId: string) {
   // 获取指定轨道的所有项目
   const trackItems = timelineItems.value.filter((item) => item.trackId === trackId)
 
@@ -61,7 +61,7 @@ export function autoArrangeTrackItems(timelineItems: Ref<TimelineItem[]>, trackI
  */
 export function autoArrangeTimelineItems(timelineItems: Ref<TimelineItem[]>) {
   // 按轨道分组，然后在每个轨道内按时间位置排序
-  const trackGroups = new Map<number, TimelineItem[]>()
+  const trackGroups = new Map<string, TimelineItem[]>()
 
   timelineItems.value.forEach((item) => {
     if (!trackGroups.has(item.trackId)) {

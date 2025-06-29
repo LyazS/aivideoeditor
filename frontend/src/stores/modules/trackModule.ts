@@ -1,6 +1,7 @@
 import { ref, type Ref } from 'vue'
 import type { Track, TimelineItem, TrackType } from '../../types'
 import { VideoVisibleSprite } from '../../utils/VideoVisibleSprite'
+import { generateTrackId } from '../../utils/idGenerator'
 
 /**
  * 轨道管理模块
@@ -11,8 +12,8 @@ export function createTrackModule() {
 
   // 轨道列表
   const tracks = ref<Track[]>([
-    { id: 1, name: '视频轨道 1', type: 'video', isVisible: true, isMuted: false, height: 80 },
-    { id: 2, name: '视频轨道 2', type: 'video', isVisible: true, isMuted: false, height: 80 },
+    { id: generateTrackId(), name: '视频轨道 1', type: 'video', isVisible: true, isMuted: false, height: 80 },
+    { id: generateTrackId(), name: '视频轨道 2', type: 'video', isVisible: true, isMuted: false, height: 80 },
   ])
 
   // ==================== 轨道管理方法 ====================
@@ -24,7 +25,8 @@ export function createTrackModule() {
    * @returns 新创建的轨道对象
    */
   function addTrack(type: TrackType = 'video', name?: string): Track {
-    const newId = Math.max(...tracks.value.map((t) => t.id)) + 1
+    // 使用UUID4生成唯一ID
+    const newId = generateTrackId()
 
     // 根据轨道类型生成默认名称和高度
     const typeNames = {
@@ -40,9 +42,12 @@ export function createTrackModule() {
       subtitle: 50, // 字幕轨道最矮
     }
 
+    // 计算同类型轨道的数量，用于生成默认名称
+    const sameTypeCount = tracks.value.filter(t => t.type === type).length + 1
+
     const newTrack: Track = {
       id: newId,
-      name: name || `${typeNames[type]} ${newId}`,
+      name: name || `${typeNames[type]} ${sameTypeCount}`,
       type,
       isVisible: true,
       isMuted: false,
@@ -67,7 +72,7 @@ export function createTrackModule() {
    * @param removeTimelineItemCallback 删除时间轴项目的回调函数
    */
   function removeTrack(
-    trackId: number,
+    trackId: string,
     timelineItems: Ref<TimelineItem[]>,
     removeTimelineItemCallback?: (timelineItemId: string) => void,
   ) {
@@ -112,7 +117,7 @@ export function createTrackModule() {
    * @param trackId 轨道ID
    * @param timelineItems 时间轴项目列表（用于同步sprite可见性）
    */
-  function toggleTrackVisibility(trackId: number, timelineItems?: Ref<TimelineItem[]>) {
+  function toggleTrackVisibility(trackId: string, timelineItems?: Ref<TimelineItem[]>) {
     const track = tracks.value.find((t) => t.id === trackId)
     if (track) {
       track.isVisible = !track.isVisible
@@ -149,7 +154,7 @@ export function createTrackModule() {
    * @param trackId 轨道ID
    * @param timelineItems 时间轴项目列表（用于同步sprite静音状态）
    */
-  function toggleTrackMute(trackId: number, timelineItems?: Ref<TimelineItem[]>) {
+  function toggleTrackMute(trackId: string, timelineItems?: Ref<TimelineItem[]>) {
     const track = tracks.value.find((t) => t.id === trackId)
     if (track) {
       // 检查轨道类型是否支持静音操作
@@ -207,7 +212,7 @@ export function createTrackModule() {
    * @param trackId 轨道ID
    * @param newName 新名称
    */
-  function renameTrack(trackId: number, newName: string) {
+  function renameTrack(trackId: string, newName: string) {
     const track = tracks.value.find((t) => t.id === trackId)
     if (track && newName.trim()) {
       const oldName = track.name
@@ -229,7 +234,7 @@ export function createTrackModule() {
    * @param trackId 轨道ID
    * @param height 新高度
    */
-  function setTrackHeight(trackId: number, height: number) {
+  function setTrackHeight(trackId: string, height: number) {
     const track = tracks.value.find((t) => t.id === trackId)
     if (track && height > 0) {
       track.height = height
@@ -250,7 +255,7 @@ export function createTrackModule() {
    * @param trackId 轨道ID
    * @returns 轨道对象或undefined
    */
-  function getTrack(trackId: number): Track | undefined {
+  function getTrack(trackId: string): Track | undefined {
     return tracks.value.find((t) => t.id === trackId)
   }
 

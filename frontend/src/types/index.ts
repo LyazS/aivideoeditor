@@ -95,7 +95,7 @@ export interface MediaItem {
 export interface TimelineItem {
   id: string
   mediaItemId: string // 引用MediaItem的ID
-  trackId: number
+  trackId: string
   mediaType: MediaType
   timeRange: VideoTimeRange | ImageTimeRange // 时间范围信息（视频包含倍速，图片不包含）
   sprite: Raw<CustomSprite> // 自定义的视频或图片sprite
@@ -120,7 +120,7 @@ export interface TimelineItem {
  * 轨道接口
  */
 export interface Track {
-  id: number
+  id: string
   name: string
   type: TrackType // 轨道类型
   isVisible: boolean
@@ -175,7 +175,7 @@ export interface CanvasBackup {
   timelineItems: Array<{
     id: string
     mediaItemId: string
-    trackId: number
+    trackId: string
     mediaType: MediaType
     timeRange: VideoTimeRange | ImageTimeRange
     x: number
@@ -201,7 +201,7 @@ export interface CanvasBackup {
 export interface TimelineItemDragData {
   type: 'timeline-item'
   itemId: string
-  trackId: number
+  trackId: string
   startTime: number // 开始时间（帧数）
   selectedItems: string[] // 多选支持
   dragOffset: { x: number; y: number } // 拖拽偏移
@@ -225,7 +225,7 @@ export interface DragPreviewData {
   name: string
   duration: number // 预览时长（帧数）- 来自MediaItem.duration
   startTime: number // 开始时间（帧数）
-  trackId: number
+  trackId: string
   isConflict?: boolean
   isMultiple?: boolean
   count?: number
@@ -293,7 +293,7 @@ export interface NotificationManager {
 export interface TimelineItemData {
   id: string
   mediaItemId: string
-  trackId: number
+  trackId: string
   mediaType: MediaType
   timeRange: VideoTimeRange | ImageTimeRange
   x: number

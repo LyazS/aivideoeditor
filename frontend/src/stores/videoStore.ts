@@ -182,7 +182,7 @@ export const useVideoStore = defineStore('video', () => {
   async function moveTimelineItemWithHistory(
     timelineItemId: string,
     newPositionFrames: number,
-    newTrackId?: number,
+    newTrackId?: string,
   ) {
     // 获取要移动的时间轴项目
     const timelineItem = timelineModule.getTimelineItem(timelineItemId)
@@ -561,7 +561,7 @@ export const useVideoStore = defineStore('video', () => {
   async function addTrackWithHistory(
     type: TrackType = 'video',
     name?: string,
-  ): Promise<number | null> {
+  ): Promise<string | null> {
     const command = new AddTrackCommand(type, name, {
       addTrack: trackModule.addTrack,
       removeTrack: trackModule.removeTrack,
@@ -583,7 +583,7 @@ export const useVideoStore = defineStore('video', () => {
    * @param trackId 要删除的轨道ID
    * @returns 是否成功删除
    */
-  async function removeTrackWithHistory(trackId: number): Promise<boolean> {
+  async function removeTrackWithHistory(trackId: string): Promise<boolean> {
     // 检查是否为最后一个轨道
     if (trackModule.tracks.value.length <= 1) {
       console.warn('⚠️ 不能删除最后一个轨道')
@@ -636,7 +636,7 @@ export const useVideoStore = defineStore('video', () => {
    * @param newName 新的轨道名称
    * @returns 是否成功重命名
    */
-  async function renameTrackWithHistory(trackId: number, newName: string): Promise<boolean> {
+  async function renameTrackWithHistory(trackId: string, newName: string): Promise<boolean> {
     // 检查轨道是否存在
     const track = trackModule.getTrack(trackId)
     if (!track) {
@@ -675,7 +675,7 @@ export const useVideoStore = defineStore('video', () => {
    * @param trackId 要自动排列的轨道ID
    * @returns 是否成功排列
    */
-  async function autoArrangeTrackWithHistory(trackId: number): Promise<boolean> {
+  async function autoArrangeTrackWithHistory(trackId: string): Promise<boolean> {
     // 检查轨道是否存在
     const track = trackModule.getTrack(trackId)
     if (!track) {
@@ -721,7 +721,7 @@ export const useVideoStore = defineStore('video', () => {
    * @param trackId 要切换可见性的轨道ID
    * @returns 是否成功切换
    */
-  async function toggleTrackVisibilityWithHistory(trackId: number): Promise<boolean> {
+  async function toggleTrackVisibilityWithHistory(trackId: string): Promise<boolean> {
     // 检查轨道是否存在
     const track = trackModule.getTrack(trackId)
     if (!track) {
@@ -754,7 +754,7 @@ export const useVideoStore = defineStore('video', () => {
    * @param trackId 要切换静音状态的轨道ID
    * @returns 是否成功切换
    */
-  async function toggleTrackMuteWithHistory(trackId: number): Promise<boolean> {
+  async function toggleTrackMuteWithHistory(trackId: string): Promise<boolean> {
     // 检查轨道是否存在
     const track = trackModule.getTrack(trackId)
     if (!track) {
@@ -967,7 +967,7 @@ export const useVideoStore = defineStore('video', () => {
     addTimelineItem: timelineModule.addTimelineItem,
     removeTimelineItem: timelineModule.removeTimelineItem,
     getTimelineItem: timelineModule.getTimelineItem,
-    getTimelineItemsForTrack: (trackId: number) =>
+    getTimelineItemsForTrack: (trackId: string) =>
       getTimelineItemsByTrack(trackId, timelineModule.timelineItems.value),
     updateTimelineItemPosition: timelineModule.updateTimelineItemPosition,
     updateTimelineItemSprite: timelineModule.updateTimelineItemSprite,
@@ -1003,7 +1003,7 @@ export const useVideoStore = defineStore('video', () => {
       return getTimelineItemAtFrames(frames, timelineModule.timelineItems.value)
     },
     autoArrangeTimelineItems: () => autoArrangeTimelineItems(timelineModule.timelineItems),
-    autoArrangeTrackItems: (trackId: number) =>
+    autoArrangeTrackItems: (trackId: string) =>
       autoArrangeTrackItems(timelineModule.timelineItems, trackId),
     // 播放控制方法
     setCurrentFrame: playbackModule.setCurrentFrame,
@@ -1024,15 +1024,15 @@ export const useVideoStore = defineStore('video', () => {
     resetPlaybackToDefaults: playbackModule.resetToDefaults,
     // 轨道管理方法
     addTrack: (type: TrackType = 'video', name?: string) => trackModule.addTrack(type, name),
-    removeTrack: (trackId: number) =>
+    removeTrack: (trackId: string) =>
       trackModule.removeTrack(
         trackId,
         timelineModule.timelineItems,
         timelineModule.removeTimelineItem,
       ),
-    toggleTrackVisibility: (trackId: number) =>
+    toggleTrackVisibility: (trackId: string) =>
       trackModule.toggleTrackVisibility(trackId, timelineModule.timelineItems),
-    toggleTrackMute: (trackId: number) =>
+    toggleTrackMute: (trackId: string) =>
       trackModule.toggleTrackMute(trackId, timelineModule.timelineItems),
     renameTrack: trackModule.renameTrack,
     setTrackHeight: trackModule.setTrackHeight,

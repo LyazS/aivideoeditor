@@ -113,7 +113,7 @@ interface Props {
 }
 
 interface Emits {
-  (e: 'update-position', timelineItemId: string, newPosition: number, newTrackId?: number): void
+  (e: 'update-position', timelineItemId: string, newPosition: number, newTrackId?: string): void
   (e: 'remove', timelineItemId: string): void
 }
 

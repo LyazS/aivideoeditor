@@ -31,7 +31,7 @@ export function createClipOperationsModule(
     setupBidirectionalSync: (item: TimelineItem) => void
   },
   selectionModule: { selectTimelineItem: (id: string) => void; clearAllSelections: () => void },
-  trackModule?: { tracks: Ref<{ id: number; name: string }[]> },
+  trackModule?: { tracks: Ref<{ id: string; name: string }[]> },
 ) {
   // ==================== 视频片段操作方法 ====================
 

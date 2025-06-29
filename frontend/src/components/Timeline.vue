@@ -240,7 +240,7 @@ const timelineWidth = ref(800)
 const tracks = computed(() => videoStore.tracks)
 
 // 编辑轨道名称相关
-const editingTrackId = ref<number | null>(null)
+const editingTrackId = ref<string | null>(null)
 const editingTrackName = ref('')
 let nameInput: HTMLInputElement | null = null
 
@@ -249,7 +249,7 @@ const showContextMenu = ref(false)
 const contextMenuType = ref<'clip' | 'track' | 'empty'>('empty')
 const contextMenuTarget = ref<{
   clipId?: string
-  trackId?: number
+  trackId?: string
   element?: HTMLElement
 }>({})
 
@@ -358,7 +358,7 @@ const currentMenuItems = computed(() => {
 })
 
 // 获取指定轨道的时间轴项目
-function getClipsForTrack(trackId: number) {
+function getClipsForTrack(trackId: string) {
   return videoStore.getTimelineItemsForTrack(trackId)
 }
 
@@ -447,7 +447,7 @@ function isMediaCompatibleWithTrack(mediaType: MediaType, trackType: TrackType):
   return false
 }
 
-async function removeTrack(trackId: number) {
+async function removeTrack(trackId: string) {
   if (tracks.value.length <= 1) {
     dialogs.showMinTrackWarning()
     return
@@ -465,7 +465,7 @@ async function removeTrack(trackId: number) {
   }
 }
 
-async function toggleVisibility(trackId: number) {
+async function toggleVisibility(trackId: string) {
   try {
     const success = await videoStore.toggleTrackVisibilityWithHistory(trackId)
     if (success) {
@@ -478,7 +478,7 @@ async function toggleVisibility(trackId: number) {
   }
 }
 
-async function toggleMute(trackId: number) {
+async function toggleMute(trackId: string) {
   try {
     const success = await videoStore.toggleTrackMuteWithHistory(trackId)
     if (success) {
@@ -491,7 +491,7 @@ async function toggleMute(trackId: number) {
   }
 }
 
-async function autoArrangeTrack(trackId: number) {
+async function autoArrangeTrack(trackId: string) {
   try {
     const success = await videoStore.autoArrangeTrackWithHistory(trackId)
     if (success) {
@@ -504,7 +504,7 @@ async function autoArrangeTrack(trackId: number) {
   }
 }
 
-async function startRename(track: { id: number; name: string }) {
+async function startRename(track: { id: string; name: string }) {
   editingTrackId.value = track.id
   editingTrackName.value = track.name
   await nextTick()
@@ -907,7 +907,7 @@ async function handleMediaItemDrop(event: DragEvent, mediaDragData: MediaItemDra
 }
 
 // 移动单个项目
-async function moveSingleItem(itemId: string, newTimeFrames: number, newTrackId: number) {
+async function moveSingleItem(itemId: string, newTimeFrames: number, newTrackId: string) {
   // newTimeFrames 是帧数，直接传给 handleTimelineItemPositionUpdate
   await handleTimelineItemPositionUpdate(itemId, newTimeFrames, newTrackId)
 }
@@ -916,7 +916,7 @@ async function moveSingleItem(itemId: string, newTimeFrames: number, newTrackId:
 async function moveMultipleItems(
   itemIds: string[],
   newTimeFrames: number,
-  newTrackId: number,
+  newTrackId: string,
   originalStartTimeFrames: number,
 ) {
   console.log('🔄 [Timeline] 开始批量移动项目:', {
@@ -963,9 +963,19 @@ async function createMediaClipFromMediaItem(
     }
   },
   startTimeFrames: number, // 帧数
-  trackId: number = 1,
+  trackId?: string,
 ): Promise<void> {
   console.log('创建时间轴项目从素材库:', mediaItem)
+
+  // 如果没有指定轨道ID，使用第一个轨道
+  if (!trackId) {
+    const firstTrack = tracks.value[0]
+    if (firstTrack) {
+      trackId = firstTrack.id
+    } else {
+      throw new Error('没有可用的轨道')
+    }
+  }
 
   try {
     // 等待WebAV初始化完成
@@ -1119,7 +1129,7 @@ async function createMediaClipFromMediaItem(
 async function handleTimelineItemPositionUpdate(
   timelineItemId: string,
   newPositionFrames: number,
-  newTrackId?: number,
+  newTrackId?: string,
 ) {
   try {
     // 使用带历史记录的移动方法
@@ -1278,7 +1288,7 @@ function handleKeyDown(event: KeyboardEvent) {
 // 检测素材库拖拽的重叠冲突
 function detectMediaItemConflicts(
   dropTime: number,
-  targetTrackId: number,
+  targetTrackId: string,
   duration: number,
 ): ConflictInfo[] {
   // 获取目标轨道上的所有项目
@@ -1300,7 +1310,7 @@ function detectMediaItemConflicts(
 
 function detectTimelineConflicts(
   dropTime: number,
-  targetTrackId: number,
+  targetTrackId: string,
   dragData: TimelineItemDragData,
 ): ConflictInfo[] {
   // 获取目标轨道上的所有项目

@@ -29,3 +29,31 @@ export function generateIdWithPrefix(prefix: string): string {
 export function generateCommandId(): string {
   return generateIdWithPrefix('cmd')
 }
+
+/**
+ * 生成UUID4格式的唯一ID
+ * 使用crypto.randomUUID()或回退到自定义实现
+ * @returns UUID4格式的字符串
+ */
+export function generateUUID4(): string {
+  // 优先使用浏览器原生的crypto.randomUUID()
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID()
+  }
+
+  // 回退到自定义UUID4实现
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0
+    const v = c === 'x' ? r : (r & 0x3 | 0x8)
+    return v.toString(16)
+  })
+}
+
+/**
+ * 生成轨道ID
+ * 使用UUID4格式确保全局唯一性
+ * @returns 轨道ID字符串
+ */
+export function generateTrackId(): string {
+  return generateUUID4()
+}

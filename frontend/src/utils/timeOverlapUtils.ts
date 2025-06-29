@@ -200,7 +200,7 @@ export function detectTrackConflicts(
  */
 export function countOverlappingItems(timelineItems: TimelineItem[]): number {
   let count = 0
-  const tracks = new Map<number, TimelineItem[]>()
+  const tracks = new Map<string, TimelineItem[]>()
 
   // 按轨道分组
   timelineItems.forEach((item) => {
@@ -234,19 +234,19 @@ export function getAllOverlappingPairs(
   timelineItems: TimelineItem[],
   getItemName: (item: TimelineItem) => string = (item) => `Item ${item.id}`,
 ): Array<{
-  trackId: number
+  trackId: string
   item1: { id: string; name: string; range: TimeRange }
   item2: { id: string; name: string; range: TimeRange }
   overlap: OverlapResult
 }> {
   const overlappingPairs: Array<{
-    trackId: number
+    trackId: string
     item1: { id: string; name: string; range: TimeRange }
     item2: { id: string; name: string; range: TimeRange }
     overlap: OverlapResult
   }> = []
 
-  const tracks = new Map<number, TimelineItem[]>()
+  const tracks = new Map<string, TimelineItem[]>()
 
   // 按轨道分组
   timelineItems.forEach((item) => {

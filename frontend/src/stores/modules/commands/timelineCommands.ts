@@ -651,10 +651,10 @@ export class MoveTimelineItemCommand implements SimpleCommand {
     private timelineItemId: string,
     private oldPositionFrames: number, // 旧的时间位置（帧数）
     private newPositionFrames: number, // 新的时间位置（帧数）
-    private oldTrackId: number, // 旧的轨道ID
-    private newTrackId: number, // 新的轨道ID
+    private oldTrackId: string, // 旧的轨道ID
+    private newTrackId: string, // 新的轨道ID
     private timelineModule: {
-      updateTimelineItemPosition: (id: string, positionFrames: number, trackId?: number) => void
+      updateTimelineItemPosition: (id: string, positionFrames: number, trackId?: string) => void
       getTimelineItem: (id: string) => TimelineItem | undefined
     },
     private mediaModule: {
@@ -1520,7 +1520,7 @@ export class SplitTimelineItemCommand implements SimpleCommand {
 export class AddTrackCommand implements SimpleCommand {
   public readonly id: string
   public readonly description: string
-  private newTrackId: number = 0 // 新创建的轨道ID
+  private newTrackId: string = '' // 新创建的轨道ID
   private trackData: Track // 保存轨道数据
 
   constructor(
@@ -1529,11 +1529,11 @@ export class AddTrackCommand implements SimpleCommand {
     private trackModule: {
       addTrack: (type: TrackType, name?: string) => Track
       removeTrack: (
-        trackId: number,
+        trackId: string,
         timelineItems: Ref<TimelineItem[]>,
         removeTimelineItemCallback?: (id: string) => void,
       ) => void
-      getTrack: (trackId: number) => Track | undefined
+      getTrack: (trackId: string) => Track | undefined
     },
   ) {
     this.id = generateCommandId()
@@ -1541,9 +1541,9 @@ export class AddTrackCommand implements SimpleCommand {
 
     // 预先计算新轨道ID（模拟trackModule的逻辑）
     // 注意：这里我们无法直接访问tracks数组，所以在execute时会获取实际的轨道数据
-    this.newTrackId = 0 // 将在execute时设置
+    this.newTrackId = '' // 将在execute时设置
     this.trackData = {
-      id: 0,
+      id: '',
       name: '',
       type: trackType,
       isVisible: true,
@@ -1555,7 +1555,7 @@ export class AddTrackCommand implements SimpleCommand {
   /**
    * 获取新创建的轨道ID
    */
-  get createdTrackId(): number {
+  get createdTrackId(): string {
     return this.newTrackId
   }
 
@@ -1610,11 +1610,11 @@ export class RenameTrackCommand implements SimpleCommand {
   private oldName: string = '' // 保存原始名称用于撤销
 
   constructor(
-    private trackId: number,
+    private trackId: string,
     private newName: string,
     private trackModule: {
-      renameTrack: (trackId: number, newName: string) => void
-      getTrack: (trackId: number) => Track | undefined
+      renameTrack: (trackId: string, newName: string) => void
+      getTrack: (trackId: string) => Track | undefined
     },
   ) {
     this.id = generateCommandId()
@@ -1689,15 +1689,15 @@ export class RemoveTrackCommand implements SimpleCommand {
   private affectedTimelineItems: TimelineItemData[] = [] // 保存被删除的时间轴项目的重建元数据
 
   constructor(
-    private trackId: number,
+    private trackId: string,
     private trackModule: {
       addTrack: (type: TrackType, name?: string) => Track
       removeTrack: (
-        trackId: number,
+        trackId: string,
         timelineItems: Ref<TimelineItem[]>,
         removeTimelineItemCallback?: (id: string) => void,
       ) => void
-      getTrack: (trackId: number) => Track | undefined
+      getTrack: (trackId: string) => Track | undefined
       tracks: { value: Track[] }
     },
     private timelineModule: {
@@ -1912,10 +1912,10 @@ export class ToggleTrackVisibilityCommand implements SimpleCommand {
   private previousVisibility: boolean // 保存切换前的可见性状态
 
   constructor(
-    private trackId: number,
+    private trackId: string,
     private trackModule: {
-      getTrack: (trackId: number) => Track | undefined
-      toggleTrackVisibility: (trackId: number, timelineItems?: Ref<TimelineItem[]>) => void
+      getTrack: (trackId: string) => Track | undefined
+      toggleTrackVisibility: (trackId: string, timelineItems?: Ref<TimelineItem[]>) => void
     },
     private timelineModule: {
       timelineItems: { value: TimelineItem[] }
@@ -2007,10 +2007,10 @@ export class ToggleTrackMuteCommand implements SimpleCommand {
   private previousMuteState: boolean // 保存切换前的静音状态
 
   constructor(
-    private trackId: number,
+    private trackId: string,
     private trackModule: {
-      getTrack: (trackId: number) => Track | undefined
-      toggleTrackMute: (trackId: number, timelineItems?: Ref<TimelineItem[]>) => void
+      getTrack: (trackId: string) => Track | undefined
+      toggleTrackMute: (trackId: string, timelineItems?: Ref<TimelineItem[]>) => void
     },
     private timelineModule: {
       timelineItems: Ref<TimelineItem[]>

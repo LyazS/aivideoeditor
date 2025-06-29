@@ -31,7 +31,7 @@ export function getTimelineItemAtFrames(
  * @returns 该轨道的所有项目
  */
 export function getTimelineItemsByTrack(
-  trackId: number,
+  trackId: string,
   timelineItems: TimelineItem[],
 ): TimelineItem[] {
   return timelineItems.filter((item) => item.trackId === trackId)
@@ -93,7 +93,7 @@ export function getTimelineItemsAtFrames(
  * @returns 找到的时间轴项目或null
  */
 export function getTimelineItemAtTrackAndFrames(
-  trackId: number,
+  trackId: string,
   frames: number,
   timelineItems: TimelineItem[],
 ): TimelineItem | null {

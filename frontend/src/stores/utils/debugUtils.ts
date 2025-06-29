@@ -48,7 +48,7 @@ export function printDebugInfo(
   details: unknown,
   mediaItems: MediaItem[],
   timelineItems: TimelineItem[],
-  tracks: { id: number; name: string }[],
+  tracks: { id: string; name: string }[],
 ) {
   const timestamp = new Date().toLocaleTimeString()
   console.group(`🎬 [${timestamp}] ${operation}`)

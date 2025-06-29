@@ -15,7 +15,7 @@ export function useDragUtils() {
   function setTimelineItemDragData(
     event: DragEvent,
     itemId: string,
-    trackId: number,
+    trackId: string,
     startTime: number, // 帧数
     selectedItems: string[],
     dragOffset: { x: number; y: number },
@@ -105,7 +105,7 @@ export function useDragUtils() {
     name: string,
     duration: number, // 帧数
     startTime: number, // 帧数
-    trackId: number,
+    trackId: string,
     isConflict: boolean = false,
     isMultiple: boolean = false,
     count?: number,
@@ -138,7 +138,7 @@ export function useDragUtils() {
 
     const rect = trackContent.getBoundingClientRect()
     const mouseX = event.clientX - rect.left
-    const targetTrackId = parseInt(trackContent.getAttribute('data-track-id') || '1')
+    const targetTrackId = trackContent.getAttribute('data-track-id') || videoStore.tracks[0]?.id || ''
 
     // 使用帧数进行精确计算
     let dropFrames: number
@@ -192,7 +192,7 @@ export function useDragUtils() {
     return document.querySelector(`[data-media-item-id="${mediaItemId}"]`)
   }
 
-  function getTrackElement(trackId: number): HTMLElement | null {
+  function getTrackElement(trackId: string): HTMLElement | null {
     return document.querySelector(`[data-track-id="${trackId}"]`)
   }
 
