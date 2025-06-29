@@ -18,25 +18,25 @@ export function getKeyframeDebugInfo(item: TimelineItem) {
   try {
     const hasAnim = hasAnimation(item)
 
-    if (!item.animation) {
+    if (!item.config.animation) {
       return { itemId: item.id, hasAnimation: false, errors: ['No animation config'] }
     }
 
     const clipDurationFrames = item.timeRange.timelineEndTime - item.timeRange.timelineStartTime
-    const keyframes = item.animation.keyframes.map((kf) => ({
+    const keyframes = item.config.animation.keyframes.map((kf: any) => ({
       framePosition: kf.framePosition,
       percentage: Math.round((kf.framePosition / clipDurationFrames) * 10000) / 100,
       properties: { ...kf.properties },
     }))
 
-    const isValid = isValidAnimationConfig(item.animation)
+    const isValid = isValidAnimationConfig(item.config.animation)
     if (!isValid) errors.push('Invalid animation config')
 
     return {
       itemId: item.id,
       hasAnimation: hasAnim,
-      isEnabled: item.animation.isEnabled,
-      keyframeCount: item.animation.keyframes.length,
+      isEnabled: item.config.animation.isEnabled,
+      keyframeCount: item.config.animation.keyframes.length,
       keyframes,
       isValid,
       errors,
@@ -58,7 +58,7 @@ export function logKeyframeDebugInfo(item: TimelineItem): void {
 
   if (debugInfo.keyframes && debugInfo.keyframes.length > 0) {
     console.log('🎯 关键帧列表:')
-    debugInfo.keyframes.forEach((kf, index) => {
+    debugInfo.keyframes.forEach((kf: any, index: number) => {
       console.log(`  ${index + 1}. 帧位置: ${kf.framePosition}, 百分比: ${kf.percentage}%`)
     })
   }

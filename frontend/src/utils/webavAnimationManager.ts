@@ -43,7 +43,7 @@ export class WebAVAnimationManager {
         return
       }
 
-      const animationConfig = this.timelineItem.animation!
+      const animationConfig = this.timelineItem.config.animation!
 
       // 验证动画配置
       if (!isValidAnimationConfig(animationConfig)) {

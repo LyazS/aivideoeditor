@@ -451,7 +451,7 @@ const handleItemDragStart = (event: DragEvent, item: MediaItem) => {
     item.id,
     item.name,
     item.duration,
-    item.mediaType,
+    item.mediaType as 'video' | 'image',
   )
 
   console.log('📦 [MediaLibrary] 使用统一格式设置拖拽数据:', dragData)

@@ -54,36 +54,50 @@ export function convertKeyframeToWebAV(
   const webavProps: Record<string, number> = {}
 
   // 所有属性都在properties中扁平化存储
-  const props = keyframe.properties
+  const props = keyframe.properties as any // 临时使用any避免类型错误
 
-  // 转换位置和尺寸（需要坐标系转换）
-  if (canvasWidth && canvasHeight) {
-    const webavCoords = projectToWebavCoords(
-      props.x,
-      props.y,
-      props.width,
-      props.height,
-      canvasWidth,
-      canvasHeight,
-    )
-    webavProps.x = webavCoords.x
-    webavProps.y = webavCoords.y
-  } else {
-    // 如果没有提供画布信息，直接使用原值（向后兼容）
-    console.warn('🎬 [Animation Converter] Missing canvas dimensions for coordinate conversion')
-    webavProps.x = props.x
-    webavProps.y = props.y
+  // 检查是否有视觉属性（用于区分audio和video/image类型）
+  const hasVisualProps = 'x' in props && 'y' in props && 'width' in props && 'height' in props
+
+  if (hasVisualProps) {
+    // 转换位置和尺寸（需要坐标系转换）
+    if (canvasWidth && canvasHeight) {
+      const webavCoords = projectToWebavCoords(
+        props.x,
+        props.y,
+        props.width,
+        props.height,
+        canvasWidth,
+        canvasHeight,
+      )
+      webavProps.x = webavCoords.x
+      webavProps.y = webavCoords.y
+    } else {
+      // 如果没有提供画布信息，直接使用原值（向后兼容）
+      console.warn('🎬 [Animation Converter] Missing canvas dimensions for coordinate conversion')
+      webavProps.x = props.x
+      webavProps.y = props.y
+    }
+
+    // 转换尺寸
+    webavProps.w = props.width
+    webavProps.h = props.height
+
+    // 转换旋转属性
+    if ('rotation' in props) {
+      webavProps.angle = props.rotation
+    }
+
+    // 转换透明度属性
+    if ('opacity' in props) {
+      webavProps.opacity = props.opacity
+    }
   }
 
-  // 转换尺寸
-  webavProps.w = props.width
-  webavProps.h = props.height
-
-  // 转换旋转属性
-  webavProps.angle = props.rotation
-
-  // 转换透明度属性
-  webavProps.opacity = props.opacity
+  // 处理音频属性（适用于video和audio类型）
+  if ('volume' in props && typeof props.volume === 'number') {
+    webavProps.volume = props.volume
+  }
 
   return webavProps
 }
@@ -212,23 +226,37 @@ export function isValidAnimationConfig(animationConfig: AnimationConfig): boolea
       return false
     }
 
-    const props = keyframe.properties
+    const props = keyframe.properties as any // 临时使用any避免类型错误
 
-    // 验证所有必需的属性都存在且为有效数值
-    if (
-      typeof props.x !== 'number' ||
-      typeof props.y !== 'number' ||
-      typeof props.width !== 'number' ||
-      typeof props.height !== 'number' ||
-      typeof props.rotation !== 'number' ||
-      typeof props.opacity !== 'number'
-    ) {
+    // 检查是否有视觉属性（用于区分audio和video/image类型）
+    const hasVisualProps = 'x' in props && 'y' in props && 'width' in props && 'height' in props
+
+    if (hasVisualProps) {
+      // 验证视觉属性都存在且为有效数值
+      if (
+        typeof props.x !== 'number' ||
+        typeof props.y !== 'number' ||
+        typeof props.width !== 'number' ||
+        typeof props.height !== 'number'
+      ) {
+        return false
+      }
+
+      // 验证数值范围
+      if (props.width <= 0 || props.height <= 0) {
+        return false
+      }
+    }
+
+    // 验证通用属性
+    if ('rotation' in props && typeof props.rotation !== 'number') {
       return false
     }
 
-    // 验证属性值在合理范围内
-    if (props.width <= 0 || props.height <= 0 || props.opacity < 0 || props.opacity > 1) {
-      return false
+    if ('opacity' in props) {
+      if (typeof props.opacity !== 'number' || props.opacity < 0 || props.opacity > 1) {
+        return false
+      }
     }
 
     return true

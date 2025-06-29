@@ -35,7 +35,7 @@ export function handleTimelineItemDurationChange(
     itemId: item.id,
     oldDuration: oldDurationFrames,
     newDuration: newDurationFrames,
-    hasAnimation: !!item.animation?.keyframes.length,
+    hasAnimation: !!item.config.animation?.keyframes.length,
   })
 
   // 如果时长没有变化，直接返回
@@ -45,7 +45,7 @@ export function handleTimelineItemDurationChange(
   }
 
   // 调整关键帧位置
-  if (item.animation && item.animation.keyframes.length > 0) {
+  if (item.config.animation && item.config.animation.keyframes.length > 0) {
     adjustKeyframesForDurationChange(item, oldDurationFrames, newDurationFrames)
   }
 
@@ -226,8 +226,8 @@ export function validateTimelineItemAfterDurationChange(item: TimelineItem): boo
   }
 
   // 检查关键帧位置是否在有效范围内
-  if (item.animation && item.animation.keyframes.length > 0) {
-    for (const keyframe of item.animation.keyframes) {
+  if (item.config.animation && item.config.animation.keyframes.length > 0) {
+    for (const keyframe of item.config.animation.keyframes) {
       if (keyframe.framePosition < 0 || keyframe.framePosition > durationFrames) {
         console.error('🚨 [Duration Change] Keyframe position out of range:', {
           framePosition: keyframe.framePosition,

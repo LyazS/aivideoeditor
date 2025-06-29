@@ -955,7 +955,7 @@ async function createMediaClipFromMediaItem(
     url: string
     name: string
     duration: number // 帧数
-    mediaType: 'video' | 'image'
+    mediaType: 'video' | 'image' | 'audio'
     fileInfo: {
       name: string
       type: string
@@ -1085,6 +1085,41 @@ async function createMediaClipFromMediaItem(
       videoStore.videoResolution.height,
     )
 
+    // 根据媒体类型创建对应的config
+    let config: any
+    if (mediaItem.mediaType === 'video') {
+      config = {
+        x: Math.round(projectCoords.x),
+        y: Math.round(projectCoords.y),
+        width: sprite.rect.w,
+        height: sprite.rect.h,
+        rotation: sprite.rect.angle || 0,
+        zIndex: sprite.zIndex,
+        opacity: sprite.opacity,
+        volume: 1,
+        isMuted: false,
+        animation: undefined, // 初始化动画配置
+      }
+    } else if (mediaItem.mediaType === 'image') {
+      config = {
+        x: Math.round(projectCoords.x),
+        y: Math.round(projectCoords.y),
+        width: sprite.rect.w,
+        height: sprite.rect.h,
+        rotation: sprite.rect.angle || 0,
+        zIndex: sprite.zIndex,
+        opacity: sprite.opacity,
+        animation: undefined, // 初始化动画配置
+      }
+    } else if (mediaItem.mediaType === 'audio') {
+      config = {
+        zIndex: sprite.zIndex,
+        volume: 1,
+        isMuted: false,
+        animation: undefined, // 初始化动画配置
+      }
+    }
+
     const timelineItem: TimelineItem = reactive({
       id: timelineItemId,
       mediaItemId: mediaItem.id,
@@ -1093,23 +1128,12 @@ async function createMediaClipFromMediaItem(
       timeRange: sprite.getTimeRange(), // 从sprite获取完整的timeRange（已经通过setTimeRange设置）
       sprite: markRaw(sprite), // 使用markRaw避免Vue响应式包装
       thumbnailUrl, // 添加缩略图URL
-      // Sprite位置和大小属性（使用项目坐标系）
-      x: Math.round(projectCoords.x),
-      y: Math.round(projectCoords.y),
-      width: sprite.rect.w,
-      height: sprite.rect.h,
-      // 其他sprite属性
-      rotation: sprite.rect.angle || 0, // 从sprite获取旋转角度（弧度），默认为0
-      zIndex: sprite.zIndex,
-      opacity: sprite.opacity,
-      // 音频属性（仅对视频有效）
-      volume: mediaItem.mediaType === 'video' ? 1 : 1, // 默认音量为1
-      isMuted: false, // 默认不静音
+      config, // 使用新的config结构
     })
 
     console.log('🔄 坐标系转换:', {
       WebAV坐标: { x: sprite.rect.x, y: sprite.rect.y },
-      项目坐标: { x: timelineItem.x, y: timelineItem.y },
+      项目坐标: { x: (timelineItem.config as any).x, y: (timelineItem.config as any).y },
       尺寸: { w: sprite.rect.w, h: sprite.rect.h },
     })
 

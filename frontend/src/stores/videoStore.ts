@@ -253,30 +253,31 @@ export const useVideoStore = defineStore('video', () => {
     // 获取当前的变换属性
     const oldTransform: typeof newTransform = {}
 
+    const config = timelineItem.config as any
     if (newTransform.x !== undefined) {
-      oldTransform.x = timelineItem.x
+      oldTransform.x = config.x
     }
     if (newTransform.y !== undefined) {
-      oldTransform.y = timelineItem.y
+      oldTransform.y = config.y
     }
 
     if (newTransform.width !== undefined) {
-      oldTransform.width = timelineItem.width
+      oldTransform.width = config.width
     }
     if (newTransform.height !== undefined) {
-      oldTransform.height = timelineItem.height
+      oldTransform.height = config.height
     }
 
     if (newTransform.rotation !== undefined) {
-      oldTransform.rotation = timelineItem.rotation
+      oldTransform.rotation = config.rotation
     }
 
     if (newTransform.opacity !== undefined) {
-      oldTransform.opacity = timelineItem.opacity
+      oldTransform.opacity = config.opacity
     }
 
     if (newTransform.zIndex !== undefined) {
-      oldTransform.zIndex = timelineItem.zIndex
+      oldTransform.zIndex = config.zIndex
     }
 
     if (newTransform.duration !== undefined) {
@@ -300,14 +301,14 @@ export const useVideoStore = defineStore('video', () => {
     if (newTransform.volume !== undefined) {
       // 获取当前音量（仅对视频有效）
       if (timelineItem.mediaType === 'video') {
-        oldTransform.volume = timelineItem.volume ?? 1
+        oldTransform.volume = config.volume ?? 1
       }
     }
 
     if (newTransform.isMuted !== undefined) {
       // 获取当前静音状态（仅对视频有效）
       if (timelineItem.mediaType === 'video') {
-        oldTransform.isMuted = timelineItem.isMuted ?? false
+        oldTransform.isMuted = config.isMuted ?? false
       }
     }
 

@@ -233,9 +233,9 @@ const isTrackVisible = computed(() => {
 // 关键帧相关计算
 const hasKeyframes = computed(() => {
   return !!(
-    props.timelineItem.animation &&
-    props.timelineItem.animation.isEnabled &&
-    props.timelineItem.animation.keyframes.length > 0
+    props.timelineItem.config.animation &&
+    props.timelineItem.config.animation.isEnabled &&
+    props.timelineItem.config.animation.keyframes.length > 0
   )
 })
 
@@ -243,7 +243,7 @@ const hasKeyframes = computed(() => {
 const visibleKeyframes = computed(() => {
   if (!hasKeyframes.value) return []
 
-  const keyframes = props.timelineItem.animation!.keyframes
+  const keyframes = props.timelineItem.config.animation!.keyframes
   const timeRange = props.timelineItem.timeRange
   const clipStartFrame = timeRange.timelineStartTime
   const clipEndFrame = timeRange.timelineEndTime
@@ -254,7 +254,7 @@ const visibleKeyframes = computed(() => {
   const clipWidth = clipRight - clipLeft
 
   return keyframes
-    .map((keyframe) => {
+    .map((keyframe: any) => {
       // 将相对帧数转换为绝对帧数
       const absoluteFrame = relativeFrameToAbsoluteFrame(keyframe.framePosition, timeRange)
 
@@ -272,7 +272,7 @@ const visibleKeyframes = computed(() => {
         isVisible: relativePixelPosition >= 0 && relativePixelPosition <= clipWidth,
       }
     })
-    .filter((kf) => kf.isVisible)
+    .filter((kf: any) => kf.isVisible)
 })
 
 function formatDurationFromFrames(frames: number): string {
@@ -588,7 +588,7 @@ async function stopResize() {
           currentTimeRange.timelineEndTime - currentTimeRange.timelineStartTime
         const newDurationFrames = newTimeRange.timelineEndTime - newTimeRange.timelineStartTime
 
-        if (props.timelineItem.animation && props.timelineItem.animation.keyframes.length > 0) {
+        if (props.timelineItem.config.animation && props.timelineItem.config.animation.keyframes.length > 0) {
           const { adjustKeyframesForDurationChange } = await import('../utils/unifiedKeyframeUtils')
           adjustKeyframesForDurationChange(props.timelineItem, oldDurationFrames, newDurationFrames)
           console.log('🎬 [Resize] Keyframes adjusted for duration change:', {
@@ -606,7 +606,7 @@ async function stopResize() {
           console.log('✅ 时间范围调整成功')
 
           // 如果有动画，需要重新设置WebAV动画时长
-          if (props.timelineItem.animation && props.timelineItem.animation.isEnabled) {
+          if (props.timelineItem.config.animation && props.timelineItem.config.animation.isEnabled) {
             const { updateWebAVAnimation } = await import('../utils/webavAnimationManager')
             await updateWebAVAnimation(props.timelineItem)
             console.log('🎬 [Resize] Animation duration updated after clip resize')

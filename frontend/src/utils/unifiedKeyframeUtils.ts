@@ -10,6 +10,9 @@ import type {
   KeyframeProperties,
   KeyframeButtonState,
   KeyframeUIState,
+  MediaType,
+  GetKeyframeProperties,
+  GetMediaConfig,
 } from '../types'
 
 // ==================== 关键帧位置转换工具函数 ====================
@@ -52,67 +55,110 @@ export function getKeyframePositionTolerance(timeRange: any): number {
 // ==================== 关键帧基础操作 ====================
 
 /**
- * 初始化动画配置
+ * 初始化动画配置（重构版本）
  * 如果TimelineItem没有动画配置，则创建一个空的配置
  */
-export function initializeAnimation(item: TimelineItem): void {
-  if (!item.animation) {
-    item.animation = {
+export function initializeAnimation<T extends MediaType>(item: TimelineItem<T>): void {
+  if (!item.config.animation) {
+    item.config.animation = {
       keyframes: [],
       isEnabled: false,
       easing: 'linear',
-    }
+    } as AnimationConfig<T>
   }
 }
 
 /**
- * 创建包含所有属性的关键帧
+ * 创建包含所有属性的关键帧（重构版本）
  * @param item 时间轴项目
  * @param absoluteFrame 绝对帧数（相对于整个项目时间轴）
  * @returns 新创建的关键帧
  */
-export function createKeyframe(item: TimelineItem, absoluteFrame: number): Keyframe {
+export function createKeyframe<T extends MediaType>(
+  item: TimelineItem<T>,
+  absoluteFrame: number
+): Keyframe<T> {
   const relativeFrame = absoluteFrameToRelativeFrame(absoluteFrame, item.timeRange)
+
+  // 根据媒体类型提取相应的可动画属性
+  const properties = extractAnimatableProperties(item)
 
   return {
     framePosition: relativeFrame,
-    properties: {
-      x: item.x,
-      y: item.y,
-      width: item.width,
-      height: item.height,
-      rotation: item.rotation,
-      opacity: item.opacity,
-    },
+    properties,
   }
 }
 
 /**
- * 检查是否有动画
+ * 提取可动画属性的类型安全工具函数
  */
-export function hasAnimation(item: TimelineItem): boolean {
-  return !!(item.animation && item.animation.isEnabled && item.animation.keyframes.length > 0)
+export function extractAnimatableProperties<T extends MediaType>(item: TimelineItem<T>): GetKeyframeProperties<T> {
+  const baseProps = { zIndex: item.config.zIndex }
+
+  if (item.mediaType === 'video') {
+    const config = item.config as GetMediaConfig<'video'>
+    return {
+      ...baseProps,
+      x: config.x,
+      y: config.y,
+      width: config.width,
+      height: config.height,
+      rotation: config.rotation,
+      opacity: config.opacity,
+      volume: config.volume,
+    } as GetKeyframeProperties<T>
+  }
+
+  if (item.mediaType === 'image') {
+    const config = item.config as GetMediaConfig<'image'>
+    return {
+      ...baseProps,
+      x: config.x,
+      y: config.y,
+      width: config.width,
+      height: config.height,
+      rotation: config.rotation,
+      opacity: config.opacity,
+    } as GetKeyframeProperties<T>
+  }
+
+  if (item.mediaType === 'audio') {
+    const config = item.config as GetMediaConfig<'audio'>
+    return {
+      ...baseProps,
+      volume: config.volume,
+    } as GetKeyframeProperties<T>
+  }
+
+  throw new Error(`不支持的媒体类型: ${item.mediaType}`)
 }
 
 /**
- * 检查当前帧是否在关键帧位置
+ * 检查是否有动画（重构版本）
  */
-export function isCurrentFrameOnKeyframe(item: TimelineItem, absoluteFrame: number): boolean {
-  if (!item.animation) return false
+export function hasAnimation<T extends MediaType>(item: TimelineItem<T>): boolean {
+  return !!(item.config.animation && item.config.animation.isEnabled && item.config.animation.keyframes.length > 0)
+}
+
+/**
+ * 检查当前帧是否在关键帧位置（重构版本）
+ */
+export function isCurrentFrameOnKeyframe<T extends MediaType>(item: TimelineItem<T>, absoluteFrame: number): boolean {
+  if (!item.config.animation) return false
 
   const relativeFrame = absoluteFrameToRelativeFrame(absoluteFrame, item.timeRange)
   const tolerance = getKeyframePositionTolerance(item.timeRange)
 
-  return item.animation.keyframes.some(
-    (kf) => Math.abs(kf.framePosition - relativeFrame) <= tolerance,
+  return item.config.animation.keyframes.some(
+    (kf: any) => Math.abs(kf.framePosition - relativeFrame) <= tolerance,
   )
 }
 
 /**
- * 获取关键帧按钮状态
+ * 获取关键帧按钮状态（重构版本）
  */
-export function getKeyframeButtonState(
-  item: TimelineItem,
+export function getKeyframeButtonState<T extends MediaType>(
+  item: TimelineItem<T>,
   currentFrame: number,
 ): KeyframeButtonState {
   if (!hasAnimation(item)) {
@@ -127,9 +173,9 @@ export function getKeyframeButtonState(
 }
 
 /**
- * 获取关键帧UI状态
+ * 获取关键帧UI状态（重构版本）
  */
-export function getKeyframeUIState(item: TimelineItem, currentFrame: number): KeyframeUIState {
+export function getKeyframeUIState<T extends MediaType>(item: TimelineItem<T>, currentFrame: number): KeyframeUIState {
   return {
     hasAnimation: hasAnimation(item),
     isOnKeyframe: isCurrentFrameOnKeyframe(item, currentFrame),
@@ -139,52 +185,52 @@ export function getKeyframeUIState(item: TimelineItem, currentFrame: number): Ke
 // ==================== 关键帧操作 ====================
 
 /**
- * 在指定帧位置查找关键帧
+ * 在指定帧位置查找关键帧（重构版本）
  */
-function findKeyframeAtFrame(item: TimelineItem, absoluteFrame: number): Keyframe | undefined {
-  if (!item.animation) return undefined
+function findKeyframeAtFrame<T extends MediaType>(item: TimelineItem<T>, absoluteFrame: number): Keyframe<T> | undefined {
+  if (!item.config.animation) return undefined
 
   const relativeFrame = absoluteFrameToRelativeFrame(absoluteFrame, item.timeRange)
   const tolerance = getKeyframePositionTolerance(item.timeRange)
 
-  return item.animation.keyframes.find(
-    (kf) => Math.abs(kf.framePosition - relativeFrame) <= tolerance,
+  return item.config.animation.keyframes.find(
+    (kf: any) => Math.abs(kf.framePosition - relativeFrame) <= tolerance,
   )
 }
 
 /**
- * 启用动画
+ * 启用动画（重构版本）
  */
-export function enableAnimation(item: TimelineItem): void {
+export function enableAnimation<T extends MediaType>(item: TimelineItem<T>): void {
   initializeAnimation(item)
-  item.animation!.isEnabled = true
+  item.config.animation!.isEnabled = true
 }
 
 /**
- * 禁用动画
+ * 禁用动画（重构版本）
  */
-export function disableAnimation(item: TimelineItem): void {
-  if (item.animation) {
-    item.animation.isEnabled = false
-    item.animation.keyframes = []
+export function disableAnimation<T extends MediaType>(item: TimelineItem<T>): void {
+  if (item.config.animation) {
+    item.config.animation.isEnabled = false
+    item.config.animation.keyframes = []
   }
 }
 
 /**
- * 删除指定帧位置的关键帧
+ * 删除指定帧位置的关键帧（重构版本）
  */
-export function removeKeyframeAtFrame(item: TimelineItem, absoluteFrame: number): boolean {
-  if (!item.animation) return false
+export function removeKeyframeAtFrame<T extends MediaType>(item: TimelineItem<T>, absoluteFrame: number): boolean {
+  if (!item.config.animation) return false
 
   const relativeFrame = absoluteFrameToRelativeFrame(absoluteFrame, item.timeRange)
   const tolerance = getKeyframePositionTolerance(item.timeRange)
-  const initialLength = item.animation.keyframes.length
+  const initialLength = item.config.animation.keyframes.length
 
-  item.animation.keyframes = item.animation.keyframes.filter(
-    (kf) => Math.abs(kf.framePosition - relativeFrame) > tolerance,
+  item.config.animation.keyframes = item.config.animation.keyframes.filter(
+    (kf: any) => Math.abs(kf.framePosition - relativeFrame) > tolerance,
   )
 
-  const removed = item.animation.keyframes.length < initialLength
+  const removed = item.config.animation.keyframes.length < initialLength
   if (removed) {
     console.log('🎬 [Unified Keyframe] Removed keyframe at frame:', absoluteFrame)
   }
@@ -205,18 +251,18 @@ export function adjustKeyframesForDurationChange(
   oldDurationFrames: number,
   newDurationFrames: number,
 ): void {
-  if (!item.animation || item.animation.keyframes.length === 0) return
+  if (!item.config.animation || item.config.animation.keyframes.length === 0) return
   if (oldDurationFrames <= 0 || newDurationFrames <= 0) return
 
   console.log('🎬 [Unified Keyframe] Adjusting keyframes for duration change:', {
     itemId: item.id,
     oldDuration: oldDurationFrames,
     newDuration: newDurationFrames,
-    keyframeCount: item.animation.keyframes.length,
+    keyframeCount: item.config.animation.keyframes.length,
   })
 
   // 为每个关键帧重新计算位置
-  item.animation.keyframes.forEach((keyframe) => {
+  item.config.animation.keyframes.forEach((keyframe: any) => {
     // 计算在原时长中的百分比位置
     const percentagePosition = keyframe.framePosition / oldDurationFrames
 
@@ -234,13 +280,13 @@ export function adjustKeyframesForDurationChange(
   })
 
   // 移除超出新时长范围的关键帧
-  const validKeyframes = item.animation.keyframes.filter(
-    (kf) => kf.framePosition <= newDurationFrames,
+  const validKeyframes = item.config.animation.keyframes.filter(
+    (kf: any) => kf.framePosition <= newDurationFrames,
   )
-  const removedCount = item.animation.keyframes.length - validKeyframes.length
+  const removedCount = item.config.animation.keyframes.length - validKeyframes.length
 
   if (removedCount > 0) {
-    item.animation.keyframes = validKeyframes
+    item.config.animation.keyframes = validKeyframes
     console.log('🎬 [Unified Keyframe] Removed keyframes beyond new duration:', removedCount)
   }
 
@@ -249,12 +295,12 @@ export function adjustKeyframesForDurationChange(
 }
 
 /**
- * 按帧位置排序关键帧
+ * 按帧位置排序关键帧（重构版本）
  */
-export function sortKeyframes(item: TimelineItem): void {
-  if (!item.animation) return
+export function sortKeyframes<T extends MediaType>(item: TimelineItem<T>): void {
+  if (!item.config.animation) return
 
-  item.animation.keyframes.sort((a, b) => a.framePosition - b.framePosition)
+  item.config.animation.keyframes.sort((a: any, b: any) => a.framePosition - b.framePosition)
 }
 
 // ==================== 统一关键帧交互逻辑 ====================
@@ -268,7 +314,7 @@ function handleClick_NoAnimation(item: TimelineItem, currentFrame: number): void
 
   // 2. 在当前帧创建包含所有属性的关键帧
   const keyframe = createKeyframe(item, currentFrame)
-  item.animation!.keyframes.push(keyframe)
+  item.config.animation!.keyframes.push(keyframe)
 
   // 3. 排序关键帧
   sortKeyframes(item)
@@ -288,12 +334,12 @@ function handleClick_OnKeyframe(item: TimelineItem, currentFrame: number): void 
   removeKeyframeAtFrame(item, currentFrame)
 
   // 2. 检查是否还有其他关键帧
-  if (item.animation!.keyframes.length > 0) {
+  if (item.config.animation!.keyframes.length > 0) {
     // 还有其他关键帧：蓝色 → 金色
     console.log('🎬 [Unified Keyframe] Removed keyframe, animation continues:', {
       itemId: item.id,
       frame: currentFrame,
-      remainingKeyframes: item.animation!.keyframes.length,
+      remainingKeyframes: item.config.animation!.keyframes.length,
     })
   } else {
     // 没有其他关键帧：蓝色 → 黑色
@@ -311,7 +357,7 @@ function handleClick_OnKeyframe(item: TimelineItem, currentFrame: number): void 
 function handleClick_BetweenKeyframes(item: TimelineItem, currentFrame: number): void {
   // 1. 在当前帧创建包含所有属性的关键帧
   const keyframe = createKeyframe(item, currentFrame)
-  item.animation!.keyframes.push(keyframe)
+  item.config.animation!.keyframes.push(keyframe)
 
   // 2. 排序关键帧
   sortKeyframes(item)
@@ -355,7 +401,7 @@ export function toggleKeyframe(item: TimelineItem, currentFrame: number): void {
  */
 function handlePropertyChange_NoAnimation(item: TimelineItem, property: string, value: any): void {
   // 直接更新属性值，不创建关键帧
-  ;(item as any)[property] = value
+  ;(item.config as any)[property] = value
 
   console.log('🎬 [Unified Keyframe] Property updated without animation:', {
     itemId: item.id,
@@ -374,7 +420,7 @@ function handlePropertyChange_OnKeyframe(
   value: any,
 ): void {
   // 1. 更新TimelineItem属性
-  ;(item as any)[property] = value
+  ;(item.config as any)[property] = value
 
   // 2. 找到当前帧的关键帧并更新
   const keyframe = findKeyframeAtFrame(item, currentFrame)
@@ -400,11 +446,11 @@ function handlePropertyChange_BetweenKeyframes(
   value: any,
 ): void {
   // 1. 更新TimelineItem属性
-  ;(item as any)[property] = value
+  ;(item.config as any)[property] = value
 
   // 2. 在当前帧创建新关键帧（包含所有属性的当前值）
   const keyframe = createKeyframe(item, currentFrame)
-  item.animation!.keyframes.push(keyframe)
+  item.config.animation!.keyframes.push(keyframe)
 
   console.log('🎬 [Unified Keyframe] Created keyframe for property change:', {
     itemId: item.id,
@@ -449,14 +495,14 @@ export function handlePropertyChange(
  * 获取上一个关键帧的帧数
  */
 export function getPreviousKeyframeFrame(item: TimelineItem, currentFrame: number): number | null {
-  if (!item.animation || item.animation.keyframes.length === 0) return null
+  if (!item.config.animation || item.config.animation.keyframes.length === 0) return null
 
   const currentRelativeFrame = absoluteFrameToRelativeFrame(currentFrame, item.timeRange)
 
   // 找到所有在当前位置之前的关键帧
-  const previousKeyframes = item.animation.keyframes
-    .filter((kf) => kf.framePosition < currentRelativeFrame)
-    .sort((a, b) => b.framePosition - a.framePosition) // 按位置降序排列
+  const previousKeyframes = item.config.animation.keyframes
+    .filter((kf: any) => kf.framePosition < currentRelativeFrame)
+    .sort((a: any, b: any) => b.framePosition - a.framePosition) // 按位置降序排列
 
   if (previousKeyframes.length === 0) return null
 
@@ -468,14 +514,14 @@ export function getPreviousKeyframeFrame(item: TimelineItem, currentFrame: numbe
  * 获取下一个关键帧的帧数
  */
 export function getNextKeyframeFrame(item: TimelineItem, currentFrame: number): number | null {
-  if (!item.animation || item.animation.keyframes.length === 0) return null
+  if (!item.config.animation || item.config.animation.keyframes.length === 0) return null
 
   const currentRelativeFrame = absoluteFrameToRelativeFrame(currentFrame, item.timeRange)
 
   // 找到所有在当前位置之后的关键帧
-  const nextKeyframes = item.animation.keyframes
-    .filter((kf) => kf.framePosition > currentRelativeFrame)
-    .sort((a, b) => a.framePosition - b.framePosition) // 按位置升序排列
+  const nextKeyframes = item.config.animation.keyframes
+    .filter((kf: any) => kf.framePosition > currentRelativeFrame)
+    .sort((a: any, b: any) => a.framePosition - b.framePosition) // 按位置升序排列
 
   if (nextKeyframes.length === 0) return null
 
@@ -489,10 +535,10 @@ export function getNextKeyframeFrame(item: TimelineItem, currentFrame: number): 
  * 清除所有关键帧
  */
 export function clearAllKeyframes(item: TimelineItem): void {
-  if (!item.animation) return
+  if (!item.config.animation) return
 
-  item.animation.keyframes = []
-  item.animation.isEnabled = false
+  item.config.animation.keyframes = []
+  item.config.animation.isEnabled = false
 
   console.log('🎬 [Unified Keyframe] Cleared all keyframes:', {
     itemId: item.id,
@@ -503,18 +549,18 @@ export function clearAllKeyframes(item: TimelineItem): void {
  * 获取关键帧总数
  */
 export function getKeyframeCount(item: TimelineItem): number {
-  return item.animation?.keyframes.length || 0
+  return item.config.animation?.keyframes.length || 0
 }
 
 /**
  * 获取所有关键帧的帧数列表（按时间顺序）
  */
 export function getAllKeyframeFrames(item: TimelineItem): number[] {
-  if (!item.animation) return []
+  if (!item.config.animation) return []
 
-  return item.animation.keyframes
-    .map((kf) => relativeFrameToAbsoluteFrame(kf.framePosition, item.timeRange))
-    .sort((a, b) => a - b)
+  return item.config.animation.keyframes
+    .map((kf: any) => relativeFrameToAbsoluteFrame(kf.framePosition, item.timeRange))
+    .sort((a: number, b: number) => a - b)
 }
 
 // ==================== 调试和验证 ====================
@@ -523,11 +569,11 @@ export function getAllKeyframeFrames(item: TimelineItem): number[] {
  * 验证关键帧数据的完整性
  */
 export function validateKeyframes(item: TimelineItem): boolean {
-  if (!item.animation) return true
+  if (!item.config.animation) return true
 
   const clipDurationFrames = item.timeRange.timelineEndTime - item.timeRange.timelineStartTime
 
-  for (const keyframe of item.animation.keyframes) {
+  for (const keyframe of item.config.animation.keyframes) {
     // 检查位置是否在有效范围内（使用帧数）
     if (keyframe.framePosition < 0 || keyframe.framePosition > clipDurationFrames) {
       console.warn('🎬 [Unified Keyframe] Invalid keyframe position:', {
@@ -567,11 +613,11 @@ export function debugKeyframes(item: TimelineItem): void {
     keyframeCount: getKeyframeCount(item),
   })
 
-  if (item.animation) {
+  if (item.config.animation) {
     console.log('Animation Config:', {
-      isEnabled: item.animation.isEnabled,
-      easing: item.animation.easing,
-      keyframes: item.animation.keyframes,
+      isEnabled: item.config.animation.isEnabled,
+      easing: item.config.animation.easing,
+      keyframes: item.config.animation.keyframes,
     })
 
     console.log('Keyframe Frames:', getAllKeyframeFrames(item))

@@ -3,7 +3,7 @@
  * 统一处理所有时间范围重叠检测的逻辑，避免代码重复
  */
 
-import type { TimelineItem, VideoTimeRange, ImageTimeRange } from '../types'
+import type { TimelineItem, VideoTimeRange, ImageTimeRange, AudioTimeRange, MediaType } from '../types'
 
 // ==================== 基础类型定义 ====================
 
@@ -83,11 +83,11 @@ export function calculateOverlapDuration(range1: TimeRange, range2: TimeRange): 
 // ==================== TimelineItem 专用函数 ====================
 
 /**
- * 从TimelineItem提取时间范围
+ * 从TimelineItem提取时间范围（重构版本）
  * @param item 时间轴项目
  * @returns 时间范围
  */
-export function extractTimeRange(item: TimelineItem): TimeRange {
+export function extractTimeRange<T extends MediaType>(item: TimelineItem<T>): TimeRange {
   return {
     start: item.timeRange.timelineStartTime,
     end: item.timeRange.timelineEndTime,
@@ -95,26 +95,29 @@ export function extractTimeRange(item: TimelineItem): TimeRange {
 }
 
 /**
- * 检测两个TimelineItem是否重叠
+ * 检测两个TimelineItem是否重叠（重构版本）
  * @param item1 时间轴项目1
  * @param item2 时间轴项目2
  * @returns 是否重叠
  */
-export function isTimelineItemsOverlapping(item1: TimelineItem, item2: TimelineItem): boolean {
+export function isTimelineItemsOverlapping<T1 extends MediaType, T2 extends MediaType>(
+  item1: TimelineItem<T1>,
+  item2: TimelineItem<T2>
+): boolean {
   const range1 = extractTimeRange(item1)
   const range2 = extractTimeRange(item2)
   return isTimeRangeOverlapping(range1, range2)
 }
 
 /**
- * 检测TimelineItem与指定时间范围是否重叠
+ * 检测TimelineItem与指定时间范围是否重叠（重构版本）
  * @param item 时间轴项目
  * @param startTime 开始时间（帧数）
  * @param endTime 结束时间（帧数）
  * @returns 重叠检测结果
  */
-export function detectTimelineItemOverlap(
-  item: TimelineItem,
+export function detectTimelineItemOverlap<T extends MediaType>(
+  item: TimelineItem<T>,
   startTime: number,
   endTime: number,
 ): OverlapResult {
@@ -194,7 +197,7 @@ export function detectTrackConflicts(
 // ==================== 批量重叠检测 ====================
 
 /**
- * 统计轨道组中的重叠项目数量
+ * 统计轨道组中的重叠项目数量（重构版本）
  * @param timelineItems 所有时间轴项目
  * @returns 重叠项目的数量
  */

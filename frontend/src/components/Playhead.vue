@@ -108,10 +108,10 @@ const clipBoundaryFrames = computed(() => {
 const keyframePositions = computed(() => {
   const positions: number[] = []
 
-  // 遍历所有时间轴项目，收集关键帧位置
+  // 遍历所有时间轴项目，收集关键帧位置（重构版本）
   videoStore.timelineItems.forEach((item) => {
-    if (item.animation && item.animation.keyframes.length > 0) {
-      item.animation.keyframes.forEach((keyframe) => {
+    if (item.config.animation && item.config.animation.keyframes.length > 0) {
+      item.config.animation.keyframes.forEach((keyframe: any) => {
         // 将相对帧数转换为绝对帧数
         const absoluteFrame = relativeFrameToAbsoluteFrame(keyframe.framePosition, item.timeRange)
         positions.push(absoluteFrame)

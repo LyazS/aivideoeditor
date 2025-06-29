@@ -523,15 +523,16 @@ const speedSegments = [
   { min: 10, max: 100, normalizedStart: 80, normalizedEnd: 100 }, // 80-100%: 10-100x
 ]
 
-// 分辨率相关 - 显示当前选中视频缩放后的分辨率
+// 分辨率相关 - 显示当前选中视频缩放后的分辨率（重构版本）
 const currentResolution = computed(() => {
-  if (!props.selectedTimelineItem) {
+  if (!props.selectedTimelineItem || (props.selectedTimelineItem.mediaType !== 'video' && props.selectedTimelineItem.mediaType !== 'image')) {
     return { width: 0, height: 0 }
   }
-  // 直接使用TimelineItem中的width/height属性，这是缩放后的实际尺寸
+  // 从config中获取width/height属性，这是缩放后的实际尺寸
+  const config = props.selectedTimelineItem.config as any
   return {
-    width: Math.round(props.selectedTimelineItem.width),
-    height: Math.round(props.selectedTimelineItem.height),
+    width: Math.round(config.width),
+    height: Math.round(config.height),
   }
 })
 
@@ -564,19 +565,21 @@ const normalizedSpeed = computed(() => {
 
 const speedInputValue = computed(() => playbackRate.value)
 
-// 音量相关 - 直接从TimelineItem读取，这是响应式的
+// 音量相关 - 从config读取，这是响应式的（重构版本）
 const volume = computed(() => {
   if (!props.selectedTimelineItem || props.selectedTimelineItem.mediaType !== 'video') return 1
+  const config = props.selectedTimelineItem.config as any // 临时使用any
   // 确保 volume 和 isMuted 都有默认值
-  const itemVolume = props.selectedTimelineItem.volume ?? 1
-  const itemMuted = props.selectedTimelineItem.isMuted ?? false
+  const itemVolume = config.volume ?? 1
+  const itemMuted = config.isMuted ?? false
   // 静音时显示0，否则显示实际音量
   return itemMuted ? 0 : itemVolume
 })
 
 const isMuted = computed(() => {
   if (!props.selectedTimelineItem || props.selectedTimelineItem.mediaType !== 'video') return false
-  return props.selectedTimelineItem.isMuted ?? false
+  const config = props.selectedTimelineItem.config as any // 临时使用any
+  return config.isMuted ?? false
 })
 
 // NumberInput 样式定义
@@ -611,31 +614,50 @@ const scaleInputStyle = {
   flex: '0 0 auto',
 }
 
-// 变换属性 - 基于TimelineItem的响应式计算属性
-const transformX = computed(() => props.selectedTimelineItem?.x || 0)
-const transformY = computed(() => props.selectedTimelineItem?.y || 0)
+// 变换属性 - 基于TimelineItem的响应式计算属性（重构版本）
+const transformX = computed(() => {
+  if (!props.selectedTimelineItem || (props.selectedTimelineItem.mediaType !== 'video' && props.selectedTimelineItem.mediaType !== 'image')) return 0
+  const config = props.selectedTimelineItem.config as any
+  return config.x || 0
+})
+const transformY = computed(() => {
+  if (!props.selectedTimelineItem || (props.selectedTimelineItem.mediaType !== 'video' && props.selectedTimelineItem.mediaType !== 'image')) return 0
+  const config = props.selectedTimelineItem.config as any
+  return config.y || 0
+})
 const scaleX = computed(() => {
-  if (!props.selectedTimelineItem || !selectedMediaItem.value) return 1
+  if (!props.selectedTimelineItem || !selectedMediaItem.value || (props.selectedTimelineItem.mediaType !== 'video' && props.selectedTimelineItem.mediaType !== 'image')) return 1
+  const config = props.selectedTimelineItem.config as any
   const originalResolution =
     selectedMediaItem.value.mediaType === 'video'
       ? videoStore.getVideoOriginalResolution(selectedMediaItem.value.id)
       : videoStore.getImageOriginalResolution(selectedMediaItem.value.id)
-  return props.selectedTimelineItem.width / originalResolution.width
+  return config.width / originalResolution.width
 })
 const scaleY = computed(() => {
-  if (!props.selectedTimelineItem || !selectedMediaItem.value) return 1
+  if (!props.selectedTimelineItem || !selectedMediaItem.value || (props.selectedTimelineItem.mediaType !== 'video' && props.selectedTimelineItem.mediaType !== 'image')) return 1
+  const config = props.selectedTimelineItem.config as any
   const originalResolution =
     selectedMediaItem.value.mediaType === 'video'
       ? videoStore.getVideoOriginalResolution(selectedMediaItem.value.id)
       : videoStore.getImageOriginalResolution(selectedMediaItem.value.id)
-  return props.selectedTimelineItem.height / originalResolution.height
+  return config.height / originalResolution.height
 })
 const rotation = computed(() => {
-  const radians = props.selectedTimelineItem?.rotation || 0
+  if (!props.selectedTimelineItem || (props.selectedTimelineItem.mediaType !== 'video' && props.selectedTimelineItem.mediaType !== 'image')) return 0
+  const config = props.selectedTimelineItem.config as any
+  const radians = config.rotation || 0
   return webAVRadiansToUIDegrees(radians)
 })
-const opacity = computed(() => props.selectedTimelineItem?.opacity || 1)
-const zIndex = computed(() => props.selectedTimelineItem?.zIndex || 0)
+const opacity = computed(() => {
+  if (!props.selectedTimelineItem || (props.selectedTimelineItem.mediaType !== 'video' && props.selectedTimelineItem.mediaType !== 'image')) return 1
+  const config = props.selectedTimelineItem.config as any
+  return config.opacity || 1
+})
+const zIndex = computed(() => {
+  if (!props.selectedTimelineItem) return 0
+  return props.selectedTimelineItem.config.zIndex || 0
+})
 
 // 等比缩放相关
 const proportionalScale = computed({
@@ -748,10 +770,10 @@ const updateTargetDurationFrames = async (newDurationFrames: number) => {
   const oldDurationFrames = timeRange.timelineEndTime - timeRange.timelineStartTime // 计算旧时长
   const newTimelineEndTime = timeRange.timelineStartTime + alignedDurationFrames // 帧数相加，不需要转换
 
-  // 🎯 关键帧位置调整：在更新timeRange之前调整关键帧位置
+  // 🎯 关键帧位置调整：在更新timeRange之前调整关键帧位置（重构版本）
   if (
-    props.selectedTimelineItem.animation &&
-    props.selectedTimelineItem.animation.keyframes.length > 0
+    props.selectedTimelineItem.config.animation &&
+    props.selectedTimelineItem.config.animation.keyframes.length > 0
   ) {
     const { adjustKeyframesForDurationChange } = await import('../utils/unifiedKeyframeUtils')
     adjustKeyframesForDurationChange(
@@ -784,8 +806,8 @@ const updateTargetDurationFrames = async (newDurationFrames: number) => {
   // 更新timelineItem的timeRange
   props.selectedTimelineItem.timeRange = sprite.getTimeRange()
 
-  // 如果有动画，需要重新设置WebAV动画时长
-  if (props.selectedTimelineItem.animation && props.selectedTimelineItem.animation.isEnabled) {
+  // 如果有动画，需要重新设置WebAV动画时长（重构版本）
+  if (props.selectedTimelineItem.config.animation && props.selectedTimelineItem.config.animation.isEnabled) {
     const { updateWebAVAnimation } = await import('../utils/webavAnimationManager')
     await updateWebAVAnimation(props.selectedTimelineItem)
     console.log('🎬 [Duration Update] Animation duration updated after clip duration change')
@@ -819,12 +841,15 @@ const updateVolume = (newVolume: number) => {
 
   const clampedVolume = Math.max(0, Math.min(1, newVolume))
 
-  // 确保属性存在，如果不存在则初始化
-  if (props.selectedTimelineItem.volume === undefined) {
-    props.selectedTimelineItem.volume = 1
-  }
-  if (props.selectedTimelineItem.isMuted === undefined) {
-    props.selectedTimelineItem.isMuted = false
+  // 确保属性存在，如果不存在则初始化（重构版本）
+  if (props.selectedTimelineItem.mediaType === 'video') {
+    const config = props.selectedTimelineItem.config as any
+    if (config.volume === undefined) {
+      config.volume = 1
+    }
+    if (config.isMuted === undefined) {
+      config.isMuted = false
+    }
   }
 
   // 使用历史记录系统更新音量
@@ -848,15 +873,16 @@ const updateVolume = (newVolume: number) => {
 const toggleMute = () => {
   if (!props.selectedTimelineItem || props.selectedTimelineItem.mediaType !== 'video') return
 
-  // 确保属性存在，如果不存在则初始化
-  if (props.selectedTimelineItem.volume === undefined) {
-    props.selectedTimelineItem.volume = 1
+  const config = props.selectedTimelineItem.config as any
+  // 确保属性存在，如果不存在则初始化（重构版本）
+  if (config.volume === undefined) {
+    config.volume = 1
   }
-  if (props.selectedTimelineItem.isMuted === undefined) {
-    props.selectedTimelineItem.isMuted = false
+  if (config.isMuted === undefined) {
+    config.isMuted = false
   }
 
-  const newMutedState = !props.selectedTimelineItem.isMuted
+  const newMutedState = !config.isMuted
 
   // 使用历史记录系统切换静音状态
   videoStore.updateTimelineItemTransformWithHistory(props.selectedTimelineItem.id, {
@@ -867,7 +893,7 @@ const toggleMute = () => {
     '✅ 静音状态切换:',
     newMutedState ? '静音' : '有声',
     '音量保持:',
-    props.selectedTimelineItem.volume,
+    (props.selectedTimelineItem.config as any).volume,
   )
 }
 
@@ -951,12 +977,13 @@ const updateTransform = async (transform?: {
 }) => {
   if (!props.selectedTimelineItem) return
 
-  // 如果没有提供transform参数，使用当前的响应式值
+  // 如果没有提供transform参数，使用当前的响应式值（重构版本）
+  const config = props.selectedTimelineItem.config as any
   const finalTransform = transform || {
     x: transformX.value,
     y: transformY.value,
-    width: props.selectedTimelineItem.width,
-    height: props.selectedTimelineItem.height,
+    width: config.width,
+    height: config.height,
     rotation: rotation.value,
     opacity: opacity.value,
     zIndex: zIndex.value,
@@ -1046,9 +1073,10 @@ const setScaleX = (value: number) => {
       ? videoStore.getVideoOriginalResolution(selectedMediaItem.value.id)
       : videoStore.getImageOriginalResolution(selectedMediaItem.value.id)
   const newScaleX = Math.max(0.01, Math.min(5, value))
+  const config = props.selectedTimelineItem.config as any
   const newSize = {
     width: originalResolution.width * newScaleX,
-    height: props.selectedTimelineItem.height, // 保持Y尺寸不变
+    height: config.height, // 保持Y尺寸不变
   }
   updateTransform({ width: newSize.width, height: newSize.height })
 }
@@ -1061,8 +1089,9 @@ const setScaleY = (value: number) => {
       ? videoStore.getVideoOriginalResolution(selectedMediaItem.value.id)
       : videoStore.getImageOriginalResolution(selectedMediaItem.value.id)
   const newScaleY = Math.max(0.01, Math.min(5, value))
+  const config = props.selectedTimelineItem.config as any
   const newSize = {
-    width: props.selectedTimelineItem.width, // 保持X尺寸不变
+    width: config.width, // 保持X尺寸不变
     height: originalResolution.height * newScaleY,
   }
   updateTransform({ width: newSize.width, height: newSize.height })
@@ -1091,14 +1120,18 @@ const updateUnifiedProperty = async (property: string, value: any) => {
     // 1. 使用统一关键帧的属性修改处理（更新关键帧数据）
     await handleUnifiedPropertyChange(property, value)
 
-    // 2. 重要：更新TimelineItem的实际属性值（这会触发响应式更新）
+    // 2. 重要：更新TimelineItem的实际属性值（这会触发响应式更新）（重构版本）
     // 这一步确保属性面板显示正确的值
-    if (property === 'x') props.selectedTimelineItem.x = value
-    else if (property === 'y') props.selectedTimelineItem.y = value
-    else if (property === 'width') props.selectedTimelineItem.width = value
-    else if (property === 'height') props.selectedTimelineItem.height = value
-    else if (property === 'rotation') props.selectedTimelineItem.rotation = value
-    else if (property === 'opacity') props.selectedTimelineItem.opacity = value
+    if (props.selectedTimelineItem.mediaType === 'video' || props.selectedTimelineItem.mediaType === 'image') {
+      const config = props.selectedTimelineItem.config as any
+      if (property === 'x') config.x = value
+      else if (property === 'y') config.y = value
+      else if (property === 'width') config.width = value
+      else if (property === 'height') config.height = value
+      else if (property === 'rotation') config.rotation = value
+      else if (property === 'opacity') config.opacity = value
+    }
+    if (property === 'zIndex') props.selectedTimelineItem.config.zIndex = value
 
     // 3. 更新sprite的实时属性（触发WebAV的实时渲染和preframe）
     const sprite = props.selectedTimelineItem.sprite
@@ -1107,40 +1140,43 @@ const updateUnifiedProperty = async (property: string, value: any) => {
       const transform: any = {}
 
       if (property === 'x' || property === 'y') {
-        // 位置更新需要坐标转换
+        // 位置更新需要坐标转换（重构版本）
+        const config = props.selectedTimelineItem.config as any
         const { projectToWebavCoords } = await import('../utils/coordinateTransform')
         const webavCoords = projectToWebavCoords(
-          props.selectedTimelineItem.x,
-          props.selectedTimelineItem.y,
-          props.selectedTimelineItem.width,
-          props.selectedTimelineItem.height,
+          config.x,
+          config.y,
+          config.width,
+          config.height,
           videoStore.videoResolution.width,
           videoStore.videoResolution.height,
         )
         transform.x = webavCoords.x
         transform.y = webavCoords.y
       } else if (property === 'width') {
-        // 🔧 中心缩放：更新宽度时需要重新计算位置以保持中心不变
+        // 🔧 中心缩放：更新宽度时需要重新计算位置以保持中心不变（重构版本）
+        const config = props.selectedTimelineItem.config as any
         transform.w = value
         const { projectToWebavCoords } = await import('../utils/coordinateTransform')
         const webavCoords = projectToWebavCoords(
-          props.selectedTimelineItem.x,
-          props.selectedTimelineItem.y,
+          config.x,
+          config.y,
           value, // 使用新的宽度
-          props.selectedTimelineItem.height,
+          config.height,
           videoStore.videoResolution.width,
           videoStore.videoResolution.height,
         )
         transform.x = webavCoords.x
         transform.y = webavCoords.y
       } else if (property === 'height') {
-        // 🔧 中心缩放：更新高度时需要重新计算位置以保持中心不变
+        // 🔧 中心缩放：更新高度时需要重新计算位置以保持中心不变（重构版本）
+        const config = props.selectedTimelineItem.config as any
         transform.h = value
         const { projectToWebavCoords } = await import('../utils/coordinateTransform')
         const webavCoords = projectToWebavCoords(
-          props.selectedTimelineItem.x,
-          props.selectedTimelineItem.y,
-          props.selectedTimelineItem.width,
+          config.x,
+          config.y,
+          config.width,
           value, // 使用新的高度
           videoStore.videoResolution.width,
           videoStore.videoResolution.height,

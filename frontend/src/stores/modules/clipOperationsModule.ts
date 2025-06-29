@@ -127,17 +127,8 @@ export function createClipOperationsModule(
         mediaType: originalItem.mediaType,
         timeRange: newSprite.getTimeRange(), // 从sprite获取完整的timeRange（包含自动计算的effectiveDuration）
         sprite: markRaw(newSprite),
-        // 复制原始项目的sprite属性
-        x: originalItem.x,
-        y: originalItem.y,
-        width: originalItem.width,
-        height: originalItem.height,
-        rotation: originalItem.rotation,
-        zIndex: originalItem.zIndex,
-        opacity: originalItem.opacity,
-        // 复制音量属性
-        volume: originalItem.volume,
-        isMuted: originalItem.isMuted,
+        // 复制原始项目的config
+        config: { ...originalItem.config },
       })
 
       // 根据媒体类型更新新sprite的时间轴位置
@@ -215,8 +206,8 @@ export function createClipOperationsModule(
         oldDurationFrames = item.timeRange.timelineEndTime - item.timeRange.timelineStartTime
         newDurationFrames = Math.round(clipDurationFrames / clampedRate)
 
-        // 如果有关键帧，先调整位置
-        if (item.animation && item.animation.keyframes.length > 0) {
+        // 如果有关键帧，先调整位置（重构版本）
+        if (item.config.animation && item.config.animation.keyframes.length > 0) {
           import('../../utils/unifiedKeyframeUtils').then(
             ({ adjustKeyframesForDurationChange }) => {
               adjustKeyframesForDurationChange(item, oldDurationFrames, newDurationFrames)
@@ -240,8 +231,8 @@ export function createClipOperationsModule(
       // 使用同步函数更新TimelineItem的timeRange
       syncTimeRange(item)
 
-      // 如果有动画，需要重新设置WebAV动画时长
-      if (item.animation && item.animation.isEnabled) {
+      // 如果有动画，需要重新设置WebAV动画时长（重构版本）
+      if (item.config.animation && item.config.animation.isEnabled) {
         // 异步更新动画，不阻塞播放速度调整
         import('../../utils/webavAnimationManager').then(({ updateWebAVAnimation }) => {
           updateWebAVAnimation(item)
@@ -422,7 +413,7 @@ export function createClipOperationsModule(
         canvas.addSprite(secondSprite)
       }
 
-      // 创建新的TimelineItem
+      // 创建新的TimelineItem（重构版本）
       const firstItem: TimelineItem = reactive({
         id: Date.now().toString() + Math.random().toString(36).substring(2, 11),
         mediaItemId: originalItem.mediaItemId,
@@ -430,17 +421,8 @@ export function createClipOperationsModule(
         mediaType: originalItem.mediaType,
         timeRange: firstSprite.getTimeRange(), // 从sprite获取完整的timeRange
         sprite: markRaw(firstSprite),
-        // 复制原始项目的sprite属性
-        x: originalItem.x,
-        y: originalItem.y,
-        width: originalItem.width,
-        height: originalItem.height,
-        rotation: originalItem.rotation,
-        zIndex: originalItem.zIndex,
-        opacity: originalItem.opacity,
-        // 复制音量属性
-        volume: originalItem.volume,
-        isMuted: originalItem.isMuted,
+        // 复制原始项目的config
+        config: { ...originalItem.config },
       })
 
       const secondItem: TimelineItem = reactive({
@@ -450,17 +432,8 @@ export function createClipOperationsModule(
         mediaType: originalItem.mediaType,
         timeRange: secondSprite.getTimeRange(), // 从sprite获取完整的timeRange
         sprite: markRaw(secondSprite),
-        // 复制原始项目的sprite属性
-        x: originalItem.x,
-        y: originalItem.y,
-        width: originalItem.width,
-        height: originalItem.height,
-        rotation: originalItem.rotation,
-        zIndex: originalItem.zIndex,
-        opacity: originalItem.opacity,
-        // 复制音量属性
-        volume: originalItem.volume,
-        isMuted: originalItem.isMuted,
+        // 复制原始项目的config
+        config: { ...originalItem.config },
       })
 
       // 从WebAV画布移除原始sprite
