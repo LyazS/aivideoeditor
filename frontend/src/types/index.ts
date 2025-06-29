@@ -21,7 +21,7 @@ export type MediaType = 'video' | 'image'
 /**
  * 轨道类型
  */
-export type TrackType = 'video' | 'audio' | 'subtitle'
+export type TrackType = 'video' | 'audio' | 'text'
 
 // ==================== 时间范围接口 ====================
 

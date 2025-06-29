@@ -32,14 +32,14 @@ export function createTrackModule() {
     const typeNames = {
       video: '视频轨道',
       audio: '音频轨道',
-      subtitle: '字幕轨道',
+      text: '文本轨道',
     }
 
     // 根据轨道类型设置默认高度
     const defaultHeights = {
       video: 80, // 视频轨道标准高度
       audio: 60, // 音频轨道较矮
-      subtitle: 50, // 字幕轨道最矮
+      text: 50, // 文本轨道最矮
     }
 
     // 计算同类型轨道的数量，用于生成默认名称
@@ -158,8 +158,8 @@ export function createTrackModule() {
     const track = tracks.value.find((t) => t.id === trackId)
     if (track) {
       // 检查轨道类型是否支持静音操作
-      if (track.type === 'subtitle') {
-        console.warn('⚠️ 字幕轨道不支持静音操作')
+      if (track.type === 'text') {
+        console.warn('⚠️ 文本轨道不支持静音操作')
         return
       }
 
@@ -281,7 +281,7 @@ export function createTrackModule() {
     const defaultHeights = {
       video: 80,
       audio: 60,
-      subtitle: 50,
+      text: 50,
     }
 
     tracks.value.forEach((track) => {
