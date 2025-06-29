@@ -69,7 +69,7 @@ export function handleVideoPlaybackRateChange(item: TimelineItem, newPlaybackRat
   const currentTimeRange = item.timeRange
   const clipDurationFrames = currentTimeRange.clipEndTime - currentTimeRange.clipStartTime
 
-  // 计算新的有效时长
+  // 计算新的有效时长（确保是整数帧数）
   const newEffectiveDuration = Math.round(clipDurationFrames / newPlaybackRate)
   const newTimelineEndTime = currentTimeRange.timelineStartTime + newEffectiveDuration
 
@@ -145,8 +145,8 @@ export function setTimelineItemDuration(item: TimelineItem, newDurationFrames: n
 
     newTimeRange = {
       ...currentTimeRange,
-      timelineEndTime: newTimelineEndTime,
-      effectiveDuration: newDurationFrames,
+      timelineEndTime: newTimelineEndTime, // newTimelineEndTime 已经是整数
+      effectiveDuration: newDurationFrames, // newDurationFrames 已经是整数
       playbackRate: newPlaybackRate,
     }
   } else {

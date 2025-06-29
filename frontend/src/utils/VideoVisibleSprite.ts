@@ -229,7 +229,9 @@ export class VideoVisibleSprite extends VisibleSprite {
       // 根据新的播放速度计算时间轴结束时间
       // 时间轴时长 = 素材时长 / 播放速度
       const newTimelineDuration = clipDuration / speed
-      const newTimelineEndTime = timelineStartTime + newTimelineDuration
+
+      // 🔧 确保时间轴结束时间是整数帧数（避免小数点时长显示）
+      const newTimelineEndTime = timelineStartTime + Math.round(newTimelineDuration)
 
       // 通过设置时间范围来实现播放速度调整
       // playbackRate 会在 #updateVisibleSpriteTime() 中根据时间范围自动计算

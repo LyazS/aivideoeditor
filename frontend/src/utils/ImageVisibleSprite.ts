@@ -67,8 +67,8 @@ export class ImageVisibleSprite extends VisibleSprite {
    */
   public setTimelineStartTime(startTime: number): void {
     const duration = this.#timeRange.displayDuration
-    this.#timeRange.timelineStartTime = startTime
-    this.#timeRange.timelineEndTime = startTime + duration
+    this.#timeRange.timelineStartTime = Math.round(startTime)
+    this.#timeRange.timelineEndTime = this.#timeRange.timelineStartTime + duration
     this.#updateVisibleSpriteTime()
   }
 
@@ -77,8 +77,8 @@ export class ImageVisibleSprite extends VisibleSprite {
    * @param endTime 时间轴结束时间（帧数）
    */
   public setTimelineEndTime(endTime: number): void {
-    this.#timeRange.timelineEndTime = endTime
-    this.#timeRange.displayDuration = endTime - this.#timeRange.timelineStartTime
+    this.#timeRange.timelineEndTime = Math.round(endTime)
+    this.#timeRange.displayDuration = Math.round(this.#timeRange.timelineEndTime - this.#timeRange.timelineStartTime)
     this.#updateVisibleSpriteTime()
   }
 
@@ -91,8 +91,8 @@ export class ImageVisibleSprite extends VisibleSprite {
       throw new Error('显示时长必须大于0')
     }
 
-    this.#timeRange.displayDuration = duration
-    this.#timeRange.timelineEndTime = this.#timeRange.timelineStartTime + duration
+    this.#timeRange.displayDuration = Math.round(duration)
+    this.#timeRange.timelineEndTime = this.#timeRange.timelineStartTime + this.#timeRange.displayDuration
     this.#updateVisibleSpriteTime()
   }
 
@@ -130,22 +130,23 @@ export class ImageVisibleSprite extends VisibleSprite {
     displayDuration?: number
   }): void {
     if (options.timelineStartTime !== undefined) {
-      this.#timeRange.timelineStartTime = options.timelineStartTime
+      this.#timeRange.timelineStartTime = Math.round(options.timelineStartTime)
     }
     if (options.timelineEndTime !== undefined) {
-      this.#timeRange.timelineEndTime = options.timelineEndTime
+      this.#timeRange.timelineEndTime = Math.round(options.timelineEndTime)
     }
     if (options.displayDuration !== undefined) {
-      this.#timeRange.displayDuration = options.displayDuration
+      this.#timeRange.displayDuration = Math.round(options.displayDuration)
     }
 
-    // 确保时间范围的一致性
+    // 确保时间范围的一致性（确保计算结果为整数帧数）
     if (options.displayDuration !== undefined && options.timelineStartTime !== undefined) {
       this.#timeRange.timelineEndTime =
         this.#timeRange.timelineStartTime + this.#timeRange.displayDuration
     } else if (options.timelineStartTime !== undefined && options.timelineEndTime !== undefined) {
-      this.#timeRange.displayDuration =
+      this.#timeRange.displayDuration = Math.round(
         this.#timeRange.timelineEndTime - this.#timeRange.timelineStartTime
+      )
     }
 
     this.#updateVisibleSpriteTime()
@@ -183,9 +184,9 @@ export class ImageVisibleSprite extends VisibleSprite {
     if (timelineStartTime >= timelineEndTime) return false
     if (displayDuration <= 0) return false
 
-    // 检查时间范围的一致性
-    const calculatedDuration = timelineEndTime - timelineStartTime
-    if (calculatedDuration !== displayDuration) return false
+    // 检查时间范围的一致性（允许1帧的误差，避免浮点数精度问题）
+    const calculatedDuration = Math.round(timelineEndTime - timelineStartTime)
+    if (Math.abs(calculatedDuration - displayDuration) > 1) return false
 
     return true
   }
