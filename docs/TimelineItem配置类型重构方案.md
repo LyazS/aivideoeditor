@@ -1365,4 +1365,619 @@ function getDiff(oldObj: any, newObj: any): Record<string, { old: any, new: any 
 
 **关键要点：所有属性变更必须遵循 UI → WebAV → TimelineItem → UI 的数据流向，这是系统稳定性的基石。**
 
-**立即开始重构，严格遵循数据流向准则。现代化的架构值得这次投入。**
+## 组件层重构方案
+
+### 1. 属性面板组件重构
+
+#### 当前问题
+
+现有的 `VideoClipProperties.vue` 组件硬编码了所有属性，无法适应不同媒体类型：
+
+```typescript
+// 当前的硬编码实现
+const x = computed(() => props.selectedTimelineItem?.x || 0)
+const y = computed(() => props.selectedTimelineItem?.y || 0)
+const volume = computed(() => props.selectedTimelineItem?.volume || 1)
+// 音频项目也会显示 x、y 等视觉属性
+```
+
+#### 重构方案
+
+```typescript
+// 类型安全的属性面板组件
+<template>
+  <div class="video-clip-properties">
+    <!-- 基础属性（所有类型共享） -->
+    <PropertySection title="基础属性">
+      <NumberInput
+        label="层级"
+        :value="config.zIndex"
+        @change="updateProperty('zIndex', $event)"
+      />
+    </PropertySection>
+
+    <!-- 视觉属性（仅 video 和 image） -->
+    <PropertySection v-if="hasVisualProps" title="位置和大小">
+      <NumberInput
+        label="X 位置"
+        :value="config.x"
+        @change="updateProperty('x', $event)"
+      />
+      <NumberInput
+        label="Y 位置"
+        :value="config.y"
+        @change="updateProperty('y', $event)"
+      />
+      <NumberInput
+        label="透明度"
+        :value="config.opacity"
+        :min="0"
+        :max="1"
+        :step="0.01"
+        @change="updateProperty('opacity', $event)"
+      />
+    </PropertySection>
+
+    <!-- 音频属性（仅 video 和 audio） -->
+    <PropertySection v-if="hasAudioProps" title="音频控制">
+      <SliderInput
+        label="音量"
+        :value="config.volume"
+        :min="0"
+        :max="1"
+        @change="updateProperty('volume', $event)"
+      />
+      <CheckboxInput
+        label="静音"
+        :value="config.isMuted"
+        @change="updateProperty('isMuted', $event)"
+      />
+    </PropertySection>
+
+    <!-- 动画属性（所有类型，如果有动画） -->
+    <PropertySection v-if="config.animation" title="动画">
+      <KeyframeControls
+        :timeline-item="selectedTimelineItem"
+        :current-frame="currentFrame"
+      />
+    </PropertySection>
+  </div>
+</template>
+
+<script setup lang="ts">
+interface Props {
+  selectedTimelineItem: TimelineItem | null
+  currentFrame: number
+}
+
+const props = defineProps<Props>()
+
+// 类型守卫
+const hasVisualProps = computed(() => {
+  return props.selectedTimelineItem?.mediaType === 'video' ||
+         props.selectedTimelineItem?.mediaType === 'image'
+})
+
+const hasAudioProps = computed(() => {
+  return props.selectedTimelineItem?.mediaType === 'video' ||
+         props.selectedTimelineItem?.mediaType === 'audio'
+})
+
+// 类型安全的配置访问
+const config = computed(() => {
+  return props.selectedTimelineItem?.config || {}
+})
+
+// 类型安全的属性更新
+function updateProperty<T extends MediaType>(
+  property: keyof GetMediaConfig<T>,
+  value: any
+) {
+  if (!props.selectedTimelineItem) return
+
+  // ✅ 遵循数据流向：UI → WebAV
+  props.selectedTimelineItem.sprite[property] = value
+  // WebAV → TimelineItem → UI (自动完成)
+}
+</script>
+```
+
+### 2. 时间轴组件重构
+
+#### VideoClip 组件类型安全化
+
+```typescript
+// 重构后的 VideoClip 组件
+<template>
+  <div
+    class="video-clip"
+    :class="clipClasses"
+    :style="clipStyle"
+    :data-media-type="timelineItem.mediaType"
+  >
+    <!-- 视觉媒体的缩略图 -->
+    <div v-if="hasVisualProps" class="clip-thumbnail">
+      <img v-if="timelineItem.thumbnailUrl" :src="timelineItem.thumbnailUrl" />
+    </div>
+
+    <!-- 音频媒体的波形图 -->
+    <div v-if="hasAudioProps && !hasVisualProps" class="audio-waveform">
+      <!-- 音频波形显示 -->
+    </div>
+
+    <!-- 关键帧标记（仅视觉媒体） -->
+    <div v-if="hasVisualProps" class="keyframe-markers">
+      <div
+        v-for="marker in keyframeMarkers"
+        :key="marker.framePosition"
+        class="keyframe-marker"
+        :style="{ left: marker.pixelPosition + 'px' }"
+      />
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+interface Props {
+  timelineItem: TimelineItem
+  track?: Track
+  timelineWidth: number
+  totalDurationFrames: number
+}
+
+const props = defineProps<Props>()
+
+// 类型守卫
+const hasVisualProps = computed(() => {
+  return props.timelineItem.mediaType === 'video' ||
+         props.timelineItem.mediaType === 'image'
+})
+
+const hasAudioProps = computed(() => {
+  return props.timelineItem.mediaType === 'video' ||
+         props.timelineItem.mediaType === 'audio'
+})
+
+// 类型安全的样式计算
+const clipClasses = computed(() => ({
+  'video-clip': true,
+  'visual-media': hasVisualProps.value,
+  'audio-media': hasAudioProps.value && !hasVisualProps.value,
+  'selected': isSelected.value,
+  'overlapping': isOverlapping.value
+}))
+</script>
+```
+
+### 3. 工具函数重构
+
+#### 时间轴搜索工具重构
+
+```typescript
+// 类型安全的搜索工具函数
+export function getTimelineItemAtFrames<T extends MediaType = MediaType>(
+  frames: number,
+  timelineItems: TimelineItem<T>[],
+): TimelineItem<T> | null {
+  return timelineItems.find((item) => {
+    const timeRange = item.sprite.getTimeRange()
+    return frames >= timeRange.timelineStartTime && frames < timeRange.timelineEndTime
+  }) || null
+}
+
+export function getTimelineItemsByTrack<T extends MediaType = MediaType>(
+  trackId: string,
+  timelineItems: TimelineItem<T>[],
+): TimelineItem<T>[] {
+  return timelineItems.filter((item) => item.trackId === trackId)
+}
+
+export function getTimelineItemsByMediaType<T extends MediaType>(
+  mediaType: T,
+  timelineItems: TimelineItem[],
+): TimelineItem<T>[] {
+  return timelineItems.filter((item): item is TimelineItem<T> =>
+    item.mediaType === mediaType
+  )
+}
+```
+
+## Store 模块重构方案
+
+### 1. TimelineModule 重构
+
+#### 当前问题
+
+现有的 timelineModule 没有类型安全的方法：
+
+```typescript
+// 当前的实现
+function addTimelineItem(timelineItem: TimelineItem) {
+  // 没有类型检查
+  setupBidirectionalSync(timelineItem)
+}
+```
+
+#### 重构方案
+
+```typescript
+// 类型安全的 timelineModule
+export function createTimelineModule() {
+  const timelineItems = ref<TimelineItem[]>([])
+
+  // 类型安全的添加方法
+  function addTimelineItem<T extends MediaType>(timelineItem: TimelineItem<T>) {
+    // 类型安全的轨道分配
+    if (!timelineItem.trackId && trackModule) {
+      const compatibleTrack = findCompatibleTrack(timelineItem.mediaType)
+      if (compatibleTrack) {
+        timelineItem.trackId = compatibleTrack.id
+      }
+    }
+
+    // 类型安全的同步设置
+    setupBidirectionalSync(timelineItem)
+
+    timelineItems.value.push(timelineItem)
+  }
+
+  // 类型安全的查找方法
+  function getTimelineItem<T extends MediaType = MediaType>(
+    id: string
+  ): TimelineItem<T> | undefined {
+    return timelineItems.value.find(item => item.id === id) as TimelineItem<T> | undefined
+  }
+
+  // 类型安全的过滤方法
+  function getTimelineItemsByType<T extends MediaType>(
+    mediaType: T
+  ): TimelineItem<T>[] {
+    return timelineItems.value.filter((item): item is TimelineItem<T> =>
+      item.mediaType === mediaType
+    )
+  }
+
+  return {
+    timelineItems: readonly(timelineItems),
+    addTimelineItem,
+    getTimelineItem,
+    getTimelineItemsByType,
+    // ... 其他方法
+  }
+}
+
+// 轨道兼容性检查
+function findCompatibleTrack(mediaType: MediaType): Track | undefined {
+  const trackType: TrackType = mediaType === 'audio' ? 'audio' : 'video'
+  return trackModule.tracks.value.find(track => track.type === trackType)
+}
+```
+
+### 2. VideoStore 重构
+
+```typescript
+// 类型安全的 videoStore 方法
+export function createVideoStore() {
+  // 类型安全的选择方法
+  function selectTimelineItem<T extends MediaType>(
+    item: TimelineItem<T> | null
+  ): void {
+    if (item) {
+      selectedTimelineItemId.value = item.id
+      // 类型安全的属性访问
+      if (hasVisualProps(item)) {
+        // 可以安全访问视觉属性
+        console.log('Selected visual item at:', item.config.x, item.config.y)
+      }
+    } else {
+      selectedTimelineItemId.value = null
+    }
+  }
+
+  // 类型安全的属性更新
+  function updateTimelineItemProperty<T extends MediaType>(
+    itemId: string,
+    property: keyof GetMediaConfig<T>,
+    value: any
+  ): void {
+    const item = getTimelineItem<T>(itemId)
+    if (!item) return
+
+    // ✅ 遵循数据流向
+    item.sprite[property] = value
+  }
+
+  return {
+    selectTimelineItem,
+    updateTimelineItemProperty,
+    // ... 其他方法
+  }
+}
+```
+
+## 迁移策略和风险控制
+
+### 1. 分阶段迁移计划
+
+#### 第一阶段：类型定义重构（1-2天）
+1. 更新 `types/index.ts` 中的 TimelineItem 接口
+2. 添加新的媒体配置类型
+3. 更新关键帧和动画相关类型
+4. 确保所有类型编译通过
+
+#### 第二阶段：核心模块重构（2-3天）
+1. 重构 timelineModule 的核心方法
+2. 更新 videoStore 的相关方法
+3. 重构命令系统的类型安全性
+4. 更新数据流向实现
+
+#### 第三阶段：组件层重构（3-4天）
+1. 重构 VideoClipProperties 组件
+2. 更新 VideoClip 组件的类型安全性
+3. 重构属性面板的条件渲染
+4. 更新所有相关的 UI 组件
+
+#### 第四阶段：工具函数重构（1-2天）
+1. 重构所有搜索和查找工具函数
+2. 更新动画和关键帧工具函数
+3. 重构坐标转换和时间计算函数
+4. 更新所有辅助工具函数
+
+### 2. 风险控制措施
+
+#### 编译时风险控制
+```typescript
+// 使用严格的类型检查
+// tsconfig.json
+{
+  "compilerOptions": {
+    "strict": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "strictFunctionTypes": true
+  }
+}
+
+// 添加类型断言辅助函数
+export function assertMediaType<T extends MediaType>(
+  item: TimelineItem,
+  expectedType: T
+): asserts item is TimelineItem<T> {
+  if (item.mediaType !== expectedType) {
+    throw new Error(`Expected ${expectedType}, got ${item.mediaType}`)
+  }
+}
+```
+
+#### 运行时风险控制
+```typescript
+// 添加运行时类型检查
+export function validateTimelineItem<T extends MediaType>(
+  item: TimelineItem<T>
+): boolean {
+  // 基础验证
+  if (!item.id || !item.mediaItemId || !item.trackId) {
+    return false
+  }
+
+  // 类型特定验证
+  if (item.mediaType === 'video') {
+    return hasVisualProps(item) && hasAudioProps(item)
+  } else if (item.mediaType === 'image') {
+    return hasVisualProps(item) && !hasAudioProps(item)
+  } else if (item.mediaType === 'audio') {
+    return !hasVisualProps(item) && hasAudioProps(item)
+  }
+
+  return false
+}
+```
+
+### 3. 测试策略
+
+#### 单元测试重构
+```typescript
+// 类型安全的测试用例
+describe('TimelineItem Type Safety', () => {
+  test('video item should have visual and audio properties', () => {
+    const videoItem: TimelineItem<'video'> = createVideoItem()
+
+    // 应该能访问视觉属性
+    expect(videoItem.config.x).toBeDefined()
+    expect(videoItem.config.y).toBeDefined()
+    expect(videoItem.config.opacity).toBeDefined()
+
+    // 应该能访问音频属性
+    expect(videoItem.config.volume).toBeDefined()
+    expect(videoItem.config.isMuted).toBeDefined()
+  })
+
+  test('audio item should only have audio properties', () => {
+    const audioItem: TimelineItem<'audio'> = createAudioItem()
+
+    // 不应该有视觉属性
+    expect('x' in audioItem.config).toBe(false)
+    expect('y' in audioItem.config).toBe(false)
+
+    // 应该有音频属性
+    expect(audioItem.config.volume).toBeDefined()
+    expect(audioItem.config.isMuted).toBeDefined()
+  })
+})
+```
+
+## 激进重构执行方案
+
+### 1. 立即替换策略
+
+**完全抛弃旧代码，一次性替换所有相关实现**
+
+#### 重构执行顺序
+
+1. **第一步：注释旧类型定义**
+   ```bash
+   # 注释 types/index.ts 中的旧 TimelineItem 接口
+   # 保留原有逻辑作为参考，让 TypeScript 编译错误指导我们找到所有需要修改的地方
+   ```
+
+2. **第二步：实现新类型定义**
+   ```typescript
+   // 立即用新的类型定义替换
+   export interface TimelineItem<T extends MediaType = MediaType> {
+     id: string
+     mediaItemId: string
+     trackId: string
+     mediaType: T
+     timeRange: T extends 'video' ? VideoTimeRange :
+               T extends 'audio' ? AudioTimeRange :
+               ImageTimeRange
+     sprite: Raw<CustomSprite>
+     thumbnailUrl?: string
+     config: GetMediaConfig<T>
+   }
+   ```
+
+3. **第三步：修复所有编译错误**
+   ```bash
+   # 运行 TypeScript 编译，让错误信息指导重构
+   npm run type-check
+   # 逐个修复每个编译错误，强制使用新的类型安全接口
+   ```
+
+### 2. 破坏性变更清单
+
+#### 必须立即注释的代码
+
+```typescript
+// ❌ 立即注释 - 旧的平铺属性访问（保留作为参考）
+// item.x = 100
+// item.y = 200
+// item.opacity = 0.5
+
+// ❌ 立即注释 - 直接属性修改（保留逻辑参考）
+// item.volume = 0.8
+// item.isMuted = true
+
+// ❌ 立即注释 - 旧的双向同步逻辑（保留实现参考）
+// watch(() => item.x, (newX) => {
+//   item.sprite.x = newX
+// })
+```
+
+#### 必须立即实现的新代码
+
+```typescript
+// ✅ 立即实现 - 新的数据流向
+item.sprite.x = 100  // UI → WebAV
+// WebAV → TimelineItem → UI (自动)
+
+// ✅ 立即实现 - 类型安全的属性访问
+if (hasVisualProps(item)) {
+  item.config.x = 100  // 只在类型安全的情况下访问
+}
+
+// ✅ 立即实现 - 新的同步机制
+item.sprite.on('propsChange', (props) => {
+  Object.assign(item.config, props)
+})
+```
+
+### 3. 激进重构检查清单
+
+#### 激进重构执行清单
+
+```markdown
+## 激进重构执行清单 - 无向后兼容
+
+### 🔥 第一阶段：旧代码注释（立即执行）
+- [ ] 注释 types/index.ts 中的旧 TimelineItem 接口（保留作为参考）
+- [ ] 注释所有平铺属性访问代码 (item.x, item.y, etc.)
+- [ ] 注释所有直接属性修改代码
+- [ ] 注释旧的双向同步逻辑
+- [ ] 注释所有兼容性代码
+
+### 🚀 第二阶段：新架构实现（立即执行）
+- [ ] 实现新的 TimelineItem<T> 泛型接口
+- [ ] 实现媒体配置类型 (VideoMediaConfig, ImageMediaConfig, AudioMediaConfig)
+- [ ] 实现类型安全的关键帧系统
+- [ ] 实现严格的数据流向 (UI → WebAV → TimelineItem → UI)
+- [ ] 实现类型守卫函数
+
+### ⚡ 第三阶段：组件层重写（立即执行）
+- [ ] 重写 VideoClipProperties 组件，支持类型安全
+- [ ] 重写 VideoClip 组件，适配不同媒体类型
+- [ ] 重写所有属性访问，使用 config.* 方式
+- [ ] 重写所有条件渲染，基于媒体类型
+- [ ] 删除所有不必要的属性显示
+
+### 💾 第四阶段：Store 层重写（立即执行）
+- [ ] 重写 timelineModule 所有方法，支持泛型
+- [ ] 重写 videoStore 属性更新方法
+- [ ] 重写命令系统，支持类型安全
+- [ ] 重写数据同步机制，严格遵循数据流向
+- [ ] 删除所有旧的属性访问方式
+
+### 🛠️ 第五阶段：工具函数重写（立即执行）
+- [ ] 重写所有搜索函数，支持泛型
+- [ ] 重写关键帧工具函数，类型安全
+- [ ] 重写动画转换器，适配新类型
+- [ ] 重写所有辅助函数，注释旧逻辑作为参考
+- [ ] 注释所有向后兼容代码
+
+### ✅ 验证标准（零容忍）
+- [ ] 零 TypeScript 编译错误
+- [ ] 零 ESLint 警告
+- [ ] 零未注释的旧代码
+- [ ] 零向后兼容代码在新实现中
+- [ ] 100% 新架构覆盖
+- [ ] 旧代码完整保留为注释参考
+```
+
+## 激进重构行动计划
+
+### 🔥 激进重构的核心理念
+
+**彻底抛弃旧代码，零向后兼容，一次性实现现代化架构**
+
+### 📋 重构覆盖领域
+
+1. **核心架构** - 完全重写类型定义、数据流向、接口设计
+2. **系统层面** - 彻底重构关键帧系统、操作记录系统、动画管理
+3. **组件层面** - 重写属性面板、时间轴组件、视频剪辑组件
+4. **Store 层面** - 重构 timelineModule、videoStore、命令系统
+5. **工具函数** - 重写搜索工具、动画工具、所有辅助函数
+
+### ⚡ 激进执行策略
+
+1. **立即注释** - 注释所有旧的 TimelineItem 相关代码，保留逻辑参考
+2. **立即重写** - 用新的类型安全架构替换所有实现
+3. **零容忍** - 不允许任何旧代码在新实现中运行
+4. **一次到位** - 不分阶段，一次性完成所有重构
+5. **保留参考** - 旧代码作为注释保留，便于理解原有逻辑
+
+### 🎯 执行顺序
+
+1. **注释旧类型** → **实现新类型** → **修复编译错误**
+2. **重写 Store** → **重写组件** → **重写工具函数**
+3. **验证功能** → **清理注释** → **完成重构**
+
+### 📝 注释策略
+
+```typescript
+// ===== 旧实现 (保留作为参考) =====
+// export interface TimelineItem {
+//   id: string
+//   x: number
+//   y: number
+//   // ... 其他旧属性
+// }
+
+// ===== 新实现 =====
+export interface TimelineItem<T extends MediaType = MediaType> {
+  id: string
+  config: GetMediaConfig<T>
+  // ... 新的类型安全属性
+}
+```
+
+**立即开始激进重构！注释所有旧代码保留参考，实现现代化的类型安全架构！**
