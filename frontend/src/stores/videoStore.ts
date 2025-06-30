@@ -911,24 +911,22 @@ export const useVideoStore = defineStore('video', () => {
     mediaModule.updateMediaItem(mediaItem)
   }
 
-  // ==================== 视频元素管理方法 ====================
-  // 使用媒体模块的视频元素管理方法
+  // ==================== 分辨率管理方法 ====================
+  // 使用媒体模块的分辨率管理方法
   function setVideoElement(clipId: string, videoElement: HTMLVideoElement | null) {
     mediaModule.setVideoElement(clipId, videoElement)
   }
 
-  function getVideoOriginalResolution(clipId: string): { width: number; height: number } {
-    return mediaModule.getVideoOriginalResolution(clipId)
+  function getVideoOriginalResolution(mediaItemId: string): { width: number; height: number } {
+    return mediaModule.getVideoOriginalResolution(mediaItemId)
   }
 
-  // ==================== 图片元素管理方法 ====================
-  // 使用媒体模块的图片元素管理方法
   function setImageElement(clipId: string, imageElement: HTMLImageElement | null) {
     mediaModule.setImageElement(clipId, imageElement)
   }
 
-  function getImageOriginalResolution(clipId: string): { width: number; height: number } {
-    return mediaModule.getImageOriginalResolution(clipId)
+  function getImageOriginalResolution(mediaItemId: string): { width: number; height: number } {
+    return mediaModule.getImageOriginalResolution(mediaItemId)
   }
 
   return {
@@ -1083,11 +1081,10 @@ export const useVideoStore = defineStore('video', () => {
     setProportionalScale: configModule.setProportionalScale,
     getConfigSummary: configModule.getConfigSummary,
     resetConfigToDefaults: configModule.resetToDefaults,
-    // 视频元素管理
-    setVideoElement,
+    // 分辨率管理（从Clip获取）
+    setVideoElement, // 已废弃，保留兼容性
     getVideoOriginalResolution,
-    // 图片元素管理
-    setImageElement,
+    setImageElement, // 已废弃，保留兼容性
     getImageOriginalResolution,
     // WebAV 相关状态和方法
     avCanvas: webavModule.avCanvas,

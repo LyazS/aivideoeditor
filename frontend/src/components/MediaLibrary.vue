@@ -226,90 +226,81 @@ const addVideoItem = async (
   startTime: number,
   resolve: () => void,
 ) => {
-  const video = document.createElement('video')
-
-  video.onloadedmetadata = async () => {
-    try {
-      const parsingMediaItem: MediaItem = {
-        id: mediaItemId,
-        file,
-        url,
-        name: file.name,
-        duration: secondsToFrames(video.duration), // 转换为帧数
-        type: file.type,
-        mediaType: 'video',
-        mp4Clip: null, // 解析中时为null
-        imgClip: null,
-        isReady: false, // 标记为未准备好
-        status: 'parsing', // 解析中状态
-      }
-
-      console.log(`📋 创建解析中的MediaItem: ${parsingMediaItem.name} (ID: ${mediaItemId})`)
-
-      // 先添加解析中状态的素材到store
-      videoStore.addMediaItem(parsingMediaItem)
-
-      // 异步创建MP4Clip
-      console.log(`🎬 Creating MP4Clip for: ${file.name}`)
-      const mp4Clip = await webAVControls.createMP4Clip(file)
-      console.log(`✅ MP4Clip created successfully for: ${file.name}`)
-
-      // 生成缩略图
-      console.log(`🖼️ 生成视频缩略图: ${file.name}`)
-      const thumbnailUrl = await generateThumbnailForMediaItem({
-        mediaType: 'video',
-        mp4Clip,
-      })
-
-      // 更新MediaItem为完成状态
-      const readyMediaItem: MediaItem = {
-        ...parsingMediaItem,
-        mp4Clip: markRaw(mp4Clip), // 使用markRaw避免Vue响应式包装
-        isReady: true, // 标记为准备好
-        status: 'ready', // 已准备好状态
-        thumbnailUrl, // 添加缩略图URL
-      }
-
-      console.log(
-        `📋 更新MediaItem为完成状态: ${readyMediaItem.name} (时长: ${readyMediaItem.duration.toFixed(2)}s)`,
-      )
-      console.log(`📐 视频原始分辨率: ${video.videoWidth}x${video.videoHeight}`)
-
-      // 设置视频元素到store中，用于获取原始分辨率
-      videoStore.setVideoElement(mediaItemId, video)
-
-      // 更新store中的MediaItem
-      videoStore.updateMediaItem(readyMediaItem)
-
-      const processingTime = ((Date.now() - startTime) / 1000).toFixed(2)
-      console.log(`✅ [并发处理] 视频文件处理完成: ${file.name} (耗时: ${processingTime}s)`)
-      resolve()
-    } catch (error) {
-      const processingTime = ((Date.now() - startTime) / 1000).toFixed(2)
-      console.error(
-        `❌ [并发处理] 视频文件处理失败: ${file.name} (耗时: ${processingTime}s)`,
-        error,
-      )
-      // 如果解析失败，从store中移除该项目
-      videoStore.removeMediaItem(mediaItemId)
-      URL.revokeObjectURL(url)
-      resolve()
+  try {
+    // 创建解析中状态的MediaItem（不需要video元素）
+    const parsingMediaItem: MediaItem = {
+      id: mediaItemId,
+      file,
+      url,
+      name: file.name,
+      duration: 0, // 初始为0，等MP4Clip解析完成后更新
+      type: file.type,
+      mediaType: 'video',
+      mp4Clip: null, // 解析中时为null
+      imgClip: null,
+      isReady: false, // 标记为未准备好
+      status: 'parsing', // 解析中状态
     }
-  }
 
-  video.onerror = () => {
+    console.log(`📋 创建解析中的MediaItem: ${parsingMediaItem.name} (ID: ${mediaItemId})`)
+
+    // 先添加解析中状态的素材到store
+    videoStore.addMediaItem(parsingMediaItem)
+
+    // 异步创建MP4Clip
+    console.log(`🎬 Creating MP4Clip for: ${file.name}`)
+    const mp4Clip = await webAVControls.createMP4Clip(file)
+    console.log(`✅ MP4Clip created successfully for: ${file.name}`)
+
+    // 获取MP4Clip的元数据
+    const meta = await mp4Clip.ready
+    const durationFrames = secondsToFrames(meta.duration / 1_000_000) // meta.duration是微秒，转换为秒再转为帧数
+
+    console.log(`📊 MP4Clip元数据: ${file.name}`, {
+      duration: meta.duration / 1_000_000 + 's',
+      durationFrames: durationFrames + '帧',
+      resolution: `${meta.width}x${meta.height}`,
+    })
+
+    // 生成缩略图
+    console.log(`🖼️ 生成视频缩略图: ${file.name}`)
+    const thumbnailUrl = await generateThumbnailForMediaItem({
+      mediaType: 'video',
+      mp4Clip,
+    })
+
+    // 更新MediaItem为完成状态
+    const readyMediaItem: MediaItem = {
+      ...parsingMediaItem,
+      duration: durationFrames, // 使用MP4Clip的准确时长
+      mp4Clip: markRaw(mp4Clip), // 使用markRaw避免Vue响应式包装
+      isReady: true, // 标记为准备好
+      status: 'ready', // 已准备好状态
+      thumbnailUrl, // 添加缩略图URL
+    }
+
+    console.log(
+      `📋 更新MediaItem为完成状态: ${readyMediaItem.name} (时长: ${framesToTimecode(readyMediaItem.duration)})`,
+    )
+    console.log(`📐 视频原始分辨率: ${meta.width}x${meta.height}`)
+
+    // 更新store中的MediaItem
+    videoStore.updateMediaItem(readyMediaItem)
+
     const processingTime = ((Date.now() - startTime) / 1000).toFixed(2)
-    console.error(`❌ [并发处理] 视频加载失败: ${file.name} (耗时: ${processingTime}s)`)
-    // 如果视频加载失败，也需要清理可能已经添加的解析中状态的素材
-    const existingItem = videoStore.getMediaItem(mediaItemId)
-    if (existingItem) {
-      videoStore.removeMediaItem(mediaItemId)
-    }
+    console.log(`✅ [并发处理] 视频文件处理完成: ${file.name} (耗时: ${processingTime}s)`)
+    resolve()
+  } catch (error) {
+    const processingTime = ((Date.now() - startTime) / 1000).toFixed(2)
+    console.error(
+      `❌ [并发处理] 视频文件处理失败: ${file.name} (耗时: ${processingTime}s)`,
+      error,
+    )
+    // 如果解析失败，从store中移除该项目
+    videoStore.removeMediaItem(mediaItemId)
     URL.revokeObjectURL(url)
     resolve()
   }
-
-  video.src = url
 }
 
 // 添加图片素材项

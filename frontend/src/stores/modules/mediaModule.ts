@@ -4,19 +4,13 @@ import type { MediaItem, TimelineItem, Track } from '../../types'
 
 /**
  * 媒体管理模块
- * 负责管理素材库中的媒体项目和视频元素引用
+ * 负责管理素材库中的媒体项目
  */
 export function createMediaModule() {
   // ==================== 状态定义 ====================
 
   // 素材库
   const mediaItems = ref<MediaItem[]>([])
-
-  // 视频元素引用映射（用于获取原始分辨率）
-  const videoElementsMap = new Map<string, HTMLVideoElement>()
-
-  // 图片元素引用映射（用于获取原始分辨率）
-  const imageElementsMap = new Map<string, HTMLImageElement>()
 
   // ==================== 媒体项目管理方法 ====================
 
@@ -151,68 +145,76 @@ export function createMediaModule() {
     }
   }
 
-  // ==================== 视频元素管理方法 ====================
+  // ==================== 视频分辨率管理方法 ====================
 
   /**
-   * 设置视频元素引用
-   * @param clipId 视频片段ID
-   * @param videoElement 视频元素或null
-   */
-  function setVideoElement(clipId: string, videoElement: HTMLVideoElement | null) {
-    if (videoElement) {
-      videoElementsMap.set(clipId, videoElement)
-    } else {
-      videoElementsMap.delete(clipId)
-    }
-  }
-
-  /**
-   * 获取视频原始分辨率
-   * @param clipId 视频片段ID
+   * 获取视频原始分辨率（从MP4Clip获取）
+   * @param mediaItemId 素材ID
    * @returns 视频分辨率对象
    */
-  function getVideoOriginalResolution(clipId: string): { width: number; height: number } {
-    const videoElement = videoElementsMap.get(clipId)
-    if (videoElement && videoElement.videoWidth > 0 && videoElement.videoHeight > 0) {
-      return {
-        width: videoElement.videoWidth,
-        height: videoElement.videoHeight,
+  function getVideoOriginalResolution(mediaItemId: string): { width: number; height: number } {
+    const mediaItem = getMediaItem(mediaItemId)
+    if (mediaItem && mediaItem.mediaType === 'video' && mediaItem.mp4Clip) {
+      try {
+        // 从MP4Clip的meta信息获取分辨率
+        const clip = mediaItem.mp4Clip
+        if ('meta' in clip && clip.meta) {
+          return {
+            width: clip.meta.width,
+            height: clip.meta.height,
+          }
+        }
+      } catch (error) {
+        console.warn('获取视频分辨率失败:', error)
       }
     }
     // 默认分辨率
     return { width: 1920, height: 1080 }
   }
 
-  // ==================== 图片元素管理方法 ====================
-
   /**
-   * 设置图片元素引用
-   * @param clipId 图片片段ID
-   * @param imageElement 图片元素或null
+   * 设置视频元素引用（已废弃，保留兼容性）
+   * @deprecated 现在从MP4Clip直接获取分辨率信息
    */
-  function setImageElement(clipId: string, imageElement: HTMLImageElement | null) {
-    if (imageElement) {
-      imageElementsMap.set(clipId, imageElement)
-    } else {
-      imageElementsMap.delete(clipId)
-    }
+  function setVideoElement(clipId: string, videoElement: HTMLVideoElement | null) {
+    console.warn('setVideoElement已废弃，现在从MP4Clip直接获取分辨率信息')
+    // 保留空实现以避免破坏现有代码
   }
 
+  // ==================== 图片分辨率管理方法 ====================
+
   /**
-   * 获取图片原始分辨率
-   * @param clipId 图片片段ID
+   * 获取图片原始分辨率（从ImgClip获取）
+   * @param mediaItemId 素材ID
    * @returns 图片分辨率对象
    */
-  function getImageOriginalResolution(clipId: string): { width: number; height: number } {
-    const imageElement = imageElementsMap.get(clipId)
-    if (imageElement && imageElement.naturalWidth > 0 && imageElement.naturalHeight > 0) {
-      return {
-        width: imageElement.naturalWidth,
-        height: imageElement.naturalHeight,
+  function getImageOriginalResolution(mediaItemId: string): { width: number; height: number } {
+    const mediaItem = getMediaItem(mediaItemId)
+    if (mediaItem && mediaItem.mediaType === 'image' && mediaItem.imgClip) {
+      try {
+        // 从ImgClip的meta信息获取分辨率
+        const clip = mediaItem.imgClip
+        if ('meta' in clip && clip.meta) {
+          return {
+            width: clip.meta.width,
+            height: clip.meta.height,
+          }
+        }
+      } catch (error) {
+        console.warn('获取图片分辨率失败:', error)
       }
     }
     // 默认分辨率
     return { width: 1920, height: 1080 }
+  }
+
+  /**
+   * 设置图片元素引用（已废弃，保留兼容性）
+   * @deprecated 现在从ImgClip直接获取分辨率信息
+   */
+  function setImageElement(clipId: string, imageElement: HTMLImageElement | null) {
+    console.warn('setImageElement已废弃，现在从ImgClip直接获取分辨率信息')
+    // 保留空实现以避免破坏现有代码
   }
 
   // ==================== 导出接口 ====================
