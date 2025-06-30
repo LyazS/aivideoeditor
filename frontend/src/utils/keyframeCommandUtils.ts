@@ -7,7 +7,7 @@ import type { TimelineItem } from '../types'
 import {
   CreateKeyframeCommand,
   DeleteKeyframeCommand,
-  UpdateKeyframePropertyCommand,
+  UpdateTimelineItemPropertyCommand,
   ClearAllKeyframesCommand,
   ToggleKeyframeCommand,
 } from '../stores/modules/commands/keyframeCommands'
@@ -84,7 +84,7 @@ export async function deleteKeyframeWithCommand(
 }
 
 /**
- * 通过命令系统更新关键帧属性
+ * 通过命令系统更新时间轴项目属性（智能处理关键帧）
  * @param timelineItemId 时间轴项目ID
  * @param frame 帧数
  * @param property 属性名
@@ -98,7 +98,7 @@ export async function updateKeyframePropertyWithCommand(
   value: any,
   executor: KeyframeCommandExecutor,
 ): Promise<void> {
-  const command = new UpdateKeyframePropertyCommand(
+  const command = new UpdateTimelineItemPropertyCommand(
     timelineItemId,
     frame,
     property,
@@ -207,10 +207,10 @@ export async function deleteKeyframe(timelineItemId: string, frame: number): Pro
 }
 
 /**
- * 便捷函数：更新关键帧属性
- * 自动创建执行器并执行命令
+ * 便捷函数：更新时间轴项目属性
+ * 自动创建执行器并执行命令（智能处理关键帧）
  */
-export async function updateKeyframeProperty(
+export async function updateTimelineItemProperty(
   timelineItemId: string,
   frame: number,
   property: string,
@@ -400,7 +400,7 @@ export async function executeBatchKeyframeOperations(
       case 'update':
         if (op.frame !== undefined && op.property && op.value !== undefined) {
           commands.push(
-            new UpdateKeyframePropertyCommand(
+            new UpdateTimelineItemPropertyCommand(
               op.timelineItemId,
               op.frame,
               op.property,

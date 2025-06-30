@@ -186,12 +186,11 @@
           </svg>
         </button>
 
-        <!-- 调试按钮 - 暂时隐藏 -->
+        <!-- 调试按钮 -->
         <button
           @click="debugUnifiedKeyframes"
           class="debug-btn"
           title="输出统一关键帧调试信息"
-          style="display: none"
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
             <path
@@ -958,8 +957,19 @@ const debugUnifiedKeyframes = async () => {
   }
 
   try {
+    // 启用关键帧调试模式
+    const { enableKeyframeDebug } = await import('../utils/keyframeDebugger')
+    enableKeyframeDebug()
+
+    // 输出详细调试信息
     const { debugKeyframes } = await import('../utils/unifiedKeyframeUtils')
     debugKeyframes(props.selectedTimelineItem)
+
+    // 输出WebAV动画状态
+    const { logKeyframeDebugInfo } = await import('../utils/keyframeDebugger')
+    logKeyframeDebugInfo(props.selectedTimelineItem)
+
+    console.log('🎬 [Unified Debug] 关键帧调试模式已启用，详细日志将在后续操作中显示')
   } catch (error) {
     console.error('🎬 [Unified Debug] 调试失败:', error)
   }
@@ -1195,9 +1205,15 @@ const updateUnifiedProperty = async (property: string, value: any) => {
         Object.assign(sprite.rect, transform)
       }
 
-      // 手动触发preframe以确保立即更新渲染
-      const currentTime = props.currentFrame * (1000000 / 30) // 转换为微秒
-      sprite.preFrame(currentTime)
+      // 🔧 修复：使用AVCanvas的previewFrame来触发整个画布重新渲染
+      // 而不是单独的sprite.preFrame()
+      const { useWebAVControls } = await import('../composables/useWebAVControls')
+      const webAVControls = useWebAVControls()
+      const avCanvas = webAVControls.getAVCanvas()
+      if (avCanvas) {
+        const currentTime = props.currentFrame * (1000000 / 30) // 使用时间轴的绝对时间
+        avCanvas.previewFrame(currentTime)
+      }
     }
 
     console.log('🎬 [Unified Property] Property updated with real-time rendering:', {

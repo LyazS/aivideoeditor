@@ -22,7 +22,7 @@ import {
 } from '../utils/unifiedKeyframeUtils'
 import {
   toggleKeyframe as toggleKeyframeWithCommand,
-  updateKeyframeProperty as updateKeyframePropertyWithCommand,
+  updateTimelineItemProperty as updateKeyframePropertyWithCommand,
   clearAllKeyframes as clearAllKeyframesWithCommand,
 } from '../utils/keyframeCommandUtils'
 import { isPlayheadInTimelineItem } from '../stores/utils/timelineSearchUtils'

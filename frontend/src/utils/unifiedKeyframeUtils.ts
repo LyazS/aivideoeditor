@@ -566,9 +566,10 @@ export function getAllKeyframeFrames(item: TimelineItem): number[] {
 // ==================== 调试和验证 ====================
 
 /**
- * 验证关键帧数据的完整性
+ * 验证关键帧数据的完整性（重构版本）
+ * 根据媒体类型验证相应的属性
  */
-export function validateKeyframes(item: TimelineItem): boolean {
+export function validateKeyframes<T extends MediaType>(item: TimelineItem<T>): boolean {
   if (!item.config.animation) return true
 
   const clipDurationFrames = item.timeRange.timelineEndTime - item.timeRange.timelineStartTime
@@ -583,18 +584,49 @@ export function validateKeyframes(item: TimelineItem): boolean {
       return false
     }
 
-    // 检查属性是否完整
+    // 根据媒体类型检查属性是否完整
     const props = keyframe.properties
-    if (
-      typeof props.x !== 'number' ||
-      typeof props.y !== 'number' ||
-      typeof props.width !== 'number' ||
-      typeof props.height !== 'number' ||
-      typeof props.rotation !== 'number' ||
-      typeof props.opacity !== 'number'
-    ) {
-      console.warn('🎬 [Unified Keyframe] Incomplete keyframe properties:', props)
+
+    // 基础属性检查（所有媒体类型都有）
+    if (typeof props.zIndex !== 'number') {
+      console.warn('🎬 [Unified Keyframe] Missing zIndex property:', props)
       return false
+    }
+
+    // 根据媒体类型检查特定属性
+    if (item.mediaType === 'video') {
+      // 视频类型：检查视觉和音频属性
+      if (
+        typeof (props as any).x !== 'number' ||
+        typeof (props as any).y !== 'number' ||
+        typeof (props as any).width !== 'number' ||
+        typeof (props as any).height !== 'number' ||
+        typeof (props as any).rotation !== 'number' ||
+        typeof (props as any).opacity !== 'number' ||
+        typeof (props as any).volume !== 'number'
+      ) {
+        console.warn('🎬 [Unified Keyframe] Incomplete video keyframe properties:', props)
+        return false
+      }
+    } else if (item.mediaType === 'image') {
+      // 图片类型：只检查视觉属性
+      if (
+        typeof (props as any).x !== 'number' ||
+        typeof (props as any).y !== 'number' ||
+        typeof (props as any).width !== 'number' ||
+        typeof (props as any).height !== 'number' ||
+        typeof (props as any).rotation !== 'number' ||
+        typeof (props as any).opacity !== 'number'
+      ) {
+        console.warn('🎬 [Unified Keyframe] Incomplete image keyframe properties:', props)
+        return false
+      }
+    } else if (item.mediaType === 'audio') {
+      // 音频类型：只检查音频属性
+      if (typeof (props as any).volume !== 'number') {
+        console.warn('🎬 [Unified Keyframe] Incomplete audio keyframe properties:', props)
+        return false
+      }
     }
   }
 

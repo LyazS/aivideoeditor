@@ -82,20 +82,28 @@ export class WebAVAnimationManager {
       // 应用动画到WebAV sprite
       sprite.setAnimation(webavConfig.keyframes, webavConfig.options)
 
-      // 立即触发preframe以确保动画效果立即生效
+      // 🔧 修复：使用AVCanvas的previewFrame来触发整个画布重新渲染
       try {
-        // 动态导入videoStore来获取当前帧
+        // 动态导入videoStore和webAVControls来获取当前帧和AVCanvas
         const { useVideoStore } = await import('../stores/videoStore')
+        const { useWebAVControls } = await import('../composables/useWebAVControls')
         const videoStore = useVideoStore()
-        const currentTime = videoStore.currentFrame * (1000000 / 30) // 转换为微秒
-        sprite.preFrame(currentTime)
+        const webAVControls = useWebAVControls()
+        const avCanvas = webAVControls.getAVCanvas()
 
-        console.log('🎬 [WebAV Animation] Triggered preFrame for immediate update:', {
-          currentFrame: videoStore.currentFrame,
-          currentTime,
-        })
+        if (avCanvas) {
+          const currentTime = videoStore.currentFrame * (1000000 / 30) // 使用时间轴的绝对时间
+          avCanvas.previewFrame(currentTime)
+
+          console.log('🎬 [WebAV Animation] Triggered AVCanvas previewFrame for immediate update:', {
+            currentFrame: videoStore.currentFrame,
+            currentTime,
+          })
+        } else {
+          console.warn('🎬 [WebAV Animation] No AVCanvas available for previewFrame')
+        }
       } catch (preFrameError) {
-        console.warn('🎬 [WebAV Animation] Failed to trigger preFrame:', preFrameError)
+        console.warn('🎬 [WebAV Animation] Failed to trigger previewFrame:', preFrameError)
       }
 
       console.log('🎬 [WebAV Animation] Animation applied successfully:', {

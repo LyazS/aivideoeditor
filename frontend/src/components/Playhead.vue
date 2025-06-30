@@ -168,17 +168,17 @@ function applySnapToClips(targetFrames: number): number {
   }
 
   // 调试信息：如果发生了吸附，输出日志
-  if (closestSnapPoint !== targetFrames) {
-    console.log('🧲 播放头吸附:', {
-      原始帧数: targetFrames,
-      吸附到: closestSnapPoint,
-      吸附类型: snapType,
-      吸附距离: Math.abs(targetFrames - closestSnapPoint),
-      阈值: Math.abs(snapThresholdFrames),
-      clip边界点: clipBoundaryFrames.value,
-      关键帧位置: keyframePositions.value,
-    })
-  }
+  // if (closestSnapPoint !== targetFrames) {
+  //   console.log('🧲 播放头吸附:', {
+  //     原始帧数: targetFrames,
+  //     吸附到: closestSnapPoint,
+  //     吸附类型: snapType,
+  //     吸附距离: Math.abs(targetFrames - closestSnapPoint),
+  //     阈值: Math.abs(snapThresholdFrames),
+  //     clip边界点: clipBoundaryFrames.value,
+  //     关键帧位置: keyframePositions.value,
+  //   })
+  // }
 
   return closestSnapPoint
 }
