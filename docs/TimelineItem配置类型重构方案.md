@@ -17,24 +17,42 @@
 
 ### 核心数据流向原则
 
-**UI → WebAV → TimelineItem → UI**
+**分层数据流向策略**
 
-这是系统中所有数据变更必须遵循的单向数据流：
+本系统根据WebAV的API支持情况，采用分层的数据流向策略：
 
+#### 【动画属性】- 标准数据流向：UI → WebAV → TimelineItem → UI
+
+适用于WebAV支持propsChange事件的属性：
+- `x`, `y` - 位置属性
+- `width`, `height` - 尺寸属性
+- `rotation` - 旋转属性
+- `zIndex` - 层级属性
+
+数据流程：
 1. **UI 层**：用户交互触发属性变更
 2. **WebAV 层**：接收变更并更新内部状态，通过 `propsChange` 事件通知系统
 3. **TimelineItem 层**：监听 WebAV 事件，更新配置数据
 4. **UI 层**：响应 TimelineItem 变更，更新界面显示
 
+#### 【非动画属性】- 直接修改模式
+
+适用于WebAV不支持propsChange事件的属性：
+- `opacity` - 透明度（通过自定义回调实现类似数据流向）
+- `volume` - 音量（WebAV没有相关事件，直接修改config）
+- `isMuted` - 静音状态（WebAV没有相关事件，直接修改config）
+
+这些属性由于WebAV的技术限制，无法遵循标准数据流向，采用直接修改config的方式是必要的架构妥协。
+
 ### 数据流向实施要求
 
-#### 1. 属性设置流程
+#### 1. 动画属性设置流程（标准数据流向）
 
 ```typescript
-// ✅ 正确的数据流向
-function updateItemProperty<T extends MediaType>(
+// ✅ 正确的动画属性数据流向
+function updateAnimationProperty<T extends MediaType>(
   item: TimelineItem<T>,
-  property: keyof GetMediaConfig<T>,
+  property: 'x' | 'y' | 'width' | 'height' | 'rotation' | 'zIndex',
   value: any
 ) {
   // 1. UI → WebAV：设置 WebAV 属性
@@ -44,14 +62,41 @@ function updateItemProperty<T extends MediaType>(
   // 3. TimelineItem → UI：响应式数据自动更新 UI
 }
 
-// ❌ 错误的数据流向 - 直接修改 TimelineItem
-function updateItemPropertyWrong<T extends MediaType>(
+// ❌ 错误的动画属性数据流向
+function updateAnimationPropertyWrong<T extends MediaType>(
   item: TimelineItem<T>,
-  property: keyof GetMediaConfig<T>,
+  property: 'x' | 'y' | 'width' | 'height' | 'rotation' | 'zIndex',
   value: any
 ) {
   // 这样会破坏数据流向一致性
   item.config[property] = value
+}
+```
+
+#### 2. 非动画属性设置流程（直接修改模式）
+
+```typescript
+// ✅ 正确的非动画属性处理方式
+function updateNonAnimationProperty<T extends MediaType>(
+  item: TimelineItem<T>,
+  property: 'volume' | 'isMuted',
+  value: any
+) {
+  // 由于WebAV技术限制，直接修改config是唯一可行方案
+  item.config[property] = value
+
+  // 如果WebAV支持设置，也同时设置WebAV属性保持一致性
+  if ('volume' in item.sprite) {
+    item.sprite[property] = value
+  }
+}
+
+// ✅ opacity的特殊处理（通过自定义回调）
+function updateOpacity<T extends MediaType>(item: TimelineItem<T>, opacity: number) {
+  // 1. UI → WebAV
+  item.sprite.opacity = opacity
+  // 2. WebAV通过自定义回调 → TimelineItem
+  // 3. TimelineItem → UI（自动）
 }
 ```
 
@@ -128,15 +173,12 @@ function updateVolume<T extends MediaType>(item: TimelineItem<T>, volume: number
 
 在重构过程中，必须检查并修复所有违反数据流向的代码：
 
-#### 常见违规模式
+#### 常见违规模式（仅适用于动画属性）
 
 ```typescript
-// ❌ 违规：直接修改 TimelineItem 配置
-item.config.x = newX
-
-// ❌ 违规：绕过 WebAV 直接同步
-item.config.opacity = newOpacity
-updateUI()
+// ❌ 违规：直接修改动画属性的 TimelineItem 配置
+item.config.x = newX        // 违规：x是动画属性，应通过WebAV设置
+item.config.rotation = newR // 违规：rotation是动画属性，应通过WebAV设置
 
 // ❌ 违规：双向同步导致循环更新
 watch(() => item.config.x, (newX) => {
@@ -147,7 +189,7 @@ watch(() => item.config.x, (newX) => {
 #### 正确的实现模式
 
 ```typescript
-// ✅ 正确：遵循数据流向
+// ✅ 正确：动画属性遵循标准数据流向
 function setItemPosition(item: TimelineItem, x: number, y: number) {
   // UI → WebAV
   item.sprite.x = x
@@ -155,11 +197,27 @@ function setItemPosition(item: TimelineItem, x: number, y: number) {
   // WebAV → TimelineItem → UI (自动)
 }
 
-// ✅ 正确：单向数据绑定
+// ✅ 正确：非动画属性直接修改config
+function setItemVolume(item: TimelineItem, volume: number) {
+  // 直接修改config（技术限制导致的必要妥协）
+  item.config.volume = volume
+  // 同时设置WebAV属性保持一致性
+  if ('volume' in item.sprite) {
+    item.sprite.volume = volume
+  }
+}
+
+// ✅ 正确：单向数据绑定（仅监听动画属性）
 function setupDataBinding<T extends MediaType>(item: TimelineItem<T>) {
-  // 只监听 WebAV 的变更，不反向设置
+  // 只监听 WebAV 的动画属性变更，不反向设置
   item.sprite.on('propsChange', (props) => {
-    Object.assign(item.config, props)
+    // 只更新动画属性
+    const animationProps = ['x', 'y', 'width', 'height', 'rotation', 'zIndex']
+    Object.entries(props).forEach(([key, value]) => {
+      if (animationProps.includes(key) && key in item.config) {
+        (item.config as any)[key] = value
+      }
+    })
   })
 }
 ```

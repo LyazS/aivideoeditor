@@ -288,6 +288,65 @@ export function useUnifiedKeyframeUI(
     webAVControls.seekTo(frame)
   }
 
+  /**
+   * 批量更新属性（使用现有的命令系统）
+   * 🎯 正确方案：利用现有的批量操作架构，而不是重新实现
+   */
+  const updateUnifiedPropertyBatch = async (properties: Record<string, any>) => {
+    if (!timelineItem.value || !currentFrame.value) return
+
+    try {
+      // 动态导入命令系统
+      const { UpdatePropertyCommand } = await import('../stores/modules/commands/keyframeCommands')
+      const { BatchUpdatePropertiesCommand } = await import('../stores/modules/commands/batchCommands')
+      const { useVideoStore } = await import('../stores/videoStore')
+
+      const videoStore = useVideoStore()
+
+      // 创建多个属性更新命令
+      const updateCommands = Object.entries(properties).map(([property, value]) => {
+        return new UpdatePropertyCommand(
+          timelineItem.value!.id,
+          currentFrame.value!,
+          property,
+          value,
+          {
+            getTimelineItem: videoStore.getTimelineItem
+          },
+          {
+            updateWebAVAnimation: async (item) => {
+              const { updateWebAVAnimation } = await import('../utils/webavAnimationManager')
+              await updateWebAVAnimation(item)
+            }
+          },
+          webAVControls // 播放头控制器
+        )
+      })
+
+      // 创建批量命令
+      const batchCommand = new BatchUpdatePropertiesCommand(
+        [timelineItem.value.id],
+        updateCommands
+      )
+
+      // 通过历史模块执行批量命令
+      await videoStore.executeBatchCommand(batchCommand)
+
+      // 强制刷新UI状态
+      forceRefresh()
+
+      console.log('🎬 [Unified Keyframe UI] Batch property update completed via command system:', {
+        itemId: timelineItem.value.id,
+        properties: Object.keys(properties),
+        currentFrame: currentFrame.value,
+        buttonState: buttonState.value,
+        commandCount: updateCommands.length
+      })
+    } catch (error) {
+      console.error('🎬 [Unified Keyframe UI] Failed to batch update properties:', error)
+    }
+  }
+
   // ==================== 监听器 ====================
 
   /**
@@ -318,6 +377,7 @@ export function useUnifiedKeyframeUI(
     // 方法
     toggleKeyframe: toggleKeyframeState,
     handlePropertyChange: handlePropertyChangeWrapper,
+    updateUnifiedPropertyBatch,
     goToPreviousKeyframe,
     goToNextKeyframe,
     clearAllKeyframes: clearAllKeyframesWrapper,

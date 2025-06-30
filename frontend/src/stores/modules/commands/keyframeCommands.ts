@@ -3,38 +3,50 @@
  * 为关键帧系统提供撤销/重做支持
  */
 
-import type { SimpleCommand, TimelineItem, Keyframe, AnimationConfig } from '../../../types'
+import type { SimpleCommand, TimelineItem, Keyframe, AnimationConfig, MediaType, GetMediaConfig } from '../../../types'
+import { hasVisualProps } from '../../../types'
 import { generateCommandId } from '../../../utils/idGenerator'
 
 // ==================== 关键帧数据快照接口 ====================
 
+// ===== 旧实现 (保留作为参考) =====
+// interface KeyframeSnapshot {
+//   /** 动画配置的完整快照 */
+//   animationConfig: AnimationConfig | null
+//   /** 时间轴项目的属性快照 */
+//   itemProperties: {
+//     x: number
+//     y: number
+//     width: number
+//     height: number
+//     rotation: number
+//     opacity: number
+//   }
+// }
+
+// ===== 新实现 - 类型安全的关键帧快照 =====
+
 /**
- * 关键帧状态快照
+ * 类型安全的关键帧状态快照
  * 用于保存和恢复关键帧的完整状态
  */
-interface KeyframeSnapshot {
+interface KeyframeSnapshot<T extends MediaType = MediaType> {
   /** 动画配置的完整快照 */
-  animationConfig: AnimationConfig | null
-  /** 时间轴项目的属性快照 */
-  itemProperties: {
-    x: number
-    y: number
-    width: number
-    height: number
-    rotation: number
-    opacity: number
-  }
+  animationConfig: AnimationConfig<T> | null
+  /** 时间轴项目的属性快照（类型安全） */
+  itemProperties: GetMediaConfig<T>
 }
 
 // ==================== 通用工具函数 ====================
 
 /**
  * 通用的状态快照应用函数（遵循正确的数据流向：UI → WebAV → TimelineItem）
+ * 类型安全版本
  */
-async function applyKeyframeSnapshot(
-  item: TimelineItem,
-  snapshot: KeyframeSnapshot,
-  webavAnimationManager: { updateWebAVAnimation: (item: TimelineItem) => Promise<void> }
+async function applyKeyframeSnapshot<T extends MediaType = MediaType>(
+  item: TimelineItem<T>,
+  snapshot: KeyframeSnapshot<T>,
+  webavAnimationManager: { updateWebAVAnimation: (item: TimelineItem<T>) => Promise<void> }
 ): Promise<void> {
   // 1. 恢复动画配置（关键帧数据）
   if (snapshot.animationConfig) {
@@ -54,40 +66,45 @@ async function applyKeyframeSnapshot(
   const sprite = item.sprite
   if (sprite && snapshot.itemProperties) {
     try {
-      // 恢复位置和尺寸
-      if (snapshot.itemProperties.x !== undefined || snapshot.itemProperties.y !== undefined) {
-        const { projectToWebavCoords } = await import('../../../utils/coordinateTransform')
-        const { useVideoStore } = await import('../../../stores/videoStore')
-        const videoStore = useVideoStore()
+      // 类型安全的属性恢复 - 只处理视觉属性
+      if (hasVisualProps(item)) {
+        const visualProps = snapshot.itemProperties as any // 临时类型断言，因为我们已经通过类型守卫确认
 
-        const webavCoords = projectToWebavCoords(
-          snapshot.itemProperties.x ?? item.x,
-          snapshot.itemProperties.y ?? item.y,
-          snapshot.itemProperties.width ?? item.width,
-          snapshot.itemProperties.height ?? item.height,
-          videoStore.videoResolution.width,
-          videoStore.videoResolution.height,
-        )
-        sprite.rect.x = webavCoords.x
-        sprite.rect.y = webavCoords.y
-      }
+        // 恢复位置和尺寸
+        if (visualProps.x !== undefined || visualProps.y !== undefined) {
+          const { projectToWebavCoords } = await import('../../../utils/coordinateTransform')
+          const { useVideoStore } = await import('../../../stores/videoStore')
+          const videoStore = useVideoStore()
 
-      // 恢复尺寸
-      if (snapshot.itemProperties.width !== undefined) {
-        sprite.rect.w = snapshot.itemProperties.width
-      }
-      if (snapshot.itemProperties.height !== undefined) {
-        sprite.rect.h = snapshot.itemProperties.height
-      }
+          const webavCoords = projectToWebavCoords(
+            visualProps.x ?? item.config.x,
+            visualProps.y ?? item.config.y,
+            visualProps.width ?? item.config.width,
+            visualProps.height ?? item.config.height,
+            videoStore.videoResolution.width,
+            videoStore.videoResolution.height,
+          )
+          sprite.rect.x = webavCoords.x
+          sprite.rect.y = webavCoords.y
+        }
 
-      // 恢复旋转
-      if (snapshot.itemProperties.rotation !== undefined) {
-        sprite.rect.angle = snapshot.itemProperties.rotation
-      }
+        // 恢复尺寸
+        if (visualProps.width !== undefined) {
+          sprite.rect.w = visualProps.width
+        }
+        if (visualProps.height !== undefined) {
+          sprite.rect.h = visualProps.height
+        }
 
-      // 恢复透明度
-      if (snapshot.itemProperties.opacity !== undefined) {
-        sprite.opacity = snapshot.itemProperties.opacity
+        // 恢复旋转
+        if (visualProps.rotation !== undefined) {
+          sprite.rect.angle = visualProps.rotation
+        }
+
+        // 恢复透明度
+        if (visualProps.opacity !== undefined) {
+          sprite.opacity = visualProps.opacity
+        }
       }
 
       // 触发渲染更新
@@ -146,7 +163,7 @@ export class CreateKeyframeCommand implements SimpleCommand {
   }
 
   /**
-   * 创建状态快照
+   * 创建状态快照（类型安全版本）
    */
   private createSnapshot(item: TimelineItem): KeyframeSnapshot {
     return {
@@ -160,14 +177,7 @@ export class CreateKeyframeCommand implements SimpleCommand {
             easing: item.animation.easing,
           }
         : null,
-      itemProperties: {
-        x: item.x,
-        y: item.y,
-        width: item.width,
-        height: item.height,
-        rotation: item.rotation,
-        opacity: item.opacity,
-      },
+      itemProperties: { ...item.config } as any, // 使用完整的config作为快照
     }
   }
 
@@ -317,7 +327,7 @@ export class DeleteKeyframeCommand implements SimpleCommand {
   }
 
   /**
-   * 创建状态快照
+   * 创建状态快照（类型安全版本）
    */
   private createSnapshot(item: TimelineItem): KeyframeSnapshot {
     return {
@@ -331,14 +341,7 @@ export class DeleteKeyframeCommand implements SimpleCommand {
             easing: item.animation.easing,
           }
         : null,
-      itemProperties: {
-        x: item.x,
-        y: item.y,
-        width: item.width,
-        height: item.height,
-        rotation: item.rotation,
-        opacity: item.opacity,
-      },
+      itemProperties: { ...item.config } as any, // 使用完整的config作为快照
     }
   }
 
@@ -486,7 +489,7 @@ export class UpdatePropertyCommand implements SimpleCommand {
   }
 
   /**
-   * 创建状态快照
+   * 创建状态快照（类型安全版本）
    */
   private createSnapshot(item: TimelineItem): KeyframeSnapshot {
     return {
@@ -500,14 +503,7 @@ export class UpdatePropertyCommand implements SimpleCommand {
             easing: item.animation.easing,
           }
         : null,
-      itemProperties: {
-        x: item.x,
-        y: item.y,
-        width: item.width,
-        height: item.height,
-        rotation: item.rotation,
-        opacity: item.opacity,
-      },
+      itemProperties: { ...item.config } as any, // 使用完整的config作为快照
     }
   }
 
@@ -658,7 +654,7 @@ export class ClearAllKeyframesCommand implements SimpleCommand {
   }
 
   /**
-   * 创建状态快照
+   * 创建状态快照（类型安全版本）
    */
   private createSnapshot(item: TimelineItem): KeyframeSnapshot {
     return {
@@ -672,14 +668,7 @@ export class ClearAllKeyframesCommand implements SimpleCommand {
             easing: item.animation.easing,
           }
         : null,
-      itemProperties: {
-        x: item.x,
-        y: item.y,
-        width: item.width,
-        height: item.height,
-        rotation: item.rotation,
-        opacity: item.opacity,
-      },
+      itemProperties: { ...item.config } as any, // 使用完整的config作为快照
     }
   }
 
@@ -802,7 +791,7 @@ export class ToggleKeyframeCommand implements SimpleCommand {
   }
 
   /**
-   * 创建状态快照
+   * 创建状态快照（类型安全版本）
    */
   private createSnapshot(item: TimelineItem): KeyframeSnapshot {
     return {
@@ -816,14 +805,7 @@ export class ToggleKeyframeCommand implements SimpleCommand {
             easing: item.animation.easing,
           }
         : null,
-      itemProperties: {
-        x: item.x,
-        y: item.y,
-        width: item.width,
-        height: item.height,
-        rotation: item.rotation,
-        opacity: item.opacity,
-      },
+      itemProperties: { ...item.config } as any, // 使用完整的config作为快照
     }
   }
 

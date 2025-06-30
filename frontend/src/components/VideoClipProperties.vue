@@ -456,7 +456,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useVideoStore } from '../stores/videoStore'
-import { isVideoTimeRange } from '../types'
+import { isVideoTimeRange, hasVisualProps, hasAudioProps } from '../types'
 import { uiDegreesToWebAVRadians, webAVRadiansToUIDegrees } from '../utils/rotationTransform'
 import { framesToTimecode, timecodeToFrames } from '../stores/utils/timeUtils'
 import { useUnifiedKeyframeUI } from '../composables/useUnifiedKeyframeUI'
@@ -477,6 +477,7 @@ const {
   buttonState: unifiedKeyframeButtonState,
   toggleKeyframe: toggleUnifiedKeyframe,
   handlePropertyChange: handleUnifiedPropertyChange,
+  updateUnifiedPropertyBatch,
   goToPreviousKeyframe: goToPreviousUnifiedKeyframe,
   goToNextKeyframe: goToNextUnifiedKeyframe,
   hasPreviousKeyframe: hasUnifiedPreviousKeyframe,
@@ -528,10 +529,13 @@ const currentResolution = computed(() => {
   if (!props.selectedTimelineItem) {
     return { width: 0, height: 0 }
   }
-  // 直接使用TimelineItem中的width/height属性，这是缩放后的实际尺寸
+  // 直接使用TimelineItem中的width/height属性，这是缩放后的实际尺寸（类型安全版本）
+  if (!hasVisualProps(props.selectedTimelineItem)) {
+    return { width: 0, height: 0 }
+  }
   return {
-    width: Math.round(props.selectedTimelineItem.width),
-    height: Math.round(props.selectedTimelineItem.height),
+    width: Math.round(props.selectedTimelineItem.config.width),
+    height: Math.round(props.selectedTimelineItem.config.height),
   }
 })
 
@@ -567,16 +571,17 @@ const speedInputValue = computed(() => playbackRate.value)
 // 音量相关 - 直接从TimelineItem读取，这是响应式的
 const volume = computed(() => {
   if (!props.selectedTimelineItem || props.selectedTimelineItem.mediaType !== 'video') return 1
-  // 确保 volume 和 isMuted 都有默认值
-  const itemVolume = props.selectedTimelineItem.volume ?? 1
-  const itemMuted = props.selectedTimelineItem.isMuted ?? false
+  // 确保 volume 和 isMuted 都有默认值（类型安全版本）
+  if (!hasAudioProps(props.selectedTimelineItem)) return 1
+  const itemVolume = props.selectedTimelineItem.config.volume ?? 1
+  const itemMuted = props.selectedTimelineItem.config.isMuted ?? false
   // 静音时显示0，否则显示实际音量
   return itemMuted ? 0 : itemVolume
 })
 
 const isMuted = computed(() => {
-  if (!props.selectedTimelineItem || props.selectedTimelineItem.mediaType !== 'video') return false
-  return props.selectedTimelineItem.isMuted ?? false
+  if (!props.selectedTimelineItem || !hasAudioProps(props.selectedTimelineItem)) return false
+  return props.selectedTimelineItem.config.isMuted ?? false
 })
 
 // NumberInput 样式定义
@@ -611,31 +616,44 @@ const scaleInputStyle = {
   flex: '0 0 auto',
 }
 
-// 变换属性 - 基于TimelineItem的响应式计算属性
-const transformX = computed(() => props.selectedTimelineItem?.x || 0)
-const transformY = computed(() => props.selectedTimelineItem?.y || 0)
+// 变换属性 - 基于TimelineItem的响应式计算属性（类型安全版本）
+const transformX = computed(() => {
+  if (!props.selectedTimelineItem || !hasVisualProps(props.selectedTimelineItem)) return 0
+  return props.selectedTimelineItem.config.x
+})
+const transformY = computed(() => {
+  if (!props.selectedTimelineItem || !hasVisualProps(props.selectedTimelineItem)) return 0
+  return props.selectedTimelineItem.config.y
+})
 const scaleX = computed(() => {
-  if (!props.selectedTimelineItem || !selectedMediaItem.value) return 1
+  if (!props.selectedTimelineItem || !selectedMediaItem.value || !hasVisualProps(props.selectedTimelineItem)) return 1
   const originalResolution =
     selectedMediaItem.value.mediaType === 'video'
       ? videoStore.getVideoOriginalResolution(selectedMediaItem.value.id)
       : videoStore.getImageOriginalResolution(selectedMediaItem.value.id)
-  return props.selectedTimelineItem.width / originalResolution.width
+  return props.selectedTimelineItem.config.width / originalResolution.width
 })
 const scaleY = computed(() => {
-  if (!props.selectedTimelineItem || !selectedMediaItem.value) return 1
+  if (!props.selectedTimelineItem || !selectedMediaItem.value || !hasVisualProps(props.selectedTimelineItem)) return 1
   const originalResolution =
     selectedMediaItem.value.mediaType === 'video'
       ? videoStore.getVideoOriginalResolution(selectedMediaItem.value.id)
       : videoStore.getImageOriginalResolution(selectedMediaItem.value.id)
-  return props.selectedTimelineItem.height / originalResolution.height
+  return props.selectedTimelineItem.config.height / originalResolution.height
 })
 const rotation = computed(() => {
-  const radians = props.selectedTimelineItem?.rotation || 0
+  if (!props.selectedTimelineItem || !hasVisualProps(props.selectedTimelineItem)) return 0
+  const radians = props.selectedTimelineItem.config.rotation
   return webAVRadiansToUIDegrees(radians)
 })
-const opacity = computed(() => props.selectedTimelineItem?.opacity || 1)
-const zIndex = computed(() => props.selectedTimelineItem?.zIndex || 0)
+const opacity = computed(() => {
+  if (!props.selectedTimelineItem || !hasVisualProps(props.selectedTimelineItem)) return 1
+  return props.selectedTimelineItem.config.opacity
+})
+const zIndex = computed(() => {
+  if (!props.selectedTimelineItem) return 0
+  return props.selectedTimelineItem.config.zIndex
+})
 
 // 等比缩放相关
 const proportionalScale = computed({
@@ -819,12 +837,18 @@ const updateVolume = (newVolume: number) => {
 
   const clampedVolume = Math.max(0, Math.min(1, newVolume))
 
-  // 确保属性存在，如果不存在则初始化
-  if (props.selectedTimelineItem.volume === undefined) {
-    props.selectedTimelineItem.volume = 1
+  // 确保属性存在，如果不存在则初始化（类型安全版本）
+  if (!hasAudioProps(props.selectedTimelineItem)) return
+
+  // 📝 数据流向说明：
+  // volume 和 isMuted 属性属于【非动画属性】，WebAV不支持这些属性的propsChange事件
+  // 因此无法遵循标准的 UI → WebAV → TimelineItem → UI 数据流向
+  // 这里直接修改config是技术限制导致的必要妥协，不是架构设计缺陷
+  if (props.selectedTimelineItem.config.volume === undefined) {
+    props.selectedTimelineItem.config.volume = 1
   }
-  if (props.selectedTimelineItem.isMuted === undefined) {
-    props.selectedTimelineItem.isMuted = false
+  if (props.selectedTimelineItem.config.isMuted === undefined) {
+    props.selectedTimelineItem.config.isMuted = false
   }
 
   // 使用历史记录系统更新音量
@@ -844,19 +868,22 @@ const updateVolume = (newVolume: number) => {
   console.log('✅ 音量更新成功:', clampedVolume)
 }
 
-// 切换静音状态
+// 切换静音状态（类型安全版本）
 const toggleMute = () => {
-  if (!props.selectedTimelineItem || props.selectedTimelineItem.mediaType !== 'video') return
+  if (!props.selectedTimelineItem || !hasAudioProps(props.selectedTimelineItem)) return
 
-  // 确保属性存在，如果不存在则初始化
-  if (props.selectedTimelineItem.volume === undefined) {
-    props.selectedTimelineItem.volume = 1
+  // 📝 数据流向说明：
+  // volume 和 isMuted 属性属于【非动画属性】，WebAV不支持这些属性的propsChange事件
+  // 因此无法遵循标准的 UI → WebAV → TimelineItem → UI 数据流向
+  // 这里直接修改config是技术限制导致的必要妥协，不是架构设计缺陷
+  if (props.selectedTimelineItem.config.volume === undefined) {
+    props.selectedTimelineItem.config.volume = 1
   }
-  if (props.selectedTimelineItem.isMuted === undefined) {
-    props.selectedTimelineItem.isMuted = false
+  if (props.selectedTimelineItem.config.isMuted === undefined) {
+    props.selectedTimelineItem.config.isMuted = false
   }
 
-  const newMutedState = !props.selectedTimelineItem.isMuted
+  const newMutedState = !props.selectedTimelineItem.config.isMuted
 
   // 使用历史记录系统切换静音状态
   videoStore.updateTimelineItemTransformWithHistory(props.selectedTimelineItem.id, {
@@ -867,7 +894,7 @@ const toggleMute = () => {
     '✅ 静音状态切换:',
     newMutedState ? '静音' : '有声',
     '音量保持:',
-    props.selectedTimelineItem.volume,
+    props.selectedTimelineItem.config.volume,
   )
 }
 
@@ -951,12 +978,12 @@ const updateTransform = async (transform?: {
 }) => {
   if (!props.selectedTimelineItem) return
 
-  // 如果没有提供transform参数，使用当前的响应式值
+  // 如果没有提供transform参数，使用当前的响应式值（类型安全版本）
   const finalTransform = transform || {
     x: transformX.value,
     y: transformY.value,
-    width: props.selectedTimelineItem.width,
-    height: props.selectedTimelineItem.height,
+    width: hasVisualProps(props.selectedTimelineItem) ? props.selectedTimelineItem.config.width : 0,
+    height: hasVisualProps(props.selectedTimelineItem) ? props.selectedTimelineItem.config.height : 0,
     rotation: rotation.value,
     opacity: opacity.value,
     zIndex: zIndex.value,
@@ -964,17 +991,29 @@ const updateTransform = async (transform?: {
 
   // 统一关键帧系统处理 - 根据当前状态自动处理关键帧创建/更新
   // 注意：updateUnifiedProperty 已经包含了实时渲染更新，所以不需要再调用 updateTimelineItemTransformWithHistory
+
+  // 🎯 特殊处理：如果同时设置了width和height，使用批量更新避免重复位置计算
+  if (finalTransform.width !== undefined && finalTransform.height !== undefined) {
+    await updateUnifiedPropertyBatch({
+      width: finalTransform.width,
+      height: finalTransform.height
+    })
+  } else {
+    // 单独处理尺寸属性
+    if (finalTransform.width !== undefined) {
+      await updateUnifiedProperty('width', finalTransform.width)
+    }
+    if (finalTransform.height !== undefined) {
+      await updateUnifiedProperty('height', finalTransform.height)
+    }
+  }
+
+  // 处理其他属性
   if (finalTransform.x !== undefined) {
     await updateUnifiedProperty('x', finalTransform.x)
   }
   if (finalTransform.y !== undefined) {
     await updateUnifiedProperty('y', finalTransform.y)
-  }
-  if (finalTransform.width !== undefined) {
-    await updateUnifiedProperty('width', finalTransform.width)
-  }
-  if (finalTransform.height !== undefined) {
-    await updateUnifiedProperty('height', finalTransform.height)
   }
   if (finalTransform.rotation !== undefined) {
     await updateUnifiedProperty('rotation', finalTransform.rotation)
@@ -1048,7 +1087,7 @@ const setScaleX = (value: number) => {
   const newScaleX = Math.max(0.01, Math.min(5, value))
   const newSize = {
     width: originalResolution.width * newScaleX,
-    height: props.selectedTimelineItem.height, // 保持Y尺寸不变
+    height: hasVisualProps(props.selectedTimelineItem) ? props.selectedTimelineItem.config.height : 0, // 保持Y尺寸不变
   }
   updateTransform({ width: newSize.width, height: newSize.height })
 }
@@ -1062,7 +1101,7 @@ const setScaleY = (value: number) => {
       : videoStore.getImageOriginalResolution(selectedMediaItem.value.id)
   const newScaleY = Math.max(0.01, Math.min(5, value))
   const newSize = {
-    width: props.selectedTimelineItem.width, // 保持X尺寸不变
+    width: hasVisualProps(props.selectedTimelineItem) ? props.selectedTimelineItem.config.width : 0, // 保持X尺寸不变
     height: originalResolution.height * newScaleY,
   }
   updateTransform({ width: newSize.width, height: newSize.height })

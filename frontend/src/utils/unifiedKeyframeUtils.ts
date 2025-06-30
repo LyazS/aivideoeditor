@@ -11,6 +11,7 @@ import type {
   KeyframeButtonState,
   KeyframeUIState,
 } from '../types'
+import { hasVisualProps } from '../types'
 
 // ==================== 关键帧位置转换工具函数 ====================
 
@@ -74,16 +75,44 @@ export function initializeAnimation(item: TimelineItem): void {
 export function createKeyframe(item: TimelineItem, absoluteFrame: number): Keyframe {
   const relativeFrame = absoluteFrameToRelativeFrame(absoluteFrame, item.timeRange)
 
-  return {
-    framePosition: relativeFrame,
-    properties: {
-      x: item.x,
-      y: item.y,
-      width: item.width,
-      height: item.height,
-      rotation: item.rotation,
-      opacity: item.opacity,
-    },
+  if (hasVisualProps(item)) {
+    if (item.mediaType === 'video') {
+      return {
+        framePosition: relativeFrame,
+        properties: {
+          x: item.config.x,
+          y: item.config.y,
+          width: item.config.width,
+          height: item.config.height,
+          rotation: item.config.rotation,
+          opacity: item.config.opacity,
+          zIndex: item.config.zIndex,
+          volume: item.config.volume,
+        },
+      } as Keyframe<'video'>
+    } else {
+      // image 类型
+      return {
+        framePosition: relativeFrame,
+        properties: {
+          x: item.config.x,
+          y: item.config.y,
+          width: item.config.width,
+          height: item.config.height,
+          rotation: item.config.rotation,
+          opacity: item.config.opacity,
+          zIndex: item.config.zIndex,
+        },
+      } as Keyframe<'image'>
+    }
+  } else {
+    // 音频类型
+    return {
+      framePosition: relativeFrame,
+      properties: {
+        volume: (item.config as any).volume ?? 1,
+      },
+    } as Keyframe<'audio'>
   }
 }
 
@@ -351,6 +380,91 @@ export function toggleKeyframe(item: TimelineItem, currentFrame: number): void {
 // ==================== 属性修改处理 ====================
 
 /**
+ * 批量更新属性值（优化版本，避免重复位置计算）
+ * 特别适用于同时更新width和height的情况
+ */
+export async function updatePropertiesBatchViaWebAV(
+  item: TimelineItem,
+  properties: Record<string, any>,
+): Promise<void> {
+  const sprite = item.sprite
+  if (!sprite) {
+    console.warn('🎬 [Unified Keyframe] No sprite found for item:', item.id)
+    return
+  }
+
+  try {
+    // 检查是否同时更新width和height
+    const hasWidth = 'width' in properties
+    const hasHeight = 'height' in properties
+
+    if (hasWidth && hasHeight && hasVisualProps(item)) {
+      // 🎯 批量处理尺寸更新：一次性计算位置，避免重复计算
+      const { projectToWebavCoords } = await import('./coordinateTransform')
+      const { useVideoStore } = await import('../stores/videoStore')
+      const videoStore = useVideoStore()
+
+      // 获取当前中心位置（项目坐标系）
+      const currentCenterX = item.config.x
+      const currentCenterY = item.config.y
+      const newWidth = properties.width
+      const newHeight = properties.height
+
+      // 同时更新尺寸
+      sprite.rect.w = newWidth
+      sprite.rect.h = newHeight
+
+      // 一次性重新计算WebAV坐标（保持中心位置不变）
+      const webavCoords = projectToWebavCoords(
+        currentCenterX,
+        currentCenterY,
+        newWidth,
+        newHeight,
+        videoStore.videoResolution.width,
+        videoStore.videoResolution.height,
+      )
+      sprite.rect.x = webavCoords.x
+      sprite.rect.y = webavCoords.y
+
+      console.log('🎯 [Batch Center Scale] Size adjustment:', {
+        itemId: item.id,
+        centerPosition: { x: currentCenterX, y: currentCenterY },
+        oldSize: { w: item.config.width, h: item.config.height },
+        newSize: { w: newWidth, h: newHeight },
+        newWebAVPos: { x: webavCoords.x, y: webavCoords.y }
+      })
+
+      // 移除已处理的属性
+      const remainingProperties = { ...properties }
+      delete remainingProperties.width
+      delete remainingProperties.height
+
+      // 处理剩余属性
+      for (const [prop, val] of Object.entries(remainingProperties)) {
+        await updatePropertyViaWebAV(item, prop, val)
+      }
+    } else {
+      // 逐个处理属性（原有逻辑）
+      for (const [prop, val] of Object.entries(properties)) {
+        await updatePropertyViaWebAV(item, prop, val)
+      }
+    }
+
+    // 触发渲染更新
+    const { useVideoStore } = await import('../stores/videoStore')
+    const videoStore = useVideoStore()
+    const avCanvas = videoStore.avCanvas
+    if (avCanvas) {
+      const currentTime = videoStore.currentFrame * (1000000 / 30) // 转换为微秒
+      avCanvas.previewFrame(currentTime)
+    }
+
+  } catch (error) {
+    console.error('批量更新属性失败:', error)
+  }
+}
+
+/**
  * 通过WebAV更新属性值（遵循正确的数据流向）
  */
 async function updatePropertyViaWebAV(item: TimelineItem, property: string, value: any): Promise<void> {
@@ -368,43 +482,89 @@ async function updatePropertyViaWebAV(item: TimelineItem, property: string, valu
       const videoStore = useVideoStore()
 
       const webavCoords = projectToWebavCoords(
-        property === 'x' ? value : item.x,
-        property === 'y' ? value : item.y,
-        item.width,
-        item.height,
+        property === 'x' ? value : (hasVisualProps(item) ? item.config.x : 0),
+        property === 'y' ? value : (hasVisualProps(item) ? item.config.y : 0),
+        hasVisualProps(item) ? item.config.width : 0,
+        hasVisualProps(item) ? item.config.height : 0,
         videoStore.videoResolution.width,
         videoStore.videoResolution.height,
       )
       sprite.rect.x = webavCoords.x
       sprite.rect.y = webavCoords.y
     } else if (property === 'width') {
-      sprite.rect.w = value
-      // 重新计算位置以保持中心不变
+      // 中心缩放：保持中心位置不变，更新宽度
       const { projectToWebavCoords } = await import('./coordinateTransform')
       const { useVideoStore } = await import('../stores/videoStore')
       const videoStore = useVideoStore()
 
-      const webavCoords = projectToWebavCoords(
-        item.x, item.y, value, item.height,
-        videoStore.videoResolution.width,
-        videoStore.videoResolution.height,
-      )
-      sprite.rect.x = webavCoords.x
-      sprite.rect.y = webavCoords.y
+      if (hasVisualProps(item)) {
+        // 获取当前中心位置（项目坐标系）
+        const currentCenterX = item.config.x
+        const currentCenterY = item.config.y
+        const newWidth = value
+        const currentHeight = item.config.height
+
+        // 更新尺寸
+        sprite.rect.w = newWidth
+
+        // 根据新尺寸重新计算WebAV坐标（保持中心位置不变）
+        const webavCoords = projectToWebavCoords(
+          currentCenterX,
+          currentCenterY,
+          newWidth,
+          currentHeight,
+          videoStore.videoResolution.width,
+          videoStore.videoResolution.height,
+        )
+        sprite.rect.x = webavCoords.x
+        sprite.rect.y = webavCoords.y
+
+        console.log('🎯 [Center Scale] Width adjustment:', {
+          itemId: item.id,
+          centerPosition: { x: currentCenterX, y: currentCenterY },
+          oldSize: { w: item.config.width, h: currentHeight },
+          newSize: { w: newWidth, h: currentHeight },
+          oldWebAVPos: { x: sprite.rect.x, y: sprite.rect.y },
+          newWebAVPos: { x: webavCoords.x, y: webavCoords.y }
+        })
+      }
     } else if (property === 'height') {
-      sprite.rect.h = value
-      // 重新计算位置以保持中心不变
+      // 中心缩放：保持中心位置不变，更新高度
       const { projectToWebavCoords } = await import('./coordinateTransform')
       const { useVideoStore } = await import('../stores/videoStore')
       const videoStore = useVideoStore()
 
-      const webavCoords = projectToWebavCoords(
-        item.x, item.y, item.width, value,
-        videoStore.videoResolution.width,
-        videoStore.videoResolution.height,
-      )
-      sprite.rect.x = webavCoords.x
-      sprite.rect.y = webavCoords.y
+      if (hasVisualProps(item)) {
+        // 获取当前中心位置（项目坐标系）
+        const currentCenterX = item.config.x
+        const currentCenterY = item.config.y
+        const currentWidth = item.config.width
+        const newHeight = value
+
+        // 更新尺寸
+        sprite.rect.h = newHeight
+
+        // 根据新尺寸重新计算WebAV坐标（保持中心位置不变）
+        const webavCoords = projectToWebavCoords(
+          currentCenterX,
+          currentCenterY,
+          currentWidth,
+          newHeight,
+          videoStore.videoResolution.width,
+          videoStore.videoResolution.height,
+        )
+        sprite.rect.x = webavCoords.x
+        sprite.rect.y = webavCoords.y
+
+        console.log('🎯 [Center Scale] Height adjustment:', {
+          itemId: item.id,
+          centerPosition: { x: currentCenterX, y: currentCenterY },
+          oldSize: { w: currentWidth, h: item.config.height },
+          newSize: { w: currentWidth, h: newHeight },
+          oldWebAVPos: { x: sprite.rect.x, y: sprite.rect.y },
+          newWebAVPos: { x: webavCoords.x, y: webavCoords.y }
+        })
+      }
     } else if (property === 'rotation') {
       sprite.rect.angle = value
     } else if (property === 'opacity') {
@@ -447,14 +607,28 @@ async function handlePropertyChange_OnKeyframe(
   property: string,
   value: any,
 ): Promise<void> {
-  // 1. 通过WebAV更新属性值，propsChange事件会自动同步到TimelineItem
-  await updatePropertyViaWebAV(item, property, value)
+  // 🎯 关键修复：先更新关键帧数据，再触发WebAV更新
+  // 这样可以避免WebAV动画系统用旧的关键帧数据覆盖新设置的值
 
-  // 2. 找到当前帧的关键帧并更新关键帧数据
+  // 1. 先找到当前帧的关键帧并更新关键帧数据
   const keyframe = findKeyframeAtFrame(item, currentFrame)
   if (keyframe) {
     ;(keyframe.properties as any)[property] = value
+    console.log('🎯 [Keyframe Fix] Updated keyframe data first:', {
+      itemId: item.id,
+      currentFrame,
+      property,
+      value,
+      keyframePosition: keyframe.framePosition
+    })
   }
+
+  // 2. 更新WebAV动画（使用新的关键帧数据）
+  const { updateWebAVAnimation } = await import('./webavAnimationManager')
+  await updateWebAVAnimation(item)
+
+  // 3. 通过WebAV更新当前属性值（确保立即生效）
+  await updatePropertyViaWebAV(item, property, value)
 
   console.log('🎬 [Unified Keyframe] Updated keyframe property via WebAV:', {
     itemId: item.id,
@@ -473,12 +647,28 @@ async function handlePropertyChange_BetweenKeyframes(
   property: string,
   value: any,
 ): Promise<void> {
-  // 1. 通过WebAV更新属性值，propsChange事件会自动同步到TimelineItem
-  await updatePropertyViaWebAV(item, property, value)
+  // 🎯 关键修复：先创建关键帧，再更新WebAV动画
 
-  // 2. 在当前帧创建新关键帧（包含所有属性的当前值）
+  // 1. 在当前帧创建新关键帧（包含所有属性的当前值，但使用新的属性值）
   const keyframe = createKeyframe(item, currentFrame)
+  // 确保新关键帧包含更新后的属性值
+  ;(keyframe.properties as any)[property] = value
   item.animation!.keyframes.push(keyframe)
+
+  console.log('🎯 [Keyframe Fix] Created new keyframe with updated property:', {
+    itemId: item.id,
+    currentFrame,
+    property,
+    value,
+    keyframePosition: keyframe.framePosition
+  })
+
+  // 2. 更新WebAV动画（使用新的关键帧数据）
+  const { updateWebAVAnimation } = await import('./webavAnimationManager')
+  await updateWebAVAnimation(item)
+
+  // 3. 通过WebAV更新当前属性值（确保立即生效）
+  await updatePropertyViaWebAV(item, property, value)
 
   console.log('🎬 [Unified Keyframe] Created keyframe for property change via WebAV:', {
     itemId: item.id,
@@ -487,6 +677,8 @@ async function handlePropertyChange_BetweenKeyframes(
     value,
   })
 }
+
+
 
 /**
  * 统一属性修改处理（遵循正确的数据流向）
@@ -612,18 +804,36 @@ export function validateKeyframes(item: TimelineItem): boolean {
       return false
     }
 
-    // 检查属性是否完整
+    // 检查属性是否完整（根据媒体类型验证不同的属性）
     const props = keyframe.properties
-    if (
-      typeof props.x !== 'number' ||
-      typeof props.y !== 'number' ||
-      typeof props.width !== 'number' ||
-      typeof props.height !== 'number' ||
-      typeof props.rotation !== 'number' ||
-      typeof props.opacity !== 'number'
-    ) {
-      console.warn('🎬 [Unified Keyframe] Incomplete keyframe properties:', props)
-      return false
+
+    if (hasVisualProps(item)) {
+      // 视觉媒体类型（video/image）需要验证视觉属性
+      if (
+        typeof (props as any).x !== 'number' ||
+        typeof (props as any).y !== 'number' ||
+        typeof (props as any).width !== 'number' ||
+        typeof (props as any).height !== 'number' ||
+        typeof (props as any).rotation !== 'number' ||
+        typeof (props as any).opacity !== 'number'
+      ) {
+        console.warn('🎬 [Unified Keyframe] Incomplete visual keyframe properties:', props)
+        return false
+      }
+
+      // 视频类型还需要验证音频属性
+      if (item.mediaType === 'video') {
+        if (typeof (props as any).volume !== 'number') {
+          console.warn('🎬 [Unified Keyframe] Incomplete video audio properties:', props)
+          return false
+        }
+      }
+    } else {
+      // 音频类型只需要验证音频属性
+      if (typeof (props as any).volume !== 'number') {
+        console.warn('🎬 [Unified Keyframe] Incomplete audio keyframe properties:', props)
+        return false
+      }
     }
   }
 
@@ -655,3 +865,5 @@ export function debugKeyframes(item: TimelineItem): void {
 
   console.groupEnd()
 }
+
+
