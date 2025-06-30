@@ -1088,83 +1088,10 @@ const updateUnifiedProperty = async (property: string, value: any) => {
   if (!props.selectedTimelineItem) return
 
   try {
-    // 1. 使用统一关键帧的属性修改处理（更新关键帧数据）
+    // 使用统一关键帧处理逻辑（已经包含了正确的WebAV更新流程）
     await handleUnifiedPropertyChange(property, value)
 
-    // 2. 重要：更新TimelineItem的实际属性值（这会触发响应式更新）
-    // 这一步确保属性面板显示正确的值
-    if (property === 'x') props.selectedTimelineItem.x = value
-    else if (property === 'y') props.selectedTimelineItem.y = value
-    else if (property === 'width') props.selectedTimelineItem.width = value
-    else if (property === 'height') props.selectedTimelineItem.height = value
-    else if (property === 'rotation') props.selectedTimelineItem.rotation = value
-    else if (property === 'opacity') props.selectedTimelineItem.opacity = value
-
-    // 3. 更新sprite的实时属性（触发WebAV的实时渲染和preframe）
-    const sprite = props.selectedTimelineItem.sprite
-    if (sprite) {
-      // 构建变换对象，只包含当前修改的属性
-      const transform: any = {}
-
-      if (property === 'x' || property === 'y') {
-        // 位置更新需要坐标转换
-        const { projectToWebavCoords } = await import('../utils/coordinateTransform')
-        const webavCoords = projectToWebavCoords(
-          props.selectedTimelineItem.x,
-          props.selectedTimelineItem.y,
-          props.selectedTimelineItem.width,
-          props.selectedTimelineItem.height,
-          videoStore.videoResolution.width,
-          videoStore.videoResolution.height,
-        )
-        transform.x = webavCoords.x
-        transform.y = webavCoords.y
-      } else if (property === 'width') {
-        // 🔧 中心缩放：更新宽度时需要重新计算位置以保持中心不变
-        transform.w = value
-        const { projectToWebavCoords } = await import('../utils/coordinateTransform')
-        const webavCoords = projectToWebavCoords(
-          props.selectedTimelineItem.x,
-          props.selectedTimelineItem.y,
-          value, // 使用新的宽度
-          props.selectedTimelineItem.height,
-          videoStore.videoResolution.width,
-          videoStore.videoResolution.height,
-        )
-        transform.x = webavCoords.x
-        transform.y = webavCoords.y
-      } else if (property === 'height') {
-        // 🔧 中心缩放：更新高度时需要重新计算位置以保持中心不变
-        transform.h = value
-        const { projectToWebavCoords } = await import('../utils/coordinateTransform')
-        const webavCoords = projectToWebavCoords(
-          props.selectedTimelineItem.x,
-          props.selectedTimelineItem.y,
-          props.selectedTimelineItem.width,
-          value, // 使用新的高度
-          videoStore.videoResolution.width,
-          videoStore.videoResolution.height,
-        )
-        transform.x = webavCoords.x
-        transform.y = webavCoords.y
-      } else if (property === 'rotation') {
-        transform.angle = value
-      } else if (property === 'opacity') {
-        // 透明度属性需要直接设置到sprite，而不是sprite.rect
-        sprite.opacity = value
-      }
-
-      // 更新sprite属性（这会触发propsChange事件和实时渲染）
-      if (Object.keys(transform).length > 0) {
-        Object.assign(sprite.rect, transform)
-      }
-
-      // 手动触发preframe以确保立即更新渲染
-      const currentTime = props.currentFrame * (1000000 / 30) // 转换为微秒
-      sprite.preFrame(currentTime)
-    }
-
-    console.log('🎬 [Unified Property] Property updated with real-time rendering:', {
+    console.log('🎬 [Unified Property] Property updated via unified keyframe system:', {
       property,
       value,
       buttonState: unifiedKeyframeButtonState.value,

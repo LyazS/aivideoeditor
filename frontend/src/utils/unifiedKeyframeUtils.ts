@@ -351,13 +351,87 @@ export function toggleKeyframe(item: TimelineItem, currentFrame: number): void {
 // ==================== 属性修改处理 ====================
 
 /**
+ * 通过WebAV更新属性值（遵循正确的数据流向）
+ */
+async function updatePropertyViaWebAV(item: TimelineItem, property: string, value: any): Promise<void> {
+  const sprite = item.sprite
+  if (!sprite) {
+    console.warn('🎬 [Unified Keyframe] No sprite found for item:', item.id)
+    return
+  }
+
+  try {
+    if (property === 'x' || property === 'y') {
+      // 位置更新需要坐标转换
+      const { projectToWebavCoords } = await import('./coordinateTransform')
+      const { useVideoStore } = await import('../stores/videoStore')
+      const videoStore = useVideoStore()
+
+      const webavCoords = projectToWebavCoords(
+        property === 'x' ? value : item.x,
+        property === 'y' ? value : item.y,
+        item.width,
+        item.height,
+        videoStore.videoResolution.width,
+        videoStore.videoResolution.height,
+      )
+      sprite.rect.x = webavCoords.x
+      sprite.rect.y = webavCoords.y
+    } else if (property === 'width') {
+      sprite.rect.w = value
+      // 重新计算位置以保持中心不变
+      const { projectToWebavCoords } = await import('./coordinateTransform')
+      const { useVideoStore } = await import('../stores/videoStore')
+      const videoStore = useVideoStore()
+
+      const webavCoords = projectToWebavCoords(
+        item.x, item.y, value, item.height,
+        videoStore.videoResolution.width,
+        videoStore.videoResolution.height,
+      )
+      sprite.rect.x = webavCoords.x
+      sprite.rect.y = webavCoords.y
+    } else if (property === 'height') {
+      sprite.rect.h = value
+      // 重新计算位置以保持中心不变
+      const { projectToWebavCoords } = await import('./coordinateTransform')
+      const { useVideoStore } = await import('../stores/videoStore')
+      const videoStore = useVideoStore()
+
+      const webavCoords = projectToWebavCoords(
+        item.x, item.y, item.width, value,
+        videoStore.videoResolution.width,
+        videoStore.videoResolution.height,
+      )
+      sprite.rect.x = webavCoords.x
+      sprite.rect.y = webavCoords.y
+    } else if (property === 'rotation') {
+      sprite.rect.angle = value
+    } else if (property === 'opacity') {
+      sprite.opacity = value
+    }
+
+    // 触发渲染更新
+    const { useVideoStore } = await import('../stores/videoStore')
+    const videoStore = useVideoStore()
+    const avCanvas = videoStore.avCanvas
+    if (avCanvas) {
+      const currentTime = videoStore.currentFrame * (1000000 / 30)
+      avCanvas.previewFrame(currentTime)
+    }
+  } catch (error) {
+    console.error('🎬 [Unified Keyframe] Failed to update property via WebAV:', error)
+  }
+}
+
+/**
  * 处理属性修改 - 状态1：黑色（无动画）
  */
-function handlePropertyChange_NoAnimation(item: TimelineItem, property: string, value: any): void {
-  // 直接更新属性值，不创建关键帧
-  ;(item as any)[property] = value
+async function handlePropertyChange_NoAnimation(item: TimelineItem, property: string, value: any): Promise<void> {
+  // 通过WebAV更新属性值，propsChange事件会自动同步到TimelineItem
+  await updatePropertyViaWebAV(item, property, value)
 
-  console.log('🎬 [Unified Keyframe] Property updated without animation:', {
+  console.log('🎬 [Unified Keyframe] Property updated without animation via WebAV:', {
     itemId: item.id,
     property,
     value,
@@ -367,22 +441,22 @@ function handlePropertyChange_NoAnimation(item: TimelineItem, property: string, 
 /**
  * 处理属性修改 - 状态2：蓝色（在关键帧）
  */
-function handlePropertyChange_OnKeyframe(
+async function handlePropertyChange_OnKeyframe(
   item: TimelineItem,
   currentFrame: number,
   property: string,
   value: any,
-): void {
-  // 1. 更新TimelineItem属性
-  ;(item as any)[property] = value
+): Promise<void> {
+  // 1. 通过WebAV更新属性值，propsChange事件会自动同步到TimelineItem
+  await updatePropertyViaWebAV(item, property, value)
 
-  // 2. 找到当前帧的关键帧并更新
+  // 2. 找到当前帧的关键帧并更新关键帧数据
   const keyframe = findKeyframeAtFrame(item, currentFrame)
   if (keyframe) {
     ;(keyframe.properties as any)[property] = value
   }
 
-  console.log('🎬 [Unified Keyframe] Updated keyframe property:', {
+  console.log('🎬 [Unified Keyframe] Updated keyframe property via WebAV:', {
     itemId: item.id,
     frame: currentFrame,
     property,
@@ -393,20 +467,20 @@ function handlePropertyChange_OnKeyframe(
 /**
  * 处理属性修改 - 状态3：金色（不在关键帧）
  */
-function handlePropertyChange_BetweenKeyframes(
+async function handlePropertyChange_BetweenKeyframes(
   item: TimelineItem,
   currentFrame: number,
   property: string,
   value: any,
-): void {
-  // 1. 更新TimelineItem属性
-  ;(item as any)[property] = value
+): Promise<void> {
+  // 1. 通过WebAV更新属性值，propsChange事件会自动同步到TimelineItem
+  await updatePropertyViaWebAV(item, property, value)
 
   // 2. 在当前帧创建新关键帧（包含所有属性的当前值）
   const keyframe = createKeyframe(item, currentFrame)
   item.animation!.keyframes.push(keyframe)
 
-  console.log('🎬 [Unified Keyframe] Created keyframe for property change:', {
+  console.log('🎬 [Unified Keyframe] Created keyframe for property change via WebAV:', {
     itemId: item.id,
     frame: currentFrame,
     property,
@@ -415,31 +489,32 @@ function handlePropertyChange_BetweenKeyframes(
 }
 
 /**
- * 统一属性修改处理
+ * 统一属性修改处理（遵循正确的数据流向）
+ * @returns 返回处理状态，用于日志记录
  */
-export function handlePropertyChange(
+export async function handlePropertyChange(
   item: TimelineItem,
   currentFrame: number,
   property: string,
   value: any,
-): void {
+): Promise<'no-animation' | 'updated-keyframe' | 'created-keyframe'> {
   if (!item) {
     console.error('🎬 [Unified Keyframe] Invalid timeline item')
-    return
+    throw new Error('Invalid timeline item')
   }
 
   const buttonState = getKeyframeButtonState(item, currentFrame)
 
   switch (buttonState) {
     case 'none':
-      handlePropertyChange_NoAnimation(item, property, value)
-      break
+      await handlePropertyChange_NoAnimation(item, property, value)
+      return 'no-animation'
     case 'on-keyframe':
-      handlePropertyChange_OnKeyframe(item, currentFrame, property, value)
-      break
+      await handlePropertyChange_OnKeyframe(item, currentFrame, property, value)
+      return 'updated-keyframe'
     case 'between-keyframes':
-      handlePropertyChange_BetweenKeyframes(item, currentFrame, property, value)
-      break
+      await handlePropertyChange_BetweenKeyframes(item, currentFrame, property, value)
+      return 'created-keyframe'
   }
 }
 

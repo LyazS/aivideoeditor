@@ -22,7 +22,7 @@ import {
 } from '../utils/unifiedKeyframeUtils'
 import {
   toggleKeyframe as toggleKeyframeWithCommand,
-  updateKeyframeProperty as updateKeyframePropertyWithCommand,
+  updateProperty as updatePropertyWithCommand,
   clearAllKeyframes as clearAllKeyframesWithCommand,
 } from '../utils/keyframeCommandUtils'
 import { isPlayheadInTimelineItem } from '../stores/utils/timelineSearchUtils'
@@ -190,7 +190,7 @@ export function useUnifiedKeyframeUI(
 
     try {
       // 使用命令系统处理属性修改
-      await updateKeyframePropertyWithCommand(
+      await updatePropertyWithCommand(
         timelineItem.value.id,
         currentFrame.value,
         property,
