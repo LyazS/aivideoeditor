@@ -293,7 +293,7 @@ export function useUnifiedKeyframeUI(
    * 🎯 正确方案：利用现有的批量操作架构，而不是重新实现
    */
   const updateUnifiedPropertyBatch = async (properties: Record<string, any>) => {
-    if (!timelineItem.value || !currentFrame.value) return
+    if (!timelineItem.value || currentFrame.value == null) return
 
     try {
       // 动态导入命令系统
