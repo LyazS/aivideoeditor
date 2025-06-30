@@ -14,9 +14,9 @@ import type { MP4Clip, ImgClip, Rect } from '@webav/av-cliper'
 export type MediaStatus = 'parsing' | 'ready' | 'error' | 'missing'
 
 /**
- * 媒体类型
+ * 媒体类型 - 添加音频支持
  */
-export type MediaType = 'video' | 'image'
+export type MediaType = 'video' | 'image' | 'audio'
 
 /**
  * 轨道类型
@@ -58,6 +58,25 @@ export interface ImageTimeRange {
 }
 
 /**
+ * 音频时间范围接口定义（帧数版本）
+ * 音频类似视频，但没有视觉属性
+ */
+export interface AudioTimeRange {
+  /** 素材内部开始时间（帧数） - 从素材的哪个帧开始播放 */
+  clipStartTime: number
+  /** 素材内部结束时间（帧数） - 播放到素材的哪个帧结束 */
+  clipEndTime: number
+  /** 时间轴开始时间（帧数） - 素材在整个项目时间轴上的开始位置 */
+  timelineStartTime: number
+  /** 时间轴结束时间（帧数） - 素材在整个项目时间轴上的结束位置 */
+  timelineEndTime: number
+  /** 有效播放时长（帧数） - 在时间轴上占用的时长，如果与素材内部时长不同则表示变速 */
+  effectiveDuration: number
+  /** 播放速度倍率 - 1.0为正常速度，2.0为2倍速，0.5为0.5倍速 */
+  playbackRate: number
+}
+
+/**
  * 音频状态接口
  */
 export interface AudioState {
@@ -88,32 +107,139 @@ export interface MediaItem {
   thumbnailUrl?: string // WebAV生成的缩略图URL
 }
 
+// ===== 旧实现 (保留作为参考) =====
+// /**
+//  * 时间轴项目接口
+//  * 时间轴层：包装VideoVisibleSprite/ImageVisibleSprite和时间轴位置信息
+//  */
+// export interface TimelineItem {
+//   id: string
+//   mediaItemId: string // 引用MediaItem的ID
+//   trackId: string
+//   mediaType: MediaType
+//   timeRange: VideoTimeRange | ImageTimeRange // 时间范围信息（视频包含倍速，图片不包含）
+//   sprite: Raw<CustomSprite> // 自定义的视频或图片sprite
+//   thumbnailUrl?: string // 时间轴clip的缩略图URL
+//   // Sprite位置和大小属性（响应式）
+//   x: number
+//   y: number
+//   width: number
+//   height: number
+//   // 其他sprite属性（响应式）
+//   rotation: number // 旋转角度（弧度）
+//   zIndex: number
+//   opacity: number
+//   // 音频属性（仅对视频有效）
+//   volume: number // 音量（0-1之间）
+//   isMuted: boolean // 静音状态
+//   // 新增：动画配置（可选）
+//   animation?: AnimationConfig // 动画配置
+// }
+
+// ===== 新实现 - 类型安全的媒体配置系统 =====
+
 /**
- * 时间轴项目接口
+ * 基础媒体属性（所有媒体类型共享）
+ */
+interface BaseMediaProps {
+  /** 层级控制 */
+  zIndex: number
+  /** 动画配置（可选） */
+  animation?: AnimationConfig
+}
+
+/**
+ * 视觉媒体属性（video 和 image 共享）
+ */
+interface VisualMediaProps extends BaseMediaProps {
+  /** 水平位置 */
+  x: number
+  /** 垂直位置 */
+  y: number
+  /** 宽度 */
+  width: number
+  /** 高度 */
+  height: number
+  /** 旋转角度（弧度） */
+  rotation: number
+  /** 透明度（0-1） */
+  opacity: number
+}
+
+/**
+ * 音频媒体属性（video 和 audio 共享）
+ */
+interface AudioMediaProps {
+  /** 音量（0-1） */
+  volume: number
+  /** 静音状态 */
+  isMuted: boolean
+}
+
+/**
+ * 视频媒体配置：同时具有视觉和音频属性
+ */
+interface VideoMediaConfig extends VisualMediaProps, AudioMediaProps {
+  // 视频特有属性（预留）
+  // playbackRate?: number // 倍速可能在 timeRange 中更合适
+}
+
+/**
+ * 图片媒体配置：只有视觉属性
+ */
+interface ImageMediaConfig extends VisualMediaProps {
+  // 图片特有属性（预留）
+  // filters?: ImageFilterConfig[]
+}
+
+/**
+ * 音频媒体配置：只有音频属性
+ */
+interface AudioMediaConfig extends BaseMediaProps, AudioMediaProps {
+  // 音频特有属性（预留）
+  // waveformColor?: string
+  // showWaveform?: boolean
+}
+
+/**
+ * 媒体配置映射
+ */
+type MediaConfigMap = {
+  video: VideoMediaConfig
+  image: ImageMediaConfig
+  audio: AudioMediaConfig
+}
+
+/**
+ * 根据媒体类型获取对应配置的工具类型
+ */
+export type GetMediaConfig<T extends MediaType> = MediaConfigMap[T]
+
+/**
+ * 重构后的时间轴项目接口（类型安全）
  * 时间轴层：包装VideoVisibleSprite/ImageVisibleSprite和时间轴位置信息
  */
-export interface TimelineItem {
+export interface TimelineItem<T extends MediaType = MediaType> {
+  /** 唯一标识符 */
   id: string
-  mediaItemId: string // 引用MediaItem的ID
+  /** 引用MediaItem的ID */
+  mediaItemId: string
+  /** 轨道ID */
   trackId: string
-  mediaType: MediaType
-  timeRange: VideoTimeRange | ImageTimeRange // 时间范围信息（视频包含倍速，图片不包含）
-  sprite: Raw<CustomSprite> // 自定义的视频或图片sprite
-  thumbnailUrl?: string // 时间轴clip的缩略图URL
-  // Sprite位置和大小属性（响应式）
-  x: number
-  y: number
-  width: number
-  height: number
-  // 其他sprite属性（响应式）
-  rotation: number // 旋转角度（弧度）
-  zIndex: number
-  opacity: number
-  // 音频属性（仅对视频有效）
-  volume: number // 音量（0-1之间）
-  isMuted: boolean // 静音状态
-  // 新增：动画配置（可选）
-  animation?: AnimationConfig // 动画配置
+  /** 媒体类型 */
+  mediaType: T
+  /** 时间范围信息（根据类型自动推断） */
+  timeRange: T extends 'video' ? VideoTimeRange :
+            T extends 'audio' ? AudioTimeRange :
+            ImageTimeRange
+  /** 自定义的视频或图片sprite */
+  sprite: Raw<CustomSprite>
+  /** 时间轴clip的缩略图URL */
+  thumbnailUrl?: string
+  /** 媒体配置（根据类型自动推断） */
+  config: GetMediaConfig<T>
+  /** 动画配置（可选） */
+  animation?: AnimationConfig<T>
 }
 
 /**
@@ -167,28 +293,41 @@ export interface PlayOptions {
   end?: number // 结束时间（帧数）
 }
 
+// ===== 旧实现 (保留作为参考) =====
+// /**
+//  * 画布备份接口
+//  * 画布重新创建时的内容备份 - 只备份元数据，不备份WebAV对象
+//  */
+// export interface CanvasBackup {
+//   timelineItems: Array<{
+//     id: string
+//     mediaItemId: string
+//     trackId: string
+//     mediaType: MediaType
+//     timeRange: VideoTimeRange | ImageTimeRange
+//     x: number
+//     y: number
+//     width: number
+//     height: number
+//     rotation: number
+//     zIndex: number
+//     opacity: number
+//     volume: number
+//     isMuted: boolean
+//     thumbnailUrl: string
+//   }>
+//   currentFrame: number // 当前播放帧数
+//   isPlaying: boolean
+// }
+
+// ===== 新实现 - 类型安全的画布备份 =====
+
 /**
- * 画布备份接口
+ * 类型安全的画布备份接口
  * 画布重新创建时的内容备份 - 只备份元数据，不备份WebAV对象
  */
 export interface CanvasBackup {
-  timelineItems: Array<{
-    id: string
-    mediaItemId: string
-    trackId: string
-    mediaType: MediaType
-    timeRange: VideoTimeRange | ImageTimeRange
-    x: number
-    y: number
-    width: number
-    height: number
-    rotation: number
-    zIndex: number
-    opacity: number
-    volume: number
-    isMuted: boolean
-    thumbnailUrl: string
-  }>
+  timelineItems: TimelineItemData[]
   currentFrame: number // 当前播放帧数
   isPlaying: boolean
 }
@@ -286,25 +425,44 @@ export interface NotificationManager {
   showInfo(title: string, message?: string, duration?: number): string
 }
 
+// ===== 旧实现 (保留作为参考) =====
+// /**
+//  * 时间轴项目数据接口
+//  * 用于命令模式中的数据保存
+//  */
+// export interface TimelineItemData {
+//   id: string
+//   mediaItemId: string
+//   trackId: string
+//   mediaType: MediaType
+//   timeRange: VideoTimeRange | ImageTimeRange
+//   x: number
+//   y: number
+//   width: number
+//   height: number
+//   rotation: number
+//   zIndex: number
+//   opacity: number
+//   volume: number
+//   isMuted: boolean
+//   thumbnailUrl?: string
+// }
+
+// ===== 新实现 - 类型安全的时间轴项目数据 =====
+
 /**
- * 时间轴项目数据接口
+ * 类型安全的时间轴项目数据接口
  * 用于命令模式中的数据保存
  */
-export interface TimelineItemData {
+export interface TimelineItemData<T extends MediaType = MediaType> {
   id: string
   mediaItemId: string
   trackId: string
-  mediaType: MediaType
-  timeRange: VideoTimeRange | ImageTimeRange
-  x: number
-  y: number
-  width: number
-  height: number
-  rotation: number
-  zIndex: number
-  opacity: number
-  volume: number
-  isMuted: boolean
+  mediaType: T
+  timeRange: T extends 'video' ? VideoTimeRange :
+            T extends 'audio' ? AudioTimeRange :
+            ImageTimeRange
+  config: GetMediaConfig<T>
   thumbnailUrl?: string
 }
 
@@ -450,14 +608,31 @@ export function isImageTimeRange(
 }
 
 /**
+ * 检查时间范围是否为音频时间范围
+ * @param timeRange 时间范围对象
+ * @returns 是否为音频时间范围
+ */
+export function isAudioTimeRange(
+  timeRange: VideoTimeRange | ImageTimeRange | AudioTimeRange,
+): timeRange is AudioTimeRange {
+  return (
+    'clipStartTime' in timeRange &&
+    'clipEndTime' in timeRange &&
+    'effectiveDuration' in timeRange &&
+    'playbackRate' in timeRange &&
+    !('displayDuration' in timeRange)
+  )
+}
+
+/**
  * 检查时间轴项目是否为视频类型
  * @param item 时间轴项目
  * @returns 是否为视频类型
  */
 export function isVideoTimelineItem(
   item: TimelineItem,
-): item is TimelineItem & { timeRange: VideoTimeRange } {
-  return item.mediaType === 'video' && isVideoTimeRange(item.timeRange)
+): item is TimelineItem<'video'> {
+  return item.mediaType === 'video'
 }
 
 /**
@@ -467,8 +642,91 @@ export function isVideoTimelineItem(
  */
 export function isImageTimelineItem(
   item: TimelineItem,
-): item is TimelineItem & { timeRange: ImageTimeRange } {
-  return item.mediaType === 'image' && isImageTimeRange(item.timeRange)
+): item is TimelineItem<'image'> {
+  return item.mediaType === 'image'
+}
+
+/**
+ * 检查时间轴项目是否为音频类型
+ * @param item 时间轴项目
+ * @returns 是否为音频类型
+ */
+export function isAudioTimelineItem(
+  item: TimelineItem,
+): item is TimelineItem<'audio'> {
+  return item.mediaType === 'audio'
+}
+
+/**
+ * 检查时间轴项目是否具有视觉属性
+ * @param item 时间轴项目
+ * @returns 是否具有视觉属性
+ */
+export function hasVisualProps(
+  item: TimelineItem,
+): item is TimelineItem<'video'> | TimelineItem<'image'> {
+  return item.mediaType === 'video' || item.mediaType === 'image'
+}
+
+/**
+ * 检查时间轴项目是否具有音频属性
+ * @param item 时间轴项目
+ * @returns 是否具有音频属性
+ */
+export function hasAudioProps(
+  item: TimelineItem,
+): item is TimelineItem<'video'> | TimelineItem<'audio'> {
+  return item.mediaType === 'video' || item.mediaType === 'audio'
+}
+
+// ===== 辅助函数：处理新旧接口转换 =====
+
+/**
+ * 从 TimelineItem 创建 TimelineItemData（类型安全版本）
+ */
+export function createTimelineItemData<T extends MediaType>(item: TimelineItem<T>): TimelineItemData<T> {
+  return {
+    id: item.id,
+    mediaItemId: item.mediaItemId,
+    trackId: item.trackId,
+    mediaType: item.mediaType,
+    timeRange: item.timeRange,
+    config: { ...item.config },
+    thumbnailUrl: item.thumbnailUrl,
+  }
+}
+
+/**
+ * 从 TimelineItemData 获取视觉属性（如果存在）
+ */
+export function getVisualPropsFromData(data: TimelineItemData): any {
+  if (data.mediaType === 'video' || data.mediaType === 'image') {
+    const config = data.config as any
+    return {
+      x: config.x,
+      y: config.y,
+      width: config.width,
+      height: config.height,
+      rotation: config.rotation,
+      opacity: config.opacity,
+      zIndex: config.zIndex,
+    }
+  }
+  return null
+}
+
+/**
+ * 从 TimelineItemData 获取音频属性（如果存在）
+ */
+export function getAudioPropsFromData(data: TimelineItemData): any {
+  if (data.mediaType === 'video' || data.mediaType === 'audio') {
+    const config = data.config as any
+    return {
+      volume: config.volume,
+      isMuted: config.isMuted,
+    }
+  }
+  return null
 }
 
 // ==================== 自定义 Sprite 类型 ====================
@@ -485,44 +743,93 @@ export type CustomSprite = VideoVisibleSprite | ImageVisibleSprite
 
 // ==================== 关键帧动画系统类型 ====================
 
+// ===== 旧实现 (保留作为参考) =====
+// /**
+//  * 关键帧属性集合
+//  * 统一关键帧系统中每个关键帧包含的所有可动画属性
+//  */
+// export interface KeyframeProperties {
+//   /** 水平位置 */
+//   x: number
+//   /** 垂直位置 */
+//   y: number
+//   /** 宽度 */
+//   width: number
+//   /** 高度 */
+//   height: number
+//   /** 旋转角度（弧度） */
+//   rotation: number
+//   /** 透明度（0-1） */
+//   opacity: number
+// }
+
+// ===== 新实现 - 类型安全的关键帧系统 =====
+
 /**
- * 关键帧属性集合
- * 统一关键帧系统中每个关键帧包含的所有可动画属性
+ * 基础可动画属性（所有媒体类型共享）
  */
-export interface KeyframeProperties {
-  /** 水平位置 */
+interface BaseAnimatableProps {
+  zIndex: number
+}
+
+/**
+ * 视觉可动画属性（video 和 image 共享）
+ */
+interface VisualAnimatableProps extends BaseAnimatableProps {
   x: number
-  /** 垂直位置 */
   y: number
-  /** 宽度 */
   width: number
-  /** 高度 */
   height: number
-  /** 旋转角度（弧度） */
   rotation: number
-  /** 透明度（0-1） */
   opacity: number
 }
 
 /**
- * 关键帧数据结构（统一关键帧系统）
- * 每个关键帧包含所有可动画属性的完整状态
+ * 音频可动画属性（video 和 audio 共享）
  */
-export interface Keyframe {
-  /** 关键帧位置（相对于clip开始的帧数） */
-  framePosition: number
-  /** 包含所有可动画属性的完整状态 */
-  properties: KeyframeProperties
+interface AudioAnimatableProps extends BaseAnimatableProps {
+  volume: number
+  // 注意：isMuted 通常不需要动画，但可以考虑添加
 }
 
 /**
- * 动画配置
- * 包含该TimelineItem的所有动画信息
- * 动画总时长等于clip时长，轮次总是1
+ * 根据媒体类型的关键帧属性映射
  */
-export interface AnimationConfig {
+type KeyframePropertiesMap = {
+  video: VisualAnimatableProps & AudioAnimatableProps
+  image: VisualAnimatableProps
+  audio: AudioAnimatableProps
+}
+
+/**
+ * 泛型关键帧属性工具类型
+ */
+export type GetKeyframeProperties<T extends MediaType> = KeyframePropertiesMap[T]
+
+/**
+ * 关键帧属性集合（向后兼容）
+ * 统一关键帧系统中每个关键帧包含的所有可动画属性
+ */
+export interface KeyframeProperties extends VisualAnimatableProps {
+  // 保持向后兼容，使用视觉属性作为默认
+}
+
+/**
+ * 重构后的关键帧接口（类型安全）
+ */
+export interface Keyframe<T extends MediaType = MediaType> {
+  /** 关键帧位置（相对于clip开始的帧数） */
+  framePosition: number
+  /** 包含所有可动画属性的完整状态 */
+  properties: GetKeyframeProperties<T>
+}
+
+/**
+ * 重构后的动画配置（类型安全）
+ */
+export interface AnimationConfig<T extends MediaType = MediaType> {
   /** 关键帧数组 */
-  keyframes: Keyframe[]
+  keyframes: Keyframe<T>[]
   /** 是否启用动画 */
   isEnabled: boolean
   /** 缓动函数（预留） */

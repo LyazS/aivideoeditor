@@ -14,9 +14,7 @@ export function getTimelineItemAtFrames(
 ): TimelineItem | null {
   return (
     timelineItems.find((item) => {
-      const sprite = item.sprite
-      const timeRange = sprite.getTimeRange()
-      // 我们自定义的 VideoVisibleSprite 和 ImageVisibleSprite 的 getTimeRange() 返回的是帧数，不需要转换
+      const timeRange = item.timeRange // 直接使用响应式的timeRange
       const startFrames = timeRange.timelineStartTime
       const endFrames = timeRange.timelineEndTime
       return frames >= startFrames && frames < endFrames
@@ -76,9 +74,7 @@ export function getTimelineItemsAtFrames(
   timelineItems: TimelineItem[],
 ): TimelineItem[] {
   return timelineItems.filter((item) => {
-    const sprite = item.sprite
-    const timeRange = sprite.getTimeRange()
-    // 我们自定义的 VideoVisibleSprite 和 ImageVisibleSprite 的 getTimeRange() 返回的是帧数，不需要转换
+    const timeRange = item.timeRange // 直接使用响应式的timeRange
     const startFrames = timeRange.timelineStartTime
     const endFrames = timeRange.timelineEndTime
     return frames >= startFrames && frames < endFrames
@@ -100,9 +96,7 @@ export function getTimelineItemAtTrackAndFrames(
   return (
     timelineItems.find((item) => {
       if (item.trackId !== trackId) return false
-      const sprite = item.sprite
-      const timeRange = sprite.getTimeRange()
-      // 我们自定义的 VideoVisibleSprite 和 ImageVisibleSprite 的 getTimeRange() 返回的是帧数，不需要转换
+      const timeRange = item.timeRange // 直接使用响应式的timeRange
       const startFrames = timeRange.timelineStartTime
       const endFrames = timeRange.timelineEndTime
       return frames >= startFrames && frames < endFrames

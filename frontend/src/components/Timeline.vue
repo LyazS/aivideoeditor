@@ -207,6 +207,7 @@ import type {
   TrackType,
   MediaType,
 } from '../types'
+import { hasVisualProps } from '../types'
 import VideoClip from './VideoClip.vue'
 import TimeScale from './TimeScale.vue'
 import { ContextMenu, ContextMenuItem, ContextMenuSeparator } from '@imengyu/vue3-context-menu'
@@ -955,7 +956,7 @@ async function createMediaClipFromMediaItem(
     url: string
     name: string
     duration: number // 帧数
-    mediaType: 'video' | 'image'
+    mediaType: 'video' | 'image' | 'audio'
     fileInfo: {
       name: string
       type: string
@@ -999,34 +1000,39 @@ async function createMediaClipFromMediaItem(
     console.log('创建sprite for mediaItem:', mediaItem.id, 'type:', mediaItem.mediaType)
     const sprite = await createSpriteFromMediaItem(storeMediaItem)
 
-    // 获取媒体的原始分辨率
-    let originalResolution: { width: number; height: number }
+    // 获取媒体的原始分辨率（仅对视觉媒体有效）
+    let originalResolution: { width: number; height: number } | null = null
     if (mediaItem.mediaType === 'video') {
       originalResolution = videoStore.getVideoOriginalResolution(mediaItem.id)
       console.log('视频原始分辨率:', originalResolution)
-    } else {
+    } else if (mediaItem.mediaType === 'image') {
       originalResolution = videoStore.getImageOriginalResolution(mediaItem.id)
       console.log('图片原始分辨率:', originalResolution)
+    } else if (mediaItem.mediaType === 'audio') {
+      console.log('音频类型，无需设置分辨率')
     }
 
-    // 设置初始尺寸为视频原始分辨率（缩放系数1.0）
-    // sprite.rect.w/h 是在画布上的实际显示像素尺寸
-    sprite.rect.w = originalResolution.width
-    sprite.rect.h = originalResolution.height
+    // 设置初始尺寸和位置（仅对视觉媒体有效）
+    if (originalResolution && 'rect' in sprite) {
+      // 设置初始尺寸为视频原始分辨率（缩放系数1.0）
+      // sprite.rect.w/h 是在画布上的实际显示像素尺寸
+      sprite.rect.w = originalResolution.width
+      sprite.rect.h = originalResolution.height
 
-    // 设置初始位置为画布中心
-    // 使用WebAV坐标系（左上角原点），让视频居中显示
-    const canvasWidth = videoStore.videoResolution.width
-    const canvasHeight = videoStore.videoResolution.height
-    sprite.rect.x = (canvasWidth - originalResolution.width) / 2
-    sprite.rect.y = (canvasHeight - originalResolution.height) / 2
+      // 设置初始位置为画布中心
+      // 使用WebAV坐标系（左上角原点），让视频居中显示
+      const canvasWidth = videoStore.videoResolution.width
+      const canvasHeight = videoStore.videoResolution.height
+      sprite.rect.x = (canvasWidth - originalResolution.width) / 2
+      sprite.rect.y = (canvasHeight - originalResolution.height) / 2
 
-    console.log('初始化sprite尺寸和位置:', {
-      原始分辨率: originalResolution,
-      显示尺寸: { w: sprite.rect.w, h: sprite.rect.h },
-      WebAV位置: { x: sprite.rect.x, y: sprite.rect.y },
-      画布尺寸: { w: canvasWidth, h: canvasHeight },
-    })
+      console.log('初始化sprite尺寸和位置:', {
+        原始分辨率: originalResolution,
+        显示尺寸: { w: sprite.rect.w, h: sprite.rect.h },
+        WebAV位置: { x: sprite.rect.x, y: sprite.rect.y },
+        画布尺寸: { w: canvasWidth, h: canvasHeight },
+      })
+    }
 
     // 设置时间范围 - 根据媒体类型使用不同的方法
     // 现在 mediaItem.duration 和 startTimeFrames 都是帧数，直接使用
@@ -1045,7 +1051,7 @@ async function createMediaClipFromMediaItem(
         endTimeFrames: startTimeFrames + mediaItem.duration,
       })
       ;(sprite as VideoVisibleSprite).setTimeRange(timeRangeConfig)
-    } else {
+    } else if (mediaItem.mediaType === 'image') {
       // 图片使用不同的时间范围设置
       const imageTimeRangeConfig = {
         timelineStartTime: startTimeFrames, // 帧数
@@ -1060,6 +1066,22 @@ async function createMediaClipFromMediaItem(
         endTimeFrames: startTimeFrames + mediaItem.duration,
       })
       ;(sprite as ImageVisibleSprite).setTimeRange(imageTimeRangeConfig)
+    } else if (mediaItem.mediaType === 'audio') {
+      // 音频类型的时间范围设置
+      console.log('音频类型，设置时间范围:', {
+        startTimeFrames,
+        endTimeFrames: startTimeFrames + mediaItem.duration,
+        durationFrames: mediaItem.duration,
+      })
+      // 音频sprite可能需要特殊的时间范围设置
+      if ('setTimeRange' in sprite) {
+        const audioTimeRangeConfig = {
+          timelineStartTime: startTimeFrames,
+          timelineEndTime: startTimeFrames + mediaItem.duration,
+          effectiveDuration: mediaItem.duration,
+        }
+        ;(sprite as any).setTimeRange(audioTimeRangeConfig)
+      }
     }
 
     // 注意：不再直接添加sprite到画布，让AddTimelineItemCommand统一处理
@@ -1075,16 +1097,20 @@ async function createMediaClipFromMediaItem(
     // 创建TimelineItem - 使用markRaw包装VideoVisibleSprite
     const timelineItemId = Date.now().toString() + Math.random().toString(36).substring(2, 11)
 
-    // 将WebAV坐标系转换为项目坐标系（中心原点）
-    const projectCoords = webavToProjectCoords(
-      sprite.rect.x,
-      sprite.rect.y,
-      sprite.rect.w,
-      sprite.rect.h,
-      videoStore.videoResolution.width,
-      videoStore.videoResolution.height,
-    )
+    // 将WebAV坐标系转换为项目坐标系（中心原点）- 仅对视觉媒体有效
+    let projectCoords = { x: 0, y: 0 }
+    if ('rect' in sprite) {
+      projectCoords = webavToProjectCoords(
+        sprite.rect.x,
+        sprite.rect.y,
+        sprite.rect.w,
+        sprite.rect.h,
+        videoStore.videoResolution.width,
+        videoStore.videoResolution.height,
+      )
+    }
 
+    // 创建类型安全的 TimelineItem
     const timelineItem: TimelineItem = reactive({
       id: timelineItemId,
       mediaItemId: mediaItem.id,
@@ -1093,23 +1119,60 @@ async function createMediaClipFromMediaItem(
       timeRange: sprite.getTimeRange(), // 从sprite获取完整的timeRange（已经通过setTimeRange设置）
       sprite: markRaw(sprite), // 使用markRaw避免Vue响应式包装
       thumbnailUrl, // 添加缩略图URL
-      // Sprite位置和大小属性（使用项目坐标系）
-      x: Math.round(projectCoords.x),
-      y: Math.round(projectCoords.y),
-      width: sprite.rect.w,
-      height: sprite.rect.h,
-      // 其他sprite属性
-      rotation: sprite.rect.angle || 0, // 从sprite获取旋转角度（弧度），默认为0
-      zIndex: sprite.zIndex,
-      opacity: sprite.opacity,
-      // 音频属性（仅对视频有效）
-      volume: mediaItem.mediaType === 'video' ? 1 : 1, // 默认音量为1
-      isMuted: false, // 默认不静音
+      // 媒体配置（根据类型自动推断）
+      config: createMediaConfig(mediaItem.mediaType, sprite)
     })
 
+    // 创建媒体配置的辅助函数
+    function createMediaConfig(mediaType: MediaType, sprite: any) {
+      if (mediaType === 'video') {
+        return {
+          // 视觉属性
+          x: Math.round(projectCoords.x),
+          y: Math.round(projectCoords.y),
+          width: sprite.rect.w,
+          height: sprite.rect.h,
+          rotation: sprite.rect.angle || 0,
+          opacity: sprite.opacity,
+          // 音频属性
+          volume: 1,
+          isMuted: false,
+          // 基础属性
+          zIndex: sprite.zIndex,
+          animation: undefined
+        }
+      } else if (mediaType === 'image') {
+        return {
+          // 视觉属性
+          x: Math.round(projectCoords.x),
+          y: Math.round(projectCoords.y),
+          width: sprite.rect.w,
+          height: sprite.rect.h,
+          rotation: sprite.rect.angle || 0,
+          opacity: sprite.opacity,
+          // 基础属性
+          zIndex: sprite.zIndex,
+          animation: undefined
+        }
+      } else if (mediaType === 'audio') {
+        return {
+          // 音频属性
+          volume: 1,
+          isMuted: false,
+          // 基础属性
+          zIndex: sprite.zIndex || 0,
+          animation: undefined
+        }
+      }
+      throw new Error(`不支持的媒体类型: ${mediaType}`)
+    }
+
     console.log('🔄 坐标系转换:', {
-      WebAV坐标: { x: sprite.rect.x, y: sprite.rect.y },
-      项目坐标: { x: timelineItem.x, y: timelineItem.y },
+      WebAV坐标: 'rect' in sprite ? { x: sprite.rect.x, y: sprite.rect.y } : 'N/A (音频)',
+      项目坐标: {
+        x: hasVisualProps(timelineItem) ? timelineItem.config.x : 'N/A',
+        y: hasVisualProps(timelineItem) ? timelineItem.config.y : 'N/A'
+      },
       尺寸: { w: sprite.rect.w, h: sprite.rect.h },
     })
 

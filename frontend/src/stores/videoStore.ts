@@ -46,6 +46,7 @@ import type {
   PropertyType,
   TrackType,
 } from '../types'
+import { hasVisualProps, hasAudioProps } from '../types'
 
 export const useVideoStore = defineStore('video', () => {
   // 创建媒体管理模块
@@ -250,33 +251,35 @@ export const useVideoStore = defineStore('video', () => {
       return
     }
 
-    // 获取当前的变换属性
+    // 获取当前的变换属性（类型安全版本）
     const oldTransform: typeof newTransform = {}
 
-    if (newTransform.x !== undefined) {
-      oldTransform.x = timelineItem.x
-    }
-    if (newTransform.y !== undefined) {
-      oldTransform.y = timelineItem.y
-    }
+    if (hasVisualProps(timelineItem)) {
+      if (newTransform.x !== undefined) {
+        oldTransform.x = timelineItem.config.x
+      }
+      if (newTransform.y !== undefined) {
+        oldTransform.y = timelineItem.config.y
+      }
 
-    if (newTransform.width !== undefined) {
-      oldTransform.width = timelineItem.width
-    }
-    if (newTransform.height !== undefined) {
-      oldTransform.height = timelineItem.height
-    }
+      if (newTransform.width !== undefined) {
+        oldTransform.width = timelineItem.config.width
+      }
+      if (newTransform.height !== undefined) {
+        oldTransform.height = timelineItem.config.height
+      }
 
-    if (newTransform.rotation !== undefined) {
-      oldTransform.rotation = timelineItem.rotation
-    }
+      if (newTransform.rotation !== undefined) {
+        oldTransform.rotation = timelineItem.config.rotation
+      }
 
-    if (newTransform.opacity !== undefined) {
-      oldTransform.opacity = timelineItem.opacity
+      if (newTransform.opacity !== undefined) {
+        oldTransform.opacity = timelineItem.config.opacity
+      }
     }
 
     if (newTransform.zIndex !== undefined) {
-      oldTransform.zIndex = timelineItem.zIndex
+      oldTransform.zIndex = timelineItem.config.zIndex
     }
 
     if (newTransform.duration !== undefined) {
@@ -297,17 +300,15 @@ export const useVideoStore = defineStore('video', () => {
       }
     }
 
-    if (newTransform.volume !== undefined) {
-      // 获取当前音量（仅对视频有效）
-      if (timelineItem.mediaType === 'video') {
-        oldTransform.volume = timelineItem.volume ?? 1
+    if (hasAudioProps(timelineItem)) {
+      if (newTransform.volume !== undefined) {
+        // 获取当前音量（对视频和音频有效）
+        oldTransform.volume = timelineItem.config.volume ?? 1
       }
-    }
 
-    if (newTransform.isMuted !== undefined) {
-      // 获取当前静音状态（仅对视频有效）
-      if (timelineItem.mediaType === 'video') {
-        oldTransform.isMuted = timelineItem.isMuted ?? false
+      if (newTransform.isMuted !== undefined) {
+        // 获取当前静音状态（对视频和音频有效）
+        oldTransform.isMuted = timelineItem.config.isMuted ?? false
       }
     }
 

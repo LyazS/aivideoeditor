@@ -6,7 +6,8 @@ import { printDebugInfo } from '../utils/debugUtils'
 import { syncTimeRange } from '../utils/timeRangeUtils'
 import { microsecondsToFrames } from '../utils/timeUtils'
 import { globalWebAVAnimationManager } from '../../utils/webavAnimationManager'
-import type { TimelineItem, MediaItem, PropsChangeEvent, VideoResolution } from '../../types'
+import type { TimelineItem, MediaItem, PropsChangeEvent, VideoResolution, MediaType } from '../../types'
+import { hasVisualProps } from '../../types'
 
 /**
  * 时间轴核心管理模块
@@ -30,16 +31,28 @@ export function createTimelineModule(
   // ==================== 双向数据同步函数 ====================
 
   /**
-   * 为TimelineItem设置双向数据同步
+   * 为TimelineItem设置双向数据同步（类型安全版本）
+   *
+   * 📝 数据流向说明：
+   * 本系统采用分层数据流向策略：
+   *
+   * 【动画属性】- 遵循标准数据流向 UI → WebAV → TimelineItem → UI：
+   * - x, y, width, height, rotation, zIndex
+   * - 这些属性WebAV支持propsChange事件，可以自动同步
+   *
+   * 【非动画属性】- 直接修改config（技术限制导致的必要妥协）：
+   * - opacity: 通过自定义回调实现类似数据流向
+   * - volume, isMuted: WebAV不支持相关事件，只能直接修改config
+   *
    * @param timelineItem TimelineItem实例
    */
-  function setupBidirectionalSync(timelineItem: TimelineItem) {
+  function setupBidirectionalSync<T extends MediaType>(timelineItem: TimelineItem<T>) {
     const sprite = timelineItem.sprite
 
     // 直接使用WebAV原生的propsChange事件监听器
-    // 设置VisibleSprite → TimelineItem 的同步
+    // 设置VisibleSprite → TimelineItem 的同步（仅适用于动画属性）
     sprite.on('propsChange', (changedProps: PropsChangeEvent) => {
-      if (changedProps.rect) {
+      if (changedProps.rect && hasVisualProps(timelineItem)) {
         const rect = changedProps.rect
 
         // 更新位置（坐标系转换）
@@ -48,39 +61,40 @@ export function createTimelineModule(
         const projectCoords = webavToProjectCoords(
           rect.x !== undefined ? rect.x : currentRect.x,
           rect.y !== undefined ? rect.y : currentRect.y,
-          rect.w !== undefined ? rect.w : timelineItem.width,
-          rect.h !== undefined ? rect.h : timelineItem.height,
+          rect.w !== undefined ? rect.w : timelineItem.config.width,
+          rect.h !== undefined ? rect.h : timelineItem.config.height,
           configModule.videoResolution.value.width,
           configModule.videoResolution.value.height,
         )
-        timelineItem.x = Math.round(projectCoords.x)
-        timelineItem.y = Math.round(projectCoords.y)
+        timelineItem.config.x = Math.round(projectCoords.x)
+        timelineItem.config.y = Math.round(projectCoords.y)
 
         // 更新尺寸
-        if (rect.w !== undefined) timelineItem.width = rect.w
-        if (rect.h !== undefined) timelineItem.height = rect.h
+        if (rect.w !== undefined) timelineItem.config.width = rect.w
+        if (rect.h !== undefined) timelineItem.config.height = rect.h
 
         // 更新旋转角度
-        if (rect.angle !== undefined) timelineItem.rotation = rect.angle
+        if (rect.angle !== undefined) timelineItem.config.rotation = rect.angle
 
         // console.log('🔄 VisibleSprite → TimelineItem 同步:', {
         //   webavCoords: { x: rect.x, y: rect.y },
-        //   projectCoords: { x: timelineItem.x, y: timelineItem.y },
-        //   size: { w: timelineItem.width, h: timelineItem.height },
-        //   rotation: timelineItem.rotation
+        //   projectCoords: { x: timelineItem.config.x, y: timelineItem.config.y },
+        //   size: { w: timelineItem.config.width, h: timelineItem.config.height },
+        //   rotation: timelineItem.config.rotation
         // })
       }
 
       // 同步zIndex属性（propsChange事件包含此属性）
       if (changedProps.zIndex !== undefined) {
-        timelineItem.zIndex = changedProps.zIndex
+        timelineItem.config.zIndex = changedProps.zIndex
       }
     })
 
-    // 设置opacity变化回调（用于我们自定义的opacity监控）
-    if (sprite instanceof VideoVisibleSprite || sprite instanceof ImageVisibleSprite) {
+    // 设置opacity变化回调（特殊属性处理：opacity属于非动画属性）
+    // 📝 opacity属性虽然不支持标准propsChange事件，但通过自定义回调实现了类似的数据流向
+    if ((sprite instanceof VideoVisibleSprite || sprite instanceof ImageVisibleSprite) && hasVisualProps(timelineItem)) {
       sprite.setOpacityChangeCallback((opacity: number) => {
-        timelineItem.opacity = opacity
+        timelineItem.config.opacity = opacity
       })
     }
   }
@@ -341,13 +355,13 @@ export function createTimelineModule(
     const sprite = item.sprite
 
     try {
-      // 更新尺寸时使用中心缩放
-      if (transform.width !== undefined || transform.height !== undefined) {
+      // 更新尺寸时使用中心缩放 - 仅对视觉媒体有效
+      if ((transform.width !== undefined || transform.height !== undefined) && hasVisualProps(item)) {
         // 获取当前中心位置（项目坐标系）
-        const currentCenterX = item.x
-        const currentCenterY = item.y
-        const newWidth = transform.width !== undefined ? transform.width : item.width
-        const newHeight = transform.height !== undefined ? transform.height : item.height
+        const currentCenterX = item.config.x
+        const currentCenterY = item.config.y
+        const newWidth = transform.width !== undefined ? transform.width : item.config.width
+        const newHeight = transform.height !== undefined ? transform.height : item.config.height
 
         // 中心缩放：保持中心位置不变，更新尺寸
         sprite.rect.w = newWidth
@@ -366,14 +380,14 @@ export function createTimelineModule(
         sprite.rect.y = webavCoords.y
       }
 
-      // 更新位置（需要坐标系转换）
-      if (transform.x !== undefined || transform.y !== undefined) {
-        const newX = transform.x !== undefined ? transform.x : item.x
-        const newY = transform.y !== undefined ? transform.y : item.y
+      // 更新位置（需要坐标系转换）- 仅对视觉媒体有效
+      if ((transform.x !== undefined || transform.y !== undefined) && hasVisualProps(item)) {
+        const newX = transform.x !== undefined ? transform.x : item.config.x
+        const newY = transform.y !== undefined ? transform.y : item.config.y
 
         // 🔧 使用当前的尺寸（可能已经在上面更新过）
-        const currentWidth = transform.width !== undefined ? transform.width : item.width
-        const currentHeight = transform.height !== undefined ? transform.height : item.height
+        const currentWidth = transform.width !== undefined ? transform.width : item.config.width
+        const currentHeight = transform.height !== undefined ? transform.height : item.config.height
 
         const webavCoords = projectToWebavCoords(
           newX,
@@ -388,10 +402,10 @@ export function createTimelineModule(
       }
 
       // 更新其他属性
-      if (transform.opacity !== undefined) {
+      if (transform.opacity !== undefined && hasVisualProps(item)) {
         sprite.opacity = transform.opacity
         // 🔧 手动同步opacity到timelineItem（因为opacity没有propsChange回调）
-        item.opacity = transform.opacity
+        item.config.opacity = transform.opacity
       }
       if (transform.zIndex !== undefined) {
         sprite.zIndex = transform.zIndex

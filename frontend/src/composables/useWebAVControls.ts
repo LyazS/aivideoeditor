@@ -4,6 +4,7 @@ import { MP4Clip, ImgClip } from '@webav/av-cliper'
 import { VideoVisibleSprite } from '../utils/VideoVisibleSprite'
 import { ImageVisibleSprite } from '../utils/ImageVisibleSprite'
 import type { VideoTimeRange, ImageTimeRange } from '../types'
+import { hasVisualProps } from '../types'
 import { useVideoStore } from '../stores/videoStore'
 import {
   framesToMicroseconds,
@@ -477,15 +478,7 @@ export function useWebAVControls() {
         trackId: item.trackId,
         mediaType: item.mediaType,
         timeRange: { ...item.timeRange },
-        x: item.x,
-        y: item.y,
-        width: item.width,
-        height: item.height,
-        rotation: item.rotation,
-        zIndex: item.zIndex,
-        opacity: item.opacity,
-        volume: item.volume,
-        isMuted: item.isMuted,
+        config: { ...item.config },
         thumbnailUrl: item.thumbnailUrl || '',
       })
     }
@@ -581,37 +574,40 @@ export function useWebAVControls() {
             newSprite.setTimeRange(itemData.timeRange)
             logSpriteRestore(itemData.id, 'Time range restored', itemData.timeRange)
 
-            // 恢复变换属性 - 需要处理新旧画布分辨率不同的情况
-            const { projectToWebavCoords } = await import('../utils/coordinateTransform')
-            const newWebavCoords = projectToWebavCoords(
-              itemData.x,
-              itemData.y,
-              itemData.width,
-              itemData.height,
-              options.width,
-              options.height,
-            )
+            // 恢复变换属性 - 需要处理新旧画布分辨率不同的情况（类型安全版本）
+            if (itemData.mediaType === 'video' || itemData.mediaType === 'image') {
+              const { projectToWebavCoords } = await import('../utils/coordinateTransform')
+              const config = itemData.config as any // 临时类型断言，稍后会修复
+              const newWebavCoords = projectToWebavCoords(
+                config.x,
+                config.y,
+                config.width,
+                config.height,
+                options.width,
+                options.height,
+              )
 
-            // 设置新的WebAV坐标
-            newSprite.rect.x = newWebavCoords.x
-            newSprite.rect.y = newWebavCoords.y
-            newSprite.rect.w = itemData.width
-            newSprite.rect.h = itemData.height
+              // 设置新的WebAV坐标
+              newSprite.rect.x = newWebavCoords.x
+              newSprite.rect.y = newWebavCoords.y
+              newSprite.rect.w = config.width
+              newSprite.rect.h = config.height
 
-            logCoordinateTransform(itemData.id, {
-              projectCoords: {
-                x: itemData.x,
-                y: itemData.y,
-              },
-              newCanvasSize: { width: options.width, height: options.height },
-              newWebAVCoords: { x: newWebavCoords.x, y: newWebavCoords.y },
-              size: { w: itemData.width, h: itemData.height },
-            })
+              logCoordinateTransform(itemData.id, {
+                projectCoords: {
+                  x: config.x,
+                  y: config.y,
+                },
+                newCanvasSize: { width: options.width, height: options.height },
+                newWebAVCoords: { x: newWebavCoords.x, y: newWebavCoords.y },
+                size: { w: config.width, h: config.height },
+              })
 
-            // 恢复其他属性
-            newSprite.zIndex = itemData.zIndex
-            newSprite.opacity = itemData.opacity
-            newSprite.rect.angle = itemData.rotation
+              // 恢复其他属性
+              newSprite.zIndex = config.zIndex
+              newSprite.opacity = config.opacity
+              newSprite.rect.angle = config.rotation
+            }
 
             logSpriteRestore(itemData.id, 'Properties restored', {
               zIndex: newSprite.zIndex,

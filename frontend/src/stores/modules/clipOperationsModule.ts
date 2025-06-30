@@ -7,7 +7,7 @@ import { printDebugInfo } from '../utils/debugUtils'
 import { syncTimeRange } from '../utils/timeRangeUtils'
 import { microsecondsToFrames, framesToTimecode } from '../utils/timeUtils'
 import type { TimelineItem, MediaItem } from '../../types'
-import { isVideoTimeRange } from '../../types'
+import { isVideoTimeRange, hasVisualProps, hasAudioProps, createTimelineItemData } from '../../types'
 
 /**
  * 视频片段操作模块
@@ -127,17 +127,8 @@ export function createClipOperationsModule(
         mediaType: originalItem.mediaType,
         timeRange: newSprite.getTimeRange(), // 从sprite获取完整的timeRange（包含自动计算的effectiveDuration）
         sprite: markRaw(newSprite),
-        // 复制原始项目的sprite属性
-        x: originalItem.x,
-        y: originalItem.y,
-        width: originalItem.width,
-        height: originalItem.height,
-        rotation: originalItem.rotation,
-        zIndex: originalItem.zIndex,
-        opacity: originalItem.opacity,
-        // 复制音量属性
-        volume: originalItem.volume,
-        isMuted: originalItem.isMuted,
+        // 复制原始项目的配置（类型安全版本）
+        config: { ...originalItem.config },
       })
 
       // 根据媒体类型更新新sprite的时间轴位置
@@ -430,17 +421,8 @@ export function createClipOperationsModule(
         mediaType: originalItem.mediaType,
         timeRange: firstSprite.getTimeRange(), // 从sprite获取完整的timeRange
         sprite: markRaw(firstSprite),
-        // 复制原始项目的sprite属性
-        x: originalItem.x,
-        y: originalItem.y,
-        width: originalItem.width,
-        height: originalItem.height,
-        rotation: originalItem.rotation,
-        zIndex: originalItem.zIndex,
-        opacity: originalItem.opacity,
-        // 复制音量属性
-        volume: originalItem.volume,
-        isMuted: originalItem.isMuted,
+        // 复制原始项目的配置（类型安全版本）
+        config: { ...originalItem.config },
       })
 
       const secondItem: TimelineItem = reactive({
@@ -450,17 +432,8 @@ export function createClipOperationsModule(
         mediaType: originalItem.mediaType,
         timeRange: secondSprite.getTimeRange(), // 从sprite获取完整的timeRange
         sprite: markRaw(secondSprite),
-        // 复制原始项目的sprite属性
-        x: originalItem.x,
-        y: originalItem.y,
-        width: originalItem.width,
-        height: originalItem.height,
-        rotation: originalItem.rotation,
-        zIndex: originalItem.zIndex,
-        opacity: originalItem.opacity,
-        // 复制音量属性
-        volume: originalItem.volume,
-        isMuted: originalItem.isMuted,
+        // 复制原始项目的配置（类型安全版本）
+        config: { ...originalItem.config },
       })
 
       // 从WebAV画布移除原始sprite

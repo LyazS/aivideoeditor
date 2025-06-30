@@ -3,27 +3,127 @@
  * 为关键帧系统提供撤销/重做支持
  */
 
-import type { SimpleCommand, TimelineItem, Keyframe, AnimationConfig } from '../../../types'
+import type { SimpleCommand, TimelineItem, Keyframe, AnimationConfig, MediaType, GetMediaConfig } from '../../../types'
+import { hasVisualProps } from '../../../types'
 import { generateCommandId } from '../../../utils/idGenerator'
 
 // ==================== 关键帧数据快照接口 ====================
 
+// ===== 旧实现 (保留作为参考) =====
+// interface KeyframeSnapshot {
+//   /** 动画配置的完整快照 */
+//   animationConfig: AnimationConfig | null
+//   /** 时间轴项目的属性快照 */
+//   itemProperties: {
+//     x: number
+//     y: number
+//     width: number
+//     height: number
+//     rotation: number
+//     opacity: number
+//   }
+// }
+
+// ===== 新实现 - 类型安全的关键帧快照 =====
+
 /**
- * 关键帧状态快照
+ * 类型安全的关键帧状态快照
  * 用于保存和恢复关键帧的完整状态
  */
-interface KeyframeSnapshot {
+interface KeyframeSnapshot<T extends MediaType = MediaType> {
   /** 动画配置的完整快照 */
-  animationConfig: AnimationConfig | null
-  /** 时间轴项目的属性快照 */
-  itemProperties: {
-    x: number
-    y: number
-    width: number
-    height: number
-    rotation: number
-    opacity: number
+  animationConfig: AnimationConfig<T> | null
+  /** 时间轴项目的属性快照（类型安全） */
+  itemProperties: GetMediaConfig<T>
+}
+
+// ==================== 通用工具函数 ====================
+
+/**
+ * 通用的状态快照应用函数（遵循正确的数据流向：UI → WebAV → TimelineItem）
+ * 类型安全版本
+ */
+async function applyKeyframeSnapshot<T extends MediaType = MediaType>(
+  item: TimelineItem<T>,
+  snapshot: KeyframeSnapshot<T>,
+  webavAnimationManager: { updateWebAVAnimation: (item: TimelineItem<T>) => Promise<void> }
+): Promise<void> {
+  // 1. 恢复动画配置（关键帧数据）
+  if (snapshot.animationConfig) {
+    item.animation = {
+      keyframes: snapshot.animationConfig.keyframes.map((kf) => ({
+        framePosition: kf.framePosition,
+        properties: { ...kf.properties },
+      })),
+      isEnabled: snapshot.animationConfig.isEnabled,
+      easing: snapshot.animationConfig.easing,
+    }
+  } else {
+    item.animation = undefined
   }
+
+  // 2. 通过WebAV恢复属性值（遵循正确的数据流向）
+  const sprite = item.sprite
+  if (sprite && snapshot.itemProperties) {
+    try {
+      // 类型安全的属性恢复 - 只处理视觉属性
+      if (hasVisualProps(item)) {
+        const visualProps = snapshot.itemProperties as any // 临时类型断言，因为我们已经通过类型守卫确认
+
+        // 恢复位置和尺寸
+        if (visualProps.x !== undefined || visualProps.y !== undefined) {
+          const { projectToWebavCoords } = await import('../../../utils/coordinateTransform')
+          const { useVideoStore } = await import('../../../stores/videoStore')
+          const videoStore = useVideoStore()
+
+          const webavCoords = projectToWebavCoords(
+            visualProps.x ?? item.config.x,
+            visualProps.y ?? item.config.y,
+            visualProps.width ?? item.config.width,
+            visualProps.height ?? item.config.height,
+            videoStore.videoResolution.width,
+            videoStore.videoResolution.height,
+          )
+          sprite.rect.x = webavCoords.x
+          sprite.rect.y = webavCoords.y
+        }
+
+        // 恢复尺寸
+        if (visualProps.width !== undefined) {
+          sprite.rect.w = visualProps.width
+        }
+        if (visualProps.height !== undefined) {
+          sprite.rect.h = visualProps.height
+        }
+
+        // 恢复旋转
+        if (visualProps.rotation !== undefined) {
+          sprite.rect.angle = visualProps.rotation
+        }
+
+        // 恢复透明度
+        if (visualProps.opacity !== undefined) {
+          sprite.opacity = visualProps.opacity
+        }
+      }
+
+      // 触发渲染更新
+      const { useVideoStore } = await import('../../../stores/videoStore')
+      const videoStore = useVideoStore()
+      const avCanvas = videoStore.avCanvas
+      if (avCanvas) {
+        const currentTime = videoStore.currentFrame * (1000000 / 30)
+        avCanvas.previewFrame(currentTime)
+      }
+    } catch (error) {
+      console.error('🎬 [Keyframe Command] Failed to restore properties via WebAV:', error)
+      // 如果WebAV更新失败，回退到直接更新TimelineItem
+      Object.assign(item, snapshot.itemProperties)
+    }
+  }
+
+  // 3. 更新WebAV动画配置
+  await webavAnimationManager.updateWebAVAnimation(item)
 }
 
 // ==================== 创建关键帧命令 ====================
@@ -63,7 +163,7 @@ export class CreateKeyframeCommand implements SimpleCommand {
   }
 
   /**
-   * 创建状态快照
+   * 创建状态快照（类型安全版本）
    */
   private createSnapshot(item: TimelineItem): KeyframeSnapshot {
     return {
@@ -77,14 +177,7 @@ export class CreateKeyframeCommand implements SimpleCommand {
             easing: item.animation.easing,
           }
         : null,
-      itemProperties: {
-        x: item.x,
-        y: item.y,
-        width: item.width,
-        height: item.height,
-        rotation: item.rotation,
-        opacity: item.opacity,
-      },
+      itemProperties: { ...item.config } as any, // 使用完整的config作为快照
     }
   }
 
@@ -92,25 +185,7 @@ export class CreateKeyframeCommand implements SimpleCommand {
    * 应用状态快照
    */
   private async applySnapshot(item: TimelineItem, snapshot: KeyframeSnapshot): Promise<void> {
-    // 恢复动画配置
-    if (snapshot.animationConfig) {
-      item.animation = {
-        keyframes: snapshot.animationConfig.keyframes.map((kf) => ({
-          framePosition: kf.framePosition,
-          properties: { ...kf.properties },
-        })),
-        isEnabled: snapshot.animationConfig.isEnabled,
-        easing: snapshot.animationConfig.easing,
-      }
-    } else {
-      item.animation = undefined
-    }
-
-    // 恢复项目属性
-    Object.assign(item, snapshot.itemProperties)
-
-    // 更新WebAV动画
-    await this.webavAnimationManager.updateWebAVAnimation(item)
+    await applyKeyframeSnapshot(item, snapshot, this.webavAnimationManager)
   }
 
   /**
@@ -199,7 +274,7 @@ export class CreateKeyframeCommand implements SimpleCommand {
     try {
       await this.applySnapshot(item, this.beforeSnapshot)
 
-      // 撤销关键帧操作时，跳转到相关帧位置
+      // 撤销关键帧操作时，跳转到相关帧位置（seekTo会自动触发渲染更新）
       if (this.playbackControls) {
         this.playbackControls.seekTo(this.frame)
       }
@@ -252,7 +327,7 @@ export class DeleteKeyframeCommand implements SimpleCommand {
   }
 
   /**
-   * 创建状态快照
+   * 创建状态快照（类型安全版本）
    */
   private createSnapshot(item: TimelineItem): KeyframeSnapshot {
     return {
@@ -266,14 +341,7 @@ export class DeleteKeyframeCommand implements SimpleCommand {
             easing: item.animation.easing,
           }
         : null,
-      itemProperties: {
-        x: item.x,
-        y: item.y,
-        width: item.width,
-        height: item.height,
-        rotation: item.rotation,
-        opacity: item.opacity,
-      },
+      itemProperties: { ...item.config } as any, // 使用完整的config作为快照
     }
   }
 
@@ -281,25 +349,7 @@ export class DeleteKeyframeCommand implements SimpleCommand {
    * 应用状态快照
    */
   private async applySnapshot(item: TimelineItem, snapshot: KeyframeSnapshot): Promise<void> {
-    // 恢复动画配置
-    if (snapshot.animationConfig) {
-      item.animation = {
-        keyframes: snapshot.animationConfig.keyframes.map((kf) => ({
-          framePosition: kf.framePosition,
-          properties: { ...kf.properties },
-        })),
-        isEnabled: snapshot.animationConfig.isEnabled,
-        easing: snapshot.animationConfig.easing,
-      }
-    } else {
-      item.animation = undefined
-    }
-
-    // 恢复项目属性
-    Object.assign(item, snapshot.itemProperties)
-
-    // 更新WebAV动画
-    await this.webavAnimationManager.updateWebAVAnimation(item)
+    await applyKeyframeSnapshot(item, snapshot, this.webavAnimationManager)
   }
 
   /**
@@ -381,7 +431,7 @@ export class DeleteKeyframeCommand implements SimpleCommand {
     try {
       await this.applySnapshot(item, this.beforeSnapshot)
 
-      // 撤销关键帧操作时，跳转到相关帧位置
+      // 撤销关键帧操作时，跳转到相关帧位置（seekTo会自动触发渲染更新）
       if (this.playbackControls) {
         this.playbackControls.seekTo(this.frame)
       }
@@ -397,13 +447,16 @@ export class DeleteKeyframeCommand implements SimpleCommand {
   }
 }
 
-// ==================== 更新关键帧属性命令 ====================
+// ==================== 统一属性更新命令 ====================
 
 /**
- * 更新关键帧属性命令
- * 支持修改关键帧中的属性值
+ * 统一属性更新命令
+ * 根据当前动画状态智能处理属性修改：
+ * - 无动画状态：直接更新属性
+ * - 在关键帧上：更新现有关键帧
+ * - 在关键帧之间：创建新关键帧
  */
-export class UpdateKeyframePropertyCommand implements SimpleCommand {
+export class UpdatePropertyCommand implements SimpleCommand {
   public readonly id: string
   public readonly description: string
   private beforeSnapshot: KeyframeSnapshot
@@ -425,7 +478,7 @@ export class UpdateKeyframePropertyCommand implements SimpleCommand {
     },
   ) {
     this.id = generateCommandId()
-    this.description = `修改关键帧属性: ${property} (帧 ${frame})`
+    this.description = `修改属性: ${property} (帧 ${frame})`
 
     // 保存执行前的状态快照
     const item = this.timelineModule.getTimelineItem(timelineItemId)
@@ -436,7 +489,7 @@ export class UpdateKeyframePropertyCommand implements SimpleCommand {
   }
 
   /**
-   * 创建状态快照
+   * 创建状态快照（类型安全版本）
    */
   private createSnapshot(item: TimelineItem): KeyframeSnapshot {
     return {
@@ -450,14 +503,7 @@ export class UpdateKeyframePropertyCommand implements SimpleCommand {
             easing: item.animation.easing,
           }
         : null,
-      itemProperties: {
-        x: item.x,
-        y: item.y,
-        width: item.width,
-        height: item.height,
-        rotation: item.rotation,
-        opacity: item.opacity,
-      },
+      itemProperties: { ...item.config } as any, // 使用完整的config作为快照
     }
   }
 
@@ -465,29 +511,11 @@ export class UpdateKeyframePropertyCommand implements SimpleCommand {
    * 应用状态快照
    */
   private async applySnapshot(item: TimelineItem, snapshot: KeyframeSnapshot): Promise<void> {
-    // 恢复动画配置
-    if (snapshot.animationConfig) {
-      item.animation = {
-        keyframes: snapshot.animationConfig.keyframes.map((kf) => ({
-          framePosition: kf.framePosition,
-          properties: { ...kf.properties },
-        })),
-        isEnabled: snapshot.animationConfig.isEnabled,
-        easing: snapshot.animationConfig.easing,
-      }
-    } else {
-      item.animation = undefined
-    }
-
-    // 恢复项目属性
-    Object.assign(item, snapshot.itemProperties)
-
-    // 更新WebAV动画
-    await this.webavAnimationManager.updateWebAVAnimation(item)
+    await applyKeyframeSnapshot(item, snapshot, this.webavAnimationManager)
   }
 
   /**
-   * 执行命令：更新关键帧属性
+   * 执行命令：更新属性（智能处理关键帧）
    */
   async execute(): Promise<void> {
     const item = this.timelineModule.getTimelineItem(this.timelineItemId)
@@ -503,12 +531,12 @@ export class UpdateKeyframePropertyCommand implements SimpleCommand {
       const videoStore = useVideoStore()
 
       videoStore.showWarning(
-        '无法更新关键帧属性',
+        '无法更新属性',
         '播放头不在当前视频片段的时间范围内。请将播放头移动到片段内再尝试修改属性。',
       )
 
       console.warn(
-        '🎬 [Update Keyframe Property Command] 播放头不在当前clip时间范围内，无法更新关键帧属性:',
+        '🎬 [Update Property Command] 播放头不在当前clip时间范围内，无法更新属性:',
         {
           itemId: this.timelineItemId,
           frame: this.frame,
@@ -520,15 +548,15 @@ export class UpdateKeyframePropertyCommand implements SimpleCommand {
           },
         },
       )
-      throw new Error('播放头不在当前clip时间范围内，无法更新关键帧属性')
+      throw new Error('播放头不在当前clip时间范围内，无法更新属性')
     }
 
     try {
       // 动态导入关键帧工具函数
       const { handlePropertyChange } = await import('../../../utils/unifiedKeyframeUtils')
 
-      // 使用统一的属性修改处理逻辑
-      handlePropertyChange(item, this.frame, this.property, this.newValue)
+      // 使用统一的属性修改处理逻辑（遵循正确的数据流向）
+      const actionType = await handlePropertyChange(item, this.frame, this.property, this.newValue)
 
       // 更新WebAV动画
       await this.webavAnimationManager.updateWebAVAnimation(item)
@@ -536,19 +564,27 @@ export class UpdateKeyframePropertyCommand implements SimpleCommand {
       // 保存执行后的状态快照
       this.afterSnapshot = this.createSnapshot(item)
 
-      // 重做关键帧属性修改时，跳转到相关帧位置
+      // 重做属性修改时，跳转到相关帧位置
       if (this.playbackControls) {
         this.playbackControls.seekTo(this.frame)
       }
 
-      console.log('✅ 更新关键帧属性命令执行成功:', {
+      // 根据实际处理类型显示不同的日志
+      const actionMessages = {
+        'no-animation': '✅ 属性更新完成（无动画）',
+        'updated-keyframe': '✅ 关键帧属性更新完成',
+        'created-keyframe': '✅ 创建关键帧并更新属性完成'
+      }
+
+      console.log(actionMessages[actionType], {
         itemId: this.timelineItemId,
         frame: this.frame,
         property: this.property,
         value: this.newValue,
+        actionType,
       })
     } catch (error) {
-      console.error('❌ 更新关键帧属性命令执行失败:', error)
+      console.error('❌ 属性更新命令执行失败:', error)
       throw error
     }
   }
@@ -565,18 +601,18 @@ export class UpdateKeyframePropertyCommand implements SimpleCommand {
     try {
       await this.applySnapshot(item, this.beforeSnapshot)
 
-      // 撤销关键帧属性修改时，跳转到相关帧位置
+      // 撤销属性修改时，跳转到相关帧位置（seekTo会自动触发渲染更新）
       if (this.playbackControls) {
         this.playbackControls.seekTo(this.frame)
       }
 
-      console.log('↩️ 更新关键帧属性命令撤销成功:', {
+      console.log('↩️ 属性更新命令撤销成功:', {
         itemId: this.timelineItemId,
         frame: this.frame,
         property: this.property,
       })
     } catch (error) {
-      console.error('❌ 更新关键帧属性命令撤销失败:', error)
+      console.error('❌ 属性更新命令撤销失败:', error)
       throw error
     }
   }
@@ -618,7 +654,7 @@ export class ClearAllKeyframesCommand implements SimpleCommand {
   }
 
   /**
-   * 创建状态快照
+   * 创建状态快照（类型安全版本）
    */
   private createSnapshot(item: TimelineItem): KeyframeSnapshot {
     return {
@@ -632,14 +668,7 @@ export class ClearAllKeyframesCommand implements SimpleCommand {
             easing: item.animation.easing,
           }
         : null,
-      itemProperties: {
-        x: item.x,
-        y: item.y,
-        width: item.width,
-        height: item.height,
-        rotation: item.rotation,
-        opacity: item.opacity,
-      },
+      itemProperties: { ...item.config } as any, // 使用完整的config作为快照
     }
   }
 
@@ -647,25 +676,7 @@ export class ClearAllKeyframesCommand implements SimpleCommand {
    * 应用状态快照
    */
   private async applySnapshot(item: TimelineItem, snapshot: KeyframeSnapshot): Promise<void> {
-    // 恢复动画配置
-    if (snapshot.animationConfig) {
-      item.animation = {
-        keyframes: snapshot.animationConfig.keyframes.map((kf) => ({
-          framePosition: kf.framePosition,
-          properties: { ...kf.properties },
-        })),
-        isEnabled: snapshot.animationConfig.isEnabled,
-        easing: snapshot.animationConfig.easing,
-      }
-    } else {
-      item.animation = undefined
-    }
-
-    // 恢复项目属性
-    Object.assign(item, snapshot.itemProperties)
-
-    // 更新WebAV动画
-    await this.webavAnimationManager.updateWebAVAnimation(item)
+    await applyKeyframeSnapshot(item, snapshot, this.webavAnimationManager)
   }
 
   /**
@@ -716,7 +727,7 @@ export class ClearAllKeyframesCommand implements SimpleCommand {
     try {
       await this.applySnapshot(item, this.beforeSnapshot)
 
-      // 撤销清除关键帧操作时，跳转到第一个关键帧位置
+      // 撤销清除关键帧操作时，跳转到第一个关键帧位置（seekTo会自动触发渲染更新）
       if (this.playbackControls && this.beforeSnapshot.animationConfig?.keyframes?.length) {
         const firstKeyframe = this.beforeSnapshot.animationConfig.keyframes[0]
         if (firstKeyframe && item.timeRange) {
@@ -780,7 +791,7 @@ export class ToggleKeyframeCommand implements SimpleCommand {
   }
 
   /**
-   * 创建状态快照
+   * 创建状态快照（类型安全版本）
    */
   private createSnapshot(item: TimelineItem): KeyframeSnapshot {
     return {
@@ -794,14 +805,7 @@ export class ToggleKeyframeCommand implements SimpleCommand {
             easing: item.animation.easing,
           }
         : null,
-      itemProperties: {
-        x: item.x,
-        y: item.y,
-        width: item.width,
-        height: item.height,
-        rotation: item.rotation,
-        opacity: item.opacity,
-      },
+      itemProperties: { ...item.config } as any, // 使用完整的config作为快照
     }
   }
 
@@ -809,25 +813,7 @@ export class ToggleKeyframeCommand implements SimpleCommand {
    * 应用状态快照
    */
   private async applySnapshot(item: TimelineItem, snapshot: KeyframeSnapshot): Promise<void> {
-    // 恢复动画配置
-    if (snapshot.animationConfig) {
-      item.animation = {
-        keyframes: snapshot.animationConfig.keyframes.map((kf) => ({
-          framePosition: kf.framePosition,
-          properties: { ...kf.properties },
-        })),
-        isEnabled: snapshot.animationConfig.isEnabled,
-        easing: snapshot.animationConfig.easing,
-      }
-    } else {
-      item.animation = undefined
-    }
-
-    // 恢复项目属性
-    Object.assign(item, snapshot.itemProperties)
-
-    // 更新WebAV动画
-    await this.webavAnimationManager.updateWebAVAnimation(item)
+    await applyKeyframeSnapshot(item, snapshot, this.webavAnimationManager)
   }
 
   /**
@@ -902,7 +888,7 @@ export class ToggleKeyframeCommand implements SimpleCommand {
     try {
       await this.applySnapshot(item, this.beforeSnapshot)
 
-      // 撤销关键帧切换操作时，跳转到相关帧位置
+      // 撤销关键帧切换操作时，跳转到相关帧位置（seekTo会自动触发渲染更新）
       if (this.playbackControls) {
         this.playbackControls.seekTo(this.frame)
       }

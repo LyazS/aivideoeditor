@@ -13,9 +13,7 @@ export function calculateContentEndTimeFrames(timelineItems: TimelineItem[]): nu
   if (timelineItems.length === 0) return 0
   return Math.max(
     ...timelineItems.map((item) => {
-      const sprite = item.sprite
-      const timeRange = sprite.getTimeRange()
-      return timeRange.timelineEndTime // 已经是帧数，不需要转换
+      return item.timeRange.timelineEndTime // 直接使用响应式的timeRange
     }),
   )
 }
@@ -33,9 +31,7 @@ export function calculateTotalDurationFrames(
   if (timelineItems.length === 0) return timelineDurationFrames
   const maxEndTimeFrames = Math.max(
     ...timelineItems.map((item) => {
-      const sprite = item.sprite
-      const timeRange = sprite.getTimeRange()
-      return timeRange.timelineEndTime // 已经是帧数，不需要转换
+      return item.timeRange.timelineEndTime // 直接使用响应式的timeRange
     }),
   )
   return Math.max(maxEndTimeFrames, timelineDurationFrames)

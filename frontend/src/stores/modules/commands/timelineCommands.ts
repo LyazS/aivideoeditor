@@ -11,7 +11,7 @@ import type {
   TimelineItemData,
   TransformData,
 } from '../../../types'
-import { isVideoTimeRange, isImageTimeRange } from '../../../types'
+import { isVideoTimeRange, isImageTimeRange, createTimelineItemData, getVisualPropsFromData, getAudioPropsFromData, hasAudioProps } from '../../../types'
 import { VideoVisibleSprite } from '../../../utils/VideoVisibleSprite'
 import { ImageVisibleSprite } from '../../../utils/ImageVisibleSprite'
 import { createSpriteFromMediaItem } from '../../../utils/spriteFactory'
@@ -47,24 +47,8 @@ export class AddTimelineItemCommand implements SimpleCommand {
     const mediaItem = this.mediaModule.getMediaItem(timelineItem.mediaItemId)
     this.description = `添加时间轴项目: ${mediaItem?.name || '未知素材'}`
 
-    // 保存原始数据用于重建sprite
-    this.originalTimelineItemData = {
-      id: timelineItem.id,
-      mediaItemId: timelineItem.mediaItemId,
-      trackId: timelineItem.trackId,
-      mediaType: timelineItem.mediaType,
-      timeRange: { ...timelineItem.timeRange },
-      x: timelineItem.x,
-      y: timelineItem.y,
-      width: timelineItem.width,
-      height: timelineItem.height,
-      rotation: timelineItem.rotation,
-      zIndex: timelineItem.zIndex,
-      opacity: timelineItem.opacity,
-      volume: timelineItem.volume,
-      isMuted: timelineItem.isMuted,
-      thumbnailUrl: timelineItem.thumbnailUrl,
-    }
+    // 保存原始数据用于重建sprite（类型安全版本）
+    this.originalTimelineItemData = createTimelineItemData(timelineItem)
   }
 
   /**
@@ -90,14 +74,17 @@ export class AddTimelineItemCommand implements SimpleCommand {
     // 3. 设置时间范围
     newSprite.setTimeRange(this.originalTimelineItemData.timeRange)
 
-    // 4. 应用变换属性
-    newSprite.rect.x = this.originalTimelineItemData.x
-    newSprite.rect.y = this.originalTimelineItemData.y
-    newSprite.rect.w = this.originalTimelineItemData.width
-    newSprite.rect.h = this.originalTimelineItemData.height
-    newSprite.rect.angle = this.originalTimelineItemData.rotation
-    newSprite.zIndex = this.originalTimelineItemData.zIndex
-    newSprite.opacity = this.originalTimelineItemData.opacity
+    // 4. 应用变换属性（类型安全版本）
+    const visualProps = getVisualPropsFromData(this.originalTimelineItemData)
+    if (visualProps) {
+      newSprite.rect.x = visualProps.x
+      newSprite.rect.y = visualProps.y
+      newSprite.rect.w = visualProps.width
+      newSprite.rect.h = visualProps.height
+      newSprite.rect.angle = visualProps.rotation
+      newSprite.opacity = visualProps.opacity
+    }
+    newSprite.zIndex = (this.originalTimelineItemData.config as any).zIndex
 
     // 5. 创建新的TimelineItem（先不设置缩略图）
     const newTimelineItem: TimelineItem = reactive({
@@ -108,15 +95,7 @@ export class AddTimelineItemCommand implements SimpleCommand {
       timeRange: newSprite.getTimeRange(),
       sprite: markRaw(newSprite),
       thumbnailUrl: undefined, // 先设为undefined，稍后重新生成
-      x: this.originalTimelineItemData.x,
-      y: this.originalTimelineItemData.y,
-      width: this.originalTimelineItemData.width,
-      height: this.originalTimelineItemData.height,
-      rotation: this.originalTimelineItemData.rotation,
-      zIndex: this.originalTimelineItemData.zIndex,
-      opacity: this.originalTimelineItemData.opacity,
-      volume: this.originalTimelineItemData.volume,
-      isMuted: this.originalTimelineItemData.isMuted,
+      config: { ...this.originalTimelineItemData.config },
     })
 
     // 6. 重新生成缩略图（异步执行，不阻塞重建过程）
@@ -238,35 +217,14 @@ export class RemoveTimelineItemCommand implements SimpleCommand {
     this.description = `移除时间轴项目: ${mediaItem?.name || '未知素材'}`
 
     // 🎯 关键：保存重建所需的完整元数据，而不是对象引用
-    this.originalTimelineItemData = {
-      id: timelineItem.id,
-      mediaItemId: timelineItem.mediaItemId,
-      trackId: timelineItem.trackId,
-      mediaType: timelineItem.mediaType,
-      // 深拷贝时间范围信息
-      timeRange: { ...timelineItem.timeRange },
-      // 深拷贝变换属性
-      x: timelineItem.x,
-      y: timelineItem.y,
-      width: timelineItem.width,
-      height: timelineItem.height,
-      rotation: timelineItem.rotation,
-      zIndex: timelineItem.zIndex,
-      opacity: timelineItem.opacity,
-      volume: timelineItem.volume,
-      isMuted: timelineItem.isMuted,
-      thumbnailUrl: timelineItem.thumbnailUrl,
-    }
+    this.originalTimelineItemData = createTimelineItemData(timelineItem)
 
     console.log('💾 保存删除项目的重建数据:', {
       id: this.originalTimelineItemData.id,
       mediaItemId: this.originalTimelineItemData.mediaItemId,
       mediaType: this.originalTimelineItemData.mediaType,
       timeRange: this.originalTimelineItemData.timeRange,
-      x: this.originalTimelineItemData.x,
-      y: this.originalTimelineItemData.y,
-      width: this.originalTimelineItemData.width,
-      height: this.originalTimelineItemData.height,
+      config: this.originalTimelineItemData.config,
     })
   }
 
@@ -293,14 +251,17 @@ export class RemoveTimelineItemCommand implements SimpleCommand {
     // 3. 设置时间范围
     newSprite.setTimeRange(this.originalTimelineItemData.timeRange)
 
-    // 4. 应用变换属性
-    newSprite.rect.x = this.originalTimelineItemData.x
-    newSprite.rect.y = this.originalTimelineItemData.y
-    newSprite.rect.w = this.originalTimelineItemData.width
-    newSprite.rect.h = this.originalTimelineItemData.height
-    newSprite.rect.angle = this.originalTimelineItemData.rotation
-    newSprite.zIndex = this.originalTimelineItemData.zIndex
-    newSprite.opacity = this.originalTimelineItemData.opacity
+    // 4. 应用变换属性（类型安全版本）
+    const visualProps = getVisualPropsFromData(this.originalTimelineItemData)
+    if (visualProps) {
+      newSprite.rect.x = visualProps.x
+      newSprite.rect.y = visualProps.y
+      newSprite.rect.w = visualProps.width
+      newSprite.rect.h = visualProps.height
+      newSprite.rect.angle = visualProps.rotation
+      newSprite.opacity = visualProps.opacity
+    }
+    newSprite.zIndex = (this.originalTimelineItemData.config as any).zIndex
 
     // 5. 创建新的TimelineItem（先不设置缩略图）
     const newTimelineItem: TimelineItem = reactive({
@@ -311,15 +272,7 @@ export class RemoveTimelineItemCommand implements SimpleCommand {
       timeRange: this.originalTimelineItemData.timeRange,
       sprite: markRaw(newSprite),
       thumbnailUrl: undefined, // 先设为undefined，稍后重新生成
-      x: this.originalTimelineItemData.x,
-      y: this.originalTimelineItemData.y,
-      width: this.originalTimelineItemData.width,
-      height: this.originalTimelineItemData.height,
-      rotation: this.originalTimelineItemData.rotation,
-      zIndex: this.originalTimelineItemData.zIndex,
-      opacity: this.originalTimelineItemData.opacity,
-      volume: this.originalTimelineItemData.volume,
-      isMuted: this.originalTimelineItemData.isMuted,
+      config: { ...this.originalTimelineItemData.config },
     })
 
     // 6. 重新生成缩略图（异步执行，不阻塞重建过程）
@@ -447,23 +400,7 @@ export class DuplicateTimelineItemCommand implements SimpleCommand {
     this.description = `复制时间轴项目: ${mediaItem?.name || '未知素材'}`
 
     // 保存原始项目的完整重建元数据
-    this.originalTimelineItemData = {
-      id: originalTimelineItem.id,
-      mediaItemId: originalTimelineItem.mediaItemId,
-      trackId: originalTimelineItem.trackId,
-      mediaType: originalTimelineItem.mediaType,
-      timeRange: { ...originalTimelineItem.timeRange },
-      x: originalTimelineItem.x,
-      y: originalTimelineItem.y,
-      width: originalTimelineItem.width,
-      height: originalTimelineItem.height,
-      rotation: originalTimelineItem.rotation,
-      zIndex: originalTimelineItem.zIndex,
-      opacity: originalTimelineItem.opacity,
-      volume: originalTimelineItem.volume,
-      isMuted: originalTimelineItem.isMuted,
-      thumbnailUrl: originalTimelineItem.thumbnailUrl,
-    }
+    this.originalTimelineItemData = createTimelineItemData(originalTimelineItem)
 
     // 生成新项目的ID
     this.newTimelineItemId = `timeline_item_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`
@@ -509,17 +446,20 @@ export class DuplicateTimelineItemCommand implements SimpleCommand {
       })
     }
 
-    // 设置变换属性
-    const rect = newSprite.rect
-    rect.x = this.originalTimelineItemData.x
-    rect.y = this.originalTimelineItemData.y
-    rect.w = this.originalTimelineItemData.width
-    rect.h = this.originalTimelineItemData.height
-    rect.angle = this.originalTimelineItemData.rotation
+    // 设置变换属性（类型安全版本）
+    const visualProps = getVisualPropsFromData(this.originalTimelineItemData)
+    if (visualProps) {
+      const rect = newSprite.rect
+      rect.x = visualProps.x
+      rect.y = visualProps.y
+      rect.w = visualProps.width
+      rect.h = visualProps.height
+      rect.angle = visualProps.rotation
+      newSprite.opacity = visualProps.opacity
+    }
 
     // 设置其他属性
-    newSprite.zIndex = this.originalTimelineItemData.zIndex
-    newSprite.opacity = this.originalTimelineItemData.opacity
+    newSprite.zIndex = (this.originalTimelineItemData.config as any).zIndex
 
     // 创建新的TimelineItem
     const newTimelineItem: TimelineItem = reactive({
@@ -544,17 +484,9 @@ export class DuplicateTimelineItemCommand implements SimpleCommand {
                 displayDuration: originalTimeRange.displayDuration,
               }
             : originalTimeRange,
-      x: this.originalTimelineItemData.x,
-      y: this.originalTimelineItemData.y,
-      width: this.originalTimelineItemData.width,
-      height: this.originalTimelineItemData.height,
-      rotation: this.originalTimelineItemData.rotation,
-      zIndex: this.originalTimelineItemData.zIndex,
-      opacity: this.originalTimelineItemData.opacity,
-      volume: this.originalTimelineItemData.volume,
-      isMuted: this.originalTimelineItemData.isMuted,
       sprite: markRaw(newSprite),
       thumbnailUrl: undefined, // 先设为undefined，稍后重新生成
+      config: { ...this.originalTimelineItemData.config }
     })
 
     // 重新生成缩略图（异步执行，不阻塞重建过程）
@@ -958,10 +890,10 @@ export class UpdateTransformCommand implements SimpleCommand {
         this.updateTimelineItemDuration(this.timelineItemId, this.newValues.duration)
       }
 
-      // 处理音量更新（仅对视频有效）
-      if (timelineItem.mediaType === 'video') {
+      // 处理音量更新（对视频和音频有效）
+      if (hasAudioProps(timelineItem)) {
         if (this.newValues.volume !== undefined) {
-          timelineItem.volume = this.newValues.volume
+          timelineItem.config.volume = this.newValues.volume
           const sprite = timelineItem.sprite
           if (sprite && 'setVolume' in sprite) {
             ;(sprite as VideoVisibleSprite).setVolume?.(this.newValues.volume)
@@ -969,7 +901,7 @@ export class UpdateTransformCommand implements SimpleCommand {
         }
 
         if (this.newValues.isMuted !== undefined) {
-          timelineItem.isMuted = this.newValues.isMuted
+          timelineItem.config.isMuted = this.newValues.isMuted
           const sprite = timelineItem.sprite
           if (sprite && 'setMuted' in sprite) {
             ;(sprite as VideoVisibleSprite).setMuted?.(this.newValues.isMuted)
@@ -1034,10 +966,10 @@ export class UpdateTransformCommand implements SimpleCommand {
         this.updateTimelineItemDuration(this.timelineItemId, this.oldValues.duration)
       }
 
-      // 处理音量恢复（仅对视频有效）
-      if (timelineItem.mediaType === 'video') {
+      // 处理音量恢复（对视频和音频有效）
+      if (hasAudioProps(timelineItem)) {
         if (this.oldValues.volume !== undefined) {
-          timelineItem.volume = this.oldValues.volume
+          timelineItem.config.volume = this.oldValues.volume
           const sprite = timelineItem.sprite
           if (sprite && 'setVolume' in sprite) {
             ;(sprite as VideoVisibleSprite).setVolume?.(this.oldValues.volume)
@@ -1045,7 +977,7 @@ export class UpdateTransformCommand implements SimpleCommand {
         }
 
         if (this.oldValues.isMuted !== undefined) {
-          timelineItem.isMuted = this.oldValues.isMuted
+          timelineItem.config.isMuted = this.oldValues.isMuted
           const sprite = timelineItem.sprite
           if (sprite && 'setMuted' in sprite) {
             ;(sprite as VideoVisibleSprite).setMuted?.(this.oldValues.isMuted)
@@ -1160,25 +1092,7 @@ export class SplitTimelineItemCommand implements SimpleCommand {
     this.description = `分割时间轴项目: ${mediaItem?.name || '未知素材'} (在 ${framesToTimecode(splitTimeFrames)})`
 
     // 🎯 关键：保存原始项目的完整重建元数据
-    this.originalTimelineItemData = {
-      id: originalTimelineItem.id,
-      mediaItemId: originalTimelineItem.mediaItemId,
-      trackId: originalTimelineItem.trackId,
-      mediaType: originalTimelineItem.mediaType,
-      // 深拷贝时间范围信息
-      timeRange: { ...originalTimelineItem.timeRange },
-      // 深拷贝变换属性
-      x: originalTimelineItem.x,
-      y: originalTimelineItem.y,
-      width: originalTimelineItem.width,
-      height: originalTimelineItem.height,
-      rotation: originalTimelineItem.rotation,
-      zIndex: originalTimelineItem.zIndex,
-      opacity: originalTimelineItem.opacity,
-      volume: originalTimelineItem.volume,
-      isMuted: originalTimelineItem.isMuted,
-      thumbnailUrl: originalTimelineItem.thumbnailUrl,
-    }
+    this.originalTimelineItemData = createTimelineItemData(originalTimelineItem)
 
     // 生成分割后项目的ID
     this.firstItemId = Date.now().toString() + Math.random().toString(36).substring(2, 11)
@@ -1251,15 +1165,18 @@ export class SplitTimelineItemCommand implements SimpleCommand {
       timelineEndTime: timelineEndTimeFrames,
     })
 
-    // 4. 应用变换属性到两个sprite
+    // 4. 应用变换属性到两个sprite（类型安全版本）
     const applyTransformToSprite = (sprite: VideoVisibleSprite) => {
-      sprite.rect.x = this.originalTimelineItemData.x
-      sprite.rect.y = this.originalTimelineItemData.y
-      sprite.rect.w = this.originalTimelineItemData.width
-      sprite.rect.h = this.originalTimelineItemData.height
-      sprite.rect.angle = this.originalTimelineItemData.rotation
-      sprite.zIndex = this.originalTimelineItemData.zIndex
-      sprite.opacity = this.originalTimelineItemData.opacity
+      const visualProps = getVisualPropsFromData(this.originalTimelineItemData)
+      if (visualProps) {
+        sprite.rect.x = visualProps.x
+        sprite.rect.y = visualProps.y
+        sprite.rect.w = visualProps.width
+        sprite.rect.h = visualProps.height
+        sprite.rect.angle = visualProps.rotation
+        sprite.opacity = visualProps.opacity
+      }
+      sprite.zIndex = (this.originalTimelineItemData.config as any).zIndex
     }
 
     applyTransformToSprite(firstSprite)
@@ -1274,15 +1191,7 @@ export class SplitTimelineItemCommand implements SimpleCommand {
       timeRange: firstSprite.getTimeRange(),
       sprite: markRaw(firstSprite),
       thumbnailUrl: undefined, // 先设为undefined，稍后重新生成
-      x: this.originalTimelineItemData.x,
-      y: this.originalTimelineItemData.y,
-      width: this.originalTimelineItemData.width,
-      height: this.originalTimelineItemData.height,
-      rotation: this.originalTimelineItemData.rotation,
-      zIndex: this.originalTimelineItemData.zIndex,
-      opacity: this.originalTimelineItemData.opacity,
-      volume: this.originalTimelineItemData.volume,
-      isMuted: this.originalTimelineItemData.isMuted,
+      config: { ...this.originalTimelineItemData.config },
     })
 
     const secondItem: TimelineItem = reactive({
@@ -1293,15 +1202,7 @@ export class SplitTimelineItemCommand implements SimpleCommand {
       timeRange: secondSprite.getTimeRange(),
       sprite: markRaw(secondSprite),
       thumbnailUrl: undefined, // 先设为undefined，稍后重新生成
-      x: this.originalTimelineItemData.x,
-      y: this.originalTimelineItemData.y,
-      width: this.originalTimelineItemData.width,
-      height: this.originalTimelineItemData.height,
-      rotation: this.originalTimelineItemData.rotation,
-      zIndex: this.originalTimelineItemData.zIndex,
-      opacity: this.originalTimelineItemData.opacity,
-      volume: this.originalTimelineItemData.volume,
-      isMuted: this.originalTimelineItemData.isMuted,
+      config: { ...this.originalTimelineItemData.config },
     })
 
     // 6. 重新生成缩略图（异步执行，不阻塞重建过程）
@@ -1341,14 +1242,17 @@ export class SplitTimelineItemCommand implements SimpleCommand {
     // 3. 设置原始时间范围
     newSprite.setTimeRange(this.originalTimelineItemData.timeRange)
 
-    // 4. 应用变换属性
-    newSprite.rect.x = this.originalTimelineItemData.x
-    newSprite.rect.y = this.originalTimelineItemData.y
-    newSprite.rect.w = this.originalTimelineItemData.width
-    newSprite.rect.h = this.originalTimelineItemData.height
-    newSprite.rect.angle = this.originalTimelineItemData.rotation
-    newSprite.zIndex = this.originalTimelineItemData.zIndex
-    newSprite.opacity = this.originalTimelineItemData.opacity
+    // 4. 应用变换属性（类型安全版本）
+    const visualProps = getVisualPropsFromData(this.originalTimelineItemData)
+    if (visualProps) {
+      newSprite.rect.x = visualProps.x
+      newSprite.rect.y = visualProps.y
+      newSprite.rect.w = visualProps.width
+      newSprite.rect.h = visualProps.height
+      newSprite.rect.angle = visualProps.rotation
+      newSprite.opacity = visualProps.opacity
+    }
+    newSprite.zIndex = (this.originalTimelineItemData.config as any).zIndex
 
     // 5. 创建新的TimelineItem（先不设置缩略图）
     const newTimelineItem: TimelineItem = reactive({
@@ -1359,15 +1263,7 @@ export class SplitTimelineItemCommand implements SimpleCommand {
       timeRange: newSprite.getTimeRange(),
       sprite: markRaw(newSprite),
       thumbnailUrl: undefined, // 先设为undefined，稍后重新生成
-      x: this.originalTimelineItemData.x,
-      y: this.originalTimelineItemData.y,
-      width: this.originalTimelineItemData.width,
-      height: this.originalTimelineItemData.height,
-      rotation: this.originalTimelineItemData.rotation,
-      zIndex: this.originalTimelineItemData.zIndex,
-      opacity: this.originalTimelineItemData.opacity,
-      volume: this.originalTimelineItemData.volume,
-      isMuted: this.originalTimelineItemData.isMuted,
+      config: { ...this.originalTimelineItemData.config },
     })
 
     // 6. 重新生成缩略图（异步执行，不阻塞重建过程）
@@ -1730,23 +1626,7 @@ export class RemoveTrackCommand implements SimpleCommand {
     const affectedItems = this.timelineModule.timelineItems.value.filter(
       (item) => item.trackId === trackId,
     )
-    this.affectedTimelineItems = affectedItems.map((item) => ({
-      id: item.id,
-      mediaItemId: item.mediaItemId,
-      trackId: item.trackId,
-      mediaType: item.mediaType,
-      timeRange: { ...item.timeRange },
-      x: item.x,
-      y: item.y,
-      width: item.width,
-      height: item.height,
-      rotation: item.rotation,
-      zIndex: item.zIndex,
-      opacity: item.opacity,
-      volume: item.volume,
-      isMuted: item.isMuted,
-      thumbnailUrl: item.thumbnailUrl,
-    }))
+    this.affectedTimelineItems = affectedItems.map((item) => createTimelineItemData(item))
 
     console.log(
       `📋 准备删除轨道: ${track.name}, 受影响的时间轴项目: ${this.affectedTimelineItems.length}个`,
@@ -1786,17 +1666,20 @@ export class RemoveTrackCommand implements SimpleCommand {
       })
     }
 
-    // 设置变换属性
-    const rect = newSprite.rect
-    rect.x = itemData.x
-    rect.y = itemData.y
-    rect.w = itemData.width
-    rect.h = itemData.height
-    rect.angle = itemData.rotation
+    // 设置变换属性（类型安全版本）
+    const visualProps = getVisualPropsFromData(itemData)
+    if (visualProps) {
+      const rect = newSprite.rect
+      rect.x = visualProps.x
+      rect.y = visualProps.y
+      rect.w = visualProps.width
+      rect.h = visualProps.height
+      rect.angle = visualProps.rotation
+      newSprite.opacity = visualProps.opacity
+    }
 
     // 设置其他属性
-    newSprite.zIndex = itemData.zIndex
-    newSprite.opacity = itemData.opacity
+    newSprite.zIndex = (itemData.config as any).zIndex
 
     // 创建新的TimelineItem
     const newTimelineItem: TimelineItem = reactive({
@@ -1805,17 +1688,9 @@ export class RemoveTrackCommand implements SimpleCommand {
       trackId: itemData.trackId,
       mediaType: itemData.mediaType,
       timeRange: { ...itemData.timeRange },
-      x: itemData.x,
-      y: itemData.y,
-      width: itemData.width,
-      height: itemData.height,
-      rotation: itemData.rotation,
-      zIndex: itemData.zIndex,
-      opacity: itemData.opacity,
-      volume: itemData.volume,
-      isMuted: itemData.isMuted,
       sprite: markRaw(newSprite),
       thumbnailUrl: itemData.thumbnailUrl,
+      config: { ...itemData.config },
     })
 
     return newTimelineItem
