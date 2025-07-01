@@ -2,11 +2,10 @@ import { VisibleSprite, MP4Clip } from '@webav/av-cliper'
 import type { VideoTimeRange, AudioState, ExtendedPropsChangeEvent } from '../types'
 import { framesToMicroseconds } from '../stores/utils/timeUtils'
 
-// 从 BaseSprite 复制的类型定义
+// 从 BaseSprite 复制的类型定义（简化版，去掉 iterCount）
 interface IAnimationOpts {
   duration: number
   delay?: number
-  iterCount?: number
 }
 
 type TAnimateProps = {
@@ -76,9 +75,9 @@ export class VideoVisibleSprite extends VisibleSprite {
   #animatKeyFrame: TAnimationKeyFrame | null = null
 
   /**
-   * 动画选项配置
+   * 动画选项配置（简化版，固定 iterCount 为 1）
    */
-  #animatOpts: Required<IAnimationOpts> | null = null
+  #animatOpts: (Required<IAnimationOpts> & { iterCount: 1 }) | null = null
 
   /**
    * 构造函数
@@ -630,13 +629,12 @@ export class VideoVisibleSprite extends VisibleSprite {
    *     '75%': { x: 0, y: 680 },
    *     '100%': { x: 0, y: 0 },
    *   },
-   *   { duration: 4e6, iterCount: 1 },
+   *   { duration: 4e6 }, // iterCount 固定为1，无需指定
    * );
    *
    * @see [视频水印动画](https://webav-tech.github.io/WebAV/demo/2_1-concat-video)
    */
   public setAnimation(keyFrame: TKeyFrameOpts, opts: IAnimationOpts): void {
-    console.log('setAnimation', keyFrame, opts)
     this.#animatKeyFrame = Object.entries(keyFrame).map(([k, val]) => {
       const numK = { from: 0, to: 100 }[k] ?? Number(k.slice(0, -1))
       if (isNaN(numK) || numK > 100 || numK < 0) {
@@ -644,11 +642,14 @@ export class VideoVisibleSprite extends VisibleSprite {
       }
       return [numK / 100, val]
     }) as TAnimationKeyFrame
+    
     this.#animatOpts = Object.assign({}, this.#animatOpts, {
       duration: opts.duration,
       delay: opts.delay ?? 0,
-      iterCount: opts.iterCount ?? Infinity,
+      iterCount: 1, // 固定为1轮，简化逻辑
     })
+    
+    console.log('setAnimation', this.#animatKeyFrame, this.#animatOpts)
   }
 
   /**
@@ -677,19 +678,26 @@ export class VideoVisibleSprite extends VisibleSprite {
 }
 
 /**
- * 线性时间函数（从BaseSprite复制）
+ * 线性时间函数（简化版，固定单轮播放）
  */
 export function linearTimeFn(
   time: number,
   kf: TAnimationKeyFrame,
-  opts: Required<IAnimationOpts>,
+  opts: Required<IAnimationOpts> & { iterCount: 1 },
 ): Partial<TAnimateProps> {
   const offsetTime = time - opts.delay
-  if (offsetTime / opts.duration >= opts.iterCount) return {}
 
-  const t = offsetTime % opts.duration
+  // 简化：如果超过动画时长，返回最后一帧状态
+  if (offsetTime > opts.duration) {
+    const lastFrame = kf[kf.length - 1]
+    return lastFrame ? lastFrame[1] : {}
+  }
 
-  const process = offsetTime === opts.duration ? 1 : t / opts.duration
+  // 如果还没开始，返回空
+  if (offsetTime < 0) return {}
+
+  // 计算当前进度（0-1之间）
+  const process = offsetTime / opts.duration
   const idx = kf.findIndex((it) => it[0] >= process)
   if (idx === -1) return {}
 
