@@ -556,10 +556,8 @@ export class UpdatePropertyCommand implements SimpleCommand {
       const { handlePropertyChange } = await import('../../../utils/unifiedKeyframeUtils')
 
       // 使用统一的属性修改处理逻辑（遵循正确的数据流向）
+      // 注意：handlePropertyChange 内部已经包含了 updateWebAVAnimation 调用，无需重复调用
       const actionType = await handlePropertyChange(item, this.frame, this.property, this.newValue)
-
-      // 更新WebAV动画
-      await this.webavAnimationManager.updateWebAVAnimation(item)
 
       // 保存执行后的状态快照
       this.afterSnapshot = this.createSnapshot(item)

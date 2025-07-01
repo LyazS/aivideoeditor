@@ -2,6 +2,26 @@ import { VisibleSprite, MP4Clip } from '@webav/av-cliper'
 import type { VideoTimeRange, AudioState, ExtendedPropsChangeEvent } from '../types'
 import { framesToMicroseconds } from '../stores/utils/timeUtils'
 
+// 从 BaseSprite 复制的类型定义
+interface IAnimationOpts {
+  duration: number
+  delay?: number
+  iterCount?: number
+}
+
+type TAnimateProps = {
+  x: number
+  y: number
+  w: number
+  h: number
+  angle: number
+  opacity: number
+}
+
+export type TAnimationKeyFrame = Array<[number, Partial<TAnimateProps>]>
+
+type TKeyFrameOpts = Partial<Record<`${number}%` | 'from' | 'to', Partial<TAnimateProps>>>
+
 /**
  * 自定义的VisibleSprite类，继承自WebAV的VisibleSprite
  * 添加了startOffset属性用于自定义起始偏移和音量控制功能
@@ -47,6 +67,18 @@ export class VideoVisibleSprite extends VisibleSprite {
    * 是否启用opacity监控
    */
   #isOpacityMonitoringEnabled: boolean = true
+
+  // ==================== 动画相关私有字段 ====================
+
+  /**
+   * 动画关键帧数据
+   */
+  #animatKeyFrame: TAnimationKeyFrame | null = null
+
+  /**
+   * 动画选项配置
+   */
+  #animatOpts: Required<IAnimationOpts> | null = null
 
   /**
    * 构造函数
@@ -583,4 +615,100 @@ export class VideoVisibleSprite extends VisibleSprite {
       console.warn('Failed to emit opacity change callback:', error)
     }
   }
+
+  // ==================== 动画方法（从BaseSprite复制） ====================
+
+  /**
+   * 给素材添加动画，使用方法参考 css animation
+   *
+   * @example
+   * sprite.setAnimation(
+   *   {
+   *     '0%': { x: 0, y: 0 },
+   *     '25%': { x: 1200, y: 680 },
+   *     '50%': { x: 1200, y: 0 },
+   *     '75%': { x: 0, y: 680 },
+   *     '100%': { x: 0, y: 0 },
+   *   },
+   *   { duration: 4e6, iterCount: 1 },
+   * );
+   *
+   * @see [视频水印动画](https://webav-tech.github.io/WebAV/demo/2_1-concat-video)
+   */
+  public setAnimation(keyFrame: TKeyFrameOpts, opts: IAnimationOpts): void {
+    console.log('setAnimation', keyFrame, opts)
+    this.#animatKeyFrame = Object.entries(keyFrame).map(([k, val]) => {
+      const numK = { from: 0, to: 100 }[k] ?? Number(k.slice(0, -1))
+      if (isNaN(numK) || numK > 100 || numK < 0) {
+        throw Error('keyFrame must between 0~100')
+      }
+      return [numK / 100, val]
+    }) as TAnimationKeyFrame
+    this.#animatOpts = Object.assign({}, this.#animatOpts, {
+      duration: opts.duration,
+      delay: opts.delay ?? 0,
+      iterCount: opts.iterCount ?? Infinity,
+    })
+  }
+
+  /**
+   * 如果当前 sprite 已被设置动画，将 sprite 的动画属性设定到指定时间的状态
+   */
+  public animate(time: number): void {
+    if (this.#animatKeyFrame == null || this.#animatOpts == null || time < this.#animatOpts.delay)
+      return
+    // console.log('animate', time, this.#animatKeyFrame, this.#animatOpts)
+    const updateProps = linearTimeFn(time, this.#animatKeyFrame, this.#animatOpts)
+    for (const k in updateProps) {
+      switch (k) {
+        case 'opacity':
+          this.opacity = updateProps[k] as number
+          break
+        case 'x':
+        case 'y':
+        case 'w':
+        case 'h':
+        case 'angle':
+          this.rect[k] = updateProps[k] as number
+          break
+      }
+    }
+  }
+}
+
+/**
+ * 线性时间函数（从BaseSprite复制）
+ */
+export function linearTimeFn(
+  time: number,
+  kf: TAnimationKeyFrame,
+  opts: Required<IAnimationOpts>,
+): Partial<TAnimateProps> {
+  const offsetTime = time - opts.delay
+  if (offsetTime / opts.duration >= opts.iterCount) return {}
+
+  const t = offsetTime % opts.duration
+
+  const process = offsetTime === opts.duration ? 1 : t / opts.duration
+  const idx = kf.findIndex((it) => it[0] >= process)
+  if (idx === -1) return {}
+
+  const startState = kf[idx - 1]
+  const nextState = kf[idx]
+  const nextFrame = nextState[1]
+  if (startState == null) return nextFrame
+  const startFrame = startState[1]
+
+  const rs: Partial<TAnimateProps> = {}
+  // 介于两个Frame状态间的进度
+  const stateProcess = (process - startState[0]) / (nextState[0] - startState[0])
+  for (const prop in nextFrame) {
+    const p = prop as keyof TAnimateProps
+    if (startFrame[p] == null) continue
+    // @ts-expect-error
+    // eslint-disable-next-line
+    rs[p] = (nextFrame[p] - startFrame[p]) * stateProcess + startFrame[p]
+  }
+
+  return rs
 }

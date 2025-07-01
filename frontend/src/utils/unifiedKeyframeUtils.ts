@@ -627,10 +627,10 @@ async function handlePropertyChange_OnKeyframe(
   const { updateWebAVAnimation } = await import('./webavAnimationManager')
   await updateWebAVAnimation(item)
 
-  // 3. 通过WebAV更新当前属性值（确保立即生效）
+  // 3. 立即更新当前属性值到sprite（确保立即生效）
   await updatePropertyViaWebAV(item, property, value)
 
-  console.log('🎬 [Unified Keyframe] Updated keyframe property via WebAV:', {
+  console.log('🎬 [Unified Keyframe] Updated keyframe property:', {
     itemId: item.id,
     frame: currentFrame,
     property,
@@ -667,10 +667,10 @@ async function handlePropertyChange_BetweenKeyframes(
   const { updateWebAVAnimation } = await import('./webavAnimationManager')
   await updateWebAVAnimation(item)
 
-  // 3. 通过WebAV更新当前属性值（确保立即生效）
+  // 3. 立即更新当前属性值到sprite（确保立即生效）
   await updatePropertyViaWebAV(item, property, value)
 
-  console.log('🎬 [Unified Keyframe] Created keyframe for property change via WebAV:', {
+  console.log('🎬 [Unified Keyframe] Created keyframe for property change:', {
     itemId: item.id,
     frame: currentFrame,
     property,
