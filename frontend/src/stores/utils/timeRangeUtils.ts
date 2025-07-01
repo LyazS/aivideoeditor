@@ -63,5 +63,3 @@ export function validateTimeRange(timeRange: VideoTimeRange | ImageTimeRange): b
   // 图片特有验证
   return basicValid && timeRange.displayDuration > 0
 }
-
-

@@ -12,8 +12,22 @@ export function createTrackModule() {
 
   // 轨道列表
   const tracks = ref<Track[]>([
-    { id: generateTrackId(), name: '视频轨道 1', type: 'video', isVisible: true, isMuted: false, height: 80 },
-    { id: generateTrackId(), name: '视频轨道 2', type: 'video', isVisible: true, isMuted: false, height: 80 },
+    {
+      id: generateTrackId(),
+      name: '视频轨道 1',
+      type: 'video',
+      isVisible: true,
+      isMuted: false,
+      height: 80,
+    },
+    {
+      id: generateTrackId(),
+      name: '视频轨道 2',
+      type: 'video',
+      isVisible: true,
+      isMuted: false,
+      height: 80,
+    },
   ])
 
   // ==================== 轨道管理方法 ====================
@@ -43,7 +57,7 @@ export function createTrackModule() {
     }
 
     // 计算同类型轨道的数量，用于生成默认名称
-    const sameTypeCount = tracks.value.filter(t => t.type === type).length + 1
+    const sameTypeCount = tracks.value.filter((t) => t.type === type).length + 1
 
     const newTrack: Track = {
       id: newId,

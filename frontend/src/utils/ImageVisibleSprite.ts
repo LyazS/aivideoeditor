@@ -22,8 +22,6 @@ export class ImageVisibleSprite extends BaseVisibleSprite {
    */
   public static readonly DEFAULT_DURATION = 150
 
-
-
   /**
    * 构造函数
    * @param clip ImgClip实例
@@ -55,7 +53,9 @@ export class ImageVisibleSprite extends BaseVisibleSprite {
    */
   public setTimelineEndTime(endTime: number): void {
     this.#timeRange.timelineEndTime = Math.round(endTime)
-    this.#timeRange.displayDuration = Math.round(this.#timeRange.timelineEndTime - this.#timeRange.timelineStartTime)
+    this.#timeRange.displayDuration = Math.round(
+      this.#timeRange.timelineEndTime - this.#timeRange.timelineStartTime,
+    )
     this.#updateVisibleSpriteTime()
   }
 
@@ -69,7 +69,8 @@ export class ImageVisibleSprite extends BaseVisibleSprite {
     }
 
     this.#timeRange.displayDuration = Math.round(duration)
-    this.#timeRange.timelineEndTime = this.#timeRange.timelineStartTime + this.#timeRange.displayDuration
+    this.#timeRange.timelineEndTime =
+      this.#timeRange.timelineStartTime + this.#timeRange.displayDuration
     this.#updateVisibleSpriteTime()
   }
 
@@ -122,7 +123,7 @@ export class ImageVisibleSprite extends BaseVisibleSprite {
         this.#timeRange.timelineStartTime + this.#timeRange.displayDuration
     } else if (options.timelineStartTime !== undefined && options.timelineEndTime !== undefined) {
       this.#timeRange.displayDuration = Math.round(
-        this.#timeRange.timelineEndTime - this.#timeRange.timelineStartTime
+        this.#timeRange.timelineEndTime - this.#timeRange.timelineStartTime,
       )
     }
 
@@ -204,5 +205,4 @@ export class ImageVisibleSprite extends BaseVisibleSprite {
       playbackRate: 1.0, // 图片固定为1.0，没有倍速概念
     }
   }
-
 }

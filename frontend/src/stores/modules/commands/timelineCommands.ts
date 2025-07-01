@@ -11,7 +11,14 @@ import type {
   TimelineItemData,
   TransformData,
 } from '../../../types'
-import { isVideoTimeRange, isImageTimeRange, createTimelineItemData, getVisualPropsFromData, getAudioPropsFromData, hasAudioProps } from '../../../types'
+import {
+  isVideoTimeRange,
+  isImageTimeRange,
+  createTimelineItemData,
+  getVisualPropsFromData,
+  getAudioPropsFromData,
+  hasAudioProps,
+} from '../../../types'
 import { VideoVisibleSprite } from '../../../utils/VideoVisibleSprite'
 import { ImageVisibleSprite } from '../../../utils/ImageVisibleSprite'
 import { createSpriteFromMediaItem } from '../../../utils/spriteFactory'
@@ -486,7 +493,7 @@ export class DuplicateTimelineItemCommand implements SimpleCommand {
             : originalTimeRange,
       sprite: markRaw(newSprite),
       thumbnailUrl: undefined, // 先设为undefined，稍后重新生成
-      config: { ...this.originalTimelineItemData.config }
+      config: { ...this.originalTimelineItemData.config },
     })
 
     // 重新生成缩略图（异步执行，不阻塞重建过程）

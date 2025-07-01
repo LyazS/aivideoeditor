@@ -3,7 +3,14 @@
  * 为关键帧系统提供撤销/重做支持
  */
 
-import type { SimpleCommand, TimelineItem, Keyframe, AnimationConfig, MediaType, GetMediaConfig } from '../../../types'
+import type {
+  SimpleCommand,
+  TimelineItem,
+  Keyframe,
+  AnimationConfig,
+  MediaType,
+  GetMediaConfig,
+} from '../../../types'
 import { hasVisualProps } from '../../../types'
 import { generateCommandId } from '../../../utils/idGenerator'
 
@@ -46,7 +53,7 @@ interface KeyframeSnapshot<T extends MediaType = MediaType> {
 async function applyKeyframeSnapshot<T extends MediaType = MediaType>(
   item: TimelineItem<T>,
   snapshot: KeyframeSnapshot<T>,
-  webavAnimationManager: { updateWebAVAnimation: (item: TimelineItem<T>) => Promise<void> }
+  webavAnimationManager: { updateWebAVAnimation: (item: TimelineItem<T>) => Promise<void> },
 ): Promise<void> {
   // 1. 恢复动画配置（关键帧数据）
   if (snapshot.animationConfig) {
@@ -535,19 +542,16 @@ export class UpdatePropertyCommand implements SimpleCommand {
         '播放头不在当前视频片段的时间范围内。请将播放头移动到片段内再尝试修改属性。',
       )
 
-      console.warn(
-        '🎬 [Update Property Command] 播放头不在当前clip时间范围内，无法更新属性:',
-        {
-          itemId: this.timelineItemId,
-          frame: this.frame,
-          property: this.property,
-          value: this.newValue,
-          clipTimeRange: {
-            start: item.timeRange.timelineStartTime,
-            end: item.timeRange.timelineEndTime,
-          },
+      console.warn('🎬 [Update Property Command] 播放头不在当前clip时间范围内，无法更新属性:', {
+        itemId: this.timelineItemId,
+        frame: this.frame,
+        property: this.property,
+        value: this.newValue,
+        clipTimeRange: {
+          start: item.timeRange.timelineStartTime,
+          end: item.timeRange.timelineEndTime,
         },
-      )
+      })
       throw new Error('播放头不在当前clip时间范围内，无法更新属性')
     }
 
@@ -571,7 +575,7 @@ export class UpdatePropertyCommand implements SimpleCommand {
       const actionMessages = {
         'no-animation': '✅ 属性更新完成（无动画）',
         'updated-keyframe': '✅ 关键帧属性更新完成',
-        'created-keyframe': '✅ 创建关键帧并更新属性完成'
+        'created-keyframe': '✅ 创建关键帧并更新属性完成',
       }
 
       console.log(actionMessages[actionType], {

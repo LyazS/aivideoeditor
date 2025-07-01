@@ -30,7 +30,9 @@
       <div v-else-if="selectedTimelineItem" class="properties-content">
         <!-- 根据选中项目类型显示不同的属性组件 -->
         <VideoClipProperties
-          v-if="selectedTimelineItem.mediaType === 'video' || selectedTimelineItem.mediaType === 'image'"
+          v-if="
+            selectedTimelineItem.mediaType === 'video' || selectedTimelineItem.mediaType === 'image'
+          "
           :selected-timeline-item="selectedTimelineItem"
           :current-frame="currentFrame"
         />
@@ -84,13 +86,7 @@ const multiSelectInfo = computed(() => {
       .filter(Boolean),
   }
 })
-
-
-
-
-
 </script>
-
 
 <style scoped>
 .properties-panel {

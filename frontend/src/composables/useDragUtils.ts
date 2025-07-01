@@ -138,7 +138,8 @@ export function useDragUtils() {
 
     const rect = trackContent.getBoundingClientRect()
     const mouseX = event.clientX - rect.left
-    const targetTrackId = trackContent.getAttribute('data-track-id') || videoStore.tracks[0]?.id || ''
+    const targetTrackId =
+      trackContent.getAttribute('data-track-id') || videoStore.tracks[0]?.id || ''
 
     // 使用帧数进行精确计算
     let dropFrames: number

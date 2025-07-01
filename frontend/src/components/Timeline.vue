@@ -412,8 +412,7 @@ function getTrackTypeIcon(type: TrackType): string {
       'M17,10.5V7A1,1 0 0,0 16,6H4A1,1 0 0,0 3,7V17A1,1 0 0,0 4,18H16A1,1 0 0,0 17,17V13.5L21,17.5V6.5L17,10.5Z',
     audio:
       'M14,3.23V5.29C16.89,6.15 19,8.83 19,12C19,15.17 16.89,17.85 14,18.71V20.77C18,19.86 21,16.28 21,12C21,7.72 18,4.14 14,3.23M16.5,12C16.5,10.23 15.5,8.71 14,7.97V16C15.5,15.29 16.5,13.76 16.5,12Z',
-    text:
-      'M18,11H16.5V10.5H14.5V13.5H16.5V13H18V14A1,1 0 0,1 17,15H14A1,1 0 0,1 13,14V10A1,1 0 0,1 14,9H17A1,1 0 0,1 18,10V11M11,15H9V9H11V15M8,9H6V15H8V9Z',
+    text: 'M18,11H16.5V10.5H14.5V13.5H16.5V13H18V14A1,1 0 0,1 17,15H14A1,1 0 0,1 13,14V10A1,1 0 0,1 14,9H17A1,1 0 0,1 18,10V11M11,15H9V9H11V15M8,9H6V15H8V9Z',
   }
   return icons[type] || icons.video
 }
@@ -1120,7 +1119,7 @@ async function createMediaClipFromMediaItem(
       sprite: markRaw(sprite), // 使用markRaw避免Vue响应式包装
       thumbnailUrl, // 添加缩略图URL
       // 媒体配置（根据类型自动推断）
-      config: createMediaConfig(mediaItem.mediaType, sprite)
+      config: createMediaConfig(mediaItem.mediaType, sprite),
     })
 
     // 创建媒体配置的辅助函数
@@ -1139,7 +1138,7 @@ async function createMediaClipFromMediaItem(
           isMuted: false,
           // 基础属性
           zIndex: sprite.zIndex,
-          animation: undefined
+          animation: undefined,
         }
       } else if (mediaType === 'image') {
         return {
@@ -1152,7 +1151,7 @@ async function createMediaClipFromMediaItem(
           opacity: sprite.opacity,
           // 基础属性
           zIndex: sprite.zIndex,
-          animation: undefined
+          animation: undefined,
         }
       } else if (mediaType === 'audio') {
         return {
@@ -1161,7 +1160,7 @@ async function createMediaClipFromMediaItem(
           isMuted: false,
           // 基础属性
           zIndex: sprite.zIndex || 0,
-          animation: undefined
+          animation: undefined,
         }
       }
       throw new Error(`不支持的媒体类型: ${mediaType}`)
@@ -1171,7 +1170,7 @@ async function createMediaClipFromMediaItem(
       WebAV坐标: 'rect' in sprite ? { x: sprite.rect.x, y: sprite.rect.y } : 'N/A (音频)',
       项目坐标: {
         x: hasVisualProps(timelineItem) ? timelineItem.config.x : 'N/A',
-        y: hasVisualProps(timelineItem) ? timelineItem.config.y : 'N/A'
+        y: hasVisualProps(timelineItem) ? timelineItem.config.y : 'N/A',
       },
       尺寸: { w: sprite.rect.w, h: sprite.rect.h },
     })

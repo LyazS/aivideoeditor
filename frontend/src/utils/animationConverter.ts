@@ -250,7 +250,11 @@ export function isValidAnimationConfig(animationConfig: AnimationConfig): boolea
 
       // 验证透明度属性（如果存在）
       if ('opacity' in props) {
-        if (typeof props.opacity !== 'number' || (props.opacity as number) < 0 || (props.opacity as number) > 1) {
+        if (
+          typeof props.opacity !== 'number' ||
+          (props.opacity as number) < 0 ||
+          (props.opacity as number) > 1
+        ) {
           return false
         }
       }

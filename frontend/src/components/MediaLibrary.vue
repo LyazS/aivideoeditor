@@ -292,10 +292,7 @@ const addVideoItem = async (
     resolve()
   } catch (error) {
     const processingTime = ((Date.now() - startTime) / 1000).toFixed(2)
-    console.error(
-      `❌ [并发处理] 视频文件处理失败: ${file.name} (耗时: ${processingTime}s)`,
-      error,
-    )
+    console.error(`❌ [并发处理] 视频文件处理失败: ${file.name} (耗时: ${processingTime}s)`, error)
     // 如果解析失败，从store中移除该项目
     videoStore.removeMediaItem(mediaItemId)
     URL.revokeObjectURL(url)

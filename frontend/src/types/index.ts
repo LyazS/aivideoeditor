@@ -229,9 +229,11 @@ export interface TimelineItem<T extends MediaType = MediaType> {
   /** 媒体类型 */
   mediaType: T
   /** 时间范围信息（根据类型自动推断） */
-  timeRange: T extends 'video' ? VideoTimeRange :
-            T extends 'audio' ? AudioTimeRange :
-            ImageTimeRange
+  timeRange: T extends 'video'
+    ? VideoTimeRange
+    : T extends 'audio'
+      ? AudioTimeRange
+      : ImageTimeRange
   /** 自定义的视频或图片sprite */
   sprite: Raw<CustomSprite>
   /** 时间轴clip的缩略图URL */
@@ -459,9 +461,11 @@ export interface TimelineItemData<T extends MediaType = MediaType> {
   mediaItemId: string
   trackId: string
   mediaType: T
-  timeRange: T extends 'video' ? VideoTimeRange :
-            T extends 'audio' ? AudioTimeRange :
-            ImageTimeRange
+  timeRange: T extends 'video'
+    ? VideoTimeRange
+    : T extends 'audio'
+      ? AudioTimeRange
+      : ImageTimeRange
   config: GetMediaConfig<T>
   thumbnailUrl?: string
 }
@@ -629,9 +633,7 @@ export function isAudioTimeRange(
  * @param item 时间轴项目
  * @returns 是否为视频类型
  */
-export function isVideoTimelineItem(
-  item: TimelineItem,
-): item is TimelineItem<'video'> {
+export function isVideoTimelineItem(item: TimelineItem): item is TimelineItem<'video'> {
   return item.mediaType === 'video'
 }
 
@@ -640,9 +642,7 @@ export function isVideoTimelineItem(
  * @param item 时间轴项目
  * @returns 是否为图片类型
  */
-export function isImageTimelineItem(
-  item: TimelineItem,
-): item is TimelineItem<'image'> {
+export function isImageTimelineItem(item: TimelineItem): item is TimelineItem<'image'> {
   return item.mediaType === 'image'
 }
 
@@ -651,9 +651,7 @@ export function isImageTimelineItem(
  * @param item 时间轴项目
  * @returns 是否为音频类型
  */
-export function isAudioTimelineItem(
-  item: TimelineItem,
-): item is TimelineItem<'audio'> {
+export function isAudioTimelineItem(item: TimelineItem): item is TimelineItem<'audio'> {
   return item.mediaType === 'audio'
 }
 
@@ -684,7 +682,9 @@ export function hasAudioProps(
 /**
  * 从 TimelineItem 创建 TimelineItemData（类型安全版本）
  */
-export function createTimelineItemData<T extends MediaType>(item: TimelineItem<T>): TimelineItemData<T> {
+export function createTimelineItemData<T extends MediaType>(
+  item: TimelineItem<T>,
+): TimelineItemData<T> {
   return {
     id: item.id,
     mediaItemId: item.mediaItemId,

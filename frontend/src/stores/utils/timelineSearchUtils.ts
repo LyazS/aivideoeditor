@@ -113,5 +113,8 @@ export function getTimelineItemAtTrackAndFrames(
 export function isPlayheadInTimelineItem(item: TimelineItem, currentFrame: number): boolean {
   // 允许播放头在clip结束位置进行关键帧操作，这样用户可以在第4帧位置操作3帧的视频
   // 这主要是为了配合播放头吸附功能，用户习惯在clip结束后的位置进行操作
-  return currentFrame >= item.timeRange.timelineStartTime && currentFrame <= item.timeRange.timelineEndTime
+  return (
+    currentFrame >= item.timeRange.timelineStartTime &&
+    currentFrame <= item.timeRange.timelineEndTime
+  )
 }

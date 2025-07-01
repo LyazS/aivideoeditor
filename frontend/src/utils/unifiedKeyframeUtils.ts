@@ -431,7 +431,7 @@ export async function updatePropertiesBatchViaWebAV(
         centerPosition: { x: currentCenterX, y: currentCenterY },
         oldSize: { w: item.config.width, h: item.config.height },
         newSize: { w: newWidth, h: newHeight },
-        newWebAVPos: { x: webavCoords.x, y: webavCoords.y }
+        newWebAVPos: { x: webavCoords.x, y: webavCoords.y },
       })
 
       // 移除已处理的属性
@@ -458,7 +458,6 @@ export async function updatePropertiesBatchViaWebAV(
       const currentTime = videoStore.currentFrame * (1000000 / 30) // 转换为微秒
       avCanvas.previewFrame(currentTime)
     }
-
   } catch (error) {
     console.error('批量更新属性失败:', error)
   }
@@ -467,7 +466,11 @@ export async function updatePropertiesBatchViaWebAV(
 /**
  * 通过WebAV更新属性值（遵循正确的数据流向）
  */
-async function updatePropertyViaWebAV(item: TimelineItem, property: string, value: any): Promise<void> {
+async function updatePropertyViaWebAV(
+  item: TimelineItem,
+  property: string,
+  value: any,
+): Promise<void> {
   const sprite = item.sprite
   if (!sprite) {
     console.warn('🎬 [Unified Keyframe] No sprite found for item:', item.id)
@@ -482,8 +485,8 @@ async function updatePropertyViaWebAV(item: TimelineItem, property: string, valu
       const videoStore = useVideoStore()
 
       const webavCoords = projectToWebavCoords(
-        property === 'x' ? value : (hasVisualProps(item) ? item.config.x : 0),
-        property === 'y' ? value : (hasVisualProps(item) ? item.config.y : 0),
+        property === 'x' ? value : hasVisualProps(item) ? item.config.x : 0,
+        property === 'y' ? value : hasVisualProps(item) ? item.config.y : 0,
         hasVisualProps(item) ? item.config.width : 0,
         hasVisualProps(item) ? item.config.height : 0,
         videoStore.videoResolution.width,
@@ -525,7 +528,7 @@ async function updatePropertyViaWebAV(item: TimelineItem, property: string, valu
           oldSize: { w: item.config.width, h: currentHeight },
           newSize: { w: newWidth, h: currentHeight },
           oldWebAVPos: { x: sprite.rect.x, y: sprite.rect.y },
-          newWebAVPos: { x: webavCoords.x, y: webavCoords.y }
+          newWebAVPos: { x: webavCoords.x, y: webavCoords.y },
         })
       }
     } else if (property === 'height') {
@@ -562,7 +565,7 @@ async function updatePropertyViaWebAV(item: TimelineItem, property: string, valu
           oldSize: { w: currentWidth, h: item.config.height },
           newSize: { w: currentWidth, h: newHeight },
           oldWebAVPos: { x: sprite.rect.x, y: sprite.rect.y },
-          newWebAVPos: { x: webavCoords.x, y: webavCoords.y }
+          newWebAVPos: { x: webavCoords.x, y: webavCoords.y },
         })
       }
     } else if (property === 'rotation') {
@@ -587,7 +590,11 @@ async function updatePropertyViaWebAV(item: TimelineItem, property: string, valu
 /**
  * 处理属性修改 - 状态1：黑色（无动画）
  */
-async function handlePropertyChange_NoAnimation(item: TimelineItem, property: string, value: any): Promise<void> {
+async function handlePropertyChange_NoAnimation(
+  item: TimelineItem,
+  property: string,
+  value: any,
+): Promise<void> {
   // 通过WebAV更新属性值，propsChange事件会自动同步到TimelineItem
   await updatePropertyViaWebAV(item, property, value)
 
@@ -619,7 +626,7 @@ async function handlePropertyChange_OnKeyframe(
       currentFrame,
       property,
       value,
-      keyframePosition: keyframe.framePosition
+      keyframePosition: keyframe.framePosition,
     })
   }
 
@@ -660,7 +667,7 @@ async function handlePropertyChange_BetweenKeyframes(
     currentFrame,
     property,
     value,
-    keyframePosition: keyframe.framePosition
+    keyframePosition: keyframe.framePosition,
   })
 
   // 2. 更新WebAV动画（使用新的关键帧数据）
@@ -677,8 +684,6 @@ async function handlePropertyChange_BetweenKeyframes(
     value,
   })
 }
-
-
 
 /**
  * 统一属性修改处理（遵循正确的数据流向）
@@ -865,5 +870,3 @@ export function debugKeyframes(item: TimelineItem): void {
 
   console.groupEnd()
 }
-
-

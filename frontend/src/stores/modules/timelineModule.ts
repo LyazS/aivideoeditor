@@ -6,7 +6,13 @@ import { printDebugInfo } from '../utils/debugUtils'
 import { syncTimeRange } from '../utils/timeRangeUtils'
 import { microsecondsToFrames } from '../utils/timeUtils'
 import { globalWebAVAnimationManager } from '../../utils/webavAnimationManager'
-import type { TimelineItem, MediaItem, ExtendedPropsChangeEvent, VideoResolution, MediaType } from '../../types'
+import type {
+  TimelineItem,
+  MediaItem,
+  ExtendedPropsChangeEvent,
+  VideoResolution,
+  MediaType,
+} from '../../types'
 import { hasVisualProps } from '../../types'
 
 /**
@@ -345,7 +351,10 @@ export function createTimelineModule(
 
     try {
       // 更新尺寸时使用中心缩放 - 仅对视觉媒体有效
-      if ((transform.width !== undefined || transform.height !== undefined) && hasVisualProps(item)) {
+      if (
+        (transform.width !== undefined || transform.height !== undefined) &&
+        hasVisualProps(item)
+      ) {
         // 获取当前中心位置（项目坐标系）
         const currentCenterX = item.config.x
         const currentCenterY = item.config.y

@@ -187,11 +187,7 @@
         </button>
 
         <!-- 调试按钮 - 暂时隐藏 -->
-        <button
-          @click="debugUnifiedKeyframes"
-          class="debug-btn"
-          title="输出统一关键帧调试信息"
-        >
+        <button @click="debugUnifiedKeyframes" class="debug-btn" title="输出统一关键帧调试信息">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
             <path
               d="M9,3V4H4V6H5V19A2,2 0 0,0 7,21H17A2,2 0 0,0 19,19V6H20V4H15V3H9M7,6H17V19H7V6M9,8V17H11V8H9M13,8V17H15V8H13Z"
@@ -625,7 +621,12 @@ const transformY = computed(() => {
   return props.selectedTimelineItem.config.y
 })
 const scaleX = computed(() => {
-  if (!props.selectedTimelineItem || !selectedMediaItem.value || !hasVisualProps(props.selectedTimelineItem)) return 1
+  if (
+    !props.selectedTimelineItem ||
+    !selectedMediaItem.value ||
+    !hasVisualProps(props.selectedTimelineItem)
+  )
+    return 1
   const originalResolution =
     selectedMediaItem.value.mediaType === 'video'
       ? videoStore.getVideoOriginalResolution(selectedMediaItem.value.id)
@@ -633,7 +634,12 @@ const scaleX = computed(() => {
   return props.selectedTimelineItem.config.width / originalResolution.width
 })
 const scaleY = computed(() => {
-  if (!props.selectedTimelineItem || !selectedMediaItem.value || !hasVisualProps(props.selectedTimelineItem)) return 1
+  if (
+    !props.selectedTimelineItem ||
+    !selectedMediaItem.value ||
+    !hasVisualProps(props.selectedTimelineItem)
+  )
+    return 1
   const originalResolution =
     selectedMediaItem.value.mediaType === 'video'
       ? videoStore.getVideoOriginalResolution(selectedMediaItem.value.id)
@@ -982,7 +988,9 @@ const updateTransform = async (transform?: {
     x: transformX.value,
     y: transformY.value,
     width: hasVisualProps(props.selectedTimelineItem) ? props.selectedTimelineItem.config.width : 0,
-    height: hasVisualProps(props.selectedTimelineItem) ? props.selectedTimelineItem.config.height : 0,
+    height: hasVisualProps(props.selectedTimelineItem)
+      ? props.selectedTimelineItem.config.height
+      : 0,
     rotation: rotation.value,
     opacity: opacity.value,
     zIndex: zIndex.value,
@@ -995,7 +1003,7 @@ const updateTransform = async (transform?: {
   if (finalTransform.width !== undefined && finalTransform.height !== undefined) {
     await updateUnifiedPropertyBatch({
       width: finalTransform.width,
-      height: finalTransform.height
+      height: finalTransform.height,
     })
   } else {
     // 单独处理尺寸属性
@@ -1086,7 +1094,9 @@ const setScaleX = (value: number) => {
   const newScaleX = Math.max(0.01, Math.min(5, value))
   const newSize = {
     width: originalResolution.width * newScaleX,
-    height: hasVisualProps(props.selectedTimelineItem) ? props.selectedTimelineItem.config.height : 0, // 保持Y尺寸不变
+    height: hasVisualProps(props.selectedTimelineItem)
+      ? props.selectedTimelineItem.config.height
+      : 0, // 保持Y尺寸不变
   }
   updateTransform({ width: newSize.width, height: newSize.height })
 }

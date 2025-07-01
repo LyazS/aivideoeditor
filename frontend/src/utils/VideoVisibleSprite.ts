@@ -58,10 +58,6 @@ export class VideoVisibleSprite extends BaseVisibleSprite {
     playbackRate: 1.0,
   }
 
-
-
-
-
   // ==================== 动画相关私有字段 ====================
 
   /**
@@ -500,10 +496,6 @@ export class VideoVisibleSprite extends BaseVisibleSprite {
     return this.#audioState.isMuted || this.isTrackMuted()
   }
 
-
-
-
-
   // ==================== 动画方法（从BaseSprite复制） ====================
 
   /**
@@ -531,13 +523,13 @@ export class VideoVisibleSprite extends BaseVisibleSprite {
       }
       return [numK / 100, val]
     }) as TAnimationKeyFrame
-    
+
     this.#animatOpts = Object.assign({}, this.#animatOpts, {
       duration: opts.duration,
       delay: opts.delay ?? 0,
       iterCount: 1, // 固定为1轮，简化逻辑
     })
-    
+
     console.log('setAnimation', this.#animatKeyFrame, this.#animatOpts)
   }
 

@@ -4,8 +4,12 @@ import { EventTool } from '@webav/internal-utils'
 // 扩展的事件类型定义，包含透明度变化事件
 export type ExtendedSpriteEvents = {
   propsChange: (
-    value: Partial<{ rect: Partial<{ x: number; y: number; w: number; h: number; angle: number }>; zIndex: number; opacity: number }>,
-  ) => void;
+    value: Partial<{
+      rect: Partial<{ x: number; y: number; w: number; h: number; angle: number }>
+      zIndex: number
+      opacity: number
+    }>,
+  ) => void
 }
 
 /**

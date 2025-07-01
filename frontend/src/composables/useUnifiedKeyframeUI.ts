@@ -175,12 +175,7 @@ export function useUnifiedKeyframeUI(
 
     try {
       // 使用命令系统处理属性修改
-      await updatePropertyWithCommand(
-        timelineItem.value.id,
-        currentFrame.value,
-        property,
-        value,
-      )
+      await updatePropertyWithCommand(timelineItem.value.id, currentFrame.value, property, value)
 
       console.log('🎬 [Unified Keyframe UI] Property changed with command:', {
         itemId: timelineItem.value.id,
@@ -277,7 +272,9 @@ export function useUnifiedKeyframeUI(
     try {
       // 动态导入命令系统
       const { UpdatePropertyCommand } = await import('../stores/modules/commands/keyframeCommands')
-      const { BatchUpdatePropertiesCommand } = await import('../stores/modules/commands/batchCommands')
+      const { BatchUpdatePropertiesCommand } = await import(
+        '../stores/modules/commands/batchCommands'
+      )
       const { useVideoStore } = await import('../stores/videoStore')
 
       const videoStore = useVideoStore()
@@ -290,23 +287,20 @@ export function useUnifiedKeyframeUI(
           property,
           value,
           {
-            getTimelineItem: videoStore.getTimelineItem
+            getTimelineItem: videoStore.getTimelineItem,
           },
           {
             updateWebAVAnimation: async (item) => {
               const { updateWebAVAnimation } = await import('../utils/webavAnimationManager')
               await updateWebAVAnimation(item)
-            }
+            },
           },
-          webAVControls // 播放头控制器
+          webAVControls, // 播放头控制器
         )
       })
 
       // 创建批量命令
-      const batchCommand = new BatchUpdatePropertiesCommand(
-        [timelineItem.value.id],
-        updateCommands
-      )
+      const batchCommand = new BatchUpdatePropertiesCommand([timelineItem.value.id], updateCommands)
 
       // 通过历史模块执行批量命令
       await videoStore.executeBatchCommand(batchCommand)
@@ -316,7 +310,7 @@ export function useUnifiedKeyframeUI(
         properties: Object.keys(properties),
         currentFrame: currentFrame.value,
         buttonState: buttonState.value,
-        commandCount: updateCommands.length
+        commandCount: updateCommands.length,
       })
     } catch (error) {
       console.error('🎬 [Unified Keyframe UI] Failed to batch update properties:', error)

@@ -7,7 +7,12 @@ import { printDebugInfo } from '../utils/debugUtils'
 import { syncTimeRange } from '../utils/timeRangeUtils'
 import { microsecondsToFrames, framesToTimecode } from '../utils/timeUtils'
 import type { TimelineItem, MediaItem } from '../../types'
-import { isVideoTimeRange, hasVisualProps, hasAudioProps, createTimelineItemData } from '../../types'
+import {
+  isVideoTimeRange,
+  hasVisualProps,
+  hasAudioProps,
+  createTimelineItemData,
+} from '../../types'
 
 /**
  * 视频片段操作模块
