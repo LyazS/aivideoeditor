@@ -80,6 +80,12 @@ export class WebAVAnimationManager {
       }
 
       // 应用动画到WebAV sprite
+      console.log('🎬 [WebAV Animation] Applying animation to WebAV sprite:', {
+        itemId: this.timelineItem.id,
+        keyframeCount: Object.keys(webavConfig.keyframes).length,
+        duration: webavConfig.options.duration,
+        keyframes: webavConfig.keyframes,
+      })
       sprite.setAnimation(webavConfig.keyframes, webavConfig.options)
 
       // 立即触发AVCanvas.previewFrame以确保动画效果立即生效

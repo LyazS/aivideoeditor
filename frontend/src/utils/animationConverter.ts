@@ -163,7 +163,7 @@ export function convertToWebAVAnimation(
         return
       }
 
-      const percentageKey = `${percentage.toFixed(2)}%`
+      const percentageKey = `${percentage.toFixed(6)}%`
 
       // 转换属性（传递画布尺寸信息，精灵尺寸从关键帧中获取）
       const webavProps = convertKeyframeToWebAV(keyframe, canvasWidth, canvasHeight)

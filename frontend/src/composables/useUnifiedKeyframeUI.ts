@@ -3,7 +3,7 @@
  * 管理统一关键帧按钮的状态和交互逻辑
  */
 
-import { ref, computed, watch, readonly, type Ref } from 'vue'
+import { computed, readonly, type Ref } from 'vue'
 import type {
   TimelineItem,
   KeyframeUIState,
@@ -42,25 +42,19 @@ export function useUnifiedKeyframeUI(
   // 视频存储，用于显示通知
   const videoStore = useVideoStore()
 
-  // ==================== 状态定义 ====================
-
-  /**
-   * 强制刷新计数器，用于触发响应式更新
-   */
-  const refreshCounter = ref(0)
-
   // ==================== 计算属性 ====================
 
   /**
    * 关键帧UI状态
    */
   const keyframeUIState = computed<KeyframeUIState>(() => {
-    // 访问refreshCounter以确保响应式更新
-    refreshCounter.value
-
     if (!timelineItem.value) {
       return { hasAnimation: false, isOnKeyframe: false }
     }
+
+    // 显式访问需要追踪的深层属性，让 Vue 建立依赖关系
+    timelineItem.value.animation?.keyframes.length
+    timelineItem.value.animation?.isEnabled
 
     return getKeyframeUIState(timelineItem.value, currentFrame.value)
   })
@@ -69,12 +63,13 @@ export function useUnifiedKeyframeUI(
    * 关键帧按钮状态
    */
   const buttonState = computed<KeyframeButtonState>(() => {
-    // 访问refreshCounter以确保响应式更新
-    refreshCounter.value
-
     if (!timelineItem.value) {
       return 'none'
     }
+
+    // 显式访问需要追踪的深层属性，让 Vue 建立依赖关系
+    timelineItem.value.animation?.keyframes.length
+    timelineItem.value.animation?.isEnabled
 
     return getKeyframeButtonState(timelineItem.value, currentFrame.value)
   })
@@ -113,13 +108,6 @@ export function useUnifiedKeyframeUI(
   // ==================== 方法定义 ====================
 
   /**
-   * 强制刷新UI状态
-   */
-  const forceRefresh = () => {
-    refreshCounter.value++
-  }
-
-  /**
    * 切换关键帧状态
    */
   const toggleKeyframeState = async () => {
@@ -147,9 +135,6 @@ export function useUnifiedKeyframeUI(
     try {
       // 使用命令系统切换关键帧
       await toggleKeyframeWithCommand(timelineItem.value.id, currentFrame.value)
-
-      // 强制刷新UI状态
-      forceRefresh()
 
       console.log('🎬 [Unified Keyframe UI] Keyframe toggled with command:', {
         itemId: timelineItem.value.id,
@@ -197,9 +182,6 @@ export function useUnifiedKeyframeUI(
         value,
       )
 
-      // 强制刷新UI状态
-      forceRefresh()
-
       console.log('🎬 [Unified Keyframe UI] Property changed with command:', {
         itemId: timelineItem.value.id,
         frame: currentFrame.value,
@@ -245,9 +227,6 @@ export function useUnifiedKeyframeUI(
     try {
       // 使用命令系统清除所有关键帧
       await clearAllKeyframesWithCommand(timelineItem.value.id)
-
-      // 强制刷新UI状态
-      forceRefresh()
 
       console.log('🎬 [Unified Keyframe UI] All keyframes cleared with command:', {
         itemId: timelineItem.value.id,
@@ -332,9 +311,6 @@ export function useUnifiedKeyframeUI(
       // 通过历史模块执行批量命令
       await videoStore.executeBatchCommand(batchCommand)
 
-      // 强制刷新UI状态
-      forceRefresh()
-
       console.log('🎬 [Unified Keyframe UI] Batch property update completed via command system:', {
         itemId: timelineItem.value.id,
         properties: Object.keys(properties),
@@ -349,19 +325,8 @@ export function useUnifiedKeyframeUI(
 
   // ==================== 监听器 ====================
 
-  /**
-   * 监听时间轴项目变化，重置状态
-   */
-  watch(timelineItem, () => {
-    forceRefresh()
-  })
-
-  /**
-   * 监听当前帧变化，更新状态
-   */
-  watch(currentFrame, () => {
-    forceRefresh()
-  })
+  // 注意：由于计算属性现在正确追踪了响应式依赖，
+  // 不再需要手动监听 timelineItem 和 currentFrame 的变化
 
   // ==================== 返回接口 ====================
 
@@ -383,7 +348,6 @@ export function useUnifiedKeyframeUI(
     clearAllKeyframes: clearAllKeyframesWrapper,
     jumpToFrame,
     seekToFrame,
-    forceRefresh,
 
     // 工具方法
     updateWebAVAnimation,
