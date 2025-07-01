@@ -30,7 +30,7 @@ import { ref, computed, onUnmounted } from 'vue'
 import { useVideoStore } from '../stores/videoStore'
 import { useWebAVControls } from '../composables/useWebAVControls'
 import { usePlaybackControls } from '../composables/usePlaybackControls'
-import { alignFramesToFrame } from '../stores/utils/timeUtils'
+import { alignFramesToFrame, framesToMicroseconds } from '../stores/utils/timeUtils'
 import { relativeFrameToAbsoluteFrame } from '../utils/unifiedKeyframeUtils'
 
 interface PlayheadProps {
@@ -177,6 +177,7 @@ function applySnapToClips(targetFrames: number): number {
   //     阈值: Math.abs(snapThresholdFrames),
   //     clip边界点: clipBoundaryFrames.value,
   //     关键帧位置: keyframePositions.value,
+  //     微秒数: framesToMicroseconds(closestSnapPoint),
   //   })
   // }
 

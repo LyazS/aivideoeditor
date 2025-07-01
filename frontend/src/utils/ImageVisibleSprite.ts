@@ -1,12 +1,13 @@
-import { VisibleSprite, ImgClip } from '@webav/av-cliper'
-import type { ImageTimeRange, ExtendedPropsChangeEvent } from '../types'
+import { ImgClip } from '@webav/av-cliper'
+import type { ImageTimeRange } from '../types'
 import { framesToMicroseconds } from '../stores/utils/timeUtils'
+import { BaseVisibleSprite } from './BaseVisibleSprite'
 
 /**
- * 自定义的图片VisibleSprite类，继承自WebAV的VisibleSprite
+ * 自定义的图片VisibleSprite类，继承自BaseVisibleSprite
  * 专门用于处理图片素材，不包含视频特有的倍速功能
  */
-export class ImageVisibleSprite extends VisibleSprite {
+export class ImageVisibleSprite extends BaseVisibleSprite {
   /**
    * 时间范围信息（帧数版本）
    */
@@ -21,25 +22,7 @@ export class ImageVisibleSprite extends VisibleSprite {
    */
   public static readonly DEFAULT_DURATION = 150
 
-  /**
-   * 上次已知的opacity值，用于变化检测
-   */
-  #lastKnownOpacity: number = 1
 
-  /**
-   * 是否启用opacity监控
-   */
-  #isOpacityMonitoringEnabled: boolean = true
-
-  /**
-   * 存储opacity值的私有字段
-   */
-  #opacityValue: number = 1
-
-  /**
-   * 存储opacity变化的回调函数
-   */
-  #opacityChangeCallback: ((opacity: number) => void) | null = null
 
   /**
    * 构造函数
@@ -51,12 +34,6 @@ export class ImageVisibleSprite extends VisibleSprite {
 
     // 初始化时间设置
     this.#updateVisibleSpriteTime()
-
-    // 初始化opacity监控
-    this.#initializeOpacityMonitoring()
-
-    // 重写opacity属性为访问器
-    this.#setupOpacityAccessor()
   }
 
   // ==================== 时间轴接口 ====================
@@ -228,97 +205,4 @@ export class ImageVisibleSprite extends VisibleSprite {
     }
   }
 
-  // ==================== Opacity监控接口 ====================
-
-  /**
-   * 启用opacity监控
-   */
-  public enableOpacityMonitoring(): void {
-    this.#isOpacityMonitoringEnabled = true
-  }
-
-  /**
-   * 禁用opacity监控
-   */
-  public disableOpacityMonitoring(): void {
-    this.#isOpacityMonitoringEnabled = false
-  }
-
-  /**
-   * 设置opacity变化的回调函数
-   * 这个方法将被timelineModule调用来注册opacity同步回调
-   */
-  public setOpacityChangeCallback(callback: (opacity: number) => void): void {
-    this.#opacityChangeCallback = callback
-  }
-
-  /**
-   * 移除opacity变化的回调函数
-   */
-  public removeOpacityChangeCallback(): void {
-    this.#opacityChangeCallback = null
-  }
-
-  // ==================== 私有方法：Opacity监控 ====================
-
-  /**
-   * 初始化opacity监控
-   */
-  #initializeOpacityMonitoring(): void {
-    // 保存父类的原始opacity值（在重写之前）
-    this.#opacityValue = (this as any).opacity || 1
-    this.#lastKnownOpacity = this.#opacityValue
-  }
-
-  /**
-   * 设置opacity属性访问器
-   * 使用属性描述符重写父类的opacity属性
-   */
-  #setupOpacityAccessor(): void {
-    // 定义新的属性描述符
-    Object.defineProperty(this, 'opacity', {
-      get: () => {
-        return this.#opacityValue
-      },
-      set: (value: number) => {
-        if (!this.#isOpacityMonitoringEnabled) {
-          this.#opacityValue = value
-          return
-        }
-
-        const oldValue = this.#opacityValue
-        this.#opacityValue = value
-
-        // 检测变化并触发事件
-        this.#checkOpacityChange(oldValue, value)
-      },
-      enumerable: true,
-      configurable: true,
-    })
-  }
-
-  /**
-   * 检查opacity变化并触发事件
-   */
-  #checkOpacityChange(oldValue: number, newValue: number): void {
-    // 使用小的容差来避免浮点数精度问题
-    const tolerance = 0.0001
-    if (Math.abs(oldValue - newValue) > tolerance) {
-      this.#lastKnownOpacity = newValue
-      this.#emitExtendedPropsChange({ opacity: newValue })
-    }
-  }
-
-  /**
-   * 触发opacity变化回调
-   */
-  #emitExtendedPropsChange(props: ExtendedPropsChangeEvent): void {
-    try {
-      if (props.opacity !== undefined && this.#opacityChangeCallback) {
-        this.#opacityChangeCallback(props.opacity)
-      }
-    } catch (error) {
-      console.warn('Failed to emit opacity change callback:', error)
-    }
-  }
 }

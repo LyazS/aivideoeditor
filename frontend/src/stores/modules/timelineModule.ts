@@ -6,7 +6,7 @@ import { printDebugInfo } from '../utils/debugUtils'
 import { syncTimeRange } from '../utils/timeRangeUtils'
 import { microsecondsToFrames } from '../utils/timeUtils'
 import { globalWebAVAnimationManager } from '../../utils/webavAnimationManager'
-import type { TimelineItem, MediaItem, PropsChangeEvent, VideoResolution, MediaType } from '../../types'
+import type { TimelineItem, MediaItem, ExtendedPropsChangeEvent, VideoResolution, MediaType } from '../../types'
 import { hasVisualProps } from '../../types'
 
 /**
@@ -51,7 +51,7 @@ export function createTimelineModule(
 
     // 直接使用WebAV原生的propsChange事件监听器
     // 设置VisibleSprite → TimelineItem 的同步（仅适用于动画属性）
-    sprite.on('propsChange', (changedProps: PropsChangeEvent) => {
+    sprite.on('propsChange', (changedProps: ExtendedPropsChangeEvent) => {
       if (changedProps.rect && hasVisualProps(timelineItem)) {
         const rect = changedProps.rect
 
@@ -84,19 +84,17 @@ export function createTimelineModule(
         // })
       }
 
-      // 同步zIndex属性（propsChange事件包含此属性）
+      // 同步zIndex属性
       if (changedProps.zIndex !== undefined) {
         timelineItem.config.zIndex = changedProps.zIndex
       }
-    })
 
-    // 设置opacity变化回调（特殊属性处理：opacity属于非动画属性）
-    // 📝 opacity属性虽然不支持标准propsChange事件，但通过自定义回调实现了类似的数据流向
-    if ((sprite instanceof VideoVisibleSprite || sprite instanceof ImageVisibleSprite) && hasVisualProps(timelineItem)) {
-      sprite.setOpacityChangeCallback((opacity: number) => {
-        timelineItem.config.opacity = opacity
-      })
-    }
+      // 同步opacity属性（使用新的事件系统）
+      // 📝 现在 opacity 变化通过 propsChange 事件统一处理
+      if (changedProps.opacity !== undefined && hasVisualProps(timelineItem)) {
+        timelineItem.config.opacity = changedProps.opacity
+      }
+    })
   }
 
   // ==================== 时间轴管理方法 ====================
@@ -164,17 +162,8 @@ export function createTimelineModule(
       const item = timelineItems.value[index]
       const mediaItem = mediaModule.getMediaItem(item.mediaItemId)
 
-      // 清理opacity回调
-      try {
-        if (
-          item.sprite instanceof VideoVisibleSprite ||
-          item.sprite instanceof ImageVisibleSprite
-        ) {
-          item.sprite.removeOpacityChangeCallback()
-        }
-      } catch (error) {
-        console.warn('清理opacity回调时出错:', error)
-      }
+      // 注意：新的事件系统使用 on 方法返回的取消函数来清理监听器
+      // 这里不需要手动清理，因为 sprite 销毁时会自动清理所有事件监听器
 
       // 清理sprite资源
       try {

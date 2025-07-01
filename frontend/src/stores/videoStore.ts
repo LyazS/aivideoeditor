@@ -198,7 +198,7 @@ export const useVideoStore = defineStore('video', () => {
     const finalNewTrackId = newTrackId !== undefined ? newTrackId : oldTrackId
 
     // 检查是否有实际变化
-    const positionChanged = Math.abs(oldPositionFrames - newPositionFrames) > 1 // 允许1帧的误差
+    const positionChanged = Math.abs(oldPositionFrames - newPositionFrames) >= 1 // 允许1帧及以上的变化
     const trackChanged = oldTrackId !== finalNewTrackId
 
     if (!positionChanged && !trackChanged) {
