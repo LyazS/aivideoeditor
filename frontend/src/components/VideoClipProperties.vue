@@ -128,323 +128,47 @@
       </div>
     </div>
 
-    <!-- 统一关键帧控制 -->
-    <div class="property-section unified-keyframe-section">
-      <div class="section-header">
-        <h4>关键帧动画</h4>
-      </div>
+    <!-- 关键帧控制 -->
+    <KeyframeControls
+      :keyframe-button-state="unifiedKeyframeButtonState"
+      :can-operate-keyframes="canOperateUnifiedKeyframes"
+      :has-previous-keyframe="hasUnifiedPreviousKeyframe"
+      :has-next-keyframe="hasUnifiedNextKeyframe"
+      :keyframe-tooltip="getUnifiedKeyframeTooltip()"
+      :show-debug-button="false"
+      @toggle-keyframe="toggleUnifiedKeyframe"
+      @go-to-previous="goToPreviousUnifiedKeyframe"
+      @go-to-next="goToNextUnifiedKeyframe"
+      @debug-keyframes="debugUnifiedKeyframes"
+    />
 
-      <!-- 关键帧控制按钮组 - 一行显示 -->
-      <div class="keyframe-controls-row">
-        <!-- 主关键帧按钮 -->
-        <button
-          class="unified-keyframe-toggle"
-          :class="{
-            'state-none': unifiedKeyframeButtonState === 'none',
-            'state-on-keyframe': unifiedKeyframeButtonState === 'on-keyframe',
-            'state-between-keyframes': unifiedKeyframeButtonState === 'between-keyframes',
-          }"
-          @click="toggleUnifiedKeyframe"
-          :disabled="!canOperateUnifiedKeyframes"
-          :title="getUnifiedKeyframeTooltip()"
-        >
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 16 16"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path d="M8 2L14 8L8 14L2 8L8 2Z" fill="currentColor" stroke="white" stroke-width="1" />
-          </svg>
-          <span>关键帧</span>
-        </button>
-
-        <!-- 上一个关键帧 -->
-        <button
-          @click="goToPreviousUnifiedKeyframe"
-          :disabled="!hasUnifiedPreviousKeyframe || !canOperateUnifiedKeyframes"
-          class="keyframe-nav-btn"
-          title="上一个关键帧"
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M15.41,16.58L10.83,12L15.41,7.41L14,6L8,12L14,18L15.41,16.58Z" />
-          </svg>
-          <span>上一帧</span>
-        </button>
-
-        <!-- 下一个关键帧 -->
-        <button
-          @click="goToNextUnifiedKeyframe"
-          :disabled="!hasUnifiedNextKeyframe || !canOperateUnifiedKeyframes"
-          class="keyframe-nav-btn"
-          title="下一个关键帧"
-        >
-          <span>下一帧</span>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M8.59,16.58L13.17,12L8.59,7.41L10,6L16,12L10,18L8.59,16.58Z" />
-          </svg>
-        </button>
-
-        <!-- 调试按钮 - 暂时隐藏 -->
-        <button @click="debugUnifiedKeyframes" class="debug-btn" title="输出统一关键帧调试信息">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-            <path
-              d="M9,3V4H4V6H5V19A2,2 0 0,0 7,21H17A2,2 0 0,0 19,19V6H20V4H15V3H9M7,6H17V19H7V6M9,8V17H11V8H9M13,8V17H15V8H13Z"
-            />
-          </svg>
-          <span>调试</span>
-        </button>
-      </div>
-    </div>
-
-    <!-- 位置大小 -->
-    <div class="property-section">
-      <div class="section-header">
-        <h4>位置大小</h4>
-      </div>
-      <!-- 位置：XY在同一行 -->
-      <div class="property-item">
-        <label>位置</label>
-        <div class="position-controls">
-          <div class="position-input-group">
-            <span class="position-label">X</span>
-            <NumberInput
-              :model-value="transformX"
-              @change="(value) => updateTransform({ x: value })"
-              :min="-videoStore.videoResolution.width"
-              :max="videoStore.videoResolution.width"
-              :step="1"
-              :precision="0"
-              placeholder="中心为0"
-              :input-style="positionInputStyle"
-            />
-          </div>
-          <div class="position-input-group">
-            <span class="position-label">Y</span>
-            <NumberInput
-              :model-value="transformY"
-              @change="(value) => updateTransform({ y: value })"
-              :min="-videoStore.videoResolution.height"
-              :max="videoStore.videoResolution.height"
-              :step="1"
-              :precision="0"
-              placeholder="中心为0"
-              :input-style="positionInputStyle"
-            />
-          </div>
-        </div>
-      </div>
-
-      <!-- 等比缩放选项 -->
-      <div class="property-item">
-        <label>等比缩放</label>
-        <input
-          v-model="proportionalScale"
-          @change="toggleProportionalScale"
-          type="checkbox"
-          class="checkbox-input"
-        />
-      </div>
-
-      <!-- 等比缩放时的统一缩放控制 -->
-      <div v-if="proportionalScale" class="property-item">
-        <label>缩放</label>
-        <div class="scale-controls">
-          <input
-            :value="uniformScale"
-            @input="(e) => updateUniformScale((e.target as HTMLInputElement).valueAsNumber)"
-            type="range"
-            min="0.01"
-            max="5"
-            step="0.01"
-            class="scale-slider"
-          />
-          <NumberInput
-            :model-value="uniformScale"
-            @change="updateUniformScale"
-            :min="0.01"
-            :max="5"
-            :step="0.01"
-            :precision="2"
-            :input-style="scaleInputStyle"
-          />
-        </div>
-      </div>
-
-      <!-- 非等比缩放时的独立XY缩放控制 -->
-      <template v-else>
-        <div class="property-item">
-          <label>X缩放</label>
-          <div class="scale-controls">
-            <input
-              :value="scaleX"
-              @input="(e) => setScaleX((e.target as HTMLInputElement).valueAsNumber)"
-              type="range"
-              min="0.01"
-              max="5"
-              step="0.01"
-              class="scale-slider"
-            />
-            <NumberInput
-              :model-value="scaleX"
-              @change="setScaleX"
-              :min="0.01"
-              :max="5"
-              :step="0.01"
-              :precision="2"
-              :input-style="scaleInputStyle"
-            />
-          </div>
-        </div>
-        <div class="property-item">
-          <label>Y缩放</label>
-          <div class="scale-controls">
-            <input
-              :value="scaleY"
-              @input="(e) => setScaleY((e.target as HTMLInputElement).valueAsNumber)"
-              type="range"
-              min="0.01"
-              max="5"
-              step="0.01"
-              class="scale-slider"
-            />
-            <NumberInput
-              :model-value="scaleY"
-              @change="setScaleY"
-              :min="0.01"
-              :max="5"
-              :step="0.01"
-              :precision="2"
-              :input-style="scaleInputStyle"
-            />
-          </div>
-        </div>
-      </template>
-
-      <!-- 水平对齐 -->
-      <div class="property-item">
-        <label>水平对齐</label>
-        <div class="alignment-controls">
-          <button @click="alignHorizontal('left')" class="align-btn" title="左对齐">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-              <rect x="2" y="4" width="8" height="2" />
-              <rect x="2" y="7" width="6" height="2" />
-              <rect x="2" y="10" width="10" height="2" />
-              <line x1="1" y1="2" x2="1" y2="14" stroke="currentColor" stroke-width="1" />
-            </svg>
-          </button>
-          <button @click="alignHorizontal('center')" class="align-btn" title="水平居中">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-              <rect x="4" y="4" width="8" height="2" />
-              <rect x="5" y="7" width="6" height="2" />
-              <rect x="3" y="10" width="10" height="2" />
-              <line x1="8" y1="2" x2="8" y2="14" stroke="currentColor" stroke-width="1" />
-            </svg>
-          </button>
-          <button @click="alignHorizontal('right')" class="align-btn" title="右对齐">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-              <rect x="6" y="4" width="8" height="2" />
-              <rect x="8" y="7" width="6" height="2" />
-              <rect x="4" y="10" width="10" height="2" />
-              <line x1="15" y1="2" x2="15" y2="14" stroke="currentColor" stroke-width="1" />
-            </svg>
-          </button>
-        </div>
-      </div>
-
-      <!-- 垂直对齐 -->
-      <div class="property-item">
-        <label>垂直对齐</label>
-        <div class="alignment-controls">
-          <button @click="alignVertical('top')" class="align-btn" title="顶对齐">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-              <rect x="4" y="2" width="2" height="8" />
-              <rect x="7" y="2" width="2" height="6" />
-              <rect x="10" y="2" width="2" height="10" />
-              <line x1="2" y1="1" x2="14" y2="1" stroke="currentColor" stroke-width="1" />
-            </svg>
-          </button>
-          <button @click="alignVertical('middle')" class="align-btn" title="垂直居中">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-              <rect x="4" y="4" width="2" height="8" />
-              <rect x="7" y="5" width="2" height="6" />
-              <rect x="10" y="3" width="2" height="10" />
-              <line x1="2" y1="8" x2="14" y2="8" stroke="currentColor" stroke-width="1" />
-            </svg>
-          </button>
-          <button @click="alignVertical('bottom')" class="align-btn" title="底对齐">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-              <rect x="4" y="6" width="2" height="8" />
-              <rect x="7" y="8" width="2" height="6" />
-              <rect x="10" y="4" width="2" height="10" />
-              <line x1="2" y1="15" x2="14" y2="15" stroke="currentColor" stroke-width="1" />
-            </svg>
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- 变换属性 -->
-    <div class="property-section">
-      <h4>变换</h4>
-
-      <div class="property-item">
-        <label>旋转</label>
-        <div class="rotation-controls">
-          <input
-            :value="rotation"
-            @input="(e) => setRotation((e.target as HTMLInputElement).valueAsNumber)"
-            type="range"
-            min="-180"
-            max="180"
-            step="0.1"
-            class="rotation-slider"
-          />
-          <NumberInput
-            :model-value="rotation"
-            @change="setRotation"
-            :step="1"
-            :precision="1"
-            :input-style="scaleInputStyle"
-          />
-        </div>
-      </div>
-      <div class="property-item">
-        <label>透明度</label>
-        <div class="opacity-controls">
-          <input
-            :value="opacity"
-            @input="(e) => setOpacity((e.target as HTMLInputElement).valueAsNumber)"
-            type="range"
-            min="0"
-            max="1"
-            step="0.01"
-            class="opacity-slider"
-          />
-          <NumberInput
-            :model-value="opacity"
-            @change="setOpacity"
-            :min="0"
-            :max="1"
-            :step="0.01"
-            :precision="2"
-            :input-style="scaleInputStyle"
-          />
-        </div>
-      </div>
-      <div class="property-item">
-        <label>层级</label>
-        <NumberInput
-          :model-value="zIndex"
-          @change="(value) => updateTransform({ zIndex: value })"
-          :min="0"
-          :step="1"
-          :precision="0"
-          :input-style="scaleInputStyle"
-        />
-      </div>
-    </div>
+    <!-- 变换控制 -->
+    <TransformControls
+      :transform-x="transformX"
+      :transform-y="transformY"
+      :scale-x="scaleX"
+      :scale-y="scaleY"
+      :rotation="rotation"
+      :opacity="opacity"
+      :z-index="zIndex"
+      :proportional-scale="proportionalScale"
+      :uniform-scale="uniformScale"
+      :position-limits="{
+        minX: -videoStore.videoResolution.width,
+        maxX: videoStore.videoResolution.width,
+        minY: -videoStore.videoResolution.height,
+        maxY: videoStore.videoResolution.height,
+      }"
+      @update-transform="updateTransform"
+      @toggle-proportional-scale="toggleProportionalScale"
+      @update-uniform-scale="updateUniformScale"
+      @set-scale-x="setScaleX"
+      @set-scale-y="setScaleY"
+      @set-rotation="setRotation"
+      @set-opacity="setOpacity"
+      @align-horizontal="alignHorizontal"
+      @align-vertical="alignVertical"
+    />
   </div>
 </template>
 
@@ -452,10 +176,11 @@
 import { computed } from 'vue'
 import { useVideoStore } from '../stores/videoStore'
 import { isVideoTimeRange, hasVisualProps, hasAudioProps } from '../types'
-import { uiDegreesToWebAVRadians, webAVRadiansToUIDegrees } from '../utils/rotationTransform'
 import { framesToTimecode, timecodeToFrames } from '../stores/utils/timeUtils'
-import { useUnifiedKeyframeUI } from '../composables/useUnifiedKeyframeUI'
+import { useKeyframeTransformControls } from '../composables/useKeyframeTransformControls'
 import NumberInput from './NumberInput.vue'
+import KeyframeControls from './KeyframeControls.vue'
+import TransformControls from './TransformControls.vue'
 import type { TimelineItem } from '../types'
 
 interface Props {
@@ -467,21 +192,52 @@ const props = defineProps<Props>()
 
 const videoStore = useVideoStore()
 
-// 统一关键帧UI管理
+// 关键帧动画和变换控制器
 const {
-  buttonState: unifiedKeyframeButtonState,
-  toggleKeyframe: toggleUnifiedKeyframe,
-  handlePropertyChange: handleUnifiedPropertyChange,
-  updateUnifiedPropertyBatch,
-  goToPreviousKeyframe: goToPreviousUnifiedKeyframe,
-  goToNextKeyframe: goToNextUnifiedKeyframe,
-  hasPreviousKeyframe: hasUnifiedPreviousKeyframe,
-  hasNextKeyframe: hasUnifiedNextKeyframe,
-  canOperateKeyframes: canOperateUnifiedKeyframes,
-} = useUnifiedKeyframeUI(
-  computed(() => props.selectedTimelineItem),
-  computed(() => props.currentFrame),
-)
+  // 关键帧状态
+  unifiedKeyframeButtonState,
+  canOperateUnifiedKeyframes,
+  hasUnifiedPreviousKeyframe,
+  hasUnifiedNextKeyframe,
+
+  // 变换属性
+  transformX,
+  transformY,
+  scaleX,
+  scaleY,
+  rotation,
+  opacity,
+  zIndex,
+  proportionalScale,
+  uniformScale,
+
+  // 关键帧控制方法
+  toggleUnifiedKeyframe,
+  goToPreviousUnifiedKeyframe,
+  goToNextUnifiedKeyframe,
+  getUnifiedKeyframeTooltip,
+  debugUnifiedKeyframes,
+
+  // 变换更新方法
+  updateTransform,
+
+  // 缩放控制方法
+  toggleProportionalScale,
+  updateUniformScale,
+  setScaleX,
+  setScaleY,
+
+  // 旋转和透明度控制方法
+  setRotation,
+  setOpacity,
+
+  // 对齐控制方法
+  alignHorizontal,
+  alignVertical,
+} = useKeyframeTransformControls({
+  selectedTimelineItem: computed(() => props.selectedTimelineItem),
+  currentFrame: computed(() => props.currentFrame),
+})
 
 // 选中项目对应的素材
 const selectedMediaItem = computed(() => {
@@ -590,86 +346,9 @@ const speedInputStyle = {
   textAlign: 'center' as const,
 }
 
-const positionInputStyle = {
-  maxWidth: '60px',
-  textAlign: 'center' as const,
-  flex: '1',
-  borderRadius: '0',
-  borderRight: 'none',
-}
 
-const scaleInputStyle = {
-  background: '#444',
-  border: '1px solid #666',
-  borderRadius: '0',
-  borderRight: 'none',
-  color: '#fff',
-  fontSize: '11px',
-  padding: '2px 4px',
-  width: '78px',
-  textAlign: 'center' as const,
-  flex: '0 0 auto',
-}
 
-// 变换属性 - 基于TimelineItem的响应式计算属性（类型安全版本）
-const transformX = computed(() => {
-  if (!props.selectedTimelineItem || !hasVisualProps(props.selectedTimelineItem)) return 0
-  return props.selectedTimelineItem.config.x
-})
-const transformY = computed(() => {
-  if (!props.selectedTimelineItem || !hasVisualProps(props.selectedTimelineItem)) return 0
-  return props.selectedTimelineItem.config.y
-})
-const scaleX = computed(() => {
-  if (
-    !props.selectedTimelineItem ||
-    !selectedMediaItem.value ||
-    !hasVisualProps(props.selectedTimelineItem)
-  )
-    return 1
-  const originalResolution =
-    selectedMediaItem.value.mediaType === 'video'
-      ? videoStore.getVideoOriginalResolution(selectedMediaItem.value.id)
-      : videoStore.getImageOriginalResolution(selectedMediaItem.value.id)
-  return props.selectedTimelineItem.config.width / originalResolution.width
-})
-const scaleY = computed(() => {
-  if (
-    !props.selectedTimelineItem ||
-    !selectedMediaItem.value ||
-    !hasVisualProps(props.selectedTimelineItem)
-  )
-    return 1
-  const originalResolution =
-    selectedMediaItem.value.mediaType === 'video'
-      ? videoStore.getVideoOriginalResolution(selectedMediaItem.value.id)
-      : videoStore.getImageOriginalResolution(selectedMediaItem.value.id)
-  return props.selectedTimelineItem.config.height / originalResolution.height
-})
-const rotation = computed(() => {
-  if (!props.selectedTimelineItem || !hasVisualProps(props.selectedTimelineItem)) return 0
-  const radians = props.selectedTimelineItem.config.rotation
-  return webAVRadiansToUIDegrees(radians)
-})
-const opacity = computed(() => {
-  if (!props.selectedTimelineItem || !hasVisualProps(props.selectedTimelineItem)) return 1
-  return props.selectedTimelineItem.config.opacity
-})
-const zIndex = computed(() => {
-  if (!props.selectedTimelineItem) return 0
-  return props.selectedTimelineItem.config.zIndex
-})
-
-// 等比缩放相关
-const proportionalScale = computed({
-  get: () => videoStore.proportionalScale,
-  set: (value) => {
-    videoStore.proportionalScale = value
-  },
-})
-
-// 等比缩放相关
-const uniformScale = computed(() => scaleX.value) // 使用X缩放值作为统一缩放值
+// 注意：变换属性现在由 useKeyframeTransformControls composable 提供
 
 // 更新片段名称
 const updateClipName = () => {
@@ -933,286 +612,15 @@ const speedToNormalized = (speed: number) => {
   return 20 // 默认值对应1x
 }
 
-/**
- * 获取统一关键帧按钮的提示文本
- */
-const getUnifiedKeyframeTooltip = () => {
-  // 如果播放头不在clip时间范围内，显示相应提示
-  if (!canOperateUnifiedKeyframes.value) {
-    return '播放头不在当前clip时间范围内，无法操作关键帧'
-  }
+// 注意：关键帧调试和提示方法现在由 useKeyframeTransformControls composable 提供
 
-  switch (unifiedKeyframeButtonState.value) {
-    case 'none':
-      return '点击创建关键帧动画'
-    case 'on-keyframe':
-      return '当前在关键帧位置，点击删除关键帧'
-    case 'between-keyframes':
-      return '点击在当前位置创建关键帧'
-    default:
-      return '关键帧控制'
-  }
-}
+// 注意：updateTransform 方法现在由 useKeyframeTransformControls composable 提供
 
-/**
- * 统一关键帧调试信息
- */
-const debugUnifiedKeyframes = async () => {
-  if (!props.selectedTimelineItem) {
-    console.log('🎬 [Unified Debug] 没有选中的时间轴项目')
-    return
-  }
+// 注意：缩放控制方法现在由 useKeyframeTransformControls composable 提供
 
-  try {
-    const { debugKeyframes } = await import('../utils/unifiedKeyframeUtils')
-    debugKeyframes(props.selectedTimelineItem)
-  } catch (error) {
-    console.error('🎬 [Unified Debug] 调试失败:', error)
-  }
-}
+// 注意：旋转、透明度和统一属性更新方法现在由 useKeyframeTransformControls composable 提供
 
-// 更新变换属性 - 使用带历史记录的方法
-const updateTransform = async (transform?: {
-  x?: number
-  y?: number
-  width?: number
-  height?: number
-  rotation?: number
-  opacity?: number
-  zIndex?: number
-}) => {
-  if (!props.selectedTimelineItem) return
-
-  // 如果没有提供transform参数，使用当前的响应式值（类型安全版本）
-  const finalTransform = transform || {
-    x: transformX.value,
-    y: transformY.value,
-    width: hasVisualProps(props.selectedTimelineItem) ? props.selectedTimelineItem.config.width : 0,
-    height: hasVisualProps(props.selectedTimelineItem)
-      ? props.selectedTimelineItem.config.height
-      : 0,
-    rotation: rotation.value,
-    opacity: opacity.value,
-    zIndex: zIndex.value,
-  }
-
-  // 统一关键帧系统处理 - 根据当前状态自动处理关键帧创建/更新
-  // 注意：updateUnifiedProperty 已经包含了实时渲染更新，所以不需要再调用 updateTimelineItemTransformWithHistory
-
-  // 🎯 特殊处理：如果同时设置了width和height，使用批量更新避免重复位置计算
-  if (finalTransform.width !== undefined && finalTransform.height !== undefined) {
-    await updateUnifiedPropertyBatch({
-      width: finalTransform.width,
-      height: finalTransform.height,
-    })
-  } else {
-    // 单独处理尺寸属性
-    if (finalTransform.width !== undefined) {
-      await updateUnifiedProperty('width', finalTransform.width)
-    }
-    if (finalTransform.height !== undefined) {
-      await updateUnifiedProperty('height', finalTransform.height)
-    }
-  }
-
-  // 处理其他属性
-  if (finalTransform.x !== undefined) {
-    await updateUnifiedProperty('x', finalTransform.x)
-  }
-  if (finalTransform.y !== undefined) {
-    await updateUnifiedProperty('y', finalTransform.y)
-  }
-  if (finalTransform.rotation !== undefined) {
-    await updateUnifiedProperty('rotation', finalTransform.rotation)
-  }
-  if (finalTransform.opacity !== undefined) {
-    await updateUnifiedProperty('opacity', finalTransform.opacity)
-  }
-
-  // 对于其他属性（如zIndex），仍然使用原来的更新方式
-  const otherTransform: any = {}
-  if (finalTransform.zIndex !== undefined) {
-    otherTransform.zIndex = finalTransform.zIndex
-  }
-
-  if (Object.keys(otherTransform).length > 0) {
-    try {
-      // 使用带历史记录的变换属性更新方法（仅用于非关键帧属性）
-      await videoStore.updateTimelineItemTransformWithHistory(
-        props.selectedTimelineItem.id,
-        otherTransform,
-      )
-      console.log('✅ 其他变换属性更新成功')
-    } catch (error) {
-      console.error('❌ 更新其他变换属性失败:', error)
-      // 如果历史记录更新失败，回退到直接更新
-      videoStore.updateTimelineItemTransform(props.selectedTimelineItem.id, otherTransform)
-    }
-  }
-
-  console.log('✅ 统一关键帧变换属性更新完成')
-}
-
-// 切换等比缩放
-const toggleProportionalScale = () => {
-  if (proportionalScale.value && props.selectedTimelineItem && selectedMediaItem.value) {
-    // 开启等比缩放时，使用当前X缩放值作为统一缩放值，同时更新Y缩放
-    const originalResolution =
-      selectedMediaItem.value.mediaType === 'video'
-        ? videoStore.getVideoOriginalResolution(selectedMediaItem.value.id)
-        : videoStore.getImageOriginalResolution(selectedMediaItem.value.id)
-    const newSize = {
-      width: originalResolution.width * scaleX.value,
-      height: originalResolution.height * scaleX.value, // 使用X缩放值保持等比
-    }
-    updateTransform({ width: newSize.width, height: newSize.height })
-  }
-}
-
-// 更新统一缩放
-const updateUniformScale = (newScale: number) => {
-  if (proportionalScale.value && props.selectedTimelineItem && selectedMediaItem.value) {
-    const originalResolution =
-      selectedMediaItem.value.mediaType === 'video'
-        ? videoStore.getVideoOriginalResolution(selectedMediaItem.value.id)
-        : videoStore.getImageOriginalResolution(selectedMediaItem.value.id)
-    const newSize = {
-      width: originalResolution.width * newScale,
-      height: originalResolution.height * newScale,
-    }
-    updateTransform({ width: newSize.width, height: newSize.height })
-  }
-}
-
-// 设置X缩放绝对值的方法
-const setScaleX = (value: number) => {
-  if (!props.selectedTimelineItem || !selectedMediaItem.value) return
-  const originalResolution =
-    selectedMediaItem.value.mediaType === 'video'
-      ? videoStore.getVideoOriginalResolution(selectedMediaItem.value.id)
-      : videoStore.getImageOriginalResolution(selectedMediaItem.value.id)
-  const newScaleX = Math.max(0.01, Math.min(5, value))
-  const newSize = {
-    width: originalResolution.width * newScaleX,
-    height: hasVisualProps(props.selectedTimelineItem)
-      ? props.selectedTimelineItem.config.height
-      : 0, // 保持Y尺寸不变
-  }
-  updateTransform({ width: newSize.width, height: newSize.height })
-}
-
-// 设置Y缩放绝对值的方法
-const setScaleY = (value: number) => {
-  if (!props.selectedTimelineItem || !selectedMediaItem.value) return
-  const originalResolution =
-    selectedMediaItem.value.mediaType === 'video'
-      ? videoStore.getVideoOriginalResolution(selectedMediaItem.value.id)
-      : videoStore.getImageOriginalResolution(selectedMediaItem.value.id)
-  const newScaleY = Math.max(0.01, Math.min(5, value))
-  const newSize = {
-    width: hasVisualProps(props.selectedTimelineItem) ? props.selectedTimelineItem.config.width : 0, // 保持X尺寸不变
-    height: originalResolution.height * newScaleY,
-  }
-  updateTransform({ width: newSize.width, height: newSize.height })
-}
-
-// 设置旋转绝对值的方法（输入角度，转换为弧度）
-const setRotation = (value: number) => {
-  const newRotationRadians = uiDegreesToWebAVRadians(value)
-  updateTransform({ rotation: newRotationRadians })
-}
-
-// 设置透明度绝对值的方法
-const setOpacity = (value: number) => {
-  const newOpacity = Math.max(0, Math.min(1, value))
-  updateTransform({ opacity: newOpacity })
-}
-
-/**
- * 更新属性值（统一关键帧版本）
- * 根据当前状态自动处理关键帧创建，同时确保实时渲染更新
- */
-const updateUnifiedProperty = async (property: string, value: any) => {
-  if (!props.selectedTimelineItem) return
-
-  try {
-    // 使用统一关键帧处理逻辑（已经包含了正确的WebAV更新流程）
-    await handleUnifiedPropertyChange(property, value)
-
-    console.log('🎬 [Unified Property] Property updated via unified keyframe system:', {
-      property,
-      value,
-      buttonState: unifiedKeyframeButtonState.value,
-    })
-  } catch (error) {
-    console.error('🎬 [Unified Property] Failed to update property:', error)
-  }
-}
-
-// 实现对齐功能（基于项目坐标系：中心为原点）
-const alignHorizontal = (alignment: 'left' | 'center' | 'right') => {
-  if (!props.selectedTimelineItem) return
-
-  const sprite = props.selectedTimelineItem.sprite
-  const canvasWidth = videoStore.videoResolution.width
-  const spriteWidth = sprite.rect.w || canvasWidth
-
-  try {
-    let newProjectX = 0
-    switch (alignment) {
-      case 'left':
-        // 左对齐：sprite左边缘贴画布左边缘
-        newProjectX = -canvasWidth / 2 + spriteWidth / 2
-        break
-      case 'center':
-        // 居中：sprite中心对齐画布中心
-        newProjectX = 0
-        break
-      case 'right':
-        // 右对齐：sprite右边缘贴画布右边缘
-        newProjectX = canvasWidth / 2 - spriteWidth / 2
-        break
-    }
-
-    updateTransform({ x: Math.round(newProjectX) })
-
-    console.log('✅ 水平对齐完成:', alignment, '项目坐标X:', Math.round(newProjectX))
-  } catch (error) {
-    console.error('水平对齐失败:', error)
-  }
-}
-
-const alignVertical = (alignment: 'top' | 'middle' | 'bottom') => {
-  if (!props.selectedTimelineItem) return
-
-  const sprite = props.selectedTimelineItem.sprite
-  const canvasHeight = videoStore.videoResolution.height
-  const spriteHeight = sprite.rect.h || canvasHeight
-
-  try {
-    let newProjectY = 0
-    switch (alignment) {
-      case 'top':
-        // 顶对齐：sprite上边缘贴画布上边缘
-        newProjectY = -canvasHeight / 2 + spriteHeight / 2
-        break
-      case 'middle':
-        // 居中：sprite中心对齐画布中心
-        newProjectY = 0
-        break
-      case 'bottom':
-        // 底对齐：sprite下边缘贴画布下边缘
-        newProjectY = canvasHeight / 2 - spriteHeight / 2
-        break
-    }
-
-    updateTransform({ y: Math.round(newProjectY) })
-
-    console.log('✅ 垂直对齐完成:', alignment, '项目坐标Y:', Math.round(newProjectY))
-  } catch (error) {
-    console.error('垂直对齐失败:', error)
-  }
-}
+// 注意：对齐方法现在由 useKeyframeTransformControls composable 提供
 </script>
 
 <style scoped>
@@ -1400,79 +808,7 @@ const alignVertical = (alignment: 'top' | 'middle' | 'bottom') => {
   color: var(--color-bg-primary);
 }
 
-/* 位置控制样式 */
-.position-controls {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-md);
-  flex: 1;
-}
 
-.position-input-group {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-xs);
-  flex: 1;
-}
-
-.position-label {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-hint);
-  min-width: 12px;
-  text-align: center;
-}
-
-/* 复选框样式 */
-.checkbox-input {
-  width: 16px;
-  height: 16px;
-  accent-color: var(--color-text-primary);
-  cursor: pointer;
-}
-
-.scale-controls,
-.rotation-controls,
-.opacity-controls {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-sm);
-  flex: 1;
-}
-
-/* 使用通用的 slider 样式 */
-.scale-slider,
-.rotation-slider,
-.opacity-slider {
-  flex: 1;
-  height: 4px;
-  background: var(--color-bg-quaternary);
-  border-radius: 2px;
-  outline: none;
-  -webkit-appearance: none;
-  appearance: none;
-}
-
-.scale-slider::-webkit-slider-thumb,
-.rotation-slider::-webkit-slider-thumb,
-.opacity-slider::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  width: 12px;
-  height: 12px;
-  background: var(--color-accent-secondary);
-  border-radius: 50%;
-  cursor: pointer;
-}
-
-.scale-slider::-moz-range-thumb,
-.rotation-slider::-moz-range-thumb,
-.opacity-slider::-moz-range-thumb {
-  width: 12px;
-  height: 12px;
-  background: var(--color-accent-secondary);
-  border-radius: 50%;
-  cursor: pointer;
-  border: none;
-}
 
 /* 分辨率显示样式 */
 .resolution-display {
@@ -1486,193 +822,9 @@ const alignVertical = (alignment: 'top' | 'middle' | 'bottom') => {
   font-family: monospace;
 }
 
-/* 对齐控制样式 */
-.alignment-controls {
-  display: flex;
-  gap: var(--spacing-xs);
-  flex: 1;
-}
 
-/* 使用通用的 align-btn 样式 */
-.align-btn {
-  background: var(--color-bg-quaternary);
-  border: 1px solid var(--color-border-secondary);
-  border-radius: var(--border-radius-small);
-  color: var(--color-text-primary);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--spacing-xs);
-  transition: all 0.2s ease;
-  min-width: 32px;
-  height: 32px;
-  flex: 1;
-}
 
-.align-btn:hover {
-  background: var(--color-bg-tertiary);
-  border-color: var(--color-border-focus);
-}
 
-/* 统一关键帧按钮样式 */
-.unified-keyframe-toggle {
-  display: flex;
-  align-items: center;
-  gap: 0px;
-  padding: 0px 12px;
-  border: 1px solid var(--color-border);
-  border-radius: 4px;
-  background: var(--color-bg-secondary);
-  cursor: pointer;
-  transition: all 0.2s ease;
-  font-size: 11px;
-  font-weight: 500;
-  color: var(--color-text-primary); /* 默认白色 */
-  height: 36px; /* 改为固定高度，与导航按钮一致 */
-  position: relative;
-}
-
-.unified-keyframe-toggle:hover {
-  background: var(--color-bg-tertiary);
-  border-color: var(--color-border-hover);
-  transform: translateY(-1px);
-}
-
-/* 状态样式 */
-.unified-keyframe-toggle.state-none {
-  color: var(--color-text-primary); /* 白色 */
-  border-color: var(--color-border);
-}
-
-.unified-keyframe-toggle.state-none:hover {
-  border-color: var(--color-border-hover);
-  background: var(--color-bg-tertiary);
-}
-
-.unified-keyframe-toggle.state-on-keyframe {
-  color: var(--color-text-primary); /* 白色字体 */
-  background: rgba(64, 158, 255, 0.2);
-  border-color: #409eff;
-  box-shadow: 0 0 8px rgba(64, 158, 255, 0.4);
-}
-
-.unified-keyframe-toggle.state-on-keyframe svg {
-  color: #409eff; /* 钻石图标保持更亮的蓝色 */
-}
-
-.unified-keyframe-toggle.state-on-keyframe:hover {
-  background: rgba(64, 158, 255, 0.3);
-  box-shadow: 0 0 12px rgba(64, 158, 255, 0.6);
-}
-
-.unified-keyframe-toggle.state-between-keyframes {
-  color: #ffd700; /* 金色 */
-  background: rgba(255, 215, 0, 0.15);
-  border-color: #ffd700;
-  box-shadow: 0 0 8px rgba(255, 215, 0, 0.3);
-}
-
-.unified-keyframe-toggle.state-between-keyframes:hover {
-  background: rgba(255, 215, 0, 0.25);
-  box-shadow: 0 0 12px rgba(255, 215, 0, 0.5);
-}
-
-/* 禁用状态样式 */
-.unified-keyframe-toggle:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-  background: var(--color-bg-disabled);
-  color: var(--color-text-disabled);
-  border-color: var(--color-border-disabled);
-  box-shadow: none;
-}
-
-.unified-keyframe-toggle:disabled:hover {
-  background: var(--color-bg-disabled);
-  border-color: var(--color-border-disabled);
-  transform: none;
-  box-shadow: none;
-}
-
-/* 关键帧控制按钮行 */
-.keyframe-controls-row {
-  display: flex;
-  gap: 6px;
-  align-items: stretch; /* 让所有按钮高度一致 */
-  margin-bottom: 16px;
-  flex-wrap: wrap; /* 在小屏幕上允许换行 */
-}
-
-/* 主关键帧按钮 */
-.keyframe-controls-row .unified-keyframe-toggle {
-  flex: 1 1 auto; /* 主按钮占据更多空间 */
-  min-width: 90px;
-  max-width: 120px;
-  font-size: 14px; /* 与导航按钮保持一致 */
-  height: 36px; /* 确保与导航按钮高度一致 */
-}
-
-/* 导航和调试按钮 */
-.keyframe-controls-row .keyframe-nav-btn,
-.keyframe-controls-row .debug-btn {
-  flex: 0 0 auto;
-  padding: 8px 10px;
-  font-size: 11px;
-  min-width: 55px;
-  height: 36px; /* 与主按钮高度一致 */
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 3px;
-  background: var(--color-bg-secondary);
-  border: 1px solid var(--color-border);
-  border-radius: 4px;
-  color: var(--color-text-primary);
-  cursor: pointer;
-  transition: all 0.2s ease;
-  white-space: nowrap;
-}
-
-.keyframe-controls-row .keyframe-nav-btn:hover:not(:disabled),
-.keyframe-controls-row .debug-btn:hover {
-  background: var(--color-bg-tertiary);
-  border-color: var(--color-border-hover);
-  transform: translateY(-1px);
-}
-
-.keyframe-controls-row .keyframe-nav-btn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-  background: var(--color-bg-disabled);
-  color: var(--color-text-disabled);
-}
-
-.keyframe-controls-row .keyframe-nav-btn span,
-.keyframe-controls-row .debug-btn span,
-.keyframe-controls-row .unified-keyframe-toggle span {
-  font-size: 10px;
-  white-space: nowrap;
-}
-
-/* 响应式调整 */
-@media (max-width: 400px) {
-  .keyframe-controls-row {
-    flex-wrap: wrap;
-    gap: 4px;
-  }
-
-  .keyframe-controls-row .unified-keyframe-toggle {
-    flex: 1 1 100%;
-    margin-bottom: 4px;
-  }
-
-  .keyframe-controls-row .keyframe-nav-btn,
-  .keyframe-controls-row .debug-btn {
-    flex: 1 1 calc(33.333% - 3px);
-    min-width: 0;
-  }
-}
 
 /* 属性项布局调整，为钻石框留出空间 */
 .property-item {
@@ -1700,10 +852,5 @@ const alignVertical = (alignment: 'top' | 'middle' | 'bottom') => {
   flex: 1;
 }
 
-.property-item .position-controls,
-.property-item .scale-controls,
-.property-item .rotation-controls,
-.property-item .opacity-controls {
-  flex: 1;
-}
+
 </style>

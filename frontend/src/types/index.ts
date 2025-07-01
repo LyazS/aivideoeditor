@@ -729,15 +729,69 @@ export function getAudioPropsFromData(data: TimelineItemData): any {
   return null
 }
 
+// ==================== 文本样式配置 ====================
+
+/**
+ * 文本样式配置接口
+ */
+export interface TextStyleConfig {
+  // 基础字体属性
+  fontSize: number                 // 字体大小 (px)
+  fontFamily: string              // 字体族
+  fontWeight: string | number     // 字重
+  fontStyle: 'normal' | 'italic'  // 字体样式
+
+  // 颜色属性
+  color: string                   // 文字颜色
+  backgroundColor?: string        // 背景颜色
+
+  // 文本效果
+  textShadow?: string            // 文字阴影
+  textStroke?: {                 // 文字描边
+    width: number
+    color: string
+  }
+
+  // 布局属性
+  textAlign: 'left' | 'center' | 'right'  // 文本对齐
+  lineHeight?: number            // 行高
+  maxWidth?: number              // 最大宽度
+
+  // 自定义字体
+  customFont?: {
+    name: string
+    url: string
+  }
+}
+
+/**
+ * 默认文本样式配置
+ */
+export const DEFAULT_TEXT_STYLE: TextStyleConfig = {
+  fontSize: 48,
+  fontFamily: 'Arial, sans-serif',
+  fontWeight: 'normal',
+  fontStyle: 'normal',
+  color: 'white',
+  textAlign: 'center',
+  lineHeight: 1.2
+}
+
 // ==================== 自定义 Sprite 类型 ====================
 
 // 导入我们的自定义 Sprite 类
 import type { VideoVisibleSprite } from '../utils/VideoVisibleSprite'
 import type { ImageVisibleSprite } from '../utils/ImageVisibleSprite'
+import type { TextVisibleSprite } from '../utils/TextVisibleSprite'
 
 /**
  * 自定义 Sprite 联合类型
- * 表示我们扩展的 VideoVisibleSprite 或 ImageVisibleSprite
+ * 表示我们扩展的 VideoVisibleSprite、ImageVisibleSprite 或 TextVisibleSprite
+ */
+export type CustomVisibleSprite = VideoVisibleSprite | ImageVisibleSprite | TextVisibleSprite
+
+/**
+ * 原有的 CustomSprite 类型别名（保持向后兼容）
  */
 export type CustomSprite = VideoVisibleSprite | ImageVisibleSprite
 
