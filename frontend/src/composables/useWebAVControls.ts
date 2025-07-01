@@ -354,8 +354,11 @@ export function useWebAVControls() {
 
   /**
    * 播放控制（帧数接口）
+   * @param startFrames 开始帧数
+   * @param endFrames 结束帧数，如果未提供则使用总时长作为结束时间
+   * @param playbackRate 播放速度倍率
    */
-  const play = (startFrames?: number, endFrames?: number): void => {
+  const play = (startFrames?: number, endFrames?: number, playbackRate?: number): void => {
     if (!globalAVCanvas) return
 
     // 帧数转换为微秒
@@ -363,11 +366,14 @@ export function useWebAVControls() {
 
     const playOptions: PlayOptions = {
       start,
-      playbackRate: videoStore.playbackRate,
+      playbackRate: playbackRate || videoStore.playbackRate,
     }
 
-    if (endFrames !== undefined) {
-      const end = framesToMicroseconds(endFrames)
+    // 如果没有提供结束时间，使用总时长作为默认结束时间
+    const finalEndFrames = endFrames !== undefined ? endFrames : videoStore.contentEndTimeFrames
+
+    if (finalEndFrames !== undefined) {
+      const end = framesToMicroseconds(finalEndFrames)
       if (end > start) {
         playOptions.end = end
       } else {
@@ -376,6 +382,15 @@ export function useWebAVControls() {
     }
 
     globalAVCanvas.play(playOptions)
+
+    console.log('▶️ 开始播放:', {
+      startFrames: startFrames || videoStore.currentFrame,
+      endFrames: finalEndFrames,
+      originalEndFrames: endFrames,
+      playbackRate: playOptions.playbackRate,
+      startTimecode: framesToTimecode(startFrames || videoStore.currentFrame),
+      endTimecode: finalEndFrames ? framesToTimecode(finalEndFrames) : undefined,
+    })
   }
 
   /**

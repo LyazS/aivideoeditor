@@ -34,6 +34,11 @@ export function calculateTotalDurationFrames(
       return item.timeRange.timelineEndTime // 直接使用响应式的timeRange
     }),
   )
+  console.log(
+    'calculateTotalDurationFrames:',
+    maxEndTimeFrames,
+    timelineDurationFrames,
+  )
   return Math.max(maxEndTimeFrames, timelineDurationFrames)
 }
 

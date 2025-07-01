@@ -78,17 +78,17 @@ export function secondsToFrames(seconds: number): number {
  */
 export function framesToMicroseconds(frames: number): number {
   // 使用更精确的计算，避免精度丢失
-  return Math.round((frames / FRAME_RATE) * 1_000_000)
+  return Math.floor((frames / FRAME_RATE) * 1_000_000)
 }
 
 /**
  * 微秒转换为帧数（WebAV接口）
  * @param microseconds 微秒数
- * @returns 帧数（向下取整）
+ * @returns 帧数（四舍五入到最近整数）
  */
 export function microsecondsToFrames(microseconds: number): number {
-  // 使用四舍五入来避免精度问题，然后向下取整
-  return Math.floor(Math.round((microseconds / 1_000_000) * FRAME_RATE * 1000) / 1000)
+  // 直接四舍五入，避免精度问题
+  return Math.round((microseconds / 1_000_000) * FRAME_RATE)
 }
 
 /**
