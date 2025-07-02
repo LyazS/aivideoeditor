@@ -10,6 +10,7 @@ import type { TextTimelineItem, TextMediaConfig, TextStyleConfig } from '../../.
 import { generateCommandId } from '../../../utils/idGenerator'
 import { TextVisibleSprite } from '../../../utils/TextVisibleSprite'
 import { createDefaultTextItem, syncConfigFromSprite } from '../../../utils/textTimelineUtils'
+import { useVideoStore } from '../../videoStore'
 
 /**
  * 创建文本项目命令
@@ -128,13 +129,16 @@ export class CreateTextItemCommand implements SimpleCommand {
     // 2. 设置时间范围
     textSprite.setTimelineStartTime(startTimeFrames)
     textSprite.setDisplayDuration(duration)
-    
-    // 3. 设置默认位置（画布中心）
-    textSprite.rect.x = 400
-    textSprite.rect.y = 300
-    
-    // 4. 获取文本渲染后的尺寸
+
+    // 3. 获取文本渲染后的尺寸
     const textMeta = await textSprite.getTextMeta()
+
+    // 4. 设置默认位置（画布中心）- 动态计算，与图片clip保持一致
+    const videoStore = useVideoStore()
+    const canvasWidth = videoStore.videoResolution.width
+    const canvasHeight = videoStore.videoResolution.height
+    textSprite.rect.x = (canvasWidth - textMeta.width) / 2
+    textSprite.rect.y = (canvasHeight - textMeta.height) / 2
     
     // 5. 创建时间轴项目
     const textItem: TextTimelineItem = {
@@ -151,7 +155,7 @@ export class CreateTextItemCommand implements SimpleCommand {
         y: textSprite.rect.y,
         width: textMeta.width,
         height: textMeta.height,
-        opacity: textSprite.getOpacityValue(),
+        opacity: textSprite.opacity,
         rotation: textSprite.rect.angle,
         zIndex: textSprite.zIndex,
       }
@@ -330,9 +334,9 @@ export class UpdateTextStyleCommand implements SimpleCommand {
 
       // 2. 更新WebAV精灵
       const textSprite = textItem.sprite as any
-      if (textSprite && typeof textSprite.updateTextStyle === 'function') {
-        await textSprite.updateTextStyle(style)
-        
+      if (textSprite && typeof textSprite.updateStyle === 'function') {
+        await textSprite.updateStyle(style)
+
         // 3. 同步配置（获取新的尺寸等）
         await syncConfigFromSprite(textItem, textSprite)
       }

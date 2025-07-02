@@ -83,20 +83,17 @@ export function createTimelineModule(
         newSprite.setDisplayDuration(timeRange.displayDuration)
       }
 
-      // 3. 应用变换属性（参考视频图片的重建模式）
+      // 3. 应用变换属性（文本重建后使用新的渲染尺寸）
       if (hasVisualProps(timelineItem)) {
         const config = timelineItem.config
 
-        // 获取新文本的原始尺寸
+        // 获取新文本的渲染尺寸
         const newTextMeta = await newSprite.getTextMeta()
 
-        // 计算缩放比例（基于配置中存储的显示尺寸和原始尺寸）
-        const scaleX = config.width > 0 ? config.width / (config.originalWidth || config.width) : 1
-        const scaleY = config.height > 0 ? config.height / (config.originalHeight || config.height) : 1
-
-        // 计算新的显示尺寸
-        const newDisplayWidth = newTextMeta.width * scaleX
-        const newDisplayHeight = newTextMeta.height * scaleY
+        // 文本重建后直接使用新的渲染尺寸，不保持之前的缩放比例
+        // 这样处理更符合用户预期：修改文本内容后，文本显示为新内容的原始大小
+        const newDisplayWidth = newTextMeta.width
+        const newDisplayHeight = newTextMeta.height
 
         // 使用中心缩放：保持中心位置不变，重新计算WebAV坐标
         const { projectToWebavCoords } = await import('../../utils/coordinateTransform')
@@ -109,21 +106,18 @@ export function createTimelineModule(
           configModule.videoResolution.value.height,
         )
 
-        // 直接应用变换属性（参考视频图片的模式）
+        // 直接应用变换属性
         newSprite.rect.x = webavCoords.x
         newSprite.rect.y = webavCoords.y
         newSprite.rect.w = newDisplayWidth
         newSprite.rect.h = newDisplayHeight
         newSprite.rect.angle = config.rotation || 0
-        newSprite.setOpacityValue(config.opacity || 1)
+        newSprite.opacity = config.opacity || 1
         newSprite.zIndex = config.zIndex || 0
 
         console.log('🎯 [timelineModule] 文本sprite重建完成:', {
           centerPosition: { x: config.x, y: config.y },
-          originalSize: { width: config.originalWidth || config.width, height: config.originalHeight || config.height },
-          displaySize: { width: config.width, height: config.height },
-          scaleRatio: { x: scaleX, y: scaleY },
-          newOriginalSize: newTextMeta,
+          newTextSize: newTextMeta,
           newDisplaySize: { w: newDisplayWidth, h: newDisplayHeight },
           newWebAVPosition: { x: webavCoords.x, y: webavCoords.y }
         })

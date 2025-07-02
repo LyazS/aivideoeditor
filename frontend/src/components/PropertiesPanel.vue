@@ -111,8 +111,8 @@ async function handleTextConfigUpdate(newConfig: any) {
 
     // 同步到WebAV精灵
     const textSprite = selectedTimelineItem.value.sprite as any
-    if (textSprite && typeof textSprite.updateFromConfig === 'function') {
-      await textSprite.updateFromConfig(newConfig)
+    if (textSprite && typeof textSprite.updateTextAndStyle === 'function') {
+      await textSprite.updateTextAndStyle(newConfig.text || textSprite.getText(), newConfig.style || {})
     }
 
     console.log('✅ 文本配置更新成功')

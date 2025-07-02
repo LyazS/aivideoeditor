@@ -7,6 +7,7 @@ import { markRaw } from 'vue'
 import type { TextTimelineItem, TextMediaConfig, TextStyleConfig, ImageTimeRange } from '../types'
 import { TextVisibleSprite } from './TextVisibleSprite'
 import { TextHelper } from './TextHelper'
+import { useVideoStore } from '../stores/videoStore'
 
 /**
  * 生成唯一的时间轴项目ID
@@ -48,13 +49,16 @@ export async function createTextTimelineItem(
     // 2. 设置时间范围
     textSprite.setTimelineStartTime(startTimeFrames)
     textSprite.setDisplayDuration(duration)
-    
-    // 3. 设置默认位置（画布中心）
-    textSprite.rect.x = 400  // 画布宽度的一半
-    textSprite.rect.y = 300  // 画布高度的一半
-    
-    // 4. 获取文本渲染后的尺寸
+
+    // 3. 获取文本渲染后的尺寸
     const textMeta = await textSprite.getTextMeta()
+
+    // 4. 设置默认位置（画布中心）- 动态计算，与图片clip保持一致
+    const videoStore = useVideoStore()
+    const canvasWidth = videoStore.videoResolution.width
+    const canvasHeight = videoStore.videoResolution.height
+    textSprite.rect.x = (canvasWidth - textMeta.width) / 2
+    textSprite.rect.y = (canvasHeight - textMeta.height) / 2
     
     // 5. 创建时间轴项目
     const timelineItem: TextTimelineItem = {
@@ -71,7 +75,7 @@ export async function createTextTimelineItem(
         y: textSprite.rect.y,
         width: textMeta.width,
         height: textMeta.height,
-        opacity: textSprite.getOpacityValue(),
+        opacity: textSprite.opacity,
         rotation: textSprite.rect.angle,
         zIndex: textSprite.zIndex,
       }
@@ -161,9 +165,7 @@ export async function syncConfigFromSprite(
       y: textSprite.rect.y,
       width: textMeta.width,
       height: textMeta.height,
-      originalWidth: textMeta.width, // 保存原始尺寸
-      originalHeight: textMeta.height, // 保存原始尺寸
-      opacity: textSprite.getOpacityValue(),
+      opacity: textSprite.opacity,
       rotation: textSprite.rect.angle,
       zIndex: textSprite.zIndex,
     }

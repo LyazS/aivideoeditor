@@ -8,7 +8,6 @@
         <textarea
           v-model="localTextContent"
           @blur="handleTextConfirm"
-          @keydown.enter="handleTextConfirm"
           placeholder="输入文本内容..."
           class="text-input"
           rows="3"
@@ -329,6 +328,10 @@ function handleTextConfirm() {
 }
 
 function handleStyleChange() {
+  console.log('🎨 [TextProperties] handleStyleChange被调用:', {
+    currentStyle: localConfig.value.style
+  })
+
   emit('update:config', { ...localConfig.value })
   emit('update:text', localConfig.value.text, localConfig.value.style)
 }
