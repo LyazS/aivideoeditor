@@ -36,34 +36,43 @@
 
 ### 2.1 文本媒体配置类型
 
+文本媒体配置通过继承 `VisualMediaProps` 实现了与视频、图片的一致性：
+
+**设计优势：**
+- **类型一致性**：文本与其他视觉媒体共享相同的位置、大小、透明度等属性
+- **代码复用**：可以复用现有的视觉属性处理逻辑
+- **功能完整**：文本支持旋转、透明度、层级等所有视觉效果
+- **扩展性强**：未来添加新的视觉属性时，文本会自动继承
+
 ```typescript
 // 在 frontend/src/types/index.ts 中新增
-export interface TextMediaConfig {
-  // 文本内容
+export interface TextMediaConfig extends VisualMediaProps {
+  /** 文本内容 */
   text: string
-  
-  // 文本样式
+
+  /** 文本样式配置 */
   style: TextStyleConfig
-  
-  // 基础视觉属性
-  x: number
-  y: number
-  width: number
-  height: number
-  opacity: number
-  zIndex: number
-  
-  // 动画配置
-  animation?: AnimationConfig<'text'>
+
+  // 继承了 VisualMediaProps 的所有属性：
+  // - x: number              // 水平位置
+  // - y: number              // 垂直位置
+  // - width: number          // 宽度
+  // - height: number         // 高度
+  // - rotation: number       // 旋转角度（弧度）
+  // - opacity: number        // 透明度（0-1）
+  // - zIndex: number         // 层级控制（来自 BaseMediaProps）
+  // - animation?: AnimationConfig // 动画配置（来自 BaseMediaProps）
 }
 
-// 扩展现有的 GetMediaConfig 类型
-export type GetMediaConfig<T extends MediaType> = 
-  T extends 'video' ? VideoMediaConfig :
-  T extends 'image' ? ImageMediaConfig :
-  T extends 'audio' ? AudioMediaConfig :
-  T extends 'text' ? TextMediaConfig :  // 新增
-  never
+// 扩展现有的 MediaConfigMap 和 GetMediaConfig 类型
+type MediaConfigMap = {
+  video: VideoMediaConfig
+  image: ImageMediaConfig
+  audio: AudioMediaConfig
+  text: TextMediaConfig  // 新增
+}
+
+export type GetMediaConfig<T extends MediaType> = MediaConfigMap[T]
 ```
 
 ### 2.2 文本时间轴项目类型
@@ -81,14 +90,11 @@ export interface TextTimelineItem extends TimelineItem<'text'> {
 ### 2.3 自定义Sprite类型扩展
 
 ```typescript
-// 更新 CustomVisibleSprite 类型
-export type CustomVisibleSprite = 
-  | VideoVisibleSprite 
-  | ImageVisibleSprite 
+// 直接更新 CustomSprite 类型以包含文本精灵
+export type CustomSprite =
+  | VideoVisibleSprite
+  | ImageVisibleSprite
   | TextVisibleSprite
-
-// 更新 CustomSprite 类型别名
-export type CustomSprite = CustomVisibleSprite
 ```
 
 ## 3. 文本轨道管理流程
@@ -104,19 +110,31 @@ async function createTextTimelineItem(
   trackId: string,
   duration: number = TextVisibleSprite.DEFAULT_DURATION
 ): Promise<TextTimelineItem> {
-  
+
   // 1. 创建文本精灵
   const textSprite = await TextVisibleSprite.create(text, style)
-  
+
   // 2. 设置时间范围
   textSprite.setTimelineStartTime(startTimeFrames)
   textSprite.setDisplayDuration(duration)
-  
-  // 3. 设置默认位置（画布中心）
-  textSprite.rect.x = 400  // 画布宽度的一半
-  textSprite.rect.y = 300  // 画布高度的一半
-  
-  // 4. 创建时间轴项目
+
+  // 3. 设置默认位置（画布中心）- 与图片创建逻辑一致
+  const canvasWidth = videoStore.videoResolution.width
+  const canvasHeight = videoStore.videoResolution.height
+  textSprite.rect.x = (canvasWidth - textSprite.rect.w) / 2
+  textSprite.rect.y = (canvasHeight - textSprite.rect.h) / 2
+
+  // 4. 将WebAV坐标系转换为项目坐标系（中心原点）
+  const projectCoords = webavToProjectCoords(
+    textSprite.rect.x,
+    textSprite.rect.y,
+    textSprite.rect.w,
+    textSprite.rect.h,
+    canvasWidth,
+    canvasHeight,
+  )
+
+  // 5. 创建时间轴项目
   const timelineItem: TextTimelineItem = {
     id: generateTimelineItemId(),
     mediaItemId: '', // 文本项目不需要媒体库项目
@@ -127,15 +145,18 @@ async function createTextTimelineItem(
     config: {
       text,
       style: textSprite.getTextStyle(),
-      x: textSprite.rect.x,
-      y: textSprite.rect.y,
+      // 使用项目坐标系（中心原点）
+      x: Math.round(projectCoords.x),
+      y: Math.round(projectCoords.y),
       width: textSprite.rect.w,
       height: textSprite.rect.h,
-      opacity: textSprite.getOpacityValue(),
+      rotation: textSprite.rect.angle || 0,
+      opacity: textSprite.opacity,
       zIndex: textSprite.zIndex,
+      animation: undefined,
     }
   }
-  
+
   return timelineItem
 }
 ```
@@ -174,35 +195,127 @@ async function addDefaultTextItem(trackId: string) {
 
 ## 4. UI组件扩展
 
-### 4.1 VideoClip组件扩展
+### 4.1 TextClip组件创建
+
+创建独立的TextClip组件，样式与VideoClip保持一致，但专门用于显示文本内容：
 
 ```typescript
-// 在 VideoClip.vue 中添加文本项目支持
-const isTextItem = computed(() => props.timelineItem.mediaType === 'text')
-
-const textContent = computed(() => {
-  if (isTextItem.value) {
-    const textItem = props.timelineItem as TextTimelineItem
-    return textItem.config.text
-  }
-  return ''
-})
-
-// 在模板中添加文本显示
+// 新增 TextClip.vue 组件
 <template>
-  <div class="video-clip" :class="{ 'text-clip': isTextItem }">
-    <!-- 现有内容... -->
-    
-    <!-- 文本项目特殊显示 -->
-    <div v-if="isTextItem" class="text-clip-content">
-      <div class="text-preview">{{ textContent }}</div>
-      <div class="text-duration">{{ formatDurationFromFrames(timelineDurationFrames) }}</div>
+  <div
+    class="text-clip"
+    :class="{
+      overlapping: isOverlapping,
+      selected: isSelected,
+      dragging: isDragging,
+      resizing: isResizing,
+      'track-hidden': !isTrackVisible,
+    }"
+    :style="clipStyle"
+    :data-media-type="'text'"
+    :data-timeline-item-id="timelineItem.id"
+    :draggable="true"
+    @dragstart="handleDragStart"
+    @dragend="handleDragEnd"
+    @click="selectClip"
+    @dblclick="editText"
+  >
+    <div class="clip-content">
+      <!-- 文本内容显示 -->
+      <div class="text-content">
+        <span class="text-preview">{{ textPreview }}</span>
+      </div>
+      <!-- 文本标签 -->
+      <div class="clip-label">
+        {{ timelineItem.config.text || '文本' }}
+      </div>
     </div>
   </div>
 </template>
+
+<script setup lang="ts">
+// 复用VideoClip的大部分逻辑，但简化显示内容
+const textPreview = computed(() => {
+  const text = props.timelineItem.config.text || ''
+  return text.length > 20 ? text.substring(0, 20) + '...' : text
+})
+
+function editText() {
+  // 触发文本编辑模式
+  emit('edit-text', props.timelineItem.id)
+}
+</script>
+
+<style scoped>
+/* 继承VideoClip的基础样式 */
+.text-clip {
+  /* 与 .video-clip 相同的基础样式 */
+  position: absolute;
+  background: linear-gradient(135deg, #4CAF50, #45a049); /* 文本专用颜色 */
+  border-radius: 4px;
+  cursor: move;
+  user-select: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  z-index: 10;
+  border: 2px solid transparent;
+}
+
+.text-content {
+  display: flex;
+  align-items: center;
+  font-size: 12px;
+  color: white;
+  padding: 4px;
+}
+</style>
 ```
 
-### 4.2 文本编辑面板组件
+### 4.2 Timeline组件中的TextClip集成
+
+```typescript
+// 在 Timeline.vue 中根据媒体类型渲染不同的clip组件
+<template>
+  <div class="timeline">
+    <!-- 轨道渲染 -->
+    <div v-for="track in tracks" :key="track.id" class="track">
+      <!-- 时间轴项目渲染 -->
+      <component
+        v-for="item in getTrackItems(track.id)"
+        :key="item.id"
+        :is="getClipComponent(item.mediaType)"
+        :timeline-item="item"
+        :timeline-width="timelineWidth"
+        @edit-text="handleEditText"
+      />
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import VideoClip from './VideoClip.vue'
+import TextClip from './TextClip.vue'
+
+function getClipComponent(mediaType: MediaType) {
+  switch (mediaType) {
+    case 'video':
+    case 'image':
+    case 'audio':
+      return VideoClip
+    case 'text':
+      return TextClip
+    default:
+      return VideoClip
+  }
+}
+
+function handleEditText(itemId: string) {
+  // 处理文本编辑逻辑
+  console.log('编辑文本项目:', itemId)
+}
+</script>
+```
+
+### 4.3 文本编辑面板组件
 
 ```typescript
 // 新增 TextEditPanel.vue 组件
@@ -232,7 +345,7 @@ const textContent = computed(() => {
 </template>
 ```
 
-### 4.3 文本样式控制器组件
+### 4.4 文本样式控制器组件
 
 ```typescript
 // 新增 TextStyleControls.vue 组件
@@ -312,13 +425,13 @@ export class UpdateTextCommand implements Command {
     private newStyle: Partial<TextStyleConfig>,
     private timelineModule: TimelineModule
   ) {}
-  
+
   async execute(): Promise<void> {
     const item = this.timelineModule.getTimelineItem(this.timelineItemId)
     if (item && item.mediaType === 'text') {
       const textSprite = item.sprite as TextVisibleSprite
       await textSprite.updateTextAndStyle(this.newText, this.newStyle)
-      
+
       // 更新配置
       const textItem = item as TextTimelineItem
       textItem.config.text = this.newText
@@ -327,6 +440,27 @@ export class UpdateTextCommand implements Command {
   }
 }
 ```
+
+### 5.2 文本clip操作命令（复用现有逻辑）
+
+文本clip的复制、撤销等操作可以直接复用现有的命令系统，因为都遵循相同的"从源头重建"原则：
+
+```typescript
+// 文本clip复制 - 复用 DuplicateTimelineItemCommand
+// 从文本内容重新创建sprite，恢复所有属性
+
+// 文本clip撤销 - 复用现有的 Command 系统
+// 从保存的状态重新创建文本sprite
+
+// 注意：文本clip不支持分割操作
+// 文本是完整的内容单元，不像视频可以按时间分割
+```
+
+**关键实现点：**
+- 文本clip需要扩展 `createSpriteFromMediaItem` 支持文本类型
+- 或者为文本创建专门的重建函数 `recreateTextSprite`
+- 确保文本的时间范围、变换属性能正确恢复
+- **分割操作**：在UI中对文本clip禁用分割功能
 
 ## 6. 集成点和扩展点
 
@@ -393,18 +527,92 @@ function handleTextToolDrop(event: DragEvent) {
 
 ## 8. 关键技术考虑
 
-### 8.1 性能优化
+### 8.1 与图片clip的处理对比
+
+文本clip与图片clip的处理逻辑高度相似，主要区别在于内容更新机制：
+
+**相似性：**
+- **底层结构**：都基于 `ImgClip` → `VisibleSprite` 的架构
+- **时间轴处理**：都使用 `ImageTimeRange`，时间轴操作逻辑完全一致
+- **属性管理**：位置、大小、透明度、旋转等属性处理相同
+- **生命周期**：创建、添加到画布、销毁的流程相同
+
+**共同原则：都遵循"从源头重建"策略**
+- **图片clip**：复制、分割、撤销等操作时，都从原始MediaItem重新创建sprite
+- **文本clip**：内容/样式变化、复制、撤销时，从文本内容重新渲染创建sprite
+
+```typescript
+// 图片：从原始MediaItem重建（复制、分割、撤销时）
+const newSprite = await createSpriteFromMediaItem(mediaItem)
+newSprite.setTimeRange(timeRange)
+// 恢复变换属性...
+
+// 文本：从文本内容重建（内容变化、复制、撤销时）
+const newSprite = await TextVisibleSprite.create(newText, newStyle)
+// 恢复位置、时间等属性...
+```
+
+**文本重建策略（与图片操作保持一致）：**
+1. **检测变化**：文本内容或样式是否改变
+2. **重新渲染**：调用 `renderTxt2ImgBitmap` 生成新的ImageBitmap
+3. **重建ImgClip**：基于新的ImageBitmap创建ImgClip
+4. **创建新Sprite**：从源头创建新的TextVisibleSprite实例
+5. **状态恢复**：保持位置、大小、透明度、时间范围等属性不变
+6. **替换实例**：在时间轴中替换旧的sprite实例
+
+### 8.2 性能优化
 - **缓存复用**：利用现有的TextVisibleSprite缓存机制
 - **防抖处理**：文本渲染的300ms防抖延迟
 - **虚拟化渲染**：大量文本项目的性能优化
 
-### 8.2 用户体验
+### 8.3 动画支持
+通过继承 `VisualMediaProps`，文本自动获得完整的动画能力：
+- **位置动画**：x, y 坐标的关键帧动画
+- **大小动画**：width, height 的缩放动画
+- **旋转动画**：rotation 角度的旋转动画
+- **透明度动画**：opacity 的淡入淡出效果
+- **复合动画**：多个属性的组合动画效果
+
+```typescript
+// 文本动画示例
+const textAnimation: AnimationConfig = {
+  keyframes: [
+    { framePosition: 0, properties: { x: 100, y: 100, opacity: 0 } },
+    { framePosition: 30, properties: { x: 200, y: 150, opacity: 1 } },
+    { framePosition: 60, properties: { x: 300, y: 200, rotation: Math.PI / 4 } }
+  ],
+  isEnabled: true,
+  easing: 'ease-in-out'
+}
+```
+
+### 8.4 UI组件复用
+由于文本继承自 `VisualMediaProps`，可以直接复用现有的视觉控制组件：
+
+**可复用的位置和变换控制：**
+- 位置控制器（x, y 坐标调整）
+- 尺寸控制器（width, height 缩放）
+- 旋转控制器（rotation 角度调整）
+- 透明度控制器（opacity 透明度调整）
+- 层级控制器（zIndex 层级管理）
+
+**可复用的动画系统：**
+- 关键帧编辑器（时间轴上的关键帧设置）
+- 动画时间轴（动画播放控制）
+- 缓动函数选择器（动画过渡效果）
+- 动画预览功能（实时预览动画效果）
+
+**仅需新增的文本专用组件：**
+- 文本内容编辑器（双击编辑文本内容）
+- 文本样式面板（字体、颜色、对齐等样式设置）
+
+### 8.5 用户体验
 - **直观编辑**：双击文本项目进入编辑模式
 - **拖拽调整**：支持文本位置和大小的拖拽调整
 - **实时预览**：文本效果的即时预览
 - **快捷键支持**：常用操作的键盘快捷键
 
-### 8.3 数据一致性
+### 8.6 数据一致性
 - **同步更新**：文本内容与样式的实时同步
 - **历史记录**：撤销/重做系统的完整支持
 - **项目兼容**：保存和加载的向后兼容性

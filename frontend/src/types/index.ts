@@ -14,9 +14,9 @@ import type { MP4Clip, ImgClip, Rect } from '@webav/av-cliper'
 export type MediaStatus = 'parsing' | 'ready' | 'error' | 'missing'
 
 /**
- * 媒体类型 - 添加音频支持
+ * 媒体类型 - 支持视频、图片、音频和文本
  */
-export type MediaType = 'video' | 'image' | 'audio'
+export type MediaType = 'video' | 'image' | 'audio' | 'text'
 
 /**
  * 轨道类型
@@ -202,12 +202,23 @@ interface AudioMediaConfig extends BaseMediaProps, AudioMediaProps {
 }
 
 /**
+ * 文本媒体配置：继承视觉媒体属性，添加文本特有属性
+ */
+export interface TextMediaConfig extends VisualMediaProps {
+  /** 文本内容 */
+  text: string
+  /** 文本样式配置 */
+  style: TextStyleConfig
+}
+
+/**
  * 媒体配置映射
  */
 type MediaConfigMap = {
   video: VideoMediaConfig
   image: ImageMediaConfig
   audio: AudioMediaConfig
+  text: TextMediaConfig
 }
 
 /**
@@ -233,7 +244,9 @@ export interface TimelineItem<T extends MediaType = MediaType> {
     ? VideoTimeRange
     : T extends 'audio'
       ? AudioTimeRange
-      : ImageTimeRange
+      : T extends 'text'
+        ? ImageTimeRange
+        : ImageTimeRange
   /** 自定义的视频或图片sprite */
   sprite: Raw<CustomSprite>
   /** 时间轴clip的缩略图URL */
@@ -736,26 +749,27 @@ export function getAudioPropsFromData(data: TimelineItemData): any {
  */
 export interface TextStyleConfig {
   // 基础字体属性
-  fontSize: number                 // 字体大小 (px)
-  fontFamily: string              // 字体族
-  fontWeight: string | number     // 字重
-  fontStyle: 'normal' | 'italic'  // 字体样式
+  fontSize: number // 字体大小 (px)
+  fontFamily: string // 字体族
+  fontWeight: string | number // 字重
+  fontStyle: 'normal' | 'italic' // 字体样式
 
   // 颜色属性
-  color: string                   // 文字颜色
-  backgroundColor?: string        // 背景颜色
+  color: string // 文字颜色
+  backgroundColor?: string // 背景颜色
 
   // 文本效果
-  textShadow?: string            // 文字阴影
-  textStroke?: {                 // 文字描边
+  textShadow?: string // 文字阴影
+  textStroke?: {
+    // 文字描边
     width: number
     color: string
   }
 
   // 布局属性
-  textAlign: 'left' | 'center' | 'right'  // 文本对齐
-  lineHeight?: number            // 行高
-  maxWidth?: number              // 最大宽度
+  textAlign: 'left' | 'center' | 'right' // 文本对齐
+  lineHeight?: number // 行高
+  maxWidth?: number // 最大宽度
 
   // 自定义字体
   customFont?: {
@@ -774,7 +788,7 @@ export const DEFAULT_TEXT_STYLE: TextStyleConfig = {
   fontStyle: 'normal',
   color: 'white',
   textAlign: 'center',
-  lineHeight: 1.2
+  lineHeight: 1.2,
 }
 
 // ==================== 自定义 Sprite 类型 ====================
@@ -791,9 +805,9 @@ import type { TextVisibleSprite } from '../utils/TextVisibleSprite'
 export type CustomVisibleSprite = VideoVisibleSprite | ImageVisibleSprite | TextVisibleSprite
 
 /**
- * 原有的 CustomSprite 类型别名（保持向后兼容）
+ * 原有的 CustomSprite 类型别名（更新以包含文本精灵）
  */
-export type CustomSprite = VideoVisibleSprite | ImageVisibleSprite
+export type CustomSprite = VideoVisibleSprite | ImageVisibleSprite | TextVisibleSprite
 
 // ==================== 关键帧动画系统类型 ====================
 
@@ -853,6 +867,7 @@ type KeyframePropertiesMap = {
   video: VisualAnimatableProps & AudioAnimatableProps
   image: VisualAnimatableProps
   audio: AudioAnimatableProps
+  text: VisualAnimatableProps
 }
 
 /**
