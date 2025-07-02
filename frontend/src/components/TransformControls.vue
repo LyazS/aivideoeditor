@@ -20,7 +20,7 @@
               :step="1"
               :precision="0"
               placeholder="中心为0"
-              :input-style="positionInputStyle"
+              input-class="position-input"
             />
           </div>
           <div class="position-input-group">
@@ -33,7 +33,7 @@
               :step="1"
               :precision="0"
               placeholder="中心为0"
-              :input-style="positionInputStyle"
+              input-class="position-input"
             />
           </div>
         </div>
@@ -54,14 +54,12 @@
       <div v-if="proportionalScale" class="property-item">
         <label>缩放</label>
         <div class="scale-controls">
-          <input
-            :value="uniformScale"
-            @input="(e) => $emit('update-uniform-scale', (e.target as HTMLInputElement).valueAsNumber)"
-            type="range"
-            min="0.01"
-            max="5"
-            step="0.01"
-            class="scale-slider"
+          <SliderInput
+            :model-value="uniformScale"
+            @input="(value) => $emit('update-uniform-scale', value)"
+            :min="0.01"
+            :max="5"
+            :step="0.01"
           />
           <NumberInput
             :model-value="uniformScale"
@@ -70,7 +68,8 @@
             :max="5"
             :step="0.01"
             :precision="2"
-            :input-style="scaleInputStyle"
+            :show-controls="false"
+            input-class="scale-input"
           />
         </div>
       </div>
@@ -80,14 +79,12 @@
         <div class="property-item">
           <label>X缩放</label>
           <div class="scale-controls">
-            <input
-              :value="scaleX"
-              @input="(e) => $emit('set-scale-x', (e.target as HTMLInputElement).valueAsNumber)"
-              type="range"
-              min="0.01"
-              max="5"
-              step="0.01"
-              class="scale-slider"
+            <SliderInput
+              :model-value="scaleX"
+              @input="(value) => $emit('set-scale-x', value)"
+              :min="0.01"
+              :max="5"
+              :step="0.01"
             />
             <NumberInput
               :model-value="scaleX"
@@ -96,21 +93,20 @@
               :max="5"
               :step="0.01"
               :precision="2"
-              :input-style="scaleInputStyle"
+              :show-controls="false"
+              input-class="scale-input"
             />
           </div>
         </div>
         <div class="property-item">
           <label>Y缩放</label>
           <div class="scale-controls">
-            <input
-              :value="scaleY"
-              @input="(e) => $emit('set-scale-y', (e.target as HTMLInputElement).valueAsNumber)"
-              type="range"
-              min="0.01"
-              max="5"
-              step="0.01"
-              class="scale-slider"
+            <SliderInput
+              :model-value="scaleY"
+              @input="(value) => $emit('set-scale-y', value)"
+              :min="0.01"
+              :max="5"
+              :step="0.01"
             />
             <NumberInput
               :model-value="scaleY"
@@ -119,7 +115,8 @@
               :max="5"
               :step="0.01"
               :precision="2"
-              :input-style="scaleInputStyle"
+              :show-controls="false"
+              input-class="scale-input"
             />
           </div>
         </div>
@@ -195,21 +192,21 @@
       <div class="property-item">
         <label>旋转</label>
         <div class="rotation-controls">
-          <input
-            :value="rotation"
-            @input="(e) => $emit('set-rotation', (e.target as HTMLInputElement).valueAsNumber)"
-            type="range"
-            min="-180"
-            max="180"
-            step="0.1"
-            class="rotation-slider"
+          <SliderInput
+            :model-value="rotation"
+            @input="(value) => $emit('set-rotation', value)"
+            :min="-180"
+            :max="180"
+            :step="0.1"
+            slider-class="rotation-slider"
           />
           <NumberInput
             :model-value="rotation"
             @change="(value) => $emit('set-rotation', value)"
             :step="1"
             :precision="1"
-            :input-style="scaleInputStyle"
+            :show-controls="false"
+            input-class="scale-input"
           />
         </div>
       </div>
@@ -217,14 +214,13 @@
       <div class="property-item">
         <label>透明度</label>
         <div class="opacity-controls">
-          <input
-            :value="opacity"
-            @input="(e) => $emit('set-opacity', (e.target as HTMLInputElement).valueAsNumber)"
-            type="range"
-            min="0"
-            max="1"
-            step="0.01"
-            class="opacity-slider"
+          <SliderInput
+            :model-value="opacity"
+            @input="(value) => $emit('set-opacity', value)"
+            :min="0"
+            :max="1"
+            :step="0.01"
+            slider-class="opacity-slider"
           />
           <NumberInput
             :model-value="opacity"
@@ -233,7 +229,8 @@
             :max="1"
             :step="0.01"
             :precision="2"
-            :input-style="scaleInputStyle"
+            :show-controls="false"
+            input-class="scale-input"
           />
         </div>
       </div>
@@ -246,7 +243,8 @@
           :min="0"
           :step="1"
           :precision="0"
-          :input-style="scaleInputStyle"
+          :show-controls="false"
+          input-class="scale-input"
         />
       </div>
     </div>
@@ -255,6 +253,7 @@
 
 <script setup lang="ts">
 import NumberInput from './NumberInput.vue'
+import SliderInput from './SliderInput.vue'
 
 interface Props {
   // 变换属性
@@ -294,27 +293,7 @@ interface Emits {
 defineProps<Props>()
 defineEmits<Emits>()
 
-// 样式定义
-const positionInputStyle = {
-  maxWidth: '60px',
-  textAlign: 'center' as const,
-  flex: '1',
-  borderRadius: '0',
-  borderRight: 'none',
-}
-
-const scaleInputStyle = {
-  background: '#444',
-  border: '1px solid #666',
-  borderRadius: '0',
-  borderRight: 'none',
-  color: '#fff',
-  fontSize: '11px',
-  padding: '2px 4px',
-  width: '78px',
-  textAlign: 'center' as const,
-  flex: '0 0 auto',
-}
+// 样式定义已移动到CSS中
 </script>
 
 <style scoped>
@@ -322,35 +301,7 @@ const scaleInputStyle = {
   width: 100%;
 }
 
-.property-section {
-  margin-bottom: var(--spacing-md);
-}
-
-.section-header {
-  margin-bottom: var(--spacing-sm);
-}
-
-.section-header h4 {
-  margin: 0;
-  color: var(--color-text-primary);
-  font-size: var(--font-size-base);
-  font-weight: 600;
-}
-
-.property-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: var(--spacing-sm);
-  gap: var(--spacing-sm);
-}
-
-.property-item label {
-  color: var(--color-text-secondary);
-  font-size: var(--font-size-sm);
-  min-width: 60px;
-  flex-shrink: 0;
-}
+/* 使用全局样式 styles/components/panels.css 中定义的 property-section, property-item, section-header 样式 */
 
 .position-controls {
   display: flex;
@@ -385,40 +336,7 @@ const scaleInputStyle = {
   flex: 1;
 }
 
-.scale-slider,
-.rotation-slider,
-.opacity-slider {
-  flex: 1;
-  height: 4px;
-  background: var(--color-bg-quaternary);
-  border-radius: 2px;
-  outline: none;
-  -webkit-appearance: none;
-  appearance: none;
-  cursor: pointer;
-}
 
-.scale-slider::-webkit-slider-thumb,
-.rotation-slider::-webkit-slider-thumb,
-.opacity-slider::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  width: 12px;
-  height: 12px;
-  background: var(--color-accent-secondary);
-  border-radius: 50%;
-  cursor: pointer;
-}
-
-.scale-slider::-moz-range-thumb,
-.rotation-slider::-moz-range-thumb,
-.opacity-slider::-moz-range-thumb {
-  width: 12px;
-  height: 12px;
-  background: var(--color-accent-secondary);
-  border-radius: 50%;
-  cursor: pointer;
-  border: none;
-}
 
 .alignment-controls {
   display: flex;
@@ -463,5 +381,23 @@ const scaleInputStyle = {
   align-items: center;
   gap: var(--spacing-xs);
   flex: 1;
+}
+
+/* 位置输入框样式 */
+.position-input {
+  max-width: 60px;
+  text-align: center;
+  flex: 1;
+}
+
+/* 缩放输入框样式 */
+.scale-input {
+  background: var(--color-bg-quaternary);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-sm);
+  padding: 2px var(--spacing-xs);
+  width: 78px;
+  text-align: center;
+  flex: 0 0 auto;
 }
 </style>

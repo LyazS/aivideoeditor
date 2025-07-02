@@ -8,6 +8,13 @@ class DragPreviewManager {
   private updateTimer: number | null = null
 
   /**
+   * 获取CSS变量值
+   */
+  private getCSSVariable(name: string): string {
+    return getComputedStyle(document.documentElement).getPropertyValue(name).trim()
+  }
+
+  /**
    * 获取videoStore实例（延迟初始化）
    */
   private get videoStore() {
@@ -79,13 +86,20 @@ class DragPreviewManager {
     preview.className = 'unified-drag-preview'
 
     // 基础样式 - 使用高性能的CSS属性，高度与clip一致
+    const backgroundColor = data.isConflict
+      ? this.getCSSVariable('--color-drag-preview-conflict')
+      : this.getCSSVariable('--color-drag-preview-normal')
+    const borderColor = data.isConflict
+      ? this.getCSSVariable('--color-drag-border-conflict')
+      : this.getCSSVariable('--color-drag-border-normal')
+
     preview.style.cssText = `
       position: fixed;
       left: 0;
       top: 0;
       height: 60px;
-      background: ${data.isConflict ? 'rgba(255, 68, 68, 0.6)' : 'rgba(128, 128, 128, 0.6)'};
-      border: 2px solid ${data.isConflict ? '#ff4444' : '#888888'};
+      background: ${backgroundColor};
+      border: 2px solid ${borderColor};
       border-radius: 4px;
       pointer-events: none;
       z-index: 1001;
@@ -158,8 +172,12 @@ class DragPreviewManager {
    */
   private updatePreviewStyle(preview: HTMLElement, data: DragPreviewData) {
     // 更新冲突状态
-    const borderColor = data.isConflict ? '#ff4444' : '#888888'
-    const backgroundColor = data.isConflict ? 'rgba(255, 68, 68, 0.6)' : 'rgba(128, 128, 128, 0.6)'
+    const borderColor = data.isConflict
+      ? this.getCSSVariable('--color-drag-border-conflict')
+      : this.getCSSVariable('--color-drag-border-normal')
+    const backgroundColor = data.isConflict
+      ? this.getCSSVariable('--color-drag-preview-conflict')
+      : this.getCSSVariable('--color-drag-preview-normal')
 
     if (preview.style.borderColor !== borderColor) {
       preview.style.borderColor = borderColor

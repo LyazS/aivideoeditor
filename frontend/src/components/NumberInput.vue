@@ -11,7 +11,7 @@
       :max="max"
       :placeholder="placeholder"
       :style="inputStyle"
-      class="number-input"
+      :class="['number-input', inputClass]"
     />
     <div v-if="showControls" class="number-controls">
       <button @click="handleIncrement" class="number-btn number-btn-up">▲</button>
@@ -43,6 +43,8 @@ interface Props {
   unit?: string
   /** 输入框自定义样式 */
   inputStyle?: Record<string, string | number>
+  /** 输入框额外CSS类 */
+  inputClass?: string
   /** 是否实时更新（input事件），否则只在确认时更新 */
   realtime?: boolean
 }
@@ -61,6 +63,7 @@ const props = withDefaults(defineProps<Props>(), {
   placeholder: '',
   unit: '',
   inputStyle: () => ({}),
+  inputClass: '',
   realtime: false,
 })
 
@@ -155,10 +158,39 @@ const handleDecrement = () => {
 </script>
 
 <style scoped>
-/* 使用通用样式，只保留组件特定的样式 */
+/* NumberInput 组件完整样式 - 从 common.css 迁移 */
+
+/* 数字输入框容器 */
 .number-input-container {
-  align-items: stretch;
+  display: flex;
+  align-items: center;
+  background: var(--color-bg-quaternary);
+  border: 1px solid var(--color-border-secondary);
+  border-radius: var(--border-radius-small);
+  overflow: hidden;
+  width: 78px;
+  height: 24px;
   position: relative;
+}
+
+.number-input-container.with-controls {
+  padding-right: 0;
+}
+
+/* 数字输入框 */
+.number-input-container .number-input {
+  background: transparent;
+  border: none;
+  color: var(--color-text-primary);
+  font-size: var(--font-size-sm);
+  padding: 2px var(--spacing-xs);
+  text-align: center;
+  flex: 1;
+  min-width: 0;
+}
+
+.number-input-container .number-input:focus {
+  outline: none;
 }
 
 .with-controls .number-input {
@@ -178,6 +210,41 @@ const handleDecrement = () => {
   appearance: textfield;
 }
 
+/* 控制按钮容器 */
+.number-input-container .number-controls {
+  display: flex;
+  flex-direction: column;
+  width: 18px;
+  flex-shrink: 0;
+}
+
+/* 控制按钮 */
+.number-input-container .number-btn {
+  background: var(--color-bg-active);
+  border: 1px solid var(--color-border-secondary);
+  border-left: none;
+  color: var(--color-text-primary);
+  cursor: pointer;
+  font-size: 8px;
+  line-height: 1;
+  padding: 0;
+  width: 100%;
+  height: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color var(--transition-fast);
+  flex: 1;
+}
+
+.number-input-container .number-btn:hover {
+  background: var(--color-border-secondary);
+}
+
+.number-input-container .number-btn:active {
+  background: var(--color-border-hover);
+}
+
 .number-btn-up {
   border-radius: 0 var(--border-radius-small) 0 0;
   border-bottom: 0.5px solid var(--color-bg-quaternary);
@@ -189,7 +256,11 @@ const handleDecrement = () => {
 }
 
 /* 单位文本 */
-.number-unit {
+.number-input-container .number-unit {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-hint);
+  margin-left: var(--spacing-xs);
+  flex-shrink: 0;
   white-space: nowrap;
   align-self: center;
 }

@@ -51,24 +51,15 @@
         <label>倍速</label>
         <div class="speed-controls">
           <!-- 分段倍速滑块 -->
-          <div class="segmented-speed-container">
-            <input
-              :value="normalizedSpeed"
-              @input="(e) => updateNormalizedSpeed((e.target as HTMLInputElement).valueAsNumber)"
-              type="range"
-              min="0"
-              max="100"
-              step="1"
-              class="segmented-speed-slider"
-            />
-            <!-- 分段竖线 -->
-            <div class="speed-dividers">
-              <div class="speed-divider" style="left: 20%"></div>
-              <div class="speed-divider" style="left: 40%"></div>
-              <div class="speed-divider" style="left: 60%"></div>
-              <div class="speed-divider" style="left: 80%"></div>
-            </div>
-          </div>
+          <SliderInput
+            :model-value="normalizedSpeed"
+            @input="updateNormalizedSpeed"
+            :min="0"
+            :max="100"
+            :step="1"
+            slider-class="segmented-speed-slider"
+            :segments="speedSliderSegments"
+          />
           <NumberInput
             :model-value="speedInputValue"
             @change="updateSpeedFromInput"
@@ -87,14 +78,13 @@
       <div v-if="selectedTimelineItem?.mediaType === 'video'" class="property-item">
         <label>音量</label>
         <div class="volume-controls">
-          <input
-            :value="volume"
-            @input="(e) => updateVolume((e.target as HTMLInputElement).valueAsNumber)"
-            type="range"
-            min="0"
-            max="1"
-            step="0.01"
-            class="volume-slider"
+          <SliderInput
+            :model-value="volume"
+            @input="updateVolume"
+            :min="0"
+            :max="1"
+            :step="0.01"
+            slider-class="volume-slider"
           />
           <NumberInput
             :model-value="volume"
@@ -179,6 +169,7 @@ import { isVideoTimeRange, hasVisualProps, hasAudioProps } from '../types'
 import { framesToTimecode, timecodeToFrames } from '../stores/utils/timeUtils'
 import { useKeyframeTransformControls } from '../composables/useKeyframeTransformControls'
 import NumberInput from './NumberInput.vue'
+import SliderInput from './SliderInput.vue'
 import KeyframeControls from './KeyframeControls.vue'
 import TransformControls from './TransformControls.vue'
 import type { TimelineItem } from '../types'
@@ -318,6 +309,14 @@ const normalizedSpeed = computed(() => {
 })
 
 const speedInputValue = computed(() => playbackRate.value)
+
+// 倍速滑块分段标记（用于SliderInput组件）
+const speedSliderSegments = [
+  { position: 20, label: '1x' },
+  { position: 40, label: '2x' },
+  { position: 60, label: '5x' },
+  { position: 80, label: '10x' }
+]
 
 // 音量相关 - 直接从TimelineItem读取，这是响应式的
 const volume = computed(() => {
@@ -628,50 +627,13 @@ const speedToNormalized = (speed: number) => {
   width: 100%;
 }
 
-/* 使用通用的 property-section, property-item 样式 */
-
-.property-input {
-  background: var(--color-bg-quaternary);
-  border: 1px solid var(--color-border-secondary);
-  border-radius: var(--border-radius-small);
-  color: var(--color-text-primary);
-  font-size: var(--font-size-base);
-  padding: var(--spacing-xs) var(--spacing-sm);
-  flex: 1;
-  min-width: 0;
-}
-
-.property-input:focus {
-  outline: none;
-  border-color: var(--color-border-focus);
-}
+/* 使用全局样式 styles/components/panels.css 和 styles/components/inputs.css 中定义的样式 */
 
 /* 时长控制样式 */
 .duration-controls {
   display: flex;
   align-items: center;
   flex: 1;
-}
-
-/* 时间码输入框样式 */
-.timecode-input {
-  width: 100%;
-  padding: var(--spacing-md);
-  border: 1px solid var(--color-border-secondary);
-  border-radius: var(--border-radius-medium);
-  background: var(--color-bg-secondary);
-  color: var(--color-text-primary);
-  font-family: 'Courier New', monospace;
-  font-size: var(--font-size-lg);
-  text-align: center;
-  transition: border-color 0.2s ease;
-  min-height: 30px;
-}
-
-.timecode-input:focus {
-  outline: none;
-  border-color: var(--color-accent-secondary);
-  box-shadow: 0 0 0 2px rgba(192, 192, 192, 0.2);
 }
 
 .timecode-input::placeholder {
@@ -696,56 +658,7 @@ const speedToNormalized = (speed: number) => {
   align-items: center;
 }
 
-.segmented-speed-slider {
-  width: 100%;
-  height: 4px;
-  background: var(--color-bg-quaternary);
-  border-radius: 2px;
-  outline: none;
-  cursor: pointer;
-  -webkit-appearance: none;
-  appearance: none;
-  position: relative;
-  z-index: 2;
-}
 
-.segmented-speed-slider::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  width: 12px;
-  height: 12px;
-  background: var(--color-accent-secondary);
-  border-radius: 50%;
-  cursor: pointer;
-}
-
-.segmented-speed-slider::-moz-range-thumb {
-  width: 12px;
-  height: 12px;
-  background: var(--color-accent-secondary);
-  border-radius: 50%;
-  border: none;
-  cursor: pointer;
-}
-
-/* 分段竖线 */
-.speed-dividers {
-  position: absolute;
-  top: 50%;
-  left: 0;
-  right: 0;
-  height: 12px;
-  transform: translateY(-50%);
-  pointer-events: none;
-  z-index: 1;
-}
-
-.speed-divider {
-  position: absolute;
-  width: 1px;
-  height: 100%;
-  background: var(--color-border-secondary);
-  transform: translateX(-50%);
-}
 
 /* 音量控制样式 */
 .volume-controls {
@@ -755,33 +668,7 @@ const speedToNormalized = (speed: number) => {
   flex: 1;
 }
 
-.volume-slider {
-  flex: 1;
-  height: 4px;
-  background: var(--color-bg-quaternary);
-  border-radius: 2px;
-  outline: none;
-  -webkit-appearance: none;
-  appearance: none;
-}
 
-.volume-slider::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  width: 12px;
-  height: 12px;
-  background: var(--color-accent-secondary);
-  border-radius: 50%;
-  cursor: pointer;
-}
-
-.volume-slider::-moz-range-thumb {
-  width: 12px;
-  height: 12px;
-  background: var(--color-accent-secondary);
-  border-radius: 50%;
-  border: none;
-  cursor: pointer;
-}
 
 .mute-btn {
   background: var(--color-bg-quaternary);
@@ -810,47 +697,13 @@ const speedToNormalized = (speed: number) => {
 
 
 
-/* 分辨率显示样式 */
-.resolution-display {
-  background: var(--color-bg-quaternary);
-  border: 1px solid var(--color-border-secondary);
-  border-radius: var(--border-radius-medium);
-  color: var(--color-text-primary);
-  font-size: var(--font-size-base);
-  padding: var(--spacing-sm) var(--spacing-md);
-  text-align: center;
-  font-family: monospace;
-}
+/* 分辨率显示样式已迁移到 styles/components/inputs.css */
 
 
 
 
 
-/* 属性项布局调整，为钻石框留出空间 */
-.property-item {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-sm);
-}
-
-.property-item label {
-  flex-shrink: 0;
-  min-width: 60px;
-}
-
-/* 区域标题头部布局 */
-.section-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: var(--spacing-sm);
-}
-
-.section-header h4 {
-  margin: 0;
-  flex: 1;
-}
+/* 注意：property-item, property-section, section-header 样式已在全局样式 styles/components/panels.css 中定义 */
 
 
 </style>

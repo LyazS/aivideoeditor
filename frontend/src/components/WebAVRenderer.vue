@@ -142,7 +142,7 @@ const initializeWebAVCanvas = async (): Promise<void> => {
     await webAVControls.initializeCanvas(canvasContainer, {
       width: canvasWidth.value,
       height: canvasHeight.value,
-      bgColor: '#000000',
+      bgColor: '#000000', // WebAV库要求的格式，保持不变
     })
 
     const totalTime = rendererTimer.end()
@@ -200,7 +200,7 @@ const recreateCanvasWithNewSize = async (newResolution: VideoResolution): Promis
       {
         width: newResolution.width,
         height: newResolution.height,
-        bgColor: '#000000',
+        bgColor: '#000000', // WebAV库要求的格式，保持不变
       },
       backup,
     )
@@ -414,7 +414,7 @@ defineExpose({
 /* 程序化创建的WebAV画布容器样式 */
 .canvas-container-wrapper :deep(.webav-canvas-container) {
   position: relative;
-  background-color: #000;
+  background-color: var(--color-bg-primary);
   border-radius: var(--border-radius-medium);
   overflow: hidden;
   box-shadow: var(--shadow-lg);

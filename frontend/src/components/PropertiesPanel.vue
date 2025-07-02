@@ -105,55 +105,13 @@ const multiSelectInfo = computed(() => {
   padding: var(--spacing-md) var(--spacing-lg);
 }
 
-/* 使用通用的 property-section, property-item 样式 */
-
-.property-input {
-  background: var(--color-bg-quaternary);
-  border: 1px solid var(--color-border-secondary);
-  border-radius: var(--border-radius-small);
-  color: var(--color-text-primary);
-  font-size: var(--font-size-base);
-  padding: var(--spacing-xs) var(--spacing-sm);
-  flex: 1;
-  min-width: 0;
-}
-
-.property-input:focus {
-  outline: none;
-  border-color: var(--color-border-focus);
-}
+/* 属性面板特定样式 - 通用属性样式已迁移到 styles/components/panels.css 和 styles/components/inputs.css */
 
 /* 时长控制样式 */
 .duration-controls {
   display: flex;
   align-items: center;
   flex: 1;
-}
-
-/* 时间码输入框样式 */
-.timecode-input {
-  width: 100%;
-  padding: var(--spacing-md);
-  border: 1px solid var(--color-border-secondary);
-  border-radius: var(--border-radius-medium);
-  background: var(--color-bg-secondary);
-  color: var(--color-text-primary);
-  font-family: 'Courier New', monospace;
-  font-size: var(--font-size-lg);
-  text-align: center;
-  transition: border-color 0.2s ease;
-  min-height: 30px;
-}
-
-.timecode-input:focus {
-  outline: none;
-  border-color: var(--color-accent-secondary);
-  box-shadow: 0 0 0 2px rgba(192, 192, 192, 0.2);
-}
-
-.timecode-input::placeholder {
-  color: var(--color-text-hint);
-  font-style: italic;
 }
 
 /* 倍速控制样式 */
@@ -359,17 +317,7 @@ const multiSelectInfo = computed(() => {
   border: none;
 }
 
-/* 分辨率显示样式 */
-.resolution-display {
-  background: var(--color-bg-quaternary);
-  border: 1px solid var(--color-border-secondary);
-  border-radius: var(--border-radius-medium);
-  color: var(--color-text-primary);
-  font-size: var(--font-size-base);
-  padding: var(--spacing-sm) var(--spacing-md);
-  text-align: center;
-  font-family: monospace;
-}
+/* 分辨率显示样式已迁移到 styles/components/inputs.css */
 
 /* 对齐控制样式 */
 .alignment-controls {
@@ -599,31 +547,7 @@ const multiSelectInfo = computed(() => {
   }
 }
 
-/* 属性项布局调整，为钻石框留出空间 */
-.property-item {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-sm);
-}
-
-.property-item label {
-  flex-shrink: 0;
-  min-width: 60px;
-}
-
-/* 区域标题头部布局 */
-.section-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: var(--spacing-sm);
-}
-
-.section-header h4 {
-  margin: 0;
-  flex: 1;
-}
+/* 属性项特定布局调整 */
 
 .property-item .position-controls,
 .property-item .scale-controls,

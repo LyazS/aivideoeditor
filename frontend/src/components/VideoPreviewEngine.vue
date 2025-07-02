@@ -601,7 +601,59 @@ onUnmounted(() => {
   max-width: 800px;
 }
 
-/* 使用通用的 splitter 样式 */
+/* 分割器样式 - 从 common.css 迁移 */
+.splitter {
+  background-color: transparent;
+  cursor: ew-resize;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  transition: background-color var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.splitter.vertical {
+  width: 8px;
+  cursor: ew-resize;
+}
+
+.splitter.horizontal {
+  height: 8px;
+  cursor: ns-resize;
+}
+
+.splitter:hover {
+  background-color: transparent;
+}
+
+.splitter.dragging {
+  background-color: transparent;
+}
+
+.splitter-handle {
+  background-color: var(--color-border-secondary);
+  border-radius: 2px;
+  transition: background-color var(--transition-fast);
+}
+
+.splitter.vertical .splitter-handle {
+  width: 4px;
+  height: 40px;
+}
+
+.splitter.horizontal .splitter-handle {
+  width: 40px;
+  height: 4px;
+}
+
+.splitter:hover .splitter-handle {
+  background-color: var(--color-text-muted);
+}
+
+.splitter.dragging .splitter-handle {
+  background-color: var(--color-text-primary);
+}
 
 .preview-center {
   flex: 1;
@@ -621,8 +673,6 @@ onUnmounted(() => {
   min-width: 100px;
   max-width: 800px;
 }
-
-/* 使用通用的 splitter 样式 */
 
 .timeline-section {
   background-color: var(--color-bg-secondary);

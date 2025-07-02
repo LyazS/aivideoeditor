@@ -457,7 +457,7 @@ const handleItemDragEnd = () => {
 .media-library {
   width: 100%;
   height: 100%;
-  background-color: #2a2a2a;
+  background-color: var(--color-bg-secondary);
   border-radius: 4px;
   display: flex;
   flex-direction: column;
@@ -481,10 +481,10 @@ const handleItemDragEnd = () => {
 }
 
 .import-btn {
-  background: #555;
+  background: var(--color-bg-active);
   border: none;
   border-radius: var(--border-radius-medium);
-  color: #ccc;
+  color: var(--color-text-secondary);
   padding: var(--spacing-sm);
   cursor: pointer;
   display: flex;
@@ -494,8 +494,8 @@ const handleItemDragEnd = () => {
 }
 
 .import-btn:hover {
-  background: #666;
-  color: white;
+  background: var(--color-border-secondary);
+  color: var(--color-text-primary);
 }
 
 .drop-zone {
@@ -554,7 +554,7 @@ const handleItemDragEnd = () => {
 .media-thumbnail {
   width: 85px;
   height: 50px;
-  background-color: #000;
+  background-color: var(--color-bg-primary);
   border-radius: var(--border-radius-small);
   position: relative;
   overflow: hidden;
@@ -581,7 +581,7 @@ const handleItemDragEnd = () => {
   width: 12px;
   height: 12px;
   border: 1px solid rgba(255, 255, 255, 0.3);
-  border-top: 1px solid #fff;
+  border-top: 1px solid var(--color-text-primary);
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }
@@ -698,21 +698,21 @@ const handleItemDragEnd = () => {
 }
 
 ::-webkit-scrollbar-track {
-  background: #1a1a1a;
+  background: var(--color-bg-primary);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #555;
+  background: var(--color-bg-active);
   border-radius: 4px;
-  border: 1px solid #333;
+  border: 1px solid var(--color-bg-tertiary);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #666;
+  background: var(--color-border-secondary);
 }
 
 ::-webkit-scrollbar-corner {
-  background: #1a1a1a;
+  background: var(--color-bg-primary);
 }
 </style>

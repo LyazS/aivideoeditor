@@ -75,7 +75,7 @@ const tooltipStyle = computed((): CSSProperties => {
 .clip-tooltip {
   position: fixed;
   background-color: rgba(0, 0, 0, 0.9);
-  border: 1px solid #555;
+  border: 1px solid var(--color-border-primary);
   border-radius: 6px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
   z-index: 1001;

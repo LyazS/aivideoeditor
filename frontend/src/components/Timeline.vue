@@ -1806,23 +1806,7 @@ onUnmounted(() => {
   border: 1px solid rgba(156, 163, 175, 0.3); /* 银色边框 */
 }
 
-/* 使用通用的 track-btn 样式 */
-
-.track-btn.arrange-btn {
-  background: var(--color-accent-secondary);
-  color: var(--color-text-primary);
-}
-
-.track-btn.arrange-btn:hover:not(:disabled) {
-  background: var(--color-accent-secondary-hover);
-}
-
-.track-btn.arrange-btn:disabled {
-  background: var(--color-bg-quaternary);
-  color: var(--color-text-tertiary);
-  cursor: not-allowed;
-  opacity: 0.5;
-}
+/* track-btn 相关样式已清理 - 未在组件中使用 */
 
 .timeline-grid {
   position: absolute;

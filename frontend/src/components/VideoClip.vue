@@ -385,7 +385,7 @@ function createSimpleDragPreview(): HTMLElement {
     width: ${clipWidth}px;
     height: ${clipHeight}px;
     background: rgba(255, 107, 53, 0.8);
-    border: 1px solid #ff6b35;
+    border: 1px solid var(--color-clip-selected);
     border-radius: 4px;
     pointer-events: none;
     z-index: 9999;
@@ -710,7 +710,7 @@ onUnmounted(() => {
 <style scoped>
 .video-clip {
   position: absolute;
-  background: linear-gradient(135deg, #4a90e2, #357abd);
+  background: linear-gradient(135deg, var(--color-clip-primary), var(--color-clip-primary-dark));
   border-radius: 4px;
   cursor: move;
   user-select: none;
@@ -721,7 +721,7 @@ onUnmounted(() => {
 
 /* 图片片段使用与视频相同的背景色 */
 .video-clip[data-media-type='image'] {
-  background: linear-gradient(135deg, #4a90e2, #357abd);
+  background: linear-gradient(135deg, var(--color-clip-primary), var(--color-clip-primary-dark));
 }
 
 /* 在拖拽或调整大小时禁用过渡效果，避免延迟 */
@@ -731,19 +731,19 @@ onUnmounted(() => {
 }
 
 .video-clip:hover {
-  border-color: #fff;
+  border-color: var(--color-text-primary);
 }
 
 .video-clip.overlapping {
-  background: linear-gradient(135deg, #e74c3c, #c0392b);
-  border-color: #ff6b6b;
+  background: linear-gradient(135deg, var(--color-clip-overlapping), var(--color-clip-overlapping-dark));
+  border-color: var(--color-accent-warning);
   box-shadow: 0 2px 12px rgba(231, 76, 60, 0.4);
   animation: pulse-warning 2s infinite;
 }
 
 .video-clip.selected {
-  background: linear-gradient(135deg, #ff6b35, #f7931e);
-  border-color: #ff6b35;
+  background: linear-gradient(135deg, var(--color-clip-selected), var(--color-clip-selected-dark));
+  border-color: var(--color-clip-selected);
   box-shadow: 0 2px 12px rgba(255, 107, 53, 0.6);
 }
 
@@ -752,20 +752,20 @@ onUnmounted(() => {
 /* 隐藏轨道上的clip样式 */
 .video-clip.track-hidden {
   opacity: 0.4;
-  background: linear-gradient(135deg, #666, #555);
-  border-color: #777;
+  background: linear-gradient(135deg, var(--color-clip-hidden), var(--color-clip-hidden-dark));
+  border-color: var(--color-border-hover);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 .video-clip.track-hidden:hover {
   opacity: 0.6;
-  border-color: #999;
+  border-color: var(--color-text-hint);
 }
 
 .video-clip.track-hidden.selected {
   opacity: 0.7;
-  background: linear-gradient(135deg, #cc5529, #c4741a);
-  border-color: #cc5529;
+  background: linear-gradient(135deg, var(--color-clip-hidden-selected), var(--color-clip-hidden-selected-dark));
+  border-color: var(--color-clip-hidden-selected);
   box-shadow: 0 2px 12px rgba(204, 85, 41, 0.4);
 }
 
@@ -802,7 +802,7 @@ onUnmounted(() => {
 .clip-thumbnail {
   width: 50px; /* 压缩缩略图宽度 */
   height: 32px; /* 压缩缩略图高度 */
-  background-color: #000;
+  background-color: var(--color-bg-primary);
   border-radius: 2px;
   overflow: hidden;
   position: relative;
@@ -828,7 +828,7 @@ onUnmounted(() => {
   width: 16px;
   height: 16px;
   border: 2px solid rgba(255, 255, 255, 0.3);
-  border-top: 2px solid #fff;
+  border-top: 2px solid var(--color-text-primary);
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }
@@ -865,7 +865,7 @@ onUnmounted(() => {
 
 .clip-speed {
   font-size: 9px;
-  color: #ffd700;
+  color: var(--color-speed-indicator);
   margin-top: 1px;
   font-weight: bold;
 }
@@ -939,8 +939,8 @@ onUnmounted(() => {
 .keyframe-diamond {
   width: 10px;
   height: 10px;
-  background-color: #00ff88; /* 明亮的绿色 */
-  border: 2px solid #ffffff;
+  background-color: var(--color-keyframe-primary);
+  border: 2px solid var(--color-text-primary);
   border-radius: 2px;
   transform: rotate(45deg);
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
@@ -948,14 +948,14 @@ onUnmounted(() => {
 }
 
 .keyframe-marker:hover .keyframe-diamond {
-  background-color: #00cc6a; /* 悬停时稍微深一点的绿色 */
+  background-color: var(--color-keyframe-hover);
   transform: rotate(45deg) scale(1.3);
   box-shadow: 0 3px 8px rgba(0, 0, 0, 0.5);
-  border-color: #ffffff;
+  border-color: var(--color-text-primary);
 }
 
 .keyframe-marker:active .keyframe-diamond {
-  background-color: #00aa55; /* 点击时更深的绿色 */
+  background-color: var(--color-keyframe-active);
   transform: rotate(45deg) scale(1.1);
 }
 </style>
