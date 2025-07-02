@@ -14,9 +14,9 @@ import type { MP4Clip, ImgClip, Rect } from '@webav/av-cliper'
 export type MediaStatus = 'parsing' | 'ready' | 'error' | 'missing'
 
 /**
- * 媒体类型 - 添加音频支持
+ * 媒体类型 - 添加音频和文本支持
  */
-export type MediaType = 'video' | 'image' | 'audio'
+export type MediaType = 'video' | 'image' | 'audio' | 'text'
 
 /**
  * 轨道类型
@@ -202,18 +202,39 @@ interface AudioMediaConfig extends BaseMediaProps, AudioMediaProps {
 }
 
 /**
+ * 文本媒体配置：具有视觉属性和文本特有属性
+ */
+export interface TextMediaConfig extends VisualMediaProps {
+  /** 文本内容 */
+  text: string
+  /** 文本样式 */
+  style: TextStyleConfig
+  /** 原始渲染宽度（用于计算缩放比例） */
+  originalWidth?: number
+  /** 原始渲染高度（用于计算缩放比例） */
+  originalHeight?: number
+}
+
+/**
  * 媒体配置映射
  */
 type MediaConfigMap = {
   video: VideoMediaConfig
   image: ImageMediaConfig
   audio: AudioMediaConfig
+  text: TextMediaConfig
 }
 
 /**
  * 根据媒体类型获取对应配置的工具类型
  */
 export type GetMediaConfig<T extends MediaType> = MediaConfigMap[T]
+
+/**
+ * 文本时间轴项目类型别名
+ * 使用泛型方式定义文本时间轴项目
+ */
+export type TextTimelineItem = TimelineItem<'text'>
 
 /**
  * 重构后的时间轴项目接口（类型安全）
@@ -772,7 +793,7 @@ export const DEFAULT_TEXT_STYLE: TextStyleConfig = {
   fontFamily: 'Arial, sans-serif',
   fontWeight: 'normal',
   fontStyle: 'normal',
-  color: 'white',
+  color: '#ffffff',
   textAlign: 'center',
   lineHeight: 1.2
 }
@@ -853,6 +874,7 @@ type KeyframePropertiesMap = {
   video: VisualAnimatableProps & AudioAnimatableProps
   image: VisualAnimatableProps
   audio: AudioAnimatableProps
+  text: VisualAnimatableProps
 }
 
 /**

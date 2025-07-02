@@ -21,7 +21,7 @@
                 item ? videoStore.getMediaItem(item.mediaItemId)?.name || '未知素材' : '未知素材'
               }}
             </span>
-            <span class="item-type">{{ item?.mediaType === 'video' ? '视频' : '图片' }}</span>
+            <span class="item-type">{{ getMediaTypeLabel(item?.mediaType) }}</span>
           </div>
         </div>
       </div>
@@ -35,6 +35,15 @@
           "
           :selected-timeline-item="selectedTimelineItem"
           :current-frame="currentFrame"
+        />
+
+        <!-- 文本属性组件 -->
+        <TextProperties
+          v-else-if="selectedTimelineItem.mediaType === 'text'"
+          :config="selectedTimelineItem.config"
+          :timeline-item="selectedTimelineItem"
+          @update:config="handleTextConfigUpdate"
+          @update:text="handleTextUpdate"
         />
 
         <!-- 未来可以在这里添加其他类型的属性组件，比如字幕属性组件 -->
@@ -59,6 +68,7 @@
 import { computed } from 'vue'
 import { useVideoStore } from '../stores/videoStore'
 import VideoClipProperties from './VideoClipProperties.vue'
+import TextProperties from './TextProperties.vue'
 
 const videoStore = useVideoStore()
 
@@ -86,6 +96,94 @@ const multiSelectInfo = computed(() => {
       .filter(Boolean),
   }
 })
+
+// 文本属性更新处理
+async function handleTextConfigUpdate(newConfig: any) {
+  if (!selectedTimelineItem.value || selectedTimelineItem.value.mediaType !== 'text') {
+    return
+  }
+
+  try {
+    console.log('🎨 更新文本配置:', newConfig)
+
+    // 直接更新配置（非命令模式，用于实时预览）
+    Object.assign(selectedTimelineItem.value.config, newConfig)
+
+    // 同步到WebAV精灵
+    const textSprite = selectedTimelineItem.value.sprite as any
+    if (textSprite && typeof textSprite.updateFromConfig === 'function') {
+      await textSprite.updateFromConfig(newConfig)
+    }
+
+    console.log('✅ 文本配置更新成功')
+  } catch (error) {
+    console.error('❌ 更新文本配置失败:', error)
+  }
+}
+
+// 文本内容和样式更新处理
+async function handleTextUpdate(text: string, style: any, originalText?: string) {
+  console.log('📥 [PropertiesPanel] 收到文本更新请求:', {
+    text: text.substring(0, 20) + '...',
+    style,
+    originalText: originalText?.substring(0, 20) + '...',
+    selectedItem: selectedTimelineItem.value?.id,
+    mediaType: selectedTimelineItem.value?.mediaType
+  })
+
+  if (!selectedTimelineItem.value || selectedTimelineItem.value.mediaType !== 'text') {
+    console.warn('⚠️ [PropertiesPanel] 无效的选中项目或非文本类型')
+    return
+  }
+
+  try {
+    // 使用原始文本进行比较，如果没有提供则使用当前配置中的文本
+    const comparisonText = originalText || selectedTimelineItem.value.config.text
+
+    console.log('🎨 [PropertiesPanel] 开始更新文本内容和样式:', {
+      text: text.substring(0, 20) + '...',
+      style,
+      comparisonText: comparisonText.substring(0, 20) + '...',
+      currentText: selectedTimelineItem.value.config.text.substring(0, 20) + '...'
+    })
+
+    // 使用命令系统更新文本内容（支持撤销/重做）
+    if (text !== comparisonText) {
+      console.log('📝 [PropertiesPanel] 文本内容有变化，调用updateTextContentWithHistory')
+      await videoStore.updateTextContentWithHistory(selectedTimelineItem.value.id, text)
+    } else {
+      console.log('⏭️ [PropertiesPanel] 文本内容无变化，跳过内容更新')
+    }
+
+    // 使用命令系统更新文本样式（支持撤销/重做）
+    if (style && Object.keys(style).length > 0) {
+      console.log('🎨 [PropertiesPanel] 样式有变化，调用updateTextStyleWithHistory')
+      await videoStore.updateTextStyleWithHistory(selectedTimelineItem.value.id, style)
+    } else {
+      console.log('⏭️ [PropertiesPanel] 样式无变化，跳过样式更新')
+    }
+
+    console.log('✅ [PropertiesPanel] 文本内容和样式更新成功')
+  } catch (error) {
+    console.error('❌ [PropertiesPanel] 更新文本内容和样式失败:', error)
+  }
+}
+
+// 获取媒体类型标签
+function getMediaTypeLabel(mediaType: string | undefined): string {
+  switch (mediaType) {
+    case 'video':
+      return '视频'
+    case 'image':
+      return '图片'
+    case 'audio':
+      return '音频'
+    case 'text':
+      return '文本'
+    default:
+      return '未知'
+  }
+}
 </script>
 
 <style scoped>

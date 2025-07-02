@@ -127,16 +127,29 @@
           @wheel="handleWheel"
         >
           <!-- 该轨道的时间轴项目 -->
-          <VideoClip
-            v-for="item in getClipsForTrack(track.id)"
-            :key="item.id"
-            :timeline-item="item"
-            :track="track"
-            :timeline-width="timelineWidth"
-            :total-duration-frames="videoStore.totalDurationFrames"
-            @update-position="handleTimelineItemPositionUpdate"
-            @remove="handleTimelineItemRemove"
-          />
+          <template v-for="item in getClipsForTrack(track.id)" :key="item.id">
+            <!-- 文本项目使用 TextClip 组件 -->
+            <TextClip
+              v-if="item.mediaType === 'text'"
+              :timeline-item="item"
+              :is-selected="videoStore.selectedTimelineItemId === item.id"
+              :pixels-per-frame="calculatePixelsPerFrame(timelineWidth, videoStore.totalDurationFrames, videoStore.zoomLevel)"
+              @select="handleTextClipSelect"
+              @drag="handleTextClipDrag"
+              @resize="handleTextClipResize"
+            />
+
+            <!-- 其他类型项目使用 VideoClip 组件 -->
+            <VideoClip
+              v-else
+              :timeline-item="item"
+              :track="track"
+              :timeline-width="timelineWidth"
+              :total-duration-frames="videoStore.totalDurationFrames"
+              @update-position="handleTimelineItemPositionUpdate"
+              @remove="handleTimelineItemRemove"
+            />
+          </template>
         </div>
       </div>
 
@@ -206,11 +219,15 @@ import type {
   ConflictInfo,
   TrackType,
   MediaType,
+  TextTimelineItem,
 } from '../types'
 import { hasVisualProps } from '../types'
 import VideoClip from './VideoClip.vue'
+import TextClip from './TextClip.vue'
 import TimeScale from './TimeScale.vue'
 import { ContextMenu, ContextMenuItem, ContextMenuSeparator } from '@imengyu/vue3-context-menu'
+import { createDefaultTextItem } from '../utils/textTimelineUtils'
+import { TextVisibleSprite } from '../utils/TextVisibleSprite'
 
 // 菜单项类型定义
 type MenuItem =
@@ -312,7 +329,17 @@ const getTrackMenuItems = (): MenuItem[] => {
   const hasClips = getClipsForTrack(trackId).length > 0
   const canDelete = tracks.value.length > 1
 
-  return [
+  const baseMenuItems = [
+    // 文本轨道专用菜单项
+    ...(track.type === 'text' ? [
+      {
+        label: '添加文本',
+        icon: 'M18,11H16.5V10.5H14.5V13.5H16.5V13H18V14A1,1 0 0,1 17,15H14A1,1 0 0,1 13,14V10A1,1 0 0,1 14,9H17A1,1 0 0,1 18,10V11M11,15H9V9H11V15M8,9H6V15H8V9Z',
+        onClick: () => addTextAtPosition(trackId),
+      } as MenuItem,
+      { type: 'separator' } as MenuItem,
+    ] : []),
+
     {
       label: hasClips ? '自动排列片段' : '自动排列片段（无片段）',
       icon: 'M3,3H21V5H3V3M3,7H15V9H3V7M3,11H21V13H3V11M3,15H15V17H3V15M3,19H21V21H3V19Z',
@@ -348,6 +375,8 @@ const getTrackMenuItems = (): MenuItem[] => {
         ]
       : []),
   ]
+
+  return baseMenuItems
 }
 
 // 当前菜单项配置
@@ -366,11 +395,11 @@ function getClipsForTrack(trackId: string) {
 // 轨道管理方法
 async function addNewTrack(type: TrackType = 'video') {
   try {
-    // 检查轨道类型限制
-    if (type === 'audio' || type === 'text') {
+    // 检查轨道类型限制（只限制音频轨道）
+    if (type === 'audio') {
       dialogs.showOperationError(
         '添加轨道',
-        `${type === 'audio' ? '音频' : '文本'}轨道功能暂未实现，敬请期待！`,
+        '音频轨道功能暂未实现，敬请期待！',
       )
       return
     }
@@ -384,6 +413,71 @@ async function addNewTrack(type: TrackType = 'video') {
   } catch (error) {
     console.error('❌ 添加轨道时出错:', error)
   }
+}
+
+// 在文本轨道上添加文本项目
+async function addTextAtPosition(trackId: string) {
+  try {
+    console.log('🎨 开始在文本轨道上添加文本项目:', { trackId })
+
+    // 计算右键点击的时间位置
+    const timePosition = calculateTimePositionFromMouse()
+
+    // 使用命令系统创建文本项目
+    const newItemId = await videoStore.createTextItemWithHistory(
+      '点击编辑文本', // 默认文本内容
+      { fontSize: 48, color: '#ffffff' }, // 默认样式
+      timePosition,
+      trackId,
+      TextVisibleSprite.DEFAULT_DURATION // 默认显示时长（帧数）
+    )
+
+    if (newItemId) {
+      console.log('✅ 文本项目添加成功:', {
+        id: newItemId,
+        trackId,
+        timePosition
+      })
+
+      // 自动选中新创建的文本项目，方便用户立即编辑
+      videoStore.selectTimelineItem(newItemId)
+    } else {
+      console.error('❌ 文本项目添加失败')
+      dialogs.showOperationError('添加文本', '文本项目添加失败，请重试')
+    }
+  } catch (error) {
+    console.error('❌ 添加文本项目时出错:', error)
+    dialogs.showOperationError('添加文本', `添加文本项目失败: ${(error as Error).message}`)
+  }
+}
+
+// 计算鼠标位置对应的时间位置（帧数）
+function calculateTimePositionFromMouse(): number {
+  // 获取右键菜单的位置，计算对应的时间位置
+  const menuX = contextMenuOptions.value.x
+
+  // 获取时间轴容器的位置
+  const timelineContainer = timelineBody.value
+  if (!timelineContainer) {
+    return 0 // 默认位置
+  }
+
+  const containerRect = timelineContainer.getBoundingClientRect()
+  const relativeX = menuX - containerRect.left
+
+  // 根据像素位置计算帧数
+  // 这里需要使用时间轴的缩放比例
+  const pixelsPerFrame = 2 // 默认值，实际应该从时间轴状态获取
+  const framePosition = Math.max(0, Math.round(relativeX / pixelsPerFrame))
+
+  console.log('📍 计算时间位置:', {
+    menuX,
+    relativeX,
+    framePosition,
+    pixelsPerFrame
+  })
+
+  return framePosition
 }
 
 // 显示添加轨道菜单
@@ -1233,6 +1327,47 @@ async function handleTimelineItemRemove(timelineItemId: string) {
       console.error('❌ 回退删除也失败:', fallbackError)
     }
   }
+}
+
+// ==================== TextClip 事件处理 ====================
+
+/**
+ * 处理文本clip选择事件
+ */
+function handleTextClipSelect(timelineItemId: string) {
+  console.log('🎯 选择文本clip:', timelineItemId)
+  videoStore.selectTimelineItem(timelineItemId)
+}
+
+/**
+ * 处理文本clip拖拽事件
+ */
+function handleTextClipDrag(data: { event: MouseEvent; timelineItem: TextTimelineItem }) {
+  console.log('🎯 开始拖拽文本clip:', data.timelineItem.id)
+
+  // 复用现有的拖拽逻辑
+  // 这里可以调用现有的拖拽处理函数，或者实现文本特有的拖拽逻辑
+  // 暂时使用简单的日志记录
+  console.log('文本clip拖拽功能待实现')
+}
+
+/**
+ * 处理文本clip调整大小事件
+ */
+function handleTextClipResize(data: {
+  event: MouseEvent;
+  timelineItem: TextTimelineItem;
+  direction: 'left' | 'right'
+}) {
+  console.log('🎯 开始调整文本clip大小:', {
+    id: data.timelineItem.id,
+    direction: data.direction
+  })
+
+  // 复用现有的调整大小逻辑
+  // 这里可以调用现有的调整大小处理函数，或者实现文本特有的调整逻辑
+  // 暂时使用简单的日志记录
+  console.log('文本clip调整大小功能待实现')
 }
 
 async function handleTimelineClick(event: MouseEvent) {

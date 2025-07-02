@@ -1,6 +1,7 @@
-import { ref, type Raw, type Ref } from 'vue'
+import { ref, type Raw, type Ref, markRaw } from 'vue'
 import { VideoVisibleSprite } from '../../utils/VideoVisibleSprite'
 import { ImageVisibleSprite } from '../../utils/ImageVisibleSprite'
+import { TextVisibleSprite } from '../../utils/TextVisibleSprite'
 import { webavToProjectCoords, projectToWebavCoords } from '../../utils/coordinateTransform'
 import { printDebugInfo } from '../utils/debugUtils'
 import { syncTimeRange } from '../utils/timeRangeUtils'
@@ -21,7 +22,12 @@ import { hasVisualProps } from '../../types'
  */
 export function createTimelineModule(
   configModule: { videoResolution: { value: VideoResolution } },
-  webavModule: { avCanvas: { value: { removeSprite: (sprite: unknown) => void } | null } },
+  webavModule: {
+    avCanvas: { value: {
+      removeSprite: (sprite: unknown) => void
+      addSprite: (sprite: unknown) => void
+    } | null }
+  },
   mediaModule: {
     getMediaItem: (id: string) => MediaItem | undefined
     mediaItems: Ref<MediaItem[]>
@@ -33,6 +39,127 @@ export function createTimelineModule(
   // ==================== 状态定义 ====================
 
   const timelineItems = ref<TimelineItem[]>([])
+
+  // ==================== 文本Sprite重建处理 ====================
+
+  /**
+   * 处理文本精灵重建
+   * 当文本内容或样式发生变化时，重新创建TextVisibleSprite
+   *
+   * @param timelineItem 文本时间轴项目
+   * @param textUpdate 文本更新信息
+   */
+  async function handleTextSpriteRecreation(
+    timelineItem: TimelineItem,
+    textUpdate: { text: string; style: any; needsRecreation: boolean }
+  ) {
+    if (timelineItem.mediaType !== 'text') {
+      console.warn('⚠️ [timelineModule] 非文本项目不支持文本精灵重建')
+      return
+    }
+
+    try {
+      console.log('🔄 [timelineModule] 开始重建文本精灵:', {
+        itemId: timelineItem.id,
+        text: textUpdate.text.substring(0, 20) + '...',
+        style: textUpdate.style
+      })
+
+      const oldSprite = timelineItem.sprite as any
+      console.log('🔄 [timelineModule] 旧精灵信息:', {
+        hasOldSprite: !!oldSprite,
+        oldSpriteType: oldSprite?.constructor?.name
+      })
+
+      // 1. 创建新的文本精灵
+      console.log('🔄 [timelineModule] 开始创建新的文本精灵')
+      const newSprite = await TextVisibleSprite.create(textUpdate.text, textUpdate.style)
+      console.log('✅ [timelineModule] 新文本精灵创建成功')
+
+      // 2. 设置时间范围（参考视频图片的重建模式）
+      if (typeof oldSprite.getTimeRange === 'function') {
+        const timeRange = oldSprite.getTimeRange()
+        newSprite.setTimelineStartTime(timeRange.timelineStartTime)
+        newSprite.setDisplayDuration(timeRange.displayDuration)
+      }
+
+      // 3. 应用变换属性（参考视频图片的重建模式）
+      if (hasVisualProps(timelineItem)) {
+        const config = timelineItem.config
+
+        // 获取新文本的原始尺寸
+        const newTextMeta = await newSprite.getTextMeta()
+
+        // 计算缩放比例（基于配置中存储的显示尺寸和原始尺寸）
+        const scaleX = config.width > 0 ? config.width / (config.originalWidth || config.width) : 1
+        const scaleY = config.height > 0 ? config.height / (config.originalHeight || config.height) : 1
+
+        // 计算新的显示尺寸
+        const newDisplayWidth = newTextMeta.width * scaleX
+        const newDisplayHeight = newTextMeta.height * scaleY
+
+        // 使用中心缩放：保持中心位置不变，重新计算WebAV坐标
+        const { projectToWebavCoords } = await import('../../utils/coordinateTransform')
+        const webavCoords = projectToWebavCoords(
+          config.x, // 保持原有的中心位置（项目坐标系）
+          config.y,
+          newDisplayWidth,
+          newDisplayHeight,
+          configModule.videoResolution.value.width,
+          configModule.videoResolution.value.height,
+        )
+
+        // 直接应用变换属性（参考视频图片的模式）
+        newSprite.rect.x = webavCoords.x
+        newSprite.rect.y = webavCoords.y
+        newSprite.rect.w = newDisplayWidth
+        newSprite.rect.h = newDisplayHeight
+        newSprite.rect.angle = config.rotation || 0
+        newSprite.setOpacityValue(config.opacity || 1)
+        newSprite.zIndex = config.zIndex || 0
+
+        console.log('🎯 [timelineModule] 文本sprite重建完成:', {
+          centerPosition: { x: config.x, y: config.y },
+          originalSize: { width: config.originalWidth || config.width, height: config.originalHeight || config.height },
+          displaySize: { width: config.width, height: config.height },
+          scaleRatio: { x: scaleX, y: scaleY },
+          newOriginalSize: newTextMeta,
+          newDisplaySize: { w: newDisplayWidth, h: newDisplayHeight },
+          newWebAVPosition: { x: webavCoords.x, y: webavCoords.y }
+        })
+      }
+
+      // 4. 从WebAV画布移除旧精灵
+      if (webavModule.avCanvas.value && oldSprite) {
+        webavModule.avCanvas.value.removeSprite(oldSprite)
+      }
+
+      // 5. 更新时间轴项目的精灵引用
+      timelineItem.sprite = markRaw(newSprite)
+
+      // 6. 重新设置双向数据同步
+      setupBidirectionalSync(timelineItem)
+
+      // 7. 添加新精灵到WebAV画布
+      if (webavModule.avCanvas.value) {
+        webavModule.avCanvas.value.addSprite(newSprite)
+      }
+
+      // 8. 更新配置（获取新的尺寸等）
+      if (typeof newSprite.getTextMeta === 'function') {
+        const textMeta = await newSprite.getTextMeta()
+        if (hasVisualProps(timelineItem)) {
+          timelineItem.config.width = textMeta.width
+          timelineItem.config.height = textMeta.height
+        }
+      }
+
+      console.log('✅ [timelineModule] 文本精灵重建完成')
+
+    } catch (error) {
+      console.error('❌ [timelineModule] 文本精灵重建失败:', error)
+    }
+  }
 
   // ==================== 双向数据同步函数 ====================
 
@@ -58,6 +185,20 @@ export function createTimelineModule(
     // 直接使用WebAV原生的propsChange事件监听器
     // 设置VisibleSprite → TimelineItem 的同步（仅适用于动画属性）
     sprite.on('propsChange', (changedProps: ExtendedPropsChangeEvent) => {
+      console.log('📡 [timelineModule] 收到propsChange事件:', {
+        itemId: timelineItem.id,
+        mediaType: timelineItem.mediaType,
+        changedProps,
+        hasTextUpdate: !!(changedProps as any).textUpdate
+      })
+
+      // 处理文本更新事件（需要重建sprite）
+      if ((changedProps as any).textUpdate?.needsRecreation && timelineItem.mediaType === 'text') {
+        console.log('🔄 [timelineModule] 检测到文本更新事件，开始重建精灵')
+        handleTextSpriteRecreation(timelineItem, (changedProps as any).textUpdate)
+        return
+      }
+
       if (changedProps.rect && hasVisualProps(timelineItem)) {
         const rect = changedProps.rect
 

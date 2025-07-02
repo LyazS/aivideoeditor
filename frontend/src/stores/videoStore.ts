@@ -36,6 +36,7 @@ import {
   ToggleTrackMuteCommand,
   ResizeTimelineItemCommand,
 } from './modules/commands/timelineCommands'
+import { CreateTextItemCommand, UpdateTextContentCommand, UpdateTextStyleCommand } from './modules/commands/textCommands'
 import { BatchDeleteCommand, BatchAutoArrangeTrackCommand } from './modules/commands/batchCommands'
 import type {
   MediaItem,
@@ -123,8 +124,9 @@ export const useVideoStore = defineStore('video', () => {
   /**
    * 带历史记录的添加时间轴项目方法
    * @param timelineItem 要添加的时间轴项目
+   * @returns 新添加的时间轴项目ID
    */
-  async function addTimelineItemWithHistory(timelineItem: TimelineItem) {
+  async function addTimelineItemWithHistory(timelineItem: TimelineItem): Promise<string> {
     const command = new AddTimelineItemCommand(
       timelineItem,
       {
@@ -139,6 +141,84 @@ export const useVideoStore = defineStore('video', () => {
       {
         getMediaItem: mediaModule.getMediaItem,
       },
+    )
+    await historyModule.executeCommand(command)
+    // 返回时间轴项目的ID
+    return timelineItem.id
+  }
+
+  /**
+   * 带历史记录的创建文本项目方法
+   * @param text 文本内容
+   * @param style 文本样式
+   * @param startTimeFrames 开始时间（帧数）
+   * @param trackId 轨道ID
+   * @param duration 显示时长（帧数）
+   * @returns 新创建的文本项目ID
+   */
+  async function createTextItemWithHistory(
+    text: string,
+    style: any,
+    startTimeFrames: number,
+    trackId: string,
+    duration: number
+  ): Promise<string> {
+    const command = new CreateTextItemCommand(
+      text,
+      style,
+      startTimeFrames,
+      trackId,
+      duration,
+      {
+        addTimelineItem: timelineModule.addTimelineItem,
+        removeTimelineItem: timelineModule.removeTimelineItem,
+        getTimelineItem: timelineModule.getTimelineItem,
+      },
+      {
+        addSprite: webavModule.addSprite,
+        removeSprite: webavModule.removeSprite,
+      }
+    )
+    await historyModule.executeCommand(command)
+    return command.newItemId
+  }
+
+  /**
+   * 带历史记录的更新文本内容方法
+   * @param timelineItemId 时间轴项目ID
+   * @param newText 新的文本内容
+   */
+  async function updateTextContentWithHistory(timelineItemId: string, newText: string): Promise<void> {
+    console.log('📝 [videoStore] updateTextContentWithHistory被调用:', {
+      timelineItemId,
+      newText: newText.substring(0, 20) + '...'
+    })
+
+    const command = new UpdateTextContentCommand(
+      timelineItemId,
+      newText,
+      {
+        getTimelineItem: timelineModule.getTimelineItem,
+      }
+    )
+
+    console.log('📝 [videoStore] 执行UpdateTextContentCommand')
+    await historyModule.executeCommand(command)
+    console.log('✅ [videoStore] UpdateTextContentCommand执行完成')
+  }
+
+  /**
+   * 带历史记录的更新文本样式方法
+   * @param timelineItemId 时间轴项目ID
+   * @param newStyle 新的文本样式
+   */
+  async function updateTextStyleWithHistory(timelineItemId: string, newStyle: any): Promise<void> {
+    const command = new UpdateTextStyleCommand(
+      timelineItemId,
+      newStyle,
+      {
+        getTimelineItem: timelineModule.getTimelineItem,
+      }
     )
     await historyModule.executeCommand(command)
   }
@@ -1122,6 +1202,10 @@ export const useVideoStore = defineStore('video', () => {
     updateTimelineItemTransformWithHistory,
     splitTimelineItemAtTimeWithHistory,
     duplicateTimelineItemWithHistory,
+    // 文本项目历史记录方法
+    createTextItemWithHistory,
+    updateTextContentWithHistory,
+    updateTextStyleWithHistory,
     addTrackWithHistory,
     removeTrackWithHistory,
     renameTrackWithHistory,

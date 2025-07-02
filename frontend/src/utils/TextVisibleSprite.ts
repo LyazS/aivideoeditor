@@ -122,18 +122,22 @@ export class TextVisibleSprite extends BaseVisibleSprite {
    * @param text 新的文本内容
    */
   async updateText(text: string): Promise<void> {
+    console.log('📝 [TextVisibleSprite] updateText被调用:', {
+      currentText: this.#text.substring(0, 20) + '...',
+      newText: text.substring(0, 20) + '...',
+      isEqual: this.#text === text
+    })
+
     if (this.#text === text) {
       console.log('📝 [TextVisibleSprite] 文本内容未变化，跳过更新')
       return
     }
 
-    console.log('📝 [TextVisibleSprite] 更新文本内容:', {
-      old: this.#text.substring(0, 20) + '...',
-      new: text.substring(0, 20) + '...'
-    })
-
+    console.log('📝 [TextVisibleSprite] 文本内容有变化，开始更新流程')
     this.#text = text
+    console.log('📝 [TextVisibleSprite] 调用scheduleUpdate')
     await this.#scheduleUpdate()
+    console.log('📝 [TextVisibleSprite] scheduleUpdate完成')
   }
 
   /**
@@ -366,8 +370,12 @@ export class TextVisibleSprite extends BaseVisibleSprite {
    * 调度更新（带防抖）
    */
   async #scheduleUpdate(): Promise<void> {
+    console.log('⏰ [TextVisibleSprite] 调度文本更新（防抖）')
+    console.log('⏰ [TextVisibleSprite] 当前文本:', this.#text.substring(0, 20) + '...')
+    console.log('⏰ [TextVisibleSprite] 当前样式:', this.#textStyle)
     // 使用 lodash 的防抖函数
     this.#debouncedUpdate()
+    console.log('⏰ [TextVisibleSprite] 防抖更新已调度')
   }
 
   /**
@@ -385,20 +393,27 @@ export class TextVisibleSprite extends BaseVisibleSprite {
 
     try {
       console.log('🔄 [TextVisibleSprite] 开始执行文本更新')
+      console.log('🔄 [TextVisibleSprite] 更新数据:', {
+        text: this.#text.substring(0, 20) + '...',
+        style: this.#textStyle
+      })
 
       // 由于 WebAV 的限制，我们无法直接替换内部的 clip
       // 实际的更新需要通过外部重新创建精灵来实现
       // 这里我们只触发更新事件，让外部系统知道需要重新创建
 
-      // 触发更新事件，通知外部需要重新创建精灵
-      this.getEventTool().emit('propsChange', {
-        // 添加文本更新的标记
+      const updateData = {
         textUpdate: {
           text: this.#text,
           style: this.#textStyle,
           needsRecreation: true
         }
-      } as any)
+      }
+
+      console.log('📢 [TextVisibleSprite] 准备触发propsChange事件:', updateData)
+
+      // 触发更新事件，通知外部需要重新创建精灵
+      this.getEventTool().emit('propsChange', updateData as any)
 
       console.log('📢 [TextVisibleSprite] 文本更新事件已触发，等待外部重新创建精灵')
 
@@ -412,10 +427,11 @@ export class TextVisibleSprite extends BaseVisibleSprite {
 
   /**
    * 创建新的文本精灵实例（用于替换当前实例）
+   * 注意：此方法主要用于内部测试，实际的文本更新应该通过外部重建流程处理
    * @returns Promise<TextVisibleSprite> 新的精灵实例
    */
   async createUpdatedSprite(): Promise<TextVisibleSprite> {
-    console.log('🔄 [TextVisibleSprite] 创建更新后的精灵实例')
+    console.log('🔄 [TextVisibleSprite] 创建更新后的精灵实例（内部方法）')
 
     // 保存当前状态
     const currentState = this.#saveCurrentState()
@@ -423,20 +439,23 @@ export class TextVisibleSprite extends BaseVisibleSprite {
     // 创建新的精灵
     const newSprite = await TextVisibleSprite.create(this.#text, this.#textStyle)
 
-    // 恢复状态
-    newSprite.rect.x = currentState.rect.x
-    newSprite.rect.y = currentState.rect.y
-    newSprite.rect.w = currentState.rect.w
-    newSprite.rect.h = currentState.rect.h
-    newSprite.rect.angle = currentState.rect.angle
-    newSprite.setOpacityValue(currentState.opacity)
-    newSprite.zIndex = currentState.zIndex
-
     // 恢复时间范围
     newSprite.#timeRange = { ...currentState.timeRange }
     newSprite.#updateVisibleSpriteTime()
 
-    console.log('✅ [TextVisibleSprite] 更新后的精灵实例创建完成')
+    // 恢复基本变换属性
+    newSprite.rect.angle = currentState.rect.angle
+    newSprite.setOpacityValue(currentState.opacity)
+    newSprite.zIndex = currentState.zIndex
+
+    // 注意：位置和尺寸的恢复应该由外部重建流程处理
+    // 这里只是简单恢复，不进行复杂的缩放计算
+    newSprite.rect.x = currentState.rect.x
+    newSprite.rect.y = currentState.rect.y
+    newSprite.rect.w = currentState.rect.w
+    newSprite.rect.h = currentState.rect.h
+
+    console.log('✅ [TextVisibleSprite] 更新后的精灵实例创建完成（简化版本）')
     return newSprite
   }
 
