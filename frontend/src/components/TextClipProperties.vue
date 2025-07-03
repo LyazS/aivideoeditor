@@ -32,12 +32,16 @@
     <!-- 文本样式 -->
     <div class="property-section">
       <h4>文本样式</h4>
-      
+
       <!-- 字体设置 -->
       <div class="property-item">
         <label>字体</label>
         <div class="font-controls">
-          <select v-model="localStyle.fontFamily" @change="updateTextStyle" class="font-family-select">
+          <select
+            v-model="localStyle.fontFamily"
+            @change="updateTextStyle"
+            class="font-family-select"
+          >
             <option value="Arial, sans-serif">Arial</option>
             <option value="'Microsoft YaHei', sans-serif">微软雅黑</option>
             <option value="'SimHei', sans-serif">黑体</option>
@@ -79,12 +83,20 @@
       <div class="property-item">
         <label>字体样式</label>
         <div class="font-style-controls">
-          <select v-model="localStyle.fontWeight" @change="updateTextStyle" class="font-weight-select">
+          <select
+            v-model="localStyle.fontWeight"
+            @change="updateTextStyle"
+            class="font-weight-select"
+          >
             <option value="normal">正常</option>
             <option value="bold">粗体</option>
             <option value="lighter">细体</option>
           </select>
-          <select v-model="localStyle.fontStyle" @change="updateTextStyle" class="font-style-select">
+          <select
+            v-model="localStyle.fontStyle"
+            @change="updateTextStyle"
+            class="font-style-select"
+          >
             <option value="normal">正常</option>
             <option value="italic">斜体</option>
           </select>
@@ -111,7 +123,11 @@
           <input
             type="color"
             :value="localStyle.backgroundColor || '#000000'"
-            @input="(e) => { localStyle.backgroundColor = (e.target as HTMLInputElement).value }"
+            @input="
+              (e) => {
+                localStyle.backgroundColor = (e.target as HTMLInputElement).value
+              }
+            "
             @change="updateTextStyle"
             class="color-picker"
             :disabled="!backgroundColorEnabled"
@@ -123,7 +139,6 @@
               @change="toggleBackgroundColor"
               class="background-color-checkbox"
             />
-            <span class="checkbox-label">启用</span>
           </label>
         </div>
       </div>
@@ -163,7 +178,6 @@
               @change="toggleShadow"
               class="effect-checkbox"
             />
-            <span class="checkbox-label">启用</span>
           </label>
           <div v-if="shadowEnabled" class="shadow-settings">
             <div class="shadow-setting-row">
@@ -256,7 +270,6 @@
               @change="toggleStroke"
               class="effect-checkbox"
             />
-            <span class="checkbox-label">启用</span>
           </label>
           <div v-if="strokeEnabled" class="stroke-settings">
             <div class="stroke-setting-row">
@@ -305,7 +318,6 @@
               @change="toggleGlow"
               class="effect-checkbox"
             />
-            <span class="checkbox-label">启用</span>
           </label>
           <div v-if="glowEnabled" class="glow-settings">
             <div class="glow-setting-row">
@@ -466,18 +478,18 @@ const textAlignOptions = [
   {
     value: 'left' as const,
     label: '左对齐',
-    icon: 'M3,3H21V5H3V3M3,7H15V9H3V7M3,11H21V13H3V11M3,15H15V17H3V15M3,19H21V21H3V19Z'
+    icon: 'M3,3H21V5H3V3M3,7H15V9H3V7M3,11H21V13H3V11M3,15H15V17H3V15M3,19H21V21H3V19Z',
   },
   {
     value: 'center' as const,
     label: '居中对齐',
-    icon: 'M3,3H21V5H3V3M7,7H17V9H7V7M3,11H21V13H3V11M7,15H17V17H7V15M3,19H21V21H3V19Z'
+    icon: 'M3,3H21V5H3V3M7,7H17V9H7V7M3,11H21V13H3V11M7,15H17V17H7V15M3,19H21V21H3V19Z',
   },
   {
     value: 'right' as const,
     label: '右对齐',
-    icon: 'M3,3H21V5H3V3M9,7H21V9H9V7M3,11H21V13H3V11M9,15H21V17H9V15M3,19H21V21H3V19Z'
-  }
+    icon: 'M3,3H21V5H3V3M9,7H21V9H9V7M3,11H21V13H3V11M9,15H21V17H9V15M3,19H21V21H3V19Z',
+  },
 ]
 
 // 样式定义
@@ -578,7 +590,9 @@ watch(
       if (newItem.config.style.textShadow) {
         shadowEnabled.value = true
         // 解析阴影字符串 (简单解析，格式: "2px 2px 4px #000000")
-        const shadowMatch = newItem.config.style.textShadow.match(/(-?\d+)px\s+(-?\d+)px\s+(\d+)px\s+(#[0-9a-fA-F]{6}|rgba?\([^)]+\)|[a-zA-Z]+)/)
+        const shadowMatch = newItem.config.style.textShadow.match(
+          /(-?\d+)px\s+(-?\d+)px\s+(\d+)px\s+(#[0-9a-fA-F]{6}|rgba?\([^)]+\)|[a-zA-Z]+)/,
+        )
         if (shadowMatch) {
           shadowOffsetX.value = parseInt(shadowMatch[1])
           shadowOffsetY.value = parseInt(shadowMatch[2])
@@ -607,7 +621,7 @@ watch(
       }
     }
   },
-  { immediate: true }
+  { immediate: true },
 )
 
 // 更新文本内容
@@ -628,8 +642,8 @@ const updateTextContent = async () => {
       localText.value.trim(),
       {},
       {
-        getTimelineItem: videoStore.getTimelineItem
-      }
+        getTimelineItem: videoStore.getTimelineItem,
+      },
     )
 
     // 执行命令（带历史记录）
@@ -667,8 +681,8 @@ const updateTextStyle = async () => {
       props.selectedTimelineItem.config.text, // 保持文本内容不变
       styleToUpdate,
       {
-        getTimelineItem: videoStore.getTimelineItem
-      }
+        getTimelineItem: videoStore.getTimelineItem,
+      },
     )
 
     // 执行命令（带历史记录）
@@ -740,7 +754,7 @@ const updateStrokeEffect = () => {
   if (strokeEnabled.value) {
     localStyle.value.textStroke = {
       width: strokeWidth.value,
-      color: strokeColor.value
+      color: strokeColor.value,
     }
   } else {
     localStyle.value.textStroke = undefined
@@ -763,7 +777,7 @@ const updateGlowEffect = () => {
     localStyle.value.textGlow = {
       color: glowColor.value,
       blur: glowBlur.value,
-      spread: glowSpread.value
+      spread: glowSpread.value,
     }
   } else {
     localStyle.value.textGlow = undefined
@@ -813,7 +827,7 @@ const updateTargetDurationFromTimecode = async (event: Event) => {
     videoStore.showError(
       '时间码格式错误',
       '请使用正确的时间码格式：HH:MM:SS.FF\n示例：00:01:30.15（1分30秒15帧）',
-      8000
+      8000,
     )
 
     // 恢复到当前值
@@ -863,7 +877,7 @@ const updateTargetDurationFrames = async (newDurationFrames: number) => {
     props.selectedTimelineItem.timeRange = {
       timelineStartTime: newTimeRange.timelineStartTime,
       timelineEndTime: newTimeRange.timelineEndTime,
-      displayDuration: newTimeRange.timelineEndTime - newTimeRange.timelineStartTime
+      displayDuration: newTimeRange.timelineEndTime - newTimeRange.timelineStartTime,
     }
   }
 

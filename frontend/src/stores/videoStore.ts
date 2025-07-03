@@ -170,7 +170,7 @@ export const useVideoStore = defineStore('video', () => {
       {
         addSprite: webavModule.addSprite,
         removeSprite: webavModule.removeSprite,
-      }
+      },
     )
     await historyModule.executeCommand(command)
   }
@@ -554,7 +554,7 @@ export const useVideoStore = defineStore('video', () => {
 
     // 计算新位置（在原项目后面，避免重叠）
     const originalEndTimeFrames = timelineItem.timeRange.timelineEndTime // 帧数
-    const newPositionFrames = originalEndTimeFrames + 3 // 在原项目结束后3帧的位置（0.1秒@30fps）
+    const newPositionFrames = originalEndTimeFrames
 
     const command = new DuplicateTimelineItemCommand(
       timelineItemId,

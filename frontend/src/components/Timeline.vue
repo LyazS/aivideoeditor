@@ -264,26 +264,47 @@ const contextMenuOptions = ref({
   zIndex: 1000,
 })
 
-// 菜单配置 - 预定义避免每次渲染重新创建
-const menuConfigs: Record<string, MenuItem[]> = {
-  clip: [
-    {
-      label: '复制片段',
-      icon: 'M19,21H8V7H19M19,5H8A2,2 0 0,0 6,7V21A2,2 0 0,0 8,23H19A2,2 0 0,0 21,21V7A2,2 0 0,0 19,5M16,1H4A2,2 0 0,0 2,3V17H4V3H16V1Z',
-      onClick: () => duplicateClip(),
-    },
-    {
+// 动态clip菜单配置
+const getClipMenuItems = (): MenuItem[] => {
+  const clipId = contextMenuTarget.value.clipId
+  if (!clipId) return []
+
+  const timelineItem = videoStore.getTimelineItem(clipId)
+  if (!timelineItem) return []
+
+  const menuItems: MenuItem[] = []
+
+  // 复制片段 - 所有类型都支持
+  menuItems.push({
+    label: '复制片段',
+    icon: 'M19,21H8V7H19M19,5H8A2,2 0 0,0 6,7V21A2,2 0 0,0 8,23H19A2,2 0 0,0 21,21V7A2,2 0 0,0 19,5M16,1H4A2,2 0 0,0 2,3V17H4V3H16V1Z',
+    onClick: () => duplicateClip(),
+  })
+
+  // 重新生成缩略图 - 只有视频和图片支持
+  if (timelineItem.mediaType === 'video' || timelineItem.mediaType === 'image') {
+    menuItems.push({
       label: '重新生成缩略图',
       icon: 'M17.65,6.35C16.2,4.9 14.21,4 12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20C15.73,20 18.84,17.45 19.73,14H17.65C16.83,16.33 14.61,18 12,18A6,6 0 0,1 6,12A6,6 0 0,1 12,6C13.66,6 15.14,6.69 16.22,7.78L13,11H20V4L17.65,6.35Z',
       onClick: () => regenerateThumbnail(),
-    },
-    { type: 'separator' },
-    {
-      label: '删除片段',
-      icon: 'M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z',
-      onClick: () => removeClip(),
-    },
-  ],
+    })
+  }
+
+  // 分隔符
+  menuItems.push({ type: 'separator' } as MenuItem)
+
+  // 删除片段 - 所有类型都支持
+  menuItems.push({
+    label: '删除片段',
+    icon: 'M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z',
+    onClick: () => removeClip(),
+  })
+
+  return menuItems
+}
+
+// 菜单配置 - 预定义避免每次渲染重新创建
+const menuConfigs: Record<string, MenuItem[]> = {
   track: [], // 轨道菜单使用动态配置
   empty: [
     {
@@ -377,6 +398,8 @@ const getTrackMenuItems = (): MenuItem[] => {
 const currentMenuItems = computed(() => {
   if (contextMenuType.value === 'track') {
     return getTrackMenuItems()
+  } else if (contextMenuType.value === 'clip') {
+    return getClipMenuItems()
   }
   return menuConfigs[contextMenuType.value] || []
 })
