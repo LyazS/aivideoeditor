@@ -193,6 +193,7 @@ import { useDragUtils } from '../composables/useDragUtils'
 import { useDialogs } from '../composables/useDialogs'
 import { VideoVisibleSprite } from '../utils/VideoVisibleSprite'
 import { ImageVisibleSprite } from '../utils/ImageVisibleSprite'
+import { AudioVisibleSprite } from '../utils/AudioVisibleSprite'
 import { createSpriteFromMediaItem } from '../utils/spriteFactory'
 import { webavToProjectCoords } from '../utils/coordinateTransform'
 import { calculatePixelsPerFrame } from '../stores/utils/timeUtils'
@@ -212,6 +213,7 @@ import type {
 import { hasVisualProps } from '../types'
 import VideoClip from './VideoClip.vue'
 import TextClip from './TextClip.vue'
+import AudioClip from './AudioClip.vue'
 import TimeScale from './TimeScale.vue'
 import { ContextMenu, ContextMenuItem, ContextMenuSeparator } from '@imengyu/vue3-context-menu'
 
@@ -412,22 +414,17 @@ function getClipsForTrack(trackId: string) {
 // 轨道管理方法
 async function addNewTrack(type: TrackType = 'video') {
   try {
-    // 检查轨道类型限制（只限制音频轨道，文本轨道已支持）
-    if (type === 'audio') {
-      dialogs.showOperationError(
-        '添加轨道',
-        '音频轨道功能暂未实现，敬请期待！',
-      )
-      return
-    }
-
     const newTrackId = await videoStore.addTrackWithHistory(type)
     if (newTrackId) {
       console.log('✅ 轨道添加成功，新轨道ID:', newTrackId, '类型:', type)
 
-      // 如果是文本轨道，显示成功提示
+      // 根据轨道类型显示成功提示
       if (type === 'text') {
         dialogs.showSuccess('文本轨道创建成功！现在可以右键点击轨道添加文本内容。')
+      } else if (type === 'audio') {
+        dialogs.showSuccess('音频轨道创建成功！现在可以拖拽音频文件到此轨道。')
+      } else if (type === 'video') {
+        dialogs.showSuccess('视频轨道创建成功！现在可以拖拽视频或图片文件到此轨道。')
       }
     } else {
       console.error('❌ 轨道添加失败')
@@ -486,7 +483,7 @@ function isMediaCompatibleWithTrack(mediaType: MediaType, trackType: TrackType):
     return mediaType === 'video' || mediaType === 'image'
   }
 
-  // 音频轨道支持音频素材（暂未实现）
+  // 音频轨道支持音频素材
   if (trackType === 'audio') {
     return mediaType === 'audio'
   }
@@ -1179,15 +1176,10 @@ async function createMediaClipFromMediaItem(
         endTimeFrames: startTimeFrames + mediaItem.duration,
         durationFrames: mediaItem.duration,
       })
-      // 音频sprite可能需要特殊的时间范围设置
-      if ('setTimeRange' in sprite) {
-        const audioTimeRangeConfig = {
-          timelineStartTime: startTimeFrames,
-          timelineEndTime: startTimeFrames + mediaItem.duration,
-          effectiveDuration: mediaItem.duration,
-        }
-        ;(sprite as any).setTimeRange(audioTimeRangeConfig)
-      }
+      // 使用AudioVisibleSprite的时间范围设置方法
+      const audioSprite = sprite as AudioVisibleSprite
+      audioSprite.setTimelineStartTime(startTimeFrames)
+      audioSprite.setDisplayDuration(mediaItem.duration)
     }
 
     // 注意：不再直接添加sprite到画布，让AddTimelineItemCommand统一处理
@@ -1326,9 +1318,10 @@ function getClipComponent(mediaType: MediaType) {
   switch (mediaType) {
     case 'text':
       return TextClip
+    case 'audio':
+      return AudioClip
     case 'video':
     case 'image':
-    case 'audio':
     default:
       return VideoClip
   }

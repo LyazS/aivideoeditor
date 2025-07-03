@@ -44,6 +44,13 @@
           :current-frame="currentFrame"
         />
 
+        <!-- 音频项目属性组件 -->
+        <AudioClipProperties
+          v-else-if="selectedTimelineItem.mediaType === 'audio'"
+          :selected-timeline-item="selectedTimelineItem as TimelineItem<'audio'>"
+          :current-frame="currentFrame"
+        />
+
         <!-- 未来可以在这里添加其他类型的属性组件，比如音频属性组件 -->
         <!-- <AudioClipProperties v-else-if="selectedTimelineItem.mediaType === 'audio'" ... /> -->
       </div>
@@ -67,6 +74,7 @@ import { computed } from 'vue'
 import { useVideoStore } from '../stores/videoStore'
 import VideoClipProperties from './VideoClipProperties.vue'
 import TextClipProperties from './TextClipProperties.vue'
+import AudioClipProperties from './AudioClipProperties.vue'
 import type { TimelineItem } from '../types'
 
 const videoStore = useVideoStore()

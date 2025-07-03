@@ -40,9 +40,15 @@
           @dragend="handleItemDragEnd"
         >
           <div class="media-thumbnail">
-            <!-- WebAV生成的缩略图 -->
+            <!-- 音频文件显示音频图标 -->
+            <div v-if="item.mediaType === 'audio'" class="audio-thumbnail">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor" class="audio-icon">
+                <path d="M14,3.23V5.29C16.89,6.15 19,8.83 19,12C19,15.17 16.89,17.85 14,18.71V20.77C18,19.86 21,16.28 21,12C21,7.72 18,4.14 14,3.23M16.5,12C16.5,10.23 15.5,8.71 14,7.97V16C15.5,15.29 16.5,13.76 16.5,12M3,9V15H7L12,20V4L7,9H3Z"/>
+              </svg>
+            </div>
+            <!-- WebAV生成的缩略图（视频和图片） -->
             <img
-              v-if="item.thumbnailUrl"
+              v-else-if="item.thumbnailUrl"
               :src="item.thumbnailUrl"
               class="thumbnail-image"
               alt="缩略图"
@@ -52,8 +58,8 @@
               <div class="loading-spinner"></div>
             </div>
 
-            <!-- 右上角时长标签（只有视频才显示） -->
-            <div v-if="item.mediaType === 'video'" class="duration-badge">
+            <!-- 右上角时长标签（视频和音频显示） -->
+            <div v-if="item.mediaType === 'video' || item.mediaType === 'audio'" class="duration-badge">
               {{ item.isReady ? formatDuration(item.duration) : '分析中' }}
             </div>
           </div>
@@ -83,7 +89,7 @@
       ref="fileInput"
       type="file"
       multiple
-      accept="video/*,image/*"
+      accept="video/*,image/*,audio/*"
       style="display: none"
       @change="handleFileSelect"
     />
@@ -153,11 +159,11 @@ const handleDrop = (event: DragEvent) => {
 // 处理文件 - 并行处理，限制最大并发数为5
 const processFiles = async (files: File[]) => {
   const mediaFiles = files.filter(
-    (file) => file.type.startsWith('video/') || file.type.startsWith('image/'),
+    (file) => file.type.startsWith('video/') || file.type.startsWith('image/') || file.type.startsWith('audio/'),
   )
 
   if (mediaFiles.length === 0) {
-    dialogs.showFileTypeError()
+    dialogs.showFileTypeError('视频、图片或音频文件')
     return
   }
 
@@ -205,11 +211,14 @@ const addMediaItem = async (file: File): Promise<void> => {
     const mediaItemId = Date.now().toString() + Math.random().toString(36).substring(2, 11)
     const isVideo = file.type.startsWith('video/')
     const isImage = file.type.startsWith('image/')
+    const isAudio = file.type.startsWith('audio/')
 
     if (isVideo) {
       await addVideoItem(file, url, mediaItemId, startTime, resolve)
     } else if (isImage) {
       await addImageItem(file, url, mediaItemId, startTime, resolve)
+    } else if (isAudio) {
+      await addAudioItem(file, url, mediaItemId, startTime, resolve)
     } else {
       console.error('不支持的文件类型:', file.type)
       URL.revokeObjectURL(url)
@@ -238,6 +247,7 @@ const addVideoItem = async (
       mediaType: 'video',
       mp4Clip: null, // 解析中时为null
       imgClip: null,
+      audioClip: null, // 解析中时为null
       isReady: false, // 标记为未准备好
       status: 'parsing', // 解析中状态
     }
@@ -322,6 +332,7 @@ const addImageItem = async (
         mediaType: 'image',
         mp4Clip: null,
         imgClip: null, // 解析中时为null
+        audioClip: null, // 图片不需要音频clip
         isReady: false, // 标记为未准备好
         status: 'parsing', // 解析中状态
       }
@@ -444,6 +455,103 @@ const handleItemDragStart = (event: DragEvent, item: MediaItem) => {
 
   console.log('📦 [MediaLibrary] 使用统一格式设置拖拽数据:', dragData)
   console.log('✅ [MediaLibrary] 拖拽数据设置完成，类型:', event.dataTransfer!.types)
+}
+
+// 添加音频素材项
+const addAudioItem = async (
+  file: File,
+  url: string,
+  mediaItemId: string,
+  startTime: number,
+  resolve: () => void,
+) => {
+  try {
+    // 创建解析中状态的MediaItem
+    const parsingMediaItem: MediaItem = {
+      id: mediaItemId,
+      name: file.name,
+      file,
+      url,
+      duration: 0, // 初始时长为0，等待解析
+      type: file.type,
+      mediaType: 'audio',
+      mp4Clip: null,
+      imgClip: null,
+      audioClip: null, // 初始为null，等待解析
+      isReady: false, // 解析中状态
+      status: 'parsing', // 解析中状态
+    }
+
+    console.log(`📋 创建解析中的音频MediaItem: ${parsingMediaItem.name} (ID: ${mediaItemId})`)
+
+    // 先添加解析中状态的素材到store
+    videoStore.addMediaItem(parsingMediaItem)
+
+    // 异步创建AudioClip
+    console.log(`🎵 Creating AudioClip for: ${file.name}`)
+    const audioClip = await webAVControls.createAudioClip(file)
+    console.log(`✅ AudioClip created successfully for: ${file.name}`)
+
+    // 获取AudioClip的元数据
+    const meta = await audioClip.ready
+    const durationFrames = secondsToFrames(meta.duration / 1_000_000) // meta.duration是微秒，转换为秒再转为帧数
+
+    console.log(`📊 AudioClip元数据: ${file.name}`, {
+      duration: meta.duration / 1_000_000 + 's',
+      durationFrames: durationFrames + '帧',
+      sampleRate: (meta as any).sampleRate,
+      numberOfChannels: (meta as any).numberOfChannels,
+    })
+
+    // 更新MediaItem为完成状态
+    const readyMediaItem: MediaItem = {
+      ...parsingMediaItem,
+      duration: durationFrames, // 使用AudioClip的准确时长
+      audioClip: markRaw(audioClip), // 使用markRaw避免Vue响应式包装
+      isReady: true, // 标记为准备好
+      status: 'ready', // 已准备好状态
+    }
+
+    console.log(
+      `📋 更新音频MediaItem为完成状态: ${readyMediaItem.name} (时长: ${(readyMediaItem.duration / 30).toFixed(2)}s)`,
+    )
+
+    // 更新store中的MediaItem
+    videoStore.updateMediaItem(readyMediaItem)
+
+    const endTime = Date.now()
+    console.log(
+      `✅ [并发处理] 音频文件处理完成: ${file.name} (耗时: ${endTime - startTime}ms)`,
+    )
+
+    // 清理URL对象
+    URL.revokeObjectURL(url)
+    resolve()
+  } catch (error) {
+    console.error(`❌ [并发处理] 音频文件处理失败: ${file.name}`, error)
+
+    // 更新MediaItem为错误状态
+    const errorMediaItem: MediaItem = {
+      id: mediaItemId,
+      name: file.name,
+      file,
+      url,
+      duration: 0,
+      type: file.type,
+      mediaType: 'audio',
+      mp4Clip: null,
+      imgClip: null,
+      audioClip: null,
+      isReady: false,
+      status: 'error',
+    }
+
+    videoStore.updateMediaItem(errorMediaItem)
+
+    // 清理URL对象
+    URL.revokeObjectURL(url)
+    resolve()
+  }
 }
 
 const handleItemDragEnd = () => {
@@ -593,6 +701,21 @@ const handleItemDragEnd = () => {
   100% {
     transform: rotate(360deg);
   }
+}
+
+.audio-thumbnail {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+  border-radius: var(--border-radius-medium);
+}
+
+.audio-icon {
+  color: white;
+  opacity: 0.9;
 }
 
 .duration-badge {

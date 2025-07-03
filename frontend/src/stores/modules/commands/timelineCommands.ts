@@ -78,12 +78,13 @@ export class AddTimelineItemCommand implements SimpleCommand {
     // 2. 从原始素材重新创建sprite
     const newSprite = await createSpriteFromMediaItem(mediaItem)
 
-    // 3. 设置时间范围
+    // 3. 设置时间范围（所有VisibleSprite现在都支持setTimeRange）
     newSprite.setTimeRange(this.originalTimelineItemData.timeRange)
 
-    // 4. 应用变换属性（类型安全版本）
+    // 4. 应用变换属性
     const visualProps = getVisualPropsFromData(this.originalTimelineItemData)
-    if (visualProps) {
+    if (visualProps && 'rect' in newSprite && 'opacity' in newSprite) {
+      // 有视觉属性的sprite（VideoVisibleSprite, ImageVisibleSprite, TextVisibleSprite）
       newSprite.rect.x = visualProps.x
       newSprite.rect.y = visualProps.y
       newSprite.rect.w = visualProps.width
@@ -91,6 +92,7 @@ export class AddTimelineItemCommand implements SimpleCommand {
       newSprite.rect.angle = visualProps.rotation
       newSprite.opacity = visualProps.opacity
     }
+    // 所有sprite都有zIndex属性（继承自BaseVisibleSprite）
     newSprite.zIndex = (this.originalTimelineItemData.config as any).zIndex
 
     // 5. 创建新的TimelineItem（先不设置缩略图）
@@ -2175,6 +2177,14 @@ export class ResizeTimelineItemCommand implements SimpleCommand {
     // 根据媒体类型设置时间范围（直接使用 timelineItem.mediaType，避免冗余的 MediaItem 获取）
     if (timelineItem.mediaType === 'video' && isVideoTimeRange(timeRange)) {
       // 视频类型：保持clipStartTime和clipEndTime，更新timeline时间
+      sprite.setTimeRange({
+        clipStartTime: timeRange.clipStartTime,
+        clipEndTime: timeRange.clipEndTime,
+        timelineStartTime: timeRange.timelineStartTime,
+        timelineEndTime: timeRange.timelineEndTime,
+      })
+    } else if (timelineItem.mediaType === 'audio' && isVideoTimeRange(timeRange)) {
+      // 音频类型：类似视频，保持clipStartTime和clipEndTime，更新timeline时间
       sprite.setTimeRange({
         clipStartTime: timeRange.clipStartTime,
         clipEndTime: timeRange.clipEndTime,

@@ -149,6 +149,17 @@ export function setTimelineItemDuration(item: TimelineItem, newDurationFrames: n
       effectiveDuration: newDurationFrames, // newDurationFrames 已经是整数
       playbackRate: newPlaybackRate,
     }
+  } else if (item.mediaType === 'audio' && isVideoTimeRange(currentTimeRange)) {
+    // 对于音频，类似视频，通过调整倍速来实现时长变化
+    const clipDurationFrames = currentTimeRange.clipEndTime - currentTimeRange.clipStartTime
+    const newPlaybackRate = clipDurationFrames / newDurationFrames
+
+    newTimeRange = {
+      ...currentTimeRange,
+      timelineEndTime: newTimelineEndTime, // newTimelineEndTime 已经是整数
+      effectiveDuration: newDurationFrames, // newDurationFrames 已经是整数
+      playbackRate: newPlaybackRate,
+    }
   } else {
     // 对于图片，直接设置显示时长
     newTimeRange = {
@@ -183,6 +194,12 @@ export function moveTimelineItem(item: TimelineItem, newStartTimeFrames: number)
   let newTimeRange: VideoTimeRange | ImageTimeRange
 
   if (item.mediaType === 'video' && isVideoTimeRange(currentTimeRange)) {
+    newTimeRange = {
+      ...currentTimeRange,
+      timelineStartTime: newStartTimeFrames,
+      timelineEndTime: newTimelineEndTime,
+    }
+  } else if (item.mediaType === 'audio' && isVideoTimeRange(currentTimeRange)) {
     newTimeRange = {
       ...currentTimeRange,
       timelineStartTime: newStartTimeFrames,

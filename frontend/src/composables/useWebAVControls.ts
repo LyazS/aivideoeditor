@@ -1,6 +1,6 @@
 import { ref, markRaw, type Raw } from 'vue'
 import { AVCanvas } from '@webav/av-canvas'
-import { MP4Clip, ImgClip } from '@webav/av-cliper'
+import { MP4Clip, ImgClip, AudioClip } from '@webav/av-cliper'
 import { VideoVisibleSprite } from '../utils/VideoVisibleSprite'
 import { ImageVisibleSprite } from '../utils/ImageVisibleSprite'
 import type { VideoTimeRange, ImageTimeRange } from '../types'
@@ -308,6 +308,30 @@ export function useWebAVControls() {
     } catch (err) {
       const errorMessage = `创建ImgClip失败: ${(err as Error).message}`
       console.error('ImgClip creation error:', err)
+      throw new Error(errorMessage)
+    }
+  }
+
+  /**
+   * 创建AudioClip
+   * @param file 音频文件
+   */
+  const createAudioClip = async (file: File): Promise<Raw<AudioClip>> => {
+    try {
+      console.log(`Creating AudioClip for: ${file.name}`)
+
+      // 创建AudioClip
+      const response = new Response(file)
+      const audioClip = markRaw(new AudioClip(response.body!))
+
+      // 等待AudioClip准备完成
+      await audioClip.ready
+
+      console.log(`AudioClip created successfully for: ${file.name}`)
+      return audioClip
+    } catch (err) {
+      const errorMessage = `创建AudioClip失败: ${(err as Error).message}`
+      console.error('AudioClip creation error:', err)
       throw new Error(errorMessage)
     }
   }
@@ -698,6 +722,7 @@ export function useWebAVControls() {
     initializeCanvas,
     createMP4Clip,
     createImgClip,
+    createAudioClip,
     cloneMP4Clip,
     cloneImgClip,
     play,

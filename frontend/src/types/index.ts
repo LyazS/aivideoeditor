@@ -4,7 +4,7 @@
  */
 
 import type { Raw } from 'vue'
-import type { MP4Clip, ImgClip, Rect } from '@webav/av-cliper'
+import type { MP4Clip, ImgClip, AudioClip, Rect } from '@webav/av-cliper'
 
 // ==================== 基础类型定义 ====================
 
@@ -57,24 +57,7 @@ export interface ImageTimeRange {
   displayDuration: number
 }
 
-/**
- * 音频时间范围接口定义（帧数版本）
- * 音频类似视频，但没有视觉属性
- */
-export interface AudioTimeRange {
-  /** 素材内部开始时间（帧数） - 从素材的哪个帧开始播放 */
-  clipStartTime: number
-  /** 素材内部结束时间（帧数） - 播放到素材的哪个帧结束 */
-  clipEndTime: number
-  /** 时间轴开始时间（帧数） - 素材在整个项目时间轴上的开始位置 */
-  timelineStartTime: number
-  /** 时间轴结束时间（帧数） - 素材在整个项目时间轴上的结束位置 */
-  timelineEndTime: number
-  /** 有效播放时长（帧数） - 在时间轴上占用的时长，如果与素材内部时长不同则表示变速 */
-  effectiveDuration: number
-  /** 播放速度倍率 - 1.0为正常速度，2.0为2倍速，0.5为0.5倍速 */
-  playbackRate: number
-}
+
 
 /**
  * 音频状态接口
@@ -90,18 +73,19 @@ export interface AudioState {
 
 /**
  * 素材项目接口
- * 素材层：包装MP4Clip/ImgClip和原始文件信息
+ * 素材层：包装MP4Clip/ImgClip/AudioClip和原始文件信息
  */
 export interface MediaItem {
   id: string
   name: string
   file: File
   url: string
-  duration: number // 素材时长（帧数）- 视频从HTML video.duration转换而来，图片固定为150帧（5秒@30fps）
+  duration: number // 素材时长（帧数）- 视频从HTML video.duration转换而来，图片固定为150帧（5秒@30fps），音频从AudioClip.meta.duration转换而来
   type: string
   mediaType: MediaType
   mp4Clip: Raw<MP4Clip> | null // 视频文件解析中时为null，解析完成后为MP4Clip实例
   imgClip: Raw<ImgClip> | null // 图片文件解析中时为null，解析完成后为ImgClip实例
+  audioClip: Raw<AudioClip> | null // 音频文件解析中时为null，解析完成后为AudioClip实例
   isReady: boolean // 是否解析完成
   status: MediaStatus // 素材状态
   thumbnailUrl?: string // WebAV生成的缩略图URL
@@ -187,7 +171,6 @@ interface AudioMediaProps {
  */
 interface VideoMediaConfig extends VisualMediaProps, AudioMediaProps {
   // 视频特有属性（预留）
-  // playbackRate?: number // 倍速可能在 timeRange 中更合适
 }
 
 /**
@@ -201,7 +184,7 @@ interface ImageMediaConfig extends VisualMediaProps {
 /**
  * 音频媒体配置：只有音频属性
  */
-interface AudioMediaConfig extends BaseMediaProps, AudioMediaProps {
+export interface AudioMediaConfig extends BaseMediaProps, AudioMediaProps {
   // 音频特有属性（预留）
   // waveformColor?: string
   // showWaveform?: boolean
@@ -249,7 +232,7 @@ export interface TimelineItem<T extends MediaType = MediaType> {
   timeRange: T extends 'video'
     ? VideoTimeRange
     : T extends 'audio'
-      ? AudioTimeRange
+      ? VideoTimeRange
       : T extends 'text'
         ? ImageTimeRange
         : ImageTimeRange
@@ -483,7 +466,7 @@ export interface TimelineItemData<T extends MediaType = MediaType> {
   timeRange: T extends 'video'
     ? VideoTimeRange
     : T extends 'audio'
-      ? AudioTimeRange
+      ? VideoTimeRange
       : ImageTimeRange
   config: GetMediaConfig<T>
   thumbnailUrl?: string
@@ -632,22 +615,7 @@ export function isImageTimeRange(
   return 'displayDuration' in timeRange && !('clipStartTime' in timeRange)
 }
 
-/**
- * 检查时间范围是否为音频时间范围
- * @param timeRange 时间范围对象
- * @returns 是否为音频时间范围
- */
-export function isAudioTimeRange(
-  timeRange: VideoTimeRange | ImageTimeRange | AudioTimeRange,
-): timeRange is AudioTimeRange {
-  return (
-    'clipStartTime' in timeRange &&
-    'clipEndTime' in timeRange &&
-    'effectiveDuration' in timeRange &&
-    'playbackRate' in timeRange &&
-    !('displayDuration' in timeRange)
-  )
-}
+
 
 /**
  * 检查时间轴项目是否为视频类型
@@ -813,17 +781,18 @@ export const DEFAULT_TEXT_STYLE: TextStyleConfig = {
 import type { VideoVisibleSprite } from '../utils/VideoVisibleSprite'
 import type { ImageVisibleSprite } from '../utils/ImageVisibleSprite'
 import type { TextVisibleSprite } from '../utils/TextVisibleSprite'
+import type { AudioVisibleSprite } from '../utils/AudioVisibleSprite'
 
 /**
  * 自定义 Sprite 联合类型
- * 表示我们扩展的 VideoVisibleSprite、ImageVisibleSprite 或 TextVisibleSprite
+ * 表示我们扩展的 VideoVisibleSprite、ImageVisibleSprite、TextVisibleSprite 或 AudioVisibleSprite
  */
-export type CustomVisibleSprite = VideoVisibleSprite | ImageVisibleSprite | TextVisibleSprite
+export type CustomVisibleSprite = VideoVisibleSprite | ImageVisibleSprite | TextVisibleSprite | AudioVisibleSprite
 
 /**
- * 原有的 CustomSprite 类型别名（更新以包含文本精灵）
+ * 原有的 CustomSprite 类型别名（更新以包含文本和音频精灵）
  */
-export type CustomSprite = VideoVisibleSprite | ImageVisibleSprite | TextVisibleSprite
+export type CustomSprite = VideoVisibleSprite | ImageVisibleSprite | TextVisibleSprite | AudioVisibleSprite
 
 // ==================== 媒体类型分类系统 ====================
 

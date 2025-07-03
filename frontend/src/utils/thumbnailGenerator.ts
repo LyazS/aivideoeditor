@@ -287,6 +287,9 @@ export async function generateThumbnailForMediaItem(
       console.log('🖼️ 生成图片缩略图...')
       canvas = await generateImageThumbnail(mediaItem.imgClip)
       console.log('✅ 图片缩略图生成成功')
+    } else if (mediaItem.mediaType === 'audio') {
+      console.log('🎵 音频文件无需生成缩略图')
+      return undefined
     } else {
       console.error('❌ 不支持的媒体类型或缺少clip对象')
       return undefined

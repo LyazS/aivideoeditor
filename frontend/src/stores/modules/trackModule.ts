@@ -1,6 +1,7 @@
 import { ref, type Ref } from 'vue'
 import type { Track, TimelineItem, TrackType } from '../../types'
 import { VideoVisibleSprite } from '../../utils/VideoVisibleSprite'
+import { AudioVisibleSprite } from '../../utils/AudioVisibleSprite'
 import { generateTrackId } from '../../utils/idGenerator'
 
 /**
@@ -19,6 +20,14 @@ export function createTrackModule() {
       isVisible: true,
       isMuted: false,
       height: 80,
+    },
+    {
+      id: generateTrackId(),
+      name: '音频轨道 1',
+      type: 'audio',
+      isVisible: true,
+      isMuted: false,
+      height: 60,
     },
     {
       id: generateTrackId(),
@@ -197,8 +206,18 @@ export function createTrackModule() {
             }
           })
         } else if (track.type === 'audio') {
-          // 音频轨道：将来处理纯音频项目
-          // TODO: 实现音频轨道的静音逻辑
+          // 音频轨道：影响音频类型的项目
+          const trackItems = timelineItems.value.filter(
+            (item) => item.trackId === trackId && item.mediaType === 'audio',
+          )
+          trackItems.forEach((item) => {
+            if (item.sprite && 'setTrackMuteChecker' in item.sprite) {
+              // 为每个AudioVisibleSprite设置轨道静音检查函数
+              const sprite = item.sprite as AudioVisibleSprite
+              sprite.setTrackMuteChecker(() => track.isMuted)
+              affectedClips++
+            }
+          })
         }
 
         console.log('🔇 切换轨道静音状态:', {

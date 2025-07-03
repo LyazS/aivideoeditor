@@ -1,6 +1,7 @@
 import type { MediaItem } from '../types'
 import { VideoVisibleSprite } from './VideoVisibleSprite'
 import { ImageVisibleSprite } from './ImageVisibleSprite'
+import { AudioVisibleSprite } from './AudioVisibleSprite'
 import { useWebAVControls } from '../composables/useWebAVControls'
 
 /**
@@ -13,7 +14,7 @@ import { useWebAVControls } from '../composables/useWebAVControls'
  */
 export async function createSpriteFromMediaItem(
   mediaItem: MediaItem,
-): Promise<VideoVisibleSprite | ImageVisibleSprite> {
+): Promise<VideoVisibleSprite | ImageVisibleSprite | AudioVisibleSprite> {
   // 检查媒体项目是否已准备好
   if (!mediaItem.isReady) {
     throw new Error(`素材尚未解析完成: ${mediaItem.name}`)
@@ -33,6 +34,12 @@ export async function createSpriteFromMediaItem(
     }
     const clonedImgClip = await webAVControls.cloneImgClip(mediaItem.imgClip)
     return new ImageVisibleSprite(clonedImgClip)
+  } else if (mediaItem.mediaType === 'audio') {
+    if (!mediaItem.audioClip) {
+      throw new Error(`音频素材解析失败，无法创建sprite: ${mediaItem.name}`)
+    }
+    // 音频不需要克隆，直接使用原始AudioClip创建新的AudioVisibleSprite
+    return new AudioVisibleSprite(mediaItem.audioClip)
   } else {
     throw new Error(`不支持的媒体类型: ${mediaItem.mediaType}`)
   }
