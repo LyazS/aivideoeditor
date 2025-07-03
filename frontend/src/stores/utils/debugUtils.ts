@@ -1,4 +1,5 @@
 import type { MediaItem, TimelineItem } from '../../types'
+import { requiresMediaItem } from '../../types'
 import { framesToTimecode } from './timeUtils'
 
 // ==================== 调试开关 ====================
@@ -84,10 +85,17 @@ export function printDebugInfo(
   console.log(`- 时间轴项目数: ${timelineItems.length}`)
   console.log(`- 轨道数: ${tracks.length}`)
 
-  // 检查引用关系
-  const orphanedTimelineItems = timelineItems.filter(
-    (timelineItem) => !mediaItems.find((mediaItem) => mediaItem.id === timelineItem.mediaItemId),
-  )
+  // 检查引用关系（只检查需要素材库项目的媒体类型）
+  const orphanedTimelineItems = timelineItems.filter((timelineItem) => {
+    // 只检查需要素材库项目的媒体类型
+    if (!requiresMediaItem(timelineItem.mediaType)) {
+      return false
+    }
+
+    // 检查是否有对应的素材库项目
+    return !mediaItems.find((mediaItem) => mediaItem.id === timelineItem.mediaItemId)
+  })
+
   if (orphanedTimelineItems.length > 0) {
     console.warn('⚠️ 发现孤立的时间轴项目 (没有对应的素材库项目):', orphanedTimelineItems)
   }

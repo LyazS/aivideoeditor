@@ -47,7 +47,7 @@ export function useDragUtils() {
     mediaItemId: string,
     name: string,
     duration: number, // 帧数
-    mediaType: 'video' | 'image' | 'audio',
+    mediaType: 'video' | 'image' | 'audio' | 'text',
   ) {
     const dragData: MediaItemDragData = {
       type: 'media-item',

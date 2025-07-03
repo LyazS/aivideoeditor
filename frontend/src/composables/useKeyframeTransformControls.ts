@@ -50,28 +50,16 @@ export function useKeyframeTransformControls(options: KeyframeTransformControlsO
 
   const scaleX = computed(() => {
     if (!selectedTimelineItem.value || !hasVisualProps(selectedTimelineItem.value)) return 1
-    
-    const selectedMediaItem = videoStore.getMediaItem(selectedTimelineItem.value.mediaItemId)
-    if (!selectedMediaItem) return 1
 
-    const originalResolution =
-      selectedMediaItem.mediaType === 'video'
-        ? videoStore.getVideoOriginalResolution(selectedMediaItem.id)
-        : videoStore.getImageOriginalResolution(selectedMediaItem.id)
-    return selectedTimelineItem.value.config.width / originalResolution.width
+    const config = selectedTimelineItem.value.config
+    return config.width / config.originalWidth
   })
 
   const scaleY = computed(() => {
     if (!selectedTimelineItem.value || !hasVisualProps(selectedTimelineItem.value)) return 1
-    
-    const selectedMediaItem = videoStore.getMediaItem(selectedTimelineItem.value.mediaItemId)
-    if (!selectedMediaItem) return 1
 
-    const originalResolution =
-      selectedMediaItem.mediaType === 'video'
-        ? videoStore.getVideoOriginalResolution(selectedMediaItem.id)
-        : videoStore.getImageOriginalResolution(selectedMediaItem.id)
-    return selectedTimelineItem.value.config.height / originalResolution.height
+    const config = selectedTimelineItem.value.config
+    return config.height / config.originalHeight
   })
 
   const rotation = computed(() => {
@@ -90,11 +78,15 @@ export function useKeyframeTransformControls(options: KeyframeTransformControlsO
     return selectedTimelineItem.value.config.zIndex
   })
 
-  // 等比缩放相关
+  // 等比缩放相关（每个clip独立状态）
   const proportionalScale = computed({
-    get: () => videoStore.proportionalScale,
+    get: () => {
+      if (!selectedTimelineItem.value || !hasVisualProps(selectedTimelineItem.value)) return true
+      return selectedTimelineItem.value.config.proportionalScale
+    },
     set: (value) => {
-      videoStore.proportionalScale = value
+      if (!selectedTimelineItem.value || !hasVisualProps(selectedTimelineItem.value)) return
+      selectedTimelineItem.value.config.proportionalScale = value
     },
   })
 
@@ -252,18 +244,15 @@ export function useKeyframeTransformControls(options: KeyframeTransformControlsO
    * 切换等比缩放
    */
   const toggleProportionalScale = () => {
-    if (proportionalScale.value && selectedTimelineItem.value) {
-      const selectedMediaItem = videoStore.getMediaItem(selectedTimelineItem.value.mediaItemId)
-      if (!selectedMediaItem) return
+    // 先切换状态
+    proportionalScale.value = !proportionalScale.value
 
-      // 开启等比缩放时，使用当前X缩放值作为统一缩放值，同时更新Y缩放
-      const originalResolution =
-        selectedMediaItem.mediaType === 'video'
-          ? videoStore.getVideoOriginalResolution(selectedMediaItem.id)
-          : videoStore.getImageOriginalResolution(selectedMediaItem.id)
+    // 如果刚刚开启等比缩放，使用当前X缩放值作为统一缩放值，同时更新Y缩放
+    if (proportionalScale.value && selectedTimelineItem.value && hasVisualProps(selectedTimelineItem.value)) {
+      const config = selectedTimelineItem.value.config
       const newSize = {
-        width: originalResolution.width * scaleX.value,
-        height: originalResolution.height * scaleX.value, // 使用X缩放值保持等比
+        width: config.originalWidth * scaleX.value,
+        height: config.originalHeight * scaleX.value, // 使用X缩放值保持等比
       }
       updateTransform({ width: newSize.width, height: newSize.height })
     }
@@ -273,17 +262,11 @@ export function useKeyframeTransformControls(options: KeyframeTransformControlsO
    * 更新统一缩放
    */
   const updateUniformScale = (newScale: number) => {
-    if (proportionalScale.value && selectedTimelineItem.value) {
-      const selectedMediaItem = videoStore.getMediaItem(selectedTimelineItem.value.mediaItemId)
-      if (!selectedMediaItem) return
-
-      const originalResolution =
-        selectedMediaItem.mediaType === 'video'
-          ? videoStore.getVideoOriginalResolution(selectedMediaItem.id)
-          : videoStore.getImageOriginalResolution(selectedMediaItem.id)
+    if (proportionalScale.value && selectedTimelineItem.value && hasVisualProps(selectedTimelineItem.value)) {
+      const config = selectedTimelineItem.value.config
       const newSize = {
-        width: originalResolution.width * newScale,
-        height: originalResolution.height * newScale,
+        width: config.originalWidth * newScale,
+        height: config.originalHeight * newScale,
       }
       updateTransform({ width: newSize.width, height: newSize.height })
     }
@@ -293,20 +276,13 @@ export function useKeyframeTransformControls(options: KeyframeTransformControlsO
    * 设置X缩放绝对值的方法
    */
   const setScaleX = (value: number) => {
-    if (!selectedTimelineItem.value) return
-    const selectedMediaItem = videoStore.getMediaItem(selectedTimelineItem.value.mediaItemId)
-    if (!selectedMediaItem) return
+    if (!selectedTimelineItem.value || !hasVisualProps(selectedTimelineItem.value)) return
 
-    const originalResolution =
-      selectedMediaItem.mediaType === 'video'
-        ? videoStore.getVideoOriginalResolution(selectedMediaItem.id)
-        : videoStore.getImageOriginalResolution(selectedMediaItem.id)
+    const config = selectedTimelineItem.value.config
     const newScaleX = Math.max(0.01, Math.min(5, value))
     const newSize = {
-      width: originalResolution.width * newScaleX,
-      height: hasVisualProps(selectedTimelineItem.value)
-        ? selectedTimelineItem.value.config.height
-        : 0, // 保持Y尺寸不变
+      width: config.originalWidth * newScaleX,
+      height: config.height, // 保持Y尺寸不变
     }
     updateTransform({ width: newSize.width, height: newSize.height })
   }
@@ -315,18 +291,13 @@ export function useKeyframeTransformControls(options: KeyframeTransformControlsO
    * 设置Y缩放绝对值的方法
    */
   const setScaleY = (value: number) => {
-    if (!selectedTimelineItem.value) return
-    const selectedMediaItem = videoStore.getMediaItem(selectedTimelineItem.value.mediaItemId)
-    if (!selectedMediaItem) return
+    if (!selectedTimelineItem.value || !hasVisualProps(selectedTimelineItem.value)) return
 
-    const originalResolution =
-      selectedMediaItem.mediaType === 'video'
-        ? videoStore.getVideoOriginalResolution(selectedMediaItem.id)
-        : videoStore.getImageOriginalResolution(selectedMediaItem.id)
+    const config = selectedTimelineItem.value.config
     const newScaleY = Math.max(0.01, Math.min(5, value))
     const newSize = {
-      width: hasVisualProps(selectedTimelineItem.value) ? selectedTimelineItem.value.config.width : 0, // 保持X尺寸不变
-      height: originalResolution.height * newScaleY,
+      width: config.width, // 保持X尺寸不变
+      height: config.originalHeight * newScaleY,
     }
     updateTransform({ width: newSize.width, height: newSize.height })
   }

@@ -487,6 +487,8 @@ export function useWebAVControls() {
     // 备份所有时间轴项目的元数据
     const timelineItems = videoStore.timelineItems
     for (const item of timelineItems) {
+      // 获取素材名称用于备份
+      const mediaItem = videoStore.getMediaItem(item.mediaItemId)
       backup.timelineItems.push({
         id: item.id,
         mediaItemId: item.mediaItemId,
@@ -495,6 +497,7 @@ export function useWebAVControls() {
         timeRange: { ...item.timeRange },
         config: { ...item.config },
         thumbnailUrl: item.thumbnailUrl || '',
+        mediaName: mediaItem?.name || '未知素材',
       })
     }
 

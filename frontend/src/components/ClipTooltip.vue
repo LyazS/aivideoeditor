@@ -6,7 +6,7 @@
         <div class="tooltip-info">
           <div class="tooltip-row">
             <span class="tooltip-label">类型:</span>
-            <span class="tooltip-value">{{ mediaType === 'video' ? '视频' : '图片' }}</span>
+            <span class="tooltip-value">{{ getMediaTypeLabel(mediaType) }}</span>
           </div>
           <div class="tooltip-row">
             <span class="tooltip-label">时长:</span>
@@ -57,6 +57,22 @@ const props = withDefaults(defineProps<ClipTooltipProps>(), {
   speed: '1.0x',
   showSpeed: false,
 })
+
+// 获取媒体类型的中文标签
+function getMediaTypeLabel(mediaType: MediaType): string {
+  switch (mediaType) {
+    case 'video':
+      return '视频'
+    case 'image':
+      return '图片'
+    case 'audio':
+      return '音频'
+    case 'text':
+      return '文本'
+    default:
+      return '未知'
+  }
+}
 
 // 计算tooltip样式
 const tooltipStyle = computed((): CSSProperties => {

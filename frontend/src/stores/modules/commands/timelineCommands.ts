@@ -55,7 +55,7 @@ export class AddTimelineItemCommand implements SimpleCommand {
     this.description = `添加时间轴项目: ${mediaItem?.name || '未知素材'}`
 
     // 保存原始数据用于重建sprite（类型安全版本）
-    this.originalTimelineItemData = createTimelineItemData(timelineItem)
+    this.originalTimelineItemData = createTimelineItemData(timelineItem, mediaItem?.name || '未知素材')
   }
 
   /**
@@ -136,11 +136,9 @@ export class AddTimelineItemCommand implements SimpleCommand {
       // 2. 添加sprite到WebAV画布
       this.webavModule.addSprite(newTimelineItem.sprite)
 
-      const mediaItem = this.mediaModule.getMediaItem(this.originalTimelineItemData.mediaItemId)
-      console.log(`✅ 已添加时间轴项目: ${mediaItem?.name || '未知素材'}`)
+      console.log(`✅ 已添加时间轴项目: ${this.originalTimelineItemData.mediaName}`)
     } catch (error) {
-      const mediaItem = this.mediaModule.getMediaItem(this.originalTimelineItemData.mediaItemId)
-      console.error(`❌ 添加时间轴项目失败: ${mediaItem?.name || '未知素材'}`, error)
+      console.error(`❌ 添加时间轴项目失败: ${this.originalTimelineItemData.mediaName}`, error)
       throw error
     }
   }
@@ -224,7 +222,7 @@ export class RemoveTimelineItemCommand implements SimpleCommand {
     this.description = `移除时间轴项目: ${mediaItem?.name || '未知素材'}`
 
     // 🎯 关键：保存重建所需的完整元数据，而不是对象引用
-    this.originalTimelineItemData = createTimelineItemData(timelineItem)
+    this.originalTimelineItemData = createTimelineItemData(timelineItem, mediaItem?.name || '未知素材')
 
     console.log('💾 保存删除项目的重建数据:', {
       id: this.originalTimelineItemData.id,
@@ -407,7 +405,7 @@ export class DuplicateTimelineItemCommand implements SimpleCommand {
     this.description = `复制时间轴项目: ${mediaItem?.name || '未知素材'}`
 
     // 保存原始项目的完整重建元数据
-    this.originalTimelineItemData = createTimelineItemData(originalTimelineItem)
+    this.originalTimelineItemData = createTimelineItemData(originalTimelineItem, mediaItem?.name || '未知素材')
 
     // 生成新项目的ID
     this.newTimelineItemId = `timeline_item_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`
@@ -417,43 +415,188 @@ export class DuplicateTimelineItemCommand implements SimpleCommand {
    * 从原始素材重建复制的时间轴项目
    */
   private async rebuildDuplicatedItem(): Promise<TimelineItem> {
+    // 根据媒体类型分发到对应的重建方法
+    switch (this.originalTimelineItemData.mediaType) {
+      case 'text':
+        return this.rebuildTextItem()
+      case 'video':
+        return this.rebuildVideoItem()
+      case 'image':
+        return this.rebuildImageItem()
+      default:
+        throw new Error(`不支持的媒体类型: ${this.originalTimelineItemData.mediaType}`)
+    }
+  }
+
+  /**
+   * 重建视频时间轴项目
+   */
+  private async rebuildVideoItem(): Promise<TimelineItem> {
+    console.log('🔄 [DuplicateTimelineItemCommand] 重建视频时间轴项目...')
+
     const mediaItem = this.mediaModule.getMediaItem(this.originalTimelineItemData.mediaItemId)
     if (!mediaItem) {
       throw new Error(`找不到素材项目: ${this.originalTimelineItemData.mediaItemId}`)
     }
 
     // 检查素材是否已经解析完成
-    if (!mediaItem.isReady || (!mediaItem.mp4Clip && !mediaItem.imgClip)) {
-      throw new Error('素材还在解析中，无法复制')
+    if (!mediaItem.isReady || !mediaItem.mp4Clip) {
+      throw new Error('视频素材还在解析中，无法复制')
     }
 
-    // 根据媒体类型克隆对应的Clip
+    // 创建视频精灵
     const newSprite = await createSpriteFromMediaItem(mediaItem)
 
     // 设置时间范围（调整到新位置）
-    const originalTimeRange = this.originalTimelineItemData.timeRange
-    // 注意：originalTimeRange 中的时间是帧数，this.newPositionFrames 也是帧数
-    const originalDurationFrames =
-      originalTimeRange.timelineEndTime - originalTimeRange.timelineStartTime // 帧数
-    const newTimelineStartTimeFrames = this.newPositionFrames // 帧数
+    const originalTimeRange = this.originalTimelineItemData.timeRange as VideoTimeRange
+    const originalDurationFrames = originalTimeRange.timelineEndTime - originalTimeRange.timelineStartTime
+    const newTimelineStartTimeFrames = this.newPositionFrames
     const newTimelineEndTimeFrames = newTimelineStartTimeFrames + originalDurationFrames
 
-    if (mediaItem.mediaType === 'video' && isVideoTimeRange(originalTimeRange)) {
-      newSprite.setTimeRange({
+    newSprite.setTimeRange({
+      clipStartTime: originalTimeRange.clipStartTime,
+      clipEndTime: originalTimeRange.clipEndTime,
+      timelineStartTime: newTimelineStartTimeFrames,
+      timelineEndTime: newTimelineEndTimeFrames,
+    })
+
+    // 设置变换属性
+    this.applyVisualProperties(newSprite)
+
+    // 创建新的TimelineItem
+    const newTimelineItem: TimelineItem = reactive({
+      id: this.newTimelineItemId,
+      mediaItemId: this.originalTimelineItemData.mediaItemId,
+      trackId: this.originalTimelineItemData.trackId,
+      mediaType: 'video',
+      timeRange: {
         clipStartTime: originalTimeRange.clipStartTime,
         clipEndTime: originalTimeRange.clipEndTime,
         timelineStartTime: newTimelineStartTimeFrames,
         timelineEndTime: newTimelineEndTimeFrames,
-      })
-    } else if (mediaItem.mediaType === 'image' && isImageTimeRange(originalTimeRange)) {
-      newSprite.setTimeRange({
+        effectiveDuration: originalTimeRange.effectiveDuration,
+        playbackRate: originalTimeRange.playbackRate,
+      },
+      sprite: markRaw(newSprite),
+      thumbnailUrl: undefined,
+      config: { ...this.originalTimelineItemData.config },
+    })
+
+    // 重新生成缩略图
+    this.regenerateThumbnailForDuplicatedItem(newTimelineItem, mediaItem)
+
+    console.log('✅ [DuplicateTimelineItemCommand] 视频时间轴项目重建完成')
+    return newTimelineItem
+  }
+
+  /**
+   * 重建图片时间轴项目
+   */
+  private async rebuildImageItem(): Promise<TimelineItem> {
+    console.log('🔄 [DuplicateTimelineItemCommand] 重建图片时间轴项目...')
+
+    const mediaItem = this.mediaModule.getMediaItem(this.originalTimelineItemData.mediaItemId)
+    if (!mediaItem) {
+      throw new Error(`找不到素材项目: ${this.originalTimelineItemData.mediaItemId}`)
+    }
+
+    // 检查素材是否已经解析完成
+    if (!mediaItem.isReady || !mediaItem.imgClip) {
+      throw new Error('图片素材还在解析中，无法复制')
+    }
+
+    // 创建图片精灵
+    const newSprite = await createSpriteFromMediaItem(mediaItem)
+
+    // 设置时间范围（调整到新位置）
+    const originalTimeRange = this.originalTimelineItemData.timeRange as ImageTimeRange
+    const originalDurationFrames = originalTimeRange.timelineEndTime - originalTimeRange.timelineStartTime
+    const newTimelineStartTimeFrames = this.newPositionFrames
+    const newTimelineEndTimeFrames = newTimelineStartTimeFrames + originalDurationFrames
+
+    newSprite.setTimeRange({
+      timelineStartTime: newTimelineStartTimeFrames,
+      timelineEndTime: newTimelineEndTimeFrames,
+      displayDuration: originalTimeRange.displayDuration,
+    })
+
+    // 设置变换属性
+    this.applyVisualProperties(newSprite)
+
+    // 创建新的TimelineItem
+    const newTimelineItem: TimelineItem = reactive({
+      id: this.newTimelineItemId,
+      mediaItemId: this.originalTimelineItemData.mediaItemId,
+      trackId: this.originalTimelineItemData.trackId,
+      mediaType: 'image',
+      timeRange: {
         timelineStartTime: newTimelineStartTimeFrames,
         timelineEndTime: newTimelineEndTimeFrames,
         displayDuration: originalTimeRange.displayDuration,
-      })
+      },
+      sprite: markRaw(newSprite),
+      thumbnailUrl: undefined,
+      config: { ...this.originalTimelineItemData.config },
+    })
+
+    // 重新生成缩略图
+    this.regenerateThumbnailForDuplicatedItem(newTimelineItem, mediaItem)
+
+    console.log('✅ [DuplicateTimelineItemCommand] 图片时间轴项目重建完成')
+    return newTimelineItem
+  }
+
+  /**
+   * 应用视觉属性到精灵
+   */
+  private applyVisualProperties(sprite: any): void {
+    const visualProps = getVisualPropsFromData(this.originalTimelineItemData)
+    if (visualProps) {
+      const rect = sprite.rect
+      rect.x = visualProps.x
+      rect.y = visualProps.y
+      rect.w = visualProps.width
+      rect.h = visualProps.height
+      rect.angle = visualProps.rotation
+      sprite.opacity = visualProps.opacity
+    }
+    sprite.zIndex = (this.originalTimelineItemData.config as any).zIndex
+  }
+
+  /**
+   * 重建文本时间轴项目（文本clip没有MediaItem）
+   */
+  private async rebuildTextItem(): Promise<TimelineItem> {
+    console.log('🔄 [DuplicateTimelineItemCommand] 重建文本时间轴项目...')
+
+    // 从保存的配置中获取文本内容和样式
+    const textConfig = this.originalTimelineItemData.config as any
+    const text = textConfig.text
+    const style = textConfig.style
+
+    if (!text) {
+      throw new Error('文本内容不能为空')
     }
 
-    // 设置变换属性（类型安全版本）
+    // 动态导入TextVisibleSprite
+    const { TextVisibleSprite } = await import('../../../utils/TextVisibleSprite')
+
+    // 重新创建文本精灵
+    const newSprite = await TextVisibleSprite.create(text, style)
+
+    // 设置时间范围（调整到新位置）
+    const originalTimeRange = this.originalTimelineItemData.timeRange
+    const originalDurationFrames = originalTimeRange.timelineEndTime - originalTimeRange.timelineStartTime
+    const newTimelineStartTimeFrames = this.newPositionFrames
+    const newTimelineEndTimeFrames = newTimelineStartTimeFrames + originalDurationFrames
+
+    newSprite.setTimeRange({
+      timelineStartTime: newTimelineStartTimeFrames,
+      timelineEndTime: newTimelineEndTimeFrames,
+      displayDuration: originalDurationFrames,
+    })
+
+    // 设置变换属性
     const visualProps = getVisualPropsFromData(this.originalTimelineItemData)
     if (visualProps) {
       const rect = newSprite.rect
@@ -466,39 +609,25 @@ export class DuplicateTimelineItemCommand implements SimpleCommand {
     }
 
     // 设置其他属性
-    newSprite.zIndex = (this.originalTimelineItemData.config as any).zIndex
+    newSprite.zIndex = textConfig.zIndex
 
     // 创建新的TimelineItem
     const newTimelineItem: TimelineItem = reactive({
       id: this.newTimelineItemId,
-      mediaItemId: this.originalTimelineItemData.mediaItemId,
+      mediaItemId: '', // 文本项目不需要媒体库项目
       trackId: this.originalTimelineItemData.trackId,
-      mediaType: this.originalTimelineItemData.mediaType,
-      timeRange:
-        mediaItem.mediaType === 'video' && isVideoTimeRange(originalTimeRange)
-          ? {
-              clipStartTime: originalTimeRange.clipStartTime,
-              clipEndTime: originalTimeRange.clipEndTime,
-              timelineStartTime: newTimelineStartTimeFrames,
-              timelineEndTime: newTimelineEndTimeFrames,
-              effectiveDuration: originalTimeRange.effectiveDuration,
-              playbackRate: originalTimeRange.playbackRate,
-            }
-          : isImageTimeRange(originalTimeRange)
-            ? {
-                timelineStartTime: newTimelineStartTimeFrames,
-                timelineEndTime: newTimelineEndTimeFrames,
-                displayDuration: originalTimeRange.displayDuration,
-              }
-            : originalTimeRange,
+      mediaType: 'text',
+      timeRange: {
+        timelineStartTime: newTimelineStartTimeFrames,
+        timelineEndTime: newTimelineEndTimeFrames,
+        displayDuration: originalDurationFrames,
+      },
       sprite: markRaw(newSprite),
-      thumbnailUrl: undefined, // 先设为undefined，稍后重新生成
+      thumbnailUrl: undefined, // 文本项目不需要缩略图
       config: { ...this.originalTimelineItemData.config },
     })
 
-    // 重新生成缩略图（异步执行，不阻塞重建过程）
-    this.regenerateThumbnailForDuplicatedItem(newTimelineItem, mediaItem)
-
+    console.log('✅ [DuplicateTimelineItemCommand] 文本时间轴项目重建完成')
     return newTimelineItem
   }
 
@@ -522,11 +651,9 @@ export class DuplicateTimelineItemCommand implements SimpleCommand {
       // 3. 添加sprite到WebAV画布
       this.webavModule.addSprite(newTimelineItem.sprite)
 
-      const mediaItem = this.mediaModule.getMediaItem(this.originalTimelineItemData.mediaItemId)
-      console.log(`✅ 已复制时间轴项目: ${mediaItem?.name || '未知素材'}`)
+      console.log(`✅ 已复制时间轴项目: ${this.originalTimelineItemData.mediaName}`)
     } catch (error) {
-      const mediaItem = this.mediaModule.getMediaItem(this.originalTimelineItemData.mediaItemId)
-      console.error(`❌ 复制时间轴项目失败: ${mediaItem?.name || '未知素材'}`, error)
+      console.error(`❌ 复制时间轴项目失败: ${this.originalTimelineItemData.mediaName}`, error)
       throw error
     }
   }
@@ -559,6 +686,12 @@ export class DuplicateTimelineItemCommand implements SimpleCommand {
     timelineItem: TimelineItem,
     mediaItem: MediaItem,
   ) {
+    // 文本clip不需要缩略图
+    if (timelineItem.mediaType === 'text') {
+      console.log('📝 文本clip不需要缩略图，跳过生成')
+      return
+    }
+
     try {
       console.log('🖼️ 开始为复制的项目重新生成缩略图...')
 
@@ -1043,6 +1176,18 @@ export class UpdateTransformCommand implements SimpleCommand {
         timelineEndTime: newTimelineEndTime,
         displayDuration: newDurationFrames,
       })
+    } else if (timelineItem.mediaType === 'text') {
+      // 对于文本，与图片类似，直接更新显示时长（使用帧数）
+      sprite.setTimeRange({
+        timelineStartTime: timeRange.timelineStartTime,
+        timelineEndTime: newTimelineEndTime,
+        displayDuration: newDurationFrames,
+      })
+      console.log('📝 [UpdateTimelineItemDuration] 文本时长已更新:', {
+        startTime: timeRange.timelineStartTime,
+        endTime: newTimelineEndTime,
+        duration: newDurationFrames
+      })
     }
 
     // 同步timeRange到TimelineItem
@@ -1099,7 +1244,7 @@ export class SplitTimelineItemCommand implements SimpleCommand {
     this.description = `分割时间轴项目: ${mediaItem?.name || '未知素材'} (在 ${framesToTimecode(splitTimeFrames)})`
 
     // 🎯 关键：保存原始项目的完整重建元数据
-    this.originalTimelineItemData = createTimelineItemData(originalTimelineItem)
+    this.originalTimelineItemData = createTimelineItemData(originalTimelineItem, mediaItem?.name || '未知素材')
 
     // 生成分割后项目的ID
     this.firstItemId = Date.now().toString() + Math.random().toString(36).substring(2, 11)
@@ -1633,7 +1778,10 @@ export class RemoveTrackCommand implements SimpleCommand {
     const affectedItems = this.timelineModule.timelineItems.value.filter(
       (item) => item.trackId === trackId,
     )
-    this.affectedTimelineItems = affectedItems.map((item) => createTimelineItemData(item))
+    this.affectedTimelineItems = affectedItems.map((item) => {
+      const mediaItem = this.mediaModule.getMediaItem(item.mediaItemId)
+      return createTimelineItemData(item, mediaItem?.name || '未知素材')
+    })
 
     console.log(
       `📋 准备删除轨道: ${track.name}, 受影响的时间轴项目: ${this.affectedTimelineItems.length}个`,
@@ -2023,13 +2171,9 @@ export class ResizeTimelineItemCommand implements SimpleCommand {
     }
 
     const sprite = timelineItem.sprite
-    const mediaItem = this.mediaModule.getMediaItem(timelineItem.mediaItemId)
-    if (!mediaItem) {
-      throw new Error(`找不到素材项目: ${timelineItem.mediaItemId}`)
-    }
 
-    // 根据媒体类型设置时间范围
-    if (mediaItem.mediaType === 'video' && isVideoTimeRange(timeRange)) {
+    // 根据媒体类型设置时间范围（直接使用 timelineItem.mediaType，避免冗余的 MediaItem 获取）
+    if (timelineItem.mediaType === 'video' && isVideoTimeRange(timeRange)) {
       // 视频类型：保持clipStartTime和clipEndTime，更新timeline时间
       sprite.setTimeRange({
         clipStartTime: timeRange.clipStartTime,
@@ -2037,8 +2181,15 @@ export class ResizeTimelineItemCommand implements SimpleCommand {
         timelineStartTime: timeRange.timelineStartTime,
         timelineEndTime: timeRange.timelineEndTime,
       })
-    } else if (mediaItem.mediaType === 'image' && isImageTimeRange(timeRange)) {
+    } else if (timelineItem.mediaType === 'image' && isImageTimeRange(timeRange)) {
       // 图片类型：设置displayDuration
+      sprite.setTimeRange({
+        timelineStartTime: timeRange.timelineStartTime,
+        timelineEndTime: timeRange.timelineEndTime,
+        displayDuration: timeRange.displayDuration,
+      })
+    } else if (timelineItem.mediaType === 'text' && isImageTimeRange(timeRange)) {
+      // 文本类型：与图片类似，设置displayDuration
       sprite.setTimeRange({
         timelineStartTime: timeRange.timelineStartTime,
         timelineEndTime: timeRange.timelineEndTime,

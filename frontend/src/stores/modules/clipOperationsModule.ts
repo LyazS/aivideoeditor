@@ -80,15 +80,15 @@ export function createClipOperationsModule(
       // 根据媒体类型克隆对应的Clip
       const newSprite = await createSpriteFromMediaItem(mediaItem)
 
-      // 根据媒体类型复制时间范围设置
-      if (mediaItem.mediaType === 'video' && isVideoTimeRange(timeRange)) {
+      // 根据媒体类型复制时间范围设置（直接使用 originalItem.mediaType，避免冗余的 MediaItem 获取）
+      if (originalItem.mediaType === 'video' && isVideoTimeRange(timeRange)) {
         ;(newSprite as VideoVisibleSprite).setTimeRange({
           clipStartTime: timeRange.clipStartTime,
           clipEndTime: timeRange.clipEndTime,
           timelineStartTime: timeRange.timelineStartTime,
           timelineEndTime: timeRange.timelineEndTime,
         })
-      } else if (mediaItem.mediaType === 'image') {
+      } else if (originalItem.mediaType === 'image') {
         ;(newSprite as ImageVisibleSprite).setTimeRange({
           timelineStartTime: timeRange.timelineStartTime,
           timelineEndTime: timeRange.timelineEndTime,
@@ -136,15 +136,15 @@ export function createClipOperationsModule(
         config: { ...originalItem.config },
       })
 
-      // 根据媒体类型更新新sprite的时间轴位置
-      if (mediaItem.mediaType === 'video' && isVideoTimeRange(timeRange)) {
+      // 根据媒体类型更新新sprite的时间轴位置（直接使用 originalItem.mediaType，避免冗余的 MediaItem 获取）
+      if (originalItem.mediaType === 'video' && isVideoTimeRange(timeRange)) {
         ;(newSprite as VideoVisibleSprite).setTimeRange({
           clipStartTime: timeRange.clipStartTime,
           clipEndTime: timeRange.clipEndTime,
           timelineStartTime: newTimelinePositionFrames,
           timelineEndTime: newTimelinePositionFrames + durationFrames,
         })
-      } else if (mediaItem.mediaType === 'image') {
+      } else if (originalItem.mediaType === 'image') {
         ;(newSprite as ImageVisibleSprite).setTimeRange({
           timelineStartTime: newTimelinePositionFrames,
           timelineEndTime: newTimelinePositionFrames + durationFrames,
@@ -305,8 +305,8 @@ export function createClipOperationsModule(
       return
     }
 
-    // 检查是否为视频类型（图片不支持分割）
-    if (mediaItem.mediaType !== 'video') {
+    // 检查是否为视频类型（图片不支持分割）（直接使用 originalItem.mediaType，避免冗余的 MediaItem 获取）
+    if (originalItem.mediaType !== 'video') {
       console.error('❌ 只有视频片段支持分割操作')
       console.groupEnd()
       return
