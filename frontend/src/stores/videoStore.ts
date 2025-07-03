@@ -37,6 +37,7 @@ import {
   ResizeTimelineItemCommand,
 } from './modules/commands/timelineCommands'
 import { BatchDeleteCommand, BatchAutoArrangeTrackCommand } from './modules/commands/batchCommands'
+import { AddTextItemCommand } from './modules/commands/textCommands'
 import type {
   MediaItem,
   TimelineItem,
@@ -125,6 +126,12 @@ export const useVideoStore = defineStore('video', () => {
    * @param timelineItem 要添加的时间轴项目
    */
   async function addTimelineItemWithHistory(timelineItem: TimelineItem) {
+    // 检查是否是文本项目，使用专门的文本命令
+    if (timelineItem.mediaType === 'text') {
+      await addTextItemWithHistory(timelineItem as any)
+      return
+    }
+
     const command = new AddTimelineItemCommand(
       timelineItem,
       {
@@ -139,6 +146,31 @@ export const useVideoStore = defineStore('video', () => {
       {
         getMediaItem: mediaModule.getMediaItem,
       },
+    )
+    await historyModule.executeCommand(command)
+  }
+
+  /**
+   * 带历史记录的添加文本项目方法
+   * @param textItem 要添加的文本时间轴项目
+   */
+  async function addTextItemWithHistory(textItem: any) {
+    const command = new AddTextItemCommand(
+      textItem.config.text,
+      textItem.config.style,
+      textItem.timeRange.timelineStartTime,
+      textItem.trackId,
+      textItem.timeRange.displayDuration,
+      configModule.videoResolution.value,
+      {
+        addTimelineItem: timelineModule.addTimelineItem,
+        removeTimelineItem: timelineModule.removeTimelineItem,
+        getTimelineItem: timelineModule.getTimelineItem,
+      },
+      {
+        addSprite: webavModule.addSprite,
+        removeSprite: webavModule.removeSprite,
+      }
     )
     await historyModule.executeCommand(command)
   }
@@ -944,8 +976,8 @@ export const useVideoStore = defineStore('video', () => {
     // 多选状态
     selectedTimelineItemIds: selectionModule.selectedTimelineItemIds,
     isMultiSelectMode: selectionModule.isMultiSelectMode,
-    // 编辑设置
-    proportionalScale: configModule.proportionalScale,
+    // 编辑设置（已废弃：等比缩放现在是每个clip独立状态）
+    // proportionalScale: configModule.proportionalScale,
     // 缩放和滚动状态
     zoomLevel: viewportModule.zoomLevel,
     scrollOffset: viewportModule.scrollOffset,

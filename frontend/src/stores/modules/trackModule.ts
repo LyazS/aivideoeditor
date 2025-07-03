@@ -22,11 +22,11 @@ export function createTrackModule() {
     },
     {
       id: generateTrackId(),
-      name: '视频轨道 2',
-      type: 'video',
+      name: '文本轨道 1',
+      type: 'text',
       isVisible: true,
       isMuted: false,
-      height: 80,
+      height: 60,
     },
   ])
 
@@ -53,7 +53,7 @@ export function createTrackModule() {
     const defaultHeights = {
       video: 80, // 视频轨道标准高度
       audio: 60, // 音频轨道较矮
-      text: 50, // 文本轨道最矮
+      text: 60, // 文本轨道，比视频轨道矮20px
     }
 
     // 计算同类型轨道的数量，用于生成默认名称
@@ -295,7 +295,7 @@ export function createTrackModule() {
     const defaultHeights = {
       video: 80,
       audio: 60,
-      text: 50,
+      text: 60,
     }
 
     tracks.value.forEach((track) => {

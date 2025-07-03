@@ -55,7 +55,7 @@ export class AddTimelineItemCommand implements SimpleCommand {
     this.description = `添加时间轴项目: ${mediaItem?.name || '未知素材'}`
 
     // 保存原始数据用于重建sprite（类型安全版本）
-    this.originalTimelineItemData = createTimelineItemData(timelineItem)
+    this.originalTimelineItemData = createTimelineItemData(timelineItem, mediaItem?.name || '未知素材')
   }
 
   /**
@@ -136,11 +136,9 @@ export class AddTimelineItemCommand implements SimpleCommand {
       // 2. 添加sprite到WebAV画布
       this.webavModule.addSprite(newTimelineItem.sprite)
 
-      const mediaItem = this.mediaModule.getMediaItem(this.originalTimelineItemData.mediaItemId)
-      console.log(`✅ 已添加时间轴项目: ${mediaItem?.name || '未知素材'}`)
+      console.log(`✅ 已添加时间轴项目: ${this.originalTimelineItemData.mediaName}`)
     } catch (error) {
-      const mediaItem = this.mediaModule.getMediaItem(this.originalTimelineItemData.mediaItemId)
-      console.error(`❌ 添加时间轴项目失败: ${mediaItem?.name || '未知素材'}`, error)
+      console.error(`❌ 添加时间轴项目失败: ${this.originalTimelineItemData.mediaName}`, error)
       throw error
     }
   }
@@ -224,7 +222,7 @@ export class RemoveTimelineItemCommand implements SimpleCommand {
     this.description = `移除时间轴项目: ${mediaItem?.name || '未知素材'}`
 
     // 🎯 关键：保存重建所需的完整元数据，而不是对象引用
-    this.originalTimelineItemData = createTimelineItemData(timelineItem)
+    this.originalTimelineItemData = createTimelineItemData(timelineItem, mediaItem?.name || '未知素材')
 
     console.log('💾 保存删除项目的重建数据:', {
       id: this.originalTimelineItemData.id,
@@ -407,7 +405,7 @@ export class DuplicateTimelineItemCommand implements SimpleCommand {
     this.description = `复制时间轴项目: ${mediaItem?.name || '未知素材'}`
 
     // 保存原始项目的完整重建元数据
-    this.originalTimelineItemData = createTimelineItemData(originalTimelineItem)
+    this.originalTimelineItemData = createTimelineItemData(originalTimelineItem, mediaItem?.name || '未知素材')
 
     // 生成新项目的ID
     this.newTimelineItemId = `timeline_item_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`
@@ -522,11 +520,9 @@ export class DuplicateTimelineItemCommand implements SimpleCommand {
       // 3. 添加sprite到WebAV画布
       this.webavModule.addSprite(newTimelineItem.sprite)
 
-      const mediaItem = this.mediaModule.getMediaItem(this.originalTimelineItemData.mediaItemId)
-      console.log(`✅ 已复制时间轴项目: ${mediaItem?.name || '未知素材'}`)
+      console.log(`✅ 已复制时间轴项目: ${this.originalTimelineItemData.mediaName}`)
     } catch (error) {
-      const mediaItem = this.mediaModule.getMediaItem(this.originalTimelineItemData.mediaItemId)
-      console.error(`❌ 复制时间轴项目失败: ${mediaItem?.name || '未知素材'}`, error)
+      console.error(`❌ 复制时间轴项目失败: ${this.originalTimelineItemData.mediaName}`, error)
       throw error
     }
   }
@@ -1043,6 +1039,18 @@ export class UpdateTransformCommand implements SimpleCommand {
         timelineEndTime: newTimelineEndTime,
         displayDuration: newDurationFrames,
       })
+    } else if (timelineItem.mediaType === 'text') {
+      // 对于文本，与图片类似，直接更新显示时长（使用帧数）
+      sprite.setTimeRange({
+        timelineStartTime: timeRange.timelineStartTime,
+        timelineEndTime: newTimelineEndTime,
+        displayDuration: newDurationFrames,
+      })
+      console.log('📝 [UpdateTimelineItemDuration] 文本时长已更新:', {
+        startTime: timeRange.timelineStartTime,
+        endTime: newTimelineEndTime,
+        duration: newDurationFrames
+      })
     }
 
     // 同步timeRange到TimelineItem
@@ -1099,7 +1107,7 @@ export class SplitTimelineItemCommand implements SimpleCommand {
     this.description = `分割时间轴项目: ${mediaItem?.name || '未知素材'} (在 ${framesToTimecode(splitTimeFrames)})`
 
     // 🎯 关键：保存原始项目的完整重建元数据
-    this.originalTimelineItemData = createTimelineItemData(originalTimelineItem)
+    this.originalTimelineItemData = createTimelineItemData(originalTimelineItem, mediaItem?.name || '未知素材')
 
     // 生成分割后项目的ID
     this.firstItemId = Date.now().toString() + Math.random().toString(36).substring(2, 11)
@@ -1633,7 +1641,10 @@ export class RemoveTrackCommand implements SimpleCommand {
     const affectedItems = this.timelineModule.timelineItems.value.filter(
       (item) => item.trackId === trackId,
     )
-    this.affectedTimelineItems = affectedItems.map((item) => createTimelineItemData(item))
+    this.affectedTimelineItems = affectedItems.map((item) => {
+      const mediaItem = this.mediaModule.getMediaItem(item.mediaItemId)
+      return createTimelineItemData(item, mediaItem?.name || '未知素材')
+    })
 
     console.log(
       `📋 准备删除轨道: ${track.name}, 受影响的时间轴项目: ${this.affectedTimelineItems.length}个`,
@@ -2023,13 +2034,9 @@ export class ResizeTimelineItemCommand implements SimpleCommand {
     }
 
     const sprite = timelineItem.sprite
-    const mediaItem = this.mediaModule.getMediaItem(timelineItem.mediaItemId)
-    if (!mediaItem) {
-      throw new Error(`找不到素材项目: ${timelineItem.mediaItemId}`)
-    }
 
-    // 根据媒体类型设置时间范围
-    if (mediaItem.mediaType === 'video' && isVideoTimeRange(timeRange)) {
+    // 根据媒体类型设置时间范围（直接使用 timelineItem.mediaType，避免冗余的 MediaItem 获取）
+    if (timelineItem.mediaType === 'video' && isVideoTimeRange(timeRange)) {
       // 视频类型：保持clipStartTime和clipEndTime，更新timeline时间
       sprite.setTimeRange({
         clipStartTime: timeRange.clipStartTime,
@@ -2037,8 +2044,15 @@ export class ResizeTimelineItemCommand implements SimpleCommand {
         timelineStartTime: timeRange.timelineStartTime,
         timelineEndTime: timeRange.timelineEndTime,
       })
-    } else if (mediaItem.mediaType === 'image' && isImageTimeRange(timeRange)) {
+    } else if (timelineItem.mediaType === 'image' && isImageTimeRange(timeRange)) {
       // 图片类型：设置displayDuration
+      sprite.setTimeRange({
+        timelineStartTime: timeRange.timelineStartTime,
+        timelineEndTime: timeRange.timelineEndTime,
+        displayDuration: timeRange.displayDuration,
+      })
+    } else if (timelineItem.mediaType === 'text' && isImageTimeRange(timeRange)) {
+      // 文本类型：与图片类似，设置displayDuration
       sprite.setTimeRange({
         timelineStartTime: timeRange.timelineStartTime,
         timelineEndTime: timeRange.timelineEndTime,

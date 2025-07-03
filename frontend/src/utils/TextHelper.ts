@@ -32,10 +32,31 @@ export class TextHelper {
       cssRules.push(`background-color: ${style.backgroundColor}`)
     }
 
-    // 文本效果
+    // 文本效果 - 合并阴影和发光效果
+    const shadows: string[] = []
+
+    // 添加普通阴影
     if (style.textShadow) {
-      cssRules.push(`text-shadow: ${style.textShadow}`)
+      shadows.push(style.textShadow)
     }
+
+    // 添加发光效果
+    if (style.textGlow) {
+      const { color, blur, spread = 0 } = style.textGlow
+      shadows.push(`0 0 ${blur}px ${color}`)
+      shadows.push(`0 0 ${blur * 2}px ${color}`)
+      shadows.push(`0 0 ${blur * 3}px ${color}`)
+      if (spread > 0) {
+        shadows.push(`0 0 ${spread}px ${color}`)
+      }
+    }
+
+    // 应用合并的阴影效果
+    if (shadows.length > 0) {
+      cssRules.push(`text-shadow: ${shadows.join(', ')}`)
+    }
+
+    // 描边效果
     if (style.textStroke) {
       cssRules.push(`-webkit-text-stroke: ${style.textStroke.width}px ${style.textStroke.color}`)
     }
@@ -51,7 +72,7 @@ export class TextHelper {
     }
 
     // 默认样式
-    cssRules.push('white-space: pre-wrap') // 保持换行
+    cssRules.push('white-space: nowrap') // 不换行显示
     cssRules.push('display: inline-block') // 确保尺寸计算正确
 
     return cssRules.join('; ')
@@ -121,9 +142,11 @@ export class TextHelper {
       fontWeight: style.fontWeight ?? DEFAULT_TEXT_STYLE.fontWeight,
       fontStyle: style.fontStyle ?? DEFAULT_TEXT_STYLE.fontStyle,
       color: style.color ?? DEFAULT_TEXT_STYLE.color,
+      // 只有当明确提供了 backgroundColor 时才设置，避免设置为 undefined 导致的问题
       backgroundColor: style.backgroundColor,
       textShadow: style.textShadow,
       textStroke: style.textStroke,
+      textGlow: style.textGlow,
       textAlign: style.textAlign ?? DEFAULT_TEXT_STYLE.textAlign,
       lineHeight: style.lineHeight ?? DEFAULT_TEXT_STYLE.lineHeight,
       maxWidth: style.maxWidth,

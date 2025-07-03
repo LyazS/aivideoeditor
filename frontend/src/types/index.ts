@@ -164,6 +164,12 @@ interface VisualMediaProps extends BaseMediaProps {
   rotation: number
   /** 透明度（0-1） */
   opacity: number
+  /** 原始宽度（用于计算缩放系数） */
+  originalWidth: number
+  /** 原始高度（用于计算缩放系数） */
+  originalHeight: number
+  /** 等比缩放状态（每个clip独立） */
+  proportionalScale: boolean
 }
 
 /**
@@ -481,6 +487,8 @@ export interface TimelineItemData<T extends MediaType = MediaType> {
       : ImageTimeRange
   config: GetMediaConfig<T>
   thumbnailUrl?: string
+  /** 素材名称，用于命令描述信息，避免冗余的 MediaItem 获取 */
+  mediaName: string
 }
 
 /**
@@ -675,8 +683,8 @@ export function isAudioTimelineItem(item: TimelineItem): item is TimelineItem<'a
  */
 export function hasVisualProps(
   item: TimelineItem,
-): item is TimelineItem<'video'> | TimelineItem<'image'> {
-  return item.mediaType === 'video' || item.mediaType === 'image'
+): item is TimelineItem<'video'> | TimelineItem<'image'> | TimelineItem<'text'> {
+  return item.mediaType === 'video' || item.mediaType === 'image' || item.mediaType === 'text'
 }
 
 /**
@@ -697,6 +705,7 @@ export function hasAudioProps(
  */
 export function createTimelineItemData<T extends MediaType>(
   item: TimelineItem<T>,
+  mediaName: string,
 ): TimelineItemData<T> {
   return {
     id: item.id,
@@ -706,6 +715,7 @@ export function createTimelineItemData<T extends MediaType>(
     timeRange: item.timeRange,
     config: { ...item.config },
     thumbnailUrl: item.thumbnailUrl,
+    mediaName,
   }
 }
 
@@ -765,6 +775,12 @@ export interface TextStyleConfig {
     width: number
     color: string
   }
+  textGlow?: {
+    // 文字发光
+    color: string
+    blur: number
+    spread?: number
+  }
 
   // 布局属性
   textAlign: 'left' | 'center' | 'right' // 文本对齐
@@ -786,7 +802,7 @@ export const DEFAULT_TEXT_STYLE: TextStyleConfig = {
   fontFamily: 'Arial, sans-serif',
   fontWeight: 'normal',
   fontStyle: 'normal',
-  color: 'white',
+  color: '#ffffff',
   textAlign: 'center',
   lineHeight: 1.2,
 }
@@ -808,6 +824,53 @@ export type CustomVisibleSprite = VideoVisibleSprite | ImageVisibleSprite | Text
  * 原有的 CustomSprite 类型别名（更新以包含文本精灵）
  */
 export type CustomSprite = VideoVisibleSprite | ImageVisibleSprite | TextVisibleSprite
+
+// ==================== 媒体类型分类系统 ====================
+
+/**
+ * 媒体类型分类
+ * 区分基于文件的媒体和程序生成的媒体
+ */
+export const MEDIA_TYPE_CATEGORIES = {
+  /** 基于文件的媒体类型（需要素材库项目） */
+  FILE_BASED: ['video', 'image', 'audio'] as const,
+
+  /** 程序生成的媒体类型（不需要素材库项目） */
+  GENERATED: ['text'] as const,
+} as const
+
+/**
+ * 检查媒体类型是否需要素材库项目
+ * @param mediaType 媒体类型
+ * @returns 是否需要素材库项目
+ */
+export function requiresMediaItem(mediaType: MediaType): boolean {
+  return MEDIA_TYPE_CATEGORIES.FILE_BASED.includes(mediaType as any)
+}
+
+/**
+ * 检查媒体类型是否为程序生成
+ * @param mediaType 媒体类型
+ * @returns 是否为程序生成的媒体
+ */
+export function isGeneratedMedia(mediaType: MediaType): boolean {
+  return MEDIA_TYPE_CATEGORIES.GENERATED.includes(mediaType as any)
+}
+
+/**
+ * 获取媒体类型的分类名称
+ * @param mediaType 媒体类型
+ * @returns 分类名称
+ */
+export function getMediaTypeCategory(mediaType: MediaType): 'FILE_BASED' | 'GENERATED' | 'UNKNOWN' {
+  if (requiresMediaItem(mediaType)) {
+    return 'FILE_BASED'
+  }
+  if (isGeneratedMedia(mediaType)) {
+    return 'GENERATED'
+  }
+  return 'UNKNOWN'
+}
 
 // ==================== 关键帧动画系统类型 ====================
 

@@ -18,10 +18,10 @@
           <div v-for="item in multiSelectInfo.items" :key="item?.id" class="selected-item">
             <span class="item-name">
               {{
-                item ? videoStore.getMediaItem(item.mediaItemId)?.name || '未知素材' : '未知素材'
+                item ? getItemDisplayName(item) : '未知素材'
               }}
             </span>
-            <span class="item-type">{{ item?.mediaType === 'video' ? '视频' : '图片' }}</span>
+            <span class="item-type">{{ getItemTypeLabel(item?.mediaType) }}</span>
           </div>
         </div>
       </div>
@@ -37,8 +37,15 @@
           :current-frame="currentFrame"
         />
 
-        <!-- 未来可以在这里添加其他类型的属性组件，比如字幕属性组件 -->
-        <!-- <SubtitleClipProperties v-else-if="selectedTimelineItem.mediaType === 'subtitle'" ... /> -->
+        <!-- 文本项目属性组件 -->
+        <TextClipProperties
+          v-else-if="selectedTimelineItem.mediaType === 'text'"
+          :selected-timeline-item="selectedTimelineItem as TimelineItem<'text'>"
+          :current-frame="currentFrame"
+        />
+
+        <!-- 未来可以在这里添加其他类型的属性组件，比如音频属性组件 -->
+        <!-- <AudioClipProperties v-else-if="selectedTimelineItem.mediaType === 'audio'" ... /> -->
       </div>
 
       <!-- 无选择状态 -->
@@ -59,6 +66,8 @@
 import { computed } from 'vue'
 import { useVideoStore } from '../stores/videoStore'
 import VideoClipProperties from './VideoClipProperties.vue'
+import TextClipProperties from './TextClipProperties.vue'
+import type { TimelineItem } from '../types'
 
 const videoStore = useVideoStore()
 
@@ -86,6 +95,36 @@ const multiSelectInfo = computed(() => {
       .filter(Boolean),
   }
 })
+
+// 获取项目显示名称
+const getItemDisplayName = (item: any) => {
+  if (!item) return '未知素材'
+
+  if (item.mediaType === 'text') {
+    // 文本项目显示文本内容
+    const text = item.config?.text || '空文本'
+    return text.length > 15 ? text.substring(0, 15) + '...' : text
+  } else {
+    // 其他类型显示素材名称
+    return videoStore.getMediaItem(item.mediaItemId)?.name || '未知素材'
+  }
+}
+
+// 获取项目类型标签
+const getItemTypeLabel = (mediaType: string | undefined) => {
+  switch (mediaType) {
+    case 'video':
+      return '视频'
+    case 'image':
+      return '图片'
+    case 'audio':
+      return '音频'
+    case 'text':
+      return '文本'
+    default:
+      return '未知'
+  }
+}
 </script>
 
 <style scoped>

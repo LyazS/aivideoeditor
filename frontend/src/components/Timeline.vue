@@ -127,13 +127,15 @@
           @wheel="handleWheel"
         >
           <!-- 该轨道的时间轴项目 -->
-          <VideoClip
+          <component
             v-for="item in getClipsForTrack(track.id)"
             :key="item.id"
+            :is="getClipComponent(item.mediaType)"
             :timeline-item="item"
             :track="track"
             :timeline-width="timelineWidth"
             :total-duration-frames="videoStore.totalDurationFrames"
+            @select="handleSelectClip"
             @update-position="handleTimelineItemPositionUpdate"
             @remove="handleTimelineItemRemove"
           />
@@ -209,6 +211,7 @@ import type {
 } from '../types'
 import { hasVisualProps } from '../types'
 import VideoClip from './VideoClip.vue'
+import TextClip from './TextClip.vue'
 import TimeScale from './TimeScale.vue'
 import { ContextMenu, ContextMenuItem, ContextMenuSeparator } from '@imengyu/vue3-context-menu'
 
@@ -312,7 +315,23 @@ const getTrackMenuItems = (): MenuItem[] => {
   const hasClips = getClipsForTrack(trackId).length > 0
   const canDelete = tracks.value.length > 1
 
-  return [
+  const menuItems: MenuItem[] = []
+
+  // 文本轨道专用菜单项
+  if (track.type === 'text') {
+    menuItems.push({
+      label: '添加文本',
+      icon: 'M9,7H15V15H17V7H23V5H17V3A1,1 0 0,0 16,2H8A1,1 0 0,0 7,3V5H1V7H7V15H9V7Z',
+      onClick: () => createTextAtPosition(trackId),
+    })
+
+    if (hasClips) {
+      menuItems.push({ type: 'separator' } as MenuItem)
+    }
+  }
+
+  // 通用菜单项
+  menuItems.push(
     {
       label: hasClips ? '自动排列片段' : '自动排列片段（无片段）',
       icon: 'M3,3H21V5H3V3M3,7H15V9H3V7M3,11H21V13H3V11M3,15H15V17H3V15M3,19H21V21H3V19Z',
@@ -336,18 +355,22 @@ const getTrackMenuItems = (): MenuItem[] => {
         ? 'M12,4L9.91,6.09L12,8.18M4.27,3L3,4.27L7.73,9H3V15H7L12,20V13.27L16.25,17.53C15.58,18.04 14.83,18.46 14,18.7V20.77C15.38,20.45 16.63,19.82 17.68,18.96L19.73,21L21,19.73L12,10.73M19,12C19,12.94 18.8,13.82 18.46,14.64L19.97,16.15C20.62,14.91 21,13.5 21,12C21,7.72 18,4.14 14,3.23V5.29C16.89,6.15 19,8.83 19,12M16.5,12C16.5,10.23 15.5,8.71 14,7.97V10.18L16.45,12.63C16.5,12.43 16.5,12.21 16.5,12Z'
         : 'M14,3.23V5.29C16.89,6.15 19,8.83 19,12C19,15.17 16.89,17.85 14,18.71V20.77C18,19.86 21,16.28 21,12C21,7.72 18,4.14 14,3.23M16.5,12C16.5,10.23 15.5,8.71 14,7.97V16C15.5,15.29 16.5,13.76 16.5,12M3,9V15H7L12,20V4L7,9H3Z',
       onClick: () => toggleMute(trackId),
-    },
-    ...(canDelete
-      ? [
-          { type: 'separator' } as MenuItem,
-          {
-            label: '删除轨道',
-            icon: 'M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z',
-            onClick: () => removeTrack(trackId),
-          } as MenuItem,
-        ]
-      : []),
-  ]
+    }
+  )
+
+  // 删除轨道选项
+  if (canDelete) {
+    menuItems.push(
+      { type: 'separator' } as MenuItem,
+      {
+        label: '删除轨道',
+        icon: 'M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z',
+        onClick: () => removeTrack(trackId),
+      } as MenuItem
+    )
+  }
+
+  return menuItems
 }
 
 // 当前菜单项配置
@@ -366,11 +389,11 @@ function getClipsForTrack(trackId: string) {
 // 轨道管理方法
 async function addNewTrack(type: TrackType = 'video') {
   try {
-    // 检查轨道类型限制
-    if (type === 'audio' || type === 'text') {
+    // 检查轨道类型限制（只限制音频轨道，文本轨道已支持）
+    if (type === 'audio') {
       dialogs.showOperationError(
         '添加轨道',
-        `${type === 'audio' ? '音频' : '文本'}轨道功能暂未实现，敬请期待！`,
+        '音频轨道功能暂未实现，敬请期待！',
       )
       return
     }
@@ -378,11 +401,17 @@ async function addNewTrack(type: TrackType = 'video') {
     const newTrackId = await videoStore.addTrackWithHistory(type)
     if (newTrackId) {
       console.log('✅ 轨道添加成功，新轨道ID:', newTrackId, '类型:', type)
+
+      // 如果是文本轨道，显示成功提示
+      if (type === 'text') {
+        dialogs.showSuccess('文本轨道创建成功！现在可以右键点击轨道添加文本内容。')
+      }
     } else {
       console.error('❌ 轨道添加失败')
     }
   } catch (error) {
     console.error('❌ 添加轨道时出错:', error)
+    dialogs.showOperationError('添加轨道', (error as Error).message)
   }
 }
 
@@ -429,19 +458,19 @@ function getTrackTypeLabel(type: TrackType): string {
 
 // 检查媒体类型与轨道类型的兼容性
 function isMediaCompatibleWithTrack(mediaType: MediaType, trackType: TrackType): boolean {
-  // 目前只有视频轨道支持视频和图片素材
+  // 视频轨道支持视频和图片素材
   if (trackType === 'video') {
     return mediaType === 'video' || mediaType === 'image'
   }
 
-  // 音频轨道暂时不支持任何素材（占位符）
+  // 音频轨道支持音频素材（暂未实现）
   if (trackType === 'audio') {
-    return false
+    return mediaType === 'audio'
   }
 
-  // 文本轨道暂时不支持任何素材（占位符）
+  // 文本轨道支持文本素材
   if (trackType === 'text') {
-    return false
+    return mediaType === 'text'
   }
 
   return false
@@ -803,11 +832,36 @@ async function handleTimelineItemDrop(event: DragEvent, dragData: TimelineItemDr
   if (draggedItem) {
     const targetTrack = tracks.value.find((t) => t.id === targetTrackId)
     if (targetTrack && !isMediaCompatibleWithTrack(draggedItem.mediaType, targetTrack.type)) {
-      const mediaTypeLabel = draggedItem.mediaType === 'video' ? '视频' : '图片'
+      // 获取媒体类型标签
+      const mediaTypeLabels = {
+        video: '视频',
+        image: '图片',
+        audio: '音频',
+        text: '文本'
+      }
+      const mediaTypeLabel = mediaTypeLabels[draggedItem.mediaType] || '未知'
       const trackTypeLabel = getTrackTypeLabel(targetTrack.type)
+
+      // 根据媒体类型提供合适的建议
+      let suggestion = ''
+      switch (draggedItem.mediaType) {
+        case 'video':
+        case 'image':
+          suggestion = '请将该片段拖拽到视频轨道。'
+          break
+        case 'audio':
+          suggestion = '请将该片段拖拽到音频轨道。'
+          break
+        case 'text':
+          suggestion = '请将该片段拖拽到文本轨道。'
+          break
+        default:
+          suggestion = '请将该片段拖拽到兼容的轨道。'
+      }
+
       dialogs.showOperationError(
         '拖拽失败',
-        `${mediaTypeLabel}片段不能拖拽到${trackTypeLabel}轨道上。\n请将${mediaTypeLabel}片段拖拽到视频轨道。`,
+        `${mediaTypeLabel}片段不能拖拽到${trackTypeLabel}轨道上。\n${suggestion}`,
       )
       return
     }
@@ -864,13 +918,43 @@ async function handleMediaItemDrop(event: DragEvent, mediaDragData: MediaItemDra
       return
     }
 
-    // 检查素材类型与轨道类型的兼容性
-    if (!isMediaCompatibleWithTrack(mediaItem.mediaType, targetTrack.type)) {
-      const mediaTypeLabel = mediaItem.mediaType === 'video' ? '视频' : '图片'
-      const trackTypeLabel = getTrackTypeLabel(targetTrack.type)
+    // 文本类型不支持从素材库拖拽创建
+    if (mediaItem.mediaType === 'text') {
       dialogs.showOperationError(
         '拖拽失败',
-        `${mediaTypeLabel}素材不能拖拽到${trackTypeLabel}轨道上。\n请将${mediaTypeLabel}素材拖拽到视频轨道。`,
+        '文本内容不能通过拖拽创建。\n请在文本轨道中右键选择"添加文本"。',
+      )
+      return
+    }
+
+    // 检查素材类型与轨道类型的兼容性
+    if (!isMediaCompatibleWithTrack(mediaItem.mediaType, targetTrack.type)) {
+      // 获取媒体类型标签
+      const mediaTypeLabels = {
+        video: '视频',
+        image: '图片',
+        audio: '音频'
+      }
+      const mediaTypeLabel = mediaTypeLabels[mediaItem.mediaType] || '未知'
+      const trackTypeLabel = getTrackTypeLabel(targetTrack.type)
+
+      // 根据媒体类型提供合适的建议
+      let suggestion = ''
+      switch (mediaItem.mediaType) {
+        case 'video':
+        case 'image':
+          suggestion = '请将该素材拖拽到视频轨道。'
+          break
+        case 'audio':
+          suggestion = '请将该素材拖拽到音频轨道。'
+          break
+        default:
+          suggestion = '请将该素材拖拽到兼容的轨道。'
+      }
+
+      dialogs.showOperationError(
+        '拖拽失败',
+        `${mediaTypeLabel}素材不能拖拽到${trackTypeLabel}轨道上。\n${suggestion}`,
       )
       return
     }
@@ -1133,6 +1217,11 @@ async function createMediaClipFromMediaItem(
           height: sprite.rect.h,
           rotation: sprite.rect.angle || 0,
           opacity: sprite.opacity,
+          // 原始尺寸（用于计算缩放系数）
+          originalWidth: originalResolution?.width || sprite.rect.w,
+          originalHeight: originalResolution?.height || sprite.rect.h,
+          // 等比缩放状态（默认开启）
+          proportionalScale: true,
           // 音频属性
           volume: 1,
           isMuted: false,
@@ -1149,6 +1238,11 @@ async function createMediaClipFromMediaItem(
           height: sprite.rect.h,
           rotation: sprite.rect.angle || 0,
           opacity: sprite.opacity,
+          // 原始尺寸（用于计算缩放系数）
+          originalWidth: originalResolution?.width || sprite.rect.w,
+          originalHeight: originalResolution?.height || sprite.rect.h,
+          // 等比缩放状态（默认开启）
+          proportionalScale: true,
           // 基础属性
           zIndex: sprite.zIndex,
           animation: undefined,
@@ -1201,6 +1295,30 @@ async function handleTimelineItemPositionUpdate(
     console.error('❌ 移动时间轴项目失败:', error)
     // 如果历史记录移动失败，回退到直接移动
     videoStore.updateTimelineItemPosition(timelineItemId, newPositionFrames, newTrackId)
+  }
+}
+
+// 根据媒体类型获取对应的Clip组件
+function getClipComponent(mediaType: MediaType) {
+  switch (mediaType) {
+    case 'text':
+      return TextClip
+    case 'video':
+    case 'image':
+    case 'audio':
+    default:
+      return VideoClip
+  }
+}
+
+// 处理clip选中事件
+function handleSelectClip(itemId: string) {
+  console.log('🎯 [Timeline] 选中clip:', itemId)
+  try {
+    // 使用videoStore的选择方法
+    videoStore.selectTimelineItem(itemId)
+  } catch (error) {
+    console.error('❌ 选中clip失败:', error)
   }
 }
 
@@ -1536,6 +1654,69 @@ function renameTrack() {
   }
 }
 
+// 在指定位置创建文本项目
+async function createTextAtPosition(trackId: string) {
+  try {
+    console.log('🔄 [Timeline] 开始创建文本项目:', { trackId })
+
+    // 计算时间位置（使用右键点击的位置）
+    const timePosition = getTimePositionFromContextMenu()
+
+    // 导入文本时间轴工具函数
+    const { createTextTimelineItem } = await import('../utils/textTimelineUtils')
+
+    // 创建文本时间轴项目
+    const textItem = await createTextTimelineItem(
+      '点击编辑文本', // 默认文本内容
+      { fontSize: 48, color: '#ffffff' }, // 默认样式
+      timePosition, // 开始时间（帧数）
+      trackId, // 轨道ID
+      150, // 默认时长（5秒@30fps）
+      videoStore.videoResolution // 视频分辨率
+    )
+
+    // 添加到时间轴（带历史记录）
+    await videoStore.addTimelineItemWithHistory(textItem)
+
+    console.log('✅ [Timeline] 文本项目创建成功:', {
+      id: textItem.id,
+      text: textItem.config.text,
+      position: timePosition
+    })
+
+    // 选中新创建的文本项目
+    videoStore.selectTimelineItem(textItem.id)
+
+  } catch (error) {
+    console.error('❌ [Timeline] 创建文本项目失败:', error)
+    dialogs.showOperationError('创建文本项目', (error as Error).message)
+  } finally {
+    showContextMenu.value = false
+  }
+}
+
+// 从右键菜单上下文获取时间位置
+function getTimePositionFromContextMenu(): number {
+  // 获取右键点击的位置
+  const clickX = contextMenuOptions.value.x
+
+  // 计算相对于时间轴内容区域的位置
+  const timelineBodyRect = timelineBody.value?.getBoundingClientRect()
+  if (!timelineBodyRect) {
+    console.warn('⚠️ 无法获取时间轴主体边界，使用默认位置')
+    return 0
+  }
+
+  // 减去轨道控制区域的宽度（150px）
+  const relativeX = clickX - timelineBodyRect.left - 150
+
+  // 转换为帧数
+  const timeFrames = videoStore.pixelToFrame(relativeX, timelineWidth.value)
+
+  // 确保时间位置不为负数
+  return Math.max(0, Math.round(timeFrames))
+}
+
 onMounted(() => {
   updateTimelineWidth()
   window.addEventListener('resize', updateTimelineWidth)
@@ -1629,7 +1810,7 @@ onUnmounted(() => {
 .track-row {
   display: flex;
   border-bottom: 1px solid var(--color-border-primary);
-  min-height: 80px;
+  /* 移除固定的min-height，让轨道高度由track.height动态控制 */
 }
 
 .track-controls {
