@@ -588,7 +588,7 @@ function showTimelineContextMenu(event: MouseEvent, trackId: string, timePositio
 
 async function createTextAtPosition(trackId: string, timeFrames: number) {
   const textItem = await createTextTimelineItem(
-    '点击编辑文本',
+    '默认文本',
     { fontSize: 48, color: '#ffffff' },
     timeFrames,
     trackId
@@ -1121,7 +1121,7 @@ const contextMenuItems = computed(() => {
 
 async function createTextAtPosition(trackId: string, timeFrames: number) {
   const textItem = await createTextTimelineItem(
-    '点击编辑文本',
+    '默认文本',
     { fontSize: 48, color: 'white' },
     timeFrames,
     trackId

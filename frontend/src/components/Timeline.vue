@@ -1690,7 +1690,7 @@ async function createTextAtPosition(trackId: string) {
 
     // 创建文本时间轴项目
     const textItem = await createTextTimelineItem(
-      '点击编辑文本', // 默认文本内容
+      '默认文本', // 默认文本内容
       { fontSize: 48, color: '#ffffff' }, // 默认样式
       timePosition, // 开始时间（帧数）
       trackId, // 轨道ID
