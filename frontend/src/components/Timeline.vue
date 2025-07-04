@@ -1399,7 +1399,7 @@ async function handleTimelineContainerClick(event: MouseEvent) {
   const target = event.target as HTMLElement
 
   // 检查点击的是否是时间轴容器本身或其他空白区域
-  // 排除点击在VideoClip、按钮、输入框等交互元素上的情况
+  // 排除点击在TimelineVideoClip、按钮、输入框等交互元素上的情况
   // 注意：不包括 track-content，因为它由 handleTimelineClick 处理
   if (
     target.classList.contains('timeline') ||

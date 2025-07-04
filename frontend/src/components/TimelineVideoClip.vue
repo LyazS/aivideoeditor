@@ -313,7 +313,7 @@ onMounted(() => {
   opacity: 0.8;
 }
 
-/* VideoClip内容样式 */
+/* TimelineVideoClip内容样式 */
 
 .clip-thumbnail {
   width: 50px; /* 压缩缩略图宽度 */
