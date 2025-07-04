@@ -256,7 +256,7 @@ const emit = defineEmits<{
   'select': [itemId: string]
 }>()
 
-// TextClip专用逻辑
+// TimelineTextClip专用逻辑
 const textPreview = computed(() => {
   const text = props.timelineItem.config.text || ''
   return text.length > 20 ? text.substring(0, 20) + '...' : text

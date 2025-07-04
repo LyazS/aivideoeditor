@@ -323,7 +323,7 @@ const emit = defineEmits<{
   'select': [itemId: string]
 }>()
 
-// TextClip专用逻辑
+// TimelineTextClip专用逻辑
 const textPreview = computed(() => {
   const text = props.timelineItem.config.text || ''
   return text.length > 20 ? text.substring(0, 20) + '...' : text
@@ -331,7 +331,7 @@ const textPreview = computed(() => {
 </script>
 
 <style scoped>
-/* TextClip专用样式 */
+/* TimelineTextClip专用样式 */
 .text-clip {
   background: linear-gradient(135deg, #4CAF50, #45a049); /* 文本专用颜色 */
 }
@@ -603,11 +603,11 @@ async function createTextAtPosition(trackId: string, timeFrames: number) {
 ### 阶段1：基础文本轨道支持 ✅ 已完成
 1. ✅ 扩展类型定义
 2. ✅ 实现文本项目创建流程
-3. ✅ 创建TextClip组件显示文本项目（基于BaseClip）
+3. ✅ 创建TimelineTextClip组件显示文本项目（基于BaseClip）
 4. ✅ 基础的文本轨道操作
 
 ### 阶段2：文本编辑功能 ✅ 已完成
-1. ✅ 文本编辑面板组件（TextClipProperties.vue）
+1. ✅ 文本编辑面板组件（TimelineTextClipProperties.vue）
 2. ✅ 文本样式控制器（完整的样式控制）
 3. ✅ 实时预览和更新（UpdateTextCommand）
 4. ✅ 文本项目的位置和大小调整（TransformControls集成）
@@ -985,16 +985,16 @@ export async function createTextTimelineItem(
 - [x] 与现有时间轴管理兼容
 - [x] createTextTimelineItem 函数已实现并测试通过
 
-#### 1.3 TextClip组件开发
+#### 1.3 TimelineTextClip组件开发
 **优先级**：🟡 高 | **预估时间**：3小时
 
 **任务内容**：
-- 基于现有 BaseClip 创建 TextClip 组件
+- 基于现有 BaseClip 创建 TimelineTextClip 组件
 - 实现文本内容的时间轴显示
 
 **具体实现**：
 ```vue
-<!-- frontend/src/components/TextClip.vue -->
+<!-- frontend/src/components/TimelineTextClip.vue -->
 <template>
   <BaseClip
     :timeline-item="timelineItem"
@@ -1056,7 +1056,7 @@ const textPreview = computed(() => {
 ```
 
 **验收标准**：
-- [x] TextClip 正确继承 BaseClip 功能
+- [x] TimelineTextClip 正确继承 BaseClip 功能
 - [x] 文本内容正确显示
 - [x] 样式符合设计规范
 - [x] 选中状态正常工作
@@ -1066,7 +1066,7 @@ const textPreview = computed(() => {
 **优先级**：🟡 高 | **预估时间**：2小时
 
 **任务内容**：
-- 在 Timeline.vue 中集成 TextClip 组件
+- 在 Timeline.vue 中集成 TimelineTextClip 组件
 - 实现根据媒体类型渲染不同组件
 
 **具体实现**：
@@ -1077,11 +1077,11 @@ function getClipComponent(mediaType: MediaType) {
     case 'video':
     case 'image':
     case 'audio':
-      return VideoClip
+      return TimelineVideoClip
     case 'text':
-      return TextClip  // 新增
+      return TimelineTextClip  // 新增
     default:
-      return VideoClip
+      return TimelineVideoClip
   }
 }
 ```
@@ -1268,7 +1268,7 @@ export function requiresMediaItem(mediaType: MediaType): boolean {
 - ✅ 时长调整功能（时间码输入）
 
 #### 2.2 文本样式控制器 ✅ 已完成
-**实现状态**：✅ 完成 | **集成在**：`TextClipProperties.vue`
+**实现状态**：✅ 完成 | **集成在**：`TimelineTextClipProperties.vue`
 
 **已实现功能**：
 - ✅ 字体选择（Arial, 微软雅黑, 黑体, 宋体, 楷体, Times New Roman, Courier New）
@@ -1283,7 +1283,7 @@ export function requiresMediaItem(mediaType: MediaType): boolean {
 
 **已实现功能**：
 - ✅ 根据媒体类型动态显示属性组件
-- ✅ 文本项目选中时正确显示TextClipProperties
+- ✅ 文本项目选中时正确显示TimelineTextClipProperties
 - ✅ 多选状态处理
 - ✅ 空选择状态处理
 
