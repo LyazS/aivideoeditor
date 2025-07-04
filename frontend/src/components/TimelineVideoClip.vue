@@ -269,13 +269,13 @@ async function regenerateThumbnailAfterResize() {
 }
 
 onMounted(() => {
-  // VideoClip组件挂载完成
-  console.log('VideoClip组件挂载完成:', props.timelineItem.id)
+  // TimelineVideoClip组件挂载完成
+  console.log('TimelineVideoClip组件挂载完成:', props.timelineItem.id)
 })
 </script>
 
 <style scoped>
-/* VideoClip特有样式 - 基于BaseClip */
+/* TimelineVideoClip特有样式 - 基于BaseClip */
 .video-clip {
   /* 视频/图片clip的背景色 */
   background: linear-gradient(135deg, var(--color-clip-primary), var(--color-clip-primary-dark));

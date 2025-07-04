@@ -188,7 +188,7 @@ function formatDurationFromFrames(frames: number): string {
 </script>
 
 <style scoped>
-/* TextClip专用样式 */
+/* TimelineTextClip专用样式 */
 .text-clip {
   /* 未选中状态：与视频clip保持一致 */
   background: linear-gradient(135deg, var(--color-clip-primary), var(--color-clip-primary-dark));

@@ -1,5 +1,5 @@
 <template>
-  <div class="video-clip-properties">
+  <div class="timeline-video-clip-properties">
     <!-- 基本信息 -->
     <div class="property-section">
       <h4>基本信息</h4>
@@ -623,7 +623,7 @@ const speedToNormalized = (speed: number) => {
 </script>
 
 <style scoped>
-.video-clip-properties {
+.timeline-video-clip-properties {
   width: 100%;
 }
 

@@ -375,19 +375,19 @@ const textPreview = computed(() => {
 </template>
 
 <script setup lang="ts">
-import VideoClip from './VideoClip.vue'
-import TextClip from './TextClip.vue'
+import TimelineVideoClip from './TimelineVideoClip.vue'
+import TimelineTextClip from './TimelineTextClip.vue'
 
 function getClipComponent(mediaType: MediaType) {
   switch (mediaType) {
     case 'video':
     case 'image':
     case 'audio':
-      return VideoClip
+      return TimelineVideoClip
     case 'text':
-      return TextClip
+      return TimelineTextClip
     default:
-      return VideoClip
+      return TimelineVideoClip
   }
 }
 
@@ -824,9 +824,9 @@ frontend/src/
 ├── components/
 │   ├── Timeline.vue                  # ✅ 轨道管理和右键菜单（文本轨道创建+文本添加）
 │   ├── BaseClip.vue                  # ✅ clip基础组件（拖拽、选择等通用功能）
-│   ├── VideoClip.vue                 # ✅ 视频/图片/音频clip组件
-│   ├── TextClip.vue                  # ✅ 文本clip组件（基于BaseClip）
-│   ├── TextClipProperties.vue        # ✅ 文本编辑面板（集成样式控制）
+│   ├── TimelineVideoClip.vue         # ✅ 视频/图片/音频clip组件
+│   ├── TimelineTextClip.vue          # ✅ 文本clip组件（基于BaseClip）
+│   ├── TimelineTextClipProperties.vue # ✅ 文本编辑面板（集成样式控制）
 │   ├── PropertiesPanel.vue           # ✅ 属性面板（集成TextClipProperties）
 │   ├── TransformControls.vue         # ✅ 变换控制组件（位置、缩放、旋转等）
 │   ├── KeyframeControls.vue          # ✅ 关键帧控制组件
