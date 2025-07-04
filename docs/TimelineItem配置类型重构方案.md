@@ -1542,10 +1542,10 @@ function updateProperty<T extends MediaType>(
 
 ### 2. 时间轴组件重构
 
-#### VideoClip 组件类型安全化
+#### TimelineVideoClip 组件类型安全化
 
 ```typescript
-// 重构后的 VideoClip 组件
+// 重构后的 TimelineVideoClip 组件
 <template>
   <div
     class="video-clip"

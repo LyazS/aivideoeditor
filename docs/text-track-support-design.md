@@ -281,15 +281,15 @@ async function addNewTrack(type: TrackType = 'video') {
 
 ## 4. UI组件扩展
 
-> **注意**：TextClip基于BaseClip基础组件构建。BaseClip提供了所有clip的通用功能（拖拽、调整时长、选中状态等）。
+> **注意**：TimelineTextClip基于BaseClip基础组件构建。BaseClip提供了所有clip的通用功能（拖拽、调整时长、选中状态等）。
 > 详细的BaseClip设计请参考：[BaseClip基础组件设计方案](./base-clip-component-design.md)
 
-### 4.1 TextClip组件创建
+### 4.1 TimelineTextClip组件创建
 
-基于BaseClip创建TextClip组件，专门处理文本内容显示：
+基于BaseClip创建TimelineTextClip组件，专门处理文本内容显示：
 
 ```typescript
-// 新增 TextClip.vue 组件 - 基于BaseClip
+// 新增 TimelineTextClip.vue 组件 - 基于BaseClip
 <template>
   <BaseClip
     :timeline-item="timelineItem"
@@ -827,7 +827,7 @@ frontend/src/
 │   ├── TimelineVideoClip.vue         # ✅ 视频/图片/音频clip组件
 │   ├── TimelineTextClip.vue          # ✅ 文本clip组件（基于BaseClip）
 │   ├── TimelineTextClipProperties.vue # ✅ 文本编辑面板（集成样式控制）
-│   ├── PropertiesPanel.vue           # ✅ 属性面板（集成TextClipProperties）
+│   ├── PropertiesPanel.vue           # ✅ 属性面板（集成TimelineTextClipProperties）
 │   ├── TransformControls.vue         # ✅ 变换控制组件（位置、缩放、旋转等）
 │   ├── KeyframeControls.vue          # ✅ 关键帧控制组件
 │   ├── SliderInput.vue               # ✅ 滑块输入组件

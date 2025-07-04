@@ -219,10 +219,10 @@ function getClipHeight(): number {
 
 ## 3. 使用示例
 
-### 3.1 TextClip使用BaseClip
+### 3.1 TimelineTextClip使用BaseClip
 
 ```vue
-<!-- TextClip.vue -->
+<!-- TimelineTextClip.vue -->
 <template>
   <BaseClip
     :timeline-item="timelineItem"
@@ -285,10 +285,10 @@ const textPreview = computed(() => {
 </style>
 ```
 
-### 3.2 VideoClip使用BaseClip
+### 3.2 TimelineVideoClip使用BaseClip
 
 ```vue
-<!-- VideoClip.vue -->
+<!-- TimelineVideoClip.vue -->
 <template>
   <BaseClip
     :timeline-item="timelineItem"
@@ -312,7 +312,7 @@ const textPreview = computed(() => {
 <script setup lang="ts">
 import BaseClip from './BaseClip.vue'
 
-// VideoClip专用逻辑...
+// TimelineVideoClip专用逻辑...
 const thumbnailUrl = computed(() => {
   // 获取缩略图URL逻辑
 })
