@@ -944,17 +944,8 @@ export const useVideoStore = defineStore('video', () => {
   }
 
   // ==================== 分辨率管理方法 ====================
-  // 使用媒体模块的分辨率管理方法
-  function setVideoElement(clipId: string, videoElement: HTMLVideoElement | null) {
-    mediaModule.setVideoElement(clipId, videoElement)
-  }
-
   function getVideoOriginalResolution(mediaItemId: string): { width: number; height: number } {
     return mediaModule.getVideoOriginalResolution(mediaItemId)
-  }
-
-  function setImageElement(clipId: string, imageElement: HTMLImageElement | null) {
-    mediaModule.setImageElement(clipId, imageElement)
   }
 
   function getImageOriginalResolution(mediaItemId: string): { width: number; height: number } {
@@ -1114,9 +1105,7 @@ export const useVideoStore = defineStore('video', () => {
     getConfigSummary: configModule.getConfigSummary,
     resetConfigToDefaults: configModule.resetToDefaults,
     // 分辨率管理（从Clip获取）
-    setVideoElement, // 已废弃，保留兼容性
     getVideoOriginalResolution,
-    setImageElement, // 已废弃，保留兼容性
     getImageOriginalResolution,
     // WebAV 相关状态和方法
     avCanvas: webavModule.avCanvas,

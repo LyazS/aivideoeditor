@@ -107,36 +107,7 @@ export interface MediaItem {
   thumbnailUrl?: string // WebAV生成的缩略图URL
 }
 
-// ===== 旧实现 (保留作为参考) =====
-// /**
-//  * 时间轴项目接口
-//  * 时间轴层：包装VideoVisibleSprite/ImageVisibleSprite和时间轴位置信息
-//  */
-// export interface TimelineItem {
-//   id: string
-//   mediaItemId: string // 引用MediaItem的ID
-//   trackId: string
-//   mediaType: MediaType
-//   timeRange: VideoTimeRange | ImageTimeRange // 时间范围信息（视频包含倍速，图片不包含）
-//   sprite: Raw<CustomSprite> // 自定义的视频或图片sprite
-//   thumbnailUrl?: string // 时间轴clip的缩略图URL
-//   // Sprite位置和大小属性（响应式）
-//   x: number
-//   y: number
-//   width: number
-//   height: number
-//   // 其他sprite属性（响应式）
-//   rotation: number // 旋转角度（弧度）
-//   zIndex: number
-//   opacity: number
-//   // 音频属性（仅对视频有效）
-//   volume: number // 音量（0-1之间）
-//   isMuted: boolean // 静音状态
-//   // 新增：动画配置（可选）
-//   animation?: AnimationConfig // 动画配置
-// }
-
-// ===== 新实现 - 类型安全的媒体配置系统 =====
+// ==================== 时间轴项目接口 ====================
 
 /**
  * 基础媒体属性（所有媒体类型共享）
@@ -314,34 +285,7 @@ export interface PlayOptions {
   end?: number // 结束时间（帧数）
 }
 
-// ===== 旧实现 (保留作为参考) =====
-// /**
-//  * 画布备份接口
-//  * 画布重新创建时的内容备份 - 只备份元数据，不备份WebAV对象
-//  */
-// export interface CanvasBackup {
-//   timelineItems: Array<{
-//     id: string
-//     mediaItemId: string
-//     trackId: string
-//     mediaType: MediaType
-//     timeRange: VideoTimeRange | ImageTimeRange
-//     x: number
-//     y: number
-//     width: number
-//     height: number
-//     rotation: number
-//     zIndex: number
-//     opacity: number
-//     volume: number
-//     isMuted: boolean
-//     thumbnailUrl: string
-//   }>
-//   currentFrame: number // 当前播放帧数
-//   isPlaying: boolean
-// }
-
-// ===== 新实现 - 类型安全的画布备份 =====
+// ==================== 画布备份接口 ====================
 
 /**
  * 类型安全的画布备份接口
@@ -446,30 +390,7 @@ export interface NotificationManager {
   showInfo(title: string, message?: string, duration?: number): string
 }
 
-// ===== 旧实现 (保留作为参考) =====
-// /**
-//  * 时间轴项目数据接口
-//  * 用于命令模式中的数据保存
-//  */
-// export interface TimelineItemData {
-//   id: string
-//   mediaItemId: string
-//   trackId: string
-//   mediaType: MediaType
-//   timeRange: VideoTimeRange | ImageTimeRange
-//   x: number
-//   y: number
-//   width: number
-//   height: number
-//   rotation: number
-//   zIndex: number
-//   opacity: number
-//   volume: number
-//   isMuted: boolean
-//   thumbnailUrl?: string
-// }
-
-// ===== 新实现 - 类型安全的时间轴项目数据 =====
+// ==================== 时间轴项目数据接口 ====================
 
 /**
  * 类型安全的时间轴项目数据接口
@@ -874,27 +795,7 @@ export function getMediaTypeCategory(mediaType: MediaType): 'FILE_BASED' | 'GENE
 
 // ==================== 关键帧动画系统类型 ====================
 
-// ===== 旧实现 (保留作为参考) =====
-// /**
-//  * 关键帧属性集合
-//  * 统一关键帧系统中每个关键帧包含的所有可动画属性
-//  */
-// export interface KeyframeProperties {
-//   /** 水平位置 */
-//   x: number
-//   /** 垂直位置 */
-//   y: number
-//   /** 宽度 */
-//   width: number
-//   /** 高度 */
-//   height: number
-//   /** 旋转角度（弧度） */
-//   rotation: number
-//   /** 透明度（0-1） */
-//   opacity: number
-// }
 
-// ===== 新实现 - 类型安全的关键帧系统 =====
 
 /**
  * 基础可动画属性（所有媒体类型共享）

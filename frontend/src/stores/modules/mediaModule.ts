@@ -172,14 +172,7 @@ export function createMediaModule() {
     return { width: 1920, height: 1080 }
   }
 
-  /**
-   * 设置视频元素引用（已废弃，保留兼容性）
-   * @deprecated 现在从MP4Clip直接获取分辨率信息
-   */
-  function setVideoElement(clipId: string, videoElement: HTMLVideoElement | null) {
-    console.warn('setVideoElement已废弃，现在从MP4Clip直接获取分辨率信息')
-    // 保留空实现以避免破坏现有代码
-  }
+
 
   // ==================== 图片分辨率管理方法 ====================
 
@@ -208,14 +201,7 @@ export function createMediaModule() {
     return { width: 1920, height: 1080 }
   }
 
-  /**
-   * 设置图片元素引用（已废弃，保留兼容性）
-   * @deprecated 现在从ImgClip直接获取分辨率信息
-   */
-  function setImageElement(clipId: string, imageElement: HTMLImageElement | null) {
-    console.warn('setImageElement已废弃，现在从ImgClip直接获取分辨率信息')
-    // 保留空实现以避免破坏现有代码
-  }
+
 
   // ==================== 导出接口 ====================
 
@@ -230,12 +216,8 @@ export function createMediaModule() {
     updateMediaItemName,
     updateMediaItem,
 
-    // 视频元素管理方法
-    setVideoElement,
+    // 分辨率管理方法
     getVideoOriginalResolution,
-
-    // 图片元素管理方法
-    setImageElement,
     getImageOriginalResolution,
   }
 }

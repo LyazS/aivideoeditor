@@ -357,9 +357,6 @@ const addImageItem = async (
       )
       console.log(`📐 图片原始分辨率: ${img.naturalWidth}x${img.naturalHeight}`)
 
-      // 设置图片元素到store中，用于获取原始分辨率
-      videoStore.setImageElement(mediaItemId, img)
-
       // 更新store中的MediaItem
       videoStore.updateMediaItem(readyMediaItem)
 

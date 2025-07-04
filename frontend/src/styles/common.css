@@ -17,8 +17,3 @@
 @import './components/panels.css';
 @import './components/scrollbar.css';
 @import './components/states.css';
-
-/* ===== CSS整理完成 ===== */
-/* 所有组件特定样式已迁移到对应的Vue组件中或全局CSS文件中 */
-/* 重复的样式定义已清理 */
-/* 硬编码的颜色值已替换为CSS变量 */

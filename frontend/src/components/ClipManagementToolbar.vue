@@ -87,7 +87,7 @@ import { computed } from 'vue'
 import { useVideoStore } from '../stores/videoStore'
 import { formatFileSize, framesToSeconds } from '../stores/utils/timeUtils'
 import { countOverlappingItems } from '../utils/timeOverlapUtils'
-import type { TimelineItem } from '../types'
+
 import { isVideoTimeRange } from '../types'
 
 const videoStore = useVideoStore()
@@ -232,6 +232,8 @@ function debugTimeline() {
   console.log('✅ 调试信息输出完成')
   console.groupEnd()
 }
+
+
 </script>
 
 <style scoped>
