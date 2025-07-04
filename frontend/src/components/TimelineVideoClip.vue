@@ -1,5 +1,5 @@
 <template>
-  <BaseClip
+  <TimelineBaseClip
     ref="baseClipRef"
     :timeline-item="timelineItem"
     :track="track"
@@ -62,7 +62,7 @@
         </div>
       </div>
     </template>
-  </BaseClip>
+  </TimelineBaseClip>
 
   <!-- Tooltip组件 -->
   <ClipTooltip
@@ -85,7 +85,7 @@ import { useVideoStore } from '../stores/videoStore'
 import { useWebAVControls } from '../composables/useWebAVControls'
 import { usePlaybackControls } from '../composables/usePlaybackControls'
 import { regenerateThumbnailForTimelineItem } from '../utils/thumbnailGenerator'
-import BaseClip from './BaseClip.vue'
+import TimelineBaseClip from './TimelineBaseClip.vue'
 import ClipTooltip from './ClipTooltip.vue'
 
 import { framesToTimecode } from '../stores/utils/timeUtils'
@@ -111,8 +111,8 @@ const videoStore = useVideoStore()
 const webAVControls = useWebAVControls()
 const { pauseForEditing } = usePlaybackControls()
 
-// BaseClip组件引用
-const baseClipRef = ref<InstanceType<typeof BaseClip>>()
+// TimelineBaseClip组件引用
+const baseClipRef = ref<InstanceType<typeof TimelineBaseClip>>()
 
 // 获取对应的MediaItem
 const mediaItem = computed(() => {
@@ -269,13 +269,13 @@ async function regenerateThumbnailAfterResize() {
 }
 
 onMounted(() => {
-  // VideoClip组件挂载完成
-  console.log('VideoClip组件挂载完成:', props.timelineItem.id)
+  // TimelineVideoClip组件挂载完成
+  console.log('TimelineVideoClip组件挂载完成:', props.timelineItem.id)
 })
 </script>
 
 <style scoped>
-/* VideoClip特有样式 - 基于BaseClip */
+/* TimelineVideoClip特有样式 - 基于TimelineBaseClip */
 .video-clip {
   /* 视频/图片clip的背景色 */
   background: linear-gradient(135deg, var(--color-clip-primary), var(--color-clip-primary-dark));
@@ -313,7 +313,7 @@ onMounted(() => {
   opacity: 0.8;
 }
 
-/* VideoClip内容样式 */
+/* TimelineVideoClip内容样式 */
 
 .clip-thumbnail {
   width: 50px; /* 压缩缩略图宽度 */

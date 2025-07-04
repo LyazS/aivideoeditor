@@ -1,20 +1,20 @@
-# BaseClip基础组件设计方案
+# TimelineBaseClip基础组件设计方案
 
 ## 1. 概述
 
-BaseClip是时间轴clip组件的基础组件，提取了所有clip类型（VideoClip、TextClip、AudioClip等）的通用功能和交互逻辑。通过继承BaseClip，各种具体的clip组件可以专注于内容渲染，而无需重复实现拖拽、调整时长、选中状态等通用功能。
+TimelineBaseClip是时间轴clip组件的基础组件，提取了所有clip类型（TimelineVideoClip、TimelineTextClip、AudioClip等）的通用功能和交互逻辑。通过继承TimelineBaseClip，各种具体的clip组件可以专注于内容渲染，而无需重复实现拖拽、调整时长、选中状态等通用功能。
 
 ### 1.1 设计目标
 
 - **代码复用**：所有clip共享拖拽、调整时长、选中等通用逻辑
 - **一致性**：确保所有clip的交互行为完全一致
-- **可维护性**：通用功能的修改只需在BaseClip中进行
+- **可维护性**：通用功能的修改只需在TimelineBaseClip中进行
 - **扩展性**：新增clip类型时只需关注内容显示，无需重复实现交互逻辑
 - **插槽设计**：通过slot机制让子组件专注于内容渲染
 
 ### 1.2 通用功能
 
-BaseClip提供以下通用功能：
+TimelineBaseClip提供以下通用功能：
 
 - **拖拽移动**：在时间轴上拖拽移动clip位置
 - **时长调整**：左右把手拖拽调整clip时长
@@ -25,10 +25,10 @@ BaseClip提供以下通用功能：
 
 ## 2. 组件设计
 
-### 2.1 BaseClip组件实现
+### 2.1 TimelineBaseClip组件实现
 
 ```vue
-<!-- BaseClip.vue -->
+<!-- TimelineBaseClip.vue -->
 <template>
   <div
     :class="clipClasses"
@@ -60,7 +60,7 @@ BaseClip提供以下通用功能：
 </template>
 
 <script setup lang="ts">
-// BaseClip通用逻辑
+// TimelineBaseClip通用逻辑
 interface Props {
   timelineItem: TimelineItem
   timelineWidth: number
@@ -219,12 +219,12 @@ function getClipHeight(): number {
 
 ## 3. 使用示例
 
-### 3.1 TextClip使用BaseClip
+### 3.1 TimelineTextClip使用TimelineBaseClip
 
 ```vue
-<!-- TextClip.vue -->
+<!-- TimelineTextClip.vue -->
 <template>
-  <BaseClip
+  <TimelineBaseClip
     :timeline-item="timelineItem"
     :timeline-width="timelineWidth"
     class="text-clip"
@@ -240,11 +240,11 @@ function getClipHeight(): number {
         {{ timelineItem.config.text || '文本' }}
       </div>
     </template>
-  </BaseClip>
+  </TimelineBaseClip>
 </template>
 
 <script setup lang="ts">
-import BaseClip from './BaseClip.vue'
+import TimelineBaseClip from './TimelineBaseClip.vue'
 
 interface Props {
   timelineItem: TextTimelineItem
@@ -285,12 +285,12 @@ const textPreview = computed(() => {
 </style>
 ```
 
-### 3.2 VideoClip使用BaseClip
+### 3.2 TimelineVideoClip使用TimelineBaseClip
 
 ```vue
-<!-- VideoClip.vue -->
+<!-- TimelineVideoClip.vue -->
 <template>
-  <BaseClip
+  <TimelineBaseClip
     :timeline-item="timelineItem"
     :timeline-width="timelineWidth"
     class="video-clip"
@@ -306,11 +306,11 @@ const textPreview = computed(() => {
         {{ getMediaLabel(timelineItem) }}
       </div>
     </template>
-  </BaseClip>
+  </TimelineBaseClip>
 </template>
 
 <script setup lang="ts">
-import BaseClip from './BaseClip.vue'
+import TimelineBaseClip from './TimelineBaseClip.vue'
 
 // VideoClip专用逻辑...
 const thumbnailUrl = computed(() => {
@@ -347,12 +347,12 @@ function getMediaLabel(item: TimelineItem): string {
 
 ### 4.1 新增clip类型
 
-基于BaseClip，可以轻松创建新的clip类型：
+基于TimelineBaseClip，可以轻松创建新的clip类型：
 
 ```vue
 <!-- AudioClip.vue -->
 <template>
-  <BaseClip
+  <TimelineBaseClip
     :timeline-item="timelineItem"
     :timeline-width="timelineWidth"
     class="audio-clip"
@@ -368,22 +368,22 @@ function getMediaLabel(item: TimelineItem): string {
         {{ timelineItem.config.name }}
       </div>
     </template>
-  </BaseClip>
+  </TimelineBaseClip>
 </template>
 ```
 
 ### 4.2 自定义事件处理
 
-子组件可以监听BaseClip的事件并添加自定义逻辑：
+子组件可以监听TimelineBaseClip的事件并添加自定义逻辑：
 
 ```vue
-<BaseClip
+<TimelineBaseClip
   @select="handleCustomSelect"
   @drag-start="handleCustomDragStart"
   @resize-start="handleCustomResizeStart"
 >
   <!-- 内容 -->
-</BaseClip>
+</TimelineBaseClip>
 ```
 
 ## 5. 优势总结

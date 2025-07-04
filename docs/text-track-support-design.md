@@ -281,17 +281,17 @@ async function addNewTrack(type: TrackType = 'video') {
 
 ## 4. UI组件扩展
 
-> **注意**：TextClip基于BaseClip基础组件构建。BaseClip提供了所有clip的通用功能（拖拽、调整时长、选中状态等）。
-> 详细的BaseClip设计请参考：[BaseClip基础组件设计方案](./base-clip-component-design.md)
+> **注意**：TimelineTextClip基于TimelineBaseClip基础组件构建。TimelineBaseClip提供了所有clip的通用功能（拖拽、调整时长、选中状态等）。
+> 详细的TimelineBaseClip设计请参考：[TimelineBaseClip基础组件设计方案](./base-clip-component-design.md)
 
-### 4.1 TextClip组件创建
+### 4.1 TimelineTextClip组件创建
 
-基于BaseClip创建TextClip组件，专门处理文本内容显示：
+基于TimelineBaseClip创建TimelineTextClip组件，专门处理文本内容显示：
 
 ```typescript
-// 新增 TextClip.vue 组件 - 基于BaseClip
+// 新增 TimelineTextClip.vue 组件 - 基于TimelineBaseClip
 <template>
-  <BaseClip
+  <TimelineBaseClip
     :timeline-item="timelineItem"
     :timeline-width="timelineWidth"
     class="text-clip"
@@ -307,11 +307,11 @@ async function addNewTrack(type: TrackType = 'video') {
         {{ timelineItem.config.text || '文本' }}
       </div>
     </template>
-  </BaseClip>
+  </TimelineBaseClip>
 </template>
 
 <script setup lang="ts">
-import BaseClip from './BaseClip.vue'
+import TimelineBaseClip from './TimelineBaseClip.vue'
 
 interface Props {
   timelineItem: TextTimelineItem
@@ -375,19 +375,19 @@ const textPreview = computed(() => {
 </template>
 
 <script setup lang="ts">
-import VideoClip from './VideoClip.vue'
-import TextClip from './TextClip.vue'
+import TimelineVideoClip from './TimelineVideoClip.vue'
+import TimelineTextClip from './TimelineTextClip.vue'
 
 function getClipComponent(mediaType: MediaType) {
   switch (mediaType) {
     case 'video':
     case 'image':
     case 'audio':
-      return VideoClip
+      return TimelineVideoClip
     case 'text':
-      return TextClip
+      return TimelineTextClip
     default:
-      return VideoClip
+      return TimelineVideoClip
   }
 }
 
@@ -823,11 +823,11 @@ frontend/src/
 ├── types/index.ts                    # ✅ 类型定义扩展（TextStyleConfig, TimelineItem<'text'>等）
 ├── components/
 │   ├── Timeline.vue                  # ✅ 轨道管理和右键菜单（文本轨道创建+文本添加）
-│   ├── BaseClip.vue                  # ✅ clip基础组件（拖拽、选择等通用功能）
-│   ├── VideoClip.vue                 # ✅ 视频/图片/音频clip组件
-│   ├── TextClip.vue                  # ✅ 文本clip组件（基于BaseClip）
-│   ├── TextClipProperties.vue        # ✅ 文本编辑面板（集成样式控制）
-│   ├── PropertiesPanel.vue           # ✅ 属性面板（集成TextClipProperties）
+│   ├── TimelineBaseClip.vue          # ✅ clip基础组件（拖拽、选择等通用功能）
+│   ├── TimelineVideoClip.vue         # ✅ 视频/图片/音频clip组件
+│   ├── TimelineTextClip.vue          # ✅ 文本clip组件（基于TimelineBaseClip）
+│   ├── TimelineTextClipProperties.vue # ✅ 文本编辑面板（集成样式控制）
+│   ├── PropertiesPanel.vue           # ✅ 属性面板（集成TimelineTextClipProperties）
 │   ├── TransformControls.vue         # ✅ 变换控制组件（位置、缩放、旋转等）
 │   ├── KeyframeControls.vue          # ✅ 关键帧控制组件
 │   ├── SliderInput.vue               # ✅ 滑块输入组件
@@ -1056,7 +1056,7 @@ const textPreview = computed(() => {
 ```
 
 **验收标准**：
-- [x] TextClip 正确继承 BaseClip 功能
+- [x] TimelineTextClip 正确继承 TimelineBaseClip 功能
 - [x] 文本内容正确显示
 - [x] 样式符合设计规范
 - [x] 选中状态正常工作
@@ -1066,7 +1066,7 @@ const textPreview = computed(() => {
 **优先级**：🟡 高 | **预估时间**：2小时
 
 **任务内容**：
-- 在 Timeline.vue 中集成 TextClip 组件
+- 在 Timeline.vue 中集成 TimelineTextClip 组件
 - 实现根据媒体类型渲染不同组件
 
 **具体实现**：
@@ -1077,11 +1077,11 @@ function getClipComponent(mediaType: MediaType) {
     case 'video':
     case 'image':
     case 'audio':
-      return VideoClip
+      return TimelineVideoClip
     case 'text':
-      return TextClip  // 新增
+      return TimelineTextClip  // 新增
     default:
-      return VideoClip
+      return TimelineVideoClip
   }
 }
 ```

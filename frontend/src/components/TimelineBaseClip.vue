@@ -42,7 +42,7 @@ import { hasOverlapInTrack } from '../utils/timeOverlapUtils'
 import type { TimelineItem, Track, VideoTimeRange, ImageTimeRange } from '../types'
 import { isVideoTimeRange } from '../types'
 
-// BaseClip通用接口
+// TimelineBaseClip通用接口
 interface Props {
   timelineItem: TimelineItem
   track?: Track
@@ -271,7 +271,7 @@ async function selectClip(event: MouseEvent) {
   // 如果正在拖拽或调整大小，不处理选中
   if (isDragging.value || isResizing.value) return
 
-  console.log('🖱️ [BaseClip] selectClip被调用:', {
+  console.log('🖱️ [TimelineBaseClip] selectClip被调用:', {
     ctrlKey: event.ctrlKey,
     itemId: props.timelineItem.id,
     currentSelections: Array.from(videoStore.selectedTimelineItemIds),
@@ -286,7 +286,7 @@ async function selectClip(event: MouseEvent) {
       await videoStore.selectTimelineItemsWithHistory([props.timelineItem.id], 'replace')
     }
   } catch (error) {
-    console.error('❌ [BaseClip] 选择操作失败:', error)
+    console.error('❌ [TimelineBaseClip] 选择操作失败:', error)
     // 如果历史记录选择失败，回退到普通选择
     if (event.ctrlKey) {
       videoStore.selectTimelineItems([props.timelineItem.id], 'toggle')
@@ -376,14 +376,14 @@ async function stopResize() {
 
     // 验证时间范围的有效性
     if (newTimelineEndTimeFrames <= newTimelineStartTimeFrames) {
-      console.error('❌ [BaseClip] 无效的时间范围:', {
+      console.error('❌ [TimelineBaseClip] 无效的时间范围:', {
         startFrames: newTimelineStartTimeFrames,
         endFrames: newTimelineEndTimeFrames,
       })
       return
     }
 
-    console.log('🔧 [BaseClip] 调整大小 - 设置时间范围:', {
+    console.log('🔧 [TimelineBaseClip] 调整大小 - 设置时间范围:', {
       mediaType: props.timelineItem.mediaType,
       timelineStartTimeFrames: newTimelineStartTimeFrames,
       timelineEndTimeFrames: newTimelineEndTimeFrames,
@@ -421,7 +421,7 @@ async function stopResize() {
       if (props.timelineItem.animation && props.timelineItem.animation.keyframes.length > 0) {
         const { adjustKeyframesForDurationChange } = await import('../utils/unifiedKeyframeUtils')
         adjustKeyframesForDurationChange(props.timelineItem, oldDurationFrames, newDurationFrames)
-        console.log('🎬 [BaseClip] Keyframes adjusted for duration change')
+        console.log('🎬 [TimelineBaseClip] Keyframes adjusted for duration change')
       }
 
       // 使用带历史记录的调整方法
@@ -431,19 +431,19 @@ async function stopResize() {
       )
 
       if (success) {
-        console.log('✅ [BaseClip] 时间范围调整成功')
+        console.log('✅ [TimelineBaseClip] 时间范围调整成功')
 
         // 如果有动画，需要重新设置WebAV动画时长
         if (props.timelineItem.animation && props.timelineItem.animation.isEnabled) {
           const { updateWebAVAnimation } = await import('../utils/webavAnimationManager')
           await updateWebAVAnimation(props.timelineItem)
-          console.log('🎬 [BaseClip] Animation duration updated after clip resize')
+          console.log('🎬 [TimelineBaseClip] Animation duration updated after clip resize')
         }
       } else {
-        console.error('❌ [BaseClip] 时间范围调整失败')
+        console.error('❌ [TimelineBaseClip] 时间范围调整失败')
       }
     } catch (error) {
-      console.error('❌ [BaseClip] 调整时间范围时出错:', error)
+      console.error('❌ [TimelineBaseClip] 调整时间范围时出错:', error)
     }
   }
 
@@ -513,7 +513,7 @@ defineExpose({
 </script>
 
 <style scoped>
-/* BaseClip通用样式 */
+/* TimelineBaseClip通用样式 */
 .base-clip {
   position: absolute;
   border-radius: 4px;

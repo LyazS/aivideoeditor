@@ -210,8 +210,8 @@ import type {
   MediaType,
 } from '../types'
 import { hasVisualProps } from '../types'
-import VideoClip from './VideoClip.vue'
-import TextClip from './TextClip.vue'
+import TimelineVideoClip from './TimelineVideoClip.vue'
+import TimelineTextClip from './TimelineTextClip.vue'
 import TimeScale from './TimeScale.vue'
 import { ContextMenu, ContextMenuItem, ContextMenuSeparator } from '@imengyu/vue3-context-menu'
 
@@ -1325,12 +1325,12 @@ async function handleTimelineItemPositionUpdate(
 function getClipComponent(mediaType: MediaType) {
   switch (mediaType) {
     case 'text':
-      return TextClip
+      return TimelineTextClip
     case 'video':
     case 'image':
     case 'audio':
     default:
-      return VideoClip
+      return TimelineVideoClip
   }
 }
 

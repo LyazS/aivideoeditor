@@ -29,7 +29,7 @@
       <!-- 单选状态 -->
       <div v-else-if="selectedTimelineItem" class="properties-content">
         <!-- 根据选中项目类型显示不同的属性组件 -->
-        <VideoClipProperties
+        <TimelineVideoClipProperties
           v-if="
             selectedTimelineItem.mediaType === 'video' || selectedTimelineItem.mediaType === 'image'
           "
@@ -38,7 +38,7 @@
         />
 
         <!-- 文本项目属性组件 -->
-        <TextClipProperties
+        <TimelineTextClipProperties
           v-else-if="selectedTimelineItem.mediaType === 'text'"
           :selected-timeline-item="selectedTimelineItem as TimelineItem<'text'>"
           :current-frame="currentFrame"
@@ -65,8 +65,8 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useVideoStore } from '../stores/videoStore'
-import VideoClipProperties from './VideoClipProperties.vue'
-import TextClipProperties from './TextClipProperties.vue'
+import TimelineVideoClipProperties from './TimelineVideoClipProperties.vue'
+import TimelineTextClipProperties from './TimelineTextClipProperties.vue'
 import type { TimelineItem } from '../types'
 
 const videoStore = useVideoStore()

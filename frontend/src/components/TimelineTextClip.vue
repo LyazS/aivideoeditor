@@ -1,5 +1,5 @@
 <template>
-  <BaseClip
+  <TimelineBaseClip
     ref="baseClipRef"
     :timeline-item="timelineItem"
     :track="track"
@@ -35,7 +35,7 @@
         </div>
       </div>
     </template>
-  </BaseClip>
+  </TimelineBaseClip>
 
   <!-- Tooltip组件 -->
   <ClipTooltip
@@ -58,7 +58,7 @@ import { framesToTimecode } from '../stores/utils/timeUtils'
 import { relativeFrameToAbsoluteFrame } from '../utils/unifiedKeyframeUtils'
 import { useWebAVControls } from '../composables/useWebAVControls'
 import { usePlaybackControls } from '../composables/usePlaybackControls'
-import BaseClip from './BaseClip.vue'
+import TimelineBaseClip from './TimelineBaseClip.vue'
 import ClipTooltip from './ClipTooltip.vue'
 import type { TimelineItem, Track } from '../types'
 import { getTextItemDisplayName } from '../utils/textTimelineUtils'
@@ -84,8 +84,8 @@ const videoStore = useVideoStore()
 const webAVControls = useWebAVControls()
 const { pauseForEditing } = usePlaybackControls()
 
-// BaseClip组件引用
-const baseClipRef = ref<InstanceType<typeof BaseClip>>()
+// TimelineBaseClip组件引用
+const baseClipRef = ref<InstanceType<typeof TimelineBaseClip>>()
 
 // 获取时间轴时长（帧数）
 const timelineDurationFrames = computed(() => {

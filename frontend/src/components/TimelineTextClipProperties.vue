@@ -631,7 +631,7 @@ const updateTextContent = async () => {
   }
 
   try {
-    console.log('🔄 [TextClipProperties] 更新文本内容:', localText.value.substring(0, 20) + '...')
+    console.log('🔄 [TimelineTextClipProperties] 更新文本内容:', localText.value.substring(0, 20) + '...')
 
     // 导入文本命令
     const { UpdateTextCommand } = await import('../stores/modules/commands/textCommands')
@@ -649,9 +649,9 @@ const updateTextContent = async () => {
     // 执行命令（带历史记录）
     await videoStore.executeCommand(command)
 
-    console.log('✅ [TextClipProperties] 文本内容更新成功')
+    console.log('✅ [TimelineTextClipProperties] 文本内容更新成功')
   } catch (error) {
-    console.error('❌ [TextClipProperties] 更新文本内容失败:', error)
+    console.error('❌ [TimelineTextClipProperties] 更新文本内容失败:', error)
     videoStore.showError('更新失败', '文本内容更新失败，请重试')
   }
 }
@@ -670,7 +670,7 @@ const updateTextStyle = async () => {
       styleToUpdate.backgroundColor = undefined
     }
 
-    console.log('🎨 [TextClipProperties] 更新文本样式:', styleToUpdate)
+    console.log('🎨 [TimelineTextClipProperties] 更新文本样式:', styleToUpdate)
 
     // 导入文本命令
     const { UpdateTextCommand } = await import('../stores/modules/commands/textCommands')
@@ -688,9 +688,9 @@ const updateTextStyle = async () => {
     // 执行命令（带历史记录）
     await videoStore.executeCommand(command)
 
-    console.log('✅ [TextClipProperties] 文本样式更新成功')
+    console.log('✅ [TimelineTextClipProperties] 文本样式更新成功')
   } catch (error) {
-    console.error('❌ [TextClipProperties] 更新文本样式失败:', error)
+    console.error('❌ [TimelineTextClipProperties] 更新文本样式失败:', error)
     videoStore.showError('更新失败', '文本样式更新失败，请重试')
   }
 }
@@ -814,14 +814,14 @@ const updateTargetDurationFromTimecode = async (event: Event) => {
     // 更新时长
     await updateTargetDurationFrames(alignedDurationFrames)
 
-    console.log('✅ [TextClipProperties] 时间码时长更新成功:', {
+    console.log('✅ [TimelineTextClipProperties] 时间码时长更新成功:', {
       inputTimecode: timecodeValue,
       parsedFrames: newDurationFrames,
       alignedFrames: alignedDurationFrames,
       finalTimecode: framesToTimecode(alignedDurationFrames),
     })
   } catch (error) {
-    console.warn('⚠️ [TextClipProperties] 时间码格式无效:', timecodeValue, error)
+    console.warn('⚠️ [TimelineTextClipProperties] 时间码格式无效:', timecodeValue, error)
 
     // 显示错误通知
     videoStore.showError(
@@ -858,7 +858,7 @@ const updateTargetDurationFrames = async (newDurationFrames: number) => {
       oldDurationFrames,
       alignedDurationFrames,
     )
-    console.log('🎬 [TextClipProperties] 关键帧已调整适应新时长')
+    console.log('🎬 [TimelineTextClipProperties] 关键帧已调整适应新时长')
   }
 
   // 更新sprite时间范围（文本使用ImageTimeRange）
@@ -885,10 +885,10 @@ const updateTargetDurationFrames = async (newDurationFrames: number) => {
   if (props.selectedTimelineItem.animation && props.selectedTimelineItem.animation.isEnabled) {
     const { updateWebAVAnimation } = await import('../utils/webavAnimationManager')
     await updateWebAVAnimation(props.selectedTimelineItem)
-    console.log('🎬 [TextClipProperties] 动画时长已更新')
+    console.log('🎬 [TimelineTextClipProperties] 动画时长已更新')
   }
 
-  console.log('✅ [TextClipProperties] 帧数时长更新成功:', {
+  console.log('✅ [TimelineTextClipProperties] 帧数时长更新成功:', {
     inputFrames: newDurationFrames,
     alignedFrames: alignedDurationFrames,
     timecode: framesToTimecode(alignedDurationFrames),
