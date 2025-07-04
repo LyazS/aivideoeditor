@@ -1,6 +1,7 @@
 import { ref, type Raw, type Ref } from 'vue'
 import { VideoVisibleSprite } from '../../utils/VideoVisibleSprite'
 import { ImageVisibleSprite } from '../../utils/ImageVisibleSprite'
+import { AudioVisibleSprite } from '../../utils/AudioVisibleSprite'
 import { webavToProjectCoords, projectToWebavCoords } from '../../utils/coordinateTransform'
 import { printDebugInfo } from '../utils/debugUtils'
 import { syncTimeRange } from '../utils/timeRangeUtils'
@@ -293,7 +294,7 @@ export function createTimelineModule(
    */
   function updateTimelineItemSprite(
     timelineItemId: string,
-    newSprite: Raw<VideoVisibleSprite | ImageVisibleSprite>,
+    newSprite: Raw<VideoVisibleSprite | ImageVisibleSprite | AudioVisibleSprite>,
   ) {
     const item = timelineItems.value.find((item) => item.id === timelineItemId)
     if (item) {

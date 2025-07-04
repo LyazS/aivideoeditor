@@ -2,6 +2,7 @@ import type { MediaItem } from '../types'
 import { VideoVisibleSprite } from './VideoVisibleSprite'
 import { ImageVisibleSprite } from './ImageVisibleSprite'
 import { useWebAVControls } from '../composables/useWebAVControls'
+import { AudioVisibleSprite } from '../utils/AudioVisibleSprite'
 
 /**
  * 从媒体项目创建对应的 Sprite 实例
@@ -13,7 +14,7 @@ import { useWebAVControls } from '../composables/useWebAVControls'
  */
 export async function createSpriteFromMediaItem(
   mediaItem: MediaItem,
-): Promise<VideoVisibleSprite | ImageVisibleSprite> {
+): Promise<VideoVisibleSprite | ImageVisibleSprite | AudioVisibleSprite> {
   // 检查媒体项目是否已准备好
   if (!mediaItem.isReady) {
     throw new Error(`素材尚未解析完成: ${mediaItem.name}`)

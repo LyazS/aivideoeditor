@@ -58,25 +58,6 @@ export interface ImageTimeRange {
 }
 
 /**
- * 音频时间范围接口定义（帧数版本）
- * 音频类似视频，但没有视觉属性
- */
-export interface AudioTimeRange {
-  /** 素材内部开始时间（帧数） - 从素材的哪个帧开始播放 */
-  clipStartTime: number
-  /** 素材内部结束时间（帧数） - 播放到素材的哪个帧结束 */
-  clipEndTime: number
-  /** 时间轴开始时间（帧数） - 素材在整个项目时间轴上的开始位置 */
-  timelineStartTime: number
-  /** 时间轴结束时间（帧数） - 素材在整个项目时间轴上的结束位置 */
-  timelineEndTime: number
-  /** 有效播放时长（帧数） - 在时间轴上占用的时长，如果与素材内部时长不同则表示变速 */
-  effectiveDuration: number
-  /** 播放速度倍率 - 1.0为正常速度，2.0为2倍速，0.5为0.5倍速 */
-  playbackRate: number
-}
-
-/**
  * 音频状态接口
  */
 export interface AudioState {
@@ -173,6 +154,8 @@ interface ImageMediaConfig extends VisualMediaProps {
  * 音频媒体配置：只有音频属性
  */
 interface AudioMediaConfig extends BaseMediaProps, AudioMediaProps {
+  /** 增益（dB） */
+  gain: number
   // 音频特有属性（预留）
   // waveformColor?: string
   // showWaveform?: boolean
@@ -220,7 +203,7 @@ export interface TimelineItem<T extends MediaType = MediaType> {
   timeRange: T extends 'video'
     ? VideoTimeRange
     : T extends 'audio'
-      ? AudioTimeRange
+      ? VideoTimeRange
       : T extends 'text'
         ? ImageTimeRange
         : ImageTimeRange
@@ -404,7 +387,7 @@ export interface TimelineItemData<T extends MediaType = MediaType> {
   timeRange: T extends 'video'
     ? VideoTimeRange
     : T extends 'audio'
-      ? AudioTimeRange
+      ? VideoTimeRange
       : ImageTimeRange
   config: GetMediaConfig<T>
   thumbnailUrl?: string
@@ -559,8 +542,8 @@ export function isImageTimeRange(
  * @returns 是否为音频时间范围
  */
 export function isAudioTimeRange(
-  timeRange: VideoTimeRange | ImageTimeRange | AudioTimeRange,
-): timeRange is AudioTimeRange {
+  timeRange: VideoTimeRange | ImageTimeRange,
+): timeRange is VideoTimeRange {
   return (
     'clipStartTime' in timeRange &&
     'clipEndTime' in timeRange &&
@@ -734,17 +717,16 @@ export const DEFAULT_TEXT_STYLE: TextStyleConfig = {
 import type { VideoVisibleSprite } from '../utils/VideoVisibleSprite'
 import type { ImageVisibleSprite } from '../utils/ImageVisibleSprite'
 import type { TextVisibleSprite } from '../utils/TextVisibleSprite'
-
-/**
- * 自定义 Sprite 联合类型
- * 表示我们扩展的 VideoVisibleSprite、ImageVisibleSprite 或 TextVisibleSprite
- */
-export type CustomVisibleSprite = VideoVisibleSprite | ImageVisibleSprite | TextVisibleSprite
+import type { AudioVisibleSprite } from '../utils/AudioVisibleSprite'
 
 /**
  * 原有的 CustomSprite 类型别名（更新以包含文本精灵）
  */
-export type CustomSprite = VideoVisibleSprite | ImageVisibleSprite | TextVisibleSprite
+export type CustomSprite =
+  | VideoVisibleSprite
+  | ImageVisibleSprite
+  | TextVisibleSprite
+  | AudioVisibleSprite
 
 // ==================== 媒体类型分类系统 ====================
 
@@ -794,8 +776,6 @@ export function getMediaTypeCategory(mediaType: MediaType): 'FILE_BASED' | 'GENE
 }
 
 // ==================== 关键帧动画系统类型 ====================
-
-
 
 /**
  * 基础可动画属性（所有媒体类型共享）

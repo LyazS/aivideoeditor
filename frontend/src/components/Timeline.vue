@@ -193,6 +193,7 @@ import { useDragUtils } from '../composables/useDragUtils'
 import { useDialogs } from '../composables/useDialogs'
 import { VideoVisibleSprite } from '../utils/VideoVisibleSprite'
 import { ImageVisibleSprite } from '../utils/ImageVisibleSprite'
+import { AudioVisibleSprite } from '../utils/AudioVisibleSprite'
 import { createSpriteFromMediaItem } from '../utils/spriteFactory'
 import { webavToProjectCoords } from '../utils/coordinateTransform'
 import { calculatePixelsPerFrame } from '../stores/utils/timeUtils'
@@ -1186,7 +1187,7 @@ async function createMediaClipFromMediaItem(
           timelineEndTime: startTimeFrames + mediaItem.duration,
           effectiveDuration: mediaItem.duration,
         }
-        ;(sprite as any).setTimeRange(audioTimeRangeConfig)
+        ;(sprite as AudioVisibleSprite).setTimeRange(audioTimeRangeConfig)
       }
     }
 
