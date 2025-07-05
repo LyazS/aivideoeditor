@@ -26,6 +26,9 @@
       >
         <!-- 左侧轨道控制 -->
         <div class="track-controls">
+          <!-- 轨道颜色标识 -->
+          <div class="track-color-indicator" :class="`track-color-${track.type}`"></div>
+
           <!-- 轨道名称 -->
           <div class="track-name">
             <!-- 轨道类型图标 -->
@@ -63,8 +66,9 @@
           <div class="track-buttons">
             <!-- 轨道快捷操作按钮 -->
             <div class="track-status">
-              <!-- 可见性切换按钮 -->
+              <!-- 可见性切换按钮 - 音频轨道不显示 -->
               <button
+                v-if="track.type !== 'audio'"
                 class="status-btn"
                 :class="{ active: track.isVisible }"
                 :title="track.isVisible ? '隐藏轨道' : '显示轨道'"
@@ -364,22 +368,30 @@ const getTrackMenuItems = (): MenuItem[] => {
       label: '重命名轨道',
       icon: 'M20.71,7.04C21.1,6.65 21.1,6 20.71,5.63L18.37,3.29C18,2.9 17.35,2.9 16.96,3.29L15.12,5.12L18.87,8.87M3,17.25V21H6.75L17.81,9.93L14.06,6.18L3,17.25Z',
       onClick: () => renameTrack(),
-    },
-    {
+    }
+  )
+
+  // 可见性控制 - 音频轨道不显示
+  if (track.type !== 'audio') {
+    menuItems.push({
       label: track.isVisible ? '隐藏轨道' : '显示轨道',
       icon: track.isVisible
         ? 'M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 12,9M12,17A5,5 0 0,1 7,12A5,5 0 0,1 12,7A5,5 0 0,1 17,12A5,5 0 0,1 12,17M12,4.5C7,4.5 2.73,7.61 1,12C2.73,16.39 7,19.5 12,19.5C17,19.5 21.27,16.39 23,12C21.27,7.61 17,4.5 12,4.5Z'
         : 'M11.83,9L15,12.16C15,12.11 15,12.05 15,12A3,3 0 0,0 12,9C11.94,9 11.89,9 11.83,9M7.53,9.8L9.08,11.35C9.03,11.56 9,11.77 9,12A3,3 0 0,0 12,15C12.22,15 12.44,14.97 12.65,14.92L14.2,16.47C13.53,16.8 12.79,17 12,17A5,5 0 0,1 7,12C7,11.21 7.2,10.47 7.53,9.8M2,4.27L4.28,6.55L4.73,7C3.08,8.3 1.78,10 1,12C2.73,16.39 7,19.5 12,19.5C13.55,19.5 15.03,19.2 16.38,18.66L16.81,19.09L19.73,22L21,20.73L3.27,3M12,7A5,5 0 0,1 17,12C17,12.64 16.87,13.26 16.64,13.82L19.57,16.75C21.07,15.5 22.27,13.86 23,12C21.27,7.61 17,4.5 12,4.5C10.6,4.5 9.26,4.75 8,5.2L10.17,7.35C10.76,7.13 11.37,7 12,7Z',
       onClick: () => toggleVisibility(trackId),
-    },
-    {
+    })
+  }
+
+  // 静音控制 - 文本轨道不显示
+  if (track.type !== 'text') {
+    menuItems.push({
       label: track.isMuted ? '取消静音' : '静音轨道',
       icon: track.isMuted
         ? 'M12,4L9.91,6.09L12,8.18M4.27,3L3,4.27L7.73,9H3V15H7L12,20V13.27L16.25,17.53C15.58,18.04 14.83,18.46 14,18.7V20.77C15.38,20.45 16.63,19.82 17.68,18.96L19.73,21L21,19.73L12,10.73M19,12C19,12.94 18.8,13.82 18.46,14.64L19.97,16.15C20.62,14.91 21,13.5 21,12C21,7.72 18,4.14 14,3.23V5.29C16.89,6.15 19,8.83 19,12M16.5,12C16.5,10.23 15.5,8.71 14,7.97V10.18L16.45,12.63C16.5,12.43 16.5,12.21 16.5,12Z'
         : 'M14,3.23V5.29C16.89,6.15 19,8.83 19,12C19,15.17 16.89,17.85 14,18.71V20.77C18,19.86 21,16.28 21,12C21,7.72 18,4.14 14,3.23M16.5,12C16.5,10.23 15.5,8.71 14,7.97V16C15.5,15.29 16.5,13.76 16.5,12M3,9V15H7L12,20V4L7,9H3Z',
       onClick: () => toggleMute(trackId),
-    }
-  )
+    })
+  }
 
   // 删除轨道选项
   if (canDelete) {
@@ -1855,6 +1867,28 @@ onUnmounted(() => {
   z-index: 10;
 }
 
+/* 轨道颜色标识 */
+.track-color-indicator {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  border-radius: 0 2px 2px 0;
+}
+
+.track-color-indicator.track-color-video {
+  background: linear-gradient(135deg, #5a6d90, #4a5d80);
+}
+
+.track-color-indicator.track-color-audio {
+  background: linear-gradient(135deg, #5d905d, #4d804d);
+}
+
+.track-color-indicator.track-color-text {
+  background: linear-gradient(135deg, #805b90, #704b80);
+}
+
 .track-content {
   flex: 1;
   position: relative;
@@ -1895,19 +1929,11 @@ onUnmounted(() => {
   opacity: 0.8;
 }
 
-/* 轨道类型样式 */
-.track-content.track-type-video {
-  border-left: 3px solid rgba(76, 175, 80, 0.3); /* 绿色边框 */
-}
-
-.track-content.track-type-audio {
-  border-left: 3px solid rgba(33, 150, 243, 0.3); /* 蓝色边框 */
-  background-color: rgba(33, 150, 243, 0.05); /* 淡蓝色背景 */
-}
-
+/* 轨道类型样式 - 移除边框，颜色标识已移至左侧控制区域 */
+.track-content.track-type-video,
+.track-content.track-type-audio,
 .track-content.track-type-text {
-  border-left: 3px solid rgba(255, 193, 7, 0.3); /* 黄色边框 */
-  background-color: rgba(255, 193, 7, 0.05); /* 淡黄色背景 */
+  /* 统一使用默认背景色 */
 }
 
 .track-name {

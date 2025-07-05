@@ -233,7 +233,7 @@ export class VideoVisibleSprite extends BaseVisibleSprite {
    * 设置播放速度
    * @param speed 播放速度倍率（1.0为正常速度，2.0为2倍速，0.5为0.5倍速）
    */
-  public setPlaybackSpeed(speed: number): void {
+  public setPlaybackRate(speed: number): void {
     if (speed <= 0) {
       throw new Error('播放速度必须大于0')
     }
@@ -260,7 +260,7 @@ export class VideoVisibleSprite extends BaseVisibleSprite {
    * 获取当前播放速度
    * @returns 播放速度倍率
    */
-  public getPlaybackSpeed(): number {
+  public getPlaybackRate(): number {
     return this.#timeRange.playbackRate
   }
 

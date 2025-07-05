@@ -143,9 +143,15 @@ export function createTrackModule() {
   function toggleTrackVisibility(trackId: string, timelineItems?: Ref<TimelineItem[]>) {
     const track = tracks.value.find((t) => t.id === trackId)
     if (track) {
+      // 音频轨道不支持可见性控制，只支持静音控制
+      if (track.type === 'audio') {
+        console.warn('⚠️ 音频轨道不支持可见性控制，请使用静音功能')
+        return
+      }
+
       track.isVisible = !track.isVisible
 
-      // 同步该轨道上所有TimelineItem的sprite可见性
+      // 同步该轨道上所有TimelineItem的sprite可见性（仅限视觉轨道）
       if (timelineItems) {
         const trackItems = timelineItems.value.filter((item) => item.trackId === trackId)
         trackItems.forEach((item) => {
@@ -157,6 +163,7 @@ export function createTrackModule() {
         console.log('👁️ 切换轨道可见性:', {
           trackId,
           trackName: track.name,
+          trackType: track.type,
           isVisible: track.isVisible,
           affectedClips: trackItems.length,
         })
@@ -164,6 +171,7 @@ export function createTrackModule() {
         console.log('👁️ 切换轨道可见性:', {
           trackId,
           trackName: track.name,
+          trackType: track.type,
           isVisible: track.isVisible,
         })
       }

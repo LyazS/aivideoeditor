@@ -161,7 +161,7 @@ onMounted(() => {
 <style scoped>
 /* TimelineAudioClip特有样式 */
 .audio-clip {
-  background: linear-gradient(135deg, #4CAF50, #45a049);
+  background: linear-gradient(135deg, #666666, #555555);
   color: white;
 }
 
@@ -226,8 +226,30 @@ onMounted(() => {
   opacity: 0.8;
 }
 
+/* 选中状态的特殊样式 */
+.audio-clip.selected {
+  background: linear-gradient(135deg, var(--color-clip-selected), var(--color-clip-selected-dark)) !important;
+}
+
 /* 重叠状态的特殊样式 */
 .audio-clip.overlapping {
-  background: linear-gradient(135deg, #ff9800, #f57c00) !important;
+  background: linear-gradient(135deg, var(--color-clip-overlapping), var(--color-clip-overlapping-dark)) !important;
+}
+
+/* 隐藏轨道上的clip样式 */
+.audio-clip.track-hidden {
+  background: linear-gradient(135deg, var(--color-clip-hidden), var(--color-clip-hidden-dark)) !important;
+}
+
+.audio-clip.track-hidden.selected {
+  background: linear-gradient(135deg, var(--color-clip-hidden-selected), var(--color-clip-hidden-selected-dark)) !important;
+}
+
+/* 隐藏轨道上的clip内容也要调整透明度 */
+.audio-clip.track-hidden .audio-content,
+.audio-clip.track-hidden .audio-name,
+.audio-clip.track-hidden .audio-duration,
+.audio-clip.track-hidden .audio-controls {
+  opacity: 0.8;
 }
 </style>

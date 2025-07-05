@@ -190,21 +190,22 @@ function formatDurationFromFrames(frames: number): string {
 <style scoped>
 /* TextClip专用样式 */
 .text-clip {
-  /* 未选中状态：与视频clip保持一致 */
-  background: linear-gradient(135deg, var(--color-clip-primary), var(--color-clip-primary-dark));
+  /* 未选中状态：统一灰色 */
+  background: linear-gradient(135deg, #666666, #555555);
   border: 2px solid transparent;
+  color: white;
 }
 
 .text-clip:hover {
-  /* 悬停状态：稍微亮一点的蓝色 */
-  background: linear-gradient(135deg, #5ba3f0, var(--color-clip-primary));
+  /* 悬停状态：稍微亮一点的灰色 */
+  background: linear-gradient(135deg, #777777, #666666);
 }
 
 .text-clip.selected {
-  /* 选中状态：保持现在的绿色背景和绿色边框 */
-  background: linear-gradient(135deg, #4CAF50, #45a049);
-  border-color: #4CAF50;
-  box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.3);
+  /* 选中状态：使用与视频clip相同的橙色 */
+  background: linear-gradient(135deg, var(--color-clip-selected), var(--color-clip-selected-dark)) !important;
+  border-color: var(--color-clip-selected);
+  box-shadow: 0 0 0 2px rgba(255, 107, 53, 0.3);
 }
 
 /* 文本内容区域 */

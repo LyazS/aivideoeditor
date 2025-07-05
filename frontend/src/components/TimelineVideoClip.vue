@@ -277,13 +277,13 @@ onMounted(() => {
 <style scoped>
 /* TimelineVideoClip特有样式 - 基于TimelineBaseClip */
 .video-clip {
-  /* 视频/图片clip的背景色 */
-  background: linear-gradient(135deg, var(--color-clip-primary), var(--color-clip-primary-dark));
+  /* 视频/图片clip的背景色 - 统一灰色 */
+  background: linear-gradient(135deg, #666666, #555555);
 }
 
 /* 图片片段使用与视频相同的背景色 */
 .video-clip--image {
-  background: linear-gradient(135deg, var(--color-clip-primary), var(--color-clip-primary-dark));
+  background: linear-gradient(135deg, #666666, #555555);
 }
 
 /* 重叠状态的特殊样式 */

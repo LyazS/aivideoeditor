@@ -411,6 +411,7 @@ export interface TransformData {
   playbackRate?: number
   volume?: number
   isMuted?: boolean
+  gain?: number // 音频增益（dB）
 }
 
 /**
@@ -427,6 +428,7 @@ export type PropertyType =
   | 'playbackRate'
   | 'volume'
   | 'audioState'
+  | 'gain'
   | 'multiple'
 
 // ==================== Store模块类型 ====================

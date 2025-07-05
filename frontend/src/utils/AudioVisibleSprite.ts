@@ -206,16 +206,30 @@ export class AudioVisibleSprite extends BaseVisibleSprite {
       throw new Error('播放速度必须大于0')
     }
 
-    // 直接更新播放速度，不改变时间范围
-    this.#timeRange.playbackRate = speed
+    const { clipStartTime, clipEndTime, timelineStartTime } = this.#timeRange
+    const clipDuration = clipEndTime - clipStartTime
 
-    // 重新计算并更新WebAV的time属性
-    this.#updateVisibleSpriteTime()
+    if (clipDuration > 0) {
+      // 根据新的播放速度计算时间轴结束时间
+      // 时间轴时长 = 素材时长 / 播放速度
+      const newTimelineDuration = clipDuration / speed
 
-    console.log('🎵 [AudioVisibleSprite] 播放速度已更新:', {
-      playbackRate: speed,
-      timeRange: this.#timeRange
-    })
+      // 🔧 确保时间轴结束时间是整数帧数（避免小数点时长显示）
+      const newTimelineEndTime = timelineStartTime + Math.round(newTimelineDuration)
+
+      // 通过设置时间范围来实现播放速度调整
+      // playbackRate 会在 #updateVisibleSpriteTime() 中根据时间范围自动计算
+      this.#timeRange.timelineEndTime = newTimelineEndTime
+      this.#updateVisibleSpriteTime()
+    }
+  }
+
+  /**
+   * 获取当前播放速度
+   * @returns 播放速度倍率
+   */
+  public getPlaybackRate(): number {
+    return this.#timeRange.playbackRate
   }
 
   /**
@@ -355,6 +369,10 @@ export class AudioVisibleSprite extends BaseVisibleSprite {
       // 更新 #startOffset 为素材内部的开始位置（帧数）
       this.#startOffset = clipStartTime
     }
+
+    // 🔧 重要：更新内部timeRange的playbackRate，确保getTimeRange()返回正确的值
+    this.#timeRange.playbackRate = playbackRate
+    this.#timeRange.effectiveDuration = durationFrames
 
     // 设置 VisibleSprite.time 属性（转换为微秒给WebAV）
     // offset: 在时间轴上的播放开始位置（微秒）

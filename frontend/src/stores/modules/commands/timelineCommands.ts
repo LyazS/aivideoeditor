@@ -21,6 +21,7 @@ import {
 } from '../../../types'
 import { VideoVisibleSprite } from '../../../utils/VideoVisibleSprite'
 import { ImageVisibleSprite } from '../../../utils/ImageVisibleSprite'
+import { AudioVisibleSprite } from '../../../utils/AudioVisibleSprite'
 import { createSpriteFromMediaItem } from '../../../utils/spriteFactory'
 import { markRaw, reactive, ref, type Ref } from 'vue'
 import type { VisibleSprite } from '@webav/av-cliper'
@@ -876,6 +877,7 @@ export class UpdateTransformCommand implements SimpleCommand {
       | 'playbackRate'
       | 'volume'
       | 'audioState'
+      | 'gain'
       | 'multiple',
     private oldValues: {
       x?: number
@@ -889,6 +891,7 @@ export class UpdateTransformCommand implements SimpleCommand {
       playbackRate?: number // 倍速
       volume?: number // 音量（0-1之间）
       isMuted?: boolean // 静音状态
+      gain?: number // 音频增益（dB）
     },
     private newValues: {
       x?: number
@@ -902,6 +905,7 @@ export class UpdateTransformCommand implements SimpleCommand {
       playbackRate?: number // 倍速
       volume?: number // 音量（0-1之间）
       isMuted?: boolean // 静音状态
+      gain?: number // 音频增益（dB）
     },
     private timelineModule: {
       updateTimelineItemTransform: (id: string, transform: TransformData) => void
@@ -1005,6 +1009,10 @@ export class UpdateTransformCommand implements SimpleCommand {
       changes.push(`静音状态: ${oldMuteText} → ${newMuteText}`)
     }
 
+    if (this.newValues.gain !== undefined && this.oldValues.gain !== undefined) {
+      changes.push(`增益: ${this.oldValues.gain.toFixed(1)}dB → ${this.newValues.gain.toFixed(1)}dB`)
+    }
+
     const changeText = changes.length > 0 ? ` (${changes.join(', ')})` : ''
     return `更新变换属性: ${mediaName}${changeText}`
   }
@@ -1041,7 +1049,7 @@ export class UpdateTransformCommand implements SimpleCommand {
         this.timelineModule.updateTimelineItemTransform(this.timelineItemId, filteredTransform)
       }
 
-      // 处理倍速更新（仅对视频有效）
+      // 处理倍速更新（对视频和音频有效）
       if (this.newValues.playbackRate !== undefined && this.clipOperationsModule) {
         this.clipOperationsModule.updateTimelineItemPlaybackRate(
           this.timelineItemId,
@@ -1070,6 +1078,15 @@ export class UpdateTransformCommand implements SimpleCommand {
           if (sprite && 'setMuted' in sprite) {
             ;(sprite as VideoVisibleSprite).setMuted?.(this.newValues.isMuted)
           }
+        }
+      }
+
+      // 处理音频增益更新（仅对音频有效）
+      if (timelineItem.mediaType === 'audio' && this.newValues.gain !== undefined) {
+        ;(timelineItem.config as any).gain = this.newValues.gain
+        const sprite = timelineItem.sprite
+        if (sprite && 'setGain' in sprite) {
+          ;(sprite as AudioVisibleSprite).setGain(this.newValues.gain)
         }
       }
 
@@ -1117,7 +1134,7 @@ export class UpdateTransformCommand implements SimpleCommand {
         this.timelineModule.updateTimelineItemTransform(this.timelineItemId, filteredTransform)
       }
 
-      // 处理倍速恢复（仅对视频有效）
+      // 处理倍速恢复（对视频和音频有效）
       if (this.oldValues.playbackRate !== undefined && this.clipOperationsModule) {
         this.clipOperationsModule.updateTimelineItemPlaybackRate(
           this.timelineItemId,
@@ -1146,6 +1163,15 @@ export class UpdateTransformCommand implements SimpleCommand {
           if (sprite && 'setMuted' in sprite) {
             ;(sprite as VideoVisibleSprite).setMuted?.(this.oldValues.isMuted)
           }
+        }
+      }
+
+      // 处理音频增益恢复（仅对音频有效）
+      if (timelineItem.mediaType === 'audio' && this.oldValues.gain !== undefined) {
+        ;(timelineItem.config as any).gain = this.oldValues.gain
+        const sprite = timelineItem.sprite
+        if (sprite && 'setGain' in sprite) {
+          ;(sprite as AudioVisibleSprite).setGain(this.oldValues.gain)
         }
       }
 
@@ -1308,14 +1334,23 @@ export class SplitTimelineItemCommand implements SimpleCommand {
       throw new Error(`原始素材不存在: ${this.originalTimelineItemData.mediaItemId}`)
     }
 
-    if (!mediaItem.isReady || !mediaItem.mp4Clip) {
-      throw new Error(`素材尚未解析完成或不是视频: ${mediaItem.name}`)
+    // 检查素材是否已准备好并且是支持分割的类型
+    if (!mediaItem.isReady) {
+      throw new Error(`素材尚未解析完成: ${mediaItem.name}`)
+    }
+
+    if (mediaItem.mediaType === 'video' && !mediaItem.mp4Clip) {
+      throw new Error(`视频素材解析失败: ${mediaItem.name}`)
+    }
+
+    if (mediaItem.mediaType === 'audio' && !mediaItem.audioClip) {
+      throw new Error(`音频素材解析失败: ${mediaItem.name}`)
     }
 
     // 2. 计算分割点的时间信息（直接使用帧数）
     const originalTimeRange = this.originalTimelineItemData.timeRange
     if (!isVideoTimeRange(originalTimeRange)) {
-      throw new Error('只能分割视频项目')
+      throw new Error('只能分割视频和音频项目')
     }
     // originalTimeRange 中的时间已经是帧数
     const timelineStartTimeFrames = originalTimeRange.timelineStartTime
@@ -1332,7 +1367,7 @@ export class SplitTimelineItemCommand implements SimpleCommand {
     const splitClipTimeFrames = clipStartTimeFrames + Math.round(clipDurationFrames * relativeRatio)
 
     // 3. 从原始素材重新创建两个sprite
-    const firstSprite = (await createSpriteFromMediaItem(mediaItem)) as VideoVisibleSprite
+    const firstSprite = await createSpriteFromMediaItem(mediaItem)
     firstSprite.setTimeRange({
       clipStartTime: clipStartTimeFrames,
       clipEndTime: splitClipTimeFrames,
@@ -1340,7 +1375,7 @@ export class SplitTimelineItemCommand implements SimpleCommand {
       timelineEndTime: splitTimeFrames, // 分割点时间（帧数）
     })
 
-    const secondSprite = (await createSpriteFromMediaItem(mediaItem)) as VideoVisibleSprite
+    const secondSprite = await createSpriteFromMediaItem(mediaItem)
     secondSprite.setTimeRange({
       clipStartTime: splitClipTimeFrames,
       clipEndTime: clipEndTimeFrames,
@@ -1348,22 +1383,59 @@ export class SplitTimelineItemCommand implements SimpleCommand {
       timelineEndTime: timelineEndTimeFrames,
     })
 
-    // 4. 应用变换属性到两个sprite（类型安全版本）
-    const applyTransformToSprite = (sprite: VideoVisibleSprite) => {
-      const visualProps = getVisualPropsFromData(this.originalTimelineItemData)
-      if (visualProps) {
-        sprite.rect.x = visualProps.x
-        sprite.rect.y = visualProps.y
-        sprite.rect.w = visualProps.width
-        sprite.rect.h = visualProps.height
-        sprite.rect.angle = visualProps.rotation
-        sprite.opacity = visualProps.opacity
-      }
-      sprite.zIndex = (this.originalTimelineItemData.config as any).zIndex
-    }
+    // 4. 根据媒体类型应用相应的属性
+    if (mediaItem.mediaType === 'video') {
+      // 视频：应用视觉和音频属性
+      const firstVideoSprite = firstSprite as VideoVisibleSprite
+      const secondVideoSprite = secondSprite as VideoVisibleSprite
 
-    applyTransformToSprite(firstSprite)
-    applyTransformToSprite(secondSprite)
+      const applyVideoTransform = (sprite: VideoVisibleSprite) => {
+        const visualProps = getVisualPropsFromData(this.originalTimelineItemData)
+        if (visualProps) {
+          sprite.rect.x = visualProps.x
+          sprite.rect.y = visualProps.y
+          sprite.rect.w = visualProps.width
+          sprite.rect.h = visualProps.height
+          sprite.rect.angle = visualProps.rotation
+          sprite.opacity = visualProps.opacity
+        }
+        sprite.zIndex = (this.originalTimelineItemData.config as any).zIndex
+
+        // 应用音频属性
+        const audioProps = getAudioPropsFromData(this.originalTimelineItemData)
+        if (audioProps) {
+          sprite.setAudioState({
+            volume: audioProps.volume,
+            isMuted: audioProps.isMuted,
+          })
+        }
+      }
+
+      applyVideoTransform(firstVideoSprite)
+      applyVideoTransform(secondVideoSprite)
+    } else if (mediaItem.mediaType === 'audio') {
+      // 音频：只应用音频属性
+      const firstAudioSprite = firstSprite as AudioVisibleSprite
+      const secondAudioSprite = secondSprite as AudioVisibleSprite
+
+      const applyAudioTransform = (sprite: AudioVisibleSprite) => {
+        const audioProps = getAudioPropsFromData(this.originalTimelineItemData)
+        if (audioProps) {
+          sprite.setAudioState({
+            volume: audioProps.volume,
+            isMuted: audioProps.isMuted,
+          })
+        }
+        // 应用增益设置（如果有的话）
+        const config = this.originalTimelineItemData.config as any
+        if (config.gain !== undefined) {
+          sprite.setGain(config.gain)
+        }
+      }
+
+      applyAudioTransform(firstAudioSprite)
+      applyAudioTransform(secondAudioSprite)
+    }
 
     // 5. 创建新的TimelineItem（先不设置缩略图）
     const firstItem: TimelineItem = reactive({
@@ -1415,27 +1487,66 @@ export class SplitTimelineItemCommand implements SimpleCommand {
       throw new Error(`原始素材不存在: ${this.originalTimelineItemData.mediaItemId}`)
     }
 
-    if (!mediaItem.isReady || !mediaItem.mp4Clip) {
-      throw new Error(`素材尚未解析完成或不是视频: ${mediaItem.name}`)
+    // 检查素材是否已准备好并且是支持的类型
+    if (!mediaItem.isReady) {
+      throw new Error(`素材尚未解析完成: ${mediaItem.name}`)
+    }
+
+    if (mediaItem.mediaType === 'video' && !mediaItem.mp4Clip) {
+      throw new Error(`视频素材解析失败: ${mediaItem.name}`)
+    }
+
+    if (mediaItem.mediaType === 'audio' && !mediaItem.audioClip) {
+      throw new Error(`音频素材解析失败: ${mediaItem.name}`)
     }
 
     // 2. 从原始素材重新创建sprite
-    const newSprite = (await createSpriteFromMediaItem(mediaItem)) as VideoVisibleSprite
+    const newSprite = await createSpriteFromMediaItem(mediaItem)
 
     // 3. 设置原始时间范围
     newSprite.setTimeRange(this.originalTimelineItemData.timeRange)
 
-    // 4. 应用变换属性（类型安全版本）
-    const visualProps = getVisualPropsFromData(this.originalTimelineItemData)
-    if (visualProps) {
-      newSprite.rect.x = visualProps.x
-      newSprite.rect.y = visualProps.y
-      newSprite.rect.w = visualProps.width
-      newSprite.rect.h = visualProps.height
-      newSprite.rect.angle = visualProps.rotation
-      newSprite.opacity = visualProps.opacity
+    // 4. 根据媒体类型应用相应的属性
+    if (mediaItem.mediaType === 'video') {
+      // 视频：应用视觉和音频属性
+      const videoSprite = newSprite as VideoVisibleSprite
+      const visualProps = getVisualPropsFromData(this.originalTimelineItemData)
+      if (visualProps) {
+        videoSprite.rect.x = visualProps.x
+        videoSprite.rect.y = visualProps.y
+        videoSprite.rect.w = visualProps.width
+        videoSprite.rect.h = visualProps.height
+        videoSprite.rect.angle = visualProps.rotation
+        videoSprite.opacity = visualProps.opacity
+      }
+      videoSprite.zIndex = (this.originalTimelineItemData.config as any).zIndex
+
+      // 应用音频属性
+      const audioProps = getAudioPropsFromData(this.originalTimelineItemData)
+      if (audioProps) {
+        videoSprite.setAudioState({
+          volume: audioProps.volume,
+          isMuted: audioProps.isMuted,
+        })
+      }
+    } else if (mediaItem.mediaType === 'audio') {
+      // 音频：只应用音频属性
+      const audioSprite = newSprite as AudioVisibleSprite
+
+      const audioProps = getAudioPropsFromData(this.originalTimelineItemData)
+      if (audioProps) {
+        audioSprite.setAudioState({
+          volume: audioProps.volume,
+          isMuted: audioProps.isMuted,
+        })
+      }
+
+      // 应用增益设置（如果有的话）
+      const config = this.originalTimelineItemData.config as any
+      if (config.gain !== undefined) {
+        audioSprite.setGain(config.gain)
+      }
     }
-    newSprite.zIndex = (this.originalTimelineItemData.config as any).zIndex
 
     // 5. 创建新的TimelineItem（先不设置缩略图）
     const newTimelineItem: TimelineItem = reactive({

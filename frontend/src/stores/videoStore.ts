@@ -274,6 +274,7 @@ export const useVideoStore = defineStore('video', () => {
       playbackRate?: number // 倍速
       volume?: number // 音量（0-1之间）
       isMuted?: boolean // 静音状态
+      gain?: number // 音频增益（dB）
     },
   ) {
     // 获取要更新的时间轴项目
@@ -324,11 +325,11 @@ export const useVideoStore = defineStore('video', () => {
     }
 
     if (newTransform.playbackRate !== undefined) {
-      // 获取当前倍速（仅对视频有效）
-      if (timelineItem.mediaType === 'video' && 'playbackRate' in timelineItem.timeRange) {
+      // 获取当前倍速（对视频和音频有效）
+      if ((timelineItem.mediaType === 'video' || timelineItem.mediaType === 'audio') && 'playbackRate' in timelineItem.timeRange) {
         oldTransform.playbackRate = timelineItem.timeRange.playbackRate || 1
       } else {
-        oldTransform.playbackRate = 1 // 图片默认为1
+        oldTransform.playbackRate = 1 // 图片和文本默认为1
       }
     }
 
@@ -342,6 +343,11 @@ export const useVideoStore = defineStore('video', () => {
         // 获取当前静音状态（对视频和音频有效）
         oldTransform.isMuted = timelineItem.config.isMuted ?? false
       }
+    }
+
+    if (timelineItem.mediaType === 'audio' && newTransform.gain !== undefined) {
+      // 获取当前增益（仅对音频有效）
+      oldTransform.gain = (timelineItem.config as any).gain ?? 0
     }
 
     // 检查是否有实际变化
@@ -457,6 +463,12 @@ export const useVideoStore = defineStore('video', () => {
       if (muteChanged) return true
     }
 
+    // 检查增益变化
+    if (newTransform.gain !== undefined && oldTransform.gain !== undefined) {
+      const gainChanged = Math.abs(oldTransform.gain - newTransform.gain) > 0.1 // 0.1dB误差容忍
+      if (gainChanged) return true
+    }
+
     return false
   }
 
@@ -478,6 +490,7 @@ export const useVideoStore = defineStore('video', () => {
     if (transform.playbackRate !== undefined) changedProperties.push('playbackRate')
     if (transform.volume !== undefined) changedProperties.push('volume')
     if (transform.isMuted !== undefined) changedProperties.push('audioState')
+    if (transform.gain !== undefined) changedProperties.push('gain')
 
     // 如果同时有音量和静音状态变化，归类为audioState
     if (transform.volume !== undefined && transform.isMuted !== undefined) {
@@ -503,9 +516,9 @@ export const useVideoStore = defineStore('video', () => {
       return
     }
 
-    // 检查是否为视频类型（图片不支持分割）
-    if (timelineItem.mediaType !== 'video') {
-      console.error('❌ 只有视频片段支持分割操作')
+    // 检查是否为支持分割的类型（图片和文本不支持分割）
+    if (timelineItem.mediaType !== 'video' && timelineItem.mediaType !== 'audio') {
+      console.error('❌ 只有视频和音频片段支持分割操作')
       return
     }
 

@@ -395,7 +395,8 @@ async function stopResize() {
     const currentTimeRange = props.timelineItem.timeRange
     let newTimeRange: VideoTimeRange | ImageTimeRange
 
-    if (props.timelineItem.mediaType === 'video' && isVideoTimeRange(currentTimeRange)) {
+    if ((props.timelineItem.mediaType === 'video' || props.timelineItem.mediaType === 'audio') && isVideoTimeRange(currentTimeRange)) {
+      // 视频和音频都使用 VideoTimeRange 结构
       newTimeRange = {
         timelineStartTime: newTimelineStartTimeFrames,
         timelineEndTime: newTimelineEndTimeFrames,

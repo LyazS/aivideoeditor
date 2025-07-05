@@ -237,9 +237,11 @@ export function createClipOperationsModule(
       }
 
       // 更新sprite的播放速度（这会自动更新sprite内部的timeRange）
-      // 只有视频sprite才有setPlaybackSpeed方法
+      // 视频和音频sprite都有setPlaybackRate方法
       if (item.mediaType === 'video') {
-        ;(item.sprite as VideoVisibleSprite).setPlaybackSpeed(clampedRate)
+        ;(item.sprite as VideoVisibleSprite).setPlaybackRate(clampedRate)
+      } else if (item.mediaType === 'audio') {
+        ;(item.sprite as AudioVisibleSprite).setPlaybackRate(clampedRate)
       }
 
       // 使用同步函数更新TimelineItem的timeRange
@@ -314,19 +316,7 @@ export function createClipOperationsModule(
       return
     }
 
-    // 检查是否为视频类型（图片不支持分割）（直接使用 originalItem.mediaType，避免冗余的 MediaItem 获取）
-    if (originalItem.mediaType !== 'video') {
-      console.error('❌ 只有视频片段支持分割操作')
-      console.groupEnd()
-      return
-    }
 
-    // 检查素材是否已经解析完成
-    if (!mediaItem.isReady || !mediaItem.mp4Clip) {
-      console.error('❌ 素材还在解析中，无法分割')
-      console.groupEnd()
-      return
-    }
 
     const timelineStartTimeFrames = timeRange.timelineStartTime // 帧数
     const timelineEndTimeFrames = timeRange.timelineEndTime // 帧数
@@ -343,9 +333,36 @@ export function createClipOperationsModule(
       return
     }
 
-    // 只有视频才支持分割
-    if (originalItem.mediaType !== 'video' || !isVideoTimeRange(timeRange)) {
-      console.error('❌ 只有视频片段支持分割')
+    // 视频和音频都支持分割
+    if (originalItem.mediaType !== 'video' && originalItem.mediaType !== 'audio') {
+      console.error('❌ 只有视频和音频片段支持分割')
+      console.groupEnd()
+      return
+    }
+
+    // 检查时间范围类型
+    if (!isVideoTimeRange(timeRange)) {
+      console.error('❌ 时间范围类型不支持分割')
+      console.groupEnd()
+      return
+    }
+
+    // 检查素材是否已经解析完成
+    if (!mediaItem.isReady) {
+      console.error('❌ 素材还在解析中，无法分割')
+      console.groupEnd()
+      return
+    }
+
+    // 检查对应的clip是否存在
+    if (originalItem.mediaType === 'video' && !mediaItem.mp4Clip) {
+      console.error('❌ 视频素材解析失败，无法分割')
+      console.groupEnd()
+      return
+    }
+
+    if (originalItem.mediaType === 'audio' && !mediaItem.audioClip) {
+      console.error('❌ 音频素材解析失败，无法分割')
       console.groupEnd()
       return
     }
@@ -367,8 +384,8 @@ export function createClipOperationsModule(
 
     try {
       // 为每个分割片段从原始素材创建sprite
-      // 创建第一个片段的VideoVisibleSprite
-      const firstSprite = (await createSpriteFromMediaItem(mediaItem)) as VideoVisibleSprite
+      // 创建第一个片段的sprite
+      const firstSprite = await createSpriteFromMediaItem(mediaItem)
       firstSprite.setTimeRange({
         clipStartTime: clipStartTimeFrames, // 帧数
         clipEndTime: splitClipTimeFrames, // 帧数
@@ -376,26 +393,8 @@ export function createClipOperationsModule(
         timelineEndTime: splitTimeFrames, // 帧数
       })
 
-      // 复制原始sprite的变换属性到第一个片段
-      const originalRect = sprite.rect
-      firstSprite.rect.x = originalRect.x
-      firstSprite.rect.y = originalRect.y
-      firstSprite.rect.w = originalRect.w
-      firstSprite.rect.h = originalRect.h
-      firstSprite.rect.angle = originalRect.angle // 复制旋转角度
-      firstSprite.zIndex = sprite.zIndex
-      firstSprite.opacity = sprite.opacity
-
-      console.log(`📋 复制原始sprite属性到第一个片段:`, {
-        position: { x: originalRect.x, y: originalRect.y },
-        size: { w: originalRect.w, h: originalRect.h },
-        rotation: originalRect.angle,
-        zIndex: sprite.zIndex,
-        opacity: sprite.opacity,
-      })
-
-      // 创建第二个片段的VideoVisibleSprite
-      const secondSprite = (await createSpriteFromMediaItem(mediaItem)) as VideoVisibleSprite
+      // 创建第二个片段的sprite
+      const secondSprite = await createSpriteFromMediaItem(mediaItem)
       secondSprite.setTimeRange({
         clipStartTime: splitClipTimeFrames, // 帧数
         clipEndTime: clipEndTimeFrames, // 帧数
@@ -403,22 +402,65 @@ export function createClipOperationsModule(
         timelineEndTime: timelineEndTimeFrames, // 帧数
       })
 
-      // 复制原始sprite的变换属性到第二个片段
-      secondSprite.rect.x = originalRect.x
-      secondSprite.rect.y = originalRect.y
-      secondSprite.rect.w = originalRect.w
-      secondSprite.rect.h = originalRect.h
-      secondSprite.rect.angle = originalRect.angle // 复制旋转角度
-      secondSprite.zIndex = sprite.zIndex
-      secondSprite.opacity = sprite.opacity
+      // 根据媒体类型复制相应的属性
+      if (originalItem.mediaType === 'video') {
+        // 视频：复制视觉和音频属性
+        const firstVideoSprite = firstSprite as VideoVisibleSprite
+        const secondVideoSprite = secondSprite as VideoVisibleSprite
+        const originalVideoSprite = sprite as VideoVisibleSprite
+        const originalRect = originalVideoSprite.rect
 
-      console.log(`📋 复制原始sprite属性到第二个片段:`, {
-        position: { x: originalRect.x, y: originalRect.y },
-        size: { w: originalRect.w, h: originalRect.h },
-        rotation: originalRect.angle,
-        zIndex: sprite.zIndex,
-        opacity: sprite.opacity,
-      })
+        // 复制视觉属性到第一个片段
+        firstVideoSprite.rect.x = originalRect.x
+        firstVideoSprite.rect.y = originalRect.y
+        firstVideoSprite.rect.w = originalRect.w
+        firstVideoSprite.rect.h = originalRect.h
+        firstVideoSprite.rect.angle = originalRect.angle
+        firstVideoSprite.zIndex = originalVideoSprite.zIndex
+        firstVideoSprite.opacity = originalVideoSprite.opacity
+
+        // 复制视觉属性到第二个片段
+        secondVideoSprite.rect.x = originalRect.x
+        secondVideoSprite.rect.y = originalRect.y
+        secondVideoSprite.rect.w = originalRect.w
+        secondVideoSprite.rect.h = originalRect.h
+        secondVideoSprite.rect.angle = originalRect.angle
+        secondVideoSprite.zIndex = originalVideoSprite.zIndex
+        secondVideoSprite.opacity = originalVideoSprite.opacity
+
+        // 复制音频属性
+        const originalAudioState = originalVideoSprite.getAudioState()
+        firstVideoSprite.setAudioState(originalAudioState)
+        secondVideoSprite.setAudioState(originalAudioState)
+
+        console.log(`📋 复制视频sprite属性:`, {
+          position: { x: originalRect.x, y: originalRect.y },
+          size: { w: originalRect.w, h: originalRect.h },
+          rotation: originalRect.angle,
+          zIndex: originalVideoSprite.zIndex,
+          opacity: originalVideoSprite.opacity,
+          audioState: originalAudioState,
+        })
+      } else if (originalItem.mediaType === 'audio') {
+        // 音频：只复制音频属性
+        const firstAudioSprite = firstSprite as AudioVisibleSprite
+        const secondAudioSprite = secondSprite as AudioVisibleSprite
+        const originalAudioSprite = sprite as AudioVisibleSprite
+
+        // 复制音频属性
+        const originalAudioState = originalAudioSprite.getAudioState()
+        const originalGain = originalAudioSprite.getGain()
+
+        firstAudioSprite.setAudioState(originalAudioState)
+        firstAudioSprite.setGain(originalGain)
+        secondAudioSprite.setAudioState(originalAudioState)
+        secondAudioSprite.setGain(originalGain)
+
+        console.log(`📋 复制音频sprite属性:`, {
+          audioState: originalAudioState,
+          gain: originalGain,
+        })
+      }
 
       // 添加到WebAV画布
       const canvas = webavModule.avCanvas.value

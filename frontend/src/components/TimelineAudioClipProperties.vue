@@ -34,6 +34,34 @@
         </div>
       </div>
 
+      <!-- 倍速控制 -->
+      <div class="property-item">
+        <label>倍速</label>
+        <div class="speed-controls">
+          <!-- 分段倍速滑块 -->
+          <SliderInput
+            :model-value="normalizedSpeed"
+            @input="updateNormalizedSpeed"
+            :min="0"
+            :max="100"
+            :step="1"
+            slider-class="segmented-speed-slider"
+            :segments="speedSliderSegments"
+          />
+          <NumberInput
+            :model-value="speedInputValue"
+            @change="updateSpeedFromInput"
+            :min="0.1"
+            :max="100"
+            :step="0.1"
+            :precision="1"
+            :show-controls="false"
+            placeholder="倍速"
+            :input-style="speedInputStyle"
+          />
+        </div>
+      </div>
+
       <!-- 音量控制 -->
       <div class="property-item">
         <label>音量</label>
@@ -159,6 +187,44 @@ const clipName = computed({
     }
   },
 })
+
+// 倍速分段配置
+const speedSegments = [
+  { min: 0.1, max: 1, normalizedStart: 0, normalizedEnd: 20 }, // 0-20%: 0.1-1x
+  { min: 1, max: 2, normalizedStart: 20, normalizedEnd: 40 }, // 20-40%: 1-2x
+  { min: 2, max: 5, normalizedStart: 40, normalizedEnd: 60 }, // 40-60%: 2-5x
+  { min: 5, max: 10, normalizedStart: 60, normalizedEnd: 80 }, // 60-80%: 5-10x
+  { min: 10, max: 100, normalizedStart: 80, normalizedEnd: 100 }, // 80-100%: 10-100x
+]
+
+// 倍速相关
+const playbackRate = computed(() => {
+  if (!props.selectedTimelineItem) return 1
+
+  // 直接从TimeRange中获取播放速度属性
+  const timeRange = props.selectedTimelineItem.timeRange
+  return isVideoTimeRange(timeRange) ? timeRange.playbackRate || 1 : 1
+})
+
+const normalizedSpeed = computed(() => {
+  return speedToNormalized(playbackRate.value)
+})
+
+const speedInputValue = computed(() => playbackRate.value)
+
+// 倍速滑块分段标记（用于SliderInput组件）
+const speedSliderSegments = [
+  { position: 20, label: '1x' },
+  { position: 40, label: '2x' },
+  { position: 60, label: '5x' },
+  { position: 80, label: '10x' }
+]
+
+// 倍速输入框样式
+const speedInputStyle = computed(() => ({
+  width: '60px',
+  textAlign: 'center' as const,
+}))
 
 // 音量相关 - 直接从TimelineItem读取，这是响应式的
 const volume = computed(() => {
@@ -360,17 +426,76 @@ const updateGain = (newGain: number) => {
 
   const clampedGain = Math.max(-20, Math.min(20, newGain))
 
-  // 📝 数据流向说明：
-  // gain 属性是音频特有属性，目前历史记录系统还不支持
-  // 暂时直接更新config，未来可以扩展历史记录系统支持音频特有属性
-  props.selectedTimelineItem.config.gain = clampedGain
-
-  // 同时更新sprite的增益设置
-  if (props.selectedTimelineItem.sprite && 'setGain' in props.selectedTimelineItem.sprite) {
-    ;(props.selectedTimelineItem.sprite as any).setGain(clampedGain)
-  }
+  // 使用历史记录系统更新增益
+  videoStore.updateTimelineItemTransformWithHistory(props.selectedTimelineItem.id, {
+    gain: clampedGain,
+  })
 
   console.log('✅ 音频增益更新成功:', clampedGain, 'dB')
+}
+
+// 更新播放速度 - 使用带历史记录的方法
+const updatePlaybackRate = async (newRate?: number) => {
+  if (props.selectedTimelineItem) {
+    const rate = newRate || playbackRate.value
+
+    try {
+      // 使用带历史记录的变换属性更新方法
+      await videoStore.updateTimelineItemTransformWithHistory(props.selectedTimelineItem.id, {
+        playbackRate: rate,
+      })
+      console.log('✅ 音频倍速更新成功')
+    } catch (error) {
+      console.error('❌ 更新音频倍速失败:', error)
+      // 如果历史记录更新失败，回退到直接更新
+      videoStore.updateTimelineItemPlaybackRate(props.selectedTimelineItem.id, rate)
+    }
+  }
+}
+
+// 更新归一化速度
+const updateNormalizedSpeed = (newNormalizedSpeed: number) => {
+  const actualSpeed = normalizedToSpeed(newNormalizedSpeed)
+  updatePlaybackRate(actualSpeed)
+}
+
+// 从输入框更新倍速
+const updateSpeedFromInput = (newSpeed: number) => {
+  if (newSpeed && newSpeed > 0) {
+    // 确保倍速在合理范围内
+    const clampedSpeed = Math.max(0.1, Math.min(100, newSpeed))
+    updatePlaybackRate(clampedSpeed)
+  }
+}
+
+// 将归一化值(0-100)转换为实际播放速度
+const normalizedToSpeed = (normalized: number) => {
+  // 找到对应的段
+  for (const segment of speedSegments) {
+    if (normalized >= segment.normalizedStart && normalized <= segment.normalizedEnd) {
+      // 在段内进行线性插值
+      const segmentProgress =
+        (normalized - segment.normalizedStart) / (segment.normalizedEnd - segment.normalizedStart)
+      return segment.min + segmentProgress * (segment.max - segment.min)
+    }
+  }
+  return 1 // 默认值
+}
+
+// 将实际播放速度转换为归一化值(0-100)
+const speedToNormalized = (speed: number) => {
+  // 找到对应的段
+  for (const segment of speedSegments) {
+    if (speed >= segment.min && speed <= segment.max) {
+      // 在段内进行线性插值
+      const segmentProgress = (speed - segment.min) / (segment.max - segment.min)
+      return (
+        segment.normalizedStart +
+        segmentProgress * (segment.normalizedEnd - segment.normalizedStart)
+      )
+    }
+  }
+  return 20 // 默认值对应1x
 }
 </script>
 
@@ -391,6 +516,14 @@ const updateGain = (newGain: number) => {
 .timecode-input::placeholder {
   color: var(--color-text-hint);
   font-style: italic;
+}
+
+/* 倍速控制样式 */
+.speed-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  flex: 1;
 }
 
 /* 音量控制样式 */
