@@ -165,6 +165,16 @@
       :wheel-container="timelineBody"
       :enable-snapping="true"
     />
+
+    <!-- 吸附指示器组件 - 覆盖整个时间轴 -->
+    <SnapIndicator
+      :show="snapIndicatorManager.visible"
+      :snap-point="snapIndicatorManager.data.snapPoint"
+      :timeline-width="snapIndicatorManager.data.timelineWidth"
+      :timeline-offset="{ x: 150, y: 0 }"
+      :show-tooltip="snapIndicatorManager.data.showTooltip"
+      :line-height="snapIndicatorManager.data.lineHeight"
+    />
   </div>
 
   <!-- 统一右键菜单 -->
@@ -233,6 +243,7 @@ import { usePlaybackControls } from '../composables/usePlaybackControls'
 import { getDragPreviewManager } from '../composables/useDragPreview'
 import { useDragUtils } from '../composables/useDragUtils'
 import { useDialogs } from '../composables/useDialogs'
+import { getSnapIndicatorManager } from '../composables/useSnapIndicator'
 import { VideoVisibleSprite } from '../utils/VideoVisibleSprite'
 import { ImageVisibleSprite } from '../utils/ImageVisibleSprite'
 import { AudioVisibleSprite } from '../utils/AudioVisibleSprite'
@@ -244,6 +255,7 @@ import { detectTrackConflicts } from '../utils/timeOverlapUtils'
 
 import { generateThumbnailForMediaItem } from '../utils/thumbnailGenerator'
 import Playhead from './Playhead.vue'
+import SnapIndicator from './SnapIndicator.vue'
 import type {
   TimelineItem,
   TimelineItemDragData,
@@ -286,6 +298,7 @@ const { pauseForEditing } = usePlaybackControls()
 const dragPreviewManager = getDragPreviewManager()
 const dragUtils = useDragUtils()
 const dialogs = useDialogs()
+const snapIndicatorManager = getSnapIndicatorManager()
 
 const timelineBody = ref<HTMLElement>()
 const timelineWidth = ref(800)
@@ -776,10 +789,12 @@ function handleDragOver(event: DragEvent) {
       // 文件拖拽，但我们不再支持直接文件拖拽
       event.dataTransfer!.dropEffect = 'none'
       dragPreviewManager.hidePreview()
+      snapIndicatorManager.hide(true) // 立即隐藏吸附指示器
       break
     default:
       event.dataTransfer!.dropEffect = 'copy'
       dragPreviewManager.hidePreview()
+      snapIndicatorManager.hide(true) // 立即隐藏吸附指示器
       break
   }
 }
@@ -791,10 +806,21 @@ function handleMediaItemDragOver(event: DragEvent) {
 
   if (!dropPosition) {
     dragPreviewManager.hidePreview()
+    snapIndicatorManager.hide(true) // 立即隐藏吸附指示器
     return
   }
 
-  const { dropTime, targetTrackId } = dropPosition
+  const { dropTime, targetTrackId, snapResult } = dropPosition
+
+  // 显示吸附指示器（如果有吸附）
+  if (snapResult && snapResult.snapped && snapResult.snapPoint) {
+    snapIndicatorManager.show(snapResult.snapPoint, timelineWidth.value, {
+      timelineOffset: { x: 150, y: 0 },
+      lineHeight: 400
+    })
+  } else {
+    snapIndicatorManager.hide(true) // 立即隐藏，不延迟
+  }
 
   // 使用统一的拖拽工具获取素材拖拽数据
   const mediaDragData = dragUtils.getCurrentMediaItemDragData()
@@ -839,6 +865,7 @@ function handleTimelineItemDragOver(event: DragEvent) {
   const currentDragData = dragUtils.getCurrentTimelineItemDragData()
   if (!currentDragData) {
     dragPreviewManager.hidePreview()
+    snapIndicatorManager.hide(true) // 立即隐藏吸附指示器
     return
   }
 
@@ -851,10 +878,21 @@ function handleTimelineItemDragOver(event: DragEvent) {
 
   if (!dropPosition) {
     dragPreviewManager.hidePreview()
+    snapIndicatorManager.hide(true) // 立即隐藏吸附指示器
     return
   }
 
-  const { dropTime: clipStartTime, targetTrackId } = dropPosition
+  const { dropTime: clipStartTime, targetTrackId, snapResult } = dropPosition
+
+  // 显示吸附指示器（如果有吸附）
+  if (snapResult && snapResult.snapped && snapResult.snapPoint) {
+    snapIndicatorManager.show(snapResult.snapPoint, timelineWidth.value, {
+      timelineOffset: { x: 150, y: 0 },
+      lineHeight: 400
+    })
+  } else {
+    snapIndicatorManager.hide(true) // 立即隐藏，不延迟
+  }
 
   // 获取拖拽项目信息
   const draggedItem = videoStore.getTimelineItem(currentDragData.itemId)
@@ -884,6 +922,7 @@ function handleTimelineItemDragOver(event: DragEvent) {
     dragPreviewManager.updatePreview(previewData, timelineWidth.value)
   } else {
     dragPreviewManager.hidePreview()
+    snapIndicatorManager.hide(true) // 立即隐藏吸附指示器
   }
 }
 
@@ -891,8 +930,9 @@ async function handleDrop(event: DragEvent) {
   event.preventDefault()
   console.log('🎯 [Timeline] 时间轴接收到拖拽事件')
 
-  // 清理统一预览
+  // 清理统一预览和吸附指示器
   dragPreviewManager.hidePreview()
+  snapIndicatorManager.hide(true) // 立即隐藏吸附指示器
 
   // 暂停播放以便进行拖拽操作
   pauseForEditing('时间轴拖拽放置')
@@ -1652,6 +1692,7 @@ function handleDragLeave(event: DragEvent) {
 
   if (!timelineElement.contains(relatedTarget)) {
     dragPreviewManager.hidePreview()
+    snapIndicatorManager.hide(true) // 立即隐藏吸附指示器
   }
 }
 
@@ -1861,6 +1902,9 @@ onUnmounted(() => {
 
   // 清理统一预览
   dragPreviewManager.hidePreview()
+
+  // 清理吸附指示器
+  snapIndicatorManager.dispose()
 
   // 移除拖拽离开事件监听
   if (timelineBody.value) {

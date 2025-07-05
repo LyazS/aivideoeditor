@@ -1,6 +1,7 @@
 import { useVideoStore } from '../stores/videoStore'
 import type { TimelineItemDragData, MediaItemDragData, MediaType, TrackType } from '../types'
 import { alignFramesToFrame } from '../stores/utils/timeUtils'
+import { useSnapManager } from './useSnapManager'
 
 /**
  * 拖拽工具函数集合
@@ -8,6 +9,7 @@ import { alignFramesToFrame } from '../stores/utils/timeUtils'
  */
 export function useDragUtils() {
   const videoStore = useVideoStore()
+  const snapManager = useSnapManager()
 
   /**
    * 设置时间轴项目拖拽数据
@@ -228,12 +230,13 @@ export function useDragUtils() {
   }
 
   /**
-   * 计算拖拽目标位置（支持轨道类型兼容性检查）
+   * 计算拖拽目标位置（支持轨道类型兼容性检查和吸附）
    */
   function calculateDropPosition(
     event: DragEvent,
     timelineWidth: number,
     dragOffset?: { x: number; y: number },
+    enableSnapping: boolean = true
   ) {
     const targetElement = event.target as HTMLElement
     const trackContent = targetElement.closest('.track-content')
@@ -246,8 +249,9 @@ export function useDragUtils() {
     const mouseX = event.clientX - rect.left
     let targetTrackId = trackContent.getAttribute('data-track-id') || videoStore.tracks[0]?.id || ''
 
-    // 获取拖拽的媒体类型
+    // 获取拖拽的媒体类型和排除的片段ID
     let draggedMediaType: MediaType | null = null
+    let excludeClipIds: string[] = []
 
     // 检查是否是时间轴项目拖拽
     const timelineDragData = getCurrentTimelineItemDragData()
@@ -256,12 +260,16 @@ export function useDragUtils() {
       if (draggedItem) {
         draggedMediaType = draggedItem.mediaType
       }
+      // 排除当前拖拽的所有选中片段
+      excludeClipIds = timelineDragData.selectedItems
     } else {
       // 检查是否是素材库拖拽
       const mediaDragData = getCurrentMediaItemDragData()
       if (mediaDragData) {
         draggedMediaType = mediaDragData.mediaType
       }
+      // 素材库拖拽不需要排除任何片段
+      excludeClipIds = []
     }
 
     // 如果能获取到媒体类型，检查轨道兼容性
@@ -278,36 +286,52 @@ export function useDragUtils() {
             const newRect = newTrackContent.getBoundingClientRect()
             // 重新计算mouseX相对于新轨道的位置
             const mouseXRelativeToNewTrack = event.clientX - newRect.left
-            // 使用新的相对位置计算时间
-            const dropFrames = calculateDropFrames(mouseXRelativeToNewTrack, timelineWidth, dragOffset)
+            // 使用新的相对位置计算时间（支持吸附）
+            const dropResult = calculateDropFrames(
+              mouseXRelativeToNewTrack,
+              timelineWidth,
+              dragOffset,
+              enableSnapping,
+              excludeClipIds
+            )
             return {
-              dropTime: dropFrames,
+              dropTime: dropResult.frame,
               targetTrackId,
               trackContent: newTrackContent,
+              snapResult: dropResult.snapResult
             }
           }
         }
       }
     }
 
-    // 使用原始逻辑计算时间
-    const dropFrames = calculateDropFrames(mouseX, timelineWidth, dragOffset)
+    // 使用原始逻辑计算时间（支持吸附）
+    const dropResult = calculateDropFrames(
+      mouseX,
+      timelineWidth,
+      dragOffset,
+      enableSnapping,
+      excludeClipIds
+    )
 
     return {
-      dropTime: dropFrames,
+      dropTime: dropResult.frame,
       targetTrackId,
       trackContent,
+      snapResult: dropResult.snapResult
     }
   }
 
   /**
-   * 计算拖拽帧数的辅助函数
+   * 计算拖拽帧数的辅助函数（支持吸附）
    */
   function calculateDropFrames(
     mouseX: number,
     timelineWidth: number,
     dragOffset?: { x: number; y: number },
-  ): number {
+    enableSnapping: boolean = true,
+    excludeClipIds?: string[]
+  ): { frame: number; snapResult?: any } {
     // 使用帧数进行精确计算
     let dropFrames: number
     if (dragOffset) {
@@ -323,7 +347,27 @@ export function useDragUtils() {
     dropFrames = Math.max(0, dropFrames)
 
     // 对齐到帧边界
-    return alignFramesToFrame(dropFrames)
+    dropFrames = alignFramesToFrame(dropFrames)
+
+    // 应用吸附计算（如果启用）
+    let snapResult
+    if (enableSnapping) {
+      snapResult = snapManager.calculateClipDragSnap(
+        dropFrames,
+        timelineWidth,
+        excludeClipIds || [],
+        {
+          temporaryDisabled: false
+        }
+      )
+
+      // 如果发生了吸附，使用吸附后的帧数
+      if (snapResult.snapped) {
+        dropFrames = snapResult.frame
+      }
+    }
+
+    return { frame: dropFrames, snapResult }
   }
 
   /**

@@ -69,6 +69,12 @@ const webAVControls = useWebAVControls()
 const dragUtils = useDragUtils()
 const { pauseForEditing } = usePlaybackControls()
 
+// 导入吸附管理器
+import { useSnapManager } from '../composables/useSnapManager'
+import { getSnapIndicatorManager } from '../composables/useSnapIndicator'
+const snapManager = useSnapManager()
+const snapIndicatorManager = getSnapIndicatorManager()
+
 // 通用状态
 const isDragging = ref(false)
 const isResizing = ref(false)
@@ -202,7 +208,10 @@ function handleDragEnd(event: DragEvent) {
   isDragging.value = false
   dragUtils.clearDragData()
   removeSimpleDragPreview()
-  
+
+  // 隐藏吸附指示器
+  snapIndicatorManager.hide(true)
+
   emit('drag-end', props.timelineItem.id, event)
 }
 
@@ -343,9 +352,30 @@ function handleResize(event: MouseEvent) {
       props.timelineWidth,
     )
     const newLeftPixel = currentLeftPixel + deltaX
-    const newLeftFrames = videoStore.pixelToFrame(newLeftPixel, props.timelineWidth)
+    let newLeftFrames = videoStore.pixelToFrame(newLeftPixel, props.timelineWidth)
+    newLeftFrames = Math.max(0, alignFramesToFrame(newLeftFrames))
 
-    newTimelinePositionFrames = Math.max(0, alignFramesToFrame(newLeftFrames))
+    // 应用吸附计算（左边界调整）
+    const snapResult = snapManager.calculateClipResizeSnap(
+      newLeftFrames,
+      props.timelineWidth,
+      props.timelineItem.id // 排除当前片段
+    )
+
+    if (snapResult.snapped) {
+      newLeftFrames = snapResult.frame
+      // 显示吸附指示器
+      if (snapResult.snapPoint) {
+        snapIndicatorManager.show(snapResult.snapPoint, props.timelineWidth, {
+          timelineOffset: { x: 150, y: 0 },
+          lineHeight: 400
+        })
+      }
+    } else {
+      snapIndicatorManager.hide(true) // 立即隐藏，不延迟
+    }
+
+    newTimelinePositionFrames = newLeftFrames
     newDurationFrames =
       resizeStartDurationFrames.value +
       (resizeStartPositionFrames.value - newTimelinePositionFrames)
@@ -354,9 +384,30 @@ function handleResize(event: MouseEvent) {
     const endFrames = resizeStartPositionFrames.value + resizeStartDurationFrames.value
     const currentRightPixel = videoStore.frameToPixel(endFrames, props.timelineWidth)
     const newRightPixel = currentRightPixel + deltaX
-    const newRightFrames = videoStore.pixelToFrame(newRightPixel, props.timelineWidth)
+    let newRightFrames = videoStore.pixelToFrame(newRightPixel, props.timelineWidth)
+    newRightFrames = alignFramesToFrame(newRightFrames)
 
-    newDurationFrames = alignFramesToFrame(newRightFrames) - resizeStartPositionFrames.value
+    // 应用吸附计算（右边界调整）
+    const snapResult = snapManager.calculateClipResizeSnap(
+      newRightFrames,
+      props.timelineWidth,
+      props.timelineItem.id // 排除当前片段
+    )
+
+    if (snapResult.snapped) {
+      newRightFrames = snapResult.frame
+      // 显示吸附指示器
+      if (snapResult.snapPoint) {
+        snapIndicatorManager.show(snapResult.snapPoint, props.timelineWidth, {
+          timelineOffset: { x: 150, y: 0 },
+          lineHeight: 400
+        })
+      }
+    } else {
+      snapIndicatorManager.hide(true) // 立即隐藏，不延迟
+    }
+
+    newDurationFrames = newRightFrames - resizeStartPositionFrames.value
   }
 
   // 设置时长限制：最小1帧，用户可以自由调整时长
@@ -452,6 +503,9 @@ async function stopResize() {
   resizeDirection.value = null
   document.removeEventListener('mousemove', handleResize)
   document.removeEventListener('mouseup', stopResize)
+
+  // 隐藏吸附指示器
+  snapIndicatorManager.hide(true)
 
   emit('resize-end', props.timelineItem.id, resizeDirection.value!)
 }
