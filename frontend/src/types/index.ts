@@ -4,7 +4,7 @@
  */
 
 import type { Raw } from 'vue'
-import type { MP4Clip, ImgClip, Rect } from '@webav/av-cliper'
+import type { MP4Clip, ImgClip, AudioClip, Rect } from '@webav/av-cliper'
 
 // ==================== 基础类型定义 ====================
 
@@ -71,7 +71,7 @@ export interface AudioState {
 
 /**
  * 素材项目接口
- * 素材层：包装MP4Clip/ImgClip和原始文件信息
+ * 素材层：包装MP4Clip/ImgClip/AudioClip和原始文件信息
  */
 export interface MediaItem {
   id: string
@@ -83,6 +83,7 @@ export interface MediaItem {
   mediaType: MediaType
   mp4Clip: Raw<MP4Clip> | null // 视频文件解析中时为null，解析完成后为MP4Clip实例
   imgClip: Raw<ImgClip> | null // 图片文件解析中时为null，解析完成后为ImgClip实例
+  audioClip: Raw<AudioClip> | null // 音频文件解析中时为null，解析完成后为AudioClip实例
   isReady: boolean // 是否解析完成
   status: MediaStatus // 素材状态
   thumbnailUrl?: string // WebAV生成的缩略图URL
@@ -153,7 +154,7 @@ interface ImageMediaConfig extends VisualMediaProps {
 /**
  * 音频媒体配置：只有音频属性
  */
-interface AudioMediaConfig extends BaseMediaProps, AudioMediaProps {
+export interface AudioMediaConfig extends BaseMediaProps, AudioMediaProps {
   /** 增益（dB） */
   gain: number
   // 音频特有属性（预留）
@@ -534,23 +535,6 @@ export function isImageTimeRange(
   timeRange: VideoTimeRange | ImageTimeRange,
 ): timeRange is ImageTimeRange {
   return 'displayDuration' in timeRange && !('clipStartTime' in timeRange)
-}
-
-/**
- * 检查时间范围是否为音频时间范围
- * @param timeRange 时间范围对象
- * @returns 是否为音频时间范围
- */
-export function isAudioTimeRange(
-  timeRange: VideoTimeRange | ImageTimeRange,
-): timeRange is VideoTimeRange {
-  return (
-    'clipStartTime' in timeRange &&
-    'clipEndTime' in timeRange &&
-    'effectiveDuration' in timeRange &&
-    'playbackRate' in timeRange &&
-    !('displayDuration' in timeRange)
-  )
 }
 
 /**

@@ -34,6 +34,12 @@ export async function createSpriteFromMediaItem(
     }
     const clonedImgClip = await webAVControls.cloneImgClip(mediaItem.imgClip)
     return new ImageVisibleSprite(clonedImgClip)
+  } else if (mediaItem.mediaType === 'audio') {
+    if (!mediaItem.audioClip) {
+      throw new Error(`音频素材解析失败，无法创建sprite: ${mediaItem.name}`)
+    }
+    const clonedAudioClip = await webAVControls.cloneAudioClip(mediaItem.audioClip)
+    return new AudioVisibleSprite(clonedAudioClip)
   } else {
     throw new Error(`不支持的媒体类型: ${mediaItem.mediaType}`)
   }

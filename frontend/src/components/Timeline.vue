@@ -213,6 +213,7 @@ import type {
 import { hasVisualProps } from '../types'
 import TimelineVideoClip from './TimelineVideoClip.vue'
 import TimelineTextClip from './TimelineTextClip.vue'
+import TimelineAudioClip from './TimelineAudioClip.vue'
 import TimeScale from './TimeScale.vue'
 import { ContextMenu, ContextMenuItem, ContextMenuSeparator } from '@imengyu/vue3-context-menu'
 
@@ -413,22 +414,16 @@ function getClipsForTrack(trackId: string) {
 // 轨道管理方法
 async function addNewTrack(type: TrackType = 'video') {
   try {
-    // 检查轨道类型限制（只限制音频轨道，文本轨道已支持）
-    if (type === 'audio') {
-      dialogs.showOperationError(
-        '添加轨道',
-        '音频轨道功能暂未实现，敬请期待！',
-      )
-      return
-    }
-
+    // 移除音频轨道限制
     const newTrackId = await videoStore.addTrackWithHistory(type)
     if (newTrackId) {
       console.log('✅ 轨道添加成功，新轨道ID:', newTrackId, '类型:', type)
 
-      // 如果是文本轨道，显示成功提示
+      // 显示成功提示
       if (type === 'text') {
         dialogs.showSuccess('文本轨道创建成功！现在可以右键点击轨道添加文本内容。')
+      } else if (type === 'audio') {
+        dialogs.showSuccess('音频轨道创建成功！现在可以拖拽音频文件到轨道中。')
       }
     } else {
       console.error('❌ 轨道添加失败')
@@ -1180,9 +1175,11 @@ async function createMediaClipFromMediaItem(
         endTimeFrames: startTimeFrames + mediaItem.duration,
         durationFrames: mediaItem.duration,
       })
-      // 音频sprite可能需要特殊的时间范围设置
+      // 音频sprite需要设置完整的时间范围（类似视频）
       if ('setTimeRange' in sprite) {
         const audioTimeRangeConfig = {
+          clipStartTime: 0, // 从音频开头开始播放
+          clipEndTime: mediaItem.duration, // 播放到音频结尾
           timelineStartTime: startTimeFrames,
           timelineEndTime: startTimeFrames + mediaItem.duration,
           effectiveDuration: mediaItem.duration,
@@ -1193,13 +1190,18 @@ async function createMediaClipFromMediaItem(
 
     // 注意：不再直接添加sprite到画布，让AddTimelineItemCommand统一处理
 
-    // 生成时间轴clip的缩略图
-    console.log('🖼️ 生成时间轴clip缩略图...')
-    const thumbnailUrl = await generateThumbnailForMediaItem({
-      mediaType: mediaItem.mediaType,
-      mp4Clip: storeMediaItem.mp4Clip,
-      imgClip: storeMediaItem.imgClip,
-    })
+    // 生成时间轴clip的缩略图（音频不需要缩略图）
+    let thumbnailUrl: string | undefined
+    if (mediaItem.mediaType !== 'audio') {
+      console.log('🖼️ 生成时间轴clip缩略图...')
+      thumbnailUrl = await generateThumbnailForMediaItem({
+        mediaType: mediaItem.mediaType,
+        mp4Clip: storeMediaItem.mp4Clip,
+        imgClip: storeMediaItem.imgClip,
+      })
+    } else {
+      console.log('🎵 音频不需要缩略图，跳过生成')
+    }
 
     // 创建TimelineItem - 使用markRaw包装VideoVisibleSprite
     const timelineItemId = Date.now().toString() + Math.random().toString(36).substring(2, 11)
@@ -1276,6 +1278,7 @@ async function createMediaClipFromMediaItem(
           // 音频属性
           volume: 1,
           isMuted: false,
+          gain: 0, // 默认增益为0dB
           // 基础属性
           zIndex: sprite.zIndex || 0,
           animation: undefined,
@@ -1327,9 +1330,10 @@ function getClipComponent(mediaType: MediaType) {
   switch (mediaType) {
     case 'text':
       return TimelineTextClip
+    case 'audio':
+      return TimelineAudioClip
     case 'video':
     case 'image':
-    case 'audio':
     default:
       return TimelineVideoClip
   }

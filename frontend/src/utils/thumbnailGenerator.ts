@@ -287,6 +287,9 @@ export async function generateThumbnailForMediaItem(
       console.log('🖼️ 生成图片缩略图...')
       canvas = await generateImageThumbnail(mediaItem.imgClip)
       console.log('✅ 图片缩略图生成成功')
+    } else if (mediaItem.mediaType === 'audio') {
+      console.log('🎵 音频不需要缩略图，跳过生成')
+      return undefined
     } else {
       console.error('❌ 不支持的媒体类型或缺少clip对象')
       return undefined
@@ -316,6 +319,12 @@ export async function regenerateThumbnailForTimelineItem(
       timelineItemId: timelineItem.id,
       mediaType: mediaItem.mediaType,
     })
+
+    // 音频不需要缩略图，直接返回
+    if (mediaItem.mediaType === 'audio') {
+      console.log('🎵 音频不需要缩略图，跳过生成')
+      return undefined
+    }
 
     let thumbnailTime: number | undefined
 

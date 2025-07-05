@@ -1,6 +1,6 @@
 import { ref, markRaw, type Raw } from 'vue'
 import { AVCanvas } from '@webav/av-canvas'
-import { MP4Clip, ImgClip } from '@webav/av-cliper'
+import { MP4Clip, ImgClip, AudioClip } from '@webav/av-cliper'
 import { VideoVisibleSprite } from '../utils/VideoVisibleSprite'
 import { ImageVisibleSprite } from '../utils/ImageVisibleSprite'
 import type { VideoTimeRange, ImageTimeRange } from '../types'
@@ -353,6 +353,50 @@ export function useWebAVControls() {
   }
 
   /**
+   * 创建AudioClip
+   * @param file 音频文件
+   */
+  const createAudioClip = async (file: File): Promise<Raw<AudioClip>> => {
+    try {
+      console.log(`Creating AudioClip for: ${file.name}`)
+
+      // 创建AudioClip
+      const response = new Response(file)
+      const audioClip = markRaw(new AudioClip(response.body!))
+
+      // 等待AudioClip准备完成
+      await audioClip.ready
+
+      console.log(`AudioClip created successfully for: ${file.name}`)
+      return audioClip
+    } catch (err) {
+      const errorMessage = `创建AudioClip失败: ${(err as Error).message}`
+      console.error('AudioClip creation error:', err)
+      throw new Error(errorMessage)
+    }
+  }
+
+  /**
+   * 克隆AudioClip实例
+   * @param originalClip 原始AudioClip
+   */
+  const cloneAudioClip = async (originalClip: Raw<AudioClip>): Promise<Raw<AudioClip>> => {
+    try {
+      console.log('Cloning AudioClip...')
+
+      // 使用WebAV内置的clone方法
+      const clonedClip = await originalClip.clone()
+
+      console.log('AudioClip cloned successfully')
+      return markRaw(clonedClip)
+    } catch (err) {
+      const errorMessage = `克隆AudioClip失败: ${(err as Error).message}`
+      console.error('AudioClip clone error:', err)
+      throw new Error(errorMessage)
+    }
+  }
+
+  /**
    * 播放控制（帧数接口）
    * @param startFrames 开始帧数
    * @param endFrames 结束帧数，如果未提供则使用总时长作为结束时间
@@ -698,8 +742,10 @@ export function useWebAVControls() {
     initializeCanvas,
     createMP4Clip,
     createImgClip,
+    createAudioClip,
     cloneMP4Clip,
     cloneImgClip,
+    cloneAudioClip,
     play,
     pause,
     seekTo,

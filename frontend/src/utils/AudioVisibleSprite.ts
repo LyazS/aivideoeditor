@@ -306,7 +306,7 @@ export class AudioVisibleSprite extends BaseVisibleSprite {
           // 计算增益倍数（dB转线性）
           const gainMultiplier = Math.pow(10, this.#gain / 20)
 
-          // 最终音量倍数
+          // 最终音频倍数
           const finalVolume = effectiveVolume * gainMultiplier
 
           // 应用音量和增益到所有声道
@@ -366,14 +366,6 @@ export class AudioVisibleSprite extends BaseVisibleSprite {
       playbackRate: playbackRate,
     }
 
-    console.log('⏰ [AudioVisibleSprite] 更新时间属性:', {
-      offset: framesToMicroseconds(timelineStartTime),
-      duration: framesToMicroseconds(durationFrames),
-      playbackRate: playbackRate,
-      clipStartTime,
-      timelineStartTime,
-      durationFrames,
-      startOffset: this.#startOffset,
-    })
+
   }
 }

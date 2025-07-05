@@ -1,6 +1,7 @@
 import { reactive, markRaw, type Ref } from 'vue'
 import { VideoVisibleSprite } from '../../utils/VideoVisibleSprite'
 import { ImageVisibleSprite } from '../../utils/ImageVisibleSprite'
+import { AudioVisibleSprite } from '../../utils/AudioVisibleSprite'
 import { createSpriteFromMediaItem } from '../../utils/spriteFactory'
 import { regenerateThumbnailForTimelineItem } from '../../utils/thumbnailGenerator'
 import { printDebugInfo } from '../utils/debugUtils'
@@ -83,6 +84,14 @@ export function createClipOperationsModule(
       // 根据媒体类型复制时间范围设置（直接使用 originalItem.mediaType，避免冗余的 MediaItem 获取）
       if (originalItem.mediaType === 'video' && isVideoTimeRange(timeRange)) {
         ;(newSprite as VideoVisibleSprite).setTimeRange({
+          clipStartTime: timeRange.clipStartTime,
+          clipEndTime: timeRange.clipEndTime,
+          timelineStartTime: timeRange.timelineStartTime,
+          timelineEndTime: timeRange.timelineEndTime,
+        })
+      } else if (originalItem.mediaType === 'audio' && isVideoTimeRange(timeRange)) {
+        // 音频使用与视频相同的时间范围结构
+        ;(newSprite as AudioVisibleSprite).setTimeRange({
           clipStartTime: timeRange.clipStartTime,
           clipEndTime: timeRange.clipEndTime,
           timelineStartTime: timeRange.timelineStartTime,

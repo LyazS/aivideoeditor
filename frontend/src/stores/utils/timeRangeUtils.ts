@@ -53,7 +53,7 @@ export function validateTimeRange(timeRange: VideoTimeRange | ImageTimeRange): b
   const basicValid =
     timeRange.timelineStartTime >= 0 && timeRange.timelineEndTime > timeRange.timelineStartTime
 
-  // 视频特有验证
+  // 视频和音频特有验证（它们使用相同的时间范围结构）
   if (isVideoTimeRange(timeRange)) {
     return (
       basicValid && timeRange.clipStartTime >= 0 && timeRange.clipEndTime > timeRange.clipStartTime

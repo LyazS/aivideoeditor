@@ -55,7 +55,10 @@ export class AddTimelineItemCommand implements SimpleCommand {
     this.description = `添加时间轴项目: ${mediaItem?.name || '未知素材'}`
 
     // 保存原始数据用于重建sprite（类型安全版本）
-    this.originalTimelineItemData = createTimelineItemData(timelineItem, mediaItem?.name || '未知素材')
+    this.originalTimelineItemData = createTimelineItemData(
+      timelineItem,
+      mediaItem?.name || '未知素材',
+    )
   }
 
   /**
@@ -172,6 +175,12 @@ export class AddTimelineItemCommand implements SimpleCommand {
    * @param mediaItem 对应的媒体项目
    */
   private async regenerateThumbnailForAddedItem(timelineItem: TimelineItem, mediaItem: MediaItem) {
+    // 音频不需要缩略图
+    if (mediaItem.mediaType === 'audio') {
+      console.log('🎵 音频不需要缩略图，跳过生成')
+      return
+    }
+
     try {
       console.log('🖼️ 开始为添加的项目重新生成缩略图...')
 
@@ -222,7 +231,10 @@ export class RemoveTimelineItemCommand implements SimpleCommand {
     this.description = `移除时间轴项目: ${mediaItem?.name || '未知素材'}`
 
     // 🎯 关键：保存重建所需的完整元数据，而不是对象引用
-    this.originalTimelineItemData = createTimelineItemData(timelineItem, mediaItem?.name || '未知素材')
+    this.originalTimelineItemData = createTimelineItemData(
+      timelineItem,
+      mediaItem?.name || '未知素材',
+    )
 
     console.log('💾 保存删除项目的重建数据:', {
       id: this.originalTimelineItemData.id,
@@ -353,6 +365,12 @@ export class RemoveTimelineItemCommand implements SimpleCommand {
     timelineItem: TimelineItem,
     mediaItem: MediaItem,
   ) {
+    // 音频不需要缩略图
+    if (mediaItem.mediaType === 'audio') {
+      console.log('🎵 音频不需要缩略图，跳过生成')
+      return
+    }
+
     try {
       console.log('🖼️ 开始为重建的删除项目重新生成缩略图...')
 
@@ -405,7 +423,10 @@ export class DuplicateTimelineItemCommand implements SimpleCommand {
     this.description = `复制时间轴项目: ${mediaItem?.name || '未知素材'}`
 
     // 保存原始项目的完整重建元数据
-    this.originalTimelineItemData = createTimelineItemData(originalTimelineItem, mediaItem?.name || '未知素材')
+    this.originalTimelineItemData = createTimelineItemData(
+      originalTimelineItem,
+      mediaItem?.name || '未知素材',
+    )
 
     // 生成新项目的ID
     this.newTimelineItemId = `timeline_item_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`
@@ -449,7 +470,8 @@ export class DuplicateTimelineItemCommand implements SimpleCommand {
 
     // 设置时间范围（调整到新位置）
     const originalTimeRange = this.originalTimelineItemData.timeRange as VideoTimeRange
-    const originalDurationFrames = originalTimeRange.timelineEndTime - originalTimeRange.timelineStartTime
+    const originalDurationFrames =
+      originalTimeRange.timelineEndTime - originalTimeRange.timelineStartTime
     const newTimelineStartTimeFrames = this.newPositionFrames
     const newTimelineEndTimeFrames = newTimelineStartTimeFrames + originalDurationFrames
 
@@ -510,7 +532,8 @@ export class DuplicateTimelineItemCommand implements SimpleCommand {
 
     // 设置时间范围（调整到新位置）
     const originalTimeRange = this.originalTimelineItemData.timeRange as ImageTimeRange
-    const originalDurationFrames = originalTimeRange.timelineEndTime - originalTimeRange.timelineStartTime
+    const originalDurationFrames =
+      originalTimeRange.timelineEndTime - originalTimeRange.timelineStartTime
     const newTimelineStartTimeFrames = this.newPositionFrames
     const newTimelineEndTimeFrames = newTimelineStartTimeFrames + originalDurationFrames
 
@@ -586,7 +609,8 @@ export class DuplicateTimelineItemCommand implements SimpleCommand {
 
     // 设置时间范围（调整到新位置）
     const originalTimeRange = this.originalTimelineItemData.timeRange
-    const originalDurationFrames = originalTimeRange.timelineEndTime - originalTimeRange.timelineStartTime
+    const originalDurationFrames =
+      originalTimeRange.timelineEndTime - originalTimeRange.timelineStartTime
     const newTimelineStartTimeFrames = this.newPositionFrames
     const newTimelineEndTimeFrames = newTimelineStartTimeFrames + originalDurationFrames
 
@@ -686,9 +710,9 @@ export class DuplicateTimelineItemCommand implements SimpleCommand {
     timelineItem: TimelineItem,
     mediaItem: MediaItem,
   ) {
-    // 文本clip不需要缩略图
-    if (timelineItem.mediaType === 'text') {
-      console.log('📝 文本clip不需要缩略图，跳过生成')
+    // 文本和音频clip不需要缩略图
+    if (timelineItem.mediaType === 'text' || timelineItem.mediaType === 'audio') {
+      console.log(`📝 ${timelineItem.mediaType}clip不需要缩略图，跳过生成`)
       return
     }
 
@@ -1158,10 +1182,14 @@ export class UpdateTransformCommand implements SimpleCommand {
     const newTimelineEndTime = framesToMicroseconds(newTimelineEndFrames)
 
     if (timelineItem.mediaType === 'video' && isVideoTimeRange(timeRange)) {
-      // 对于视频，通过调整倍速来实现时长变化
-      const clipDurationFrames = timeRange.clipEndTime - timeRange.clipStartTime
-      const newPlaybackRate = clipDurationFrames / newDurationFrames
-
+      // 更新sprite的时间范围
+      sprite.setTimeRange({
+        clipStartTime: timeRange.clipStartTime || 0,
+        clipEndTime: timeRange.clipEndTime || mediaItem.duration,
+        timelineStartTime: timeRange.timelineStartTime,
+        timelineEndTime: newTimelineEndTime,
+      })
+    } else if (timelineItem.mediaType === 'audio' && isVideoTimeRange(timeRange)) {
       // 更新sprite的时间范围
       sprite.setTimeRange({
         clipStartTime: timeRange.clipStartTime || 0,
@@ -1186,7 +1214,7 @@ export class UpdateTransformCommand implements SimpleCommand {
       console.log('📝 [UpdateTimelineItemDuration] 文本时长已更新:', {
         startTime: timeRange.timelineStartTime,
         endTime: newTimelineEndTime,
-        duration: newDurationFrames
+        duration: newDurationFrames,
       })
     }
 
@@ -1244,7 +1272,10 @@ export class SplitTimelineItemCommand implements SimpleCommand {
     this.description = `分割时间轴项目: ${mediaItem?.name || '未知素材'} (在 ${framesToTimecode(splitTimeFrames)})`
 
     // 🎯 关键：保存原始项目的完整重建元数据
-    this.originalTimelineItemData = createTimelineItemData(originalTimelineItem, mediaItem?.name || '未知素材')
+    this.originalTimelineItemData = createTimelineItemData(
+      originalTimelineItem,
+      mediaItem?.name || '未知素材',
+    )
 
     // 生成分割后项目的ID
     this.firstItemId = Date.now().toString() + Math.random().toString(36).substring(2, 11)
@@ -1439,6 +1470,12 @@ export class SplitTimelineItemCommand implements SimpleCommand {
     timelineItem: TimelineItem,
     mediaItem: MediaItem,
   ) {
+    // 音频不需要缩略图
+    if (mediaItem.mediaType === 'audio') {
+      console.log('🎵 音频不需要缩略图，跳过生成')
+      return
+    }
+
     try {
       console.log('🖼️ 开始为重建的原始项目重新生成缩略图...')
 
@@ -1534,6 +1571,12 @@ export class SplitTimelineItemCommand implements SimpleCommand {
     secondItem: TimelineItem,
     mediaItem: MediaItem,
   ) {
+    // 音频不需要缩略图
+    if (mediaItem.mediaType === 'audio') {
+      console.log('🎵 音频不需要缩略图，跳过生成')
+      return
+    }
+
     try {
       console.log('🖼️ 开始为分割后的项目重新生成缩略图...')
 
@@ -1798,7 +1841,7 @@ export class RemoveTrackCommand implements SimpleCommand {
     }
 
     // 检查素材是否已经解析完成
-    if (!mediaItem.isReady || (!mediaItem.mp4Clip && !mediaItem.imgClip)) {
+    if (!mediaItem.isReady || (!mediaItem.mp4Clip && !mediaItem.imgClip && !mediaItem.audioClip)) {
       throw new Error('素材还在解析中，无法重建')
     }
 
@@ -1818,6 +1861,14 @@ export class RemoveTrackCommand implements SimpleCommand {
         timelineStartTime: itemData.timeRange.timelineStartTime,
         timelineEndTime: itemData.timeRange.timelineEndTime,
         displayDuration: itemData.timeRange.displayDuration,
+      })
+    } else if (mediaItem.mediaType === 'audio' && isVideoTimeRange(itemData.timeRange)) {
+      // 音频使用与视频相同的时间范围结构
+      newSprite.setTimeRange({
+        clipStartTime: itemData.timeRange.clipStartTime,
+        clipEndTime: itemData.timeRange.clipEndTime,
+        timelineStartTime: itemData.timeRange.timelineStartTime,
+        timelineEndTime: itemData.timeRange.timelineEndTime,
       })
     }
 
@@ -2175,6 +2226,14 @@ export class ResizeTimelineItemCommand implements SimpleCommand {
     // 根据媒体类型设置时间范围（直接使用 timelineItem.mediaType，避免冗余的 MediaItem 获取）
     if (timelineItem.mediaType === 'video' && isVideoTimeRange(timeRange)) {
       // 视频类型：保持clipStartTime和clipEndTime，更新timeline时间
+      sprite.setTimeRange({
+        clipStartTime: timeRange.clipStartTime,
+        clipEndTime: timeRange.clipEndTime,
+        timelineStartTime: timeRange.timelineStartTime,
+        timelineEndTime: timeRange.timelineEndTime,
+      })
+    } else if (timelineItem.mediaType === 'audio' && isVideoTimeRange(timeRange)) {
+      // 音频类型：保持clipStartTime和clipEndTime，更新timeline时间（与视频相同）
       sprite.setTimeRange({
         clipStartTime: timeRange.clipStartTime,
         clipEndTime: timeRange.clipEndTime,

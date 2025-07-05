@@ -24,7 +24,7 @@
           />
         </svg>
         <p>拖拽文件到此处导入</p>
-        <p class="hint">支持 MP4, WebM, AVI 等视频格式和 JPG, PNG, GIF 等图片格式</p>
+        <p class="hint">支持 MP4, WebM, AVI 等视频格式、JPG, PNG, GIF 等图片格式和 MP3, WAV, M4A 等音频格式</p>
       </div>
 
       <!-- 素材列表 -->
@@ -52,8 +52,8 @@
               <div class="loading-spinner"></div>
             </div>
 
-            <!-- 右上角时长标签（只有视频才显示） -->
-            <div v-if="item.mediaType === 'video'" class="duration-badge">
+            <!-- 右上角时长标签（视频和音频显示） -->
+            <div v-if="item.mediaType === 'video' || item.mediaType === 'audio'" class="duration-badge">
               {{ item.isReady ? formatDuration(item.duration) : '分析中' }}
             </div>
           </div>
@@ -83,7 +83,7 @@
       ref="fileInput"
       type="file"
       multiple
-      accept="video/*,image/*"
+      accept="video/*,image/*,audio/*"
       style="display: none"
       @change="handleFileSelect"
     />
@@ -150,10 +150,22 @@ const handleDrop = (event: DragEvent) => {
   processFiles(files)
 }
 
+// 支持的音频文件类型
+const SUPPORTED_AUDIO_TYPES = [
+  'audio/mpeg',     // .mp3
+  'audio/wav',      // .wav
+  'audio/mp4',      // .m4a
+  'audio/aac',      // .aac
+  'audio/ogg',      // .ogg
+  'audio/webm',     // .webm
+]
+
 // 处理文件 - 并行处理，限制最大并发数为5
 const processFiles = async (files: File[]) => {
   const mediaFiles = files.filter(
-    (file) => file.type.startsWith('video/') || file.type.startsWith('image/'),
+    (file) => file.type.startsWith('video/') ||
+              file.type.startsWith('image/') ||
+              SUPPORTED_AUDIO_TYPES.includes(file.type),
   )
 
   if (mediaFiles.length === 0) {
@@ -205,11 +217,14 @@ const addMediaItem = async (file: File): Promise<void> => {
     const mediaItemId = Date.now().toString() + Math.random().toString(36).substring(2, 11)
     const isVideo = file.type.startsWith('video/')
     const isImage = file.type.startsWith('image/')
+    const isAudio = SUPPORTED_AUDIO_TYPES.includes(file.type)
 
     if (isVideo) {
       await addVideoItem(file, url, mediaItemId, startTime, resolve)
     } else if (isImage) {
       await addImageItem(file, url, mediaItemId, startTime, resolve)
+    } else if (isAudio) {
+      await addAudioItem(file, url, mediaItemId, startTime, resolve)
     } else {
       console.error('不支持的文件类型:', file.type)
       URL.revokeObjectURL(url)
@@ -238,6 +253,7 @@ const addVideoItem = async (
       mediaType: 'video',
       mp4Clip: null, // 解析中时为null
       imgClip: null,
+      audioClip: null,
       isReady: false, // 标记为未准备好
       status: 'parsing', // 解析中状态
     }
@@ -322,6 +338,7 @@ const addImageItem = async (
         mediaType: 'image',
         mp4Clip: null,
         imgClip: null, // 解析中时为null
+        audioClip: null,
         isReady: false, // 标记为未准备好
         status: 'parsing', // 解析中状态
       }
@@ -389,6 +406,92 @@ const addImageItem = async (
   }
 
   img.src = url
+}
+
+// 添加音频素材项
+const addAudioItem = async (
+  file: File,
+  url: string,
+  mediaItemId: string,
+  startTime: number,
+  resolve: () => void,
+) => {
+  try {
+    // 创建解析中状态的音频素材
+    const parsingMediaItem: MediaItem = {
+      id: mediaItemId,
+      name: file.name,
+      file: file,
+      url: url,
+      duration: 0, // 音频时长待解析后确定
+      type: file.type,
+      mediaType: 'audio',
+      mp4Clip: null,
+      imgClip: null,
+      audioClip: null, // 解析中时为null
+      isReady: false,
+      status: 'parsing',
+    }
+
+    console.log(`📋 创建解析中的音频MediaItem: ${parsingMediaItem.name} (ID: ${mediaItemId})`)
+
+    // 先添加解析中状态的素材到store
+    videoStore.addMediaItem(parsingMediaItem)
+
+    // 异步创建AudioClip
+    console.log(`🎵 Creating AudioClip for: ${file.name}`)
+    const audioClip = await webAVControls.createAudioClip(file)
+    console.log(`✅ AudioClip created successfully for: ${file.name}`)
+
+    // 获取AudioClip的元数据
+    const meta = await audioClip.ready
+    const durationFrames = secondsToFrames(meta.duration / 1_000_000) // meta.duration是微秒
+
+    console.log(`📊 AudioClip元数据: ${file.name}`, {
+      duration: meta.duration / 1_000_000 + 's',
+      durationFrames: durationFrames + '帧',
+      // 音频特有属性可能不在meta中，暂时注释
+      // channels: meta.numberOfChannels,
+      // sampleRate: meta.sampleRate,
+    })
+
+    // 音频使用默认图标
+    const thumbnailUrl = generateAudioDefaultIcon()
+
+    // 更新MediaItem为就绪状态
+    const readyMediaItem: MediaItem = {
+      ...parsingMediaItem,
+      duration: durationFrames,
+      audioClip: markRaw(audioClip),
+      isReady: true,
+      status: 'ready',
+      thumbnailUrl,
+    }
+
+    console.log(
+      `📋 更新音频MediaItem为完成状态: ${readyMediaItem.name} (时长: ${framesToTimecode(readyMediaItem.duration)})`,
+    )
+
+    videoStore.updateMediaItem(readyMediaItem)
+
+    const processingTime = ((Date.now() - startTime) / 1000).toFixed(2)
+    console.log(`✅ [并发处理] 音频文件处理完成: ${file.name} (耗时: ${processingTime}s)`)
+    resolve()
+  } catch (error) {
+    const processingTime = ((Date.now() - startTime) / 1000).toFixed(2)
+    console.error(`❌ [并发处理] 音频文件处理失败: ${file.name} (耗时: ${processingTime}s)`, error)
+    // 如果解析失败，从store中移除该项目
+    videoStore.removeMediaItem(mediaItemId)
+    URL.revokeObjectURL(url)
+    resolve()
+  }
+}
+
+// 生成音频默认图标
+function generateAudioDefaultIcon(): string {
+  // 生成音频默认图标 - 使用纯SVG图形
+  const svg = `<svg width="60" height="40" xmlns="http://www.w3.org/2000/svg"><rect width="60" height="40" fill="#4CAF50" rx="4"/><g fill="white" transform="translate(30, 20)"><circle cx="-6" cy="8" r="3"/><circle cx="6" cy="6" r="3"/><rect x="-3" y="-2" width="1.5" height="10"/><rect x="9" y="-4" width="1.5" height="10"/><path d="M -1.5 -2 Q 6 -6 10.5 -4 L 10.5 -2 Q 6 -4 -1.5 0 Z"/></g></svg>`
+  return `data:image/svg+xml;base64,${btoa(svg)}`
 }
 
 // 移除素材项

@@ -131,6 +131,12 @@ export function createTimelineModule(
           const sprite = timelineItem.sprite as VideoVisibleSprite // VideoVisibleSprite
           sprite.setTrackMuteChecker(() => track.isMuted)
         }
+
+        // 为音频片段设置轨道静音检查函数
+        if (timelineItem.mediaType === 'audio' && 'setTrackMuteChecker' in timelineItem.sprite) {
+          const sprite = timelineItem.sprite as AudioVisibleSprite // AudioVisibleSprite
+          sprite.setTrackMuteChecker(() => track.isMuted)
+        }
       }
     }
 
