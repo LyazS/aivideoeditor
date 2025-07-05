@@ -1,5 +1,5 @@
 import { useVideoStore } from '../stores/videoStore'
-import type { TimelineItemDragData, MediaItemDragData } from '../types'
+import type { TimelineItemDragData, MediaItemDragData, MediaType, TrackType } from '../types'
 import { alignFramesToFrame } from '../stores/utils/timeUtils'
 
 /**
@@ -99,6 +99,43 @@ export function useDragUtils() {
   }
 
   /**
+   * 根据媒体类型计算clip高度
+   */
+  function getClipHeightByMediaType(mediaType: MediaType): number {
+    switch (mediaType) {
+      case 'text':
+        return 40 // 文本clip，比文本轨道(60px)矮20px，上下各留10px间距
+      case 'audio':
+        return 50 // 音频clip中等高度
+      default:
+        return 60 // 视频/图片clip标准高度
+    }
+  }
+
+  /**
+   * 获取被拖拽项目的实际高度
+   */
+  function getDraggedItemHeight(): number {
+    // 检查是否是时间轴项目拖拽
+    const timelineDragData = getCurrentTimelineItemDragData()
+    if (timelineDragData) {
+      const draggedItem = videoStore.getTimelineItem(timelineDragData.itemId)
+      if (draggedItem) {
+        return getClipHeightByMediaType(draggedItem.mediaType)
+      }
+    }
+
+    // 检查是否是素材库拖拽
+    const mediaDragData = getCurrentMediaItemDragData()
+    if (mediaDragData) {
+      return getClipHeightByMediaType(mediaDragData.mediaType)
+    }
+
+    // 默认高度
+    return 60
+  }
+
+  /**
    * 创建拖拽预览的基础数据
    */
   function createDragPreviewData(
@@ -109,7 +146,16 @@ export function useDragUtils() {
     isConflict: boolean = false,
     isMultiple: boolean = false,
     count?: number,
+    mediaType?: MediaType,
   ) {
+    // 计算预览高度
+    let height: number
+    if (mediaType) {
+      height = getClipHeightByMediaType(mediaType)
+    } else {
+      height = getDraggedItemHeight()
+    }
+
     return {
       name,
       duration,
@@ -118,11 +164,71 @@ export function useDragUtils() {
       isConflict,
       isMultiple,
       count,
+      height,
+      mediaType,
     }
   }
 
   /**
-   * 计算拖拽目标位置
+   * 检查媒体类型与轨道类型的兼容性
+   */
+  function isMediaCompatibleWithTrack(mediaType: MediaType, trackType: TrackType): boolean {
+    // 视频轨道支持视频和图片素材
+    if (trackType === 'video') {
+      return mediaType === 'video' || mediaType === 'image'
+    }
+
+    // 音频轨道支持音频素材
+    if (trackType === 'audio') {
+      return mediaType === 'audio'
+    }
+
+    // 文本轨道支持文本素材
+    if (trackType === 'text') {
+      return mediaType === 'text'
+    }
+
+    return false
+  }
+
+  /**
+   * 根据媒体类型寻找最近的兼容轨道
+   */
+  function findNearestCompatibleTrack(
+    mouseY: number,
+    mediaType: MediaType,
+  ): string | null {
+    const tracks = videoStore.tracks
+    if (tracks.length === 0) return null
+
+    // 获取所有兼容的轨道及其位置信息
+    const compatibleTracks: Array<{ id: string; distance: number; element: HTMLElement }> = []
+
+    tracks.forEach((track) => {
+      if (isMediaCompatibleWithTrack(mediaType, track.type)) {
+        const trackElement = document.querySelector(`[data-track-id="${track.id}"]`) as HTMLElement
+        if (trackElement) {
+          const rect = trackElement.getBoundingClientRect()
+          const trackCenterY = rect.top + rect.height / 2
+          const distance = Math.abs(mouseY - trackCenterY)
+          compatibleTracks.push({
+            id: track.id,
+            distance,
+            element: trackElement,
+          })
+        }
+      }
+    })
+
+    if (compatibleTracks.length === 0) return null
+
+    // 返回距离最近的兼容轨道
+    compatibleTracks.sort((a, b) => a.distance - b.distance)
+    return compatibleTracks[0].id
+  }
+
+  /**
+   * 计算拖拽目标位置（支持轨道类型兼容性检查）
    */
   function calculateDropPosition(
     event: DragEvent,
@@ -138,9 +244,70 @@ export function useDragUtils() {
 
     const rect = trackContent.getBoundingClientRect()
     const mouseX = event.clientX - rect.left
-    const targetTrackId =
-      trackContent.getAttribute('data-track-id') || videoStore.tracks[0]?.id || ''
+    let targetTrackId = trackContent.getAttribute('data-track-id') || videoStore.tracks[0]?.id || ''
 
+    // 获取拖拽的媒体类型
+    let draggedMediaType: MediaType | null = null
+
+    // 检查是否是时间轴项目拖拽
+    const timelineDragData = getCurrentTimelineItemDragData()
+    if (timelineDragData) {
+      const draggedItem = videoStore.getTimelineItem(timelineDragData.itemId)
+      if (draggedItem) {
+        draggedMediaType = draggedItem.mediaType
+      }
+    } else {
+      // 检查是否是素材库拖拽
+      const mediaDragData = getCurrentMediaItemDragData()
+      if (mediaDragData) {
+        draggedMediaType = mediaDragData.mediaType
+      }
+    }
+
+    // 如果能获取到媒体类型，检查轨道兼容性
+    if (draggedMediaType) {
+      const currentTrack = videoStore.tracks.find(t => t.id === targetTrackId)
+      if (currentTrack && !isMediaCompatibleWithTrack(draggedMediaType, currentTrack.type)) {
+        // 当前轨道不兼容，寻找最近的兼容轨道
+        const nearestCompatibleTrackId = findNearestCompatibleTrack(event.clientY, draggedMediaType)
+        if (nearestCompatibleTrackId) {
+          targetTrackId = nearestCompatibleTrackId
+          // 更新trackContent为新的目标轨道
+          const newTrackContent = document.querySelector(`[data-track-id="${targetTrackId}"]`) as HTMLElement
+          if (newTrackContent) {
+            const newRect = newTrackContent.getBoundingClientRect()
+            // 重新计算mouseX相对于新轨道的位置
+            const mouseXRelativeToNewTrack = event.clientX - newRect.left
+            // 使用新的相对位置计算时间
+            const dropFrames = calculateDropFrames(mouseXRelativeToNewTrack, timelineWidth, dragOffset)
+            return {
+              dropTime: dropFrames,
+              targetTrackId,
+              trackContent: newTrackContent,
+            }
+          }
+        }
+      }
+    }
+
+    // 使用原始逻辑计算时间
+    const dropFrames = calculateDropFrames(mouseX, timelineWidth, dragOffset)
+
+    return {
+      dropTime: dropFrames,
+      targetTrackId,
+      trackContent,
+    }
+  }
+
+  /**
+   * 计算拖拽帧数的辅助函数
+   */
+  function calculateDropFrames(
+    mouseX: number,
+    timelineWidth: number,
+    dragOffset?: { x: number; y: number },
+  ): number {
     // 使用帧数进行精确计算
     let dropFrames: number
     if (dragOffset) {
@@ -156,13 +323,7 @@ export function useDragUtils() {
     dropFrames = Math.max(0, dropFrames)
 
     // 对齐到帧边界
-    dropFrames = alignFramesToFrame(dropFrames)
-
-    return {
-      dropTime: dropFrames, // 现在返回帧数
-      targetTrackId,
-      trackContent,
-    }
+    return alignFramesToFrame(dropFrames)
   }
 
   /**
@@ -223,9 +384,13 @@ export function useDragUtils() {
 
     // 预览数据创建
     createDragPreviewData,
+    getClipHeightByMediaType,
+    getDraggedItemHeight,
 
     // 位置计算
     calculateDropPosition,
+    findNearestCompatibleTrack,
+    isMediaCompatibleWithTrack,
 
     // 类型检查
     getDragDataType,

@@ -93,11 +93,14 @@ class DragPreviewManager {
       ? this.getCSSVariable('--color-drag-border-conflict')
       : this.getCSSVariable('--color-drag-border-normal')
 
+    // 使用传入的高度，如果没有则使用默认值60px
+    const previewHeight = data.height || 60
+
     preview.style.cssText = `
       position: fixed;
       left: 0;
       top: 0;
-      height: 60px;
+      height: ${previewHeight}px;
       background: ${backgroundColor};
       border: 2px solid ${borderColor};
       border-radius: 4px;
@@ -151,8 +154,16 @@ class DragPreviewManager {
     if (trackElement) {
       const trackRect = trackElement.getBoundingClientRect()
 
+      // 获取轨道信息以计算垂直居中位置
+      const track = this.videoStore.tracks.find(t => t.id === data.trackId)
+      const trackHeight = track?.height || 80 // 默认轨道高度80px
+      const previewHeight = data.height || 60 // 预览高度
+
+      // 计算垂直居中位置，与TimelineBaseClip的逻辑保持一致
+      const topOffset = Math.max(5, (trackHeight - previewHeight) / 2) // 至少5px的上边距
+
       const finalLeft = trackRect.left + left
-      const finalTop = trackRect.top + 10 // 与VideoClip的top: '10px'保持一致
+      const finalTop = trackRect.top + topOffset
 
       // 使用 transform 而不是 left/top 来提高性能
       preview.style.transform = `translate(${finalLeft}px, ${finalTop}px)`

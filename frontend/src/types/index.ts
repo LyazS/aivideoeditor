@@ -317,6 +317,8 @@ export interface DragPreviewData {
   isConflict?: boolean
   isMultiple?: boolean
   count?: number
+  height?: number // 预览高度（像素）- 与被拖拽clip的高度一致
+  mediaType?: MediaType // 媒体类型，用于确定默认高度
 }
 
 /**

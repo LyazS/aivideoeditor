@@ -171,7 +171,11 @@
   <ContextMenu v-model:show="showContextMenu" :options="contextMenuOptions">
     <template v-for="(item, index) in currentMenuItems" :key="index">
       <ContextMenuSeparator v-if="'type' in item && item.type === 'separator'" />
-      <ContextMenuItem v-else-if="'label' in item" :label="item.label" @click="item.onClick">
+      <ContextMenuItem
+        v-else-if="'label' in item && 'onClick' in item"
+        :label="item.label"
+        @click="item.onClick"
+      >
         <template #icon>
           <svg
             width="16"
@@ -183,6 +187,40 @@
           </svg>
         </template>
       </ContextMenuItem>
+      <ContextMenuGroup
+        v-else-if="'label' in item && 'children' in item"
+        :label="item.label"
+      >
+        <template #icon>
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+          >
+            <path :d="item.icon" />
+          </svg>
+        </template>
+        <template v-for="(child, childIndex) in item.children" :key="childIndex">
+          <ContextMenuSeparator v-if="'type' in child && child.type === 'separator'" />
+          <ContextMenuItem
+            v-else-if="'label' in child && 'onClick' in child"
+            :label="child.label"
+            @click="child.onClick"
+          >
+            <template #icon>
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+              >
+                <path :d="child.icon" />
+              </svg>
+            </template>
+          </ContextMenuItem>
+        </template>
+      </ContextMenuGroup>
     </template>
   </ContextMenu>
 </template>
@@ -219,7 +257,7 @@ import TimelineVideoClip from './TimelineVideoClip.vue'
 import TimelineTextClip from './TimelineTextClip.vue'
 import TimelineAudioClip from './TimelineAudioClip.vue'
 import TimeScale from './TimeScale.vue'
-import { ContextMenu, ContextMenuItem, ContextMenuSeparator } from '@imengyu/vue3-context-menu'
+import { ContextMenu, ContextMenuItem, ContextMenuSeparator, ContextMenuGroup } from '@imengyu/vue3-context-menu'
 
 // 菜单项类型定义
 type MenuItem =
@@ -227,6 +265,11 @@ type MenuItem =
       label: string
       icon: string
       onClick: () => void
+    }
+  | {
+      label: string
+      icon: string
+      children: MenuItem[]
     }
   | {
       type: 'separator'
@@ -344,6 +387,32 @@ const getTrackMenuItems = (): MenuItem[] => {
 
   const menuItems: MenuItem[] = []
 
+  // 添加新轨道子菜单
+  menuItems.push(
+    {
+      label: '添加新轨道',
+      icon: 'M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z',
+      children: [
+        {
+          label: '视频轨道',
+          icon: 'M17,10.5V7A1,1 0 0,0 16,6H4A1,1 0 0,0 3,7V17A1,1 0 0,0 4,18H16A1,1 0 0,0 17,17V13.5L21,17.5V6.5L17,10.5Z',
+          onClick: () => addNewTrackAfter('video', trackId),
+        },
+        {
+          label: '音频轨道',
+          icon: 'M14,3.23V5.29C16.89,6.15 19,8.83 19,12C19,15.17 16.89,17.85 14,18.71V20.77C18,19.86 21,16.28 21,12C21,7.72 18,4.14 14,3.23M16.5,12C16.5,10.23 15.5,8.71 14,7.97V16C15.5,15.29 16.5,13.76 16.5,12Z',
+          onClick: () => addNewTrackAfter('audio', trackId),
+        },
+        {
+          label: '文本轨道',
+          icon: 'M18,11H16.5V10.5H14.5V13.5H16.5V13H18V14A1,1 0 0,1 17,15H14A1,1 0 0,1 13,14V10A1,1 0 0,1 14,9H17A1,1 0 0,1 18,10V11M11,15H9V9H11V15M8,9H6V15H8V9Z',
+          onClick: () => addNewTrackAfter('text', trackId),
+        },
+      ],
+    },
+    { type: 'separator' } as MenuItem
+  )
+
   // 文本轨道专用菜单项
   if (track.type === 'text') {
     menuItems.push({
@@ -446,6 +515,38 @@ async function addNewTrack(type: TrackType = 'video') {
   }
 }
 
+// 在指定轨道后添加新轨道
+async function addNewTrackAfter(type: TrackType, afterTrackId: string) {
+  try {
+    // 找到目标轨道的位置
+    const afterTrackIndex = tracks.value.findIndex(track => track.id === afterTrackId)
+    if (afterTrackIndex === -1) {
+      console.error('❌ 找不到目标轨道:', afterTrackId)
+      return
+    }
+
+    // 在目标轨道后插入新轨道（位置为 afterTrackIndex + 1）
+    const newTrackId = await videoStore.addTrackWithHistory(type, undefined, afterTrackIndex + 1)
+    if (newTrackId) {
+      console.log('✅ 轨道添加成功，新轨道ID:', newTrackId, '类型:', type, '位置:', afterTrackIndex + 1)
+
+      // 显示成功提示
+      if (type === 'text') {
+        dialogs.showSuccess('文本轨道创建成功！现在可以右键点击轨道添加文本内容。')
+      } else if (type === 'audio') {
+        dialogs.showSuccess('音频轨道创建成功！现在可以拖拽音频文件到轨道中。')
+      } else if (type === 'video') {
+        dialogs.showSuccess('视频轨道创建成功！现在可以拖拽视频文件到轨道中。')
+      }
+    } else {
+      console.error('❌ 轨道添加失败')
+    }
+  } catch (error) {
+    console.error('❌ 添加轨道时出错:', error)
+    dialogs.showOperationError('添加轨道', (error as Error).message)
+  }
+}
+
 // 显示添加轨道菜单
 function showAddTrackMenu(event?: MouseEvent) {
   // 如果是点击按钮触发，获取按钮位置
@@ -487,25 +588,8 @@ function getTrackTypeLabel(type: TrackType): string {
   return labels[type] || '视频'
 }
 
-// 检查媒体类型与轨道类型的兼容性
-function isMediaCompatibleWithTrack(mediaType: MediaType, trackType: TrackType): boolean {
-  // 视频轨道支持视频和图片素材
-  if (trackType === 'video') {
-    return mediaType === 'video' || mediaType === 'image'
-  }
-
-  // 音频轨道支持音频素材（暂未实现）
-  if (trackType === 'audio') {
-    return mediaType === 'audio'
-  }
-
-  // 文本轨道支持文本素材
-  if (trackType === 'text') {
-    return mediaType === 'text'
-  }
-
-  return false
-}
+// 使用统一的拖拽工具中的兼容性检查函数
+const { isMediaCompatibleWithTrack } = dragUtils
 
 async function removeTrack(trackId: string) {
   if (tracks.value.length <= 1) {
@@ -729,6 +813,8 @@ function handleMediaItemDragOver(event: DragEvent) {
       targetTrackId,
       isConflict,
       false,
+      undefined,
+      mediaDragData.mediaType,
     )
 
     dragPreviewManager.updatePreview(previewData, timelineWidth.value)
@@ -741,6 +827,8 @@ function handleMediaItemDragOver(event: DragEvent) {
       targetTrackId,
       false,
       false,
+      undefined,
+      'video', // 默认使用视频类型
     )
 
     dragPreviewManager.updatePreview(previewData, timelineWidth.value)
@@ -792,6 +880,7 @@ function handleTimelineItemDragOver(event: DragEvent) {
       isConflict,
       currentDragData.selectedItems.length > 1,
       currentDragData.selectedItems.length,
+      draggedItem.mediaType,
     )
 
     dragPreviewManager.updatePreview(previewData, timelineWidth.value)

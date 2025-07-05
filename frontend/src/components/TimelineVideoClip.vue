@@ -54,7 +54,7 @@
           v-for="keyframe in visibleKeyframes"
           :key="keyframe.framePosition"
           class="keyframe-marker"
-          :style="{ left: keyframe.pixelPosition - 6.5 + 'px', transform: 'translateY(-50%)' }"
+          :style="{ left: keyframe.pixelPosition - 4.0 + 'px', transform: 'translateY(-50%)' }"
           :title="`关键帧 - 帧 ${keyframe.absoluteFrame} (点击跳转)`"
           @click.stop="jumpToKeyframe(keyframe.absoluteFrame)"
         >

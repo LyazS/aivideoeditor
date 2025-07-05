@@ -45,9 +45,10 @@ export function createTrackModule() {
    * 添加新轨道
    * @param type 轨道类型
    * @param name 轨道名称（可选）
+   * @param position 插入位置（可选，默认为末尾）
    * @returns 新创建的轨道对象
    */
-  function addTrack(type: TrackType = 'video', name?: string): Track {
+  function addTrack(type: TrackType = 'video', name?: string, position?: number): Track {
     // 使用UUID4生成唯一ID
     const newId = generateTrackId()
 
@@ -76,12 +77,19 @@ export function createTrackModule() {
       isMuted: false,
       height: defaultHeights[type],
     }
-    tracks.value.push(newTrack)
+
+    // 根据位置参数决定插入位置
+    if (position !== undefined && position >= 0 && position <= tracks.value.length) {
+      tracks.value.splice(position, 0, newTrack)
+    } else {
+      tracks.value.push(newTrack)
+    }
 
     console.log('🎵 添加新轨道:', {
       id: newTrack.id,
       name: newTrack.name,
       type: newTrack.type,
+      position: position !== undefined ? position : tracks.value.length - 1,
       totalTracks: tracks.value.length,
     })
 

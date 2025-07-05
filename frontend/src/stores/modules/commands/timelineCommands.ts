@@ -1728,8 +1728,9 @@ export class AddTrackCommand implements SimpleCommand {
   constructor(
     private trackType: TrackType, // 轨道类型
     private trackName: string | undefined, // 轨道名称（可选）
+    private position: number | undefined, // 插入位置（可选）
     private trackModule: {
-      addTrack: (type: TrackType, name?: string) => Track
+      addTrack: (type: TrackType, name?: string, position?: number) => Track
       removeTrack: (
         trackId: string,
         timelineItems: Ref<TimelineItem[]>,
@@ -1739,7 +1740,7 @@ export class AddTrackCommand implements SimpleCommand {
     },
   ) {
     this.id = generateCommandId()
-    this.description = `添加轨道: ${trackName || `${trackType}轨道`}`
+    this.description = `添加轨道: ${trackName || `${trackType}轨道`}${position !== undefined ? ` (位置: ${position})` : ''}`
 
     // 预先计算新轨道ID（模拟trackModule的逻辑）
     // 注意：这里我们无法直接访问tracks数组，所以在execute时会获取实际的轨道数据
@@ -1768,14 +1769,14 @@ export class AddTrackCommand implements SimpleCommand {
     try {
       console.log(`🔄 执行添加轨道操作...`)
 
-      // 调用trackModule的addTrack方法
-      const newTrack = this.trackModule.addTrack(this.trackType, this.trackName)
+      // 调用trackModule的addTrack方法，传入位置参数
+      const newTrack = this.trackModule.addTrack(this.trackType, this.trackName, this.position)
 
       // 保存轨道数据用于撤销
       this.newTrackId = newTrack.id
       this.trackData = { ...newTrack }
 
-      console.log(`✅ 已添加轨道: ${newTrack.name} (ID: ${newTrack.id}, 类型: ${newTrack.type})`)
+      console.log(`✅ 已添加轨道: ${newTrack.name} (ID: ${newTrack.id}, 类型: ${newTrack.type}, 位置: ${this.position ?? '末尾'})`)
     } catch (error) {
       console.error(`❌ 添加轨道失败: ${this.trackName || `${this.trackType}轨道`}`, error)
       throw error
