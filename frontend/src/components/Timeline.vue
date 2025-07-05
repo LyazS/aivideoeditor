@@ -387,32 +387,6 @@ const getTrackMenuItems = (): MenuItem[] => {
 
   const menuItems: MenuItem[] = []
 
-  // 添加新轨道子菜单
-  menuItems.push(
-    {
-      label: '添加新轨道',
-      icon: 'M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z',
-      children: [
-        {
-          label: '视频轨道',
-          icon: 'M17,10.5V7A1,1 0 0,0 16,6H4A1,1 0 0,0 3,7V17A1,1 0 0,0 4,18H16A1,1 0 0,0 17,17V13.5L21,17.5V6.5L17,10.5Z',
-          onClick: () => addNewTrackAfter('video', trackId),
-        },
-        {
-          label: '音频轨道',
-          icon: 'M14,3.23V5.29C16.89,6.15 19,8.83 19,12C19,15.17 16.89,17.85 14,18.71V20.77C18,19.86 21,16.28 21,12C21,7.72 18,4.14 14,3.23M16.5,12C16.5,10.23 15.5,8.71 14,7.97V16C15.5,15.29 16.5,13.76 16.5,12Z',
-          onClick: () => addNewTrackAfter('audio', trackId),
-        },
-        {
-          label: '文本轨道',
-          icon: 'M18,11H16.5V10.5H14.5V13.5H16.5V13H18V14A1,1 0 0,1 17,15H14A1,1 0 0,1 13,14V10A1,1 0 0,1 14,9H17A1,1 0 0,1 18,10V11M11,15H9V9H11V15M8,9H6V15H8V9Z',
-          onClick: () => addNewTrackAfter('text', trackId),
-        },
-      ],
-    },
-    { type: 'separator' } as MenuItem
-  )
-
   // 文本轨道专用菜单项
   if (track.type === 'text') {
     menuItems.push({
@@ -462,10 +436,34 @@ const getTrackMenuItems = (): MenuItem[] => {
     })
   }
 
+  // 添加新轨道子菜单
+  menuItems.push(
+    { type: 'separator' } as MenuItem,
+    {
+      label: '添加新轨道',
+      icon: 'M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z',
+      children: [
+        {
+          label: '视频轨道',
+          icon: 'M17,10.5V7A1,1 0 0,0 16,6H4A1,1 0 0,0 3,7V17A1,1 0 0,0 4,18H16A1,1 0 0,0 17,17V13.5L21,17.5V6.5L17,10.5Z',
+          onClick: () => addNewTrackAfter('video', trackId),
+        },
+        {
+          label: '音频轨道',
+          icon: 'M14,3.23V5.29C16.89,6.15 19,8.83 19,12C19,15.17 16.89,17.85 14,18.71V20.77C18,19.86 21,16.28 21,12C21,7.72 18,4.14 14,3.23M16.5,12C16.5,10.23 15.5,8.71 14,7.97V16C15.5,15.29 16.5,13.76 16.5,12Z',
+          onClick: () => addNewTrackAfter('audio', trackId),
+        },
+        {
+          label: '文本轨道',
+          icon: 'M18,11H16.5V10.5H14.5V13.5H16.5V13H18V14A1,1 0 0,1 17,15H14A1,1 0 0,1 13,14V10A1,1 0 0,1 14,9H17A1,1 0 0,1 18,10V11M11,15H9V9H11V15M8,9H6V15H8V9Z',
+          onClick: () => addNewTrackAfter('text', trackId),
+        },
+      ],
+    },
+  )
   // 删除轨道选项
   if (canDelete) {
     menuItems.push(
-      { type: 'separator' } as MenuItem,
       {
         label: '删除轨道',
         icon: 'M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z',

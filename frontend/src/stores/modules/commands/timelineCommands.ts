@@ -10,6 +10,7 @@ import type {
   ImageTimeRange,
   TimelineItemData,
   TransformData,
+  TextMediaConfig,
 } from '../../../types'
 import {
   isVideoTimeRange,
@@ -1947,6 +1948,11 @@ export class RemoveTrackCommand implements SimpleCommand {
    * 从原始素材重建时间轴项目
    */
   private async rebuildTimelineItem(itemData: TimelineItemData): Promise<TimelineItem> {
+    // 特殊处理文本类型的时间轴项目
+    if (itemData.mediaType === 'text') {
+      return await this.rebuildTextTimelineItem(itemData as TimelineItemData<'text'>)
+    }
+
     const mediaItem = this.mediaModule.getMediaItem(itemData.mediaItemId)
     if (!mediaItem) {
       throw new Error(`找不到素材项目: ${itemData.mediaItemId}`)
@@ -2011,6 +2017,66 @@ export class RemoveTrackCommand implements SimpleCommand {
       config: { ...itemData.config },
     })
 
+    return newTimelineItem
+  }
+
+  /**
+   * 重建文本时间轴项目
+   */
+  private async rebuildTextTimelineItem(itemData: TimelineItemData<'text'>): Promise<TimelineItem<'text'>> {
+    console.log('🔄 [RemoveTrackCommand] 重建文本时间轴项目...')
+
+    // 从保存的配置中获取文本内容和样式
+    const textConfig = itemData.config as TextMediaConfig
+    const text = textConfig.text
+    const style = textConfig.style
+
+    console.log('📝 [RemoveTrackCommand] 文本重建参数:', {
+      text: text.substring(0, 20) + '...',
+      style,
+      timeRange: itemData.timeRange
+    })
+
+    // 动态导入TextVisibleSprite
+    const { TextVisibleSprite } = await import('../../../utils/TextVisibleSprite')
+
+    // 重新创建文本精灵
+    const newSprite = await TextVisibleSprite.create(text, style)
+
+    // 设置时间范围
+    if (isImageTimeRange(itemData.timeRange)) {
+      newSprite.setTimeRange({
+        timelineStartTime: itemData.timeRange.timelineStartTime,
+        timelineEndTime: itemData.timeRange.timelineEndTime,
+        displayDuration: itemData.timeRange.displayDuration,
+      })
+    }
+
+    // 设置变换属性
+    const rect = newSprite.rect
+    rect.x = textConfig.x
+    rect.y = textConfig.y
+    rect.w = textConfig.width
+    rect.h = textConfig.height
+    rect.angle = textConfig.rotation
+    newSprite.opacity = textConfig.opacity
+
+    // 设置其他属性
+    newSprite.zIndex = textConfig.zIndex
+
+    // 创建新的TimelineItem
+    const newTimelineItem: TimelineItem<'text'> = reactive({
+      id: itemData.id,
+      mediaItemId: '', // 文本项目不需要媒体库项目
+      trackId: itemData.trackId,
+      mediaType: 'text',
+      timeRange: { ...itemData.timeRange },
+      sprite: markRaw(newSprite),
+      thumbnailUrl: undefined, // 文本项目不需要缩略图
+      config: { ...itemData.config },
+    })
+
+    console.log('✅ [RemoveTrackCommand] 文本时间轴项目重建完成')
     return newTimelineItem
   }
 
