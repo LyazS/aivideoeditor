@@ -341,6 +341,25 @@ export function createTrackModule() {
     console.log('🔄 所有轨道已重置为默认状态')
   }
 
+  /**
+   * 恢复轨道列表（用于项目加载）
+   * @param restoredTracks 要恢复的轨道数组
+   */
+  function restoreTracks(restoredTracks: Track[]) {
+    console.log(`📋 开始恢复轨道: ${restoredTracks.length}个轨道`)
+
+    // 清空现有轨道
+    tracks.value = []
+
+    // 添加恢复的轨道
+    for (const track of restoredTracks) {
+      tracks.value.push({ ...track })
+      console.log(`📋 恢复轨道: ${track.name} (${track.type})`)
+    }
+
+    console.log(`✅ 轨道恢复完成: ${tracks.value.length}个轨道`)
+  }
+
   // ==================== 导出接口 ====================
 
   return {
@@ -357,6 +376,9 @@ export function createTrackModule() {
     getTrack,
     getTracksSummary,
     resetTracksToDefaults,
+
+    // 恢复方法
+    restoreTracks,
   }
 }
 

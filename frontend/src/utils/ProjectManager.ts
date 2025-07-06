@@ -1,4 +1,35 @@
 import { directoryManager } from './DirectoryManager'
+import type { MediaReference } from './MediaManager'
+import type { MediaItem, TimelineItemData, Track } from '../types'
+import { mediaManager } from './MediaManager'
+
+/**
+ * 项目加载选项
+ */
+export interface LoadProjectOptions {
+  /** 是否加载媒体文件 */
+  loadMedia?: boolean
+  /** 是否恢复时间轴 */
+  loadTimeline?: boolean
+  /** 进度回调函数 */
+  onProgress?: (stage: string, progress: number) => void
+}
+
+/**
+ * 项目加载结果
+ */
+export interface ProjectLoadResult {
+  /** 项目配置 */
+  projectConfig: ProjectConfig
+  /** 加载的媒体项目（如果启用了媒体加载） */
+  mediaItems?: MediaItem[]
+  /** 时间轴项目数据（如果启用了时间轴加载） */
+  timelineItems?: TimelineItemData[]
+  /** 轨道数据（如果启用了时间轴加载） */
+  tracks?: Track[]
+  /** 已完成的加载阶段 */
+  loadedStages: string[]
+}
 
 /**
  * 项目配置接口
@@ -34,13 +65,7 @@ export interface ProjectConfig {
   
   // 媒体文件引用
   mediaReferences: {
-    [mediaId: string]: {
-      originalPath: string
-      storedPath: string
-      type: string
-      size: number
-      checksum?: string
-    }
+    [mediaId: string]: MediaReference
   }
   
   // 导出历史
@@ -172,21 +197,121 @@ export class ProjectManager {
   }
 
   /**
-   * 加载项目
+   * 加载项目（简化版本，仅加载配置）
+   * @deprecated 建议使用 loadProjectWithOptions 方法
    */
   async loadProject(projectId: string): Promise<ProjectConfig | null> {
+    const result = await this.loadProjectWithOptions(projectId, { loadMedia: false })
+    return result?.projectConfig || null
+  }
+
+  /**
+   * 分阶段加载项目（完整版本）
+   * @param projectId 项目ID
+   * @param options 加载选项
+   * @returns 项目加载结果
+   */
+  async loadProjectWithOptions(
+    projectId: string,
+    options: LoadProjectOptions = {}
+  ): Promise<ProjectLoadResult | null> {
+    const {
+      loadMedia = true,
+      loadTimeline = true,
+      onProgress
+    } = options
+
     const workspaceHandle = await directoryManager.getWorkspaceHandle()
     if (!workspaceHandle) {
       throw new Error('未设置工作目录')
     }
 
     try {
+      console.log(`📂 开始分阶段加载项目: ${projectId}`)
+      const loadedStages: string[] = []
+
+      // 阶段1: 加载项目配置 (20%)
+      onProgress?.('加载项目配置...', 20)
       const projectsHandle = await workspaceHandle.getDirectoryHandle(this.PROJECTS_FOLDER)
       const projectHandle = await projectsHandle.getDirectoryHandle(projectId)
-      
-      return await this.loadProjectConfig(projectHandle)
+      const projectConfig = await this.loadProjectConfig(projectHandle)
+
+      if (!projectConfig) {
+        throw new Error('项目配置加载失败')
+      }
+
+      loadedStages.push('config')
+      console.log(`✅ 项目配置加载完成: ${projectConfig.name}`)
+
+      let mediaItems: MediaItem[] | undefined
+
+      if (loadMedia && projectConfig.mediaReferences && Object.keys(projectConfig.mediaReferences).length > 0) {
+        // 阶段2: 加载媒体文件 (20% -> 80%)
+        onProgress?.('加载媒体文件...', 40)
+
+        try {
+          mediaItems = await mediaManager.loadAllMediaForProject(
+            projectId,
+            projectConfig.mediaReferences,
+            {
+              batchSize: 3,
+              onProgress: (loaded, total) => {
+                // 将媒体加载进度映射到40%-80%范围
+                const mediaProgress = 40 + (loaded / total) * 40
+                onProgress?.(`加载媒体文件 ${loaded}/${total}...`, mediaProgress)
+              }
+            }
+          )
+
+          loadedStages.push('media')
+          console.log(`✅ 媒体文件加载完成: ${mediaItems.length}个文件`)
+        } catch (error) {
+          console.error('媒体文件加载失败:', error)
+          // 媒体加载失败不应该阻止项目加载，继续后续流程
+          mediaItems = []
+        }
+      }
+
+      // 阶段3: 加载时间轴数据 (80% -> 95%)
+      let timelineItems: TimelineItemData[] | undefined
+      let tracks: Track[] | undefined
+
+      if (loadTimeline && projectConfig.timeline) {
+        onProgress?.('加载时间轴数据...', 85)
+
+        // 加载轨道数据
+        tracks = projectConfig.timeline.tracks || []
+        console.log(`📋 加载轨道数据: ${tracks.length}个轨道`)
+
+        // 加载时间轴项目数据
+        timelineItems = projectConfig.timeline.timelineItems || []
+        console.log(`⏰ 加载时间轴项目数据: ${timelineItems.length}个项目`)
+
+        onProgress?.('时间轴数据加载完成...', 95)
+        loadedStages.push('timeline-loaded')
+        console.log(`✅ 时间轴数据加载完成: ${tracks.length}个轨道, ${timelineItems.length}个项目`)
+      }
+
+      // 阶段4: 完成加载 (95% -> 100%)
+      onProgress?.('加载完成', 100)
+      loadedStages.push('complete')
+
+      const result: ProjectLoadResult = {
+        projectConfig,
+        mediaItems,
+        timelineItems,
+        tracks,
+        loadedStages
+      }
+
+      console.log(`✅ 项目加载完成: ${projectConfig.name}`, {
+        stages: loadedStages,
+        mediaCount: mediaItems?.length || 0
+      })
+
+      return result
     } catch (error) {
-      console.error(`加载项目 ${projectId} 失败:`, error)
+      console.error(`❌ 加载项目 ${projectId} 失败:`, error)
       return null
     }
   }

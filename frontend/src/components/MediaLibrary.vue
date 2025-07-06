@@ -2,13 +2,22 @@
   <div class="media-library">
     <div class="library-header">
       <h3>素材库</h3>
-      <HoverButton @click="triggerFileInput" title="导入文件">
-        <template #icon>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z" />
-          </svg>
-        </template>
-      </HoverButton>
+      <div class="header-buttons">
+        <HoverButton @click="debugMediaStatus" title="调试素材状态">
+          <template #icon>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M9.5,3A6.5,6.5 0 0,1 16,9.5C16,11.11 15.41,12.59 14.44,13.73L14.71,14H15.5L20.5,19L19,20.5L14,15.5V14.71L13.73,14.44C12.59,15.41 11.11,16 9.5,16A6.5,6.5 0 0,1 3,9.5A6.5,6.5 0 0,1 9.5,3M9.5,5C7,5 5,7 5,9.5C5,12 7,14 9.5,14C12,14 14,12 14,9.5C14,7 12,5 9.5,5Z" />
+            </svg>
+          </template>
+        </HoverButton>
+        <HoverButton @click="triggerFileInput" title="导入文件">
+          <template #icon>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z" />
+            </svg>
+          </template>
+        </HoverButton>
+      </div>
     </div>
 
     <!-- 拖拽区域 -->
@@ -101,6 +110,7 @@ import { useDragUtils } from '../composables/useDragUtils'
 import { formatFileSize, framesToTimecode, secondsToFrames } from '../stores/utils/timeUtils'
 import type { MediaItem } from '../types'
 import { generateThumbnailForMediaItem } from '../utils/thumbnailGenerator'
+import { mediaManager } from '../utils/MediaManager'
 import HoverButton from './HoverButton.vue'
 
 const videoStore = useVideoStore()
@@ -288,6 +298,20 @@ const addVideoItem = async (
       mp4Clip,
     })
 
+    // 保存媒体文件到本地（如果有当前项目）
+    let mediaReference = null
+    if (videoStore.currentProjectId) {
+      try {
+        console.log(`💾 保存视频文件到本地: ${file.name}`)
+        mediaReference = await mediaManager.importMediaFiles(file, mp4Clip, videoStore.currentProjectId, 'video')
+        videoStore.addMediaReference(mediaItemId, mediaReference)
+        console.log(`✅ 视频文件已保存到本地: ${mediaReference.storedPath}`)
+      } catch (error) {
+        console.warn(`⚠️ 保存视频文件到本地失败: ${file.name}`, error)
+        // 继续处理，不阻断用户操作
+      }
+    }
+
     // 更新MediaItem为完成状态
     const readyMediaItem: MediaItem = {
       ...parsingMediaItem,
@@ -362,6 +386,20 @@ const addImageItem = async (
         mediaType: 'image',
         imgClip,
       })
+
+      // 保存媒体文件到本地（如果有当前项目）
+      let mediaReference = null
+      if (videoStore.currentProjectId) {
+        try {
+          console.log(`💾 保存图片文件到本地: ${file.name}`)
+          mediaReference = await mediaManager.importMediaFiles(file, imgClip, videoStore.currentProjectId, 'image')
+          videoStore.addMediaReference(mediaItemId, mediaReference)
+          console.log(`✅ 图片文件已保存到本地: ${mediaReference.storedPath}`)
+        } catch (error) {
+          console.warn(`⚠️ 保存图片文件到本地失败: ${file.name}`, error)
+          // 继续处理，不阻断用户操作
+        }
+      }
 
       // 更新MediaItem为完成状态
       const readyMediaItem: MediaItem = {
@@ -461,6 +499,20 @@ const addAudioItem = async (
     // 音频使用默认图标
     const thumbnailUrl = generateAudioDefaultIcon()
 
+    // 保存媒体文件到本地（如果有当前项目）
+    let mediaReference = null
+    if (videoStore.currentProjectId) {
+      try {
+        console.log(`💾 保存音频文件到本地: ${file.name}`)
+        mediaReference = await mediaManager.importMediaFiles(file, audioClip, videoStore.currentProjectId, 'audio')
+        videoStore.addMediaReference(mediaItemId, mediaReference)
+        console.log(`✅ 音频文件已保存到本地: ${mediaReference.storedPath}`)
+      } catch (error) {
+        console.warn(`⚠️ 保存音频文件到本地失败: ${file.name}`, error)
+        // 继续处理，不阻断用户操作
+      }
+    }
+
     // 更新MediaItem为就绪状态
     const readyMediaItem: MediaItem = {
       ...parsingMediaItem,
@@ -554,6 +606,81 @@ const handleItemDragEnd = () => {
   // 使用统一的拖拽工具清理状态
   dragUtils.clearDragData()
 }
+
+// 调试素材状态
+const debugMediaStatus = () => {
+  console.log('🔍 ===== 素材库调试信息 =====')
+  console.log(`📊 素材总数: ${videoStore.mediaItems.length}`)
+
+  if (videoStore.mediaItems.length === 0) {
+    console.log('📭 素材库为空')
+    return
+  }
+
+  // 按状态分组统计
+  const statusGroups = {
+    parsing: [] as any[],
+    ready: [] as any[],
+    error: [] as any[],
+    missing: [] as any[]
+  }
+
+  videoStore.mediaItems.forEach((item: any, index: number) => {
+    const statusInfo = {
+      index: index + 1,
+      id: item.id,
+      name: item.name,
+      mediaType: item.mediaType,
+      duration: item.duration,
+      isReady: item.isReady,
+      status: item.status,
+      hasFile: !!item.file,
+      hasUrl: !!item.url,
+      hasThumbnail: !!item.thumbnailUrl,
+      hasMP4Clip: !!item.mp4Clip,
+      hasImgClip: !!item.imgClip,
+      hasAudioClip: !!item.audioClip,
+      fileSize: item.file ? `${(item.file.size / 1024 / 1024).toFixed(2)}MB` : 'N/A',
+      fileType: item.file?.type || 'N/A'
+    }
+
+    statusGroups[item.status as keyof typeof statusGroups].push(statusInfo)
+
+    console.log(`📄 [${index + 1}] ${item.name}:`, statusInfo)
+  })
+
+  // 输出状态统计
+  console.log('📈 状态统计:')
+  Object.entries(statusGroups).forEach(([status, items]) => {
+    if (items.length > 0) {
+      console.log(`  ${status}: ${items.length}个`)
+      items.forEach(item => {
+        console.log(`    - ${item.name} (${item.mediaType})`)
+      })
+    }
+  })
+
+  // 检查相关的时间轴项目
+  const timelineItemsCount = videoStore.timelineItems.length
+  console.log(`🎬 时间轴项目总数: ${timelineItemsCount}`)
+
+  if (timelineItemsCount > 0) {
+    const mediaItemsWithTimelineItems = new Set()
+    videoStore.timelineItems.forEach((timelineItem: any) => {
+      mediaItemsWithTimelineItems.add(timelineItem.mediaItemId)
+    })
+    console.log(`🔗 有时间轴项目的素材数: ${mediaItemsWithTimelineItems.size}`)
+  }
+
+  // 检查项目状态
+  if (videoStore.currentProjectId) {
+    console.log(`📁 当前项目ID: ${videoStore.currentProjectId}`)
+  } else {
+    console.log('📁 当前无项目')
+  }
+
+  console.log('🔍 ===== 调试信息结束 =====')
+}
 </script>
 
 <style scoped>
@@ -581,6 +708,12 @@ const handleItemDragEnd = () => {
   margin: 0;
   font-size: var(--font-size-lg);
   color: var(--color-text-primary);
+}
+
+.header-buttons {
+  display: flex;
+  gap: var(--spacing-sm);
+  align-items: center;
 }
 
 .import-btn {

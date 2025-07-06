@@ -44,6 +44,15 @@
               </template>
               导出
             </HoverButton>
+
+            <HoverButton @click="debugProject" title="调试：打印项目JSON">
+              <template #icon>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M20,19V7H4V19H20M20,3A2,2 0 0,1 22,5V19A2,2 0 0,1 20,21H4A2,2 0 0,1 2,19V5A2,2 0 0,1 4,3H20M13,17V15H18V17H13M9.58,13L5.57,9H8.4L11.7,12.3C12.09,12.69 12.09,13.33 11.7,13.72L8.42,17H5.59L9.58,13Z" />
+                </svg>
+              </template>
+              调试
+            </HoverButton>
           </div>
         </div>
       </div>
@@ -58,65 +67,181 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
+import { useRoute } from 'vue-router'
+import { useVideoStore } from '../stores/videoStore'
+import { useAutoSave } from '../composables/useAutoSave'
 import VideoPreviewEngine from '../components/VideoPreviewEngine.vue'
 import HoverButton from '../components/HoverButton.vue'
 
-const router = useRouter()
 const route = useRoute()
+const videoStore = useVideoStore()
+
+// 初始化自动保存
+const autoSave = useAutoSave({
+  debounceTime: 2000, // 2秒防抖
+  throttleTime: 30000, // 30秒强制保存
+  enabled: true
+})
 
 // 响应式数据
-const isSaving = ref(false)
 const projectTitle = ref('未命名项目')
-const lastSaved = ref<Date | null>(null)
 
-// 计算属性
-const projectStatus = computed(() => {
-  if (isSaving.value) return '保存中...'
-  if (lastSaved.value) {
-    const now = new Date()
-    const diff = now.getTime() - lastSaved.value.getTime()
-    const minutes = Math.floor(diff / 60000)
-    if (minutes < 1) return '刚刚保存'
-    if (minutes < 60) return `${minutes}分钟前保存`
-    const hours = Math.floor(minutes / 60)
-    if (hours < 24) return `${hours}小时前保存`
-    return '需要保存'
-  }
-  return '未保存'
-})
+// 计算属性 - 使用store中的项目状态
+const projectStatus = computed(() => videoStore.projectStatus)
+const isSaving = computed(() => videoStore.isSaving)
 
 // 方法
 function goBack() {
   // 如果有未保存的更改，可以在这里添加确认对话框
-  router.push('/')
+  // 使用 window.location.href 直接跳转，彻底重新加载页面
+  // 这样可以确保所有store状态都被重新创建，避免数据混合问题
+  console.log('🔙 使用页面重载方式返回项目管理')
+  window.location.href = '/'
 }
 
 async function saveProject() {
   if (isSaving.value) return
 
   try {
-    isSaving.value = true
-
-    // TODO: 实现项目保存逻辑
-    // 这里应该调用持久化存储的保存方法
-    await new Promise(resolve => setTimeout(resolve, 1000)) // 模拟保存延迟
-
-    lastSaved.value = new Date()
-    console.log('项目已保存')
-
-    // 可以添加成功提示
+    const success = await autoSave.manualSave()
+    if (success) {
+      console.log('项目已手动保存')
+      // 可以添加成功提示
+    } else {
+      console.warn('手动保存失败')
+      // 可以添加失败提示
+    }
   } catch (error) {
     console.error('保存项目失败:', error)
     // 可以添加错误提示
-  } finally {
-    isSaving.value = false
   }
 }
 
 function exportProject() {
   // TODO: 实现项目导出逻辑
   console.log('导出项目')
+}
+
+function debugProject() {
+  console.log('🔍 [调试] 开始打印项目JSON数据...')
+
+  try {
+    // 构建完整的项目数据
+    const projectData = {
+      // 基本信息
+      projectInfo: {
+        currentProject: videoStore.currentProject,
+        currentProjectId: videoStore.currentProjectId,
+        currentProjectName: videoStore.currentProjectName,
+        projectStatus: videoStore.projectStatus,
+        hasCurrentProject: videoStore.hasCurrentProject,
+        isSaving: videoStore.isSaving,
+        lastSaved: videoStore.lastSaved
+      },
+
+      // 项目设置
+      settings: {
+        videoResolution: videoStore.videoResolution,
+        frameRate: videoStore.frameRate,
+        timelineDurationFrames: videoStore.timelineDurationFrames
+      },
+
+      // 轨道数据
+      tracks: videoStore.tracks,
+
+      // 媒体项目数据（包含运行时状态）
+      mediaItems: videoStore.mediaItems.map(item => ({
+        id: item.id,
+        name: item.name,
+        file: item.file ? {
+          name: item.file.name,
+          size: item.file.size,
+          type: item.file.type,
+          lastModified: item.file.lastModified
+        } : null,
+        url: item.url,
+        duration: item.duration,
+        type: item.type,
+        mediaType: item.mediaType,
+        isReady: item.isReady,
+        status: item.status,
+        thumbnailUrl: item.thumbnailUrl ? 'blob URL存在' : null,
+        hasMP4Clip: !!item.mp4Clip,
+        hasImgClip: !!item.imgClip,
+        hasAudioClip: !!item.audioClip
+      })),
+
+      // 时间轴项目数据
+      timelineItems: videoStore.timelineItems.map(item => ({
+        id: item.id,
+        mediaItemId: item.mediaItemId,
+        trackId: item.trackId,
+        mediaType: item.mediaType,
+        timeRange: item.timeRange,
+        config: item.config,
+        thumbnailUrl: item.thumbnailUrl ? 'blob URL存在' : null,
+        hasSprite: !!item.sprite,
+        mediaName: videoStore.getMediaItem(item.mediaItemId)?.name || 'Unknown'
+      })),
+
+      // 媒体引用映射
+      mediaReferences: videoStore.mediaReferences,
+
+      // 统计信息
+      statistics: {
+        totalMediaItems: videoStore.mediaItems.length,
+        totalTimelineItems: videoStore.timelineItems.length,
+        totalTracks: videoStore.tracks.length,
+        readyMediaItems: videoStore.mediaItems.filter(item => item.isReady).length,
+        mediaReferencesCount: Object.keys(videoStore.mediaReferences).length
+      }
+    }
+
+    // 打印到控制台
+    console.log('📊 [调试] 完整项目数据:', projectData)
+
+    // 打印格式化的JSON
+    console.log('📄 [调试] 项目JSON (格式化):')
+    console.log(JSON.stringify(projectData, null, 2))
+
+    // 打印持久化数据（不包含运行时状态）
+    const persistenceData = {
+      timeline: {
+        tracks: videoStore.tracks,
+        timelineItems: videoStore.timelineItems.map(item => ({
+          id: item.id,
+          mediaItemId: item.mediaItemId,
+          trackId: item.trackId,
+          mediaType: item.mediaType,
+          timeRange: item.timeRange,
+          config: item.config,
+          mediaName: videoStore.getMediaItem(item.mediaItemId)?.name || 'Unknown'
+        })),
+        mediaItems: videoStore.mediaItems.map(item => ({
+          id: item.id,
+          name: item.name,
+          type: item.type,
+          mediaType: item.mediaType,
+          duration: item.duration
+        }))
+      },
+      settings: {
+        videoResolution: videoStore.videoResolution,
+        frameRate: videoStore.frameRate,
+        timelineDurationFrames: videoStore.timelineDurationFrames
+      },
+      mediaReferences: videoStore.mediaReferences
+    }
+
+    console.log('💾 [调试] 持久化数据 (将保存到project.json):')
+    console.log(JSON.stringify(persistenceData, null, 2))
+
+    // 在浏览器中显示通知
+    console.log('✅ [调试] 项目JSON数据已打印到控制台，请查看开发者工具')
+
+  } catch (error) {
+    console.error('❌ [调试] 打印项目数据失败:', error)
+  }
 }
 
 // 键盘快捷键
@@ -132,18 +257,40 @@ function handleKeydown(event: KeyboardEvent) {
     event.preventDefault()
     exportProject()
   }
+
+  // Ctrl+D 调试
+  if (event.ctrlKey && event.key === 'd') {
+    event.preventDefault()
+    debugProject()
+  }
 }
 
 // 生命周期
-onMounted(() => {
+onMounted(async () => {
   // 从路由参数获取项目ID
   const projectId = route.params.projectId as string
-  if (projectId && projectId !== 'undefined') {
-    // TODO: 根据项目ID加载项目数据
-    projectTitle.value = `项目 ${projectId}`
-    console.log('加载项目:', projectId)
-  } else {
-    projectTitle.value = '新建项目'
+
+  try {
+    await videoStore.setCurrentProject(projectId)
+
+    if (videoStore.hasCurrentProject) {
+      projectTitle.value = videoStore.currentProjectName
+      console.log('项目已加载:', videoStore.currentProjectName)
+
+      // 启用自动保存
+      autoSave.enableAutoSave()
+      console.log('✅ 自动保存已启用')
+    } else {
+      projectTitle.value = '新建项目'
+      console.log('准备创建新项目')
+
+      // 对于新项目，暂时禁用自动保存，直到项目被创建
+      autoSave.disableAutoSave()
+    }
+  } catch (error) {
+    console.error('加载项目失败:', error)
+    projectTitle.value = '加载失败'
+    autoSave.disableAutoSave()
   }
 
   // 注册键盘快捷键
@@ -151,6 +298,9 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
+  // 禁用自动保存
+  autoSave.disableAutoSave()
+
   // 清理键盘快捷键
   window.removeEventListener('keydown', handleKeydown)
 })

@@ -278,7 +278,10 @@ async function createNewProject() {
 }
 
 function openProjectById(projectId: string) {
-  router.push(`/editor/${projectId}`)
+  // 使用 window.location.href 直接跳转，彻底重新加载页面
+  // 这样可以确保所有store状态都被重新创建，避免数据混合问题
+  console.log(`🚀 使用页面重载方式打开项目: ${projectId}`)
+  window.location.href = `/editor/${projectId}`
 }
 
 async function duplicateProject(projectId: string) {
