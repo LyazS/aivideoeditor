@@ -2,11 +2,13 @@
   <div class="media-library">
     <div class="library-header">
       <h3>素材库</h3>
-      <button class="import-btn" @click="triggerFileInput" title="导入文件">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z" />
-        </svg>
-      </button>
+      <HoverButton @click="triggerFileInput" title="导入文件">
+        <template #icon>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z" />
+          </svg>
+        </template>
+      </HoverButton>
     </div>
 
     <!-- 拖拽区域 -->
@@ -99,6 +101,7 @@ import { useDragUtils } from '../composables/useDragUtils'
 import { formatFileSize, framesToTimecode, secondsToFrames } from '../stores/utils/timeUtils'
 import type { MediaItem } from '../types'
 import { generateThumbnailForMediaItem } from '../utils/thumbnailGenerator'
+import HoverButton from './HoverButton.vue'
 
 const videoStore = useVideoStore()
 const webAVControls = useWebAVControls()

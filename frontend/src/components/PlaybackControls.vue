@@ -2,24 +2,28 @@
   <div class="playback-controls">
     <!-- 播放控制按钮 -->
     <div class="control-buttons">
-      <button
-        class="control-btn primary"
+      <HoverButton
+        variant="primary"
         @click="togglePlayPause"
         :title="isPlaying ? '暂停' : '播放'"
       >
-        <svg v-if="!isPlaying" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M8,5.14V19.14L19,12.14L8,5.14Z" />
-        </svg>
-        <svg v-else width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M14,19H18V5H14M6,19H10V5H6V19Z" />
-        </svg>
-      </button>
+        <template #icon>
+          <svg v-if="!isPlaying" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M8,5.14V19.14L19,12.14L8,5.14Z" />
+          </svg>
+          <svg v-else width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M14,19H18V5H14M6,19H10V5H6V19Z" />
+          </svg>
+        </template>
+      </HoverButton>
 
-      <button class="control-btn" @click="stop" title="停止">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M18,18H6V6H18V18Z" />
-        </svg>
-      </button>
+      <HoverButton @click="stop" title="停止">
+        <template #icon>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M18,18H6V6H18V18Z" />
+          </svg>
+        </template>
+      </HoverButton>
     </div>
 
     <!-- 播放速度控制 -->
@@ -45,6 +49,7 @@ import { computed } from 'vue'
 import { useVideoStore } from '../stores/videoStore'
 import { useWebAVControls } from '../composables/useWebAVControls'
 import { usePlaybackControls } from '../composables/usePlaybackControls'
+import HoverButton from './HoverButton.vue'
 
 const videoStore = useVideoStore()
 const webAVControls = useWebAVControls()
@@ -109,35 +114,7 @@ function handleSpeedChange(event: Event) {
   flex-shrink: 0;
 }
 
-.control-btn {
-  background: none;
-  border: none;
-  color: var(--color-text-secondary);
-  cursor: pointer;
-  padding: var(--spacing-xs);
-  border-radius: var(--border-radius-medium);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all var(--transition-fast);
-  flex-shrink: 0;
-}
-
-.control-btn:hover {
-  background-color: var(--color-bg-quaternary);
-  color: var(--color-text-primary);
-}
-
-.control-btn.primary {
-  background: none;
-  color: var(--color-text-secondary);
-  padding: var(--spacing-md);
-}
-
-.control-btn.primary:hover {
-  background-color: var(--color-bg-quaternary);
-  color: var(--color-text-primary);
-}
+/* 旧的控制按钮样式已移除，现在使用 HoverButton 组件 */
 
 .speed-section {
   display: flex;

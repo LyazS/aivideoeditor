@@ -1,39 +1,53 @@
 <template>
   <div class="video-editor-view">
-    <!-- 顶部导航栏 -->
-    <header class="editor-header">
-      <div class="header-left">
-        <button class="back-btn" @click="goBack" title="返回项目管理">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z" />
-          </svg>
-          返回
-        </button>
-        <div class="project-info">
-          <h1 class="project-title">{{ projectTitle }}</h1>
-          <span class="project-status">{{ projectStatus }}</span>
+    <!-- 状态栏 -->
+    <div class="status-bar-container">
+      <div class="status-bar">
+        <div class="status-content">
+          <!-- 左侧：返回按钮和保存状态 -->
+          <div class="status-left">
+            <HoverButton @click="goBack" title="返回项目管理">
+              <template #icon>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z" />
+                </svg>
+              </template>
+              返回
+            </HoverButton>
+            <span class="project-status">{{ projectStatus }}</span>
+          </div>
+
+          <!-- 中间：项目名称 -->
+          <div class="status-center">
+            <span class="project-title">{{ projectTitle }}</span>
+          </div>
+
+          <!-- 右侧：保存和导出按钮 -->
+          <div class="status-right">
+            <HoverButton @click="saveProject" :disabled="isSaving" title="保存项目">
+              <template #icon>
+                <svg v-if="!isSaving" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M15,9H5V5H15M12,19A3,3 0 0,1 9,16A3,3 0 0,1 12,13A3,3 0 0,1 15,16A3,3 0 0,1 12,19M17,3H5C3.89,3 3,3.9 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V7L17,3Z" />
+                </svg>
+                <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="currentColor" class="spinning">
+                  <path d="M12,4V2A10,10 0 0,0 2,12H4A8,8 0 0,1 12,4Z" />
+                </svg>
+              </template>
+              {{ isSaving ? '保存中...' : '保存' }}
+            </HoverButton>
+
+            <HoverButton @click="exportProject" title="导出项目">
+              <template #icon>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z" />
+                </svg>
+              </template>
+              导出
+            </HoverButton>
+          </div>
         </div>
       </div>
-      
-      <div class="header-right">
-        <button class="save-btn" @click="saveProject" :disabled="isSaving" title="保存项目">
-          <svg v-if="!isSaving" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M15,9H5V5H15M12,19A3,3 0 0,1 9,16A3,3 0 0,1 12,13A3,3 0 0,1 15,16A3,3 0 0,1 12,19M17,3H5C3.89,3 3,3.9 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V7L17,3Z" />
-          </svg>
-          <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="currentColor" class="spinning">
-            <path d="M12,4V2A10,10 0 0,0 2,12H4A8,8 0 0,1 12,4Z" />
-          </svg>
-          {{ isSaving ? '保存中...' : '保存' }}
-        </button>
-        
-        <button class="export-btn" @click="exportProject" title="导出项目">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z" />
-          </svg>
-          导出
-        </button>
-      </div>
-    </header>
+    </div>
 
     <!-- 视频编辑器主体 -->
     <div class="editor-content">
@@ -46,6 +60,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import VideoPreviewEngine from '../components/VideoPreviewEngine.vue'
+import HoverButton from '../components/HoverButton.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -79,17 +94,17 @@ function goBack() {
 
 async function saveProject() {
   if (isSaving.value) return
-  
+
   try {
     isSaving.value = true
-    
+
     // TODO: 实现项目保存逻辑
     // 这里应该调用持久化存储的保存方法
     await new Promise(resolve => setTimeout(resolve, 1000)) // 模拟保存延迟
-    
+
     lastSaved.value = new Date()
     console.log('项目已保存')
-    
+
     // 可以添加成功提示
   } catch (error) {
     console.error('保存项目失败:', error)
@@ -111,7 +126,7 @@ function handleKeydown(event: KeyboardEvent) {
     event.preventDefault()
     saveProject()
   }
-  
+
   // Ctrl+E 导出
   if (event.ctrlKey && event.key === 'e') {
     event.preventDefault()
@@ -130,7 +145,7 @@ onMounted(() => {
   } else {
     projectTitle.value = '新建项目'
   }
-  
+
   // 注册键盘快捷键
   window.addEventListener('keydown', handleKeydown)
 })
@@ -143,109 +158,68 @@ onUnmounted(() => {
 
 <style scoped>
 .video-editor-view {
+  width: 100%;
   height: 100vh;
   display: flex;
   flex-direction: column;
   background-color: var(--color-bg-primary);
+  color: var(--color-text-primary);
 }
 
-.editor-header {
-  background-color: var(--color-bg-secondary);
-  border-bottom: 1px solid var(--color-border);
-  padding: 0.75rem 1rem;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+.status-bar-container {
+  padding: var(--spacing-sm) var(--spacing-sm) 0 var(--spacing-sm);
   flex-shrink: 0;
 }
 
-.header-left {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
-.back-btn {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 0.75rem;
-  background: none;
-  border: 1px solid var(--color-border);
+.status-bar {
+  height: 30px;
+  background-color: var(--color-bg-secondary);
   border-radius: var(--border-radius-medium);
-  color: var(--color-text-secondary);
-  cursor: pointer;
-  transition: all 0.2s ease;
-  font-size: 0.875rem;
-}
-
-.back-btn:hover {
-  background-color: var(--color-bg-hover);
-  color: var(--color-text-primary);
-  border-color: var(--color-border-hover);
-}
-
-.project-info {
   display: flex;
-  flex-direction: column;
-  gap: 0.125rem;
+  align-items: center;
+  flex-shrink: 0;
+  padding: 0 var(--spacing-lg);
 }
+
+.status-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.status-left {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  flex: 0 0 auto;
+}
+
+.status-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+}
+
+.status-right {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  flex: 0 0 auto;
+}
+
+/* 旧的按钮样式已移除，现在使用 HoverButton 组件 */
 
 .project-title {
-  font-size: 1rem;
-  font-weight: 600;
+  font-size: var(--font-size-md);
   color: var(--color-text-primary);
-  margin: 0;
+  font-weight: 600;
 }
 
 .project-status {
-  font-size: 0.75rem;
-  color: var(--color-text-secondary);
-}
-
-.header-right {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.save-btn,
-.export-btn {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 1rem;
-  border: none;
-  border-radius: var(--border-radius-medium);
-  font-size: 0.875rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.save-btn {
-  background-color: var(--color-primary);
-  color: white;
-}
-
-.save-btn:hover:not(:disabled) {
-  background-color: var(--color-primary-hover);
-}
-
-.save-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.export-btn {
-  background-color: var(--color-bg-tertiary);
-  color: var(--color-text-primary);
-  border: 1px solid var(--color-border);
-}
-
-.export-btn:hover {
-  background-color: var(--color-bg-hover);
-  border-color: var(--color-border-hover);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
 }
 
 .editor-content {
@@ -266,3 +240,5 @@ onUnmounted(() => {
   }
 }
 </style>
+
+

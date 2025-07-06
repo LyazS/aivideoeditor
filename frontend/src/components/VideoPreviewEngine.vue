@@ -1,14 +1,5 @@
 <template>
   <div class="video-preview-engine">
-    <!-- 状态栏 -->
-    <div class="status-bar-container">
-      <div class="status-bar">
-        <div class="status-content">
-          <span class="app-title">光影绘梦</span>
-        </div>
-      </div>
-    </div>
-
     <div class="main-content">
       <!-- 预览区域：三列布局 -->
       <div class="preview-section" :style="{ height: previewHeight + '%' }">
@@ -190,7 +181,7 @@ import PropertiesPanel from './PropertiesPanel.vue'
 import { useVideoStore } from '../stores/videoStore'
 import { useKeyboardShortcuts } from '../composables/useKeyboardShortcuts'
 import { logWebAVReadyStateChange, logComponentLifecycle } from '../utils/webavDebug'
-import { framesToTimecode, secondsToFrames } from '../stores/utils/timeUtils'
+import { framesToTimecode } from '../stores/utils/timeUtils'
 
 const videoStore = useVideoStore()
 
@@ -205,6 +196,8 @@ watch(
   },
   { immediate: true },
 )
+
+
 
 // 窗口大小变化时调整面板宽度
 const adjustPanelWidths = () => {
@@ -435,11 +428,7 @@ const stopRightResize = () => {
   document.body.style.userSelect = ''
 }
 
-function formatTime(seconds: number): string {
-  // 使用标准的时间码格式化函数
-  const frames = secondsToFrames(seconds)
-  return framesToTimecode(frames)
-}
+
 
 // 获取预览样式（根据分辨率比例）
 function getPreviewStyle(resolution: { width: number; height: number }) {
@@ -547,41 +536,15 @@ onUnmounted(() => {
   color: var(--color-text-primary);
 }
 
-.status-bar-container {
-  padding: var(--spacing-sm) var(--spacing-sm) 0 var(--spacing-sm);
-  flex-shrink: 0;
-}
 
-.status-bar {
-  height: 30px;
-  background-color: var(--color-bg-secondary);
-  border-radius: var(--border-radius-medium);
-  display: flex;
-  align-items: center;
-  flex-shrink: 0;
-  padding: 0 var(--spacing-lg);
-}
-
-.status-content {
-  display: flex;
-  align-items: center;
-  width: 100%;
-}
-
-.app-title {
-  font-size: var(--font-size-md);
-  color: var(--color-text-secondary);
-  font-weight: 500;
-  letter-spacing: 0.5px;
-}
 
 .main-content {
   flex: 1;
   display: flex;
   flex-direction: column;
   padding: var(--spacing-sm);
-  height: calc(100vh - 48px);
   overflow: hidden;
+  height: 100%;
 }
 
 .preview-section {

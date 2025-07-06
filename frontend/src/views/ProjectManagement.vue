@@ -5,7 +5,7 @@
       <div class="header-content">
         <div class="logo-section">
           <h1 class="app-title">光影绘梦</h1>
-          <span class="app-subtitle">视频编辑器</span>
+          <span class="app-subtitle">AI视频编辑器</span>
         </div>
         <div class="header-actions">
           <button v-if="workspaceInfo" class="workspace-info" @click="changeWorkspace" title="点击更改工作目录">
