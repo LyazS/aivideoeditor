@@ -537,6 +537,7 @@ export class VideoVisibleSprite extends BaseVisibleSprite {
    * 如果当前 sprite 已被设置动画，将 sprite 的动画属性设定到指定时间的状态
    */
   public animate(time: number): void {
+    time -= framesToMicroseconds(this.#startOffset)
     if (this.#animatKeyFrame == null || this.#animatOpts == null || time < this.#animatOpts.delay)
       return
     // console.log('animate', time, this.#animatKeyFrame, this.#animatOpts)
