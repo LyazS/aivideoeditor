@@ -36,8 +36,9 @@
     <div v-if="timelineItems.length > 0" class="toolbar-section">
       <HoverButton
         v-if="videoStore.selectedTimelineItemId"
+        :disabled="isSplitButtonDisabled"
         @click="splitSelectedClip"
-        title="在当前时间位置裁剪选中的片段"
+        :title="splitButtonTitle"
       >
         <template #icon>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -55,7 +56,7 @@
         title="删除选中的片段"
       >
         <template #icon>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="#ef4444">
             <path
               d="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z"
             />
@@ -92,7 +93,7 @@ import { computed } from 'vue'
 import { useVideoStore } from '../stores/videoStore'
 import { formatFileSize, framesToSeconds } from '../stores/utils/timeUtils'
 import { countOverlappingItems } from '../utils/timeOverlapUtils'
-import { isVideoTimeRange } from '../types'
+import { isVideoTimeRange, isImageTimelineItem } from '../types'
 import HoverButton from './HoverButton.vue'
 
 const videoStore = useVideoStore()
@@ -103,6 +104,26 @@ const timelineItems = computed(() => videoStore.timelineItems)
 const overlappingCount = computed(() => {
   // 使用统一的重叠检测工具
   return countOverlappingItems(videoStore.timelineItems)
+})
+
+// 检查选中的项目是否为图片类型
+const selectedItemIsImage = computed(() => {
+  if (!videoStore.selectedTimelineItemId) return false
+  const item = videoStore.getTimelineItem(videoStore.selectedTimelineItemId)
+  return item ? isImageTimelineItem(item) : false
+})
+
+// 检查裁剪按钮是否应该被禁用（图片类型不支持裁剪）
+const isSplitButtonDisabled = computed(() => {
+  return selectedItemIsImage.value
+})
+
+// 裁剪按钮的提示文本
+const splitButtonTitle = computed(() => {
+  if (selectedItemIsImage.value) {
+    return "图片类型不支持裁剪功能"
+  }
+  return "在当前时间位置裁剪选中的片段"
 })
 
 async function splitSelectedClip() {

@@ -393,13 +393,14 @@ onUnmounted(() => {
   align-items: center;
   justify-content: space-between;
   width: 100%;
+  position: relative; /* 为中间区域的绝对定位提供参考 */
 }
 
 .status-left {
   display: flex;
   align-items: center;
   gap: var(--spacing-sm);
-  flex: 0 0 auto;
+  flex: 0 0 200px; /* 固定左侧宽度 */
 }
 
 .status-center {
@@ -407,13 +408,17 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   flex: 1;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%); /* 绝对居中 */
 }
 
 .status-right {
   display: flex;
   align-items: center;
   gap: var(--spacing-xs);
-  flex: 0 0 auto;
+  flex: 0 0 200px; /* 固定右侧宽度，与左侧对称 */
+  justify-content: flex-end;
 }
 
 /* 旧的按钮样式已移除，现在使用 HoverButton 组件 */

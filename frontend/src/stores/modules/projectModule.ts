@@ -49,14 +49,14 @@ export function createProjectModule() {
   const projectStatus = computed(() => {
     if (isSaving.value) return '保存中...'
     if (lastSaved.value) {
-      const now = new Date()
-      const diff = now.getTime() - lastSaved.value.getTime()
-      const minutes = Math.floor(diff / 60000)
-      if (minutes < 1) return '刚刚保存'
-      if (minutes < 60) return `${minutes}分钟前保存`
-      const hours = Math.floor(minutes / 60)
-      if (hours < 24) return `${hours}小时前保存`
-      return '需要保存'
+      // 格式化时间为 HH:MM:SS
+      const timeString = lastSaved.value.toLocaleTimeString('zh-CN', {
+        hour12: false,
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      })
+      return `${timeString} 已保存`
     }
     return '未保存'
   })
