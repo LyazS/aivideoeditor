@@ -125,6 +125,7 @@
               :key="project.id"
               class="project-card"
               @click="openProjectById(project.id)"
+              @contextmenu="showProjectMenu($event, project)"
             >
               <div class="project-thumbnail">
                 <img v-if="project.thumbnail" :src="project.thumbnail" :alt="project.name" />
@@ -133,6 +134,16 @@
                     <path d="M17,10.5V7A1,1 0 0,0 16,6H4A1,1 0 0,0 3,7V17A1,1 0 0,0 4,18H16A1,1 0 0,0 17,17V13.5L21,17.5V6.5L17,10.5Z" />
                   </svg>
                 </div>
+                <!-- 设置按钮移到缩略图右上角 -->
+                <button
+                  class="settings-btn-overlay"
+                  @click.stop="showProjectMenu($event, project)"
+                  title="项目设置"
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M16,12A2,2 0 0,1 18,10A2,2 0 0,1 20,12A2,2 0 0,1 18,14A2,2 0 0,1 16,12M10,12A2,2 0 0,1 12,10A2,2 0 0,1 14,12A2,2 0 0,1 12,14A2,2 0 0,1 10,12M4,12A2,2 0 0,1 6,10A2,2 0 0,1 8,12A2,2 0 0,1 6,14A2,2 0 0,1 4,12Z" />
+                  </svg>
+                </button>
               </div>
               <div class="project-info">
                 <h3 class="project-name">{{ project.name }}</h3>
@@ -142,24 +153,55 @@
                   <span class="project-duration">{{ project.duration || '00:00' }}</span>
                 </div>
               </div>
-              <div class="project-actions">
-                <button class="action-btn" @click.stop="duplicateProject(project.id)" title="复制项目">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M19,21H8V7H19M19,5H8A2,2 0 0,0 6,7V21A2,2 0 0,0 8,23H19A2,2 0 0,0 21,21V7A2,2 0 0,0 19,5M16,1H4A2,2 0 0,0 2,3V17H4V3H16V1Z" />
-                  </svg>
-                </button>
-                <button class="action-btn" @click.stop="confirmDeleteProject(project)" title="删除项目">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z" />
-                  </svg>
-                </button>
-              </div>
             </div>
           </div>
         </section>
       </div>
     </main>
   </div>
+
+  <!-- 项目设置菜单 -->
+  <ContextMenu v-model:show="showContextMenu" :options="contextMenuOptions">
+    <ContextMenuItem
+      label="编辑项目"
+      @click="showEditDialog(selectedProject!)"
+    >
+      <template #icon>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M20.71,7.04C21.1,6.65 21.1,6 20.71,5.63L18.37,3.29C18,2.9 17.35,2.9 16.96,3.29L15.12,5.12L18.87,8.87M3,17.25V21H6.75L17.81,9.93L14.06,6.18L3,17.25Z" />
+        </svg>
+      </template>
+    </ContextMenuItem>
+    <!-- 复制项目功能暂时禁用 -->
+    <!-- <ContextMenuItem
+      label="复制项目"
+      @click="duplicateProject(selectedProject?.id || '')"
+    >
+      <template #icon>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M19,21H8V7H19M19,5H8A2,2 0 0,0 6,7V21A2,2 0 0,0 8,23H19A2,2 0 0,0 21,21V7A2,2 0 0,0 19,5M16,1H4A2,2 0 0,0 2,3V17H4V3H16V1Z" />
+        </svg>
+      </template>
+    </ContextMenuItem> -->
+    <ContextMenuItem
+      label="删除项目"
+      @click="confirmDeleteProject(selectedProject!)"
+    >
+      <template #icon>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="#ff6b6b">
+          <path d="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z" />
+        </svg>
+      </template>
+    </ContextMenuItem>
+  </ContextMenu>
+
+  <!-- 编辑项目对话框 -->
+  <EditProjectDialog
+    v-model:show="showEditProjectDialog"
+    :project="selectedProject"
+    :is-saving="false"
+    @save="handleSaveProjectEdit"
+  />
 </template>
 
 <script setup lang="ts">
@@ -167,6 +209,8 @@ import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { directoryManager } from '../utils/DirectoryManager'
 import { projectManager, type ProjectConfig } from '../utils/ProjectManager'
+import { ContextMenu, ContextMenuItem } from '@imengyu/vue3-context-menu'
+import EditProjectDialog from '../components/EditProjectDialog.vue'
 
 const router = useRouter()
 
@@ -176,6 +220,19 @@ const projects = ref<ProjectConfig[]>([])
 const isLoading = ref(false)
 const hasWorkspaceAccess = ref(false)
 const workspaceInfo = ref<{ name: string; path?: string } | null>(null)
+
+// 上下文菜单相关
+const showContextMenu = ref(false)
+const selectedProject = ref<ProjectConfig | null>(null)
+const contextMenuOptions = ref({
+  x: 0,
+  y: 0,
+  theme: 'mac dark',
+  zIndex: 1000,
+})
+
+// 编辑项目对话框相关
+const showEditProjectDialog = ref(false)
 
 // 计算属性
 const isApiSupported = computed(() => directoryManager.isSupported())
@@ -322,6 +379,55 @@ async function deleteProject(projectId: string) {
     console.log('项目删除成功')
   } catch (error) {
     console.error('删除项目失败:', error)
+  }
+}
+
+// 显示项目设置菜单
+function showProjectMenu(event: MouseEvent, project: ProjectConfig) {
+  event.preventDefault()
+  event.stopPropagation()
+
+  selectedProject.value = project
+  contextMenuOptions.value.x = event.clientX
+  contextMenuOptions.value.y = event.clientY
+  showContextMenu.value = true
+}
+
+// 显示编辑项目对话框
+function showEditDialog(project: ProjectConfig) {
+  selectedProject.value = project
+  showEditProjectDialog.value = true
+  showContextMenu.value = false
+}
+
+// 处理保存项目编辑
+async function handleSaveProjectEdit(data: { name: string; description: string }) {
+  if (!selectedProject.value) {
+    return
+  }
+
+  try {
+    // 更新项目配置
+    const updatedProject: ProjectConfig = {
+      ...selectedProject.value,
+      name: data.name,
+      description: data.description,
+      updatedAt: new Date().toISOString()
+    }
+
+    // 保存项目
+    await projectManager.saveProject(updatedProject)
+
+    // 刷新项目列表
+    await loadProjects()
+
+    // 关闭对话框
+    showEditProjectDialog.value = false
+
+    console.log('项目信息更新成功:', updatedProject.name)
+  } catch (error) {
+    console.error('更新项目信息失败:', error)
+    // 可以添加错误提示
   }
 }
 
@@ -676,12 +782,21 @@ onMounted(async () => {
   align-items: center;
   justify-content: center;
   overflow: hidden;
+  position: relative;
 }
 
 .list-view .project-thumbnail {
   aspect-ratio: 16/9;
   width: 120px;
   flex-shrink: 0;
+}
+
+/* 列表视图中的设置按钮调整 */
+.list-view .settings-btn-overlay {
+  top: 4px;
+  right: 4px;
+  width: 28px;
+  height: 28px;
 }
 
 .project-thumbnail img {
@@ -722,33 +837,37 @@ onMounted(async () => {
   color: var(--color-text-secondary);
 }
 
-.project-actions {
-  padding: 0.5rem 1rem;
-  display: flex;
-  gap: 0.5rem;
-  border-top: 1px solid var(--color-border);
-}
 
-.list-view .project-actions {
-  border-top: none;
-  border-left: 1px solid var(--color-border);
-  flex-direction: column;
-  padding: 1rem;
-}
 
-.action-btn {
-  padding: 0.5rem;
-  background: none;
-  border: 1px solid var(--color-border);
-  border-radius: var(--border-radius-small);
-  color: var(--color-text-secondary);
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.action-btn:hover {
-  background-color: var(--color-bg-hover);
+/* 右上角设置按钮样式 */
+.settings-btn-overlay {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 36px;
+  height: 36px;
+  background: rgba(0, 0, 0, 0.6);
+  border: none;
+  border-radius: var(--border-radius-medium);
   color: var(--color-text-primary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  opacity: 0;
+  transform: scale(0.9);
+  backdrop-filter: blur(4px);
+}
+
+.project-card:hover .settings-btn-overlay {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.settings-btn-overlay:hover {
+  background: rgba(0, 0, 0, 0.8);
+  transform: scale(1.05);
 }
 
 .btn {
@@ -772,6 +891,8 @@ onMounted(async () => {
 .btn-primary:hover {
   background-color: var(--color-primary-hover);
 }
+
+
 
 .spinning {
   animation: spin 1s linear infinite;

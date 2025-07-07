@@ -1410,6 +1410,13 @@ export const useVideoStore = defineStore('video', () => {
     isLoading: projectModule.isLoading,
     lastSaved: projectModule.lastSaved,
     mediaReferences: projectModule.mediaReferences,
+
+    // 加载进度状态
+    loadingProgress: projectModule.loadingProgress,
+    loadingStage: projectModule.loadingStage,
+    loadingDetails: projectModule.loadingDetails,
+    showLoadingProgress: projectModule.showLoadingProgress,
+
     createProject: projectModule.createProject,
     loadProject: projectModule.loadProject,
     saveCurrentProject: projectModule.saveCurrentProject,
@@ -1419,6 +1426,8 @@ export const useVideoStore = defineStore('video', () => {
     removeMediaReference: projectModule.removeMediaReference,
     getMediaReference: projectModule.getMediaReference,
     getProjectSummary: projectModule.getProjectSummary,
+    updateLoadingProgress: projectModule.updateLoadingProgress,
+    resetLoadingState: projectModule.resetLoadingState,
 
     // 项目恢复方法
     restoreMediaItems,

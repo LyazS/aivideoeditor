@@ -19,7 +19,12 @@
 
           <!-- 中间：项目名称 -->
           <div class="status-center">
-            <span class="project-title">{{ projectTitle }}</span>
+            <button class="project-title-btn" @click="showEditProjectDialog" title="点击编辑项目信息">
+              <span class="project-title">{{ projectTitle }}</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" class="edit-icon">
+                <path d="M20.71,7.04C21.1,6.65 21.1,6 20.71,5.63L18.37,3.29C18,2.9 17.35,2.9 16.96,3.29L15.12,5.12L18.87,8.87M3,17.25V21H6.75L17.81,9.93L14.06,6.18L3,17.25Z" />
+              </svg>
+            </button>
           </div>
 
           <!-- 右侧：保存和导出按钮 -->
@@ -62,6 +67,22 @@
     <div class="editor-content">
       <VideoPreviewEngine />
     </div>
+
+    <!-- 加载进度覆盖层 -->
+    <LoadingOverlay
+      :visible="videoStore.showLoadingProgress"
+      :stage="videoStore.loadingStage"
+      :progress="videoStore.loadingProgress"
+      :details="videoStore.loadingDetails"
+    />
+
+    <!-- 编辑项目对话框 -->
+    <EditProjectDialog
+      v-model:show="showEditDialog"
+      :project="currentProject"
+      :is-saving="isSaving"
+      @save="handleSaveProject"
+    />
   </div>
 </template>
 
@@ -72,6 +93,8 @@ import { useVideoStore } from '../stores/videoStore'
 import { useAutoSave } from '../composables/useAutoSave'
 import VideoPreviewEngine from '../components/VideoPreviewEngine.vue'
 import HoverButton from '../components/HoverButton.vue'
+import LoadingOverlay from '../components/LoadingOverlay.vue'
+import EditProjectDialog from '../components/EditProjectDialog.vue'
 
 const route = useRoute()
 const videoStore = useVideoStore()
@@ -85,10 +108,12 @@ const autoSave = useAutoSave({
 
 // 响应式数据
 const projectTitle = ref('未命名项目')
+const showEditDialog = ref(false)
 
 // 计算属性 - 使用store中的项目状态
 const projectStatus = computed(() => videoStore.projectStatus)
 const isSaving = computed(() => videoStore.isSaving)
+const currentProject = computed(() => videoStore.currentProject)
 
 // 方法
 function goBack() {
@@ -120,6 +145,38 @@ async function saveProject() {
 function exportProject() {
   // TODO: 实现项目导出逻辑
   console.log('导出项目')
+}
+
+// 显示编辑项目对话框
+function showEditProjectDialog() {
+  showEditDialog.value = true
+}
+
+// 处理保存项目编辑
+async function handleSaveProject(data: { name: string; description: string }) {
+  if (!currentProject.value) {
+    console.error('没有当前项目可编辑')
+    return
+  }
+
+  try {
+    // 更新项目信息
+    await videoStore.saveCurrentProject({
+      name: data.name,
+      description: data.description
+    })
+
+    // 更新标题显示
+    projectTitle.value = data.name
+
+    // 关闭对话框
+    showEditDialog.value = false
+
+    console.log('项目信息更新成功:', data.name)
+  } catch (error) {
+    console.error('更新项目信息失败:', error)
+    // 可以添加错误提示
+  }
 }
 
 function debugProject() {
@@ -361,10 +418,37 @@ onUnmounted(() => {
 
 /* 旧的按钮样式已移除，现在使用 HoverButton 组件 */
 
+.project-title-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--border-radius-medium);
+  transition: all 0.2s ease;
+  color: var(--color-text-primary);
+}
+
+.project-title-btn:hover {
+  background: var(--color-bg-hover);
+}
+
+.project-title-btn:hover .edit-icon {
+  opacity: 1;
+}
+
 .project-title {
   font-size: var(--font-size-md);
   color: var(--color-text-primary);
   font-weight: 600;
+}
+
+.edit-icon {
+  opacity: 0.6;
+  transition: opacity 0.2s ease;
+  color: var(--color-text-secondary);
 }
 
 .project-status {

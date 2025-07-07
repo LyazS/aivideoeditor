@@ -18,7 +18,12 @@ export function createProjectModule() {
   
   // 项目加载状态
   const isLoading = ref(false)
-  
+
+  // 加载进度状态
+  const loadingProgress = ref(0) // 0-100
+  const loadingStage = ref('') // 当前加载阶段
+  const loadingDetails = ref('') // 详细信息
+
   // 媒体引用映射（用于持久化）
   const mediaReferences = ref<Record<string, MediaReference>>({})
 
@@ -63,7 +68,49 @@ export function createProjectModule() {
     return currentProject.value !== null
   })
 
+  /**
+   * 是否正在显示加载进度
+   */
+  const showLoadingProgress = computed(() => {
+    return isLoading.value && loadingProgress.value > 0
+  })
+
   // ==================== 项目管理方法 ====================
+
+  /**
+   * 更新加载进度
+   * @param stage 当前阶段
+   * @param progress 进度百分比 (0-100)
+   * @param details 详细信息（可选）
+   */
+  function updateLoadingProgress(stage: string, progress: number, details?: string): void {
+    loadingStage.value = stage
+    loadingProgress.value = Math.max(0, Math.min(100, progress))
+    loadingDetails.value = details || ''
+    console.log(`📊 加载进度: ${stage} (${progress}%)${details ? ` - ${details}` : ''}`)
+  }
+
+  /**
+   * 重置加载状态
+   * @param delay 延迟时间（毫秒），默认1000ms
+   */
+  function resetLoadingState(delay: number = 1000): void {
+    if (delay > 0) {
+      // 延迟重置，让用户看到加载完成的状态
+      setTimeout(() => {
+        isLoading.value = false
+        loadingProgress.value = 0
+        loadingStage.value = ''
+        loadingDetails.value = ''
+      }, delay)
+    } else {
+      // 立即重置
+      isLoading.value = false
+      loadingProgress.value = 0
+      loadingStage.value = ''
+      loadingDetails.value = ''
+    }
+  }
 
   /**
    * 创建新项目
@@ -73,20 +120,22 @@ export function createProjectModule() {
   async function createProject(name: string, template?: Partial<ProjectConfig>): Promise<ProjectConfig> {
     try {
       isLoading.value = true
+      updateLoadingProgress('创建项目...', 10)
       console.log(`📁 创建新项目: ${name}`)
-      
+
       const projectConfig = await projectManager.createProject(name, template)
       currentProject.value = projectConfig
       mediaReferences.value = {}
       lastSaved.value = new Date()
-      
+
+      updateLoadingProgress('项目创建完成', 100)
       console.log(`✅ 项目创建成功: ${name} (ID: ${projectConfig.id})`)
       return projectConfig
     } catch (error) {
       console.error('创建项目失败:', error)
       throw error
     } finally {
-      isLoading.value = false
+      resetLoadingState()
     }
   }
 
@@ -97,6 +146,7 @@ export function createProjectModule() {
   async function loadProject(projectId: string): Promise<ProjectConfig | null> {
     try {
       isLoading.value = true
+      updateLoadingProgress('开始加载项目...', 5)
       console.log(`📂 开始完整加载项目: ${projectId}`)
 
       // 使用新的分阶段加载方法
@@ -104,7 +154,7 @@ export function createProjectModule() {
         loadMedia: true,
         loadTimeline: true, // 启用时间轴恢复
         onProgress: (stage, progress) => {
-          console.log(`📊 加载进度: ${stage} (${progress}%)`)
+          updateLoadingProgress(stage, progress)
         }
       })
 
@@ -143,6 +193,7 @@ export function createProjectModule() {
           console.log(`✅ 时间轴项目恢复完成: ${timelineItems.length}个项目`)
         }
 
+        updateLoadingProgress('项目加载完成', 100)
         console.log(`✅ 项目完整加载成功: ${projectConfig.name}`)
         return projectConfig
       } else {
@@ -153,7 +204,7 @@ export function createProjectModule() {
       console.error('加载项目失败:', error)
       throw error
     } finally {
-      isLoading.value = false
+      resetLoadingState()
     }
   }
 
@@ -274,6 +325,12 @@ export function createProjectModule() {
     lastSaved,
     mediaReferences,
 
+    // 加载进度状态
+    loadingProgress,
+    loadingStage,
+    loadingDetails,
+    showLoadingProgress,
+
     // 方法
     createProject,
     loadProject,
@@ -283,7 +340,11 @@ export function createProjectModule() {
     addMediaReference,
     removeMediaReference,
     getMediaReference,
-    getProjectSummary
+    getProjectSummary,
+
+    // 加载进度方法
+    updateLoadingProgress,
+    resetLoadingState
   }
 }
 
