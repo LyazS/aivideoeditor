@@ -1373,6 +1373,8 @@ async function createMediaClipFromMediaItem(
       thumbnailUrl, // 添加缩略图URL
       // 媒体配置（根据类型自动推断）
       config: createMediaConfig(mediaItem.mediaType, sprite),
+      animation: undefined, // 新创建的项目默认没有动画
+      mediaName: mediaItem.name,
     })
 
     // 创建媒体配置的辅助函数
@@ -1396,7 +1398,6 @@ async function createMediaClipFromMediaItem(
           isMuted: false,
           // 基础属性
           zIndex: sprite.zIndex,
-          animation: undefined,
         }
       } else if (mediaType === 'image') {
         return {
@@ -1414,7 +1415,6 @@ async function createMediaClipFromMediaItem(
           proportionalScale: true,
           // 基础属性
           zIndex: sprite.zIndex,
-          animation: undefined,
         }
       } else if (mediaType === 'audio') {
         return {
@@ -1424,7 +1424,6 @@ async function createMediaClipFromMediaItem(
           gain: 0, // 默认增益为0dB
           // 基础属性
           zIndex: sprite.zIndex || 0,
-          animation: undefined,
         }
       }
       throw new Error(`不支持的媒体类型: ${mediaType}`)

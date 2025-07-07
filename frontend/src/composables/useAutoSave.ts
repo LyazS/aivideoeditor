@@ -49,8 +49,8 @@ export function useAutoSave(config: Partial<AutoSaveConfig> = {}) {
   })
 
   // 定时器引用
-  let debounceTimer: NodeJS.Timeout | null = null
-  let throttleTimer: NodeJS.Timeout | null = null
+  let debounceTimer: number | null = null
+  let throttleTimer: number | null = null
   let retryCount = 0
 
   /**
@@ -95,6 +95,7 @@ export function useAutoSave(config: Partial<AutoSaveConfig> = {}) {
             mediaType: item.mediaType,
             timeRange: item.timeRange,
             config: item.config,
+            animation: item.animation, // 保存动画配置
             // 注意：不保存 thumbnailUrl，这是运行时生成的blob URL
             mediaName: videoStore.getMediaItem(item.mediaItemId)?.name || 'Unknown'
           })),

@@ -57,10 +57,7 @@ export class AddTimelineItemCommand implements SimpleCommand {
     this.description = `添加时间轴项目: ${mediaItem?.name || '未知素材'}`
 
     // 保存原始数据用于重建sprite（类型安全版本）
-    this.originalTimelineItemData = createTimelineItemData(
-      timelineItem,
-      mediaItem?.name || '未知素材',
-    )
+    this.originalTimelineItemData = createTimelineItemData(timelineItem)
   }
 
   /**
@@ -108,6 +105,8 @@ export class AddTimelineItemCommand implements SimpleCommand {
       sprite: markRaw(newSprite),
       thumbnailUrl: undefined, // 先设为undefined，稍后重新生成
       config: { ...this.originalTimelineItemData.config },
+      animation: this.originalTimelineItemData.animation ? { ...this.originalTimelineItemData.animation } : undefined,
+      mediaName: this.originalTimelineItemData.mediaName,
     })
 
     // 6. 重新生成缩略图（异步执行，不阻塞重建过程）
@@ -233,10 +232,7 @@ export class RemoveTimelineItemCommand implements SimpleCommand {
     this.description = `移除时间轴项目: ${mediaItem?.name || '未知素材'}`
 
     // 🎯 关键：保存重建所需的完整元数据，而不是对象引用
-    this.originalTimelineItemData = createTimelineItemData(
-      timelineItem,
-      mediaItem?.name || '未知素材',
-    )
+    this.originalTimelineItemData = createTimelineItemData(timelineItem)
 
     console.log('💾 保存删除项目的重建数据:', {
       id: this.originalTimelineItemData.id,
@@ -292,6 +288,8 @@ export class RemoveTimelineItemCommand implements SimpleCommand {
       sprite: markRaw(newSprite),
       thumbnailUrl: undefined, // 先设为undefined，稍后重新生成
       config: { ...this.originalTimelineItemData.config },
+      animation: this.originalTimelineItemData.animation ? { ...this.originalTimelineItemData.animation } : undefined,
+      mediaName: this.originalTimelineItemData.mediaName,
     })
 
     // 6. 重新生成缩略图（异步执行，不阻塞重建过程）
@@ -425,10 +423,7 @@ export class DuplicateTimelineItemCommand implements SimpleCommand {
     this.description = `复制时间轴项目: ${mediaItem?.name || '未知素材'}`
 
     // 保存原始项目的完整重建元数据
-    this.originalTimelineItemData = createTimelineItemData(
-      originalTimelineItem,
-      mediaItem?.name || '未知素材',
-    )
+    this.originalTimelineItemData = createTimelineItemData(originalTimelineItem)
 
     // 生成新项目的ID
     this.newTimelineItemId = `timeline_item_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`
@@ -504,6 +499,8 @@ export class DuplicateTimelineItemCommand implements SimpleCommand {
       sprite: markRaw(newSprite),
       thumbnailUrl: undefined,
       config: { ...this.originalTimelineItemData.config },
+      animation: this.originalTimelineItemData.animation ? { ...this.originalTimelineItemData.animation } : undefined,
+      mediaName: this.originalTimelineItemData.mediaName,
     })
 
     // 重新生成缩略图
@@ -562,6 +559,8 @@ export class DuplicateTimelineItemCommand implements SimpleCommand {
       sprite: markRaw(newSprite),
       thumbnailUrl: undefined,
       config: { ...this.originalTimelineItemData.config },
+      animation: this.originalTimelineItemData.animation ? { ...this.originalTimelineItemData.animation } : undefined,
+      mediaName: this.originalTimelineItemData.mediaName,
     })
 
     // 重新生成缩略图
@@ -651,6 +650,8 @@ export class DuplicateTimelineItemCommand implements SimpleCommand {
       sprite: markRaw(newSprite),
       thumbnailUrl: undefined, // 文本项目不需要缩略图
       config: { ...this.originalTimelineItemData.config },
+      animation: this.originalTimelineItemData.animation ? { ...this.originalTimelineItemData.animation } : undefined,
+      mediaName: this.originalTimelineItemData.mediaName,
     })
 
     console.log('✅ [DuplicateTimelineItemCommand] 文本时间轴项目重建完成')
@@ -1299,10 +1300,7 @@ export class SplitTimelineItemCommand implements SimpleCommand {
     this.description = `分割时间轴项目: ${mediaItem?.name || '未知素材'} (在 ${framesToTimecode(splitTimeFrames)})`
 
     // 🎯 关键：保存原始项目的完整重建元数据
-    this.originalTimelineItemData = createTimelineItemData(
-      originalTimelineItem,
-      mediaItem?.name || '未知素材',
-    )
+    this.originalTimelineItemData = createTimelineItemData(originalTimelineItem)
 
     // 生成分割后项目的ID
     this.firstItemId = Date.now().toString() + Math.random().toString(36).substring(2, 11)
@@ -1448,6 +1446,8 @@ export class SplitTimelineItemCommand implements SimpleCommand {
       sprite: markRaw(firstSprite),
       thumbnailUrl: undefined, // 先设为undefined，稍后重新生成
       config: { ...this.originalTimelineItemData.config },
+      animation: this.originalTimelineItemData.animation ? { ...this.originalTimelineItemData.animation } : undefined,
+      mediaName: this.originalTimelineItemData.mediaName,
     })
 
     const secondItem: TimelineItem = reactive({
@@ -1459,6 +1459,8 @@ export class SplitTimelineItemCommand implements SimpleCommand {
       sprite: markRaw(secondSprite),
       thumbnailUrl: undefined, // 先设为undefined，稍后重新生成
       config: { ...this.originalTimelineItemData.config },
+      animation: this.originalTimelineItemData.animation ? { ...this.originalTimelineItemData.animation } : undefined,
+      mediaName: this.originalTimelineItemData.mediaName,
     })
 
     // 6. 重新生成缩略图（异步执行，不阻塞重建过程）
@@ -1559,6 +1561,8 @@ export class SplitTimelineItemCommand implements SimpleCommand {
       sprite: markRaw(newSprite),
       thumbnailUrl: undefined, // 先设为undefined，稍后重新生成
       config: { ...this.originalTimelineItemData.config },
+      animation: this.originalTimelineItemData.animation ? { ...this.originalTimelineItemData.animation } : undefined,
+      mediaName: this.originalTimelineItemData.mediaName,
     })
 
     // 6. 重新生成缩略图（异步执行，不阻塞重建过程）
@@ -1935,8 +1939,7 @@ export class RemoveTrackCommand implements SimpleCommand {
       (item) => item.trackId === trackId,
     )
     this.affectedTimelineItems = affectedItems.map((item) => {
-      const mediaItem = this.mediaModule.getMediaItem(item.mediaItemId)
-      return createTimelineItemData(item, mediaItem?.name || '未知素材')
+      return createTimelineItemData(item)
     })
 
     console.log(
@@ -2013,8 +2016,10 @@ export class RemoveTrackCommand implements SimpleCommand {
       mediaType: itemData.mediaType,
       timeRange: { ...itemData.timeRange },
       sprite: markRaw(newSprite),
-      thumbnailUrl: itemData.thumbnailUrl,
+      thumbnailUrl: undefined, // 运行时重新生成
       config: { ...itemData.config },
+      animation: itemData.animation ? { ...itemData.animation } : undefined,
+      mediaName: itemData.mediaName,
     })
 
     return newTimelineItem
@@ -2074,6 +2079,8 @@ export class RemoveTrackCommand implements SimpleCommand {
       sprite: markRaw(newSprite),
       thumbnailUrl: undefined, // 文本项目不需要缩略图
       config: { ...itemData.config },
+      animation: itemData.animation ? { ...itemData.animation } : undefined,
+      mediaName: itemData.mediaName,
     })
 
     console.log('✅ [RemoveTrackCommand] 文本时间轴项目重建完成')

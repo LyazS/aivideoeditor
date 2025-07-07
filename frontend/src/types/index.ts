@@ -94,17 +94,17 @@ export interface MediaItem {
 /**
  * 基础媒体属性（所有媒体类型共享）
  */
-interface BaseMediaProps {
+interface BaseMediaProps<T extends MediaType = MediaType> {
   /** 层级控制 */
   zIndex: number
   /** 动画配置（可选） */
-  animation?: AnimationConfig
+  animation?: AnimationConfig<T>
 }
 
 /**
  * 视觉媒体属性（video 和 image 共享）
  */
-interface VisualMediaProps extends BaseMediaProps {
+interface VisualMediaProps<T extends MediaType = MediaType> extends BaseMediaProps<T> {
   /** 水平位置 */
   x: number
   /** 垂直位置 */
@@ -138,7 +138,7 @@ interface AudioMediaProps {
 /**
  * 视频媒体配置：同时具有视觉和音频属性
  */
-interface VideoMediaConfig extends VisualMediaProps, AudioMediaProps {
+interface VideoMediaConfig extends VisualMediaProps<'video'>, AudioMediaProps {
   // 视频特有属性（预留）
   // playbackRate?: number // 倍速可能在 timeRange 中更合适
 }
@@ -146,7 +146,7 @@ interface VideoMediaConfig extends VisualMediaProps, AudioMediaProps {
 /**
  * 图片媒体配置：只有视觉属性
  */
-interface ImageMediaConfig extends VisualMediaProps {
+interface ImageMediaConfig extends VisualMediaProps<'image'> {
   // 图片特有属性（预留）
   // filters?: ImageFilterConfig[]
 }
@@ -154,7 +154,7 @@ interface ImageMediaConfig extends VisualMediaProps {
 /**
  * 音频媒体配置：只有音频属性
  */
-export interface AudioMediaConfig extends BaseMediaProps, AudioMediaProps {
+export interface AudioMediaConfig extends BaseMediaProps<'audio'>, AudioMediaProps {
   /** 增益（dB） */
   gain: number
   // 音频特有属性（预留）
@@ -165,7 +165,7 @@ export interface AudioMediaConfig extends BaseMediaProps, AudioMediaProps {
 /**
  * 文本媒体配置：继承视觉媒体属性，添加文本特有属性
  */
-export interface TextMediaConfig extends VisualMediaProps {
+export interface TextMediaConfig extends VisualMediaProps<'text'> {
   /** 文本内容 */
   text: string
   /** 文本样式配置 */
@@ -190,32 +190,13 @@ export type GetMediaConfig<T extends MediaType> = MediaConfigMap[T]
 /**
  * 重构后的时间轴项目接口（类型安全）
  * 时间轴层：包装VideoVisibleSprite/ImageVisibleSprite和时间轴位置信息
+ * 继承自 TimelineItemData，添加运行时特有的属性
  */
-export interface TimelineItem<T extends MediaType = MediaType> {
-  /** 唯一标识符 */
-  id: string
-  /** 引用MediaItem的ID */
-  mediaItemId: string
-  /** 轨道ID */
-  trackId: string
-  /** 媒体类型 */
-  mediaType: T
-  /** 时间范围信息（根据类型自动推断） */
-  timeRange: T extends 'video'
-    ? VideoTimeRange
-    : T extends 'audio'
-      ? VideoTimeRange
-      : T extends 'text'
-        ? ImageTimeRange
-        : ImageTimeRange
+export interface TimelineItem<T extends MediaType = MediaType> extends TimelineItemData<T> {
   /** 自定义的视频或图片sprite */
   sprite: Raw<CustomSprite>
-  /** 时间轴clip的缩略图URL */
+  /** 时间轴clip的缩略图URL（运行时生成，不持久化） */
   thumbnailUrl?: string
-  /** 媒体配置（根据类型自动推断） */
-  config: GetMediaConfig<T>
-  /** 动画配置（可选） */
-  animation?: AnimationConfig<T>
 }
 
 /**
@@ -380,7 +361,7 @@ export interface NotificationManager {
 
 /**
  * 类型安全的时间轴项目数据接口
- * 用于命令模式中的数据保存
+ * 用于命令模式中的数据保存和持久化
  */
 export interface TimelineItemData<T extends MediaType = MediaType> {
   id: string
@@ -393,7 +374,8 @@ export interface TimelineItemData<T extends MediaType = MediaType> {
       ? VideoTimeRange
       : ImageTimeRange
   config: GetMediaConfig<T>
-  thumbnailUrl?: string
+  /** 动画配置（可选，需要持久化） */
+  animation?: AnimationConfig<T>
   /** 素材名称，用于命令描述信息，避免冗余的 MediaItem 获取 */
   mediaName: string
 }
@@ -594,20 +576,20 @@ export function hasAudioProps(
 
 /**
  * 从 TimelineItem 创建 TimelineItemData（类型安全版本）
+ * 用于去除运行时属性（sprite, thumbnailUrl），保留持久化数据（包括 animation）
  */
 export function createTimelineItemData<T extends MediaType>(
   item: TimelineItem<T>,
-  mediaName: string,
 ): TimelineItemData<T> {
   return {
     id: item.id,
     mediaItemId: item.mediaItemId,
     trackId: item.trackId,
     mediaType: item.mediaType,
-    timeRange: item.timeRange,
+    timeRange: { ...item.timeRange }, // 深拷贝 timeRange 对象，避免引用共享
     config: { ...item.config },
-    thumbnailUrl: item.thumbnailUrl,
-    mediaName,
+    animation: item.animation ? { ...item.animation } : undefined,
+    mediaName: item.mediaName,
   }
 }
 

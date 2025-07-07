@@ -540,7 +540,6 @@ export function useWebAVControls() {
         mediaType: item.mediaType,
         timeRange: { ...item.timeRange },
         config: { ...item.config },
-        thumbnailUrl: item.thumbnailUrl || '',
         mediaName: mediaItem?.name || '未知素材',
       })
     }

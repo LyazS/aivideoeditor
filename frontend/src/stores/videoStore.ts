@@ -1,6 +1,8 @@
 import { computed, markRaw, type Raw } from 'vue'
 import { defineStore } from 'pinia'
 import { VideoVisibleSprite } from '../utils/VideoVisibleSprite'
+import { ImageVisibleSprite } from '../utils/ImageVisibleSprite'
+import { AudioVisibleSprite } from '../utils/AudioVisibleSprite'
 import { expandTimelineIfNeededFrames } from './utils/timeUtils'
 import { autoArrangeTimelineItems, autoArrangeTrackItems } from './utils/timelineArrangementUtils'
 import { calculateTotalDurationFrames } from './utils/durationUtils'
@@ -49,8 +51,9 @@ import type {
   ImageTimeRange,
   PropertyType,
   TrackType,
+  AudioMediaConfig,
 } from '../types'
-import { hasVisualProps, hasAudioProps } from '../types'
+import { hasVisualProps, hasAudioProps, getVisualPropsFromData, getAudioPropsFromData } from '../types'
 
 export const useVideoStore = defineStore('video', () => {
   // 创建媒体管理模块
@@ -1034,6 +1037,8 @@ export const useVideoStore = defineStore('video', () => {
         mediaType: itemData.mediaType,
         timeRange: itemData.timeRange,
         config: itemData.config,
+        animation: itemData.animation ? { ...itemData.animation } : undefined, // 恢复动画配置
+        mediaName: itemData.mediaName, // 恢复媒体名称
         // thumbnailUrl: undefined // 将在重建sprite后重新生成
         // sprite: null // 将在后续重建
       }
@@ -1098,14 +1103,56 @@ export const useVideoStore = defineStore('video', () => {
         // 恢复配置设置
         if (timelineItem.config) {
           // 根据媒体类型应用配置
-          if (timelineItem.mediaType === 'video' && 'volume' in timelineItem.config) {
-            // 只有VideoVisibleSprite有setVolume方法
-            if ('setVolume' in newSprite) {
-              (newSprite as any).setVolume(timelineItem.config.volume || 1)
+          if (timelineItem.mediaType === 'video') {
+            // VideoVisibleSprite：应用视觉和音频属性
+            const videoSprite = newSprite as VideoVisibleSprite
+            const visualProps = getVisualPropsFromData(timelineItem)
+            const audioProps = getAudioPropsFromData(timelineItem)
+
+            // 应用视觉属性
+            if (visualProps) {
+              videoSprite.opacity = visualProps.opacity
+              videoSprite.zIndex = visualProps.zIndex
             }
-          }
-          if ('zIndex' in timelineItem.config) {
-            newSprite.zIndex = timelineItem.config.zIndex || 0
+
+            // 应用音频属性
+            if (audioProps) {
+              videoSprite.setAudioState({
+                volume: audioProps.volume,
+                isMuted: audioProps.isMuted,
+              })
+            }
+          } else if (timelineItem.mediaType === 'audio') {
+            // AudioVisibleSprite：应用音频属性
+            const audioSprite = newSprite as AudioVisibleSprite
+            const audioProps = getAudioPropsFromData(timelineItem)
+
+            // 应用音频状态
+            if (audioProps) {
+              audioSprite.setAudioState({
+                volume: audioProps.volume,
+                isMuted: audioProps.isMuted,
+              })
+            }
+
+            // 应用增益设置（AudioMediaConfig特有属性）
+            const config = timelineItem.config as AudioMediaConfig
+            if (config.gain !== undefined) {
+              audioSprite.setGain(config.gain)
+            }
+
+            // 应用zIndex
+            audioSprite.zIndex = config.zIndex
+          } else if (timelineItem.mediaType === 'image') {
+            // ImageVisibleSprite：应用视觉属性
+            const imageSprite = newSprite as ImageVisibleSprite
+            const visualProps = getVisualPropsFromData(timelineItem)
+
+            // 应用视觉属性
+            if (visualProps) {
+              imageSprite.opacity = visualProps.opacity
+              imageSprite.zIndex = visualProps.zIndex
+            }
           }
         }
 
@@ -1117,6 +1164,18 @@ export const useVideoStore = defineStore('video', () => {
 
         // 重新设置双向数据同步
         timelineModule.setupBidirectionalSync(timelineItem)
+
+        // 如果有动画配置，重新应用动画
+        if (timelineItem.animation && timelineItem.animation.isEnabled) {
+          try {
+            console.log(`🎬 重新应用动画配置: ${timelineItem.id}`)
+            const { updateWebAVAnimation } = await import('../utils/webavAnimationManager')
+            await updateWebAVAnimation(timelineItem)
+            console.log(`✅ 动画配置重新应用完成: ${timelineItem.id}`)
+          } catch (animationError) {
+            console.error(`❌ 动画配置重新应用失败: ${timelineItem.id}`, animationError)
+          }
+        }
 
         // 重新生成缩略图（因为之前的blob URL可能已失效）
         if (mediaItem.mediaType !== 'audio') {

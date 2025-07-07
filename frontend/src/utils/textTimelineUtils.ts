@@ -122,7 +122,9 @@ export async function createTextTimelineItem(
       timeRange: textSprite.getTimeRange(),
       sprite: markRaw(textSprite),
       thumbnailUrl: undefined, // 文本项目不需要缩略图
-      config: textConfig
+      config: textConfig,
+      animation: undefined, // 新创建的文本项目默认没有动画
+      mediaName: `文本: ${text.substring(0, 10)}${text.length > 10 ? '...' : ''}` // 使用文本内容作为名称
     })
 
     console.log('✅ [TextTimelineUtils] 文本时间轴项目创建完成:', {
