@@ -1,6 +1,8 @@
-import { computed, type Raw } from 'vue'
+import { computed, markRaw, type Raw } from 'vue'
 import { defineStore } from 'pinia'
 import { VideoVisibleSprite } from '../utils/VideoVisibleSprite'
+import { ImageVisibleSprite } from '../utils/ImageVisibleSprite'
+import { AudioVisibleSprite } from '../utils/AudioVisibleSprite'
 import { expandTimelineIfNeededFrames } from './utils/timeUtils'
 import { autoArrangeTimelineItems, autoArrangeTrackItems } from './utils/timelineArrangementUtils'
 import { calculateTotalDurationFrames } from './utils/durationUtils'
@@ -22,6 +24,7 @@ import { createTimelineModule } from './modules/timelineModule'
 import { createClipOperationsModule } from './modules/clipOperationsModule'
 import { createHistoryModule } from './modules/historyModule'
 import { createNotificationModule } from './modules/notificationModule'
+import { createProjectModule } from './modules/projectModule'
 import {
   AddTimelineItemCommand,
   RemoveTimelineItemCommand,
@@ -41,13 +44,16 @@ import { AddTextItemCommand } from './modules/commands/textCommands'
 import type {
   MediaItem,
   TimelineItem,
+  TimelineItemData,
+  Track,
   TransformData,
   VideoTimeRange,
   ImageTimeRange,
   PropertyType,
   TrackType,
+  AudioMediaConfig,
 } from '../types'
-import { hasVisualProps, hasAudioProps } from '../types'
+import { hasVisualProps, hasAudioProps, getVisualPropsFromData, getAudioPropsFromData } from '../types'
 
 export const useVideoStore = defineStore('video', () => {
   // 创建媒体管理模块
@@ -64,6 +70,9 @@ export const useVideoStore = defineStore('video', () => {
 
   // 创建WebAV集成模块
   const webavModule = createWebAVModule()
+
+  // 创建项目管理模块
+  const projectModule = createProjectModule()
 
   // 创建时间轴核心管理模块
   const timelineModule = createTimelineModule(
@@ -969,6 +978,225 @@ export const useVideoStore = defineStore('video', () => {
     return mediaModule.getImageOriginalResolution(mediaItemId)
   }
 
+  // ==================== 项目恢复方法 ====================
+
+  /**
+   * 恢复媒体项目列表（用于项目加载）
+   */
+  function restoreMediaItems(restoredMediaItems: MediaItem[]) {
+    console.log(`📁 开始恢复媒体项目: ${restoredMediaItems.length}个文件`)
+
+    // 清空现有的媒体项目
+    mediaModule.mediaItems.value = []
+
+    // 添加恢复的媒体项目
+    for (const mediaItem of restoredMediaItems) {
+      mediaModule.mediaItems.value.push(mediaItem)
+      console.log(`📁 恢复媒体项目: ${mediaItem.name} (${mediaItem.mediaType})`)
+    }
+
+    console.log(`✅ 媒体项目恢复完成: ${mediaModule.mediaItems.value.length}个文件`)
+  }
+
+  /**
+   * 恢复轨道结构（用于项目加载）
+   */
+  function restoreTracks(restoredTracks: Track[]) {
+    trackModule.restoreTracks(restoredTracks)
+  }
+
+  /**
+   * 恢复时间轴项目（用于项目加载）
+   * 这是一个异步方法，需要等待WebAV画布准备好后重建sprite
+   */
+  async function restoreTimelineItems(restoredTimelineItems: TimelineItemData[]) {
+    console.log(`⏰ 开始恢复时间轴项目: ${restoredTimelineItems.length}个项目`)
+
+    // 清空现有的时间轴项目
+    timelineModule.timelineItems.value = []
+
+    // 首先恢复时间轴项目数据（不包含sprite）
+    for (const itemData of restoredTimelineItems) {
+      if (!itemData.id || !itemData.mediaItemId) {
+        console.warn('⚠️ 跳过无效的时间轴项目数据:', itemData)
+        continue
+      }
+
+      // 验证对应的媒体项目是否存在
+      const mediaItem = mediaModule.getMediaItem(itemData.mediaItemId)
+      if (!mediaItem) {
+        console.warn(`⚠️ 跳过时间轴项目，对应的媒体项目不存在: ${itemData.mediaItemId}`)
+        continue
+      }
+
+      // 创建时间轴项目（不包含sprite和thumbnailUrl，都将在后续重建）
+      const timelineItem: Partial<TimelineItem> = {
+        id: itemData.id,
+        mediaItemId: itemData.mediaItemId,
+        trackId: itemData.trackId,
+        mediaType: itemData.mediaType,
+        timeRange: itemData.timeRange,
+        config: itemData.config,
+        animation: itemData.animation ? { ...itemData.animation } : undefined, // 恢复动画配置
+        mediaName: itemData.mediaName, // 恢复媒体名称
+        // thumbnailUrl: undefined // 将在重建sprite后重新生成
+        // sprite: null // 将在后续重建
+      }
+
+      // 暂时添加到数组中（不完整的项目）
+      timelineModule.timelineItems.value.push(timelineItem as TimelineItem)
+
+      console.log(`📋 恢复时间轴项目数据: ${itemData.id} (媒体: ${mediaItem.name})`)
+    }
+
+    console.log(`✅ 时间轴项目数据恢复完成: ${timelineModule.timelineItems.value.length}个项目`)
+
+    // 然后等待WebAV画布准备好，重建所有sprite
+    await rebuildTimelineItemSprites()
+  }
+
+  /**
+   * 重建所有时间轴项目的sprite（从原始素材重新创建）
+   */
+  async function rebuildTimelineItemSprites() {
+    console.log(`🔄 开始重建时间轴项目的sprite...`)
+
+    const items = timelineModule.timelineItems.value
+    if (items.length === 0) {
+      console.log(`ℹ️ 没有时间轴项目需要重建sprite`)
+      return
+    }
+
+    // 等待WebAV画布准备好
+    const avCanvas = webavModule.avCanvas.value
+    if (!avCanvas) {
+      throw new Error('WebAV画布未准备好，无法重建sprite')
+    }
+
+    // 导入sprite工厂函数和缩略图生成函数
+    const { createSpriteFromMediaItem } = await import('../utils/spriteFactory')
+    const { regenerateThumbnailForTimelineItem } = await import('../utils/thumbnailGenerator')
+
+    let rebuiltCount = 0
+    for (const timelineItem of items) {
+      try {
+        console.log(`🔄 重建sprite: ${timelineItem.id} (${rebuiltCount + 1}/${items.length})`)
+
+        // 获取对应的媒体项目
+        const mediaItem = mediaModule.getMediaItem(timelineItem.mediaItemId)
+        if (!mediaItem) {
+          console.warn(`⚠️ 跳过时间轴项目，对应的媒体项目不存在: ${timelineItem.mediaItemId}`)
+          continue
+        }
+
+        if (!mediaItem.isReady) {
+          console.warn(`⚠️ 跳过时间轴项目，媒体项目尚未准备好: ${mediaItem.name}`)
+          continue
+        }
+
+        // 从原始素材重新创建sprite
+        const newSprite = await createSpriteFromMediaItem(mediaItem)
+
+        // 恢复时间范围设置
+        newSprite.setTimeRange(timelineItem.timeRange)
+
+        // 恢复配置设置
+        if (timelineItem.config) {
+          // 根据媒体类型应用配置
+          if (timelineItem.mediaType === 'video') {
+            // VideoVisibleSprite：应用视觉和音频属性
+            const videoSprite = newSprite as VideoVisibleSprite
+            const visualProps = getVisualPropsFromData(timelineItem)
+            const audioProps = getAudioPropsFromData(timelineItem)
+
+            // 应用视觉属性
+            if (visualProps) {
+              videoSprite.opacity = visualProps.opacity
+              videoSprite.zIndex = visualProps.zIndex
+            }
+
+            // 应用音频属性
+            if (audioProps) {
+              videoSprite.setAudioState({
+                volume: audioProps.volume,
+                isMuted: audioProps.isMuted,
+              })
+            }
+          } else if (timelineItem.mediaType === 'audio') {
+            // AudioVisibleSprite：应用音频属性
+            const audioSprite = newSprite as AudioVisibleSprite
+            const audioProps = getAudioPropsFromData(timelineItem)
+
+            // 应用音频状态
+            if (audioProps) {
+              audioSprite.setAudioState({
+                volume: audioProps.volume,
+                isMuted: audioProps.isMuted,
+              })
+            }
+
+            // 应用增益设置（AudioMediaConfig特有属性）
+            const config = timelineItem.config as AudioMediaConfig
+            if (config.gain !== undefined) {
+              audioSprite.setGain(config.gain)
+            }
+
+            // 应用zIndex
+            audioSprite.zIndex = config.zIndex
+          } else if (timelineItem.mediaType === 'image') {
+            // ImageVisibleSprite：应用视觉属性
+            const imageSprite = newSprite as ImageVisibleSprite
+            const visualProps = getVisualPropsFromData(timelineItem)
+
+            // 应用视觉属性
+            if (visualProps) {
+              imageSprite.opacity = visualProps.opacity
+              imageSprite.zIndex = visualProps.zIndex
+            }
+          }
+        }
+
+        // 添加到画布
+        await avCanvas.addSprite(newSprite)
+
+        // 更新store中的sprite引用
+        timelineModule.updateTimelineItemSprite(timelineItem.id, markRaw(newSprite))
+
+        // 重新设置双向数据同步
+        timelineModule.setupBidirectionalSync(timelineItem)
+
+        // 如果有动画配置，重新应用动画
+        if (timelineItem.animation && timelineItem.animation.isEnabled) {
+          try {
+            console.log(`🎬 重新应用动画配置: ${timelineItem.id}`)
+            const { updateWebAVAnimation } = await import('../utils/webavAnimationManager')
+            await updateWebAVAnimation(timelineItem)
+            console.log(`✅ 动画配置重新应用完成: ${timelineItem.id}`)
+          } catch (animationError) {
+            console.error(`❌ 动画配置重新应用失败: ${timelineItem.id}`, animationError)
+          }
+        }
+
+        // 重新生成缩略图（因为之前的blob URL可能已失效）
+        if (mediaItem.mediaType !== 'audio') {
+          console.log(`🖼️ 重新生成缩略图: ${timelineItem.id}`)
+          const newThumbnailUrl = await regenerateThumbnailForTimelineItem(timelineItem, mediaItem)
+          if (newThumbnailUrl) {
+            timelineItem.thumbnailUrl = newThumbnailUrl
+            console.log(`✅ 缩略图重新生成完成: ${timelineItem.id}`)
+          }
+        }
+
+        rebuiltCount++
+        console.log(`✅ sprite重建完成: ${timelineItem.id} (${rebuiltCount}/${items.length})`)
+      } catch (error) {
+        console.error(`❌ sprite重建失败: ${timelineItem.id}`, error)
+      }
+    }
+
+    console.log(`✅ 所有sprite重建完成: 成功${rebuiltCount}/${items.length}个`)
+  }
+
   return {
     // 新的两层数据结构
     mediaItems: mediaModule.mediaItems,
@@ -1171,5 +1399,39 @@ export const useVideoStore = defineStore('video', () => {
     // 批量操作方法
     startBatch: historyModule.startBatch,
     executeBatchCommand: historyModule.executeBatchCommand,
+
+    // 项目管理
+    currentProject: projectModule.currentProject,
+    currentProjectId: projectModule.currentProjectId,
+    currentProjectName: projectModule.currentProjectName,
+    projectStatus: projectModule.projectStatus,
+    hasCurrentProject: projectModule.hasCurrentProject,
+    isSaving: projectModule.isSaving,
+    isLoading: projectModule.isLoading,
+    lastSaved: projectModule.lastSaved,
+    mediaReferences: projectModule.mediaReferences,
+
+    // 加载进度状态
+    loadingProgress: projectModule.loadingProgress,
+    loadingStage: projectModule.loadingStage,
+    loadingDetails: projectModule.loadingDetails,
+    showLoadingProgress: projectModule.showLoadingProgress,
+
+    createProject: projectModule.createProject,
+    loadProject: projectModule.loadProject,
+    saveCurrentProject: projectModule.saveCurrentProject,
+    setCurrentProject: projectModule.setCurrentProject,
+    clearCurrentProject: projectModule.clearCurrentProject,
+    addMediaReference: projectModule.addMediaReference,
+    removeMediaReference: projectModule.removeMediaReference,
+    getMediaReference: projectModule.getMediaReference,
+    getProjectSummary: projectModule.getProjectSummary,
+    updateLoadingProgress: projectModule.updateLoadingProgress,
+    resetLoadingState: projectModule.resetLoadingState,
+
+    // 项目恢复方法
+    restoreMediaItems,
+    restoreTracks,
+    restoreTimelineItems,
   }
 })

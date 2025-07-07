@@ -18,12 +18,14 @@
     "@webav/av-cliper": "^1.1.5",
     "lodash": "^4.17.21",
     "pinia": "^3.0.1",
-    "vue": "^3.5.13"
+    "vue": "^3.5.13",
+    "vue-router": "^4.5.1"
   },
   "devDependencies": {
     "@tsconfig/node22": "^22.0.1",
     "@types/lodash": "^4.17.19",
     "@types/node": "^22.14.0",
+    "@types/wicg-file-system-access": "^2023.10.6",
     "@vitejs/plugin-vue": "^5.2.3",
     "@vue/eslint-config-prettier": "^10.2.0",
     "@vue/eslint-config-typescript": "^14.5.0",

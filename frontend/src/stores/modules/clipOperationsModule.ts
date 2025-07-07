@@ -143,6 +143,8 @@ export function createClipOperationsModule(
         sprite: markRaw(newSprite),
         // 复制原始项目的配置（类型安全版本）
         config: { ...originalItem.config },
+        animation: originalItem.animation ? { ...originalItem.animation } : undefined, // 复制动画配置
+        mediaName: mediaItem.name,
       })
 
       // 根据媒体类型更新新sprite的时间轴位置（直接使用 originalItem.mediaType，避免冗余的 MediaItem 获取）
@@ -479,6 +481,8 @@ export function createClipOperationsModule(
         sprite: markRaw(firstSprite),
         // 复制原始项目的配置（类型安全版本）
         config: { ...originalItem.config },
+        animation: originalItem.animation ? { ...originalItem.animation } : undefined, // 复制动画配置
+        mediaName: mediaItem.name,
       })
 
       const secondItem: TimelineItem = reactive({
@@ -490,6 +494,8 @@ export function createClipOperationsModule(
         sprite: markRaw(secondSprite),
         // 复制原始项目的配置（类型安全版本）
         config: { ...originalItem.config },
+        animation: originalItem.animation ? { ...originalItem.animation } : undefined, // 复制动画配置
+        mediaName: mediaItem.name,
       })
 
       // 从WebAV画布移除原始sprite

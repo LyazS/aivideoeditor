@@ -3,62 +3,66 @@
   <div class="clip-management-toolbar">
     <!-- 历史管理工具栏 -->
     <div class="toolbar-section">
-      <button
-        class="toolbar-btn undo-btn"
+      <HoverButton
         @click="undo"
         :disabled="!videoStore.canUndo"
         title="撤销上一个操作 (Ctrl+Z)"
       >
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-          <path
-            d="M12.5,8C9.85,8 7.45,9 5.6,10.6L2,7V16H11L7.38,12.38C8.77,11.22 10.54,10.5 12.5,10.5C16.04,10.5 19.05,12.81 20.1,16L22.47,15.22C21.08,11.03 17.15,8 12.5,8Z"
-          />
-        </svg>
+        <template #icon>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+            <path
+              d="M12.5,8C9.85,8 7.45,9 5.6,10.6L2,7V16H11L7.38,12.38C8.77,11.22 10.54,10.5 12.5,10.5C16.04,10.5 19.05,12.81 20.1,16L22.47,15.22C21.08,11.03 17.15,8 12.5,8Z"
+            />
+          </svg>
+        </template>
         撤销
-      </button>
-      <button
-        class="toolbar-btn redo-btn"
+      </HoverButton>
+      <HoverButton
         @click="redo"
         :disabled="!videoStore.canRedo"
         title="重做下一个操作 (Ctrl+Y)"
       >
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-          <path
-            d="M18.4,10.6C16.55,9 14.15,8 11.5,8C6.85,8 2.92,11.03 1.53,15.22L3.9,16C4.95,12.81 7.96,10.5 11.5,10.5C13.46,10.5 15.23,11.22 16.62,12.38L13,16H22V7L18.4,10.6Z"
-          />
-        </svg>
+        <template #icon>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+            <path
+              d="M18.4,10.6C16.55,9 14.15,8 11.5,8C6.85,8 2.92,11.03 1.53,15.22L3.9,16C4.95,12.81 7.96,10.5 11.5,10.5C13.46,10.5 15.23,11.22 16.62,12.38L13,16H22V7L18.4,10.6Z"
+            />
+          </svg>
+        </template>
         重做
-      </button>
+      </HoverButton>
     </div>
 
     <div v-if="timelineItems.length > 0" class="toolbar-section">
-      <button
+      <HoverButton
         v-if="videoStore.selectedTimelineItemId"
-        class="toolbar-btn split-btn"
         @click="splitSelectedClip"
         title="在当前时间位置裁剪选中的片段"
       >
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-          <path
-            d="M19,3H5C3.89,3 3,3.89 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V5C21,3.89 20.1,3 19,3M19,19H5V5H19V19Z"
-          />
-          <path d="M12,7V17M7,12H17" stroke="white" stroke-width="1" />
-        </svg>
+        <template #icon>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <!-- 左方括号 [ -->
+            <path d="M10 6 L10 18 M8 6 L10 6 M8 18 L10 18" />
+            <!-- 右方括号 ] -->
+            <path d="M14 6 L14 18 M14 6 L16 6 M14 18 L16 18" />
+          </svg>
+        </template>
         裁剪
-      </button>
-      <button
+      </HoverButton>
+      <HoverButton
         v-if="videoStore.selectedTimelineItemId"
-        class="toolbar-btn delete-btn"
         @click="deleteSelectedClip"
         title="删除选中的片段"
       >
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-          <path
-            d="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z"
-          />
-        </svg>
+        <template #icon>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+            <path
+              d="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z"
+            />
+          </svg>
+        </template>
         删除
-      </button>
+      </HoverButton>
       <span v-if="overlappingCount > 0" class="overlap-warning">
         ⚠️ {{ overlappingCount }} 个重叠
       </span>
@@ -66,18 +70,19 @@
 
     <!-- 调试按钮放在最右边 - 暂时隐藏 -->
     <div class="toolbar-section debug-section" style="display: none">
-      <button
-        class="toolbar-btn debug-btn"
+      <HoverButton
         @click="debugTimeline"
         title="在控制台打印时间轴配置信息"
       >
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-          <path
-            d="M9.5,3A6.5,6.5 0 0,1 16,9.5C16,11.11 15.41,12.59 14.44,13.73L14.71,14H15.5L20.5,19L19,20.5L14,15.5V14.71L13.73,14.44C12.59,15.41 11.11,16 9.5,16A6.5,6.5 0 0,1 3,9.5A6.5,6.5 0 0,1 9.5,3M9.5,5C7,5 5,7 5,9.5C5,12 7,14 9.5,14C12,14 14,12 14,9.5C14,7 12,5 9.5,5Z"
-          />
-        </svg>
+        <template #icon>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+            <path
+              d="M9.5,3A6.5,6.5 0 0,1 16,9.5C16,11.11 15.41,12.59 14.44,13.73L14.71,14H15.5L20.5,19L19,20.5L14,15.5V14.71L13.73,14.44C12.59,15.41 11.11,16 9.5,16A6.5,6.5 0 0,1 3,9.5A6.5,6.5 0 0,1 9.5,3M9.5,5C7,5 5,7 5,9.5C5,12 7,14 9.5,14C12,14 14,12 14,9.5C14,7 12,5 9.5,5Z"
+            />
+          </svg>
+        </template>
         调试
-      </button>
+      </HoverButton>
     </div>
   </div>
 </template>
@@ -87,8 +92,8 @@ import { computed } from 'vue'
 import { useVideoStore } from '../stores/videoStore'
 import { formatFileSize, framesToSeconds } from '../stores/utils/timeUtils'
 import { countOverlappingItems } from '../utils/timeOverlapUtils'
-
 import { isVideoTimeRange } from '../types'
+import HoverButton from './HoverButton.vue'
 
 const videoStore = useVideoStore()
 

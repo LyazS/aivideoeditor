@@ -1,11 +1,10 @@
 <script setup lang="ts">
-import VideoPreviewEngine from './components/VideoPreviewEngine.vue'
 import NotificationContainer from './components/NotificationContainer.vue'
 </script>
 
 <template>
   <div id="app">
-    <VideoPreviewEngine />
+    <router-view />
     <NotificationContainer />
   </div>
 </template>
