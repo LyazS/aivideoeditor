@@ -570,6 +570,60 @@ export class MediaManager {
   }
 
   /**
+   * 删除本地媒体文件和元数据
+   * @param projectId 项目ID
+   * @param mediaReference 媒体引用信息
+   */
+  async deleteMediaFromProject(projectId: string, mediaReference: MediaReference): Promise<void> {
+    const workspaceHandle = await directoryManager.getWorkspaceHandle()
+    if (!workspaceHandle) {
+      throw new Error('未设置工作目录')
+    }
+
+    try {
+      console.log(`🗑️ 开始删除本地媒体文件: ${mediaReference.originalFileName}`)
+
+      // 获取项目目录
+      const projectsHandle = await workspaceHandle.getDirectoryHandle('projects')
+      const projectHandle = await projectsHandle.getDirectoryHandle(projectId)
+
+      // 解析文件路径
+      const pathParts = mediaReference.storedPath.split('/')
+      let currentHandle: FileSystemDirectoryHandle = projectHandle
+
+      // 导航到文件所在目录
+      for (let i = 0; i < pathParts.length - 1; i++) {
+        currentHandle = await currentHandle.getDirectoryHandle(pathParts[i])
+      }
+
+      const fileName = pathParts[pathParts.length - 1]
+
+      // 删除媒体文件
+      try {
+        await currentHandle.removeEntry(fileName)
+        console.log(`✅ 媒体文件已删除: ${mediaReference.storedPath}`)
+      } catch (error) {
+        console.warn(`⚠️ 删除媒体文件失败: ${mediaReference.storedPath}`, error)
+        // 文件可能已经不存在，继续删除元数据
+      }
+
+      // 删除元数据文件
+      const metaFileName = `${fileName}.meta`
+      try {
+        await currentHandle.removeEntry(metaFileName)
+        console.log(`✅ 元数据文件已删除: ${mediaReference.storedPath}.meta`)
+      } catch (error) {
+        console.warn(`⚠️ 删除元数据文件失败: ${mediaReference.storedPath}.meta`, error)
+      }
+
+      console.log(`✅ 本地媒体文件删除完成: ${mediaReference.originalFileName}`)
+    } catch (error) {
+      console.error(`❌ 删除本地媒体文件失败: ${mediaReference.originalFileName}`, error)
+      throw error
+    }
+  }
+
+  /**
    * 批量加载项目的所有媒体文件
    * @param projectId 项目ID
    * @param mediaReferences 媒体引用映射

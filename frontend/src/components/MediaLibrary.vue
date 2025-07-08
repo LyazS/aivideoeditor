@@ -550,7 +550,7 @@ function generateAudioDefaultIcon(): string {
 }
 
 // 移除素材项
-const removeMediaItem = (id: string) => {
+const removeMediaItem = async (id: string) => {
   const item = videoStore.getMediaItem(id)
   if (item) {
     // 检查是否有相关的时间轴项目
@@ -561,18 +561,24 @@ const removeMediaItem = (id: string) => {
     if (dialogs.confirmMediaDelete(item.name, relatedTimelineItems.length)) {
       console.log(`🗑️ 准备删除素材库项目: ${item.name} (ID: ${id})`)
 
-      // 清理URL
-      URL.revokeObjectURL(item.url)
+      try {
+        // 清理URL
+        URL.revokeObjectURL(item.url)
 
-      // 清理缩略图URL
-      if (item.thumbnailUrl) {
-        URL.revokeObjectURL(item.thumbnailUrl)
+        // 清理缩略图URL
+        if (item.thumbnailUrl) {
+          URL.revokeObjectURL(item.thumbnailUrl)
+        }
+
+        // 从store中移除MediaItem（会自动移除相关的TimelineItem和本地文件）
+        await videoStore.removeMediaItem(id)
+
+        console.log(`✅ 素材库项目删除完成: ${item.name}`)
+        dialogs.showSuccess('删除成功', `素材 "${item.name}" 已从项目中删除`)
+      } catch (error) {
+        console.error(`❌ 删除素材失败: ${item.name}`, error)
+        dialogs.showError('删除失败', `删除素材 "${item.name}" 时发生错误`)
       }
-
-      // 从store中移除MediaItem（会自动移除相关的TimelineItem）
-      videoStore.removeMediaItem(id)
-
-      console.log(`✅ 素材库项目删除完成: ${item.name}`)
     }
   }
 }

@@ -1,6 +1,7 @@
 import { ref, computed } from 'vue'
 import { projectManager, type ProjectConfig } from '../../utils/ProjectManager'
 import type { MediaReference } from '../../utils/MediaManager'
+import type { MediaItem } from '../../types'
 
 /**
  * 项目管理模块
@@ -145,74 +146,7 @@ export function createProjectModule() {
     }
   }
 
-  /**
-   * 加载项目（完整版本，包含媒体文件）
-   * @param projectId 项目ID
-   */
-  async function loadProject(projectId: string): Promise<ProjectConfig | null> {
-    try {
-      isLoading.value = true
-      updateLoadingProgress('开始加载项目...', 5)
-      console.log(`📂 开始完整加载项目: ${projectId}`)
 
-      // 使用新的分阶段加载方法
-      const result = await projectManager.loadProjectWithOptions(projectId, {
-        loadMedia: true,
-        loadTimeline: true, // 启用时间轴恢复
-        onProgress: (stage, progress) => {
-          updateLoadingProgress(stage, progress)
-        }
-      })
-
-      if (result?.projectConfig) {
-        const { projectConfig, mediaItems, timelineItems, tracks } = result
-
-        // 设置项目配置
-        currentProject.value = projectConfig
-        mediaReferences.value = projectConfig.mediaReferences || {}
-        lastSaved.value = new Date(projectConfig.updatedAt)
-
-        // 动态导入VideoStore以避免循环依赖
-        const { useVideoStore } = await import('../videoStore')
-        const videoStore = useVideoStore()
-
-        // 如果有媒体文件，恢复到VideoStore中
-        if (mediaItems && mediaItems.length > 0) {
-          console.log(`📁 恢复媒体文件到store: ${mediaItems.length}个文件`)
-
-          // 使用专门的restoreMediaItems方法
-          videoStore.restoreMediaItems(mediaItems)
-          console.log(`✅ 媒体文件恢复完成: ${mediaItems.length}个文件`)
-        }
-
-        // 如果有轨道数据，恢复轨道结构
-        if (tracks && tracks.length > 0) {
-          console.log(`📋 恢复轨道结构: ${tracks.length}个轨道`)
-          videoStore.restoreTracks(tracks)
-          console.log(`✅ 轨道结构恢复完成: ${tracks.length}个轨道`)
-        }
-
-        // 如果有时间轴项目数据，恢复时间轴项目
-        if (timelineItems && timelineItems.length > 0) {
-          console.log(`⏰ 恢复时间轴项目: ${timelineItems.length}个项目`)
-          await videoStore.restoreTimelineItems(timelineItems)
-          console.log(`✅ 时间轴项目恢复完成: ${timelineItems.length}个项目`)
-        }
-
-        updateLoadingProgress('项目加载完成', 100)
-        console.log(`✅ 项目完整加载成功: ${projectConfig.name}`)
-        return projectConfig
-      } else {
-        console.warn(`❌ 项目不存在: ${projectId}`)
-        return null
-      }
-    } catch (error) {
-      console.error('加载项目失败:', error)
-      throw error
-    } finally {
-      resetLoadingState()
-    }
-  }
 
   /**
    * 保存当前项目
@@ -273,6 +207,51 @@ export function createProjectModule() {
    */
   function getMediaReference(mediaItemId: string): MediaReference | undefined {
     return mediaReferences.value[mediaItemId]
+  }
+
+  /**
+   * 清理无效的媒体引用
+   * 移除那些在project.json中存在但实际媒体文件已丢失的引用
+   * @param loadedMediaItems 成功加载的媒体项目列表
+   */
+  async function cleanupInvalidMediaReferences(loadedMediaItems: MediaItem[]): Promise<void> {
+    const loadedMediaIds = new Set(loadedMediaItems.map(item => item.id))
+    const originalReferencesCount = Object.keys(mediaReferences.value).length
+
+    console.log(`🧹 [MEDIA-CLEANUP] 检查媒体引用一致性: ${originalReferencesCount} 个引用, ${loadedMediaItems.length} 个成功加载`)
+
+    // 找出无效的媒体引用（在引用中存在但未成功加载的）
+    const invalidMediaIds: string[] = []
+    for (const mediaId in mediaReferences.value) {
+      if (!loadedMediaIds.has(mediaId)) {
+        invalidMediaIds.push(mediaId)
+      }
+    }
+
+    if (invalidMediaIds.length > 0) {
+      console.log(`🧹 [MEDIA-CLEANUP] 发现 ${invalidMediaIds.length} 个无效媒体引用，开始清理...`)
+
+      // 移除无效的媒体引用
+      for (const mediaId of invalidMediaIds) {
+        const reference = mediaReferences.value[mediaId]
+        console.log(`🧹 [MEDIA-CLEANUP] 清理无效媒体引用: ${mediaId} (${reference?.originalFileName || 'Unknown'})`)
+        delete mediaReferences.value[mediaId]
+      }
+
+      // 立即保存更新后的项目配置
+      try {
+        if (currentProject.value) {
+          // 更新当前项目的 mediaReferences
+          currentProject.value.mediaReferences = { ...mediaReferences.value }
+          await projectManager.saveProject(currentProject.value)
+          console.log(`🧹 [MEDIA-CLEANUP] ✅ 媒体引用清理完成: 移除 ${invalidMediaIds.length} 个无效引用 (${originalReferencesCount} -> ${Object.keys(mediaReferences.value).length})`)
+        }
+      } catch (error) {
+        console.error('🧹 [MEDIA-CLEANUP] ❌ 保存清理后的项目配置失败:', error)
+      }
+    } else {
+      console.log(`🧹 [MEDIA-CLEANUP] ✅ 媒体引用检查完成: 所有 ${originalReferencesCount} 个引用都有效`)
+    }
   }
 
   /**
@@ -363,7 +342,10 @@ export function createProjectModule() {
         mediaReferences.value = projectConfig.mediaReferences || {}
         lastSaved.value = new Date(projectConfig.updatedAt)
 
-        // 如果有媒体文件，恢复到VideoStore中
+        // 先清理无效的媒体引用，确保数据一致性
+        await cleanupInvalidMediaReferences(mediaItems || [])
+
+        // 然后恢复媒体文件到VideoStore中
         if (mediaItems && mediaItems.length > 0) {
           console.log(`📁 [Content Load] 恢复媒体文件到store: ${mediaItems.length}个文件`)
           videoStore.restoreMediaItems(mediaItems)
@@ -452,7 +434,6 @@ export function createProjectModule() {
 
     // 方法
     createProject,
-    loadProject,
     saveCurrentProject,
     preloadProjectSettings,
     loadProjectContent,
@@ -460,6 +441,7 @@ export function createProjectModule() {
     addMediaReference,
     removeMediaReference,
     getMediaReference,
+    cleanupInvalidMediaReferences,
     getProjectSummary,
 
     // 加载进度方法

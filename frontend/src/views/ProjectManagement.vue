@@ -172,17 +172,7 @@
         </svg>
       </template>
     </ContextMenuItem>
-    <!-- 复制项目功能暂时禁用 -->
-    <!-- <ContextMenuItem
-      label="复制项目"
-      @click="duplicateProject(selectedProject?.id || '')"
-    >
-      <template #icon>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M19,21H8V7H19M19,5H8A2,2 0 0,0 6,7V21A2,2 0 0,0 8,23H19A2,2 0 0,0 21,21V7A2,2 0 0,0 19,5M16,1H4A2,2 0 0,0 2,3V17H4V3H16V1Z" />
-        </svg>
-      </template>
-    </ContextMenuItem> -->
+
     <ContextMenuItem
       label="删除项目"
       @click="confirmDeleteProject(selectedProject!)"
@@ -341,30 +331,7 @@ function openProjectById(projectId: string) {
   window.location.href = `/editor/${projectId}`
 }
 
-async function duplicateProject(projectId: string) {
-  try {
-    const originalProject = await projectManager.loadProject(projectId)
-    if (!originalProject) {
-      console.error('找不到要复制的项目')
-      return
-    }
 
-    const newProject = await projectManager.createProject(
-      `${originalProject.name} - 副本`,
-      {
-        ...originalProject,
-        id: undefined, // 让系统生成新ID
-        createdAt: undefined,
-        updatedAt: undefined
-      }
-    )
-
-    await loadProjects() // 刷新项目列表
-    console.log('项目复制成功:', newProject.name)
-  } catch (error) {
-    console.error('复制项目失败:', error)
-  }
-}
 
 function confirmDeleteProject(project: ProjectConfig) {
   if (confirm(`确定要删除项目"${project.name}"吗？此操作无法撤销。`)) {

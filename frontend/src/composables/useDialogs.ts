@@ -116,9 +116,9 @@ export function useDialogs() {
    * @returns 用户是否确认删除
    */
   function confirmMediaDelete(mediaName: string, relatedTimelineItemsCount: number = 0): boolean {
-    let message = `确定要删除素材 "${mediaName}" 吗？`
+    let message = `确定要删除素材 "${mediaName}" 吗？\n\n⚠️ 这将永久删除本地文件，无法恢复！`
     if (relatedTimelineItemsCount > 0) {
-      message += `\n\n注意：这将同时删除时间轴上的 ${relatedTimelineItemsCount} 个相关片段。`
+      message += `\n\n同时还会删除时间轴上的 ${relatedTimelineItemsCount} 个相关片段。`
     }
     return confirm('确认删除素材', message)
   }

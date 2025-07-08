@@ -946,7 +946,11 @@ export const useVideoStore = defineStore('video', () => {
     }
   }
 
-  function removeMediaItem(mediaItemId: string) {
+  async function removeMediaItem(mediaItemId: string) {
+    // 获取媒体引用信息，用于删除本地文件
+    const mediaReference = projectModule.getMediaReference(mediaItemId)
+
+    // 先从内存中删除
     mediaModule.removeMediaItem(
       mediaItemId,
       timelineModule.timelineItems,
@@ -954,6 +958,22 @@ export const useVideoStore = defineStore('video', () => {
       webavModule.avCanvas.value as any, // WebAV 类型不匹配，需要类型断言
       () => {}, // 清理回调，目前为空
     )
+
+    // 删除媒体引用
+    projectModule.removeMediaReference(mediaItemId)
+
+    // 删除本地文件（如果有引用信息且有当前项目）
+    if (mediaReference && projectModule.currentProject.value?.id) {
+      try {
+        const { MediaManager } = await import('../utils/MediaManager')
+        const mediaManager = MediaManager.getInstance()
+        await mediaManager.deleteMediaFromProject(projectModule.currentProject.value.id, mediaReference)
+        console.log(`✅ 本地媒体文件已删除: ${mediaReference.originalFileName}`)
+      } catch (error) {
+        console.error(`❌ 删除本地媒体文件失败: ${mediaReference.originalFileName}`, error)
+        // 本地文件删除失败不应该阻止内存清理，只记录错误
+      }
+    }
   }
 
   function getMediaItem(mediaItemId: string): MediaItem | undefined {
@@ -1423,7 +1443,6 @@ export const useVideoStore = defineStore('video', () => {
     isProjectContentReady: projectModule.isProjectContentReady,
 
     createProject: projectModule.createProject,
-    loadProject: projectModule.loadProject,
     saveCurrentProject: projectModule.saveCurrentProject,
     preloadProjectSettings: projectModule.preloadProjectSettings,
     loadProjectContent: projectModule.loadProjectContent,
@@ -1431,6 +1450,7 @@ export const useVideoStore = defineStore('video', () => {
     addMediaReference: projectModule.addMediaReference,
     removeMediaReference: projectModule.removeMediaReference,
     getMediaReference: projectModule.getMediaReference,
+    getMediaReferences: () => projectModule.mediaReferences.value,
     getProjectSummary: projectModule.getProjectSummary,
     updateLoadingProgress: projectModule.updateLoadingProgress,
     resetLoadingState: projectModule.resetLoadingState,
