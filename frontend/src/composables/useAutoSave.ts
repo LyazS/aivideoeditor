@@ -111,7 +111,10 @@ export function useAutoSave(config: Partial<AutoSaveConfig> = {}) {
             config: item.config,
             animation: item.animation, // 保存动画配置
             // 注意：不保存 thumbnailUrl，这是运行时生成的blob URL
-            mediaName: videoStore.getMediaItem(item.mediaItemId)?.name || 'Unknown'
+            // 对于文本类型，使用item.mediaName；对于其他类型，从MediaItem获取
+            mediaName: item.mediaType === 'text'
+              ? item.mediaName || `文本: ${(item.config as any)?.text?.substring(0, 10) || '未知'}...`
+              : videoStore.getMediaItem(item.mediaItemId)?.name || 'Unknown'
           })),
           mediaItems: videoStore.mediaItems.map(item => ({
             id: item.id,

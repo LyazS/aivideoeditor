@@ -45,7 +45,7 @@ export class AddTimelineItemCommand implements SimpleCommand {
       getTimelineItem: (id: string) => TimelineItem | undefined
     },
     private webavModule: {
-      addSprite: (sprite: VisibleSprite) => boolean
+      addSprite: (sprite: VisibleSprite) => Promise<boolean>
       removeSprite: (sprite: VisibleSprite) => boolean
     },
     private mediaModule: {
@@ -138,7 +138,7 @@ export class AddTimelineItemCommand implements SimpleCommand {
       this.timelineModule.addTimelineItem(newTimelineItem)
 
       // 2. 添加sprite到WebAV画布
-      this.webavModule.addSprite(newTimelineItem.sprite)
+      await this.webavModule.addSprite(newTimelineItem.sprite)
 
       console.log(`✅ 已添加时间轴项目: ${this.originalTimelineItemData.mediaName}`)
     } catch (error) {
@@ -219,7 +219,7 @@ export class RemoveTimelineItemCommand implements SimpleCommand {
       getTimelineItem: (id: string) => TimelineItem | undefined
     },
     private webavModule: {
-      addSprite: (sprite: VisibleSprite) => boolean
+      addSprite: (sprite: VisibleSprite) => Promise<boolean>
       removeSprite: (sprite: VisibleSprite) => boolean
     },
     private mediaModule: {
@@ -345,7 +345,7 @@ export class RemoveTimelineItemCommand implements SimpleCommand {
       this.timelineModule.addTimelineItem(newTimelineItem)
 
       // 2. 添加sprite到WebAV画布
-      this.webavModule.addSprite(newTimelineItem.sprite)
+      await this.webavModule.addSprite(newTimelineItem.sprite)
 
       const mediaItem = this.mediaModule.getMediaItem(this.originalTimelineItemData.mediaItemId)
       console.log(`↩️ 已撤销删除时间轴项目: ${mediaItem?.name || '未知素材'}`)
@@ -411,12 +411,13 @@ export class DuplicateTimelineItemCommand implements SimpleCommand {
       setupBidirectionalSync: (item: TimelineItem) => void
     },
     private webavModule: {
-      addSprite: (sprite: VisibleSprite) => boolean
+      addSprite: (sprite: VisibleSprite) => Promise<boolean>
       removeSprite: (sprite: VisibleSprite) => boolean
     },
     private mediaModule: {
       getMediaItem: (id: string) => MediaItem | undefined
     },
+    private canvasResolution: { width: number; height: number }, // 画布分辨率
   ) {
     this.id = generateCommandId()
     const mediaItem = this.mediaModule.getMediaItem(originalTimelineItem.mediaItemId)
@@ -480,7 +481,7 @@ export class DuplicateTimelineItemCommand implements SimpleCommand {
     })
 
     // 设置变换属性
-    this.applyVisualProperties(newSprite)
+    await this.applyVisualProperties(newSprite)
 
     // 创建新的TimelineItem
     const newTimelineItem: TimelineItem = reactive({
@@ -543,7 +544,7 @@ export class DuplicateTimelineItemCommand implements SimpleCommand {
     })
 
     // 设置变换属性
-    this.applyVisualProperties(newSprite)
+    await this.applyVisualProperties(newSprite)
 
     // 创建新的TimelineItem
     const newTimelineItem: TimelineItem = reactive({
@@ -573,12 +574,29 @@ export class DuplicateTimelineItemCommand implements SimpleCommand {
   /**
    * 应用视觉属性到精灵
    */
-  private applyVisualProperties(sprite: any): void {
+  private async applyVisualProperties(sprite: any): Promise<void> {
     const visualProps = getVisualPropsFromData(this.originalTimelineItemData)
     if (visualProps) {
+      // 导入坐标转换工具
+      const { projectToWebavCoords } = await import('../../../utils/coordinateTransform')
+
+      // 使用传入的画布分辨率
+      const canvasWidth = this.canvasResolution.width
+      const canvasHeight = this.canvasResolution.height
+
+      // 将项目坐标系转换为WebAV坐标系
+      const webavCoords = projectToWebavCoords(
+        visualProps.x,
+        visualProps.y,
+        visualProps.width,
+        visualProps.height,
+        canvasWidth,
+        canvasHeight,
+      )
+
       const rect = sprite.rect
-      rect.x = visualProps.x
-      rect.y = visualProps.y
+      rect.x = webavCoords.x
+      rect.y = webavCoords.y
       rect.w = visualProps.width
       rect.h = visualProps.height
       rect.angle = visualProps.rotation
@@ -621,16 +639,36 @@ export class DuplicateTimelineItemCommand implements SimpleCommand {
       displayDuration: originalDurationFrames,
     })
 
-    // 设置变换属性
+    // 设置变换属性（应用坐标转换）
     const visualProps = getVisualPropsFromData(this.originalTimelineItemData)
+
     if (visualProps) {
+      // 导入坐标转换工具
+      const { projectToWebavCoords } = await import('../../../utils/coordinateTransform')
+
+      // 使用传入的画布分辨率进行坐标转换
+      const canvasWidth = this.canvasResolution.width
+      const canvasHeight = this.canvasResolution.height
+
+      // 将项目坐标系转换为WebAV坐标系
+      const webavCoords = projectToWebavCoords(
+        visualProps.x,
+        visualProps.y,
+        visualProps.width,
+        visualProps.height,
+        canvasWidth,
+        canvasHeight,
+      )
+
       const rect = newSprite.rect
-      rect.x = visualProps.x
-      rect.y = visualProps.y
+      rect.x = webavCoords.x
+      rect.y = webavCoords.y
       rect.w = visualProps.width
       rect.h = visualProps.height
       rect.angle = visualProps.rotation
       newSprite.opacity = visualProps.opacity
+    } else {
+      console.warn('⚠️ [DuplicateTimelineItemCommand] 未找到视觉属性，跳过坐标设置')
     }
 
     // 设置其他属性
@@ -676,7 +714,7 @@ export class DuplicateTimelineItemCommand implements SimpleCommand {
       this.timelineModule.setupBidirectionalSync(newTimelineItem)
 
       // 3. 添加sprite到WebAV画布
-      this.webavModule.addSprite(newTimelineItem.sprite)
+      await this.webavModule.addSprite(newTimelineItem.sprite)
 
       console.log(`✅ 已复制时间轴项目: ${this.originalTimelineItemData.mediaName}`)
     } catch (error) {
@@ -1287,7 +1325,7 @@ export class SplitTimelineItemCommand implements SimpleCommand {
       getTimelineItem: (id: string) => TimelineItem | undefined
     },
     private webavModule: {
-      addSprite: (sprite: VisibleSprite) => boolean
+      addSprite: (sprite: VisibleSprite) => Promise<boolean>
       removeSprite: (sprite: VisibleSprite) => boolean
     },
     private mediaModule: {
@@ -1632,8 +1670,8 @@ export class SplitTimelineItemCommand implements SimpleCommand {
       this.timelineModule.addTimelineItem(secondItem)
 
       // 3. 添加sprite到WebAV画布
-      this.webavModule.addSprite(firstItem.sprite)
-      this.webavModule.addSprite(secondItem.sprite)
+      await this.webavModule.addSprite(firstItem.sprite)
+      await this.webavModule.addSprite(secondItem.sprite)
 
       const mediaItem = this.mediaModule.getMediaItem(this.originalTimelineItemData.mediaItemId)
       console.log(
@@ -1665,7 +1703,7 @@ export class SplitTimelineItemCommand implements SimpleCommand {
       this.timelineModule.addTimelineItem(originalItem)
 
       // 4. 添加sprite到WebAV画布
-      this.webavModule.addSprite(originalItem.sprite)
+      await this.webavModule.addSprite(originalItem.sprite)
 
       const mediaItem = this.mediaModule.getMediaItem(this.originalTimelineItemData.mediaItemId)
       console.log(`↩️ 已撤销分割时间轴项目: ${mediaItem?.name || '未知素材'}`)
@@ -1916,7 +1954,7 @@ export class RemoveTrackCommand implements SimpleCommand {
       timelineItems: { value: TimelineItem[] }
     },
     private webavModule: {
-      addSprite: (sprite: VisibleSprite) => boolean
+      addSprite: (sprite: VisibleSprite) => Promise<boolean>
       removeSprite: (sprite: VisibleSprite) => boolean
     },
     private mediaModule: {
@@ -2154,7 +2192,7 @@ export class RemoveTrackCommand implements SimpleCommand {
         this.timelineModule.setupBidirectionalSync(newTimelineItem)
 
         // 添加sprite到WebAV画布
-        this.webavModule.addSprite(newTimelineItem.sprite)
+        await this.webavModule.addSprite(newTimelineItem.sprite)
       }
 
       console.log(

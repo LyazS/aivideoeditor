@@ -597,7 +597,7 @@ export function createTimelineItemData<T extends MediaType>(
  * 从 TimelineItemData 获取视觉属性（如果存在）
  */
 export function getVisualPropsFromData(data: TimelineItemData): any {
-  if (data.mediaType === 'video' || data.mediaType === 'image') {
+  if (data.mediaType === 'video' || data.mediaType === 'image' || data.mediaType === 'text') {
     const config = data.config as any
     return {
       x: config.x,
