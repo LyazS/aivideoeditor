@@ -83,7 +83,21 @@ export function useAutoSave(config: Partial<AutoSaveConfig> = {}) {
 
     try {
       console.log('💾 [AutoSave] 开始自动保存...')
-      
+
+      // 清理媒体引用：只保留当前存在的媒体项目的引用
+      const currentMediaIds = new Set(videoStore.mediaItems.map(item => item.id))
+      const cleanedMediaReferences: Record<string, any> = {}
+
+      // 获取当前的媒体引用
+      const currentReferences = videoStore.getMediaReferences()
+      for (const [mediaId, reference] of Object.entries(currentReferences)) {
+        if (currentMediaIds.has(mediaId)) {
+          cleanedMediaReferences[mediaId] = reference
+        } else {
+          console.log(`🧹 [MEDIA-CLEANUP] [AutoSave] 跳过无效媒体引用: ${mediaId}`)
+        }
+      }
+
       // 构建项目数据
       const projectData = {
         timeline: {
@@ -113,7 +127,9 @@ export function useAutoSave(config: Partial<AutoSaveConfig> = {}) {
           videoResolution: videoStore.videoResolution,
           frameRate: videoStore.frameRate,
           timelineDurationFrames: videoStore.timelineDurationFrames
-        }
+        },
+        // 使用清理后的媒体引用
+        mediaReferences: cleanedMediaReferences
       }
 
       await videoStore.saveCurrentProject(projectData)

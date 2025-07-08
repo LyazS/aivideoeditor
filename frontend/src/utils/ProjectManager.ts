@@ -196,14 +196,7 @@ export class ProjectManager {
     }
   }
 
-  /**
-   * 加载项目（简化版本，仅加载配置）
-   * @deprecated 建议使用 loadProjectWithOptions 方法
-   */
-  async loadProject(projectId: string): Promise<ProjectConfig | null> {
-    const result = await this.loadProjectWithOptions(projectId, { loadMedia: false })
-    return result?.projectConfig || null
-  }
+
 
   /**
    * 轻量级设置预加载 - 只读取 project.json 中的 settings 部分
