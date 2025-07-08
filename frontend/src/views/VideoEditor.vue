@@ -1,7 +1,7 @@
 <template>
   <div class="video-editor-view">
     <!-- 状态栏 -->
-    <div class="status-bar-container">
+    <div class="status-bar-container" :class="{ 'loading-hidden': videoStore.showLoadingProgress }">
       <div class="status-bar">
         <div class="status-content">
           <!-- 左侧：返回按钮和保存状态 -->
@@ -64,7 +64,7 @@
     </div>
 
     <!-- 视频编辑器主体 -->
-    <div class="editor-content">
+    <div class="editor-content" :class="{ 'loading-hidden': videoStore.showLoadingProgress }">
       <VideoPreviewEngine />
     </div>
 
@@ -87,7 +87,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onBeforeMount, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useVideoStore } from '../stores/videoStore'
 import { useAutoSave } from '../composables/useAutoSave'
@@ -323,36 +323,71 @@ function handleKeydown(event: KeyboardEvent) {
 }
 
 // 生命周期
-onMounted(async () => {
+// 预加载项目设置（在所有子组件挂载前完成，确保WebAV初始化时使用正确的分辨率）
+onBeforeMount(async () => {
+  console.log('� [LIFECYCLE] VideoEditor.onBeforeMount 开始')
+
   // 从路由参数获取项目ID
   const projectId = route.params.projectId as string
 
   try {
-    await videoStore.setCurrentProject(projectId)
+    console.log('� [LIFECYCLE] VideoEditor 开始预加载项目设置')
+    await videoStore.preloadProjectSettings(projectId)
+    console.log('🔄 [LIFECYCLE] VideoEditor 项目设置预加载完成')
+  } catch (error) {
+    console.error('🔄 [LIFECYCLE] VideoEditor 预加载项目设置失败:', error)
+    // 对于现有项目，预加载失败是严重错误，需要通知用户
+    if (projectId && projectId !== 'undefined') {
+      projectTitle.value = '项目设置加载失败'
+      // 这里可以显示错误提示给用户
+      throw new Error(`项目设置加载失败: ${error}`)
+    }
+    // 对于新项目，可以使用默认设置继续
+    console.log('🔄 [LIFECYCLE] VideoEditor 新项目使用默认设置')
+  }
+
+  console.log('🔄 [LIFECYCLE] VideoEditor.onBeforeMount 完成')
+})
+
+onMounted(async () => {
+  console.log('� [LIFECYCLE] VideoEditor.onMounted 开始')
+
+  // 从路由参数获取项目ID
+  const projectId = route.params.projectId as string
+
+  // 加载项目内容
+
+  try {
+    console.log('📂 [VideoEditor] 开始加载项目内容...')
+    await videoStore.loadProjectContent(projectId)
 
     if (videoStore.hasCurrentProject) {
       projectTitle.value = videoStore.currentProjectName
-      console.log('项目已加载:', videoStore.currentProjectName)
+      console.log('✅ [VideoEditor] 项目内容加载完成:', videoStore.currentProjectName)
 
       // 启用自动保存
       autoSave.enableAutoSave()
-      console.log('✅ 自动保存已启用')
+      console.log('✅ [VideoEditor] 自动保存已启用')
     } else {
       projectTitle.value = '新建项目'
-      console.log('准备创建新项目')
+      console.log('📝 [VideoEditor] 准备创建新项目')
 
       // 对于新项目，暂时禁用自动保存，直到项目被创建
       autoSave.disableAutoSave()
     }
   } catch (error) {
-    console.error('加载项目失败:', error)
+    console.error('❌ [VideoEditor] 加载项目内容失败:', error)
     projectTitle.value = '加载失败'
     autoSave.disableAutoSave()
   }
 
   // 注册键盘快捷键
   window.addEventListener('keydown', handleKeydown)
+
+  console.log('🔄 [LIFECYCLE] VideoEditor.onMounted 完成')
 })
+
+
 
 onUnmounted(() => {
   // 禁用自动保存
@@ -393,13 +428,14 @@ onUnmounted(() => {
   align-items: center;
   justify-content: space-between;
   width: 100%;
+  position: relative; /* 为中间区域的绝对定位提供参考 */
 }
 
 .status-left {
   display: flex;
   align-items: center;
   gap: var(--spacing-sm);
-  flex: 0 0 auto;
+  flex: 0 0 200px; /* 固定左侧宽度 */
 }
 
 .status-center {
@@ -407,13 +443,17 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   flex: 1;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%); /* 绝对居中 */
 }
 
 .status-right {
   display: flex;
   align-items: center;
   gap: var(--spacing-xs);
-  flex: 0 0 auto;
+  flex: 0 0 200px; /* 固定右侧宽度，与左侧对称 */
+  justify-content: flex-end;
 }
 
 /* 旧的按钮样式已移除，现在使用 HoverButton 组件 */
@@ -459,6 +499,13 @@ onUnmounted(() => {
 .editor-content {
   flex: 1;
   overflow: hidden;
+  transition: opacity 0.3s ease;
+}
+
+.status-bar-container.loading-hidden,
+.editor-content.loading-hidden {
+  opacity: 0;
+  pointer-events: none;
 }
 
 .spinning {

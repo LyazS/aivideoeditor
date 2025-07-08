@@ -17,7 +17,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { useVideoStore } from '../stores/videoStore'
 import type { VideoResolution } from '../types'
 import { useWebAVControls } from '../composables/useWebAVControls'
@@ -333,8 +333,40 @@ const cleanupResizeObserver = (): void => {
   }
 }
 
+// 等待项目设置就绪
+async function waitForProjectSettingsReady(): Promise<void> {
+  console.log('🔄 [LIFECYCLE] WebAVRenderer.waitForProjectSettingsReady 开始')
+
+  return new Promise((resolve) => {
+    if (videoStore.isProjectSettingsReady) {
+      console.log('🔄 [LIFECYCLE] WebAVRenderer 设置已就绪，立即返回')
+      resolve()
+      return
+    }
+
+    console.log('🔄 [LIFECYCLE] WebAVRenderer 开始监听设置状态变化')
+    const unwatch = watch(
+      () => videoStore.isProjectSettingsReady,
+      (isReady) => {
+        console.log('🔄 [LIFECYCLE] WebAVRenderer 监听到设置状态变化:', isReady)
+        if (isReady) {
+          console.log('🔄 [LIFECYCLE] WebAVRenderer 设置就绪，继续初始化')
+          unwatch()
+          resolve()
+        }
+      },
+      { immediate: true }
+    )
+
+    // 不设置超时，如果设置加载失败，应该让错误暴露出来
+    // 这样可以更好地发现和调试问题
+  })
+}
+
 // 生命周期
 onMounted(async () => {
+  console.log('🔄 [LIFECYCLE] WebAVRenderer.onMounted 开始')
+
   const mountTimer = createPerformanceTimer('WebAV Renderer Mount')
   logComponentLifecycle('WebAV Renderer', 'mounted', 'starting...')
 
@@ -347,6 +379,19 @@ onMounted(async () => {
     // 设置尺寸监听
     setupResizeObserver()
     console.log('✅ [WebAV Renderer] Resize observer setup completed')
+
+    // 检查项目设置状态（应该在父组件onBeforeMount中已完成）
+    console.log('🔄 [LIFECYCLE] WebAVRenderer 检查项目设置状态:', videoStore.isProjectSettingsReady)
+
+    if (!videoStore.isProjectSettingsReady) {
+      console.log('🔄 [LIFECYCLE] WebAVRenderer 等待项目设置完成')
+      await waitForProjectSettingsReady()
+      console.log('🔄 [LIFECYCLE] WebAVRenderer 项目设置等待完成')
+    } else {
+      console.log('🔄 [LIFECYCLE] WebAVRenderer 项目设置已就绪')
+    }
+
+    console.log('🔄 [LIFECYCLE] WebAVRenderer 开始初始化画布')
 
     // 初始化WebAV画布到容器
     await initializeWebAVCanvas()

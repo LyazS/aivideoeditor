@@ -233,12 +233,26 @@ const isDragging = ref(false)
 
 // 分辨率相关
 const showResolutionModal = ref(false)
-const currentResolution = ref({
-  name: '1080p',
-  width: 1920,
-  height: 1080,
-  aspectRatio: '16:9',
-  category: '横屏',
+
+// 从videoStore获取当前分辨率，而不是使用硬编码的默认值
+const currentResolution = computed(() => {
+  const resolution = videoStore.videoResolution
+  // 根据分辨率判断类别
+  const aspectRatio = resolution.width / resolution.height
+  let category = '横屏'
+  if (aspectRatio < 1) {
+    category = '竖屏'
+  } else if (Math.abs(aspectRatio - 1) < 0.1) {
+    category = '方形'
+  }
+
+  return {
+    name: resolution.name,
+    width: resolution.width,
+    height: resolution.height,
+    aspectRatio: resolution.aspectRatio,
+    category: category,
+  }
 })
 
 const resolutionOptions = [
@@ -270,7 +284,13 @@ const currentResolutionText = computed(() => {
 })
 
 // 临时选择的分辨率（在弹窗中选择但未确认）
-const tempSelectedResolution = ref(currentResolution.value)
+const tempSelectedResolution = ref({
+  name: '1080p',
+  width: 1920,
+  height: 1080,
+  aspectRatio: '16:9',
+  category: '横屏',
+})
 
 // 自定义分辨率
 const showCustomResolution = ref(false)
@@ -454,33 +474,45 @@ function getPreviewStyle(resolution: { width: number; height: number }) {
 }
 
 function confirmSelection() {
+  let selectedResolution
+
   if (showCustomResolution.value) {
     // 使用自定义分辨率
-    const customResolution = {
+    selectedResolution = {
       name: '自定义',
       width: customWidth.value,
       height: customHeight.value,
       aspectRatio: customResolutionText.value,
-      category: '自定义',
     }
-    currentResolution.value = customResolution
-    videoStore.setVideoResolution(customResolution)
   } else {
-    // 使用预设分辨率
-    currentResolution.value = tempSelectedResolution.value
-    videoStore.setVideoResolution(tempSelectedResolution.value)
+    // 使用预设分辨率，转换为VideoResolution格式
+    selectedResolution = {
+      name: tempSelectedResolution.value.name,
+      width: tempSelectedResolution.value.width,
+      height: tempSelectedResolution.value.height,
+      aspectRatio: tempSelectedResolution.value.aspectRatio,
+    }
   }
+
+  // 更新videoStore中的分辨率
+  videoStore.setVideoResolution(selectedResolution)
 
   showResolutionModal.value = false
   showCustomResolution.value = false
-  console.log('确认选择分辨率:', currentResolution.value)
+  console.log('确认选择分辨率:', selectedResolution)
 }
 
 function cancelSelection() {
   showResolutionModal.value = false
   showCustomResolution.value = false
-  // 重置临时选择
-  tempSelectedResolution.value = currentResolution.value
+  // 重置临时选择为当前分辨率
+  tempSelectedResolution.value = {
+    name: currentResolution.value.name,
+    width: currentResolution.value.width,
+    height: currentResolution.value.height,
+    aspectRatio: currentResolution.value.aspectRatio,
+    category: currentResolution.value.category,
+  }
 }
 
 function selectPresetResolution(resolution: (typeof resolutionOptions)[0]) {
@@ -501,7 +533,13 @@ function selectCustomResolution() {
 
 function openResolutionModal() {
   // 初始化临时选择为当前分辨率
-  tempSelectedResolution.value = currentResolution.value
+  tempSelectedResolution.value = {
+    name: currentResolution.value.name,
+    width: currentResolution.value.width,
+    height: currentResolution.value.height,
+    aspectRatio: currentResolution.value.aspectRatio,
+    category: currentResolution.value.category,
+  }
   showCustomResolution.value = false
 
   // 如果当前分辨率是自定义的，显示自定义输入

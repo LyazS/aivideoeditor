@@ -37,6 +37,32 @@ export function createConfigModule() {
   }
 
   /**
+   * 从项目设置中恢复配置
+   * @param settings 项目设置对象
+   */
+  function restoreFromProjectSettings(settings: {
+    videoResolution: VideoResolution
+    frameRate: number
+    timelineDurationFrames: number
+  }) {
+    console.log('🔧 [Config] 开始从项目设置恢复配置:', settings)
+
+    // 恢复视频分辨率
+    videoResolution.value = settings.videoResolution
+    console.log('🎬 [Config] 视频分辨率已恢复:', settings.videoResolution)
+
+    // 恢复帧率
+    frameRate.value = settings.frameRate
+    console.log('🎞️ [Config] 帧率已恢复:', settings.frameRate)
+
+    // 恢复时间轴时长
+    timelineDurationFrames.value = settings.timelineDurationFrames
+    console.log('⏱️ [Config] 时间轴时长已恢复:', settings.timelineDurationFrames)
+
+    console.log('✅ [Config] 项目设置恢复完成')
+  }
+
+  /**
    * 设置帧率
    * @param rate 新的帧率值
    */
@@ -118,6 +144,7 @@ export function createConfigModule() {
     setProportionalScale,
     getConfigSummary,
     resetToDefaults,
+    restoreFromProjectSettings,
   }
 }
 
