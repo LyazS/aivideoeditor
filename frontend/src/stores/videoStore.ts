@@ -1349,6 +1349,7 @@ export const useVideoStore = defineStore('video', () => {
     setProportionalScale: configModule.setProportionalScale,
     getConfigSummary: configModule.getConfigSummary,
     resetConfigToDefaults: configModule.resetToDefaults,
+    restoreFromProjectSettings: configModule.restoreFromProjectSettings,
     // 分辨率管理（从Clip获取）
     getVideoOriginalResolution,
     getImageOriginalResolution,
@@ -1417,10 +1418,15 @@ export const useVideoStore = defineStore('video', () => {
     loadingDetails: projectModule.loadingDetails,
     showLoadingProgress: projectModule.showLoadingProgress,
 
+    // 项目加载状态
+    isProjectSettingsReady: projectModule.isProjectSettingsReady,
+    isProjectContentReady: projectModule.isProjectContentReady,
+
     createProject: projectModule.createProject,
     loadProject: projectModule.loadProject,
     saveCurrentProject: projectModule.saveCurrentProject,
-    setCurrentProject: projectModule.setCurrentProject,
+    preloadProjectSettings: projectModule.preloadProjectSettings,
+    loadProjectContent: projectModule.loadProjectContent,
     clearCurrentProject: projectModule.clearCurrentProject,
     addMediaReference: projectModule.addMediaReference,
     removeMediaReference: projectModule.removeMediaReference,

@@ -91,7 +91,7 @@ const currentStage = computed(() => {
 /* Vue Transition 动画 */
 .loading-fade-enter-active,
 .loading-fade-leave-active {
-  transition: opacity 0.5s ease;
+  transition: opacity 0.2s ease;
 }
 
 .loading-fade-enter-from,

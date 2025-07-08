@@ -206,6 +206,58 @@ export class ProjectManager {
   }
 
   /**
+   * 轻量级设置预加载 - 只读取 project.json 中的 settings 部分
+   * @param projectId 项目ID
+   * @returns 项目设置或null（仅当项目不存在时）
+   * @throws 当项目存在但读取失败时抛出错误
+   */
+  async loadProjectSettings(projectId: string): Promise<ProjectConfig['settings'] | null> {
+    const workspaceHandle = await directoryManager.getWorkspaceHandle()
+    if (!workspaceHandle) {
+      throw new Error('未设置工作目录')
+    }
+
+    try {
+      console.log(`🔧 [Settings Preload] 开始预加载项目设置: ${projectId}`)
+
+      const projectsHandle = await workspaceHandle.getDirectoryHandle(this.PROJECTS_FOLDER)
+      const projectHandle = await projectsHandle.getDirectoryHandle(projectId)
+      const projectConfig = await this.loadProjectConfig(projectHandle)
+
+      if (!projectConfig) {
+        throw new Error(`项目配置文件读取失败或格式错误`)
+      }
+
+      if (!projectConfig.settings) {
+        throw new Error(`项目配置文件缺少settings字段`)
+      }
+
+      // 验证关键设置字段
+      if (!projectConfig.settings.videoResolution) {
+        throw new Error(`项目配置缺少videoResolution设置`)
+      }
+
+      console.log(`✅ [Settings Preload] 项目设置预加载成功:`, {
+        videoResolution: projectConfig.settings.videoResolution,
+        frameRate: projectConfig.settings.frameRate,
+        timelineDurationFrames: projectConfig.settings.timelineDurationFrames
+      })
+
+      return projectConfig.settings
+    } catch (error) {
+      // 如果是项目不存在的错误，返回null（用于新项目）
+      if (error instanceof Error && error.name === 'NotFoundError') {
+        console.log(`📝 [Settings Preload] 项目不存在，返回null: ${projectId}`)
+        return null
+      }
+
+      // 其他错误（文件损坏、格式错误等）抛出异常
+      console.error(`❌ [Settings Preload] 预加载项目设置失败: ${projectId}`, error)
+      throw new Error(`无法加载项目设置: ${error instanceof Error ? error.message : String(error)}`)
+    }
+  }
+
+  /**
    * 分阶段加载项目（完整版本）
    * @param projectId 项目ID
    * @param options 加载选项
@@ -313,6 +365,147 @@ export class ProjectManager {
     } catch (error) {
       console.error(`❌ 加载项目 ${projectId} 失败:`, error)
       return null
+    }
+  }
+
+  /**
+   * 加载项目内容（不包含设置预加载，专注于媒体和时间轴数据）
+   * @param projectId 项目ID
+   * @param preloadedSettings 可选的预加载设置，避免重复读取
+   * @param options 加载选项
+   * @returns 项目加载结果
+   */
+  async loadProjectContent(
+    projectId: string,
+    preloadedSettings?: ProjectConfig['settings'],
+    options: LoadProjectOptions = {}
+  ): Promise<ProjectLoadResult | null> {
+    const {
+      loadMedia = true,
+      loadTimeline = true,
+      onProgress
+    } = options
+
+    const workspaceHandle = await directoryManager.getWorkspaceHandle()
+    if (!workspaceHandle) {
+      throw new Error('未设置工作目录')
+    }
+
+    try {
+      console.log(`📂 [Content Load] 开始加载项目内容: ${projectId}`)
+      const loadedStages: string[] = []
+
+      // 阶段1: 加载项目配置 (如果没有预加载设置则需要加载)
+      let projectConfig: ProjectConfig
+
+      if (preloadedSettings) {
+        console.log(`🔧 [Content Load] 使用预加载的设置，跳过配置文件读取`)
+        onProgress?.('使用预加载设置...', 10)
+
+        // 仍需要读取完整配置以获取其他数据，但设置部分使用预加载的
+        const projectsHandle = await workspaceHandle.getDirectoryHandle(this.PROJECTS_FOLDER)
+        const projectHandle = await projectsHandle.getDirectoryHandle(projectId)
+        const fullConfig = await this.loadProjectConfig(projectHandle)
+
+        if (!fullConfig) {
+          throw new Error('项目配置加载失败')
+        }
+
+        // 使用预加载的设置覆盖文件中的设置
+        projectConfig = {
+          ...fullConfig,
+          settings: preloadedSettings
+        }
+      } else {
+        console.log(`📂 [Content Load] 加载完整项目配置...`)
+        onProgress?.('加载项目配置...', 10)
+
+        const projectsHandle = await workspaceHandle.getDirectoryHandle(this.PROJECTS_FOLDER)
+        const projectHandle = await projectsHandle.getDirectoryHandle(projectId)
+        const fullConfig = await this.loadProjectConfig(projectHandle)
+
+        if (!fullConfig) {
+          throw new Error('项目配置加载失败')
+        }
+
+        projectConfig = fullConfig
+      }
+
+      loadedStages.push('config-loaded')
+      console.log(`✅ [Content Load] 项目配置处理完成: ${projectConfig.name}`)
+
+      // 阶段2: 加载媒体文件 (20% -> 80%)
+      let mediaItems: MediaItem[] | undefined
+
+      if (loadMedia && projectConfig.mediaReferences && Object.keys(projectConfig.mediaReferences).length > 0) {
+        onProgress?.('加载媒体文件...', 30)
+
+        console.log(`📁 [Content Load] 开始加载媒体文件: ${Object.keys(projectConfig.mediaReferences).length}个文件`)
+
+        try {
+          mediaItems = await mediaManager.loadAllMediaForProject(
+            projectId,
+            projectConfig.mediaReferences,
+            {
+              batchSize: 10,
+              onProgress: (loaded, total) => {
+                // 将媒体加载进度映射到30%-80%范围
+                const mediaProgress = 30 + (loaded / total) * 50
+                onProgress?.(`加载媒体文件 ${loaded}/${total}...`, mediaProgress)
+              }
+            }
+          )
+
+          loadedStages.push('media-loaded')
+          console.log(`✅ [Content Load] 媒体文件加载完成: ${mediaItems.length}个文件`)
+        } catch (error) {
+          console.error('❌ [Content Load] 媒体文件加载失败:', error)
+          // 媒体加载失败不应该阻止项目加载，继续后续流程
+          mediaItems = []
+        }
+      }
+
+      // 阶段3: 加载时间轴数据 (80% -> 95%)
+      let timelineItems: TimelineItemData[] | undefined
+      let tracks: Track[] | undefined
+
+      if (loadTimeline && projectConfig.timeline) {
+        onProgress?.('加载时间轴数据...', 85)
+
+        tracks = projectConfig.timeline.tracks || []
+        console.log(`📋 [Content Load] 加载轨道数据: ${tracks.length}个轨道`)
+
+        timelineItems = projectConfig.timeline.timelineItems || []
+        console.log(`⏰ [Content Load] 加载时间轴项目数据: ${timelineItems.length}个项目`)
+
+        onProgress?.('时间轴数据加载完成...', 95)
+        loadedStages.push('timeline-loaded')
+        console.log(`✅ [Content Load] 时间轴数据加载完成: ${tracks.length}个轨道, ${timelineItems.length}个项目`)
+      }
+
+      // 阶段4: 完成加载 (95% -> 100%)
+      onProgress?.('内容加载完成', 100)
+      loadedStages.push('complete')
+
+      const result: ProjectLoadResult = {
+        projectConfig,
+        mediaItems,
+        timelineItems,
+        tracks,
+        loadedStages
+      }
+
+      console.log(`✅ [Content Load] 项目内容加载完成: ${projectConfig.name}`, {
+        loadedStages,
+        mediaItemsCount: mediaItems?.length || 0,
+        timelineItemsCount: timelineItems?.length || 0,
+        tracksCount: tracks?.length || 0
+      })
+
+      return result
+    } catch (error) {
+      console.error(`❌ [Content Load] 加载项目内容失败: ${projectId}`, error)
+      throw error
     }
   }
 

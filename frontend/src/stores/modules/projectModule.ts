@@ -19,6 +19,12 @@ export function createProjectModule() {
   // 项目加载状态
   const isLoading = ref(false)
 
+  // 项目设置预加载状态
+  const isProjectSettingsReady = ref(false)
+
+  // 项目内容加载状态
+  const isProjectContentReady = ref(false)
+
   // 加载进度状态
   const loadingProgress = ref(0) // 0-100
   const loadingStage = ref('') // 当前加载阶段
@@ -72,7 +78,7 @@ export function createProjectModule() {
    * 是否正在显示加载进度
    */
   const showLoadingProgress = computed(() => {
-    return isLoading.value && loadingProgress.value > 0
+    return isLoading.value && loadingProgress.value >= 0
   })
 
   // ==================== 项目管理方法 ====================
@@ -92,9 +98,9 @@ export function createProjectModule() {
 
   /**
    * 重置加载状态
-   * @param delay 延迟时间（毫秒），默认1000ms
+   * @param delay 延迟时间（毫秒），默认300ms
    */
-  function resetLoadingState(delay: number = 1000): void {
+  function resetLoadingState(delay: number = 300): void {
     if (delay > 0) {
       // 延迟重置，让用户看到加载完成的状态
       setTimeout(() => {
@@ -270,19 +276,130 @@ export function createProjectModule() {
   }
 
   /**
-   * 设置当前项目（用于从路由参数加载）
+   * 预加载项目设置（轻量级，只加载关键配置）
+   * @param projectId 项目ID
+   * @throws 当现有项目的设置加载失败时抛出错误
+   */
+  async function preloadProjectSettings(projectId: string): Promise<void> {
+    if (!projectId || projectId === 'undefined') {
+      console.log('🔄 [LIFECYCLE] ProjectModule 新项目，使用默认设置')
+      isProjectSettingsReady.value = true
+      console.log('🔄 [LIFECYCLE] ProjectModule isProjectSettingsReady 设置为 true')
+      return
+    }
+
+    try {
+      console.log(`🔧 [Settings Preload] 开始预加载项目设置: ${projectId}`)
+
+      const settings = await projectManager.loadProjectSettings(projectId)
+
+      if (settings) {
+        // 动态导入VideoStore以避免循环依赖
+        const { useVideoStore } = await import('../videoStore')
+        const videoStore = useVideoStore()
+
+        // 恢复配置到configModule
+        videoStore.restoreFromProjectSettings(settings)
+
+        console.log('🔄 [LIFECYCLE] ProjectModule 项目设置预加载成功')
+        isProjectSettingsReady.value = true
+        console.log('🔄 [LIFECYCLE] ProjectModule isProjectSettingsReady 设置为 true')
+      } else {
+        // settings为null表示项目不存在（新项目），使用默认设置
+        console.log('🔄 [LIFECYCLE] ProjectModule 项目不存在，使用默认设置')
+        isProjectSettingsReady.value = true
+        console.log('🔄 [LIFECYCLE] ProjectModule isProjectSettingsReady 设置为 true (新项目)')
+      }
+    } catch (error) {
+      console.error('❌ [Settings Preload] 预加载项目设置失败:', error)
+      // 对于现有项目，设置加载失败是严重错误，不应该继续
+      isProjectSettingsReady.value = false
+      throw new Error(`项目设置加载失败，无法继续: ${error instanceof Error ? error.message : String(error)}`)
+    }
+  }
+
+  /**
+   * 加载项目内容（媒体文件、时间轴数据等）
    * @param projectId 项目ID
    */
-  async function setCurrentProject(projectId: string): Promise<void> {
-    if (projectId && projectId !== 'undefined') {
-      await loadProject(projectId)
-    } else {
-      // 创建新项目的情况
+  async function loadProjectContent(projectId: string): Promise<void> {
+    if (!projectId || projectId === 'undefined') {
+      console.log('📂 [Content Load] 新项目，跳过内容加载')
       currentProject.value = null
       mediaReferences.value = {}
       lastSaved.value = null
+      isProjectContentReady.value = true
+      return
+    }
+
+    try {
+      isLoading.value = true
+      updateLoadingProgress('开始加载项目内容...', 5)
+      console.log(`📂 [Content Load] 开始加载项目内容: ${projectId}`)
+
+      // 获取预加载的设置（如果有的话）
+      const { useVideoStore } = await import('../videoStore')
+      const videoStore = useVideoStore()
+      const preloadedSettings = {
+        videoResolution: videoStore.videoResolution,
+        frameRate: videoStore.frameRate,
+        timelineDurationFrames: videoStore.timelineDurationFrames
+      }
+
+      // 使用新的分阶段加载方法
+      const result = await projectManager.loadProjectContent(projectId, preloadedSettings, {
+        loadMedia: true,
+        loadTimeline: true,
+        onProgress: (stage, progress) => {
+          updateLoadingProgress(stage, progress)
+        }
+      })
+
+      if (result?.projectConfig) {
+        const { projectConfig, mediaItems, timelineItems, tracks } = result
+
+        // 设置项目配置
+        currentProject.value = projectConfig
+        mediaReferences.value = projectConfig.mediaReferences || {}
+        lastSaved.value = new Date(projectConfig.updatedAt)
+
+        // 如果有媒体文件，恢复到VideoStore中
+        if (mediaItems && mediaItems.length > 0) {
+          console.log(`📁 [Content Load] 恢复媒体文件到store: ${mediaItems.length}个文件`)
+          videoStore.restoreMediaItems(mediaItems)
+          console.log(`✅ [Content Load] 媒体文件恢复完成: ${mediaItems.length}个文件`)
+        }
+
+        // 如果有轨道数据，恢复轨道结构
+        if (tracks && tracks.length > 0) {
+          console.log(`📋 [Content Load] 恢复轨道结构: ${tracks.length}个轨道`)
+          videoStore.restoreTracks(tracks)
+          console.log(`✅ [Content Load] 轨道结构恢复完成: ${tracks.length}个轨道`)
+        }
+
+        // 如果有时间轴项目数据，恢复时间轴项目
+        if (timelineItems && timelineItems.length > 0) {
+          console.log(`⏰ [Content Load] 恢复时间轴项目: ${timelineItems.length}个项目`)
+          await videoStore.restoreTimelineItems(timelineItems)
+          console.log(`✅ [Content Load] 时间轴项目恢复完成: ${timelineItems.length}个项目`)
+        }
+
+        updateLoadingProgress('项目内容加载完成', 100)
+        console.log(`✅ [Content Load] 项目内容加载成功: ${projectConfig.name}`)
+      } else {
+        console.warn(`❌ [Content Load] 项目不存在: ${projectId}`)
+      }
+
+      isProjectContentReady.value = true
+    } catch (error) {
+      console.error('❌ [Content Load] 加载项目内容失败:', error)
+      throw error
+    } finally {
+      resetLoadingState()
     }
   }
+
+
 
   /**
    * 清除当前项目
@@ -330,12 +447,15 @@ export function createProjectModule() {
     loadingStage,
     loadingDetails,
     showLoadingProgress,
+    isProjectSettingsReady,
+    isProjectContentReady,
 
     // 方法
     createProject,
     loadProject,
     saveCurrentProject,
-    setCurrentProject,
+    preloadProjectSettings,
+    loadProjectContent,
     clearCurrentProject,
     addMediaReference,
     removeMediaReference,
