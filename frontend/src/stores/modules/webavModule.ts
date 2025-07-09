@@ -132,14 +132,14 @@ export function createWebAVModule() {
    * 添加sprite到画布
    * @param sprite 要添加的sprite
    */
-  function addSprite(sprite: VisibleSprite) {
+  async function addSprite(sprite: VisibleSprite): Promise<boolean> {
     if (!isWebAVAvailable()) {
       console.warn('⚠️ [WebAVModule] WebAV不可用，无法添加sprite')
       return false
     }
 
     try {
-      avCanvas.value!.addSprite(sprite)
+      await avCanvas.value!.addSprite(sprite)
       console.log('✅ [WebAVModule] 添加sprite成功')
       return true
     } catch (error) {

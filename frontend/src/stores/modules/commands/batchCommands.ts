@@ -18,7 +18,7 @@ export class BatchDeleteCommand extends BaseBatchCommand {
       removeTimelineItem: (id: string) => void
     },
     private webavModule: {
-      addSprite: (sprite: VisibleSprite) => boolean
+      addSprite: (sprite: VisibleSprite) => Promise<boolean>
       removeSprite: (sprite: VisibleSprite) => boolean
     },
     private mediaModule: {

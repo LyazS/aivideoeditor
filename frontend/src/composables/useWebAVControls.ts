@@ -531,8 +531,15 @@ export function useWebAVControls() {
     // 备份所有时间轴项目的元数据
     const timelineItems = videoStore.timelineItems
     for (const item of timelineItems) {
-      // 获取素材名称用于备份
-      const mediaItem = videoStore.getMediaItem(item.mediaItemId)
+      // 获取素材名称用于备份（特殊处理文本类型）
+      let mediaName: string
+      if (item.mediaType === 'text') {
+        mediaName = item.mediaName || `文本: ${(item.config as any)?.text?.substring(0, 10) || '未知'}...`
+      } else {
+        const mediaItem = videoStore.getMediaItem(item.mediaItemId)
+        mediaName = mediaItem?.name || '未知素材'
+      }
+
       backup.timelineItems.push({
         id: item.id,
         mediaItemId: item.mediaItemId,
@@ -540,7 +547,7 @@ export function useWebAVControls() {
         mediaType: item.mediaType,
         timeRange: { ...item.timeRange },
         config: { ...item.config },
-        mediaName: mediaItem?.name || '未知素材',
+        mediaName,
       })
     }
 

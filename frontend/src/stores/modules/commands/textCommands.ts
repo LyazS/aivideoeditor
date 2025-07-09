@@ -32,7 +32,7 @@ export class AddTextItemCommand implements SimpleCommand {
       getTimelineItem: (id: string) => TimelineItem | undefined
     },
     private webavModule: {
-      addSprite: (sprite: any) => boolean
+      addSprite: (sprite: any) => Promise<boolean>
       removeSprite: (sprite: any) => boolean
     }
   ) {
@@ -58,7 +58,7 @@ export class AddTextItemCommand implements SimpleCommand {
       this.timelineModule.addTimelineItem(this.textItem)
 
       // 2. 添加sprite到WebAV画布
-      this.webavModule.addSprite(this.textItem.sprite)
+      await this.webavModule.addSprite(this.textItem.sprite)
 
       console.log(`✅ [AddTextItemCommand] 文本项目添加成功:`, {
         id: this.textItem.id,

@@ -595,6 +595,7 @@ export const useVideoStore = defineStore('video', () => {
       {
         getMediaItem: mediaModule.getMediaItem,
       },
+      configModule.videoResolution.value, // 传入画布分辨率
     )
 
     try {
@@ -1037,16 +1038,27 @@ export const useVideoStore = defineStore('video', () => {
 
     // 首先恢复时间轴项目数据（不包含sprite）
     for (const itemData of restoredTimelineItems) {
-      if (!itemData.id || !itemData.mediaItemId) {
-        console.warn('⚠️ 跳过无效的时间轴项目数据:', itemData)
+      // 基本验证：必须有ID
+      if (!itemData.id) {
+        console.warn('⚠️ 跳过无效的时间轴项目数据（缺少ID）:', itemData)
         continue
       }
 
-      // 验证对应的媒体项目是否存在
-      const mediaItem = mediaModule.getMediaItem(itemData.mediaItemId)
-      if (!mediaItem) {
-        console.warn(`⚠️ 跳过时间轴项目，对应的媒体项目不存在: ${itemData.mediaItemId}`)
-        continue
+      // 特殊处理文本类型（文本类型没有对应的媒体项目，mediaItemId可以为空）
+      if (itemData.mediaType === 'text') {
+        // 文本类型验证通过
+      } else {
+        // 非文本类型：必须有mediaItemId且对应的媒体项目必须存在
+        if (!itemData.mediaItemId) {
+          console.warn('⚠️ 跳过无效的时间轴项目数据（缺少mediaItemId）:', itemData)
+          continue
+        }
+
+        const mediaItem = mediaModule.getMediaItem(itemData.mediaItemId)
+        if (!mediaItem) {
+          console.warn(`⚠️ 跳过时间轴项目，对应的媒体项目不存在: ${itemData.mediaItemId}`)
+          continue
+        }
       }
 
       // 创建时间轴项目（不包含sprite和thumbnailUrl，都将在后续重建）
@@ -1066,7 +1078,7 @@ export const useVideoStore = defineStore('video', () => {
       // 暂时添加到数组中（不完整的项目）
       timelineModule.timelineItems.value.push(timelineItem as TimelineItem)
 
-      console.log(`📋 恢复时间轴项目数据: ${itemData.id} (媒体: ${mediaItem.name})`)
+      console.log(`📋 恢复时间轴项目数据: ${itemData.id} (${itemData.mediaType})`)
     }
 
     console.log(`✅ 时间轴项目数据恢复完成: ${timelineModule.timelineItems.value.length}个项目`)
@@ -1102,20 +1114,29 @@ export const useVideoStore = defineStore('video', () => {
       try {
         console.log(`🔄 重建sprite: ${timelineItem.id} (${rebuiltCount + 1}/${items.length})`)
 
-        // 获取对应的媒体项目
-        const mediaItem = mediaModule.getMediaItem(timelineItem.mediaItemId)
-        if (!mediaItem) {
-          console.warn(`⚠️ 跳过时间轴项目，对应的媒体项目不存在: ${timelineItem.mediaItemId}`)
-          continue
-        }
+        // 特殊处理文本类型的时间轴项目
+        let newSprite: any
+        if (timelineItem.mediaType === 'text') {
+          // 文本类型：从配置中重新创建TextVisibleSprite
+          const textConfig = timelineItem.config as any
+          const { TextVisibleSprite } = await import('../utils/TextVisibleSprite')
+          newSprite = await TextVisibleSprite.create(textConfig.text, textConfig.style)
+        } else {
+          // 其他类型：从媒体项目创建sprite
+          const mediaItem = mediaModule.getMediaItem(timelineItem.mediaItemId)
+          if (!mediaItem) {
+            console.warn(`⚠️ 跳过时间轴项目，对应的媒体项目不存在: ${timelineItem.mediaItemId}`)
+            continue
+          }
 
-        if (!mediaItem.isReady) {
-          console.warn(`⚠️ 跳过时间轴项目，媒体项目尚未准备好: ${mediaItem.name}`)
-          continue
-        }
+          if (!mediaItem.isReady) {
+            console.warn(`⚠️ 跳过时间轴项目，媒体项目尚未准备好: ${mediaItem.name}`)
+            continue
+          }
 
-        // 从原始素材重新创建sprite
-        const newSprite = await createSpriteFromMediaItem(mediaItem)
+          // 从原始素材重新创建sprite
+          newSprite = await createSpriteFromMediaItem(mediaItem)
+        }
 
         // 恢复时间范围设置
         newSprite.setTimeRange(timelineItem.timeRange)
@@ -1129,8 +1150,22 @@ export const useVideoStore = defineStore('video', () => {
             const visualProps = getVisualPropsFromData(timelineItem)
             const audioProps = getAudioPropsFromData(timelineItem)
 
-            // 应用视觉属性
+            // 应用坐标转换（位置和尺寸）
             if (visualProps) {
+              const { projectToWebavCoords } = await import('../utils/coordinateTransform')
+              const webavCoords = projectToWebavCoords(
+                visualProps.x,
+                visualProps.y,
+                visualProps.width,
+                visualProps.height,
+                configModule.videoResolution.value.width,
+                configModule.videoResolution.value.height,
+              )
+              videoSprite.rect.x = webavCoords.x
+              videoSprite.rect.y = webavCoords.y
+              videoSprite.rect.w = visualProps.width
+              videoSprite.rect.h = visualProps.height
+              videoSprite.rect.angle = visualProps.rotation
               videoSprite.opacity = visualProps.opacity
               videoSprite.zIndex = visualProps.zIndex
             }
@@ -1168,10 +1203,49 @@ export const useVideoStore = defineStore('video', () => {
             const imageSprite = newSprite as ImageVisibleSprite
             const visualProps = getVisualPropsFromData(timelineItem)
 
-            // 应用视觉属性
+            // 应用坐标转换（位置和尺寸）
             if (visualProps) {
+              const { projectToWebavCoords } = await import('../utils/coordinateTransform')
+              const webavCoords = projectToWebavCoords(
+                visualProps.x,
+                visualProps.y,
+                visualProps.width,
+                visualProps.height,
+                configModule.videoResolution.value.width,
+                configModule.videoResolution.value.height,
+              )
+              imageSprite.rect.x = webavCoords.x
+              imageSprite.rect.y = webavCoords.y
+              imageSprite.rect.w = visualProps.width
+              imageSprite.rect.h = visualProps.height
+              imageSprite.rect.angle = visualProps.rotation
               imageSprite.opacity = visualProps.opacity
               imageSprite.zIndex = visualProps.zIndex
+            }
+          } else if (timelineItem.mediaType === 'text') {
+            // TextVisibleSprite：应用视觉属性
+            const textSprite = newSprite as any // TextVisibleSprite
+            const visualProps = getVisualPropsFromData(timelineItem)
+
+            // 应用坐标转换（位置和尺寸）
+            if (visualProps) {
+              const { projectToWebavCoords } = await import('../utils/coordinateTransform')
+              const webavCoords = projectToWebavCoords(
+                visualProps.x,
+                visualProps.y,
+                visualProps.width,
+                visualProps.height,
+                configModule.videoResolution.value.width,
+                configModule.videoResolution.value.height,
+              )
+
+              textSprite.rect.x = webavCoords.x
+              textSprite.rect.y = webavCoords.y
+              textSprite.rect.w = visualProps.width
+              textSprite.rect.h = visualProps.height
+              textSprite.rect.angle = visualProps.rotation
+              textSprite.opacity = visualProps.opacity
+              textSprite.zIndex = visualProps.zIndex
             }
           }
         }
@@ -1198,12 +1272,16 @@ export const useVideoStore = defineStore('video', () => {
         }
 
         // 重新生成缩略图（因为之前的blob URL可能已失效）
-        if (mediaItem.mediaType !== 'audio') {
-          console.log(`🖼️ 重新生成缩略图: ${timelineItem.id}`)
-          const newThumbnailUrl = await regenerateThumbnailForTimelineItem(timelineItem, mediaItem)
-          if (newThumbnailUrl) {
-            timelineItem.thumbnailUrl = newThumbnailUrl
-            console.log(`✅ 缩略图重新生成完成: ${timelineItem.id}`)
+        // 文本类型不需要缩略图，音频类型也不需要缩略图
+        if (timelineItem.mediaType !== 'audio' && timelineItem.mediaType !== 'text') {
+          const mediaItem = mediaModule.getMediaItem(timelineItem.mediaItemId)
+          if (mediaItem) {
+            console.log(`🖼️ 重新生成缩略图: ${timelineItem.id}`)
+            const newThumbnailUrl = await regenerateThumbnailForTimelineItem(timelineItem, mediaItem)
+            if (newThumbnailUrl) {
+              timelineItem.thumbnailUrl = newThumbnailUrl
+              console.log(`✅ 缩略图重新生成完成: ${timelineItem.id}`)
+            }
           }
         }
 

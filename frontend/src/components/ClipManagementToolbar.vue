@@ -106,24 +106,41 @@ const overlappingCount = computed(() => {
   return countOverlappingItems(videoStore.timelineItems)
 })
 
-// 检查选中的项目是否为图片类型
-const selectedItemIsImage = computed(() => {
+// 检查选中的项目是否支持裁剪（视频和音频支持，图片和文本不支持）
+const selectedItemSupportsSplit = computed(() => {
   if (!videoStore.selectedTimelineItemId) return false
   const item = videoStore.getTimelineItem(videoStore.selectedTimelineItemId)
-  return item ? isImageTimelineItem(item) : false
+  if (!item) return false
+
+  // 视频和音频支持裁剪，图片和文本不支持
+  return item.mediaType === 'video' || item.mediaType === 'audio'
 })
 
-// 检查裁剪按钮是否应该被禁用（图片类型不支持裁剪）
+// 检查裁剪按钮是否应该被禁用（只有视频和音频类型支持裁剪）
 const isSplitButtonDisabled = computed(() => {
-  return selectedItemIsImage.value
+  return !selectedItemSupportsSplit.value
 })
 
 // 裁剪按钮的提示文本
 const splitButtonTitle = computed(() => {
-  if (selectedItemIsImage.value) {
-    return "图片类型不支持裁剪功能"
+  if (!videoStore.selectedTimelineItemId) {
+    return "请先选择一个片段"
   }
-  return "在当前时间位置裁剪选中的片段"
+
+  const item = videoStore.getTimelineItem(videoStore.selectedTimelineItemId)
+  if (!item) {
+    return "片段不存在"
+  }
+
+  if (item.mediaType === 'text') {
+    return "文本类型不支持裁剪功能"
+  } else if (item.mediaType === 'image') {
+    return "图片类型不支持裁剪功能"
+  } else if (item.mediaType === 'video' || item.mediaType === 'audio') {
+    return "在当前时间位置裁剪选中的片段"
+  } else {
+    return "该类型不支持裁剪功能"
+  }
 })
 
 async function splitSelectedClip() {
