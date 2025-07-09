@@ -1,15 +1,25 @@
 <template>
   <div class="media-library">
     <div class="library-header">
-      <h3>素材库</h3>
-      <div class="header-buttons">
-        <HoverButton @click="debugMediaStatus" title="调试素材状态">
-          <template #icon>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M9.5,3A6.5,6.5 0 0,1 16,9.5C16,11.11 15.41,12.59 14.44,13.73L14.71,14H15.5L20.5,19L19,20.5L14,15.5V14.71L13.73,14.44C12.59,15.41 11.11,16 9.5,16A6.5,6.5 0 0,1 3,9.5A6.5,6.5 0 0,1 9.5,3M9.5,5C7,5 5,7 5,9.5C5,12 7,14 9.5,14C12,14 14,12 14,9.5C14,7 12,5 9.5,5Z" />
+      <div class="header-left">
+        <!-- Tab 切换 -->
+        <div class="tab-list">
+          <button
+            v-for="tab in tabs"
+            :key="tab.type"
+            class="tab-button"
+            :class="{ active: activeTab === tab.type }"
+            @click="setActiveTab(tab.type)"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+              <path :d="tab.icon" />
             </svg>
-          </template>
-        </HoverButton>
+            <span>{{ tab.label }}</span>
+            <span class="tab-count">({{ getTabCount(tab.type) }})</span>
+          </button>
+        </div>
+      </div>
+      <div class="header-buttons">
         <HoverButton @click="triggerFileInput" title="导入文件">
           <template #icon>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
@@ -28,20 +38,21 @@
       @dragleave="handleDragLeave"
       @drop="handleDrop"
     >
-      <div v-if="videoStore.mediaItems.length === 0" class="empty-state">
+      <div v-if="filteredMediaItems.length === 0" class="empty-state">
         <svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor">
           <path
             d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"
           />
         </svg>
-        <p>拖拽文件到此处导入</p>
+        <p v-if="videoStore.mediaItems.length === 0">拖拽文件到此处导入</p>
+        <p v-else>当前分类暂无素材</p>
         <p class="hint">支持 MP4, WebM, AVI 等视频格式、JPG, PNG, GIF 等图片格式和 MP3, WAV, M4A 等音频格式</p>
       </div>
 
       <!-- 素材列表 -->
       <div v-else class="media-list">
         <div
-          v-for="item in videoStore.mediaItems"
+          v-for="item in filteredMediaItems"
           :key="item.id"
           class="media-item"
           :class="{ parsing: !item.isReady }"
@@ -102,13 +113,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, markRaw } from 'vue'
+import { ref, markRaw, computed } from 'vue'
 import { useVideoStore } from '../stores/videoStore'
 import { useWebAVControls } from '../composables/useWebAVControls'
 import { useDialogs } from '../composables/useDialogs'
 import { useDragUtils } from '../composables/useDragUtils'
-import { formatFileSize, framesToTimecode, secondsToFrames } from '../stores/utils/timeUtils'
-import type { MediaItem } from '../types'
+import { framesToTimecode, secondsToFrames } from '../stores/utils/timeUtils'
+import type { MediaItem, MediaType } from '../types'
 import { generateThumbnailForMediaItem } from '../utils/thumbnailGenerator'
 import { mediaManager } from '../utils/MediaManager'
 import HoverButton from './HoverButton.vue'
@@ -119,6 +130,73 @@ const dialogs = useDialogs()
 const dragUtils = useDragUtils()
 const fileInput = ref<HTMLInputElement>()
 const isDragOver = ref(false)
+
+// Tab 相关状态
+type TabType = 'all' | 'video' | 'audio'
+
+const activeTab = ref<TabType>('all')
+
+// Tab 配置
+const tabs = [
+  {
+    type: 'all' as TabType,
+    label: '全部',
+    icon: 'M4,6H20V8H4V6M4,11H20V13H4V11M4,16H20V18H4V16Z'
+  },
+  {
+    type: 'video' as TabType,
+    label: '视频',
+    icon: 'M17,10.5V7A1,1 0 0,0 16,6H4A1,1 0 0,0 3,7V17A1,1 0 0,0 4,18H16A1,1 0 0,0 17,17V13.5L21,17.5V6.5L17,10.5Z'
+  },
+  {
+    type: 'audio' as TabType,
+    label: '音频',
+    icon: 'M14,3.23V5.29C16.89,6.15 19,8.83 19,12C19,15.17 16.89,17.85 14,18.71V20.77C18,19.86 21,16.28 21,12C21,7.72 18,4.14 14,3.23M16.5,12C16.5,10.23 15.5,8.71 14,7.97V16C15.5,15.29 16.5,13.76 16.5,12M3,9V15H7L12,20V4L7,9H3Z'
+  }
+]
+
+// 计算过滤后的素材列表
+const filteredMediaItems = computed(() => {
+  if (activeTab.value === 'all') {
+    return videoStore.mediaItems
+  }
+
+  return videoStore.mediaItems.filter(item => {
+    if (activeTab.value === 'video') {
+      return item.mediaType === 'video' || item.mediaType === 'image'
+    }
+    if (activeTab.value === 'audio') {
+      return item.mediaType === 'audio'
+    }
+    return true
+  })
+})
+
+// 设置活动tab
+const setActiveTab = (tabType: TabType) => {
+  activeTab.value = tabType
+}
+
+// 获取tab对应的素材数量
+const getTabCount = (tabType: TabType) => {
+  if (tabType === 'all') {
+    return videoStore.mediaItems.length
+  }
+
+  if (tabType === 'video') {
+    return videoStore.mediaItems.filter(item =>
+      item.mediaType === 'video' || item.mediaType === 'image'
+    ).length
+  }
+
+  if (tabType === 'audio') {
+    return videoStore.mediaItems.filter(item =>
+      item.mediaType === 'audio'
+    ).length
+  }
+
+  return 0
+}
 
 // 格式化时长显示（使用时间码格式）
 function formatDuration(frames: number): string {
@@ -188,8 +266,37 @@ const processFiles = async (files: File[]) => {
 
   console.log(`📁 开始并行处理 ${mediaFiles.length} 个文件，最大并发数: 5`)
 
+  // 分析文件类型，确定tab跳转逻辑
+  const fileTypeCounts = {
+    video: 0,
+    audio: 0
+  }
+
+  mediaFiles.forEach(file => {
+    if (file.type.startsWith('video/') || file.type.startsWith('image/')) {
+      fileTypeCounts.video++
+    } else if (SUPPORTED_AUDIO_TYPES.includes(file.type)) {
+      fileTypeCounts.audio++
+    }
+  })
+
   // 使用并发控制处理文件
   await processConcurrentFiles(mediaFiles, 5)
+
+  // 根据素材类型自动跳转到对应tab
+  if (fileTypeCounts.video > 0 && fileTypeCounts.audio > 0) {
+    // 多种类型的素材，跳转到all tab
+    setActiveTab('all')
+    console.log(`📂 自动切换到全部tab (多种类型: 视频/图片: ${fileTypeCounts.video}, 音频: ${fileTypeCounts.audio})`)
+  } else if (fileTypeCounts.video > 0 && fileTypeCounts.audio === 0) {
+    // 只有视频/图片，跳转到视频tab
+    setActiveTab('video')
+    console.log(`📂 自动切换到视频tab (仅视频/图片: ${fileTypeCounts.video})`)
+  } else if (fileTypeCounts.audio > 0 && fileTypeCounts.video === 0) {
+    // 只有音频，跳转到音频tab
+    setActiveTab('audio')
+    console.log(`📂 自动切换到音频tab (仅音频: ${fileTypeCounts.audio})`)
+  }
 
   console.log(`✅ 所有文件处理完成`)
 }
@@ -613,80 +720,6 @@ const handleItemDragEnd = () => {
   dragUtils.clearDragData()
 }
 
-// 调试素材状态
-const debugMediaStatus = () => {
-  console.log('🔍 ===== 素材库调试信息 =====')
-  console.log(`📊 素材总数: ${videoStore.mediaItems.length}`)
-
-  if (videoStore.mediaItems.length === 0) {
-    console.log('📭 素材库为空')
-    return
-  }
-
-  // 按状态分组统计
-  const statusGroups = {
-    parsing: [] as any[],
-    ready: [] as any[],
-    error: [] as any[],
-    missing: [] as any[]
-  }
-
-  videoStore.mediaItems.forEach((item: any, index: number) => {
-    const statusInfo = {
-      index: index + 1,
-      id: item.id,
-      name: item.name,
-      mediaType: item.mediaType,
-      duration: item.duration,
-      isReady: item.isReady,
-      status: item.status,
-      hasFile: !!item.file,
-      hasUrl: !!item.url,
-      hasThumbnail: !!item.thumbnailUrl,
-      hasMP4Clip: !!item.mp4Clip,
-      hasImgClip: !!item.imgClip,
-      hasAudioClip: !!item.audioClip,
-      fileSize: item.file ? `${(item.file.size / 1024 / 1024).toFixed(2)}MB` : 'N/A',
-      fileType: item.file?.type || 'N/A'
-    }
-
-    statusGroups[item.status as keyof typeof statusGroups].push(statusInfo)
-
-    console.log(`📄 [${index + 1}] ${item.name}:`, statusInfo)
-  })
-
-  // 输出状态统计
-  console.log('📈 状态统计:')
-  Object.entries(statusGroups).forEach(([status, items]) => {
-    if (items.length > 0) {
-      console.log(`  ${status}: ${items.length}个`)
-      items.forEach(item => {
-        console.log(`    - ${item.name} (${item.mediaType})`)
-      })
-    }
-  })
-
-  // 检查相关的时间轴项目
-  const timelineItemsCount = videoStore.timelineItems.length
-  console.log(`🎬 时间轴项目总数: ${timelineItemsCount}`)
-
-  if (timelineItemsCount > 0) {
-    const mediaItemsWithTimelineItems = new Set()
-    videoStore.timelineItems.forEach((timelineItem: any) => {
-      mediaItemsWithTimelineItems.add(timelineItem.mediaItemId)
-    })
-    console.log(`🔗 有时间轴项目的素材数: ${mediaItemsWithTimelineItems.size}`)
-  }
-
-  // 检查项目状态
-  if (videoStore.currentProjectId) {
-    console.log(`📁 当前项目ID: ${videoStore.currentProjectId}`)
-  } else {
-    console.log('📁 当前无项目')
-  }
-
-  console.log('🔍 ===== 调试信息结束 =====')
-}
 </script>
 
 <style scoped>
@@ -710,16 +743,71 @@ const debugMediaStatus = () => {
   flex-shrink: 0;
 }
 
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-lg);
+}
+
 .library-header h3 {
   margin: 0;
   font-size: var(--font-size-lg);
   color: var(--color-text-primary);
+  flex-shrink: 0;
 }
 
 .header-buttons {
   display: flex;
   gap: var(--spacing-sm);
   align-items: center;
+}
+
+/* Tab 样式 */
+.tab-list {
+  display: flex;
+  gap: var(--spacing-xs);
+}
+
+.tab-button {
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border-primary);
+  border-radius: var(--border-radius-small);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-xs);
+  transition: all var(--transition-fast);
+  position: relative;
+}
+
+.tab-button:hover {
+  color: var(--color-text-primary);
+  background-color: var(--color-bg-hover);
+  border-color: var(--color-border-secondary);
+}
+
+.tab-button.active {
+  color: var(--color-accent-primary);
+  background-color: var(--color-accent-primary);
+  background-color: rgba(59, 130, 246, 0.1);
+  border-color: var(--color-accent-primary);
+}
+
+.tab-button svg {
+  flex-shrink: 0;
+}
+
+.tab-count {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  font-weight: normal;
+}
+
+.tab-button.active .tab-count {
+  color: var(--color-accent-primary);
 }
 
 .import-btn {
