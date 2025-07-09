@@ -442,6 +442,8 @@ export class DuplicateTimelineItemCommand implements SimpleCommand {
         return this.rebuildVideoItem()
       case 'image':
         return this.rebuildImageItem()
+      case 'audio':
+        return this.rebuildAudioItem()
       default:
         throw new Error(`不支持的媒体类型: ${this.originalTimelineItemData.mediaType}`)
     }
@@ -568,6 +570,77 @@ export class DuplicateTimelineItemCommand implements SimpleCommand {
     this.regenerateThumbnailForDuplicatedItem(newTimelineItem, mediaItem)
 
     console.log('✅ [DuplicateTimelineItemCommand] 图片时间轴项目重建完成')
+    return newTimelineItem
+  }
+
+  /**
+   * 重建音频时间轴项目
+   */
+  private async rebuildAudioItem(): Promise<TimelineItem> {
+    console.log('🔄 [DuplicateTimelineItemCommand] 重建音频时间轴项目...')
+
+    const mediaItem = this.mediaModule.getMediaItem(this.originalTimelineItemData.mediaItemId)
+    if (!mediaItem) {
+      throw new Error(`找不到素材项目: ${this.originalTimelineItemData.mediaItemId}`)
+    }
+
+    // 检查素材是否已经解析完成
+    if (!mediaItem.isReady || !mediaItem.audioClip) {
+      throw new Error('音频素材还在解析中，无法复制')
+    }
+
+    // 创建音频精灵
+    const newSprite = await createSpriteFromMediaItem(mediaItem)
+
+    // 设置时间范围（调整到新位置）
+    const originalTimeRange = this.originalTimelineItemData.timeRange as VideoTimeRange
+    const originalDurationFrames =
+      originalTimeRange.timelineEndTime - originalTimeRange.timelineStartTime
+    const newTimelineStartTimeFrames = this.newPositionFrames
+    const newTimelineEndTimeFrames = newTimelineStartTimeFrames + originalDurationFrames
+
+    newSprite.setTimeRange({
+      clipStartTime: originalTimeRange.clipStartTime,
+      clipEndTime: originalTimeRange.clipEndTime,
+      timelineStartTime: newTimelineStartTimeFrames,
+      timelineEndTime: newTimelineEndTimeFrames,
+    })
+
+    // 音频不需要视觉属性，但需要复制音频属性
+    const audioConfig = this.originalTimelineItemData.config as any
+    if (audioConfig && audioConfig.audioState) {
+      const audioSprite = newSprite as any
+      if (typeof audioSprite.setAudioState === 'function') {
+        audioSprite.setAudioState(audioConfig.audioState)
+      }
+      if (typeof audioSprite.setGain === 'function' && audioConfig.gain !== undefined) {
+        audioSprite.setGain(audioConfig.gain)
+      }
+    }
+
+    // 创建新的TimelineItem
+    const newTimelineItem: TimelineItem = reactive({
+      id: this.newTimelineItemId,
+      mediaItemId: this.originalTimelineItemData.mediaItemId,
+      trackId: this.originalTimelineItemData.trackId,
+      mediaType: 'audio',
+      timeRange: {
+        clipStartTime: originalTimeRange.clipStartTime,
+        clipEndTime: originalTimeRange.clipEndTime,
+        timelineStartTime: newTimelineStartTimeFrames,
+        timelineEndTime: newTimelineEndTimeFrames,
+        effectiveDuration: originalTimeRange.effectiveDuration,
+        playbackRate: originalTimeRange.playbackRate,
+      },
+      sprite: markRaw(newSprite),
+      thumbnailUrl: undefined, // 音频不需要缩略图
+      config: { ...this.originalTimelineItemData.config },
+      animation: this.originalTimelineItemData.animation ? { ...this.originalTimelineItemData.animation } : undefined,
+      mediaName: this.originalTimelineItemData.mediaName,
+    })
+
+    // 音频不需要缩略图，跳过缩略图生成
+    console.log('✅ [DuplicateTimelineItemCommand] 音频时间轴项目重建完成')
     return newTimelineItem
   }
 

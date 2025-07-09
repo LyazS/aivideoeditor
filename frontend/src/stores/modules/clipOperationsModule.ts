@@ -72,7 +72,7 @@ export function createClipOperationsModule(
 
     try {
       // 检查素材是否已经解析完成
-      if (!mediaItem.isReady || (!mediaItem.mp4Clip && !mediaItem.imgClip)) {
+      if (!mediaItem.isReady || (!mediaItem.mp4Clip && !mediaItem.imgClip && !mediaItem.audioClip)) {
         console.error('❌ 素材还在解析中，无法复制')
         console.groupEnd()
         return null
