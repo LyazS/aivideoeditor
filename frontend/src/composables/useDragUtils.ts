@@ -104,14 +104,8 @@ export function useDragUtils() {
    * 根据媒体类型计算clip高度
    */
   function getClipHeightByMediaType(mediaType: MediaType): number {
-    switch (mediaType) {
-      case 'text':
-        return 40 // 文本clip，比文本轨道(60px)矮20px，上下各留10px间距
-      case 'audio':
-        return 50 // 音频clip中等高度
-      default:
-        return 60 // 视频/图片clip标准高度
-    }
+    // 统一所有类型的clip高度为50px
+    return 50 // 所有clip统一高度50px，轨道高度60px，上下各留5px间距
   }
 
   /**
@@ -134,7 +128,7 @@ export function useDragUtils() {
     }
 
     // 默认高度
-    return 60
+    return 50
   }
 
   /**

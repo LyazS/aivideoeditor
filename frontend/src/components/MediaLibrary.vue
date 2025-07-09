@@ -20,7 +20,7 @@
         </div>
       </div>
       <div class="header-buttons">
-        <HoverButton @click="triggerFileInput" title="导入文件">
+        <HoverButton @click="showImportMenu" title="导入文件">
           <template #icon>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
               <path d="M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z" />
@@ -37,8 +37,9 @@
       @dragover="handleDragOver"
       @dragleave="handleDragLeave"
       @drop="handleDrop"
+      @contextmenu="handleContextMenu"
     >
-      <div v-if="filteredMediaItems.length === 0" class="empty-state">
+      <div v-if="filteredMediaItems.length === 0" class="empty-state" @contextmenu="handleEmptyAreaContextMenu">
         <svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor">
           <path
             d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"
@@ -60,6 +61,7 @@
           :draggable="item.isReady"
           @dragstart="handleItemDragStart($event, item)"
           @dragend="handleItemDragEnd"
+          @contextmenu="handleMediaItemContextMenu($event, item)"
         >
           <div class="media-thumbnail">
             <!-- WebAV生成的缩略图 -->
@@ -109,6 +111,29 @@
       style="display: none"
       @change="handleFileSelect"
     />
+
+    <!-- 右键菜单 -->
+    <ContextMenu v-model:show="showContextMenu" :options="contextMenuOptions">
+      <template v-for="(item, index) in currentMenuItems" :key="index">
+        <ContextMenuSeparator v-if="'type' in item && item.type === 'separator'" />
+        <ContextMenuItem
+          v-else-if="'label' in item && 'onClick' in item"
+          :label="item.label"
+          @click="item.onClick"
+        >
+          <template #icon>
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              :fill="item.label.includes('删除') ? '#ff6b6b' : 'currentColor'"
+            >
+              <path :d="item.icon" />
+            </svg>
+          </template>
+        </ContextMenuItem>
+      </template>
+    </ContextMenu>
   </div>
 </template>
 
@@ -123,6 +148,7 @@ import type { MediaItem, MediaType } from '../types'
 import { generateThumbnailForMediaItem } from '../utils/thumbnailGenerator'
 import { mediaManager } from '../utils/MediaManager'
 import HoverButton from './HoverButton.vue'
+import { ContextMenu, ContextMenuItem, ContextMenuSeparator } from '@imengyu/vue3-context-menu'
 
 const videoStore = useVideoStore()
 const webAVControls = useWebAVControls()
@@ -135,6 +161,17 @@ const isDragOver = ref(false)
 type TabType = 'all' | 'video' | 'audio'
 
 const activeTab = ref<TabType>('all')
+
+// 右键菜单相关状态
+const showContextMenu = ref(false)
+const contextMenuType = ref<'media-item' | 'empty'>('empty')
+const selectedMediaItem = ref<MediaItem | null>(null)
+const contextMenuOptions = ref({
+  x: 0,
+  y: 0,
+  theme: 'mac dark',
+  zIndex: 1000,
+})
 
 // Tab 配置
 const tabs = [
@@ -154,6 +191,35 @@ const tabs = [
     icon: 'M14,3.23V5.29C16.89,6.15 19,8.83 19,12C19,15.17 16.89,17.85 14,18.71V20.77C18,19.86 21,16.28 21,12C21,7.72 18,4.14 14,3.23M16.5,12C16.5,10.23 15.5,8.71 14,7.97V16C15.5,15.29 16.5,13.76 16.5,12M3,9V15H7L12,20V4L7,9H3Z'
   }
 ]
+
+// 菜单项类型定义
+type MenuItem = {
+  label: string
+  icon: string
+  onClick: () => void
+}
+
+// 动态菜单项配置
+const currentMenuItems = computed((): MenuItem[] => {
+  if (contextMenuType.value === 'media-item' && selectedMediaItem.value) {
+    return [
+      {
+        label: '删除素材',
+        icon: 'M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z',
+        onClick: () => handleDeleteMediaItem(),
+      }
+    ]
+  } else {
+    // 空白区域菜单
+    return [
+      {
+        label: '导入素材',
+        icon: 'M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z',
+        onClick: () => handleImportFromMenu(),
+      }
+    ]
+  }
+})
 
 // 计算过滤后的素材列表
 const filteredMediaItems = computed(() => {
@@ -206,6 +272,77 @@ function formatDuration(frames: number): string {
 // 触发文件选择
 const triggerFileInput = () => {
   fileInput.value?.click()
+}
+
+// 显示导入菜单（左键点击导入按钮时）
+const showImportMenu = (event?: MouseEvent) => {
+  if (event) {
+    const button = event.currentTarget as HTMLElement
+    const rect = button.getBoundingClientRect()
+    contextMenuOptions.value.x = rect.left
+    contextMenuOptions.value.y = rect.bottom + 5
+  } else {
+    contextMenuOptions.value.x = 100
+    contextMenuOptions.value.y = 100
+  }
+
+  contextMenuType.value = 'empty'
+  selectedMediaItem.value = null
+  showContextMenu.value = true
+}
+
+// 右键菜单处理方法
+const handleContextMenu = (event: MouseEvent) => {
+  event.preventDefault()
+
+  // 更新菜单位置
+  contextMenuOptions.value.x = event.clientX
+  contextMenuOptions.value.y = event.clientY
+
+  // 默认显示空白区域菜单
+  contextMenuType.value = 'empty'
+  selectedMediaItem.value = null
+  showContextMenu.value = true
+}
+
+const handleMediaItemContextMenu = (event: MouseEvent, item: MediaItem) => {
+  event.preventDefault()
+  event.stopPropagation()
+
+  // 更新菜单位置
+  contextMenuOptions.value.x = event.clientX
+  contextMenuOptions.value.y = event.clientY
+
+  // 设置为素材项菜单
+  contextMenuType.value = 'media-item'
+  selectedMediaItem.value = item
+  showContextMenu.value = true
+}
+
+const handleEmptyAreaContextMenu = (event: MouseEvent) => {
+  event.preventDefault()
+
+  // 更新菜单位置
+  contextMenuOptions.value.x = event.clientX
+  contextMenuOptions.value.y = event.clientY
+
+  // 显示空白区域菜单
+  contextMenuType.value = 'empty'
+  selectedMediaItem.value = null
+  showContextMenu.value = true
+}
+
+// 菜单项处理方法
+const handleDeleteMediaItem = () => {
+  if (selectedMediaItem.value) {
+    removeMediaItem(selectedMediaItem.value.id)
+  }
+  showContextMenu.value = false
+}
+
+const handleImportFromMenu = () => {
+  triggerFileInput()
+  showContextMenu.value = false
 }
 
 // 处理文件选择
