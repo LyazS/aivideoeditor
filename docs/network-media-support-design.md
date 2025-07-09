@@ -29,23 +29,64 @@
 #### 1.1 类型定义扩展
 ```typescript
 // types/index.ts
+
+// 扩展现有的MediaType类型，添加network类型
+// 现有定义：export type MediaType = 'video' | 'image' | 'audio' | 'text'
+// 扩展为：
 export type MediaType = 'video' | 'image' | 'audio' | 'text' | 'network'
+
+// 网络素材状态枚举
 export type NetworkMediaStatus = 'loading' | 'loaded' | 'error' | 'timeout' | 'unsupported'
+
+// 网络时间轴项目专用时间范围接口（复用现有的时间范围概念）
+export interface NetworkTimeRange {
+  /** 时间轴开始时间（帧数） - 网络占位符在整个项目时间轴上的开始位置 */
+  timelineStartTime: number
+  /** 时间轴结束时间（帧数） - 网络占位符在整个项目时间轴上的结束位置 */
+  timelineEndTime: number
+}
+
+// 注意：VideoTimeRange 和 ImageTimeRange 已在现有代码中定义，直接复用
 ```
 
-#### 1.2 网络素材专用接口
+#### 1.2 继承关系设计
+
 ```typescript
 /**
- * 网络素材项目接口 - 专门用于网络素材加载期间
+ * 基础媒体项目接口 - 所有媒体项目的共同基础
  */
-export interface NetworkMediaItem {
+export interface BaseMediaItem {
   id: string
-  name: string // 从URL提取或用户输入的名称
+  name: string
+  createdAt: string
+}
+
+/**
+ * 本地媒体项目接口 - 继承基础接口，添加本地文件相关属性
+ */
+export interface LocalMediaItem extends BaseMediaItem {
+  mediaType: 'video' | 'image' | 'audio' | 'text'
+  file: File
+  url: string
+  duration: number // 素材时长（帧数）
+  type: string
+  mp4Clip: Raw<MP4Clip> | null
+  imgClip: Raw<ImgClip> | null
+  audioClip: Raw<AudioClip> | null
+  isReady: boolean
+  status: MediaStatus
+  thumbnailUrl?: string
+}
+
+/**
+ * 网络媒体项目接口 - 继承基础接口，添加网络相关属性
+ */
+export interface NetworkMediaItem extends BaseMediaItem {
+  mediaType: 'network' // 固定为network类型
   networkUrl: string // 网络素材的原始URL
   networkStatus: NetworkMediaStatus // 网络加载状态
   loadingProgress: number // 加载进度 0-100
   expectedDuration: number // 用户输入的预计时长（帧数）
-  mediaType: 'network' // 固定为network类型
 
   // 加载过程中的临时数据
   downloadedFile?: File // 下载完成的文件对象
@@ -56,24 +97,46 @@ export interface NetworkMediaItem {
   thumbnailUrl?: string // 默认的网络素材图标
 
   // 时间戳
-  createdAt: string
   startedAt?: string // 开始下载时间
   completedAt?: string // 完成下载时间
+
+  // 转换状态标记（转换完成后设置为true）
+  isConverted?: boolean
 }
 
 /**
- * 网络素材引用 - 用于项目持久化
+ * 基础媒体引用接口 - 所有媒体引用的共同基础
  */
-export interface NetworkMediaReference {
+export interface BaseMediaReference {
   originalFileName: string
+  fileSize: number
+  checksum: string
+}
+
+/**
+ * 本地媒体引用接口 - 继承基础接口，添加本地存储相关属性
+ */
+export interface LocalMediaReference extends BaseMediaReference {
+  type: 'video' | 'image' | 'audio' | 'text'
+  storedPath: string // 相对于项目目录的路径
+}
+
+/**
+ * 网络媒体引用接口 - 继承基础接口，添加网络相关属性
+ */
+export interface NetworkMediaReference extends BaseMediaReference {
+  type: 'network'
   networkUrl: string
   expectedDuration: number // 预计时长（帧数）
   isNetworkPlaceholder: true // 标识为网络占位符
-  type: 'network'
 
-  // 加载状态（不持久化，重新加载时重置）
+  // 网络素材的文件大小和校验和在下载前为0和空字符串
   fileSize: 0
   checksum: ''
+
+  // 错误状态持久化（可选）
+  networkStatus?: NetworkMediaStatus
+  errorMessage?: string
 }
 ```
 
@@ -82,18 +145,26 @@ export interface NetworkMediaReference {
 /**
  * 媒体项目联合类型
  */
-export type AnyMediaItem = MediaItem | NetworkMediaItem
+export type AnyMediaItem = LocalMediaItem | NetworkMediaItem
 
 /**
  * 媒体引用联合类型
  */
-export type AnyMediaReference = MediaReference | NetworkMediaReference
+export type AnyMediaReference = LocalMediaReference | NetworkMediaReference
 
 /**
  * 类型守卫函数
  */
+export function isLocalMediaItem(item: AnyMediaItem): item is LocalMediaItem {
+  return item.mediaType !== 'network'
+}
+
 export function isNetworkMediaItem(item: AnyMediaItem): item is NetworkMediaItem {
   return item.mediaType === 'network'
+}
+
+export function isLocalMediaReference(ref: AnyMediaReference): ref is LocalMediaReference {
+  return ref.type !== 'network'
 }
 
 export function isNetworkMediaReference(ref: AnyMediaReference): ref is NetworkMediaReference {
@@ -104,25 +175,49 @@ export function isNetworkMediaReference(ref: AnyMediaReference): ref is NetworkM
  * 网络素材转换结果
  */
 export interface NetworkToLocalConversionResult {
-  localMediaItem: MediaItem
-  localMediaReference: MediaReference
+  localMediaItem: LocalMediaItem
+  localMediaReference: LocalMediaReference
   timelineItemsToRebuild: string[] // 需要重建的时间轴项目ID列表
 }
 
 /**
- * 网络时间轴项目接口 - 专门用于网络素材占位符
+ * 基础时间轴项目接口 - 所有时间轴项目的共同基础
  */
-export interface NetworkTimelineItem {
+export interface BaseTimelineItem {
   id: string
-  mediaItemId: string // 指向 NetworkMediaItem.id
+  mediaItemId: string
   trackId: string
-  mediaType: 'network' // 固定为network类型
+  mediaType: MediaType
+}
 
-  // 时间范围（基于预计时长）
-  timeRange: {
-    timelineStartTime: number // 帧数
-    timelineEndTime: number // 帧数
-  }
+/**
+ * 本地时间轴项目接口 - 继承基础接口，添加本地媒体相关属性
+ */
+export interface LocalTimelineItem extends BaseTimelineItem {
+  mediaType: 'video' | 'image' | 'audio' | 'text'
+  mediaItemId: string // 指向 LocalMediaItem.id
+
+  // 时间范围 - 使用现有的时间范围接口
+  timeRange: VideoTimeRange | ImageTimeRange // 根据媒体类型使用对应的时间范围
+
+  // sprite和配置
+  sprite: Raw<CustomSprite>
+  config: GetMediaConfig<MediaType> // 根据媒体类型的配置
+
+  // 其他现有属性
+  thumbnailUrl?: string
+  mediaName?: string
+}
+
+/**
+ * 网络时间轴项目接口 - 继承基础接口，添加网络相关属性
+ */
+export interface NetworkTimelineItem extends BaseTimelineItem {
+  mediaType: 'network' // 固定为network类型
+  mediaItemId: string // 指向 NetworkMediaItem.id
+
+  // 时间范围 - 使用专用的简化时间范围
+  timeRange: NetworkTimeRange
 
   // 网络状态相关
   networkStatus: NetworkMediaStatus
@@ -143,11 +238,15 @@ export interface NetworkTimelineItem {
 /**
  * 时间轴项目联合类型
  */
-export type AnyTimelineItem = TimelineItem | NetworkTimelineItem
+export type AnyTimelineItem = LocalTimelineItem | NetworkTimelineItem
 
 /**
  * 类型守卫函数
  */
+export function isLocalTimelineItem(item: AnyTimelineItem): item is LocalTimelineItem {
+  return item.mediaType !== 'network'
+}
+
 export function isNetworkTimelineItem(item: AnyTimelineItem): item is NetworkTimelineItem {
   return item.mediaType === 'network' && 'isNetworkPlaceholder' in item
 }
@@ -532,9 +631,13 @@ const handleDeleteNetworkItem = async (itemId: string) => {
 // 网络素材转换完成的处理函数
 const handleNetworkMediaConversion = async (
   networkMediaItem: NetworkMediaItem,
-  localMediaItem: MediaItem
+  localMediaItem: LocalMediaItem
 ) => {
   console.log(`🔄 开始转换网络素材: ${networkMediaItem.id} → ${localMediaItem.id}`)
+
+  // 标记转换完成
+  networkMediaItem.isConverted = true
+  networkMediaItem.networkStatus = 'loaded'
 
   // 查找所有相关的NetworkTimelineItem
   const networkTimelineItems = timelineItems.value.filter(item =>
@@ -542,17 +645,16 @@ const handleNetworkMediaConversion = async (
   ) as NetworkTimelineItem[]
 
   for (const networkItem of networkTimelineItems) {
-    // 1. 创建新的TimelineItem（详细逻辑见转换流程）
+    // 1. 创建新的LocalTimelineItem（详细逻辑见转换流程）
     // 注意：这里会根据实际文件时长调整clip范围
-    const newTimelineItem = await createTimelineItemFromLocalMedia(
+    const newTimelineItem = await createLocalTimelineItemFromNetworkItem(
       localMediaItem,
-      networkItem.timeRange,
-      networkItem.trackId
+      networkItem
     )
 
-    // 2. 添加新的TimelineItem
+    // 2. 添加新的LocalTimelineItem
     timelineItems.value.push(newTimelineItem)
-    console.log(`✅ 添加新TimelineItem: ${newTimelineItem.id}`)
+    console.log(`✅ 添加新LocalTimelineItem: ${newTimelineItem.id}`)
 
     // 3. 移除NetworkTimelineItem
     const index = timelineItems.value.findIndex(item => item.id === networkItem.id)
@@ -561,6 +663,14 @@ const handleNetworkMediaConversion = async (
       console.log(`🗑️ 移除NetworkTimelineItem: ${networkItem.id}`)
     }
   }
+
+  // 4. 将LocalMediaItem添加到媒体库
+  mediaStore.addMediaItem(localMediaItem)
+  console.log(`📚 LocalMediaItem已添加到媒体库`)
+
+  // 5. 清理NetworkMediaItem（不保留历史）
+  networkMediaManager.removeNetworkMediaItem(networkMediaItem.id)
+  console.log(`🧹 NetworkMediaItem已清理`)
 
   console.log(`🎉 网络素材转换完成，共转换 ${networkTimelineItems.length} 个clip`)
 }
@@ -649,14 +759,14 @@ export class NetworkMediaManager {
   private isSupportedMediaType(file: File): boolean
 
   /**
-   * 转换网络素材为本地素材
+   * 转换网络素材为本地素材（转换完成后自动清理网络素材）
    * @param networkMediaItem 网络素材项目
    * @param timelineItems 时间轴项目数组（用于查找需要重建的clip）
    * @returns 转换结果
    */
   async convertToLocal(
     networkMediaItem: NetworkMediaItem,
-    timelineItems: TimelineItem[]
+    timelineItems: AnyTimelineItem[]
   ): Promise<NetworkToLocalConversionResult>
 
   /**
@@ -666,7 +776,7 @@ export class NetworkMediaManager {
   removeNetworkMediaItem(mediaItemId: string): void
 
   /**
-   * 获取所有网络素材项目
+   * 获取所有网络素材项目（仅包括加载中和错误状态的素材）
    * @returns 网络素材项目列表
    */
   getAllNetworkMediaItems(): NetworkMediaItem[]
@@ -695,7 +805,7 @@ graph TD
     B --> C[输入URL和预计时长]
     C --> D[创建网络占位符NetworkMediaItem]
     D --> E[添加到网络tab]
-    E --> F[在networkMediaReferences中创建占位符]
+    E --> F[在NetworkMediaReferences中创建占位符]
     F --> G[拖拽到时间轴时创建NetworkTimelineItem]
     G --> H[开始后台下载]
     H --> I[实时更新加载进度]
@@ -708,8 +818,9 @@ graph TD
     M -->|否| O[标记为错误状态]
     O --> P[NetworkTimelineItem显示红色错误]
     N --> Q[查找相关NetworkTimelineItem]
-    Q --> R[更新为MediaItem和MediaReference]
-    R --> S[移动到对应tab]
+    Q --> R[创建LocalMediaItem和LocalMediaReference]
+    R --> R1[移除NetworkMediaItem和NetworkMediaReference]
+    R1 --> S[移动到对应tab]
     S --> T[创建新的TimelineItem和sprite]
     T --> U[添加sprite到WebAV画布]
     U --> V[添加TimelineItem到时间轴]
@@ -717,7 +828,7 @@ graph TD
     W --> X[轨道重新分配检查]
 ```
 
-#### 4.2 网络素材转换流程
+#### 4.2 网络素材转换流程（基于继承关系）
 1. **下载完成检测**：NetworkMediaItem 的 downloadedFile 字段不为空
 2. **类型检测**：根据下载的文件头信息检测实际媒体类型
 3. **类型支持检查**：
@@ -732,32 +843,40 @@ graph TD
    ```
 4. **创建本地素材**（仅当文件类型支持时）：
    - 将下载的文件保存到项目的media目录
-   - 创建标准的 MediaItem 对象（与直接导入的本地素材完全相同）
+   - 创建 LocalMediaItem 对象（与直接导入的本地素材完全相同）
    - 创建对应类型的 WebAV Clip（MP4Clip/ImgClip/AudioClip）
    - 生成缩略图
-5. **查找相关时间轴clip**（仅当文件类型支持时）：
+5. **标记转换完成**（仅当文件类型支持时）：
    ```typescript
-   const timelineItemsToRebuild = timelineItems.filter(
-     item => item.mediaItemId === networkMediaItem.id
-   ).map(item => item.id)
+   // 标记NetworkMediaItem转换完成
+   networkMediaItem.isConverted = true
+   networkMediaItem.networkStatus = 'loaded'
    ```
-6. **数据替换**（仅当文件类型支持时）：
-   - **完全替换**：用新的 MediaItem 替换 NetworkMediaItem
-   - **完全替换**：用新的 MediaReference 替换 NetworkMediaReference
-   - 从网络tab移动到对应的tab（视频/音频）
-7. **时间轴clip重建**（仅当文件类型支持时）：
-   - 查找相关的 NetworkTimelineItem
+6. **查找相关时间轴clip**（仅当文件类型支持时）：
+   ```typescript
+   const networkTimelineItems = timelineItems.filter(
+     item => isNetworkTimelineItem(item) && item.mediaItemId === networkMediaItem.id
+   ) as NetworkTimelineItem[]
+   ```
+7. **时间轴clip转换**（仅当文件类型支持时）：
+   - 为每个 NetworkTimelineItem 创建对应的 LocalTimelineItem
    - **时长调整**：比较实际文件时长与预估时长，使用实际时长重新设置clip范围
-   - **创建新clip**：基于本地素材创建新的 sprite 和 TimelineItem
+   - **创建新clip**：基于本地素材创建新的 sprite 和 LocalTimelineItem
    - **画布更新**：将新的 sprite 添加到 WebAV 画布
-   - **添加新clip**：将新的 TimelineItem 添加到时间轴数组
+   - **添加新clip**：将新的 LocalTimelineItem 添加到时间轴数组
    - **移除NetworkClip**：从时间轴数组中移除 NetworkTimelineItem
    - 保持原有的起始位置和轨道位置（必要时重新分配轨道）
-8. **错误状态处理**（当文件类型不支持时）：
-   - NetworkMediaItem 保持在网络tab中
+8. **媒体库更新**（仅当文件类型支持时）：
+   - 将 LocalMediaItem 添加到媒体库
+   - 从网络tab移动到对应的tab（视频/音频/图片）
+   - 清理 NetworkMediaItem（不保留历史）
+9. **错误状态处理**（当文件类型不支持时）：
+   - NetworkMediaItem 保持在网络tab中，显示错误状态
    - 时间轴占位符显示红色错误状态
    - 属性面板显示错误信息和重新选择文件选项
-9. **清理网络数据**：删除 NetworkMediaItem 和相关的网络加载任务（仅当成功转换时）
+10. **引用关系更新**：
+    - 创建 LocalMediaReference 并添加到 mediaReferences
+    - 清理 NetworkMediaReference（不保留历史）
 
 **重要说明**：转换过程是**先添加新clip，再移除旧clip**的过程，而不是就地修改。这确保了：
 - **无缝切换**：避免时间轴出现空白期，用户体验更流畅
@@ -793,7 +912,7 @@ if (networkMediaItem.networkStatus === 'unsupported') {
     // 保持NetworkTimelineItem状态，不转换
   }
 } else if (networkMediaItem.networkStatus === 'loaded') {
-  // 文件类型支持，转换为标准TimelineItem
+  // 文件类型支持，转换为LocalTimelineItem
   for (const networkItem of networkTimelineItems) {
     // 保存原有配置
     const originalTimeRange = networkItem.timeRange
@@ -801,68 +920,74 @@ if (networkMediaItem.networkStatus === 'unsupported') {
     const originalId = networkItem.id
 
     // 1. 创建新的sprite（基于转换后的本地素材）
-    const newSprite = await createSpriteFromMediaItem(localMediaItem)
+    const newSprite = await createSpriteFromLocalMediaItem(localMediaItem)
 
     // 2. 处理时长不匹配的情况
     const originalDuration = originalTimeRange.timelineEndTime - originalTimeRange.timelineStartTime
     const actualDuration = localMediaItem.duration // 实际文件时长（帧数）
 
-    let newTimelineEndTime: number
+    let newTimeRange: VideoTimeRange | ImageTimeRange
     if (actualDuration !== originalDuration) {
       // 实际时长与预估时长不符，使用实际时长
-      newTimelineEndTime = originalTimeRange.timelineStartTime + actualDuration
       console.log(`⏱️ 时长调整: 预估${originalDuration}帧 → 实际${actualDuration}帧`)
-    } else {
-      // 时长匹配，保持原有范围
-      newTimelineEndTime = originalTimeRange.timelineEndTime
     }
 
-    newSprite.setTimeRange({
-      timelineStartTime: originalTimeRange.timelineStartTime,
-      timelineEndTime: newTimelineEndTime,
-      clipStartTime: 0,
-      clipEndTime: actualDuration
-    })
+    // 根据实际媒体类型创建对应的时间范围
+    if (localMediaItem.mediaType === 'video' || localMediaItem.mediaType === 'audio') {
+      newTimeRange = {
+        clipStartTime: 0,
+        clipEndTime: actualDuration,
+        timelineStartTime: originalTimeRange.timelineStartTime,
+        timelineEndTime: originalTimeRange.timelineStartTime + actualDuration,
+        effectiveDuration: actualDuration,
+        playbackRate: 1.0
+      } as VideoTimeRange
+    } else {
+      // 图片类型
+      newTimeRange = {
+        timelineStartTime: originalTimeRange.timelineStartTime,
+        timelineEndTime: originalTimeRange.timelineStartTime + actualDuration,
+        displayDuration: actualDuration
+      } as ImageTimeRange
+    }
 
-    // 2. 检查轨道兼容性，必要时重新分配
+    newSprite.setTimeRange(newTimeRange)
+
+    // 3. 检查轨道兼容性，必要时重新分配
     let targetTrackId = originalTrackId
     if (needsTrackReassignment(originalTrackId, localMediaItem.mediaType)) {
       targetTrackId = findCompatibleTrack(localMediaItem.mediaType)
       console.log(`🔄 轨道重新分配: ${originalTrackId} → ${targetTrackId}`)
     }
 
-    // 3. 创建新的标准TimelineItem
-    const newTimelineItem: TimelineItem = {
+    // 4. 创建新的LocalTimelineItem
+    const newTimelineItem: LocalTimelineItem = {
       id: generateNewTimelineItemId(), // 生成新的ID
       mediaItemId: localMediaItem.id,
       trackId: targetTrackId,
       mediaType: localMediaItem.mediaType,
-      timeRange: newSprite.getTimeRange(),
+      timeRange: newSprite.getTimeRange(), // 使用sprite返回的正确时间范围类型
       sprite: markRaw(newSprite),
-      config: {
-        // 基于原有配置创建新配置
-        opacity: 1,
-        // ... 其他默认配置
-      },
+      config: createDefaultConfigForMediaType(localMediaItem.mediaType),
       mediaName: localMediaItem.name
     }
 
-    // 4. 添加sprite到WebAV画布
+    // 5. 添加sprite到WebAV画布
     avCanvas.addSprite(newSprite)
     console.log(`🎨 添加sprite到画布: ${newTimelineItem.id}`)
 
-    // 5. 添加新的TimelineItem到时间轴
+    // 6. 添加新的LocalTimelineItem到时间轴
     timelineItems.value.push(newTimelineItem)
-    console.log(`✅ 添加新TimelineItem: ${newTimelineItem.id}`)
+    console.log(`✅ 添加新LocalTimelineItem: ${newTimelineItem.id}`)
 
-    // 6. 从时间轴移除NetworkTimelineItem
+    // 7. 从时间轴移除NetworkTimelineItem
     const networkItemIndex = timelineItems.value.findIndex(item => item.id === originalId)
     if (networkItemIndex !== -1) {
       timelineItems.value.splice(networkItemIndex, 1)
       console.log(`🗑️ 移除NetworkTimelineItem: ${originalId}`)
     }
 
-    // 7. 触发UI更新（如果当前选中的是被替换的项目）
+    // 8. 触发UI更新（如果当前选中的是被替换的项目）
     if (selectedTimelineItemId.value === originalId) {
       selectedTimelineItemId.value = newTimelineItem.id
     }
@@ -883,32 +1008,161 @@ if (networkMediaItem.networkStatus === 'unsupported') {
 
 ### 5. 持久化设计
 
-#### 5.1 项目保存结构
+#### 5.1 完整的项目保存结构（project.json）
+
+基于现有的ProjectConfig接口和新的继承关系设计：
+
 ```json
 {
-  "mediaReferences": {
-    // 已完成转换的网络素材 - 完全等同于本地素材
-    "converted_item_123": {
-      "originalFileName": "network_video.mp4",
-      "storedPath": "media/videos/network_video.mp4",
-      "type": "video",
-      "fileSize": 1024000,
-      "checksum": "abc123"
-      // 注意：转换后不保留任何网络相关信息
-    },
+  "id": "project_1234567890",
+  "name": "我的视频项目",
+  "description": "包含网络素材的视频项目",
+  "createdAt": "2024-01-01T00:00:00.000Z",
+  "updatedAt": "2024-01-01T12:00:00.000Z",
+  "version": "1.0.0",
+  "thumbnail": "thumbnails/project_thumb.jpg",
+  "duration": "00:02:30",
 
-    // 普通本地素材
-    "local_item_789": {
+  // 项目设置
+  "settings": {
+    "videoResolution": {
+      "name": "1080p",
+      "width": 1920,
+      "height": 1080,
+      "aspectRatio": "16:9"
+    },
+    "frameRate": 30,
+    "timelineDurationFrames": 1800
+  },
+
+  // 时间轴数据（不包含运行时状态）
+  "timeline": {
+    "tracks": [
+      {
+        "id": "track_video_1",
+        "name": "视频轨道 1",
+        "type": "video",
+        "isVisible": true,
+        "isMuted": false,
+        "height": 60
+      },
+      {
+        "id": "track_audio_1",
+        "name": "音频轨道 1",
+        "type": "audio",
+        "isVisible": true,
+        "isMuted": false,
+        "height": 40
+      }
+    ],
+
+    // 时间轴项目数据（包含本地和网络项目）
+    "timelineItems": [
+      // 本地时间轴项目（持久化数据，不包含sprite等运行时状态）
+      {
+        "id": "timeline_local_001",
+        "mediaItemId": "local_item_123",
+        "trackId": "track_video_1",
+        "mediaType": "video",
+        "timeRange": {
+          "clipStartTime": 0,
+          "clipEndTime": 300,
+          "timelineStartTime": 0,
+          "timelineEndTime": 300,
+          "effectiveDuration": 300,
+          "playbackRate": 1.0
+        },
+        "config": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080,
+          "rotation": 0,
+          "opacity": 1,
+          "volume": 1,
+          "isMuted": false
+        },
+        "mediaName": "本地视频.mp4"
+      },
+
+      // 网络时间轴项目（持久化数据）
+      {
+        "id": "timeline_network_001",
+        "mediaItemId": "network_item_456",
+        "trackId": "track_audio_1",
+        "mediaType": "network",
+        "timeRange": {
+          "timelineStartTime": 300,
+          "timelineEndTime": 450
+        },
+        "config": {
+          "name": "网络音频",
+          "expectedDuration": 150
+        },
+        "isNetworkPlaceholder": true,
+        "networkStatus": "loading",
+        "loadingProgress": 65
+      }
+    ],
+
+    // 媒体项目数据（包含本地和网络项目，不包含运行时状态）
+    "mediaItems": [
+      // 本地媒体项目数据
+      {
+        "id": "local_item_123",
+        "name": "本地视频.mp4",
+        "mediaType": "video",
+        "duration": 300,
+        "type": "video/mp4",
+        "createdAt": "2024-01-01T10:00:00.000Z"
+      },
+
+      // 网络媒体项目数据
+      {
+        "id": "network_item_456",
+        "name": "网络音频.mp3",
+        "mediaType": "network",
+        "networkUrl": "https://example.com/audio.mp3",
+        "networkStatus": "loading",
+        "loadingProgress": 65,
+        "expectedDuration": 150,
+        "createdAt": "2024-01-01T11:00:00.000Z",
+        "startedAt": "2024-01-01T11:05:00.000Z"
+      },
+
+      // 转换后的本地媒体项目（网络素材转换完成后只保留本地项目）
+      {
+        "id": "local_item_789",
+        "name": "已转换视频.mp4",
+        "mediaType": "video",
+        "duration": 600,
+        "type": "video/mp4",
+        "createdAt": "2024-01-01T09:05:00.000Z"
+      }
+    ]
+  },
+
+  // 本地媒体文件引用（包括已转换的网络素材）
+  "mediaReferences": {
+    "local_item_123": {
       "originalFileName": "local_video.mp4",
       "storedPath": "media/videos/local_video.mp4",
       "type": "video",
       "fileSize": 2048000,
       "checksum": "def456"
+    },
+    "local_item_789": {
+      "originalFileName": "converted_video.mp4",
+      "storedPath": "media/videos/converted_video.mp4",
+      "type": "video",
+      "fileSize": 1024000,
+      "checksum": "abc123"
     }
   },
 
-  // 网络素材占位符单独存储
+  // 网络媒体引用（仅包括加载中和错误状态的素材，转换完成后会被清理）
   "networkMediaReferences": {
+    // 加载中的网络素材
     "network_item_456": {
       "originalFileName": "loading_audio.mp3",
       "networkUrl": "https://example.com/audio.mp3",
@@ -917,38 +1171,236 @@ if (networkMediaItem.networkStatus === 'unsupported') {
       "type": "network",
       "fileSize": 0,
       "checksum": ""
-    },
-    "network_item_789": {
-      "originalFileName": "error_video.mp4",
-      "networkUrl": "https://example.com/unsupported.xyz",
-      "expectedDuration": 300,
-      "isNetworkPlaceholder": true,
-      "type": "network",
-      "networkStatus": "unsupported",
-      "errorMessage": "不支持的文件类型: application/octet-stream",
-      "fileSize": 0,
-      "checksum": ""
     }
-  }
+  },
+
+  // 导出记录
+  "exports": []
 }
 ```
 
-#### 5.2 项目加载恢复机制
-1. **分离加载**：
-   - **mediaReferences**：按普通本地素材加载，包括已转换完成的网络素材
-   - **networkMediaReferences**：重新创建 NetworkMediaItem，重新启动下载流程
-2. **网络素材恢复**：
-   - 从 networkMediaReferences 创建 NetworkMediaItem 对象
-   - 重新启动网络下载任务
-   - 恢复到网络tab中显示
-3. **状态重置**：
-   - 加载进度重置为0
-   - 网络状态重置为 'loading'
-   - 重新开始下载流程
-4. **错误处理**：
-   - 网络不可用：显示错误状态，提供重试选项
-   - URL失效：标记为错误状态，允许用户修改URL
-   - 超时：提供重新加载选项
+#### 5.2 项目加载恢复机制（基于继承关系）
+
+**加载流程概述**：
+```typescript
+async function loadProjectContent(projectId: string): Promise<void> {
+  // 1. 加载项目配置
+  const projectConfig = await loadProjectConfig(projectId)
+
+  // 2. 分别处理本地和网络媒体项目
+  const { localMediaItems, networkMediaItems } = separateMediaItems(projectConfig.timeline.mediaItems)
+
+  // 3. 恢复本地媒体项目
+  await restoreLocalMediaItems(localMediaItems, projectConfig.mediaReferences)
+
+  // 4. 恢复网络媒体项目
+  await restoreNetworkMediaItems(networkMediaItems, projectConfig.networkMediaReferences)
+
+  // 5. 重建时间轴项目
+  await rebuildTimelineItems(projectConfig.timeline.timelineItems)
+}
+```
+
+**详细恢复步骤**：
+
+1. **本地媒体项目恢复**：
+   ```typescript
+   async function restoreLocalMediaItems(
+     localMediaItems: LocalMediaItemData[],
+     mediaReferences: Record<string, LocalMediaReference>
+   ): Promise<LocalMediaItem[]> {
+     const restoredItems: LocalMediaItem[] = []
+
+     for (const itemData of localMediaItems) {
+       const reference = mediaReferences[itemData.id]
+       if (!reference) {
+         console.warn(`本地媒体引用缺失: ${itemData.id}`)
+         continue
+       }
+
+       // 从本地文件重新创建WebAV Clip
+       const file = await loadFileFromPath(reference.storedPath)
+       const clip = await createWebAVClip(file, itemData.mediaType)
+
+       // 重建LocalMediaItem
+       const localMediaItem: LocalMediaItem = {
+         ...itemData,
+         file,
+         url: URL.createObjectURL(file),
+         mp4Clip: itemData.mediaType === 'video' ? clip : null,
+         imgClip: itemData.mediaType === 'image' ? clip : null,
+         audioClip: itemData.mediaType === 'audio' ? clip : null,
+         isReady: false, // 重新解析
+         status: 'parsing'
+       }
+
+       restoredItems.push(localMediaItem)
+     }
+
+     return restoredItems
+   }
+   ```
+
+2. **网络媒体项目恢复**：
+   ```typescript
+   async function restoreNetworkMediaItems(
+     networkMediaItems: NetworkMediaItemData[],
+     networkReferences: Record<string, NetworkMediaReference>
+   ): Promise<NetworkMediaItem[]> {
+     const restoredItems: NetworkMediaItem[] = []
+
+     for (const itemData of networkMediaItems) {
+       const reference = networkReferences[itemData.id]
+       if (!reference) {
+         console.warn(`网络媒体引用缺失: ${itemData.id}`)
+         continue
+       }
+
+       // 重建NetworkMediaItem
+       const networkMediaItem: NetworkMediaItem = {
+         ...itemData,
+         // 重置运行时状态
+         loadingProgress: 0,
+         networkStatus: 'loading',
+         downloadedFile: undefined,
+         detectedMediaType: undefined,
+         errorMessage: undefined,
+         thumbnailUrl: undefined,
+         startedAt: undefined,
+         completedAt: undefined,
+         convertedTo: undefined
+       }
+
+       // 如果之前已经转换成功，该网络素材应该已被清理，不应该出现在这里
+       if (reference.networkStatus === 'loaded') {
+         console.warn(`发现已转换的网络素材引用，应该已被清理: ${itemData.id}`)
+         continue
+       }
+
+       // 如果之前有错误状态，恢复错误信息
+       if (reference.networkStatus && reference.errorMessage) {
+         networkMediaItem.networkStatus = reference.networkStatus
+         networkMediaItem.errorMessage = reference.errorMessage
+       }
+
+       restoredItems.push(networkMediaItem)
+
+       // 重新启动下载任务（除非已经转换成功或有错误）
+       if (networkMediaItem.networkStatus === 'loading') {
+         networkMediaManager.startDownload(networkMediaItem)
+       }
+     }
+
+     return restoredItems
+   }
+   ```
+
+3. **时间轴项目重建**：
+   ```typescript
+   async function rebuildTimelineItems(
+     timelineItemsData: (LocalTimelineItemData | NetworkTimelineItemData)[]
+   ): Promise<AnyTimelineItem[]> {
+     const rebuiltItems: AnyTimelineItem[] = []
+
+     for (const itemData of timelineItemsData) {
+       if (isNetworkTimelineItemData(itemData)) {
+         // 重建NetworkTimelineItem
+         const networkMediaItem = findNetworkMediaItem(itemData.mediaItemId)
+         if (networkMediaItem) {
+           const networkTimelineItem: NetworkTimelineItem = {
+             ...itemData,
+             networkStatus: networkMediaItem.networkStatus,
+             loadingProgress: networkMediaItem.loadingProgress,
+             errorMessage: networkMediaItem.errorMessage,
+             sprite: null
+           }
+           rebuiltItems.push(networkTimelineItem)
+         }
+       } else {
+         // 重建LocalTimelineItem
+         const localMediaItem = findLocalMediaItem(itemData.mediaItemId)
+         if (localMediaItem) {
+           const sprite = await createSpriteFromLocalMediaItem(localMediaItem)
+           sprite.setTimeRange(itemData.timeRange)
+
+           const localTimelineItem: LocalTimelineItem = {
+             ...itemData,
+             sprite: markRaw(sprite)
+           }
+           rebuiltItems.push(localTimelineItem)
+         }
+       }
+     }
+
+     return rebuiltItems
+   }
+   ```
+
+4. **状态同步和错误处理**：
+   - **网络状态恢复**：根据保存的状态决定是否重新下载
+   - **错误状态保持**：保留之前的错误信息，提供重试选项
+   - **断线重连**：自动检测网络状态，支持断线重连
+
+#### 5.3 持久化设计的关键考虑
+
+**为什么要分离存储 mediaReferences 和 networkMediaReferences？**
+
+1. **数据一致性**：
+   - `mediaReferences` 只存储已经下载到本地的文件引用
+   - `networkMediaReferences` 存储网络素材的元信息和状态
+   - 避免了同一个素材在不同状态下的数据混乱
+
+2. **加载性能**：
+   - 本地素材可以立即加载和使用
+   - 网络素材需要重新下载，分离存储便于区别处理
+   - 避免了加载时的类型判断复杂性
+
+3. **状态管理**：
+   - 网络素材的状态（loading/error/loaded）需要特殊处理
+   - 转换完成后立即清理网络素材，简化状态管理
+
+4. **向后兼容**：
+   - 现有的 `mediaReferences` 结构保持不变
+   - 新增的 `networkMediaReferences` 不影响现有功能
+   - 渐进式迁移，降低风险
+
+**为什么在 timeline.mediaItems 中同时保存本地和网络项目？**
+
+1. **统一管理**：
+   - 媒体库需要统一显示所有媒体项目
+   - 便于搜索、排序和过滤操作
+   - 保持现有的媒体管理逻辑
+
+2. **关系维护**：
+   - 时间轴项目通过 `mediaItemId` 引用媒体项目
+   - 统一存储便于维护引用关系
+   - 支持网络素材转换后的无缝切换
+
+3. **状态同步**：
+   - 网络素材的状态变化需要同步到时间轴
+   - 统一存储便于状态广播和更新
+   - 减少数据同步的复杂性
+
+**简化的转换设计原理**：
+
+```typescript
+// 网络素材转换：直接替换，不保留关联
+NetworkMediaItem {
+  id: "network_123",
+  isConverted: true // 简单的转换标记
+}
+
+// 转换完成后：
+// 1. 创建 LocalMediaItem (新ID: "local_456")
+// 2. 创建 LocalMediaReference
+// 3. 清理 NetworkMediaItem 和 NetworkMediaReference
+```
+
+这种设计的优势：
+- **简洁明了**：避免复杂的关联关系
+- **内存高效**：转换完成后立即清理，减少内存占用
+- **状态清晰**：只有加载中和错误状态的网络素材会保留
+- **易于维护**：减少数据一致性问题
 
 ### 6. Tab 切换逻辑扩展
 
@@ -983,27 +1435,37 @@ function determineTargetTab(draggedMediaTypes: MediaType[]): TabType {
 当网络素材下载完成后，实际文件时长往往与用户预估的时长不符：
 
 ```typescript
-// 时长调整逻辑
+// 时长调整逻辑 - 根据实际媒体类型创建正确的时间范围
 function adjustTimelineItemDuration(
-  originalTimeRange: TimeRange,
+  originalTimeRange: NetworkTimeRange,
   actualDuration: number,
-  expectedDuration: number
-): TimeRange {
+  expectedDuration: number,
+  actualMediaType: 'video' | 'image' | 'audio'
+): VideoTimeRange | ImageTimeRange {
   const startTime = originalTimeRange.timelineStartTime
 
   if (actualDuration !== expectedDuration) {
     console.log(`⏱️ 时长调整: 预估${expectedDuration}帧 → 实际${actualDuration}帧`)
+  }
 
+  // 根据实际媒体类型创建对应的时间范围
+  if (actualMediaType === 'video' || actualMediaType === 'audio') {
+    return {
+      clipStartTime: 0,
+      clipEndTime: actualDuration,
+      timelineStartTime: startTime,
+      timelineEndTime: startTime + actualDuration,
+      effectiveDuration: actualDuration,
+      playbackRate: 1.0
+    } as VideoTimeRange
+  } else {
+    // 图片类型
     return {
       timelineStartTime: startTime,
       timelineEndTime: startTime + actualDuration,
-      clipStartTime: 0,
-      clipEndTime: actualDuration
-    }
+      displayDuration: actualDuration
+    } as ImageTimeRange
   }
-
-  // 时长匹配，保持原有范围
-  return originalTimeRange
 }
 ```
 
@@ -1065,8 +1527,8 @@ function adjustTimelineItemDuration(
 ### Phase 3: 转换和重建（2-3天）
 - [ ] 媒体类型检测逻辑
 - [ ] 文件类型支持检查（`isSupportedMediaType`）
-- [ ] NetworkMediaItem 到 MediaItem 的完整转换
-- [ ] NetworkMediaReference 到 MediaReference 的替换
+- [ ] NetworkMediaItem 到 LocalMediaItem 的完整转换
+- [ ] NetworkMediaReference 到 LocalMediaReference 的替换
 - [ ] 实现 `findTimelineItemsToRebuild` 查找逻辑
 - [ ] NetworkTimelineItem 到 TimelineItem 的转换机制（移除+添加）
 - [ ] 轨道兼容性检查和重新分配逻辑
@@ -1076,9 +1538,9 @@ function adjustTimelineItemDuration(
 - [ ] 时长调整机制实现（实际时长vs预估时长）
 
 ### Phase 4: 持久化和恢复（2-3天）
-- [ ] 项目保存/加载适配（支持 networkMediaReferences）
+- [ ] 项目保存/加载适配（支持 NetworkMediaReferences）
 - [ ] 断线恢复机制实现
-- [ ] NetworkMediaItem 和 MediaItem 的数据流管理
+- [ ] NetworkMediaItem 和 LocalMediaItem 的数据流管理
 - [ ] 错误状态的持久化和恢复
 - [ ] 重试和URL更新功能实现
 - [ ] 错误处理和用户反馈完善
@@ -1116,9 +1578,32 @@ function isSupportedMediaType(file: File): boolean {
 
 ## 总结
 
-本方案通过扩展现有的媒体管理架构，为视频编辑器添加了完整的网络素材支持。设计保持了与现有系统的一致性，利用了现有的媒体管理、项目持久化和时间轴重建机制，同时为网络素材提供了完整的生命周期管理。
+本方案通过继承关系重新设计了网络素材支持架构，解决了原设计中的存储混乱、类型复杂性和转换流程问题。新设计保持了与现有系统的一致性，同时提供了更清晰的类型层次和数据流。
 
-方案的核心优势：
+## 新设计的核心优势：
+
+### 1. **清晰的继承关系**
+- **BaseMediaItem/BaseMediaReference**：提供共同的基础属性
+- **LocalMediaItem/LocalMediaReference**：专门处理本地文件
+- **NetworkMediaItem/NetworkMediaReference**：专门处理网络素材
+- **类型安全**：通过继承关系确保类型一致性，减少类型判断的复杂度
+
+### 2. **简化的存储策略**
+- **单一数据源**：所有媒体项目都存储在同一个数组中，通过类型区分
+- **引用分离**：本地引用和网络引用分别存储，避免数据混乱
+- **即时清理**：转换完成后立即清理网络素材，保持数据简洁
+
+### 3. **简化的转换流程**
+- **直接替换**：网络素材转换时创建新的本地素材，然后清理网络素材
+- **一次性转换**：转换过程是一次性的，不保留中间状态
+- **内存优化**：转换完成后立即释放网络素材占用的内存
+
+### 4. **向后兼容性**
+- **类型别名**：`MediaItem = LocalMediaItem` 保持现有代码兼容
+- **渐进迁移**：可以逐步迁移现有代码到新的类型系统
+- **最小改动**：现有的媒体处理逻辑基本不需要修改
+
+### 5. **功能完整性**
 - **渐进式加载**：支持占位符机制，不阻塞用户操作
 - **自动转换**：加载完成后自动转换为对应的本地媒体类型
 - **完全本地化**：转换完成后与直接导入的本地素材完全一致，无网络依赖
@@ -1130,3 +1615,9 @@ function isSupportedMediaType(file: File): boolean {
 - **数据一致性**：确保网络素材转换后的数据结构与本地素材完全相同
 - **操作灵活性**：支持重新选择文件、修改URL、重试下载等恢复操作
 - **视觉一致性**：网络clip与普通clip在时间轴上有统一的视觉风格
+
+### 6. **架构优势**
+- **可扩展性**：继承关系便于未来添加新的媒体类型
+- **可维护性**：清晰的类型层次和简化的状态管理降低了代码复杂度
+- **可测试性**：类型分离使得单元测试更容易编写
+- **高性能**：及时清理减少内存占用，提升应用性能
