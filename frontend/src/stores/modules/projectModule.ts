@@ -1,7 +1,6 @@
 import { ref, computed } from 'vue'
-import { projectManager, type ProjectConfig } from '../../utils/ProjectManager'
-import type { MediaReference } from '../../utils/MediaManager'
-import type { MediaItem } from '../../types'
+import { projectManager } from '../../utils/ProjectManager'
+import type { MediaReference, ProjectConfig, MediaItem } from '../../types'
 
 /**
  * 项目管理模块

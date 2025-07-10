@@ -3,7 +3,7 @@
  * 提供通过命令系统执行关键帧操作的高级接口
  */
 
-import type { TimelineItem } from '../types'
+import type { TimelineItem, KeyframeCommandExecutor, BatchKeyframeOperation } from '../types'
 import {
   CreateKeyframeCommand,
   DeleteKeyframeCommand,
@@ -11,31 +11,6 @@ import {
   ClearAllKeyframesCommand,
   ToggleKeyframeCommand,
 } from '../stores/modules/commands/keyframeCommands'
-
-// ==================== 模块依赖接口 ====================
-
-/**
- * 关键帧命令执行器接口
- * 定义执行关键帧命令所需的模块依赖
- */
-export interface KeyframeCommandExecutor {
-  /** 时间轴模块 */
-  timelineModule: {
-    getTimelineItem: (id: string) => TimelineItem | undefined
-  }
-  /** WebAV动画管理器 */
-  webavAnimationManager: {
-    updateWebAVAnimation: (item: TimelineItem) => Promise<void>
-  }
-  /** 历史记录模块 */
-  historyModule: {
-    executeCommand: (command: any) => Promise<void>
-  }
-  /** 播放头控制器 */
-  playbackControls: {
-    seekTo: (frame: number) => void
-  }
-}
 
 // ==================== 关键帧命令执行函数 ====================
 
@@ -239,18 +214,6 @@ export async function toggleKeyframe(timelineItemId: string, frame: number): Pro
 }
 
 // ==================== 批量操作支持 ====================
-
-/**
- * 批量关键帧操作
- * 支持在一个命令中执行多个关键帧操作
- */
-export interface BatchKeyframeOperation {
-  type: 'create' | 'delete' | 'update' | 'clear' | 'toggle'
-  timelineItemId: string
-  frame?: number
-  property?: string
-  value?: any
-}
 
 /**
  * 智能批量关键帧命令

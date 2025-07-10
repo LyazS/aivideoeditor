@@ -51,7 +51,7 @@
 
 <script setup lang="ts">
 import { ref, watch } from 'vue'
-import type { ProjectConfig } from '../utils/ProjectManager'
+import type { ProjectConfig } from '../types'
 
 interface Props {
   show: boolean

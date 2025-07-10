@@ -851,3 +851,196 @@ export interface WebAVAnimationConfig {
     easing?: string
   }
 }
+
+// ==================== 项目管理相关接口 ====================
+
+/**
+ * 媒体引用接口
+ * 用于项目配置中引用媒体文件
+ */
+export interface MediaReference {
+  originalFileName: string
+  storedPath: string // 相对于项目目录的路径
+  type: MediaType // 'video' | 'image' | 'audio'
+  fileSize: number
+  checksum: string
+}
+
+/**
+ * 项目配置接口
+ */
+export interface ProjectConfig {
+  id: string
+  name: string
+  description?: string
+  createdAt: string
+  updatedAt: string
+  version: string
+  thumbnail?: string
+  duration?: string
+
+  // 项目设置
+  settings: {
+    videoResolution: {
+      name: string
+      width: number
+      height: number
+      aspectRatio: string
+    }
+    frameRate: number
+    timelineDurationFrames: number
+  }
+
+  // 时间轴数据
+  timeline: {
+    tracks: any[]
+    timelineItems: any[]
+    mediaItems: any[]
+  }
+
+  // 媒体文件引用
+  mediaReferences: {
+    [mediaId: string]: MediaReference
+  }
+
+  // 导出历史
+  exports: any[]
+}
+
+/**
+ * 媒体元数据接口
+ */
+export interface MediaMetadata {
+  // 基础信息
+  id: string
+  originalFileName: string
+  fileSize: number
+  mimeType: string
+  checksum: string // 文件完整性校验
+
+  // WebAV解析后的核心元数据
+  duration?: number // 微秒（视频和音频需要）
+  width?: number // 分辨率宽度（视频和图片需要）
+  height?: number // 分辨率高度（视频和图片需要）
+
+  // 缩略图信息
+  thumbnailPath?: string
+
+  // WebAV Clip重建信息
+  clipType: 'MP4Clip' | 'ImgClip' | 'AudioClip'
+
+  // 导入时间戳
+  importedAt: string
+}
+
+// ==================== 时间重叠检测相关接口 ====================
+
+/**
+ * 重叠检测时间范围接口 - 用于时间重叠检测的统一时间范围表示
+ */
+export interface OverlapTimeRange {
+  start: number // 开始时间（帧数）
+  end: number // 结束时间（帧数）
+}
+
+/**
+ * 重叠检测结果
+ */
+export interface OverlapResult {
+  hasOverlap: boolean // 是否有重叠
+  overlapStart: number // 重叠开始时间（帧数）
+  overlapEnd: number // 重叠结束时间（帧数）
+  overlapDuration: number // 重叠时长（帧数）
+}
+
+/**
+ * 冲突信息 - 用于拖拽预览等场景
+ */
+export interface ConflictInfo {
+  itemId: string
+  itemName: string
+  startTime: number
+  endTime: number
+  overlapStart: number
+  overlapEnd: number
+}
+
+// ==================== 关键帧命令相关接口 ====================
+
+/**
+ * 关键帧命令执行器接口
+ * 定义执行关键帧命令所需的模块依赖
+ */
+export interface KeyframeCommandExecutor {
+  /** 时间轴模块 */
+  timelineModule: {
+    getTimelineItem: (id: string) => TimelineItem | undefined
+  }
+  /** WebAV动画管理器 */
+  webavAnimationManager: {
+    updateWebAVAnimation: (item: TimelineItem) => Promise<void>
+  }
+  /** 历史记录模块 */
+  historyModule: {
+    executeCommand: (command: any) => Promise<void>
+  }
+  /** 播放头控制器 */
+  playbackControls: {
+    seekTo: (frame: number) => void
+  }
+}
+
+/**
+ * 批量关键帧操作
+ * 支持在一个命令中执行多个关键帧操作
+ */
+export interface BatchKeyframeOperation {
+  type: 'create' | 'delete' | 'update' | 'clear' | 'toggle'
+  timelineItemId: string
+  frame?: number
+  property?: string
+  value?: any
+}
+
+// ==================== 吸附指示器相关接口 ====================
+
+/**
+ * 吸附指示器数据接口
+ */
+export interface SnapIndicatorData {
+  // 是否显示指示器
+  show: boolean
+  // 吸附点信息
+  snapPoint?: any // 引用 types/snap.ts 中的 SnapPoint
+  // 时间轴宽度
+  timelineWidth: number
+  // 时间轴容器的偏移量
+  timelineOffset?: { x: number; y: number }
+  // 是否显示工具提示
+  showTooltip?: boolean
+  // 指示线高度
+  lineHeight?: number
+}
+
+// ==================== 自动保存相关接口 ====================
+
+/**
+ * 自动保存配置
+ */
+export interface AutoSaveConfig {
+  debounceTime: number // 防抖时间（毫秒）
+  throttleTime: number // 节流时间（毫秒）
+  maxRetries: number // 最大重试次数
+  enabled: boolean // 是否启用自动保存
+}
+
+/**
+ * 自动保存状态
+ */
+export interface AutoSaveState {
+  isEnabled: boolean
+  lastSaveTime: Date | null
+  saveCount: number
+  errorCount: number
+  isDirty: boolean // 是否有未保存的更改
+}

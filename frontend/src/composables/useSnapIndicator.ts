@@ -1,23 +1,6 @@
 import { ref, reactive } from 'vue'
 import type { SnapPoint } from '../types/snap'
-
-/**
- * 吸附指示器数据接口
- */
-export interface SnapIndicatorData {
-  // 是否显示指示器
-  show: boolean
-  // 吸附点信息
-  snapPoint?: SnapPoint
-  // 时间轴宽度
-  timelineWidth: number
-  // 时间轴容器的偏移量
-  timelineOffset?: { x: number; y: number }
-  // 是否显示工具提示
-  showTooltip?: boolean
-  // 指示线高度
-  lineHeight?: number
-}
+import type { SnapIndicatorData } from '../types'
 
 /**
  * 吸附指示器管理器类

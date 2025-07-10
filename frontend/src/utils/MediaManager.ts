@@ -1,44 +1,7 @@
 import { directoryManager } from './DirectoryManager'
 import type { Raw } from 'vue'
 import type { MP4Clip, ImgClip, AudioClip } from '@webav/av-cliper'
-import type { MediaType, MediaItem } from '../types'
-
-/**
- * 媒体元数据接口
- */
-export interface MediaMetadata {
-  // 基础信息
-  id: string
-  originalFileName: string
-  fileSize: number
-  mimeType: string
-  checksum: string // 文件完整性校验
-
-  // WebAV解析后的核心元数据
-  duration?: number // 微秒（视频和音频需要）
-  width?: number // 分辨率宽度（视频和图片需要）
-  height?: number // 分辨率高度（视频和图片需要）
-
-  // 缩略图信息
-  thumbnailPath?: string
-
-  // WebAV Clip重建信息
-  clipType: 'MP4Clip' | 'ImgClip' | 'AudioClip'
-
-  // 导入时间戳
-  importedAt: string
-}
-
-/**
- * 媒体引用接口
- */
-export interface MediaReference {
-  originalFileName: string
-  storedPath: string // 相对于项目目录的路径
-  type: MediaType // 'video' | 'image' | 'audio'
-  fileSize: number
-  checksum: string
-}
+import type { MediaType, MediaItem, MediaMetadata, MediaReference } from '../types'
 
 /**
  * 媒体文件管理器

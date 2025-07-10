@@ -1,6 +1,5 @@
 import { directoryManager } from './DirectoryManager'
-import type { MediaReference } from './MediaManager'
-import type { MediaItem, TimelineItemData, Track } from '../types'
+import type { MediaItem, TimelineItemData, Track, MediaReference, ProjectConfig } from '../types'
 import { mediaManager } from './MediaManager'
 
 /**
@@ -31,46 +30,7 @@ export interface ProjectLoadResult {
   loadedStages: string[]
 }
 
-/**
- * 项目配置接口
- */
-export interface ProjectConfig {
-  id: string
-  name: string
-  description?: string
-  createdAt: string
-  updatedAt: string
-  version: string
-  thumbnail?: string
-  duration?: string
-  
-  // 项目设置
-  settings: {
-    videoResolution: {
-      name: string
-      width: number
-      height: number
-      aspectRatio: string
-    }
-    frameRate: number
-    timelineDurationFrames: number
-  }
-  
-  // 时间轴数据
-  timeline: {
-    tracks: any[]
-    timelineItems: any[]
-    mediaItems: any[]
-  }
-  
-  // 媒体文件引用
-  mediaReferences: {
-    [mediaId: string]: MediaReference
-  }
-  
-  // 导出历史
-  exports: any[]
-}
+
 
 /**
  * 项目管理器

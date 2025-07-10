@@ -198,7 +198,8 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { directoryManager } from '../utils/DirectoryManager'
-import { projectManager, type ProjectConfig } from '../utils/ProjectManager'
+import { projectManager } from '../utils/ProjectManager'
+import type { ProjectConfig } from '../types'
 import { ContextMenu, ContextMenuItem } from '@imengyu/vue3-context-menu'
 import EditProjectDialog from '../components/EditProjectDialog.vue'
 
