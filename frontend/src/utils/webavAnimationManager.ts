@@ -3,7 +3,7 @@
  * 负责将关键帧动画配置应用到WebAV sprite，并管理动画的生命周期
  */
 
-import type { TimelineItem } from '../types'
+import type { LocalTimelineItem } from '../types'
 import { convertToWebAVAnimation, isValidAnimationConfig } from './animationConverter'
 import { hasAnimation } from './unifiedKeyframeUtils'
 import { debugWebAVAnimationUpdate, isKeyframeDebugEnabled } from './keyframeDebugger'

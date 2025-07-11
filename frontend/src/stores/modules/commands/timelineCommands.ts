@@ -2,22 +2,23 @@ import { generateCommandId } from '../../../utils/idGenerator'
 import { framesToMicroseconds, framesToTimecode } from '../../utils/timeUtils'
 import type {
   SimpleCommand,
-  TimelineItem,
-  MediaItem,
+  LocalTimelineItem,
+  LocalMediaItem,
   Track,
   TrackType,
   VideoTimeRange,
   ImageTimeRange,
-  TimelineItemData,
+  LocalTimelineItemData,
   TransformData,
   TextMediaConfig,
 } from '../../../types'
 import {
   isVideoTimeRange,
   isImageTimeRange,
-  createTimelineItemData,
+  createLocalTimelineItemData,
   getVisualPropsFromData,
   getAudioPropsFromData,
+  hasVisualProps,
   hasAudioProps,
 } from '../../../types'
 import { VideoVisibleSprite } from '../../../utils/VideoVisibleSprite'
@@ -35,21 +36,21 @@ import type { VisibleSprite } from '@webav/av-cliper'
 export class AddTimelineItemCommand implements SimpleCommand {
   public readonly id: string
   public readonly description: string
-  private originalTimelineItemData: TimelineItemData // 保存原始timelineItem数据用于重建
+  private originalTimelineItemData: LocalTimelineItemData // 保存原始timelineItem数据用于重建
 
   constructor(
-    timelineItem: TimelineItem, // 注意：不再保存timelineItem引用，只保存重建数据
+    timelineItem: LocalTimelineItem, // 注意：不再保存timelineItem引用，只保存重建数据
     private timelineModule: {
-      addTimelineItem: (item: TimelineItem) => void
+      addTimelineItem: (item: LocalTimelineItem) => void
       removeTimelineItem: (id: string) => void
-      getTimelineItem: (id: string) => TimelineItem | undefined
+      getTimelineItem: (id: string) => LocalTimelineItem | undefined
     },
     private webavModule: {
       addSprite: (sprite: VisibleSprite) => Promise<boolean>
       removeSprite: (sprite: VisibleSprite) => boolean
     },
     private mediaModule: {
-      getMediaItem: (id: string) => MediaItem | undefined
+      getMediaItem: (id: string) => LocalMediaItem | undefined
     },
   ) {
     this.id = generateCommandId()
@@ -57,14 +58,14 @@ export class AddTimelineItemCommand implements SimpleCommand {
     this.description = `添加时间轴项目: ${mediaItem?.name || '未知素材'}`
 
     // 保存原始数据用于重建sprite（类型安全版本）
-    this.originalTimelineItemData = createTimelineItemData(timelineItem)
+    this.originalTimelineItemData = createLocalTimelineItemData(timelineItem)
   }
 
   /**
    * 从原始素材重建完整的TimelineItem
    * 统一重建逻辑：每次都从原始素材完全重新创建
    */
-  private async rebuildTimelineItem(): Promise<TimelineItem> {
+  private async rebuildTimelineItem(): Promise<LocalTimelineItem> {
     console.log('🔄 开始从源头重建时间轴项目...')
 
     // 1. 获取原始素材
@@ -96,7 +97,7 @@ export class AddTimelineItemCommand implements SimpleCommand {
     newSprite.zIndex = (this.originalTimelineItemData.config as any).zIndex
 
     // 5. 创建新的TimelineItem（先不设置缩略图）
-    const newTimelineItem: TimelineItem = reactive({
+    const newTimelineItem: LocalTimelineItem = reactive({
       id: this.originalTimelineItemData.id,
       mediaItemId: this.originalTimelineItemData.mediaItemId,
       trackId: this.originalTimelineItemData.trackId,
@@ -175,7 +176,7 @@ export class AddTimelineItemCommand implements SimpleCommand {
    * @param timelineItem 添加的时间轴项目
    * @param mediaItem 对应的媒体项目
    */
-  private async regenerateThumbnailForAddedItem(timelineItem: TimelineItem, mediaItem: MediaItem) {
+  private async regenerateThumbnailForAddedItem(timelineItem: LocalTimelineItem, mediaItem: LocalMediaItem) {
     // 音频不需要缩略图
     if (mediaItem.mediaType === 'audio') {
       console.log('🎵 音频不需要缩略图，跳过生成')
@@ -208,22 +209,22 @@ export class AddTimelineItemCommand implements SimpleCommand {
 export class RemoveTimelineItemCommand implements SimpleCommand {
   public readonly id: string
   public readonly description: string
-  private originalTimelineItemData: TimelineItemData // 保存重建所需的完整元数据
+  private originalTimelineItemData: LocalTimelineItemData // 保存重建所需的完整元数据
 
   constructor(
     private timelineItemId: string,
-    timelineItem: TimelineItem, // 要删除的时间轴项目
+    timelineItem: LocalTimelineItem, // 要删除的时间轴项目
     private timelineModule: {
-      addTimelineItem: (item: TimelineItem) => void
+      addTimelineItem: (item: LocalTimelineItem) => void
       removeTimelineItem: (id: string) => void
-      getTimelineItem: (id: string) => TimelineItem | undefined
+      getTimelineItem: (id: string) => LocalTimelineItem | undefined
     },
     private webavModule: {
       addSprite: (sprite: VisibleSprite) => Promise<boolean>
       removeSprite: (sprite: VisibleSprite) => boolean
     },
     private mediaModule: {
-      getMediaItem: (id: string) => MediaItem | undefined
+      getMediaItem: (id: string) => LocalMediaItem | undefined
     },
   ) {
     this.id = generateCommandId()
@@ -232,7 +233,7 @@ export class RemoveTimelineItemCommand implements SimpleCommand {
     this.description = `移除时间轴项目: ${mediaItem?.name || '未知素材'}`
 
     // 🎯 关键：保存重建所需的完整元数据，而不是对象引用
-    this.originalTimelineItemData = createTimelineItemData(timelineItem)
+    this.originalTimelineItemData = createLocalTimelineItemData(timelineItem)
 
     console.log('💾 保存删除项目的重建数据:', {
       id: this.originalTimelineItemData.id,
@@ -247,7 +248,7 @@ export class RemoveTimelineItemCommand implements SimpleCommand {
    * 从原始素材重建sprite和timelineItem
    * 遵循"从源头重建"原则，每次都完全重新创建
    */
-  private async rebuildTimelineItem(): Promise<TimelineItem> {
+  private async rebuildTimelineItem(): Promise<LocalTimelineItem> {
     console.log('🔄 开始从源头重建时间轴项目...')
 
     // 1. 获取原始素材
@@ -279,7 +280,7 @@ export class RemoveTimelineItemCommand implements SimpleCommand {
     newSprite.zIndex = (this.originalTimelineItemData.config as any).zIndex
 
     // 5. 创建新的TimelineItem（先不设置缩略图）
-    const newTimelineItem: TimelineItem = reactive({
+    const newTimelineItem: LocalTimelineItem = reactive({
       id: this.originalTimelineItemData.id,
       mediaItemId: this.originalTimelineItemData.mediaItemId,
       trackId: this.originalTimelineItemData.trackId,
@@ -362,8 +363,8 @@ export class RemoveTimelineItemCommand implements SimpleCommand {
    * @param mediaItem 对应的媒体项目
    */
   private async regenerateThumbnailForRemovedItem(
-    timelineItem: TimelineItem,
-    mediaItem: MediaItem,
+    timelineItem: LocalTimelineItem,
+    mediaItem: LocalMediaItem,
   ) {
     // 音频不需要缩略图
     if (mediaItem.mediaType === 'audio') {
@@ -397,25 +398,25 @@ export class RemoveTimelineItemCommand implements SimpleCommand {
 export class DuplicateTimelineItemCommand implements SimpleCommand {
   public readonly id: string
   public readonly description: string
-  private originalTimelineItemData: TimelineItemData // 保存原始项目的重建元数据
+  private originalTimelineItemData: LocalTimelineItemData // 保存原始项目的重建元数据
   public readonly newTimelineItemId: string // 新创建的项目ID
 
   constructor(
     private originalTimelineItemId: string,
-    originalTimelineItem: TimelineItem, // 要复制的原始时间轴项目
+    originalTimelineItem: LocalTimelineItem, // 要复制的原始时间轴项目
     private newPositionFrames: number, // 新项目的时间位置（帧数）
     private timelineModule: {
-      addTimelineItem: (item: TimelineItem) => void
+      addTimelineItem: (item: LocalTimelineItem) => void
       removeTimelineItem: (id: string) => void
-      getTimelineItem: (id: string) => TimelineItem | undefined
-      setupBidirectionalSync: (item: TimelineItem) => void
+      getTimelineItem: (id: string) => LocalTimelineItem | undefined
+      setupBidirectionalSync: (item: LocalTimelineItem) => void
     },
     private webavModule: {
       addSprite: (sprite: VisibleSprite) => Promise<boolean>
       removeSprite: (sprite: VisibleSprite) => boolean
     },
     private mediaModule: {
-      getMediaItem: (id: string) => MediaItem | undefined
+      getMediaItem: (id: string) => LocalMediaItem | undefined
     },
     private canvasResolution: { width: number; height: number }, // 画布分辨率
   ) {
@@ -424,7 +425,7 @@ export class DuplicateTimelineItemCommand implements SimpleCommand {
     this.description = `复制时间轴项目: ${mediaItem?.name || '未知素材'}`
 
     // 保存原始项目的完整重建元数据
-    this.originalTimelineItemData = createTimelineItemData(originalTimelineItem)
+    this.originalTimelineItemData = createLocalTimelineItemData(originalTimelineItem)
 
     // 生成新项目的ID
     this.newTimelineItemId = `timeline_item_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`
@@ -433,7 +434,7 @@ export class DuplicateTimelineItemCommand implements SimpleCommand {
   /**
    * 从原始素材重建复制的时间轴项目
    */
-  private async rebuildDuplicatedItem(): Promise<TimelineItem> {
+  private async rebuildDuplicatedItem(): Promise<LocalTimelineItem> {
     // 根据媒体类型分发到对应的重建方法
     switch (this.originalTimelineItemData.mediaType) {
       case 'text':
@@ -452,7 +453,7 @@ export class DuplicateTimelineItemCommand implements SimpleCommand {
   /**
    * 重建视频时间轴项目
    */
-  private async rebuildVideoItem(): Promise<TimelineItem> {
+  private async rebuildVideoItem(): Promise<LocalTimelineItem> {
     console.log('🔄 [DuplicateTimelineItemCommand] 重建视频时间轴项目...')
 
     const mediaItem = this.mediaModule.getMediaItem(this.originalTimelineItemData.mediaItemId)
@@ -486,7 +487,7 @@ export class DuplicateTimelineItemCommand implements SimpleCommand {
     await this.applyVisualProperties(newSprite)
 
     // 创建新的TimelineItem
-    const newTimelineItem: TimelineItem = reactive({
+    const newTimelineItem: LocalTimelineItem = reactive({
       id: this.newTimelineItemId,
       mediaItemId: this.originalTimelineItemData.mediaItemId,
       trackId: this.originalTimelineItemData.trackId,
@@ -516,7 +517,7 @@ export class DuplicateTimelineItemCommand implements SimpleCommand {
   /**
    * 重建图片时间轴项目
    */
-  private async rebuildImageItem(): Promise<TimelineItem> {
+  private async rebuildImageItem(): Promise<LocalTimelineItem> {
     console.log('🔄 [DuplicateTimelineItemCommand] 重建图片时间轴项目...')
 
     const mediaItem = this.mediaModule.getMediaItem(this.originalTimelineItemData.mediaItemId)
@@ -549,7 +550,7 @@ export class DuplicateTimelineItemCommand implements SimpleCommand {
     await this.applyVisualProperties(newSprite)
 
     // 创建新的TimelineItem
-    const newTimelineItem: TimelineItem = reactive({
+    const newTimelineItem: LocalTimelineItem = reactive({
       id: this.newTimelineItemId,
       mediaItemId: this.originalTimelineItemData.mediaItemId,
       trackId: this.originalTimelineItemData.trackId,
@@ -576,7 +577,7 @@ export class DuplicateTimelineItemCommand implements SimpleCommand {
   /**
    * 重建音频时间轴项目
    */
-  private async rebuildAudioItem(): Promise<TimelineItem> {
+  private async rebuildAudioItem(): Promise<LocalTimelineItem> {
     console.log('🔄 [DuplicateTimelineItemCommand] 重建音频时间轴项目...')
 
     const mediaItem = this.mediaModule.getMediaItem(this.originalTimelineItemData.mediaItemId)
@@ -619,7 +620,7 @@ export class DuplicateTimelineItemCommand implements SimpleCommand {
     }
 
     // 创建新的TimelineItem
-    const newTimelineItem: TimelineItem = reactive({
+    const newTimelineItem: LocalTimelineItem = reactive({
       id: this.newTimelineItemId,
       mediaItemId: this.originalTimelineItemData.mediaItemId,
       trackId: this.originalTimelineItemData.trackId,
@@ -681,7 +682,7 @@ export class DuplicateTimelineItemCommand implements SimpleCommand {
   /**
    * 重建文本时间轴项目（文本clip没有MediaItem）
    */
-  private async rebuildTextItem(): Promise<TimelineItem> {
+  private async rebuildTextItem(): Promise<LocalTimelineItem> {
     console.log('🔄 [DuplicateTimelineItemCommand] 重建文本时间轴项目...')
 
     // 从保存的配置中获取文本内容和样式
@@ -748,7 +749,7 @@ export class DuplicateTimelineItemCommand implements SimpleCommand {
     newSprite.zIndex = textConfig.zIndex
 
     // 创建新的TimelineItem
-    const newTimelineItem: TimelineItem = reactive({
+    const newTimelineItem: LocalTimelineItem = reactive({
       id: this.newTimelineItemId,
       mediaItemId: '', // 文本项目不需要媒体库项目
       trackId: this.originalTimelineItemData.trackId,
@@ -821,8 +822,8 @@ export class DuplicateTimelineItemCommand implements SimpleCommand {
    * @param mediaItem 对应的媒体项目
    */
   private async regenerateThumbnailForDuplicatedItem(
-    timelineItem: TimelineItem,
-    mediaItem: MediaItem,
+    timelineItem: LocalTimelineItem,
+    mediaItem: LocalMediaItem,
   ) {
     // 文本和音频clip不需要缩略图
     if (timelineItem.mediaType === 'text' || timelineItem.mediaType === 'audio') {
@@ -865,10 +866,10 @@ export class MoveTimelineItemCommand implements SimpleCommand {
     private newTrackId: string, // 新的轨道ID
     private timelineModule: {
       updateTimelineItemPosition: (id: string, positionFrames: number, trackId?: string) => void
-      getTimelineItem: (id: string) => TimelineItem | undefined
+      getTimelineItem: (id: string) => LocalTimelineItem | undefined
     },
     private mediaModule: {
-      getMediaItem: (id: string) => MediaItem | undefined
+      getMediaItem: (id: string) => LocalMediaItem | undefined
     },
   ) {
     this.id = generateCommandId()
@@ -1022,10 +1023,10 @@ export class UpdateTransformCommand implements SimpleCommand {
     },
     private timelineModule: {
       updateTimelineItemTransform: (id: string, transform: TransformData) => void
-      getTimelineItem: (id: string) => TimelineItem | undefined
+      getTimelineItem: (id: string) => LocalTimelineItem | undefined
     },
     private mediaModule: {
-      getMediaItem: (id: string) => MediaItem | undefined
+      getMediaItem: (id: string) => LocalMediaItem | undefined
     },
     private clipOperationsModule?: {
       updateTimelineItemPlaybackRate: (id: string, rate: number) => void
@@ -1384,25 +1385,25 @@ export class UpdateTransformCommand implements SimpleCommand {
 export class SplitTimelineItemCommand implements SimpleCommand {
   public readonly id: string
   public readonly description: string
-  private originalTimelineItemData: TimelineItemData // 保存原始项目的重建数据
+  private originalTimelineItemData: LocalTimelineItemData // 保存原始项目的重建数据
   private firstItemId: string // 分割后第一个项目的ID
   private secondItemId: string // 分割后第二个项目的ID
 
   constructor(
     private originalTimelineItemId: string,
-    originalTimelineItem: TimelineItem, // 要分割的原始时间轴项目
+    originalTimelineItem: LocalTimelineItem, // 要分割的原始时间轴项目
     private splitTimeFrames: number, // 分割时间点（帧数）
     private timelineModule: {
-      addTimelineItem: (item: TimelineItem) => void
+      addTimelineItem: (item: LocalTimelineItem) => void
       removeTimelineItem: (id: string) => void
-      getTimelineItem: (id: string) => TimelineItem | undefined
+      getTimelineItem: (id: string) => LocalTimelineItem | undefined
     },
     private webavModule: {
       addSprite: (sprite: VisibleSprite) => Promise<boolean>
       removeSprite: (sprite: VisibleSprite) => boolean
     },
     private mediaModule: {
-      getMediaItem: (id: string) => MediaItem | undefined
+      getMediaItem: (id: string) => LocalMediaItem | undefined
     },
   ) {
     this.id = generateCommandId()
@@ -1411,7 +1412,7 @@ export class SplitTimelineItemCommand implements SimpleCommand {
     this.description = `分割时间轴项目: ${mediaItem?.name || '未知素材'} (在 ${framesToTimecode(splitTimeFrames)})`
 
     // 🎯 关键：保存原始项目的完整重建元数据
-    this.originalTimelineItemData = createTimelineItemData(originalTimelineItem)
+    this.originalTimelineItemData = createLocalTimelineItemData(originalTimelineItem)
 
     // 生成分割后项目的ID
     this.firstItemId = Date.now().toString() + Math.random().toString(36).substring(2, 11)
@@ -1433,8 +1434,8 @@ export class SplitTimelineItemCommand implements SimpleCommand {
    * 遵循"从源头重建"原则，每次都完全重新创建
    */
   private async rebuildSplitItems(): Promise<{
-    firstItem: TimelineItem
-    secondItem: TimelineItem
+    firstItem: LocalTimelineItem
+    secondItem: LocalTimelineItem
   }> {
     console.log('🔄 开始从源头重建分割后的时间轴项目...')
 
@@ -1548,7 +1549,7 @@ export class SplitTimelineItemCommand implements SimpleCommand {
     }
 
     // 5. 创建新的TimelineItem（先不设置缩略图）
-    const firstItem: TimelineItem = reactive({
+    const firstItem: LocalTimelineItem = reactive({
       id: this.firstItemId,
       mediaItemId: this.originalTimelineItemData.mediaItemId,
       trackId: this.originalTimelineItemData.trackId,
@@ -1561,7 +1562,7 @@ export class SplitTimelineItemCommand implements SimpleCommand {
       mediaName: this.originalTimelineItemData.mediaName,
     })
 
-    const secondItem: TimelineItem = reactive({
+    const secondItem: LocalTimelineItem = reactive({
       id: this.secondItemId,
       mediaItemId: this.originalTimelineItemData.mediaItemId,
       trackId: this.originalTimelineItemData.trackId,
@@ -1592,7 +1593,7 @@ export class SplitTimelineItemCommand implements SimpleCommand {
    * 从原始素材重建原始项目
    * 用于撤销分割操作
    */
-  private async rebuildOriginalItem(): Promise<TimelineItem> {
+  private async rebuildOriginalItem(): Promise<LocalTimelineItem> {
     console.log('🔄 开始从源头重建原始时间轴项目...')
 
     // 1. 获取原始素材
@@ -1663,7 +1664,7 @@ export class SplitTimelineItemCommand implements SimpleCommand {
     }
 
     // 5. 创建新的TimelineItem（先不设置缩略图）
-    const newTimelineItem: TimelineItem = reactive({
+    const newTimelineItem: LocalTimelineItem = reactive({
       id: this.originalTimelineItemData.id,
       mediaItemId: this.originalTimelineItemData.mediaItemId,
       trackId: this.originalTimelineItemData.trackId,
@@ -1694,8 +1695,8 @@ export class SplitTimelineItemCommand implements SimpleCommand {
    * @param mediaItem 对应的媒体项目
    */
   private async regenerateThumbnailForOriginalItem(
-    timelineItem: TimelineItem,
-    mediaItem: MediaItem,
+    timelineItem: LocalTimelineItem,
+    mediaItem: LocalMediaItem,
   ) {
     // 音频不需要缩略图
     if (mediaItem.mediaType === 'audio') {
@@ -1794,9 +1795,9 @@ export class SplitTimelineItemCommand implements SimpleCommand {
    * @param mediaItem 对应的媒体项目
    */
   private async regenerateThumbnailsForSplitItems(
-    firstItem: TimelineItem,
-    secondItem: TimelineItem,
-    mediaItem: MediaItem,
+    firstItem: LocalTimelineItem,
+    secondItem: LocalTimelineItem,
+    mediaItem: LocalMediaItem,
   ) {
     // 音频不需要缩略图
     if (mediaItem.mediaType === 'audio') {
@@ -2005,7 +2006,7 @@ export class RemoveTrackCommand implements SimpleCommand {
   public readonly id: string
   public readonly description: string
   private trackData: Track // 保存被删除的轨道数据
-  private affectedTimelineItems: TimelineItemData[] = [] // 保存被删除的时间轴项目的重建元数据
+  private affectedTimelineItems: LocalTimelineItemData[] = [] // 保存被删除的时间轴项目的重建元数据
 
   constructor(
     private trackId: string,
@@ -2013,25 +2014,25 @@ export class RemoveTrackCommand implements SimpleCommand {
       addTrack: (type: TrackType, name?: string) => Track
       removeTrack: (
         trackId: string,
-        timelineItems: Ref<TimelineItem[]>,
+        timelineItems: Ref<LocalTimelineItem[]>,
         removeTimelineItemCallback?: (id: string) => void,
       ) => void
       getTrack: (trackId: string) => Track | undefined
       tracks: { value: Track[] }
     },
     private timelineModule: {
-      addTimelineItem: (item: TimelineItem) => void
+      addTimelineItem: (item: LocalTimelineItem) => void
       removeTimelineItem: (id: string) => void
-      getTimelineItem: (id: string) => TimelineItem | undefined
-      setupBidirectionalSync: (item: TimelineItem) => void
-      timelineItems: { value: TimelineItem[] }
+      getTimelineItem: (id: string) => LocalTimelineItem | undefined
+      setupBidirectionalSync: (item: LocalTimelineItem) => void
+      timelineItems: { value: LocalTimelineItem[] }
     },
     private webavModule: {
       addSprite: (sprite: VisibleSprite) => Promise<boolean>
       removeSprite: (sprite: VisibleSprite) => boolean
     },
     private mediaModule: {
-      getMediaItem: (id: string) => MediaItem | undefined
+      getMediaItem: (id: string) => LocalMediaItem | undefined
     },
   ) {
     this.id = generateCommandId()
@@ -2050,7 +2051,7 @@ export class RemoveTrackCommand implements SimpleCommand {
       (item) => item.trackId === trackId,
     )
     this.affectedTimelineItems = affectedItems.map((item) => {
-      return createTimelineItemData(item)
+      return createLocalTimelineItemData(item)
     })
 
     console.log(
@@ -2061,10 +2062,10 @@ export class RemoveTrackCommand implements SimpleCommand {
   /**
    * 从原始素材重建时间轴项目
    */
-  private async rebuildTimelineItem(itemData: TimelineItemData): Promise<TimelineItem> {
+  private async rebuildTimelineItem(itemData: LocalTimelineItemData): Promise<LocalTimelineItem> {
     // 特殊处理文本类型的时间轴项目
     if (itemData.mediaType === 'text') {
-      return await this.rebuildTextTimelineItem(itemData as TimelineItemData<'text'>)
+      return await this.rebuildTextTimelineItem(itemData as LocalTimelineItemData<'text'>)
     }
 
     const mediaItem = this.mediaModule.getMediaItem(itemData.mediaItemId)
@@ -2120,7 +2121,7 @@ export class RemoveTrackCommand implements SimpleCommand {
     newSprite.zIndex = (itemData.config as any).zIndex
 
     // 创建新的TimelineItem
-    const newTimelineItem: TimelineItem = reactive({
+    const newTimelineItem: LocalTimelineItem = reactive({
       id: itemData.id,
       mediaItemId: itemData.mediaItemId,
       trackId: itemData.trackId,
@@ -2139,7 +2140,7 @@ export class RemoveTrackCommand implements SimpleCommand {
   /**
    * 重建文本时间轴项目
    */
-  private async rebuildTextTimelineItem(itemData: TimelineItemData<'text'>): Promise<TimelineItem<'text'>> {
+  private async rebuildTextTimelineItem(itemData: LocalTimelineItemData<'text'>): Promise<LocalTimelineItem<'text'>> {
     console.log('🔄 [RemoveTrackCommand] 重建文本时间轴项目...')
 
     // 从保存的配置中获取文本内容和样式
@@ -2181,7 +2182,7 @@ export class RemoveTrackCommand implements SimpleCommand {
     newSprite.zIndex = textConfig.zIndex
 
     // 创建新的TimelineItem
-    const newTimelineItem: TimelineItem<'text'> = reactive({
+    const newTimelineItem: LocalTimelineItem<'text'> = reactive({
       id: itemData.id,
       mediaItemId: '', // 文本项目不需要媒体库项目
       trackId: itemData.trackId,
@@ -2292,10 +2293,10 @@ export class ToggleTrackVisibilityCommand implements SimpleCommand {
     private trackId: string,
     private trackModule: {
       getTrack: (trackId: string) => Track | undefined
-      toggleTrackVisibility: (trackId: string, timelineItems?: Ref<TimelineItem[]>) => void
+      toggleTrackVisibility: (trackId: string, timelineItems?: Ref<LocalTimelineItem[]>) => void
     },
     private timelineModule: {
-      timelineItems: { value: TimelineItem[] }
+      timelineItems: { value: LocalTimelineItem[] }
     },
   ) {
     this.id = generateCommandId()
@@ -2387,10 +2388,10 @@ export class ToggleTrackMuteCommand implements SimpleCommand {
     private trackId: string,
     private trackModule: {
       getTrack: (trackId: string) => Track | undefined
-      toggleTrackMute: (trackId: string, timelineItems?: Ref<TimelineItem[]>) => void
+      toggleTrackMute: (trackId: string, timelineItems?: Ref<LocalTimelineItem[]>) => void
     },
     private timelineModule: {
-      timelineItems: Ref<TimelineItem[]>
+      timelineItems: Ref<LocalTimelineItem[]>
     },
   ) {
     this.id = `toggle-track-mute-${trackId}-${Date.now()}`
@@ -2474,10 +2475,10 @@ export class ResizeTimelineItemCommand implements SimpleCommand {
     originalTimeRange: VideoTimeRange | ImageTimeRange, // 原始时间范围
     newTimeRange: VideoTimeRange | ImageTimeRange, // 新的时间范围
     private timelineModule: {
-      getTimelineItem: (id: string) => TimelineItem | undefined
+      getTimelineItem: (id: string) => LocalTimelineItem | undefined
     },
     private mediaModule: {
-      getMediaItem: (id: string) => MediaItem | undefined
+      getMediaItem: (id: string) => LocalMediaItem | undefined
     },
   ) {
     this.id = generateCommandId()
@@ -2635,10 +2636,10 @@ export class SelectTimelineItemsCommand implements SimpleCommand {
       syncAVCanvasSelection: () => void
     },
     private timelineModule: {
-      getTimelineItem: (id: string) => TimelineItem | undefined
+      getTimelineItem: (id: string) => LocalTimelineItem | undefined
     },
     private mediaModule: {
-      getMediaItem: (id: string) => MediaItem | undefined
+      getMediaItem: (id: string) => LocalMediaItem | undefined
     },
   ) {
     this.id = generateCommandId()

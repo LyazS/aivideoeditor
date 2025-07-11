@@ -39,7 +39,7 @@ import { useDragUtils } from '../composables/useDragUtils'
 import { usePlaybackControls } from '../composables/usePlaybackControls'
 import { framesToTimecode, alignFramesToFrame } from '../stores/utils/timeUtils'
 import { hasOverlapInTrack } from '../utils/timeOverlapUtils'
-import type { TimelineItem, Track, VideoTimeRange, ImageTimeRange } from '../types'
+import type { LocalTimelineItem, Track, VideoTimeRange, ImageTimeRange } from '../types'
 import { isVideoTimeRange } from '../types'
 
 // TimelineBaseClip通用接口

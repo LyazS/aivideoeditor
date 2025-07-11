@@ -4,7 +4,7 @@ import { MP4Clip, ImgClip, AudioClip } from '@webav/av-cliper'
 import { VideoVisibleSprite } from '../utils/VideoVisibleSprite'
 import { ImageVisibleSprite } from '../utils/ImageVisibleSprite'
 import type { VideoTimeRange, ImageTimeRange } from '../types'
-import { hasVisualProps } from '../types'
+// 删除 hasVisualProps 导入，因为已被删除
 import { useVideoStore } from '../stores/videoStore'
 import {
   framesToMicroseconds,

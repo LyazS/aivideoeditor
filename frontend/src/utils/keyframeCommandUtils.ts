@@ -3,7 +3,7 @@
  * 提供通过命令系统执行关键帧操作的高级接口
  */
 
-import type { TimelineItem, KeyframeCommandExecutor, BatchKeyframeOperation } from '../types'
+import type { LocalTimelineItem, KeyframeCommandExecutor, BatchKeyframeOperation } from '../types'
 import {
   CreateKeyframeCommand,
   DeleteKeyframeCommand,

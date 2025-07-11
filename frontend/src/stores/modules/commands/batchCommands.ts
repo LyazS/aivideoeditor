@@ -1,6 +1,6 @@
 import { generateCommandId } from '../../../utils/idGenerator'
 import { BaseBatchCommand } from '../historyModule'
-import type { SimpleCommand, TimelineItem, MediaItem, Track } from '../../../types'
+import type { SimpleCommand, LocalTimelineItem, LocalMediaItem, Track } from '../../../types'
 import { RemoveTimelineItemCommand, MoveTimelineItemCommand } from './timelineCommands'
 import type { VisibleSprite } from '@webav/av-cliper'
 
@@ -12,9 +12,9 @@ export class BatchDeleteCommand extends BaseBatchCommand {
   constructor(
     private timelineItemIds: string[],
     private timelineModule: {
-      getTimelineItem: (id: string) => TimelineItem | undefined
-      timelineItems: { value: TimelineItem[] }
-      addTimelineItem: (item: TimelineItem) => void
+      getTimelineItem: (id: string) => LocalTimelineItem | undefined
+      timelineItems: { value: LocalTimelineItem[] }
+      addTimelineItem: (item: LocalTimelineItem) => void
       removeTimelineItem: (id: string) => void
     },
     private webavModule: {
@@ -22,7 +22,7 @@ export class BatchDeleteCommand extends BaseBatchCommand {
       removeSprite: (sprite: VisibleSprite) => boolean
     },
     private mediaModule: {
-      getMediaItem: (id: string) => MediaItem | undefined
+      getMediaItem: (id: string) => LocalMediaItem | undefined
     },
   ) {
     super(`批量删除 ${timelineItemIds.length} 个时间轴项目`)
@@ -58,14 +58,14 @@ export class BatchDeleteCommand extends BaseBatchCommand {
 export class BatchAutoArrangeTrackCommand extends BaseBatchCommand {
   constructor(
     private trackId: string,
-    private timelineItems: TimelineItem[],
+    private timelineItems: LocalTimelineItem[],
     private timelineModule: {
-      getTimelineItem: (id: string) => TimelineItem | undefined
-      timelineItems: { value: TimelineItem[] }
+      getTimelineItem: (id: string) => LocalTimelineItem | undefined
+      timelineItems: { value: LocalTimelineItem[] }
       updateTimelineItemPosition: (id: string, position: number, trackId?: string) => void
     },
     private mediaModule: {
-      getMediaItem: (id: string) => MediaItem | undefined
+      getMediaItem: (id: string) => LocalMediaItem | undefined
     },
     private trackModule: {
       getTrack: (trackId: string) => Track | undefined

@@ -1,4 +1,4 @@
-import type { TimelineItem, VideoTimeRange, ImageTimeRange } from '../../types'
+import type { LocalTimelineItem, VideoTimeRange, ImageTimeRange } from '../../types'
 import { isVideoTimeRange } from '../../types'
 
 // ==================== 时间范围工具 ====================
@@ -10,7 +10,7 @@ import { isVideoTimeRange } from '../../types'
  * @param newTimeRange 新的时间范围（可选，如果不提供则从sprite获取）
  */
 export function syncTimeRange(
-  timelineItem: TimelineItem,
+  timelineItem: LocalTimelineItem,
   newTimeRange?: Partial<VideoTimeRange>,
 ): void {
   const sprite = timelineItem.sprite

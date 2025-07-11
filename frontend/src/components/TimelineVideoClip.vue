@@ -90,7 +90,7 @@ import ClipTooltip from './ClipTooltip.vue'
 
 import { framesToTimecode } from '../stores/utils/timeUtils'
 import { relativeFrameToAbsoluteFrame } from '../utils/unifiedKeyframeUtils'
-import type { TimelineItem, Track } from '../types'
+import type { LocalTimelineItem, Track } from '../types'
 
 interface Props {
   timelineItem: TimelineItem

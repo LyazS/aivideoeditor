@@ -1,4 +1,4 @@
-import type { TimelineItem } from '../../types'
+import type { LocalTimelineItem } from '../../types'
 
 // ==================== 时长计算工具 ====================
 
@@ -9,7 +9,7 @@ import type { TimelineItem } from '../../types'
  * @param timelineItems 时间轴项目数组
  * @returns 内容结束时间（帧数）
  */
-export function calculateContentEndTimeFrames(timelineItems: TimelineItem[]): number {
+export function calculateContentEndTimeFrames(timelineItems: LocalTimelineItem[]): number {
   if (timelineItems.length === 0) return 0
   return Math.max(
     ...timelineItems.map((item) => {
@@ -25,7 +25,7 @@ export function calculateContentEndTimeFrames(timelineItems: TimelineItem[]): nu
  * @returns 总时长（帧数）
  */
 export function calculateTotalDurationFrames(
-  timelineItems: TimelineItem[],
+  timelineItems: LocalTimelineItem[],
   timelineDurationFrames: number,
 ): number {
   if (timelineItems.length === 0) return timelineDurationFrames

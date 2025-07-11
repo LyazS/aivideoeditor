@@ -431,7 +431,7 @@ import NumberInput from './NumberInput.vue'
 import SliderInput from './SliderInput.vue'
 import KeyframeControls from './KeyframeControls.vue'
 import TransformControls from './TransformControls.vue'
-import type { TimelineItem, TextStyleConfig } from '../types'
+import type { LocalTimelineItem, TextStyleConfig } from '../types'
 
 interface Props {
   selectedTimelineItem: TimelineItem<'text'> | null

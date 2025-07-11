@@ -3,7 +3,7 @@
  * 统一处理所有时间范围重叠检测的逻辑，避免代码重复
  */
 
-import type { TimelineItem, VideoTimeRange, ImageTimeRange, OverlapTimeRange, OverlapResult, ConflictInfo } from '../types'
+import type { LocalTimelineItem, VideoTimeRange, ImageTimeRange, OverlapTimeRange, OverlapResult, ConflictInfo } from '../types'
 
 // ==================== 核心重叠检测函数 ====================
 

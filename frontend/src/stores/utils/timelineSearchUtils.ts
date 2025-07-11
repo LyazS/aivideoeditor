@@ -1,4 +1,4 @@
-import type { MediaItem, TimelineItem } from '../../types'
+import type { LocalMediaItem, LocalTimelineItem } from '../../types'
 
 // ==================== 查找工具 ====================
 
@@ -10,8 +10,8 @@ import type { MediaItem, TimelineItem } from '../../types'
  */
 export function getTimelineItemAtFrames(
   frames: number,
-  timelineItems: TimelineItem[],
-): TimelineItem | null {
+  timelineItems: LocalTimelineItem[],
+): LocalTimelineItem | null {
   return (
     timelineItems.find((item) => {
       const timeRange = item.timeRange // 直接使用响应式的timeRange
@@ -30,8 +30,8 @@ export function getTimelineItemAtFrames(
  */
 export function getTimelineItemsByTrack(
   trackId: string,
-  timelineItems: TimelineItem[],
-): TimelineItem[] {
+  timelineItems: LocalTimelineItem[],
+): LocalTimelineItem[] {
   return timelineItems.filter((item) => item.trackId === trackId)
 }
 
@@ -42,9 +42,9 @@ export function getTimelineItemsByTrack(
  * @returns 孤立的时间轴项目
  */
 export function findOrphanedTimelineItems(
-  timelineItems: TimelineItem[],
-  mediaItems: MediaItem[],
-): TimelineItem[] {
+  timelineItems: LocalTimelineItem[],
+  mediaItems: LocalMediaItem[],
+): LocalTimelineItem[] {
   return timelineItems.filter(
     (timelineItem) => !mediaItems.find((mediaItem) => mediaItem.id === timelineItem.mediaItemId),
   )
@@ -58,8 +58,8 @@ export function findOrphanedTimelineItems(
  */
 export function findTimelineItemBySprite(
   sprite: unknown,
-  timelineItems: TimelineItem[],
-): TimelineItem | null {
+  timelineItems: LocalTimelineItem[],
+): LocalTimelineItem | null {
   return timelineItems.find((item) => item.sprite === sprite) || null
 }
 
@@ -71,8 +71,8 @@ export function findTimelineItemBySprite(
  */
 export function getTimelineItemsAtFrames(
   frames: number,
-  timelineItems: TimelineItem[],
-): TimelineItem[] {
+  timelineItems: LocalTimelineItem[],
+): LocalTimelineItem[] {
   return timelineItems.filter((item) => {
     const timeRange = item.timeRange // 直接使用响应式的timeRange
     const startFrames = timeRange.timelineStartTime
@@ -91,8 +91,8 @@ export function getTimelineItemsAtFrames(
 export function getTimelineItemAtTrackAndFrames(
   trackId: string,
   frames: number,
-  timelineItems: TimelineItem[],
-): TimelineItem | null {
+  timelineItems: LocalTimelineItem[],
+): LocalTimelineItem | null {
   return (
     timelineItems.find((item) => {
       if (item.trackId !== trackId) return false
@@ -110,7 +110,7 @@ export function getTimelineItemAtTrackAndFrames(
  * @param currentFrame 当前播放帧数
  * @returns 是否在时间范围内
  */
-export function isPlayheadInTimelineItem(item: TimelineItem, currentFrame: number): boolean {
+export function isPlayheadInTimelineItem(item: LocalTimelineItem, currentFrame: number): boolean {
   // 允许播放头在clip结束位置进行关键帧操作，这样用户可以在第4帧位置操作3帧的视频
   // 这主要是为了配合播放头吸附功能，用户习惯在clip结束后的位置进行操作
   return (

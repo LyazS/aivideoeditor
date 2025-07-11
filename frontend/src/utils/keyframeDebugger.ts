@@ -3,7 +3,7 @@
  * 用于调试和验证关键帧系统的工作状态
  */
 
-import type { TimelineItem } from '../types'
+import type { LocalTimelineItem } from '../types'
 import { isValidAnimationConfig } from './animationConverter'
 import { hasAnimation } from './unifiedKeyframeUtils'
 
@@ -12,7 +12,7 @@ import { hasAnimation } from './unifiedKeyframeUtils'
 /**
  * 获取TimelineItem的关键帧调试信息
  */
-export function getKeyframeDebugInfo(item: TimelineItem) {
+export function getKeyframeDebugInfo(item: LocalTimelineItem) {
   const errors: string[] = []
 
   try {
@@ -50,7 +50,7 @@ export function getKeyframeDebugInfo(item: TimelineItem) {
 /**
  * 打印关键帧调试信息到控制台
  */
-export function logKeyframeDebugInfo(item: TimelineItem): void {
+export function logKeyframeDebugInfo(item: LocalTimelineItem): void {
   const debugInfo = getKeyframeDebugInfo(item)
 
   console.group(`🎬 [Keyframe Debug] ${debugInfo.itemId}`)
@@ -73,7 +73,7 @@ export function logKeyframeDebugInfo(item: TimelineItem): void {
 /**
  * 在WebAV动画更新时自动调试
  */
-export function debugWebAVAnimationUpdate(item: TimelineItem): void {
+export function debugWebAVAnimationUpdate(item: LocalTimelineItem): void {
   if (import.meta.env.DEV) {
     console.log('🔄 [WebAV Animation Debug] 动画更新触发')
     logKeyframeDebugInfo(item)

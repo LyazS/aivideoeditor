@@ -5,7 +5,7 @@
 
 import type {
   SimpleCommand,
-  TimelineItem,
+  LocalTimelineItem,
   Keyframe,
   AnimationConfig,
   MediaType,
@@ -51,9 +51,9 @@ interface KeyframeSnapshot<T extends MediaType = MediaType> {
  * 类型安全版本
  */
 async function applyKeyframeSnapshot<T extends MediaType = MediaType>(
-  item: TimelineItem<T>,
+  item: LocalTimelineItem<T>,
   snapshot: KeyframeSnapshot<T>,
-  webavAnimationManager: { updateWebAVAnimation: (item: TimelineItem<T>) => Promise<void> },
+  webavAnimationManager: { updateWebAVAnimation: (item: LocalTimelineItem<T>) => Promise<void> },
 ): Promise<void> {
   // 1. 恢复动画配置（关键帧数据）
   if (snapshot.animationConfig) {
@@ -149,10 +149,10 @@ export class CreateKeyframeCommand implements SimpleCommand {
     private timelineItemId: string,
     private frame: number,
     private timelineModule: {
-      getTimelineItem: (id: string) => TimelineItem | undefined
+      getTimelineItem: (id: string) => LocalTimelineItem | undefined
     },
     private webavAnimationManager: {
-      updateWebAVAnimation: (item: TimelineItem) => Promise<void>
+      updateWebAVAnimation: (item: LocalTimelineItem) => Promise<void>
     },
     private playbackControls?: {
       seekTo: (frame: number) => void
@@ -172,7 +172,7 @@ export class CreateKeyframeCommand implements SimpleCommand {
   /**
    * 创建状态快照（类型安全版本）
    */
-  private createSnapshot(item: TimelineItem): KeyframeSnapshot {
+  private createSnapshot(item: LocalTimelineItem): KeyframeSnapshot {
     return {
       animationConfig: item.animation
         ? {
@@ -191,7 +191,7 @@ export class CreateKeyframeCommand implements SimpleCommand {
   /**
    * 应用状态快照
    */
-  private async applySnapshot(item: TimelineItem, snapshot: KeyframeSnapshot): Promise<void> {
+  private async applySnapshot(item: LocalTimelineItem, snapshot: KeyframeSnapshot): Promise<void> {
     await applyKeyframeSnapshot(item, snapshot, this.webavAnimationManager)
   }
 
@@ -313,10 +313,10 @@ export class DeleteKeyframeCommand implements SimpleCommand {
     private timelineItemId: string,
     private frame: number,
     private timelineModule: {
-      getTimelineItem: (id: string) => TimelineItem | undefined
+      getTimelineItem: (id: string) => LocalTimelineItem | undefined
     },
     private webavAnimationManager: {
-      updateWebAVAnimation: (item: TimelineItem) => Promise<void>
+      updateWebAVAnimation: (item: LocalTimelineItem) => Promise<void>
     },
     private playbackControls?: {
       seekTo: (frame: number) => void
@@ -336,7 +336,7 @@ export class DeleteKeyframeCommand implements SimpleCommand {
   /**
    * 创建状态快照（类型安全版本）
    */
-  private createSnapshot(item: TimelineItem): KeyframeSnapshot {
+  private createSnapshot(item: LocalTimelineItem): KeyframeSnapshot {
     return {
       animationConfig: item.animation
         ? {
@@ -355,7 +355,7 @@ export class DeleteKeyframeCommand implements SimpleCommand {
   /**
    * 应用状态快照
    */
-  private async applySnapshot(item: TimelineItem, snapshot: KeyframeSnapshot): Promise<void> {
+  private async applySnapshot(item: LocalTimelineItem, snapshot: KeyframeSnapshot): Promise<void> {
     await applyKeyframeSnapshot(item, snapshot, this.webavAnimationManager)
   }
 
@@ -475,10 +475,10 @@ export class UpdatePropertyCommand implements SimpleCommand {
     private property: string,
     private newValue: any,
     private timelineModule: {
-      getTimelineItem: (id: string) => TimelineItem | undefined
+      getTimelineItem: (id: string) => LocalTimelineItem | undefined
     },
     private webavAnimationManager: {
-      updateWebAVAnimation: (item: TimelineItem) => Promise<void>
+      updateWebAVAnimation: (item: LocalTimelineItem) => Promise<void>
     },
     private playbackControls?: {
       seekTo: (frame: number) => void
@@ -498,7 +498,7 @@ export class UpdatePropertyCommand implements SimpleCommand {
   /**
    * 创建状态快照（类型安全版本）
    */
-  private createSnapshot(item: TimelineItem): KeyframeSnapshot {
+  private createSnapshot(item: LocalTimelineItem): KeyframeSnapshot {
     return {
       animationConfig: item.animation
         ? {
@@ -517,7 +517,7 @@ export class UpdatePropertyCommand implements SimpleCommand {
   /**
    * 应用状态快照
    */
-  private async applySnapshot(item: TimelineItem, snapshot: KeyframeSnapshot): Promise<void> {
+  private async applySnapshot(item: LocalTimelineItem, snapshot: KeyframeSnapshot): Promise<void> {
     await applyKeyframeSnapshot(item, snapshot, this.webavAnimationManager)
   }
 
@@ -635,10 +635,10 @@ export class ClearAllKeyframesCommand implements SimpleCommand {
   constructor(
     private timelineItemId: string,
     private timelineModule: {
-      getTimelineItem: (id: string) => TimelineItem | undefined
+      getTimelineItem: (id: string) => LocalTimelineItem | undefined
     },
     private webavAnimationManager: {
-      updateWebAVAnimation: (item: TimelineItem) => Promise<void>
+      updateWebAVAnimation: (item: LocalTimelineItem) => Promise<void>
     },
     private playbackControls?: {
       seekTo: (frame: number) => void
@@ -658,7 +658,7 @@ export class ClearAllKeyframesCommand implements SimpleCommand {
   /**
    * 创建状态快照（类型安全版本）
    */
-  private createSnapshot(item: TimelineItem): KeyframeSnapshot {
+  private createSnapshot(item: LocalTimelineItem): KeyframeSnapshot {
     return {
       animationConfig: item.animation
         ? {
@@ -677,7 +677,7 @@ export class ClearAllKeyframesCommand implements SimpleCommand {
   /**
    * 应用状态快照
    */
-  private async applySnapshot(item: TimelineItem, snapshot: KeyframeSnapshot): Promise<void> {
+  private async applySnapshot(item: LocalTimelineItem, snapshot: KeyframeSnapshot): Promise<void> {
     await applyKeyframeSnapshot(item, snapshot, this.webavAnimationManager)
   }
 
@@ -772,10 +772,10 @@ export class ToggleKeyframeCommand implements SimpleCommand {
     private timelineItemId: string,
     private frame: number,
     private timelineModule: {
-      getTimelineItem: (id: string) => TimelineItem | undefined
+      getTimelineItem: (id: string) => LocalTimelineItem | undefined
     },
     private webavAnimationManager: {
-      updateWebAVAnimation: (item: TimelineItem) => Promise<void>
+      updateWebAVAnimation: (item: LocalTimelineItem) => Promise<void>
     },
     private playbackControls?: {
       seekTo: (frame: number) => void
@@ -795,7 +795,7 @@ export class ToggleKeyframeCommand implements SimpleCommand {
   /**
    * 创建状态快照（类型安全版本）
    */
-  private createSnapshot(item: TimelineItem): KeyframeSnapshot {
+  private createSnapshot(item: LocalTimelineItem): KeyframeSnapshot {
     return {
       animationConfig: item.animation
         ? {
@@ -814,7 +814,7 @@ export class ToggleKeyframeCommand implements SimpleCommand {
   /**
    * 应用状态快照
    */
-  private async applySnapshot(item: TimelineItem, snapshot: KeyframeSnapshot): Promise<void> {
+  private async applySnapshot(item: LocalTimelineItem, snapshot: KeyframeSnapshot): Promise<void> {
     await applyKeyframeSnapshot(item, snapshot, this.webavAnimationManager)
   }
 

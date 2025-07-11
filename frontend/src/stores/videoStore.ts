@@ -1,5 +1,6 @@
 import { computed, markRaw, type Raw } from 'vue'
 import { defineStore } from 'pinia'
+import { hasVisualProps, hasAudioProps } from '../types'
 import { VideoVisibleSprite } from '../utils/VideoVisibleSprite'
 import { ImageVisibleSprite } from '../utils/ImageVisibleSprite'
 import { AudioVisibleSprite } from '../utils/AudioVisibleSprite'
@@ -42,9 +43,9 @@ import {
 import { BatchDeleteCommand, BatchAutoArrangeTrackCommand } from './modules/commands/batchCommands'
 import { AddTextItemCommand } from './modules/commands/textCommands'
 import type {
-  MediaItem,
-  TimelineItem,
-  TimelineItemData,
+  LocalMediaItem,
+  LocalTimelineItem,
+  LocalTimelineItemData,
   Track,
   TransformData,
   VideoTimeRange,
@@ -53,7 +54,7 @@ import type {
   TrackType,
   AudioMediaConfig,
 } from '../types'
-import { hasVisualProps, hasAudioProps, getVisualPropsFromData, getAudioPropsFromData } from '../types'
+import { getVisualPropsFromData, getAudioPropsFromData } from '../types'
 
 export const useVideoStore = defineStore('video', () => {
   // 创建媒体管理模块
@@ -124,7 +125,7 @@ export const useVideoStore = defineStore('video', () => {
 
   // ==================== 素材管理方法 ====================
   // 使用媒体模块的方法，但需要包装以提供额外的依赖
-  function addMediaItem(mediaItem: MediaItem) {
+  function addMediaItem(mediaItem: LocalMediaItem) {
     mediaModule.addMediaItem(mediaItem, timelineModule.timelineItems, trackModule.tracks)
   }
 
@@ -134,7 +135,7 @@ export const useVideoStore = defineStore('video', () => {
    * 带历史记录的添加时间轴项目方法
    * @param timelineItem 要添加的时间轴项目
    */
-  async function addTimelineItemWithHistory(timelineItem: TimelineItem) {
+  async function addTimelineItemWithHistory(timelineItem: LocalTimelineItem) {
     // 检查是否是文本项目，使用专门的文本命令
     if (timelineItem.mediaType === 'text') {
       await addTextItemWithHistory(timelineItem as any)
@@ -977,7 +978,7 @@ export const useVideoStore = defineStore('video', () => {
     }
   }
 
-  function getMediaItem(mediaItemId: string): MediaItem | undefined {
+  function getMediaItem(mediaItemId: string): LocalMediaItem | undefined {
     return mediaModule.getMediaItem(mediaItemId)
   }
 
@@ -986,7 +987,7 @@ export const useVideoStore = defineStore('video', () => {
     mediaModule.updateMediaItemName(mediaItemId, newName)
   }
 
-  function updateMediaItem(mediaItem: MediaItem) {
+  function updateMediaItem(mediaItem: LocalMediaItem) {
     mediaModule.updateMediaItem(mediaItem)
   }
 
@@ -1004,7 +1005,7 @@ export const useVideoStore = defineStore('video', () => {
   /**
    * 恢复媒体项目列表（用于项目加载）
    */
-  function restoreMediaItems(restoredMediaItems: MediaItem[]) {
+  function restoreMediaItems(restoredMediaItems: LocalMediaItem[]) {
     console.log(`📁 开始恢复媒体项目: ${restoredMediaItems.length}个文件`)
 
     // 清空现有的媒体项目
@@ -1030,7 +1031,7 @@ export const useVideoStore = defineStore('video', () => {
    * 恢复时间轴项目（用于项目加载）
    * 这是一个异步方法，需要等待WebAV画布准备好后重建sprite
    */
-  async function restoreTimelineItems(restoredTimelineItems: TimelineItemData[]) {
+  async function restoreTimelineItems(restoredTimelineItems: LocalTimelineItemData[]) {
     console.log(`⏰ 开始恢复时间轴项目: ${restoredTimelineItems.length}个项目`)
 
     // 清空现有的时间轴项目
@@ -1062,7 +1063,7 @@ export const useVideoStore = defineStore('video', () => {
       }
 
       // 创建时间轴项目（不包含sprite和thumbnailUrl，都将在后续重建）
-      const timelineItem: Partial<TimelineItem> = {
+      const timelineItem: Partial<LocalTimelineItem> = {
         id: itemData.id,
         mediaItemId: itemData.mediaItemId,
         trackId: itemData.trackId,
@@ -1076,7 +1077,7 @@ export const useVideoStore = defineStore('video', () => {
       }
 
       // 暂时添加到数组中（不完整的项目）
-      timelineModule.timelineItems.value.push(timelineItem as TimelineItem)
+      timelineModule.timelineItems.value.push(timelineItem as LocalTimelineItem)
 
       console.log(`📋 恢复时间轴项目数据: ${itemData.id} (${itemData.mediaType})`)
     }

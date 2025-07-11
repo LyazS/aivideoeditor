@@ -66,7 +66,7 @@ import { useVideoStore } from '../stores/videoStore'
 import { framesToTimecode } from '../stores/utils/timeUtils'
 import TimelineBaseClip from './TimelineBaseClip.vue'
 import ClipTooltip from './ClipTooltip.vue'
-import type { TimelineItem, Track, AudioMediaConfig } from '../types'
+import type { LocalTimelineItem, Track, AudioMediaConfig } from '../types'
 
 interface Props {
   timelineItem: TimelineItem<'audio'>

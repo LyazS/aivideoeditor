@@ -260,14 +260,13 @@ import { generateThumbnailForMediaItem } from '../utils/thumbnailGenerator'
 import Playhead from './Playhead.vue'
 import SnapIndicator from './SnapIndicator.vue'
 import type {
-  TimelineItem,
+  LocalTimelineItem,
   TimelineItemDragData,
   MediaItemDragData,
   ConflictInfo,
   TrackType,
   MediaType,
 } from '../types'
-import { hasVisualProps } from '../types'
 import TimelineVideoClip from './TimelineVideoClip.vue'
 import TimelineTextClip from './TimelineTextClip.vue'
 import TimelineAudioClip from './TimelineAudioClip.vue'

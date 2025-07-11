@@ -3,7 +3,7 @@
  * 当TimelineItem的时长发生变化时，自动调整关键帧位置
  */
 
-import type { TimelineItem, VideoTimeRange, ImageTimeRange } from '../types'
+import type { LocalTimelineItem, VideoTimeRange, ImageTimeRange } from '../types'
 import { isVideoTimeRange } from '../types'
 import { adjustKeyframesForDurationChange } from './unifiedKeyframeUtils'
 

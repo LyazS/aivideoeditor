@@ -1,7 +1,7 @@
 import { directoryManager } from './DirectoryManager'
 import type { Raw } from 'vue'
 import type { MP4Clip, ImgClip, AudioClip } from '@webav/av-cliper'
-import type { MediaType, MediaItem, MediaMetadata, MediaReference } from '../types'
+import type { MediaType, LocalMediaItem, MediaMetadata, LocalMediaReference } from '../types'
 
 /**
  * 媒体文件管理器
@@ -429,19 +429,19 @@ export class MediaManager {
   }
 
   /**
-   * 从本地重建完整的MediaItem对象
+   * 从本地重建完整的LocalMediaItem对象
    * @param mediaId 媒体ID
    * @param reference 媒体引用信息
    * @param projectId 项目ID
-   * @returns 重建的MediaItem对象
+   * @returns 重建的LocalMediaItem对象
    */
   async rebuildMediaItemFromLocal(
     mediaId: string,
-    reference: MediaReference,
+    reference: LocalMediaReference,
     projectId: string
-  ): Promise<MediaItem> {
+  ): Promise<LocalMediaItem> {
     try {
-      console.log(`🔄 开始重建MediaItem: ${reference.originalFileName}`)
+      console.log(`🔄 开始重建LocalMediaItem: ${reference.originalFileName}`)
 
       // 1. 加载本地文件
       const localFile = await this.loadMediaFromProject(projectId, reference.storedPath)
@@ -501,8 +501,8 @@ export class MediaManager {
         }
       }
 
-      // 7. 创建完整的MediaItem对象
-      const mediaItem: MediaItem = {
+      // 7. 创建完整的LocalMediaItem对象
+      const mediaItem: LocalMediaItem = {
         id: mediaId,
         name: reference.originalFileName,
         file: localFile,
@@ -518,7 +518,7 @@ export class MediaManager {
         thumbnailUrl
       }
 
-      console.log(`✅ MediaItem重建成功: ${reference.originalFileName}`, {
+      console.log(`✅ LocalMediaItem重建成功: ${reference.originalFileName}`, {
         id: mediaId,
         type: reference.type,
         duration: `${durationFrames}帧`,
@@ -527,7 +527,7 @@ export class MediaManager {
 
       return mediaItem
     } catch (error) {
-      console.error(`❌ MediaItem重建失败: ${reference.originalFileName}`, error)
+      console.error(`❌ LocalMediaItem重建失败: ${reference.originalFileName}`, error)
       throw error
     }
   }
@@ -591,16 +591,16 @@ export class MediaManager {
    * @param projectId 项目ID
    * @param mediaReferences 媒体引用映射
    * @param options 加载选项
-   * @returns 重建的MediaItem数组
+   * @returns 重建的LocalMediaItem数组
    */
   async loadAllMediaForProject(
     projectId: string,
-    mediaReferences: Record<string, MediaReference>,
+    mediaReferences: Record<string, LocalMediaReference>,
     options?: {
       batchSize?: number
       onProgress?: (loaded: number, total: number) => void
     }
-  ): Promise<MediaItem[]> {
+  ): Promise<LocalMediaItem[]> {
     try {
       const { batchSize = 3, onProgress } = options || {}
       const mediaEntries = Object.entries(mediaReferences)
@@ -608,7 +608,7 @@ export class MediaManager {
 
       console.log(`📦 开始批量加载媒体文件: ${totalCount}个文件`)
 
-      const mediaItems: MediaItem[] = []
+      const mediaItems: LocalMediaItem[] = []
       let loadedCount = 0
 
       // 分批处理，避免同时加载太多大文件
@@ -643,7 +643,7 @@ export class MediaManager {
         const batchResults = await Promise.all(batchPromises)
 
         // 过滤掉失败的项目
-        const successfulItems = batchResults.filter((item): item is MediaItem => item !== null)
+        const successfulItems = batchResults.filter((item): item is LocalMediaItem => item !== null)
         mediaItems.push(...successfulItems)
       }
 

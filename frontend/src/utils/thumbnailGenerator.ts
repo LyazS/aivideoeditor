@@ -264,7 +264,7 @@ export function canvasToBlob(canvas: HTMLCanvasElement, quality: number = 0.8): 
 }
 
 // 从统一类型文件导入所需类型
-import type { MediaItem, TimelineItem, MediaItemForThumbnail } from '../types'
+import type { LocalMediaItem, LocalTimelineItem, MediaItemForThumbnail } from '../types'
 
 /**
  * 统一的缩略图生成函数 - 根据媒体类型自动选择合适的生成方法

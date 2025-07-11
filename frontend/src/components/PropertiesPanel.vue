@@ -72,7 +72,7 @@ import { useVideoStore } from '../stores/videoStore'
 import TimelineVideoClipProperties from './TimelineVideoClipProperties.vue'
 import TimelineTextClipProperties from './TimelineTextClipProperties.vue'
 import TimelineAudioClipProperties from './TimelineAudioClipProperties.vue'
-import type { TimelineItem } from '../types'
+import type { LocalTimelineItem } from '../types'
 
 const videoStore = useVideoStore()
 

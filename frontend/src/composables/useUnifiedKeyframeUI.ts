@@ -5,7 +5,7 @@
 
 import { computed, readonly, type Ref } from 'vue'
 import type {
-  TimelineItem,
+  LocalTimelineItem,
   KeyframeUIState,
   KeyframeButtonState,
   KeyframeProperties,
@@ -33,7 +33,7 @@ import { isPlayheadInTimelineItem } from '../stores/utils/timelineSearchUtils'
  * @param currentFrame 当前播放帧数
  */
 export function useUnifiedKeyframeUI(
-  timelineItem: Ref<TimelineItem | null>,
+  timelineItem: Ref<LocalTimelineItem | null>,
   currentFrame: Ref<number>,
 ) {
   // WebAV控制器，用于正确的时间跳转

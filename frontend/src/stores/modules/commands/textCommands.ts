@@ -1,6 +1,6 @@
 import { generateCommandId } from '../../../utils/idGenerator'
 import { framesToTimecode } from '../../utils/timeUtils'
-import type { SimpleCommand, TimelineItem, TextStyleConfig } from '../../../types'
+import type { SimpleCommand, LocalTimelineItem, TextStyleConfig } from '../../../types'
 import { createTextTimelineItem } from '../../../utils/textTimelineUtils'
 import { TextVisibleSprite } from '../../../utils/TextVisibleSprite'
 import { markRaw } from 'vue'
@@ -17,7 +17,7 @@ import { markRaw } from 'vue'
 export class AddTextItemCommand implements SimpleCommand {
   public readonly id: string
   public readonly description: string
-  private textItem: TimelineItem<'text'> | null = null
+  private textItem: LocalTimelineItem<'text'> | null = null
 
   constructor(
     private text: string,

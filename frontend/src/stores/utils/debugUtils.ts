@@ -1,4 +1,4 @@
-import type { MediaItem, TimelineItem } from '../../types'
+import type { LocalMediaItem, LocalTimelineItem } from '../../types'
 import { requiresMediaItem } from '../../types'
 import { framesToTimecode } from './timeUtils'
 
@@ -47,8 +47,8 @@ window.disableTimelineDebug = () => {
 export function printDebugInfo(
   operation: string,
   details: unknown,
-  mediaItems: MediaItem[],
-  timelineItems: TimelineItem[],
+  mediaItems: LocalMediaItem[],
+  timelineItems: LocalTimelineItem[],
   tracks: { id: string; name: string }[],
 ) {
   const timestamp = new Date().toLocaleTimeString()

@@ -1,6 +1,8 @@
 /**
  * 统一的类型定义文件
  * 将分散在各个文件中的interface定义集中管理
+ *
+ * 激进重构版本：基于继承关系的异步处理素材支持
  */
 
 import type { Raw } from 'vue'
@@ -14,30 +16,51 @@ import type { MP4Clip, ImgClip, AudioClip, Rect } from '@webav/av-cliper'
 export type MediaStatus = 'parsing' | 'ready' | 'error' | 'missing'
 
 /**
- * 媒体类型 - 支持视频、图片、音频和文本
+ * 核心媒体类型 - 支持视频、图片、音频和文本
  */
 export type MediaType = 'video' | 'image' | 'audio' | 'text'
+
+/**
+ * 异步处理素材在处理前使用 'unknown' 类型，处理后使用实际检测到的类型
+ */
+export type MediaTypeOrUnknown = MediaType | 'unknown'
+
+/**
+ * 异步处理素材状态枚举
+ */
+export type AsyncProcessingStatus = 'pending' | 'processing' | 'completed' | 'error' | 'cancelled' | 'unsupported'
+
+/**
+ * 异步处理类型枚举（当前只支持远程下载）
+ */
+export type AsyncProcessingType = 'remote-download'
 
 /**
  * 轨道类型
  */
 export type TrackType = 'video' | 'audio' | 'text'
 
-// ==================== 时间范围接口 ====================
+// ==================== 时间范围接口（继承关系设计） ====================
 
 /**
- * 视频时间范围接口定义（帧数版本）
- * 应用层使用帧数进行精确计算，减少浮点数误差
+ * 基础时间范围接口 - 所有时间范围的共同基础
  */
-export interface VideoTimeRange {
+export interface BaseTimeRange {
+  /** 时间轴开始时间（帧数） - 在整个项目时间轴上的开始位置 */
+  timelineStartTime: number
+  /** 时间轴结束时间（帧数） - 在整个项目时间轴上的结束位置 */
+  timelineEndTime: number
+}
+
+/**
+ * 视频时间范围接口 - 继承基础时间范围，添加视频特有属性
+ * 包含视频和音频的时间范围信息
+ */
+export interface VideoTimeRange extends BaseTimeRange {
   /** 素材内部开始时间（帧数） - 从素材的哪个帧开始播放 */
   clipStartTime: number
   /** 素材内部结束时间（帧数） - 播放到素材的哪个帧结束 */
   clipEndTime: number
-  /** 时间轴开始时间（帧数） - 素材在整个项目时间轴上的开始位置 */
-  timelineStartTime: number
-  /** 时间轴结束时间（帧数） - 素材在整个项目时间轴上的结束位置 */
-  timelineEndTime: number
   /** 有效播放时长（帧数） - 在时间轴上占用的时长，如果与素材内部时长不同则表示变速 */
   effectiveDuration: number
   /** 播放速度倍率 - 1.0为正常速度，2.0为2倍速，0.5为0.5倍速 */
@@ -45,17 +68,38 @@ export interface VideoTimeRange {
 }
 
 /**
- * 图片时间范围接口定义（帧数版本）
+ * 图片时间范围接口 - 继承基础时间范围，添加图片特有属性
  * 图片没有倍速概念，所以不包含playbackRate
  */
-export interface ImageTimeRange {
-  /** 时间轴开始时间（帧数） - 图片在整个项目时间轴上的开始位置 */
-  timelineStartTime: number
-  /** 时间轴结束时间（帧数） - 图片在整个项目时间轴上的结束位置 */
-  timelineEndTime: number
+export interface ImageTimeRange extends BaseTimeRange {
   /** 显示时长（帧数） - 图片在时间轴上显示的时长 */
   displayDuration: number
 }
+
+/**
+ * 异步处理时间轴项目专用时间范围接口 - 继承基础时间范围
+ */
+export interface AsyncProcessingTimeRange extends BaseTimeRange {
+  // 继承 timelineStartTime 和 timelineEndTime
+  // 可以在未来添加异步处理特有的时间范围属性
+}
+
+// ==================== 异步处理配置类型 ====================
+
+/**
+ * 远程下载配置
+ */
+export interface RemoteDownloadConfig {
+  type: 'remote-download'
+  url: string // 远程URL
+  headers?: Record<string, string> // 自定义请求头
+  timeout?: number // 超时时间（毫秒）
+}
+
+/**
+ * 异步处理配置联合类型（当前只支持远程下载）
+ */
+export type AsyncProcessingConfig = RemoteDownloadConfig
 
 /**
  * 音频状态接口
@@ -67,27 +111,75 @@ export interface AudioState {
   isMuted: boolean
 }
 
-// ==================== 核心数据接口 ====================
+// ==================== 核心数据接口（基于继承关系的激进重构） ====================
 
 /**
- * 素材项目接口
- * 素材层：包装MP4Clip/ImgClip/AudioClip和原始文件信息
+ * 基础媒体项目接口 - 所有媒体项目的共同基础
  */
-export interface MediaItem {
+export interface BaseMediaItem {
   id: string
   name: string
+  createdAt: string
+}
+
+/**
+ * 本地媒体项目接口 - 继承基础接口，添加本地文件相关属性
+ */
+export interface LocalMediaItem extends BaseMediaItem {
+  mediaType: MediaType
   file: File
   url: string
-  duration: number // 素材时长（帧数）- 视频从HTML video.duration转换而来，图片固定为150帧（5秒@30fps）
+  duration: number // 素材时长（帧数）
   type: string
-  mediaType: MediaType
-  mp4Clip: Raw<MP4Clip> | null // 视频文件解析中时为null，解析完成后为MP4Clip实例
-  imgClip: Raw<ImgClip> | null // 图片文件解析中时为null，解析完成后为ImgClip实例
-  audioClip: Raw<AudioClip> | null // 音频文件解析中时为null，解析完成后为AudioClip实例
-  isReady: boolean // 是否解析完成
-  status: MediaStatus // 素材状态
-  thumbnailUrl?: string // WebAV生成的缩略图URL
+  mp4Clip: Raw<MP4Clip> | null
+  imgClip: Raw<ImgClip> | null
+  audioClip: Raw<AudioClip> | null
+  isReady: boolean
+  status: MediaStatus
+  thumbnailUrl?: string
+  isAsyncProcessing?: false // 明确标识为本地媒体
 }
+
+/**
+ * 异步处理媒体项目接口 - 继承基础接口，添加异步处理相关属性
+ */
+export interface AsyncProcessingMediaItem extends BaseMediaItem {
+  mediaType: MediaTypeOrUnknown // 处理前为'unknown'，处理后为实际类型
+  isAsyncProcessing: true // 标识为异步处理媒体
+  processingType: AsyncProcessingType // 处理类型
+  processingStatus: AsyncProcessingStatus // 处理状态
+  processingProgress: number // 处理进度 0-100
+  expectedDuration: number // 用户输入的预计时长（帧数）
+
+  // 处理配置和参数
+  processingConfig: AsyncProcessingConfig // 处理配置（根据类型不同）
+
+  // 处理过程中的临时数据
+  processedFile?: File // 处理完成的文件对象
+  errorMessage?: string // 错误信息
+
+  // UI显示相关
+  thumbnailUrl?: string // 默认图标或预览图
+
+  // 时间戳
+  startedAt?: string // 开始处理时间
+  completedAt?: string // 完成处理时间
+
+  // 转换状态标记（转换完成后设置为true）
+  isConverted?: boolean
+}
+
+/**
+ * 激进重构：删除旧的类型别名，强制使用新的命名约定
+ *
+ * ❌ 删除的类型别名：
+ * - MediaItem = LocalMediaItem （强制使用 LocalMediaItem）
+ *
+ * ✅ 新的类型架构：
+ * BaseMediaItem
+ *   ├── LocalMediaItem
+ *   └── AsyncProcessingMediaItem
+ */
 
 // ==================== 时间轴项目接口 ====================
 
@@ -188,15 +280,22 @@ type MediaConfigMap = {
 export type GetMediaConfig<T extends MediaType> = MediaConfigMap[T]
 
 /**
- * 重构后的时间轴项目接口（类型安全）
- * 时间轴层：包装VideoVisibleSprite/ImageVisibleSprite和时间轴位置信息
- * 继承自 TimelineItemData，添加运行时特有的属性
+ * 类型守卫函数（激进重构后直接使用联合类型）
  */
-export interface TimelineItem<T extends MediaType = MediaType> extends TimelineItemData<T> {
-  /** 自定义的视频或图片sprite */
-  sprite: Raw<CustomSprite>
-  /** 时间轴clip的缩略图URL（运行时生成，不持久化） */
-  thumbnailUrl?: string
+export function isLocalTimelineItem(item: LocalTimelineItem<MediaType> | AsyncProcessingTimelineItem): item is LocalTimelineItem<MediaType> {
+  return !('isAsyncProcessingPlaceholder' in item) || item.isAsyncProcessingPlaceholder === false
+}
+
+export function isAsyncProcessingTimelineItem(item: LocalTimelineItem<MediaType> | AsyncProcessingTimelineItem): item is AsyncProcessingTimelineItem {
+  return 'isAsyncProcessingPlaceholder' in item && item.isAsyncProcessingPlaceholder === true
+}
+
+export function isLocalMediaItem(item: LocalMediaItem | AsyncProcessingMediaItem): item is LocalMediaItem {
+  return !('isAsyncProcessing' in item) || item.isAsyncProcessing === false
+}
+
+export function isAsyncProcessingMediaItem(item: LocalMediaItem | AsyncProcessingMediaItem): item is AsyncProcessingMediaItem {
+  return 'isAsyncProcessing' in item && item.isAsyncProcessing === true
 }
 
 /**
@@ -257,7 +356,7 @@ export interface PlayOptions {
  * 画布重新创建时的内容备份 - 只备份元数据，不备份WebAV对象
  */
 export interface CanvasBackup {
-  timelineItems: TimelineItemData[]
+  timelineItems: LocalTimelineItemData[]
   currentFrame: number // 当前播放帧数
   isPlaying: boolean
 }
@@ -357,16 +456,23 @@ export interface NotificationManager {
   showInfo(title: string, message?: string, duration?: number): string
 }
 
-// ==================== 时间轴项目数据接口 ====================
+// ==================== 时间轴项目接口（基于继承关系的激进重构） ====================
 
 /**
- * 类型安全的时间轴项目数据接口
- * 用于命令模式中的数据保存和持久化
+ * 基础时间轴项目接口 - 所有时间轴项目的共同基础
  */
-export interface TimelineItemData<T extends MediaType = MediaType> {
+export interface BaseTimelineItem {
   id: string
   mediaItemId: string
   trackId: string
+  mediaType: MediaTypeOrUnknown
+}
+
+/**
+ * 本地时间轴项目数据接口（持久化数据）
+ * 继承基础属性，添加本地时间轴项目的持久化数据
+ */
+export interface LocalTimelineItemData<T extends MediaType = MediaType> extends BaseTimelineItem {
   mediaType: T
   timeRange: T extends 'video'
     ? VideoTimeRange
@@ -374,11 +480,58 @@ export interface TimelineItemData<T extends MediaType = MediaType> {
       ? VideoTimeRange
       : ImageTimeRange
   config: GetMediaConfig<T>
-  /** 动画配置（可选，需要持久化） */
   animation?: AnimationConfig<T>
-  /** 素材名称，用于命令描述信息，避免冗余的 MediaItem 获取 */
   mediaName: string
 }
+
+/**
+ * 本地时间轴项目接口 - 继承 LocalTimelineItemData，添加运行时属性
+ */
+export interface LocalTimelineItem<T extends MediaType = MediaType> extends LocalTimelineItemData<T> {
+  sprite: Raw<CustomSprite>
+  thumbnailUrl?: string
+  isAsyncProcessingPlaceholder?: false
+}
+
+/**
+ * 异步处理时间轴项目接口 - 继承基础接口，添加异步处理相关属性
+ */
+export interface AsyncProcessingTimelineItem extends BaseTimelineItem {
+  mediaType: MediaTypeOrUnknown // 处理前为'unknown'，处理后为实际类型
+  mediaItemId: string // 指向 AsyncProcessingMediaItem.id
+
+  // 时间范围 - 使用基础时间范围接口
+  timeRange: AsyncProcessingTimeRange
+
+  // 异步处理状态相关
+  processingType: AsyncProcessingType
+  processingStatus: AsyncProcessingStatus
+  processingProgress: number // 0-100
+  errorMessage?: string
+
+  // 占位符配置
+  config: {
+    name: string // 显示名称
+    expectedDuration: number // 预计时长（帧数）
+  }
+
+  // 标识字段
+  isAsyncProcessingPlaceholder: true
+  sprite: null // 异步处理占位符不创建sprite
+}
+
+/**
+ * 激进重构：删除旧的类型别名，强制使用新的命名约定
+ *
+ * ❌ 删除的类型别名：
+ * - TimelineItem<T> = LocalTimelineItem<T> （强制使用 LocalTimelineItem）
+ * - TimelineItemData<T> = LocalTimelineItemData<T> （强制使用 LocalTimelineItemData）
+ *
+ * ✅ 新的类型架构：
+ * BaseTimelineItem
+ *   ├── LocalTimelineItemData<T> → LocalTimelineItem<T>
+ *   └── AsyncProcessingTimelineItem
+ */
 
 /**
  * 变换数据接口
@@ -418,15 +571,15 @@ export type PropertyType =
 // ==================== Store模块类型 ====================
 
 /**
- * 媒体模块类型
+ * 媒体模块类型（激进重构后使用新的类型）
  */
 export type MediaModule = {
   mediaItems: any
-  addMediaItem: (item: MediaItem) => void
+  addMediaItem: (item: LocalMediaItem) => void
   removeMediaItem: (id: string) => void
-  getMediaItem: (id: string) => MediaItem | undefined
+  getMediaItem: (id: string) => LocalMediaItem | undefined
   updateMediaItemName: (id: string, name: string) => void
-  updateMediaItem: (id: string, updates: Partial<MediaItem>) => void
+  updateMediaItem: (id: string, updates: Partial<LocalMediaItem>) => void
   setVideoElement: (id: string, element: HTMLVideoElement) => void
   getVideoOriginalResolution: (id: string) => Promise<{ width: number; height: number }>
   setImageElement: (id: string, element: HTMLImageElement) => void
@@ -523,64 +676,15 @@ export function isImageTimeRange(
   return 'displayDuration' in timeRange && !('clipStartTime' in timeRange)
 }
 
-/**
- * 检查时间轴项目是否为视频类型
- * @param item 时间轴项目
- * @returns 是否为视频类型
- */
-export function isVideoTimelineItem(item: TimelineItem): item is TimelineItem<'video'> {
-  return item.mediaType === 'video'
-}
+// ===== 激进重构：删除旧的辅助函数，使用新的类型守卫 =====
 
 /**
- * 检查时间轴项目是否为图片类型
- * @param item 时间轴项目
- * @returns 是否为图片类型
- */
-export function isImageTimelineItem(item: TimelineItem): item is TimelineItem<'image'> {
-  return item.mediaType === 'image'
-}
-
-/**
- * 检查时间轴项目是否为音频类型
- * @param item 时间轴项目
- * @returns 是否为音频类型
- */
-export function isAudioTimelineItem(item: TimelineItem): item is TimelineItem<'audio'> {
-  return item.mediaType === 'audio'
-}
-
-/**
- * 检查时间轴项目是否具有视觉属性
- * @param item 时间轴项目
- * @returns 是否具有视觉属性
- */
-export function hasVisualProps(
-  item: TimelineItem,
-): item is TimelineItem<'video'> | TimelineItem<'image'> | TimelineItem<'text'> {
-  return item.mediaType === 'video' || item.mediaType === 'image' || item.mediaType === 'text'
-}
-
-/**
- * 检查时间轴项目是否具有音频属性
- * @param item 时间轴项目
- * @returns 是否具有音频属性
- */
-export function hasAudioProps(
-  item: TimelineItem,
-): item is TimelineItem<'video'> | TimelineItem<'audio'> {
-  return item.mediaType === 'video' || item.mediaType === 'audio'
-}
-
-// ===== 辅助函数：处理新旧接口转换 =====
-
-/**
- * 从 TimelineItem 创建 TimelineItemData（类型安全版本）
+ * 从 LocalTimelineItem 创建 LocalTimelineItemData（类型安全版本）
  * 用于去除运行时属性（sprite, thumbnailUrl），保留持久化数据（包括 animation）
  */
-export function createTimelineItemData<T extends MediaType>(
-  item: TimelineItem<T>,
-): TimelineItemData<T> {
+export function createLocalTimelineItemData<T extends MediaType>(
+  item: LocalTimelineItem<T>,
+): LocalTimelineItemData<T> {
   return {
     id: item.id,
     mediaItemId: item.mediaItemId,
@@ -594,9 +698,9 @@ export function createTimelineItemData<T extends MediaType>(
 }
 
 /**
- * 从 TimelineItemData 获取视觉属性（如果存在）
+ * 从 LocalTimelineItemData 获取视觉属性（如果存在）
  */
-export function getVisualPropsFromData(data: TimelineItemData): any {
+export function getVisualPropsFromData(data: LocalTimelineItemData): any {
   if (data.mediaType === 'video' || data.mediaType === 'image' || data.mediaType === 'text') {
     const config = data.config as any
     return {
@@ -613,9 +717,9 @@ export function getVisualPropsFromData(data: TimelineItemData): any {
 }
 
 /**
- * 从 TimelineItemData 获取音频属性（如果存在）
+ * 从 LocalTimelineItemData 获取音频属性（如果存在）
  */
-export function getAudioPropsFromData(data: TimelineItemData): any {
+export function getAudioPropsFromData(data: LocalTimelineItemData): any {
   if (data.mediaType === 'video' || data.mediaType === 'audio') {
     const config = data.config as any
     return {
@@ -745,6 +849,24 @@ export function getMediaTypeCategory(mediaType: MediaType): 'FILE_BASED' | 'GENE
   return 'UNKNOWN'
 }
 
+/**
+ * 检查时间轴项目是否具有视觉属性
+ * @param item 时间轴项目
+ * @returns 是否具有视觉属性
+ */
+export function hasVisualProps(item: LocalTimelineItem): boolean {
+  return item.mediaType === 'video' || item.mediaType === 'image' || item.mediaType === 'text'
+}
+
+/**
+ * 检查时间轴项目是否具有音频属性
+ * @param item 时间轴项目
+ * @returns 是否具有音频属性
+ */
+export function hasAudioProps(item: LocalTimelineItem): boolean {
+  return item.mediaType === 'video' || item.mediaType === 'audio'
+}
+
 // ==================== 关键帧动画系统类型 ====================
 
 /**
@@ -855,19 +977,52 @@ export interface WebAVAnimationConfig {
 // ==================== 项目管理相关接口 ====================
 
 /**
- * 媒体引用接口
- * 用于项目配置中引用媒体文件
+ * 基础媒体引用接口 - 所有媒体引用的共同基础
  */
-export interface MediaReference {
+export interface BaseMediaReference {
   originalFileName: string
-  storedPath: string // 相对于项目目录的路径
-  type: MediaType // 'video' | 'image' | 'audio'
+  type: MediaType | 'unknown'
   fileSize: number
   checksum: string
 }
 
 /**
- * 项目配置接口
+ * 本地媒体引用接口 - 继承基础接口，添加本地文件相关属性
+ * 用于项目配置中引用本地媒体文件
+ */
+export interface LocalMediaReference extends BaseMediaReference {
+  type: MediaType
+  storedPath: string // 相对于项目目录的路径
+}
+
+/**
+ * 异步处理媒体引用接口 - 继承基础接口，添加异步处理相关属性
+ * 用于项目配置中引用异步处理素材
+ */
+export interface AsyncProcessingMediaReference extends BaseMediaReference {
+  type: 'unknown'
+  processingType: AsyncProcessingType
+  processingConfig: AsyncProcessingConfig
+  expectedDuration: number
+  isAsyncProcessingPlaceholder: true
+  processingStatus?: AsyncProcessingStatus // 持久化错误状态
+  errorMessage?: string // 持久化错误信息
+}
+
+/**
+ * 激进重构：删除旧的类型别名，强制使用新的命名约定
+ *
+ * ❌ 删除的类型别名：
+ * - MediaReference = LocalMediaReference （强制使用 LocalMediaReference）
+ *
+ * ✅ 新的类型架构：
+ * BaseMediaReference
+ *   ├── LocalMediaReference
+ *   └── AsyncProcessingMediaReference
+ */
+
+/**
+ * 项目配置接口（激进重构后支持异步处理素材）
  */
 export interface ProjectConfig {
   id: string
@@ -898,9 +1053,14 @@ export interface ProjectConfig {
     mediaItems: any[]
   }
 
-  // 媒体文件引用
-  mediaReferences: {
-    [mediaId: string]: MediaReference
+  // 本地媒体文件引用（包括已转换的异步处理素材）
+  localMediaReferences: {
+    [mediaId: string]: LocalMediaReference
+  }
+
+  // 异步处理媒体引用（仅包括处理中和错误状态的素材，转换完成后会被清理）
+  asyncProcessingMediaReferences: {
+    [mediaId: string]: AsyncProcessingMediaReference
   }
 
   // 导出历史
@@ -968,17 +1128,17 @@ export interface ConflictInfo {
 // ==================== 关键帧命令相关接口 ====================
 
 /**
- * 关键帧命令执行器接口
+ * 关键帧命令执行器接口（激进重构后使用新类型）
  * 定义执行关键帧命令所需的模块依赖
  */
 export interface KeyframeCommandExecutor {
   /** 时间轴模块 */
   timelineModule: {
-    getTimelineItem: (id: string) => TimelineItem | undefined
+    getTimelineItem: (id: string) => LocalTimelineItem | undefined
   }
   /** WebAV动画管理器 */
   webavAnimationManager: {
-    updateWebAVAnimation: (item: TimelineItem) => Promise<void>
+    updateWebAVAnimation: (item: LocalTimelineItem) => Promise<void>
   }
   /** 历史记录模块 */
   historyModule: {

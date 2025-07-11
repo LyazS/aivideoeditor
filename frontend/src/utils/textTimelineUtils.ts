@@ -2,7 +2,7 @@ import { markRaw, reactive } from 'vue'
 import { TextVisibleSprite } from './TextVisibleSprite'
 import { webavToProjectCoords } from './coordinateTransform'
 import { generateId } from './idGenerator'
-import type { TimelineItem, TextStyleConfig, TextMediaConfig } from '../types'
+import type { LocalTimelineItem, TextStyleConfig, TextMediaConfig } from '../types'
 import { DEFAULT_TEXT_STYLE } from '../types'
 
 /**

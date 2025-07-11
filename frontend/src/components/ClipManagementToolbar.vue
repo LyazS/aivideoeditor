@@ -93,7 +93,7 @@ import { computed } from 'vue'
 import { useVideoStore } from '../stores/videoStore'
 import { formatFileSize, framesToSeconds } from '../stores/utils/timeUtils'
 import { countOverlappingItems } from '../utils/timeOverlapUtils'
-import { isVideoTimeRange, isImageTimelineItem } from '../types'
+import { isVideoTimeRange } from '../types'
 import HoverButton from './HoverButton.vue'
 
 const videoStore = useVideoStore()

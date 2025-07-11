@@ -165,17 +165,17 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useVideoStore } from '../stores/videoStore'
-import { isVideoTimeRange, hasVisualProps, hasAudioProps } from '../types'
+import { isVideoTimeRange } from '../types'
 import { framesToTimecode, timecodeToFrames } from '../stores/utils/timeUtils'
 import { useKeyframeTransformControls } from '../composables/useKeyframeTransformControls'
 import NumberInput from './NumberInput.vue'
 import SliderInput from './SliderInput.vue'
 import KeyframeControls from './KeyframeControls.vue'
 import TransformControls from './TransformControls.vue'
-import type { TimelineItem } from '../types'
+import type { LocalTimelineItem } from '../types'
 
 interface Props {
-  selectedTimelineItem: TimelineItem | null
+  selectedTimelineItem: LocalTimelineItem | null
   currentFrame: number
 }
 

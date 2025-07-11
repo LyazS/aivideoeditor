@@ -8,14 +8,14 @@ import {
   calculateContentEndTimeFrames,
   calculateMaxVisibleDurationFrames,
 } from '../utils/durationUtils'
-import type { TimelineItem } from '../../types'
+import type { LocalTimelineItem } from '../../types'
 
 /**
  * 缩放滚动管理模块
  * 负责管理时间轴的缩放和滚动状态
  */
 export function createViewportModule(
-  timelineItems: Ref<TimelineItem[]>,
+  timelineItems: Ref<LocalTimelineItem[]>,
   totalDurationFrames: Ref<number>,
   timelineDurationFrames: Ref<number>,
 ) {

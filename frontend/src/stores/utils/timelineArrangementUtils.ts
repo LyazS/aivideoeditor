@@ -1,5 +1,5 @@
 import type { Ref } from 'vue'
-import type { TimelineItem } from '../../types'
+import type { LocalTimelineItem } from '../../types'
 import { isVideoTimeRange } from '../../types'
 
 // ==================== 自动整理工具 ====================
@@ -9,7 +9,7 @@ import { isVideoTimeRange } from '../../types'
  * @param timelineItems 时间轴项目数组的ref
  * @param trackId 要整理的轨道ID
  */
-export function autoArrangeTrackItems(timelineItems: Ref<TimelineItem[]>, trackId: string) {
+export function autoArrangeTrackItems(timelineItems: Ref<LocalTimelineItem[]>, trackId: string) {
   // 获取指定轨道的所有项目
   const trackItems = timelineItems.value.filter((item) => item.trackId === trackId)
 
@@ -59,9 +59,9 @@ export function autoArrangeTrackItems(timelineItems: Ref<TimelineItem[]>, trackI
  * 自动整理时间轴项目，按轨道分组并在每个轨道内按时间排序
  * @param timelineItems 时间轴项目数组的ref
  */
-export function autoArrangeTimelineItems(timelineItems: Ref<TimelineItem[]>) {
+export function autoArrangeTimelineItems(timelineItems: Ref<LocalTimelineItem[]>) {
   // 按轨道分组，然后在每个轨道内按时间位置排序
-  const trackGroups = new Map<string, TimelineItem[]>()
+  const trackGroups = new Map<string, LocalTimelineItem[]>()
 
   timelineItems.value.forEach((item) => {
     if (!trackGroups.has(item.trackId)) {

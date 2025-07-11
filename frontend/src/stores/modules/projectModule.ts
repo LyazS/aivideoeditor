@@ -1,6 +1,6 @@
 import { ref, computed } from 'vue'
 import { projectManager } from '../../utils/ProjectManager'
-import type { MediaReference, ProjectConfig, MediaItem } from '../../types'
+import type { LocalMediaReference, ProjectConfig, LocalMediaItem } from '../../types'
 
 /**
  * 项目管理模块
@@ -31,7 +31,7 @@ export function createProjectModule() {
   const loadingDetails = ref('') // 详细信息
 
   // 媒体引用映射（用于持久化）
-  const mediaReferences = ref<Record<string, MediaReference>>({})
+  const mediaReferences = ref<Record<string, LocalMediaReference>>({})
 
   // ==================== 计算属性 ====================
 
@@ -164,7 +164,8 @@ export function createProjectModule() {
       const updatedProject: ProjectConfig = {
         ...currentProject.value,
         ...projectData,
-        mediaReferences: mediaReferences.value,
+        localMediaReferences: mediaReferences.value,
+        asyncProcessingMediaReferences: {},
         updatedAt: new Date().toISOString()
       }
       
@@ -186,7 +187,7 @@ export function createProjectModule() {
    * @param mediaItemId 媒体项目ID
    * @param mediaReference 媒体引用
    */
-  function addMediaReference(mediaItemId: string, mediaReference: MediaReference): void {
+  function addMediaReference(mediaItemId: string, mediaReference: LocalMediaReference): void {
     mediaReferences.value[mediaItemId] = mediaReference
     console.log(`📎 添加媒体引用: ${mediaItemId} -> ${mediaReference.storedPath}`)
   }
@@ -204,7 +205,7 @@ export function createProjectModule() {
    * 获取媒体引用
    * @param mediaItemId 媒体项目ID
    */
-  function getMediaReference(mediaItemId: string): MediaReference | undefined {
+  function getMediaReference(mediaItemId: string): LocalMediaReference | undefined {
     return mediaReferences.value[mediaItemId]
   }
 
@@ -213,7 +214,7 @@ export function createProjectModule() {
    * 移除那些在project.json中存在但实际媒体文件已丢失的引用
    * @param loadedMediaItems 成功加载的媒体项目列表
    */
-  async function cleanupInvalidMediaReferences(loadedMediaItems: MediaItem[]): Promise<void> {
+  async function cleanupInvalidMediaReferences(loadedMediaItems: LocalMediaItem[]): Promise<void> {
     const loadedMediaIds = new Set(loadedMediaItems.map(item => item.id))
     const originalReferencesCount = Object.keys(mediaReferences.value).length
 
@@ -240,8 +241,8 @@ export function createProjectModule() {
       // 立即保存更新后的项目配置
       try {
         if (currentProject.value) {
-          // 更新当前项目的 mediaReferences
-          currentProject.value.mediaReferences = { ...mediaReferences.value }
+          // 更新当前项目的 localMediaReferences
+          currentProject.value.localMediaReferences = { ...mediaReferences.value }
           await projectManager.saveProject(currentProject.value)
           console.log(`🧹 [MEDIA-CLEANUP] ✅ 媒体引用清理完成: 移除 ${invalidMediaIds.length} 个无效引用 (${originalReferencesCount} -> ${Object.keys(mediaReferences.value).length})`)
         }
@@ -338,7 +339,7 @@ export function createProjectModule() {
 
         // 设置项目配置
         currentProject.value = projectConfig
-        mediaReferences.value = projectConfig.mediaReferences || {}
+        mediaReferences.value = projectConfig.localMediaReferences || {}
         lastSaved.value = new Date(projectConfig.updatedAt)
 
         // 先清理无效的媒体引用，确保数据一致性

@@ -1,5 +1,5 @@
 import { directoryManager } from './DirectoryManager'
-import type { MediaItem, TimelineItemData, Track, MediaReference, ProjectConfig } from '../types'
+import type { LocalMediaItem, LocalTimelineItemData, Track, LocalMediaReference, ProjectConfig } from '../types'
 import { mediaManager } from './MediaManager'
 
 /**
@@ -124,7 +124,8 @@ export class ProjectManager {
         mediaItems: []
       },
       
-      mediaReferences: {},
+      localMediaReferences: {},
+      asyncProcessingMediaReferences: {},
       exports: [],
       
       ...template
@@ -250,14 +251,14 @@ export class ProjectManager {
 
       let mediaItems: MediaItem[] | undefined
 
-      if (loadMedia && projectConfig.mediaReferences && Object.keys(projectConfig.mediaReferences).length > 0) {
+      if (loadMedia && projectConfig.localMediaReferences && Object.keys(projectConfig.localMediaReferences).length > 0) {
         // 阶段2: 加载媒体文件 (20% -> 80%)
         onProgress?.('加载媒体文件...', 40)
 
         try {
           mediaItems = await mediaManager.loadAllMediaForProject(
             projectId,
-            projectConfig.mediaReferences,
+            projectConfig.localMediaReferences,
             {
               batchSize: 3,
               onProgress: (loaded, total) => {
@@ -390,15 +391,15 @@ export class ProjectManager {
       // 阶段2: 加载媒体文件 (20% -> 80%)
       let mediaItems: MediaItem[] | undefined
 
-      if (loadMedia && projectConfig.mediaReferences && Object.keys(projectConfig.mediaReferences).length > 0) {
+      if (loadMedia && projectConfig.localMediaReferences && Object.keys(projectConfig.localMediaReferences).length > 0) {
         onProgress?.('加载媒体文件...', 30)
 
-        console.log(`📁 [Content Load] 开始加载媒体文件: ${Object.keys(projectConfig.mediaReferences).length}个文件`)
+        console.log(`📁 [Content Load] 开始加载媒体文件: ${Object.keys(projectConfig.localMediaReferences).length}个文件`)
 
         try {
           mediaItems = await mediaManager.loadAllMediaForProject(
             projectId,
-            projectConfig.mediaReferences,
+            projectConfig.localMediaReferences,
             {
               batchSize: 10,
               onProgress: (loaded, total) => {

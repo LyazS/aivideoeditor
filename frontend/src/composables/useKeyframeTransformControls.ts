@@ -5,13 +5,13 @@
 
 import { computed, type Ref } from 'vue'
 import { useVideoStore } from '../stores/videoStore'
-import { hasVisualProps } from '../types'
 import { uiDegreesToWebAVRadians, webAVRadiansToUIDegrees } from '../utils/rotationTransform'
 import { useUnifiedKeyframeUI } from './useUnifiedKeyframeUI'
-import type { TimelineItem } from '../types'
+import type { LocalTimelineItem } from '../types'
+import { hasVisualProps } from '../types'
 
 interface KeyframeTransformControlsOptions {
-  selectedTimelineItem: Ref<TimelineItem | null>
+  selectedTimelineItem: Ref<LocalTimelineItem | null>
   currentFrame: Ref<number>
 }
 
@@ -263,7 +263,7 @@ export function useKeyframeTransformControls(options: KeyframeTransformControlsO
    */
   const updateUniformScale = (newScale: number) => {
     if (proportionalScale.value && selectedTimelineItem.value && hasVisualProps(selectedTimelineItem.value)) {
-      const config = selectedTimelineItem.value.config
+      const config = selectedTimelineItem.value.config as any // 类型断言，因为 hasVisualProps 已经确保了这是视觉媒体
       const newSize = {
         width: config.originalWidth * newScale,
         height: config.originalHeight * newScale,
@@ -278,7 +278,7 @@ export function useKeyframeTransformControls(options: KeyframeTransformControlsO
   const setScaleX = (value: number) => {
     if (!selectedTimelineItem.value || !hasVisualProps(selectedTimelineItem.value)) return
 
-    const config = selectedTimelineItem.value.config
+    const config = selectedTimelineItem.value.config as any // 类型断言，因为 hasVisualProps 已经确保了这是视觉媒体
     const newScaleX = Math.max(0.01, Math.min(5, value))
     const newSize = {
       width: config.originalWidth * newScaleX,
@@ -293,7 +293,7 @@ export function useKeyframeTransformControls(options: KeyframeTransformControlsO
   const setScaleY = (value: number) => {
     if (!selectedTimelineItem.value || !hasVisualProps(selectedTimelineItem.value)) return
 
-    const config = selectedTimelineItem.value.config
+    const config = selectedTimelineItem.value.config as any // 类型断言，因为 hasVisualProps 已经确保了这是视觉媒体
     const newScaleY = Math.max(0.01, Math.min(5, value))
     const newSize = {
       width: config.width, // 保持X尺寸不变

@@ -1,5 +1,5 @@
 import type { Ref } from 'vue'
-import type { MediaItem, TimelineItem, Track } from '../../types'
+import type { LocalMediaItem, LocalTimelineItem, Track } from '../../types'
 import { findOrphanedTimelineItems } from './timelineSearchUtils'
 import { validateTimeRange } from './timeRangeUtils'
 import { getAllOverlappingPairs } from '../../utils/timeOverlapUtils'
@@ -14,8 +14,8 @@ import { getAllOverlappingPairs } from '../../utils/timeOverlapUtils'
  * @returns 验证结果
  */
 export function validateDataIntegrity(
-  mediaItems: MediaItem[],
-  timelineItems: TimelineItem[],
+  mediaItems: LocalMediaItem[],
+  timelineItems: LocalTimelineItem[],
   tracks: Track[],
 ): {
   isValid: boolean
@@ -65,8 +65,8 @@ export function validateDataIntegrity(
  * @returns 清理的项目数量
  */
 export function cleanupInvalidReferences(
-  timelineItems: Ref<TimelineItem[]>,
-  mediaItems: MediaItem[],
+  timelineItems: Ref<LocalTimelineItem[]>,
+  mediaItems: LocalMediaItem[],
 ): number {
   const orphanedItems = findOrphanedTimelineItems(timelineItems.value, mediaItems)
 

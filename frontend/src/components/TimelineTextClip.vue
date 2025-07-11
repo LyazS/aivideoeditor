@@ -60,7 +60,7 @@ import { useWebAVControls } from '../composables/useWebAVControls'
 import { usePlaybackControls } from '../composables/usePlaybackControls'
 import TimelineBaseClip from './TimelineBaseClip.vue'
 import ClipTooltip from './ClipTooltip.vue'
-import type { TimelineItem, Track } from '../types'
+import type { LocalTimelineItem, Track } from '../types'
 import { getTextItemDisplayName } from '../utils/textTimelineUtils'
 
 interface Props {

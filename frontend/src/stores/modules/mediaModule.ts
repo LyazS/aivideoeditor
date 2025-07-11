@@ -1,6 +1,6 @@
 import { ref, type Ref } from 'vue'
 import { printDebugInfo } from '../utils/debugUtils'
-import type { MediaItem, TimelineItem, Track } from '../../types'
+import type { LocalMediaItem, LocalTimelineItem, Track } from '../../types'
 
 /**
  * 媒体管理模块
@@ -10,7 +10,7 @@ export function createMediaModule() {
   // ==================== 状态定义 ====================
 
   // 素材库
-  const mediaItems = ref<MediaItem[]>([])
+  const mediaItems = ref<LocalMediaItem[]>([])
 
   // ==================== 媒体项目管理方法 ====================
 
@@ -21,8 +21,8 @@ export function createMediaModule() {
    * @param tracks 轨道引用（用于调试信息）
    */
   function addMediaItem(
-    mediaItem: MediaItem,
-    timelineItems: Ref<TimelineItem[]>,
+    mediaItem: LocalMediaItem,
+    timelineItems: Ref<LocalTimelineItem[]>,
     tracks: Ref<Track[]>,
   ) {
     mediaItems.value.push(mediaItem)
@@ -51,12 +51,12 @@ export function createMediaModule() {
    */
   function removeMediaItem(
     mediaItemId: string,
-    timelineItems: Ref<TimelineItem[]>,
+    timelineItems: Ref<LocalTimelineItem[]>,
     tracks: Ref<Track[]>,
     avCanvas: { removeSprite: (sprite: unknown) => void } | null,
-    cleanupTimelineItem: (timelineItem: TimelineItem) => void,
+    cleanupTimelineItem: (timelineItem: LocalTimelineItem) => void,
   ) {
-    const index = mediaItems.value.findIndex((item) => item.id === mediaItemId)
+    const index = mediaItems.value.findIndex((item: LocalMediaItem) => item.id === mediaItemId)
     if (index > -1) {
       const mediaItem = mediaItems.value[index]
       const relatedTimelineItems = timelineItems.value.filter(
@@ -116,8 +116,8 @@ export function createMediaModule() {
    * @param mediaItemId 媒体项目ID
    * @returns 媒体项目或undefined
    */
-  function getMediaItem(mediaItemId: string): MediaItem | undefined {
-    return mediaItems.value.find((item) => item.id === mediaItemId)
+  function getMediaItem(mediaItemId: string): LocalMediaItem | undefined {
+    return mediaItems.value.find((item: LocalMediaItem) => item.id === mediaItemId)
   }
 
   /**
@@ -137,8 +137,8 @@ export function createMediaModule() {
    * 更新媒体项目
    * @param updatedMediaItem 更新后的媒体项目
    */
-  function updateMediaItem(updatedMediaItem: MediaItem) {
-    const index = mediaItems.value.findIndex((item) => item.id === updatedMediaItem.id)
+  function updateMediaItem(updatedMediaItem: LocalMediaItem) {
+    const index = mediaItems.value.findIndex((item: LocalMediaItem) => item.id === updatedMediaItem.id)
     if (index !== -1) {
       mediaItems.value[index] = updatedMediaItem
       console.log(`媒体项目已更新: ${updatedMediaItem.id} -> ${updatedMediaItem.name}`)

@@ -8,8 +8,8 @@ import { syncTimeRange } from '../utils/timeRangeUtils'
 import { microsecondsToFrames } from '../utils/timeUtils'
 import { globalWebAVAnimationManager } from '../../utils/webavAnimationManager'
 import type {
-  TimelineItem,
-  MediaItem,
+  LocalTimelineItem,
+  LocalMediaItem,
   ExtendedPropsChangeEvent,
   VideoResolution,
   MediaType,
@@ -24,8 +24,8 @@ export function createTimelineModule(
   configModule: { videoResolution: { value: VideoResolution } },
   webavModule: { avCanvas: { value: { removeSprite: (sprite: unknown) => void } | null } },
   mediaModule: {
-    getMediaItem: (id: string) => MediaItem | undefined
-    mediaItems: Ref<MediaItem[]>
+    getMediaItem: (id: string) => LocalMediaItem | undefined
+    mediaItems: Ref<LocalMediaItem[]>
   },
   trackModule?: {
     tracks: Ref<{ id: string; name: string; isVisible: boolean; isMuted: boolean }[]>
@@ -33,7 +33,7 @@ export function createTimelineModule(
 ) {
   // ==================== 状态定义 ====================
 
-  const timelineItems = ref<TimelineItem[]>([])
+  const timelineItems = ref<LocalTimelineItem[]>([])
 
   // ==================== 双向数据同步函数 ====================
 
@@ -53,7 +53,7 @@ export function createTimelineModule(
    *
    * @param timelineItem TimelineItem实例
    */
-  function setupBidirectionalSync<T extends MediaType>(timelineItem: TimelineItem<T>) {
+  function setupBidirectionalSync<T extends MediaType>(timelineItem: LocalTimelineItem<T>) {
     const sprite = timelineItem.sprite
 
     // 直接使用WebAV原生的propsChange事件监听器
@@ -110,7 +110,7 @@ export function createTimelineModule(
    * 添加时间轴项目
    * @param timelineItem 要添加的时间轴项目
    */
-  function addTimelineItem(timelineItem: TimelineItem) {
+  function addTimelineItem(timelineItem: LocalTimelineItem) {
     // 如果没有指定轨道，默认分配到第一个轨道
     if (!timelineItem.trackId && trackModule) {
       const firstTrack = trackModule.tracks.value[0]
@@ -224,7 +224,7 @@ export function createTimelineModule(
    * @param timelineItemId 时间轴项目ID
    * @returns 时间轴项目或undefined
    */
-  function getTimelineItem(timelineItemId: string): TimelineItem | undefined {
+  function getTimelineItem(timelineItemId: string): LocalTimelineItem | undefined {
     return timelineItems.value.find((item) => item.id === timelineItemId)
   }
 

@@ -4,7 +4,7 @@
  */
 
 import type {
-  TimelineItem,
+  LocalTimelineItem,
   Keyframe,
   AnimationConfig,
   KeyframeProperties,

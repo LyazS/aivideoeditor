@@ -7,12 +7,10 @@ import { regenerateThumbnailForTimelineItem } from '../../utils/thumbnailGenerat
 import { printDebugInfo } from '../utils/debugUtils'
 import { syncTimeRange } from '../utils/timeRangeUtils'
 import { microsecondsToFrames, framesToTimecode } from '../utils/timeUtils'
-import type { TimelineItem, MediaItem } from '../../types'
+import type { LocalTimelineItem, LocalMediaItem } from '../../types'
 import {
   isVideoTimeRange,
-  hasVisualProps,
-  hasAudioProps,
-  createTimelineItemData,
+  createLocalTimelineItemData,
 } from '../../types'
 
 /**
@@ -29,12 +27,12 @@ export function createClipOperationsModule(
     }
   },
   mediaModule: {
-    getMediaItem: (id: string) => MediaItem | undefined
-    mediaItems: Ref<MediaItem[]>
+    getMediaItem: (id: string) => LocalMediaItem | undefined
+    mediaItems: Ref<LocalMediaItem[]>
   },
   timelineModule: {
-    timelineItems: Ref<TimelineItem[]>
-    setupBidirectionalSync: (item: TimelineItem) => void
+    timelineItems: Ref<LocalTimelineItem[]>
+    setupBidirectionalSync: (item: LocalTimelineItem) => void
   },
   selectionModule: { selectTimelineItem: (id: string) => void; clearAllSelections: () => void },
   trackModule?: { tracks: Ref<{ id: string; name: string }[]> },
@@ -134,7 +132,7 @@ export function createClipOperationsModule(
       const durationFrames = timeRange.timelineEndTime - timeRange.timelineStartTime // 帧数
       const newTimelinePositionFrames = timeRange.timelineEndTime // 紧接着原项目结束位置
 
-      const newItem: TimelineItem = reactive({
+      const newItem: LocalTimelineItem = reactive({
         id: Date.now().toString() + Math.random().toString(36).substring(2, 11),
         mediaItemId: originalItem.mediaItemId,
         trackId: originalItem.trackId,
@@ -472,7 +470,7 @@ export function createClipOperationsModule(
       }
 
       // 创建新的TimelineItem
-      const firstItem: TimelineItem = reactive({
+      const firstItem: LocalTimelineItem = reactive({
         id: Date.now().toString() + Math.random().toString(36).substring(2, 11),
         mediaItemId: originalItem.mediaItemId,
         trackId: originalItem.trackId,
@@ -485,7 +483,7 @@ export function createClipOperationsModule(
         mediaName: mediaItem.name,
       })
 
-      const secondItem: TimelineItem = reactive({
+      const secondItem: LocalTimelineItem = reactive({
         id: Date.now().toString() + Math.random().toString(36).substring(2, 11),
         mediaItemId: originalItem.mediaItemId,
         trackId: originalItem.trackId,
@@ -548,7 +546,7 @@ export function createClipOperationsModule(
    * @param newItem 新复制的时间轴项目
    * @param mediaItem 对应的媒体项目
    */
-  async function regenerateThumbnailAfterDuplicate(newItem: TimelineItem, mediaItem: MediaItem) {
+  async function regenerateThumbnailAfterDuplicate(newItem: LocalTimelineItem, mediaItem: LocalMediaItem) {
     try {
       console.log('🖼️ 开始为复制的片段重新生成缩略图...')
 
@@ -569,9 +567,9 @@ export function createClipOperationsModule(
    * @param mediaItem 对应的媒体项目
    */
   async function regenerateThumbnailsAfterSplit(
-    firstItem: TimelineItem,
-    secondItem: TimelineItem,
-    mediaItem: MediaItem,
+    firstItem: LocalTimelineItem,
+    secondItem: LocalTimelineItem,
+    mediaItem: LocalMediaItem,
   ) {
     try {
       console.log('🖼️ 开始为分割后的片段重新生成缩略图...')

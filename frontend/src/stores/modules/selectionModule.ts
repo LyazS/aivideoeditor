@@ -1,14 +1,14 @@
 import { ref, computed, type Raw, type Ref } from 'vue'
-import type { TimelineItem, MediaItem } from '../../types'
+import type { LocalTimelineItem, LocalMediaItem } from '../../types'
 
 /**
  * 选择管理模块
  * 负责管理时间轴项目的选择状态
  */
 export function createSelectionModule(
-  timelineItems: Ref<TimelineItem[]>,
-  getTimelineItem: (id: string) => TimelineItem | undefined,
-  getMediaItem: (id: string) => MediaItem | undefined,
+  timelineItems: Ref<LocalTimelineItem[]>,
+  getTimelineItem: (id: string) => LocalTimelineItem | undefined,
+  getMediaItem: (id: string) => LocalMediaItem | undefined,
   executeCommand: (command: any) => Promise<void>,
 ) {
   // ==================== 状态定义 ====================
@@ -282,7 +282,7 @@ export function createSelectionModule(
    * 获取当前选中的时间轴项目
    * @returns 选中的时间轴项目或null
    */
-  function getSelectedTimelineItem(): TimelineItem | null {
+  function getSelectedTimelineItem(): LocalTimelineItem | null {
     if (!selectedTimelineItemId.value) return null
     return getTimelineItem(selectedTimelineItemId.value) || null
   }
