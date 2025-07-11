@@ -1,6 +1,6 @@
 import { computed, markRaw, type Raw } from 'vue'
 import { defineStore } from 'pinia'
-import { hasVisualProps, hasAudioProps } from '../types'
+import { hasVisualProps, hasAudioProps, type TextMediaConfig } from '../types'
 import { VideoVisibleSprite } from '../utils/VideoVisibleSprite'
 import { ImageVisibleSprite } from '../utils/ImageVisibleSprite'
 import { AudioVisibleSprite } from '../utils/AudioVisibleSprite'
@@ -78,7 +78,7 @@ export const useVideoStore = defineStore('video', () => {
   // 创建时间轴核心管理模块
   const timelineModule = createTimelineModule(
     configModule,
-    webavModule as any,
+    webavModule,
     mediaModule,
     trackModule,
   )
@@ -114,7 +114,7 @@ export const useVideoStore = defineStore('video', () => {
 
   // 创建视频片段操作模块（需要在其他模块之后创建）
   const clipOperationsModule = createClipOperationsModule(
-    webavModule as any,
+    webavModule,
     mediaModule,
     timelineModule,
     selectionModule,
@@ -138,7 +138,8 @@ export const useVideoStore = defineStore('video', () => {
   async function addTimelineItemWithHistory(timelineItem: LocalTimelineItem) {
     // 检查是否是文本项目，使用专门的文本命令
     if (timelineItem.mediaType === 'text') {
-      await addTextItemWithHistory(timelineItem as any)
+      // 类型检查确保这是文本项目
+      await addTextItemWithHistory(timelineItem as LocalTimelineItem<'text'>)
       return
     }
 
@@ -164,7 +165,7 @@ export const useVideoStore = defineStore('video', () => {
    * 带历史记录的添加文本项目方法
    * @param textItem 要添加的文本时间轴项目
    */
-  async function addTextItemWithHistory(textItem: any) {
+  async function addTextItemWithHistory(textItem: LocalTimelineItem<'text'>) {
     const command = new AddTextItemCommand(
       textItem.config.text,
       textItem.config.style,
@@ -298,26 +299,28 @@ export const useVideoStore = defineStore('video', () => {
     const oldTransform: typeof newTransform = {}
 
     if (hasVisualProps(timelineItem)) {
+      // hasVisualProps 类型守卫确保了 config 具有视觉属性
+      const config = timelineItem.config
       if (newTransform.x !== undefined) {
-        oldTransform.x = timelineItem.config.x
+        oldTransform.x = config.x
       }
       if (newTransform.y !== undefined) {
-        oldTransform.y = timelineItem.config.y
+        oldTransform.y = config.y
       }
 
       if (newTransform.width !== undefined) {
-        oldTransform.width = timelineItem.config.width
+        oldTransform.width = config.width
       }
       if (newTransform.height !== undefined) {
-        oldTransform.height = timelineItem.config.height
+        oldTransform.height = config.height
       }
 
       if (newTransform.rotation !== undefined) {
-        oldTransform.rotation = timelineItem.config.rotation
+        oldTransform.rotation = config.rotation
       }
 
       if (newTransform.opacity !== undefined) {
-        oldTransform.opacity = timelineItem.config.opacity
+        oldTransform.opacity = config.opacity
       }
     }
 
@@ -344,20 +347,24 @@ export const useVideoStore = defineStore('video', () => {
     }
 
     if (hasAudioProps(timelineItem)) {
+      // hasAudioProps 类型守卫确保了 config 具有音频属性
+      const config = timelineItem.config
       if (newTransform.volume !== undefined) {
         // 获取当前音量（对视频和音频有效）
-        oldTransform.volume = timelineItem.config.volume ?? 1
+        oldTransform.volume = config.volume ?? 1
       }
 
       if (newTransform.isMuted !== undefined) {
         // 获取当前静音状态（对视频和音频有效）
-        oldTransform.isMuted = timelineItem.config.isMuted ?? false
+        oldTransform.isMuted = config.isMuted ?? false
       }
     }
 
     if (timelineItem.mediaType === 'audio' && newTransform.gain !== undefined) {
       // 获取当前增益（仅对音频有效）
-      oldTransform.gain = (timelineItem.config as any).gain ?? 0
+      // 类型检查确保这是音频项目，配置应该有 gain 属性
+      const audioConfig = timelineItem.config as AudioMediaConfig
+      oldTransform.gain = audioConfig.gain ?? 0
     }
 
     // 检查是否有实际变化
@@ -957,7 +964,7 @@ export const useVideoStore = defineStore('video', () => {
       mediaItemId,
       timelineModule.timelineItems,
       trackModule.tracks,
-      webavModule.avCanvas.value as any, // WebAV 类型不匹配，需要类型断言
+      webavModule.avCanvas.value, // AVCanvas 有 removeSprite 方法，类型兼容
       () => {}, // 清理回调，目前为空
     )
 
@@ -1119,7 +1126,8 @@ export const useVideoStore = defineStore('video', () => {
         let newSprite: any
         if (timelineItem.mediaType === 'text') {
           // 文本类型：从配置中重新创建TextVisibleSprite
-          const textConfig = timelineItem.config as any
+          // 类型检查确保这是文本项目，配置应该有文本属性
+          const textConfig = timelineItem.config as TextMediaConfig
           const { TextVisibleSprite } = await import('../utils/TextVisibleSprite')
           newSprite = await TextVisibleSprite.create(textConfig.text, textConfig.style)
         } else {
@@ -1225,7 +1233,8 @@ export const useVideoStore = defineStore('video', () => {
             }
           } else if (timelineItem.mediaType === 'text') {
             // TextVisibleSprite：应用视觉属性
-            const textSprite = newSprite as any // TextVisibleSprite
+            // 类型检查确保这是文本精灵，应该有视觉属性方法
+            const textSprite = newSprite as import('../utils/TextVisibleSprite').TextVisibleSprite
             const visualProps = getVisualPropsFromData(timelineItem)
 
             // 应用坐标转换（位置和尺寸）

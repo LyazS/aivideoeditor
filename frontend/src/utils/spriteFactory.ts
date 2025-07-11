@@ -13,7 +13,7 @@ import { AudioVisibleSprite } from '../utils/AudioVisibleSprite'
  * @throws 当媒体项目未准备好或类型不支持时抛出错误
  */
 export async function createSpriteFromMediaItem(
-  mediaItem: MediaItem,
+  mediaItem: LocalMediaItem,
 ): Promise<VideoVisibleSprite | ImageVisibleSprite | AudioVisibleSprite> {
   // 检查媒体项目是否已准备好
   if (!mediaItem.isReady) {

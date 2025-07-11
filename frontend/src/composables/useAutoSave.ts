@@ -93,7 +93,7 @@ export function useAutoSave(config: Partial<AutoSaveConfig> = {}) {
             // 注意：不保存 thumbnailUrl，这是运行时生成的blob URL
             // 对于文本类型，使用item.mediaName；对于其他类型，从MediaItem获取
             mediaName: item.mediaType === 'text'
-              ? item.mediaName || `文本: ${(item.config as any)?.text?.substring(0, 10) || '未知'}...`
+              ? item.mediaName || `文本: ${('text' in item.config) ? item.config.text?.substring(0, 10) || '未知' : '未知'}...`
               : videoStore.getMediaItem(item.mediaItemId)?.name || 'Unknown'
           })),
           mediaItems: videoStore.mediaItems.map(item => ({

@@ -337,7 +337,7 @@ export class MediaManager {
     clip: Raw<MP4Clip> | Raw<ImgClip> | Raw<AudioClip>,
     projectId: string,
     mediaType: MediaType
-  ): Promise<MediaReference> {
+  ): Promise<LocalMediaReference> {
     try {
       console.log(`📁 开始导入媒体文件: ${file.name}`)
 
@@ -351,7 +351,7 @@ export class MediaManager {
       await this.saveMediaMetadata(projectId, storedPath, metadata)
 
       // 4. 创建媒体引用
-      const mediaReference: MediaReference = {
+      const mediaReference: LocalMediaReference = {
         originalFileName: file.name,
         storedPath,
         type: mediaType,
@@ -505,6 +505,7 @@ export class MediaManager {
       const mediaItem: LocalMediaItem = {
         id: mediaId,
         name: reference.originalFileName,
+        createdAt: new Date().toISOString(),
         file: localFile,
         url: URL.createObjectURL(localFile),
         duration: durationFrames,
@@ -537,7 +538,7 @@ export class MediaManager {
    * @param projectId 项目ID
    * @param mediaReference 媒体引用信息
    */
-  async deleteMediaFromProject(projectId: string, mediaReference: MediaReference): Promise<void> {
+  async deleteMediaFromProject(projectId: string, mediaReference: LocalMediaReference): Promise<void> {
     const workspaceHandle = await directoryManager.getWorkspaceHandle()
     if (!workspaceHandle) {
       throw new Error('未设置工作目录')

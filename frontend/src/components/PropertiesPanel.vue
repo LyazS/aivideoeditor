@@ -40,14 +40,14 @@
         <!-- 文本项目属性组件 -->
         <TimelineTextClipProperties
           v-else-if="selectedTimelineItem.mediaType === 'text'"
-          :selected-timeline-item="selectedTimelineItem as TimelineItem<'text'>"
+          :selected-timeline-item="selectedTimelineItem as LocalTimelineItem<'text'>"
           :current-frame="currentFrame"
         />
 
         <!-- 音频项目属性组件 -->
         <TimelineAudioClipProperties
           v-else-if="selectedTimelineItem.mediaType === 'audio'"
-          :selected-timeline-item="selectedTimelineItem as TimelineItem<'audio'>"
+          :selected-timeline-item="selectedTimelineItem as LocalTimelineItem<'audio'>"
           :current-frame="currentFrame"
         />
       </div>

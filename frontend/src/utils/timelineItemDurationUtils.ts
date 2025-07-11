@@ -20,11 +20,11 @@ export function getClipDurationFrames(timeRange: VideoTimeRange | ImageTimeRange
 
 /**
  * 处理TimelineItem时长变化，自动调整关键帧位置
- * @param item TimelineItem实例
+ * @param item LocalTimelineItem实例
  * @param newTimeRange 新的时间范围
  */
 export function handleTimelineItemDurationChange(
-  item: TimelineItem,
+  item: LocalTimelineItem,
   newTimeRange: VideoTimeRange | ImageTimeRange,
 ): void {
   // 计算旧时长和新时长
@@ -60,7 +60,7 @@ export function handleTimelineItemDurationChange(
  * @param item 视频TimelineItem
  * @param newPlaybackRate 新的播放倍速
  */
-export function handleVideoPlaybackRateChange(item: TimelineItem, newPlaybackRate: number): void {
+export function handleVideoPlaybackRateChange(item: LocalTimelineItem, newPlaybackRate: number): void {
   if (item.mediaType !== 'video' || !isVideoTimeRange(item.timeRange)) {
     console.warn('🔄 [Duration Change] Item is not a video, cannot change playback rate')
     return
@@ -99,7 +99,7 @@ export function handleVideoPlaybackRateChange(item: TimelineItem, newPlaybackRat
  * @param newDisplayDurationFrames 新的显示时长（帧数）
  */
 export function handleImageDisplayDurationChange(
-  item: TimelineItem,
+  item: LocalTimelineItem,
   newDisplayDurationFrames: number,
 ): void {
   if (item.mediaType !== 'image') {
@@ -132,7 +132,7 @@ export function handleImageDisplayDurationChange(
  * @param item TimelineItem实例
  * @param newDurationFrames 新的时长（帧数）
  */
-export function setTimelineItemDuration(item: TimelineItem, newDurationFrames: number): void {
+export function setTimelineItemDuration(item: LocalTimelineItem, newDurationFrames: number): void {
   const currentTimeRange = item.timeRange
   const newTimelineEndTime = currentTimeRange.timelineStartTime + newDurationFrames
 
@@ -175,7 +175,7 @@ export function setTimelineItemDuration(item: TimelineItem, newDurationFrames: n
  * @param item TimelineItem实例
  * @param newStartTimeFrames 新的开始时间（帧数）
  */
-export function moveTimelineItem(item: TimelineItem, newStartTimeFrames: number): void {
+export function moveTimelineItem(item: LocalTimelineItem, newStartTimeFrames: number): void {
   const currentTimeRange = item.timeRange
   const durationFrames = getClipDurationFrames(currentTimeRange)
   const newTimelineEndTime = newStartTimeFrames + durationFrames
@@ -212,10 +212,10 @@ export function moveTimelineItem(item: TimelineItem, newStartTimeFrames: number)
 
 /**
  * 验证时长变化后的数据一致性
- * @param item TimelineItem实例
+ * @param item LocalTimelineItem实例
  * @returns 是否验证通过
  */
-export function validateTimelineItemAfterDurationChange(item: TimelineItem): boolean {
+export function validateTimelineItemAfterDurationChange(item: LocalTimelineItem): boolean {
   const timeRange = item.timeRange
   const durationFrames = getClipDurationFrames(timeRange)
 

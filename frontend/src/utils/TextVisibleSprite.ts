@@ -398,7 +398,7 @@ export class TextVisibleSprite extends BaseVisibleSprite {
           style: this.#textStyle,
           needsRecreation: true
         }
-      } as any)
+      })
 
       console.log('📢 [TextVisibleSprite] 文本更新事件已触发，等待外部重新创建精灵')
 

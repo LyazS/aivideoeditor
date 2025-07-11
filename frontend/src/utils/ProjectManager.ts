@@ -21,9 +21,9 @@ export interface ProjectLoadResult {
   /** 项目配置 */
   projectConfig: ProjectConfig
   /** 加载的媒体项目（如果启用了媒体加载） */
-  mediaItems?: MediaItem[]
+  mediaItems?: LocalMediaItem[]
   /** 时间轴项目数据（如果启用了时间轴加载） */
-  timelineItems?: TimelineItemData[]
+  timelineItems?: LocalTimelineItemData[]
   /** 轨道数据（如果启用了时间轴加载） */
   tracks?: Track[]
   /** 已完成的加载阶段 */
@@ -249,7 +249,7 @@ export class ProjectManager {
       loadedStages.push('config')
       console.log(`✅ 项目配置加载完成: ${projectConfig.name}`)
 
-      let mediaItems: MediaItem[] | undefined
+      let mediaItems: LocalMediaItem[] | undefined
 
       if (loadMedia && projectConfig.localMediaReferences && Object.keys(projectConfig.localMediaReferences).length > 0) {
         // 阶段2: 加载媒体文件 (20% -> 80%)
@@ -279,7 +279,7 @@ export class ProjectManager {
       }
 
       // 阶段3: 加载时间轴数据 (80% -> 95%)
-      let timelineItems: TimelineItemData[] | undefined
+      let timelineItems: LocalTimelineItemData[] | undefined
       let tracks: Track[] | undefined
 
       if (loadTimeline && projectConfig.timeline) {
@@ -389,7 +389,7 @@ export class ProjectManager {
       console.log(`✅ [Content Load] 项目配置处理完成: ${projectConfig.name}`)
 
       // 阶段2: 加载媒体文件 (20% -> 80%)
-      let mediaItems: MediaItem[] | undefined
+      let mediaItems: LocalMediaItem[] | undefined
 
       if (loadMedia && projectConfig.localMediaReferences && Object.keys(projectConfig.localMediaReferences).length > 0) {
         onProgress?.('加载媒体文件...', 30)
@@ -420,7 +420,7 @@ export class ProjectManager {
       }
 
       // 阶段3: 加载时间轴数据 (80% -> 95%)
-      let timelineItems: TimelineItemData[] | undefined
+      let timelineItems: LocalTimelineItemData[] | undefined
       let tracks: Track[] | undefined
 
       if (loadTimeline && projectConfig.timeline) {

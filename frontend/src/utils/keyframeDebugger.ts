@@ -141,7 +141,17 @@ export async function debugCurrentItem(): Promise<void> {
 
 // 导出到全局对象以便在控制台中使用
 if (typeof window !== 'undefined') {
-  ;(window as any).keyframeDebug = {
+  // 类型安全的全局对象扩展
+  interface WindowWithKeyframeDebug extends Window {
+    keyframeDebug?: {
+      debugCurrentItem: typeof debugCurrentItem
+      enableKeyframeDebug: typeof enableKeyframeDebug
+      disableKeyframeDebug: typeof disableKeyframeDebug
+      logKeyframeDebugInfo: typeof logKeyframeDebugInfo
+    }
+  }
+
+  ;(window as WindowWithKeyframeDebug).keyframeDebug = {
     debugCurrentItem,
     enableKeyframeDebug,
     disableKeyframeDebug,

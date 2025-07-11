@@ -1,13 +1,18 @@
 import { VisibleSprite } from '@webav/av-cliper'
 import { EventTool } from '@webav/internal-utils'
 
-// 扩展的事件类型定义，包含透明度变化事件
+// 扩展的事件类型定义，包含透明度变化事件和文本更新事件
 export type ExtendedSpriteEvents = {
   propsChange: (
     value: Partial<{
       rect: Partial<{ x: number; y: number; w: number; h: number; angle: number }>
       zIndex: number
       opacity: number
+      textUpdate?: {
+        text: string
+        style: import('../types').TextStyleConfig
+        needsRecreation: boolean
+      }
     }>,
   ) => void
 }
@@ -67,7 +72,8 @@ export abstract class BaseVisibleSprite extends VisibleSprite {
 
     // 初始化属性值（从父类获取）
     this.#zIndexValue = super.zIndex
-    this.#opacityValue = (this as any).opacity || 1
+    // 安全地获取父类的 opacity 属性，如果不存在则使用默认值 1
+    this.#opacityValue = this.getParentOpacity() || 1
 
     // 覆写 opacity 属性为访问器
     this.#setupOpacityAccessor()
@@ -100,6 +106,26 @@ export abstract class BaseVisibleSprite extends VisibleSprite {
   }
 
   // ==================== 私有方法 ====================
+
+  /**
+   * 安全地获取父类的 opacity 属性
+   * @returns 父类的 opacity 值，如果不存在则返回 undefined
+   */
+  private getParentOpacity(): number | undefined {
+    try {
+      // 尝试访问父类的 opacity 属性
+      const parentOpacity = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(this), 'opacity')
+      if (parentOpacity && parentOpacity.get) {
+        return parentOpacity.get.call(this)
+      }
+      // 如果没有 getter，尝试直接访问属性
+      // 这里使用 any 是因为需要访问父类的私有属性，是必要的类型断言
+      return (Object.getPrototypeOf(this) as { opacity?: number }).opacity
+    } catch {
+      // 如果访问失败，返回 undefined
+      return undefined
+    }
+  }
 
   /**
    * 设置 opacity 属性访问器

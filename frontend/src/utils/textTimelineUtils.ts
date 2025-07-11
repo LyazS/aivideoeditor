@@ -36,7 +36,7 @@ export async function createTextTimelineItem(
   trackId: string,
   duration: number = TextVisibleSprite.DEFAULT_DURATION,
   videoResolution: { width: number; height: number }
-): Promise<TimelineItem<'text'>> {
+): Promise<LocalTimelineItem<'text'>> {
   console.log('🔄 [TextTimelineUtils] 开始创建文本时间轴项目:', {
     text: text.substring(0, 20) + '...',
     startTimeFrames,
@@ -114,7 +114,7 @@ export async function createTextTimelineItem(
     }
 
     // 7. 创建时间轴项目
-    const timelineItem: TimelineItem<'text'> = reactive({
+    const timelineItem: LocalTimelineItem<'text'> = reactive({
       id: generateTimelineItemId(),
       mediaItemId: '', // 文本项目不需要媒体库项目
       trackId,
@@ -172,7 +172,7 @@ export function createDefaultTextStyle(overrides: Partial<TextStyleConfig> = {})
  * @param maxLength 最大显示长度
  * @returns 显示名称
  */
-export function getTextItemDisplayName(textItem: TimelineItem<'text'>, maxLength: number = 20): string {
+export function getTextItemDisplayName(textItem: LocalTimelineItem<'text'>, maxLength: number = 20): string {
   const text = textItem.config.text || '文本'
   return text.length > maxLength ? text.substring(0, maxLength) + '...' : text
 }
@@ -191,7 +191,7 @@ export function isValidTextContent(text: string): boolean {
  * @param textItem 文本时间轴项目
  * @returns 预览信息对象
  */
-export function createTextItemPreview(textItem: TimelineItem<'text'>) {
+export function createTextItemPreview(textItem: LocalTimelineItem<'text'>) {
   return {
     id: textItem.id,
     text: getTextItemDisplayName(textItem),

@@ -27,9 +27,9 @@ export class AddTextItemCommand implements SimpleCommand {
     private duration: number,
     private videoResolution: { width: number; height: number },
     private timelineModule: {
-      addTimelineItem: (item: TimelineItem<'text'>) => void
+      addTimelineItem: (item: LocalTimelineItem<'text'>) => void
       removeTimelineItem: (id: string) => void
-      getTimelineItem: (id: string) => TimelineItem | undefined
+      getTimelineItem: (id: string) => LocalTimelineItem | undefined
     },
     private webavModule: {
       addSprite: (sprite: any) => Promise<boolean>
@@ -107,7 +107,7 @@ export class UpdateTextCommand implements SimpleCommand {
     private newText: string,
     private newStyle: Partial<TextStyleConfig>,
     private timelineModule: {
-      getTimelineItem: (id: string) => TimelineItem | undefined
+      getTimelineItem: (id: string) => LocalTimelineItem | undefined
     }
   ) {
     this.id = generateCommandId()
@@ -118,7 +118,7 @@ export class UpdateTextCommand implements SimpleCommand {
     try {
       console.log(`🔄 [UpdateTextCommand] 执行更新文本操作...`)
 
-      const item = this.timelineModule.getTimelineItem(this.timelineItemId) as TimelineItem<'text'>
+      const item = this.timelineModule.getTimelineItem(this.timelineItemId) as LocalTimelineItem<'text'>
       if (!item || item.mediaType !== 'text') {
         throw new Error(`文本项目不存在或类型错误: ${this.timelineItemId}`)
       }
@@ -146,7 +146,7 @@ export class UpdateTextCommand implements SimpleCommand {
    * 遵循"从源头重建"原则，完全重新创建sprite实例
    */
   private async recreateTextSprite(
-    item: TimelineItem<'text'>,
+    item: LocalTimelineItem<'text'>,
     newText: string,
     newStyle: Partial<TextStyleConfig>
   ): Promise<void> {
@@ -252,7 +252,7 @@ export class UpdateTextCommand implements SimpleCommand {
       if (this.oldText && this.oldStyle) {
         console.log(`🔄 [UpdateTextCommand] 撤销更新文本操作...`)
 
-        const item = this.timelineModule.getTimelineItem(this.timelineItemId) as TimelineItem<'text'>
+        const item = this.timelineModule.getTimelineItem(this.timelineItemId) as LocalTimelineItem<'text'>
         if (!item || item.mediaType !== 'text') {
           throw new Error(`文本项目不存在或类型错误: ${this.timelineItemId}`)
         }
@@ -276,14 +276,14 @@ export class UpdateTextCommand implements SimpleCommand {
 export class RemoveTextItemCommand implements SimpleCommand {
   public readonly id: string
   public readonly description: string
-  private removedItem: TimelineItem<'text'> | null = null
+  private removedItem: LocalTimelineItem<'text'> | null = null
 
   constructor(
     private timelineItemId: string,
     private timelineModule: {
-      addTimelineItem: (item: TimelineItem<'text'>) => void
+      addTimelineItem: (item: LocalTimelineItem<'text'>) => void
       removeTimelineItem: (id: string) => void
-      getTimelineItem: (id: string) => TimelineItem<'text'> | undefined
+      getTimelineItem: (id: string) => LocalTimelineItem<'text'> | undefined
     },
     private webavModule: {
       addSprite: (sprite: any) => boolean
@@ -298,7 +298,7 @@ export class RemoveTextItemCommand implements SimpleCommand {
     try {
       console.log(`🔄 [RemoveTextItemCommand] 执行删除文本操作...`)
 
-      const item = this.timelineModule.getTimelineItem(this.timelineItemId) as TimelineItem<'text'>
+      const item = this.timelineModule.getTimelineItem(this.timelineItemId) as LocalTimelineItem<'text'>
       if (!item || item.mediaType !== 'text') {
         throw new Error(`文本项目不存在或类型错误: ${this.timelineItemId}`)
       }

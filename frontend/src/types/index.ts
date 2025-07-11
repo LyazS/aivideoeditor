@@ -186,7 +186,7 @@ export interface AsyncProcessingMediaItem extends BaseMediaItem {
 /**
  * 基础媒体属性（所有媒体类型共享）
  */
-interface BaseMediaProps<T extends MediaType = MediaType> {
+export interface BaseMediaProps<T extends MediaType = MediaType> {
   /** 层级控制 */
   zIndex: number
   /** 动画配置（可选） */
@@ -230,7 +230,7 @@ interface AudioMediaProps {
 /**
  * 视频媒体配置：同时具有视觉和音频属性
  */
-interface VideoMediaConfig extends VisualMediaProps<'video'>, AudioMediaProps {
+export interface VideoMediaConfig extends VisualMediaProps<'video'>, AudioMediaProps {
   // 视频特有属性（预留）
   // playbackRate?: number // 倍速可能在 timeRange 中更合适
 }
@@ -238,7 +238,7 @@ interface VideoMediaConfig extends VisualMediaProps<'video'>, AudioMediaProps {
 /**
  * 图片媒体配置：只有视觉属性
  */
-interface ImageMediaConfig extends VisualMediaProps<'image'> {
+export interface ImageMediaConfig extends VisualMediaProps<'image'> {
   // 图片特有属性（预留）
   // filters?: ImageFilterConfig[]
 }
@@ -278,6 +278,11 @@ type MediaConfigMap = {
  * 根据媒体类型获取对应配置的工具类型
  */
 export type GetMediaConfig<T extends MediaType> = MediaConfigMap[T]
+
+/**
+ * 视觉媒体配置联合类型
+ */
+export type VisualMediaConfig = VideoMediaConfig | ImageMediaConfig | TextMediaConfig
 
 /**
  * 类型守卫函数（激进重构后直接使用联合类型）
@@ -337,6 +342,12 @@ export interface PropsChangeEvent {
  */
 export interface ExtendedPropsChangeEvent extends PropsChangeEvent {
   opacity?: number
+  // 文本更新事件数据
+  textUpdate?: {
+    text: string
+    style: TextStyleConfig
+    needsRecreation: boolean
+  }
   // 未来可扩展其他属性
 }
 
@@ -701,8 +712,9 @@ export function createLocalTimelineItemData<T extends MediaType>(
  * 从 LocalTimelineItemData 获取视觉属性（如果存在）
  */
 export function getVisualPropsFromData(data: LocalTimelineItemData): any {
-  if (data.mediaType === 'video' || data.mediaType === 'image' || data.mediaType === 'text') {
-    const config = data.config as any
+  // 使用类型守卫进行检查
+  if (hasVisualPropsData(data)) {
+    const config = data.config
     return {
       x: config.x,
       y: config.y,
@@ -721,7 +733,11 @@ export function getVisualPropsFromData(data: LocalTimelineItemData): any {
  */
 export function getAudioPropsFromData(data: LocalTimelineItemData): any {
   if (data.mediaType === 'video' || data.mediaType === 'audio') {
-    const config = data.config as any
+    // 类型安全的配置访问
+    if (!hasAudioProperties(data.config)) {
+      return null
+    }
+    const config = data.config
     return {
       volume: config.volume,
       isMuted: config.isMuted,
@@ -822,7 +838,7 @@ export const MEDIA_TYPE_CATEGORIES = {
  * @returns 是否需要素材库项目
  */
 export function requiresMediaItem(mediaType: MediaType): boolean {
-  return MEDIA_TYPE_CATEGORIES.FILE_BASED.includes(mediaType as any)
+  return (MEDIA_TYPE_CATEGORIES.FILE_BASED as readonly MediaType[]).includes(mediaType)
 }
 
 /**
@@ -831,7 +847,7 @@ export function requiresMediaItem(mediaType: MediaType): boolean {
  * @returns 是否为程序生成的媒体
  */
 export function isGeneratedMedia(mediaType: MediaType): boolean {
-  return MEDIA_TYPE_CATEGORIES.GENERATED.includes(mediaType as any)
+  return (MEDIA_TYPE_CATEGORIES.GENERATED as readonly MediaType[]).includes(mediaType)
 }
 
 /**
@@ -850,21 +866,122 @@ export function getMediaTypeCategory(mediaType: MediaType): 'FILE_BASED' | 'GENE
 }
 
 /**
- * 检查时间轴项目是否具有视觉属性
+ * 检查时间轴项目是否具有视觉属性（类型守卫版本）
  * @param item 时间轴项目
- * @returns 是否具有视觉属性
+ * @returns 是否具有视觉属性，同时进行类型守卫
  */
-export function hasVisualProps(item: LocalTimelineItem): boolean {
-  return item.mediaType === 'video' || item.mediaType === 'image' || item.mediaType === 'text'
+export function hasVisualProps(item: LocalTimelineItem): item is LocalTimelineItem<'video' | 'image' | 'text'> {
+  const hasVisual = item.mediaType === 'video' || item.mediaType === 'image' || item.mediaType === 'text'
+  if (hasVisual) {
+    // 额外的运行时检查，确保配置确实具有视觉属性
+    return hasVisualProperties(item.config)
+  }
+  return false
 }
 
 /**
- * 检查时间轴项目是否具有音频属性
+ * 检查时间轴项目是否具有音频属性（类型守卫版本）
  * @param item 时间轴项目
+ * @returns 是否具有音频属性，同时进行类型守卫
+ */
+export function hasAudioProps(item: LocalTimelineItem): item is LocalTimelineItem<'video' | 'audio'> {
+  const hasAudio = item.mediaType === 'video' || item.mediaType === 'audio'
+  if (hasAudio) {
+    // 额外的运行时检查，确保配置确实具有音频属性
+    return hasAudioProperties(item.config)
+  }
+  return false
+}
+
+/**
+ * 检查时间轴项目数据是否具有视觉属性（类型守卫版本）
+ * @param itemData 时间轴项目数据
+ * @returns 是否具有视觉属性，同时进行类型守卫
+ */
+export function hasVisualPropsData(itemData: LocalTimelineItemData): itemData is LocalTimelineItemData<'video' | 'image' | 'text'> {
+  const hasVisual = itemData.mediaType === 'video' || itemData.mediaType === 'image' || itemData.mediaType === 'text'
+  if (hasVisual) {
+    // 额外的运行时检查，确保配置确实具有视觉属性
+    return hasVisualProperties(itemData.config)
+  }
+  return false
+}
+
+/**
+ * 类型守卫函数：检查配置是否具有视觉属性
+ * @param config 媒体配置对象
+ * @returns 是否具有视觉属性
+ */
+export function hasVisualProperties(config: GetMediaConfig<MediaType>): config is VideoMediaConfig | ImageMediaConfig | TextMediaConfig {
+  return 'width' in config &&
+         'height' in config &&
+         'x' in config &&
+         'y' in config &&
+         'rotation' in config &&
+         'opacity' in config
+}
+
+/**
+ * 类型守卫函数：检查配置是否具有音频属性
+ * @param config 媒体配置对象
  * @returns 是否具有音频属性
  */
-export function hasAudioProps(item: LocalTimelineItem): boolean {
-  return item.mediaType === 'video' || item.mediaType === 'audio'
+export function hasAudioProperties(config: GetMediaConfig<MediaType>): config is VideoMediaConfig | AudioMediaConfig {
+  return 'volume' in config && 'isMuted' in config
+}
+
+/**
+ * 类型安全的配置属性访问器
+ * 根据媒体类型安全地访问配置属性
+ */
+export function getConfigProperty<T extends MediaType, K extends keyof GetMediaConfig<T>>(
+  item: LocalTimelineItem<T>,
+  property: K
+): GetMediaConfig<T>[K] {
+  return (item.config as GetMediaConfig<T>)[property]
+}
+
+/**
+ * 类型安全的配置属性设置器
+ * 根据媒体类型安全地设置配置属性
+ */
+export function setConfigProperty<T extends MediaType, K extends keyof GetMediaConfig<T>>(
+  item: LocalTimelineItem<T>,
+  property: K,
+  value: GetMediaConfig<T>[K]
+): void {
+  ;(item.config as GetMediaConfig<T>)[property] = value
+}
+
+/**
+ * 类型守卫：检查关键帧属性是否包含指定属性
+ */
+export function hasKeyframeProperty<T extends MediaType>(
+  properties: GetKeyframeProperties<T>,
+  property: keyof GetKeyframeProperties<T>
+): boolean {
+  return property in properties
+}
+
+/**
+ * 类型安全的关键帧属性访问器
+ */
+export function getKeyframeProperty<T extends MediaType, K extends keyof GetKeyframeProperties<T>>(
+  properties: GetKeyframeProperties<T>,
+  property: K
+): GetKeyframeProperties<T>[K] {
+  return properties[property]
+}
+
+/**
+ * 类型安全的关键帧属性设置器
+ */
+export function setKeyframeProperty<T extends MediaType, K extends keyof GetKeyframeProperties<T>>(
+  properties: GetKeyframeProperties<T>,
+  property: K,
+  value: GetKeyframeProperties<T>[K]
+): void {
+  properties[property] = value
 }
 
 // ==================== 关键帧动画系统类型 ====================
@@ -879,7 +996,7 @@ interface BaseAnimatableProps {
 /**
  * 视觉可动画属性（video 和 image 共享）
  */
-interface VisualAnimatableProps extends BaseAnimatableProps {
+export interface VisualAnimatableProps extends BaseAnimatableProps {
   x: number
   y: number
   width: number
@@ -891,7 +1008,7 @@ interface VisualAnimatableProps extends BaseAnimatableProps {
 /**
  * 音频可动画属性（video 和 audio 共享）
  */
-interface AudioAnimatableProps extends BaseAnimatableProps {
+export interface AudioAnimatableProps extends BaseAnimatableProps {
   volume: number
   // 注意：isMuted 通常不需要动画，但可以考虑添加
 }

@@ -55,7 +55,7 @@ export function calculateOverlapDuration(range1: OverlapTimeRange, range2: Overl
  * @param item 时间轴项目
  * @returns 时间范围
  */
-export function extractTimeRange(item: TimelineItem): OverlapTimeRange {
+export function extractTimeRange(item: LocalTimelineItem): OverlapTimeRange {
   return {
     start: item.timeRange.timelineStartTime,
     end: item.timeRange.timelineEndTime,
@@ -68,7 +68,7 @@ export function extractTimeRange(item: TimelineItem): OverlapTimeRange {
  * @param item2 时间轴项目2
  * @returns 是否重叠
  */
-export function isTimelineItemsOverlapping(item1: TimelineItem, item2: TimelineItem): boolean {
+export function isTimelineItemsOverlapping(item1: LocalTimelineItem, item2: LocalTimelineItem): boolean {
   const range1 = extractTimeRange(item1)
   const range2 = extractTimeRange(item2)
   return isTimeRangeOverlapping(range1, range2)
@@ -82,7 +82,7 @@ export function isTimelineItemsOverlapping(item1: TimelineItem, item2: TimelineI
  * @returns 重叠检测结果
  */
 export function detectTimelineItemOverlap(
-  item: TimelineItem,
+  item: LocalTimelineItem,
   startTime: number,
   endTime: number,
 ): OverlapResult {
@@ -101,8 +101,8 @@ export function detectTimelineItemOverlap(
  * @returns 是否有重叠
  */
 export function hasOverlapInTrack(
-  targetItem: TimelineItem,
-  trackItems: TimelineItem[],
+  targetItem: LocalTimelineItem,
+  trackItems: LocalTimelineItem[],
   excludeIds: string[] = [],
 ): boolean {
   const targetRange = extractTimeRange(targetItem)
@@ -130,9 +130,9 @@ export function hasOverlapInTrack(
 export function detectTrackConflicts(
   startTime: number,
   endTime: number,
-  trackItems: TimelineItem[],
+  trackItems: LocalTimelineItem[],
   excludeIds: string[] = [],
-  getItemName: (item: TimelineItem) => string = (item) => `Item ${item.id}`,
+  getItemName: (item: LocalTimelineItem) => string = (item) => `Item ${item.id}`,
 ): ConflictInfo[] {
   const conflicts: ConflictInfo[] = []
   const targetRange: OverlapTimeRange = { start: startTime, end: endTime }
@@ -166,9 +166,9 @@ export function detectTrackConflicts(
  * @param timelineItems 所有时间轴项目
  * @returns 重叠项目的数量
  */
-export function countOverlappingItems(timelineItems: TimelineItem[]): number {
+export function countOverlappingItems(timelineItems: LocalTimelineItem[]): number {
   let count = 0
-  const tracks = new Map<string, TimelineItem[]>()
+  const tracks = new Map<string, LocalTimelineItem[]>()
 
   // 按轨道分组
   timelineItems.forEach((item) => {
@@ -199,8 +199,8 @@ export function countOverlappingItems(timelineItems: TimelineItem[]): number {
  * @returns 重叠项目对的信息
  */
 export function getAllOverlappingPairs(
-  timelineItems: TimelineItem[],
-  getItemName: (item: TimelineItem) => string = (item) => `Item ${item.id}`,
+  timelineItems: LocalTimelineItem[],
+  getItemName: (item: LocalTimelineItem) => string = (item) => `Item ${item.id}`,
 ): Array<{
   trackId: string
   item1: { id: string; name: string; range: OverlapTimeRange }
@@ -214,7 +214,7 @@ export function getAllOverlappingPairs(
     overlap: OverlapResult
   }> = []
 
-  const tracks = new Map<string, TimelineItem[]>()
+  const tracks = new Map<string, LocalTimelineItem[]>()
 
   // 按轨道分组
   timelineItems.forEach((item) => {

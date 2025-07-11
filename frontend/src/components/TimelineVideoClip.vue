@@ -93,7 +93,7 @@ import { relativeFrameToAbsoluteFrame } from '../utils/unifiedKeyframeUtils'
 import type { LocalTimelineItem, Track } from '../types'
 
 interface Props {
-  timelineItem: TimelineItem
+  timelineItem: LocalTimelineItem
   track?: Track
   timelineWidth: number
   totalDurationFrames: number

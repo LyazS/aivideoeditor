@@ -134,17 +134,17 @@
   </div>
 </template>
 
-<script setup lang="ts">
+<script setup lang="ts" generic="T extends 'audio'">
 import { computed } from 'vue'
 import { useVideoStore } from '../stores/videoStore'
-import { isVideoTimeRange } from '../types'
+import { isVideoTimeRange, hasAudioProps } from '../types'
 import { framesToTimecode, timecodeToFrames } from '../stores/utils/timeUtils'
 import NumberInput from './NumberInput.vue'
 import SliderInput from './SliderInput.vue'
-import type { LocalTimelineItem } from '../types'
+import type { LocalTimelineItem, MediaType } from '../types'
 
 interface Props {
-  selectedTimelineItem: LocalTimelineItem<'audio'> | null
+  selectedTimelineItem: LocalTimelineItem<T> | null
   currentFrame: number
 }
 
@@ -352,7 +352,9 @@ const updateTargetDurationFrames = async (newDurationFrames: number) => {
   // 更新timelineItem的timeRange（音频使用VideoTimeRange）
   const newTimeRange = sprite.getTimeRange()
   if (isVideoTimeRange(newTimeRange)) {
-    props.selectedTimelineItem.timeRange = newTimeRange
+    // 通过类型断言安全地更新 timeRange，因为我们已经验证了类型
+    const timelineItem = props.selectedTimelineItem as LocalTimelineItem<'audio'>
+    timelineItem.timeRange = newTimeRange
   }
 
   console.log('✅ 音频帧数时长更新成功:', {

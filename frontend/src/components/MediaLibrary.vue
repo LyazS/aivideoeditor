@@ -165,7 +165,7 @@ const activeTab = ref<TabType>('all')
 // 右键菜单相关状态
 const showContextMenu = ref(false)
 const contextMenuType = ref<'media-item' | 'empty'>('empty')
-const selectedMediaItem = ref<MediaItem | null>(null)
+const selectedMediaItem = ref<LocalMediaItem | null>(null)
 const contextMenuOptions = ref({
   x: 0,
   y: 0,
@@ -305,7 +305,7 @@ const handleContextMenu = (event: MouseEvent) => {
   showContextMenu.value = true
 }
 
-const handleMediaItemContextMenu = (event: MouseEvent, item: MediaItem) => {
+const handleMediaItemContextMenu = (event: MouseEvent, item: LocalMediaItem) => {
   event.preventDefault()
   event.stopPropagation()
 
@@ -499,12 +499,13 @@ const addVideoItem = async (
   resolve: () => void,
 ) => {
   try {
-    // 创建解析中状态的MediaItem（不需要video元素）
-    const parsingMediaItem: MediaItem = {
+    // 创建解析中状态的LocalMediaItem（不需要video元素）
+    const parsingMediaItem: LocalMediaItem = {
       id: mediaItemId,
+      name: file.name,
+      createdAt: new Date().toISOString(),
       file,
       url,
-      name: file.name,
       duration: 0, // 初始为0，等MP4Clip解析完成后更新
       type: file.type,
       mediaType: 'video',
@@ -556,8 +557,8 @@ const addVideoItem = async (
       }
     }
 
-    // 更新MediaItem为完成状态
-    const readyMediaItem: MediaItem = {
+    // 更新LocalMediaItem为完成状态
+    const readyMediaItem: LocalMediaItem = {
       ...parsingMediaItem,
       duration: durationFrames, // 使用MP4Clip的准确时长
       mp4Clip: markRaw(mp4Clip), // 使用markRaw避免Vue响应式包装
@@ -599,11 +600,12 @@ const addImageItem = async (
 
   img.onload = async () => {
     try {
-      const parsingMediaItem: MediaItem = {
+      const parsingMediaItem: LocalMediaItem = {
         id: mediaItemId,
+        name: file.name,
+        createdAt: new Date().toISOString(),
         file,
         url,
-        name: file.name,
         duration: 150, // 图片默认150帧时长（5秒@30fps）
         type: file.type,
         mediaType: 'image',
@@ -645,8 +647,8 @@ const addImageItem = async (
         }
       }
 
-      // 更新MediaItem为完成状态
-      const readyMediaItem: MediaItem = {
+      // 更新LocalMediaItem为完成状态
+      const readyMediaItem: LocalMediaItem = {
         ...parsingMediaItem,
         imgClip: markRaw(imgClip), // 使用markRaw避免Vue响应式包装
         isReady: true, // 标记为准备好
@@ -703,9 +705,10 @@ const addAudioItem = async (
 ) => {
   try {
     // 创建解析中状态的音频素材
-    const parsingMediaItem: MediaItem = {
+    const parsingMediaItem: LocalMediaItem = {
       id: mediaItemId,
       name: file.name,
+      createdAt: new Date().toISOString(),
       file: file,
       url: url,
       duration: 0, // 音频时长待解析后确定
@@ -757,8 +760,8 @@ const addAudioItem = async (
       }
     }
 
-    // 更新MediaItem为就绪状态
-    const readyMediaItem: MediaItem = {
+    // 更新LocalMediaItem为就绪状态
+    const readyMediaItem: LocalMediaItem = {
       ...parsingMediaItem,
       duration: durationFrames,
       audioClip: markRaw(audioClip),
@@ -828,7 +831,7 @@ const removeMediaItem = async (id: string) => {
 }
 
 // 素材项拖拽开始
-const handleItemDragStart = (event: DragEvent, item: MediaItem) => {
+const handleItemDragStart = (event: DragEvent, item: LocalMediaItem) => {
   console.log('🎯 [MediaLibrary] 开始拖拽素材:', item.name, 'isReady:', item.isReady)
 
   // 如果素材还未解析完成，阻止拖拽

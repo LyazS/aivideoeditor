@@ -112,8 +112,8 @@ export function createWebAVModule() {
       isAvailable: isWebAVAvailable(),
       canvasInfo: avCanvas.value
         ? {
-            width: (avCanvas.value as any).width || 'unknown',
-            height: (avCanvas.value as any).height || 'unknown',
+            width: ('width' in avCanvas.value) ? avCanvas.value.width : 'unknown',
+            height: ('height' in avCanvas.value) ? avCanvas.value.height : 'unknown',
             constructor: avCanvas.value.constructor.name,
           }
         : null,

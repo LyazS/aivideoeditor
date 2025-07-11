@@ -14,7 +14,7 @@ import type {
   VideoResolution,
   MediaType,
 } from '../../types'
-import { hasVisualProps } from '../../types'
+import { hasVisualProps, hasAudioProps } from '../../types'
 
 /**
  * 时间轴核心管理模块
@@ -22,7 +22,10 @@ import { hasVisualProps } from '../../types'
  */
 export function createTimelineModule(
   configModule: { videoResolution: { value: VideoResolution } },
-  webavModule: { avCanvas: { value: { removeSprite: (sprite: unknown) => void } | null } },
+  webavModule: {
+    avCanvas: { value: { removeSprite: (spr: any) => void } | null }
+    removeSprite?: (sprite: any) => boolean
+  },
   mediaModule: {
     getMediaItem: (id: string) => LocalMediaItem | undefined
     mediaItems: Ref<LocalMediaItem[]>
@@ -65,23 +68,25 @@ export function createTimelineModule(
         // 更新位置（坐标系转换）
         // 如果rect.x/rect.y为undefined，说明位置没有变化，使用sprite的当前值
         const currentRect = sprite.rect
+        // hasVisualProps 类型守卫确保了 config 具有视觉属性
+        const config = timelineItem.config
         const projectCoords = webavToProjectCoords(
           rect.x !== undefined ? rect.x : currentRect.x,
           rect.y !== undefined ? rect.y : currentRect.y,
-          rect.w !== undefined ? rect.w : timelineItem.config.width,
-          rect.h !== undefined ? rect.h : timelineItem.config.height,
+          rect.w !== undefined ? rect.w : config.width,
+          rect.h !== undefined ? rect.h : config.height,
           configModule.videoResolution.value.width,
           configModule.videoResolution.value.height,
         )
-        timelineItem.config.x = Math.round(projectCoords.x)
-        timelineItem.config.y = Math.round(projectCoords.y)
+        config.x = Math.round(projectCoords.x)
+        config.y = Math.round(projectCoords.y)
 
         // 更新尺寸
-        if (rect.w !== undefined) timelineItem.config.width = rect.w
-        if (rect.h !== undefined) timelineItem.config.height = rect.h
+        if (rect.w !== undefined) config.width = rect.w
+        if (rect.h !== undefined) config.height = rect.h
 
         // 更新旋转角度
-        if (rect.angle !== undefined) timelineItem.config.rotation = rect.angle
+        if (rect.angle !== undefined) config.rotation = rect.angle
 
         // console.log('🔄 VisibleSprite → TimelineItem 同步:', {
         //   webavCoords: { x: rect.x, y: rect.y },
@@ -99,6 +104,7 @@ export function createTimelineModule(
       // 同步opacity属性（使用新的事件系统）
       // 📝 现在 opacity 变化通过 propsChange 事件统一处理
       if (changedProps.opacity !== undefined && hasVisualProps(timelineItem)) {
+        // hasVisualProps 类型守卫确保了 config 具有视觉属性
         timelineItem.config.opacity = changedProps.opacity
       }
     })
@@ -363,10 +369,12 @@ export function createTimelineModule(
         hasVisualProps(item)
       ) {
         // 获取当前中心位置（项目坐标系）
-        const currentCenterX = item.config.x
-        const currentCenterY = item.config.y
-        const newWidth = transform.width !== undefined ? transform.width : item.config.width
-        const newHeight = transform.height !== undefined ? transform.height : item.config.height
+        // hasVisualProps 类型守卫确保了 config 具有视觉属性
+        const config = item.config
+        const currentCenterX = config.x
+        const currentCenterY = config.y
+        const newWidth = transform.width !== undefined ? transform.width : config.width
+        const newHeight = transform.height !== undefined ? transform.height : config.height
 
         // 中心缩放：保持中心位置不变，更新尺寸
         sprite.rect.w = newWidth
@@ -387,12 +395,14 @@ export function createTimelineModule(
 
       // 更新位置（需要坐标系转换）- 仅对视觉媒体有效
       if ((transform.x !== undefined || transform.y !== undefined) && hasVisualProps(item)) {
-        const newX = transform.x !== undefined ? transform.x : item.config.x
-        const newY = transform.y !== undefined ? transform.y : item.config.y
+        // hasVisualProps 类型守卫确保了 config 具有视觉属性
+        const config = item.config
+        const newX = transform.x !== undefined ? transform.x : config.x
+        const newY = transform.y !== undefined ? transform.y : config.y
 
         // 🔧 使用当前的尺寸（可能已经在上面更新过）
-        const currentWidth = transform.width !== undefined ? transform.width : item.config.width
-        const currentHeight = transform.height !== undefined ? transform.height : item.config.height
+        const currentWidth = transform.width !== undefined ? transform.width : config.width
+        const currentHeight = transform.height !== undefined ? transform.height : config.height
 
         const webavCoords = projectToWebavCoords(
           newX,
@@ -410,6 +420,7 @@ export function createTimelineModule(
       if (transform.opacity !== undefined && hasVisualProps(item)) {
         sprite.opacity = transform.opacity
         // 🔧 手动同步opacity到timelineItem（因为opacity没有propsChange回调）
+        // hasVisualProps 类型守卫确保了 config 具有视觉属性
         item.config.opacity = transform.opacity
       }
       if (transform.zIndex !== undefined) {

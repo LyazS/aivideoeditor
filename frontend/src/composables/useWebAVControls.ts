@@ -534,7 +534,9 @@ export function useWebAVControls() {
       // 获取素材名称用于备份（特殊处理文本类型）
       let mediaName: string
       if (item.mediaType === 'text') {
-        mediaName = item.mediaName || `文本: ${(item.config as any)?.text?.substring(0, 10) || '未知'}...`
+        // 类型检查确保这是文本项目，配置应该有文本属性
+        const textConfig = item.config as import('../types').TextMediaConfig
+        mediaName = item.mediaName || `文本: ${textConfig?.text?.substring(0, 10) || '未知'}...`
       } else {
         const mediaItem = videoStore.getMediaItem(item.mediaItemId)
         mediaName = mediaItem?.name || '未知素材'
@@ -645,7 +647,15 @@ export function useWebAVControls() {
             // 恢复变换属性 - 需要处理新旧画布分辨率不同的情况（类型安全版本）
             if (itemData.mediaType === 'video' || itemData.mediaType === 'image') {
               const { projectToWebavCoords } = await import('../utils/coordinateTransform')
-              const config = itemData.config as any // 临时类型断言，稍后会修复
+              const { hasVisualPropsData } = await import('../types')
+
+              // 类型安全的配置访问（使用类型守卫）
+              if (!hasVisualPropsData(itemData)) {
+                console.warn('🎨 [WebAV Controls] Item does not have visual properties:', itemData.mediaType)
+                continue
+              }
+
+              const config = itemData.config
               const newWebavCoords = projectToWebavCoords(
                 config.x,
                 config.y,

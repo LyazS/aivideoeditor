@@ -44,7 +44,7 @@ import { isVideoTimeRange } from '../types'
 
 // TimelineBaseClip通用接口
 interface Props {
-  timelineItem: TimelineItem
+  timelineItem: LocalTimelineItem
   track?: Track
   timelineWidth: number
   totalDurationFrames: number

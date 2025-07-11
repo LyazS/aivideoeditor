@@ -11,6 +11,8 @@ import type {
   LocalTimelineItemData,
   TransformData,
   TextMediaConfig,
+  AudioMediaConfig,
+  BaseMediaProps,
 } from '../../../types'
 import {
   isVideoTimeRange,
@@ -94,7 +96,9 @@ export class AddTimelineItemCommand implements SimpleCommand {
       newSprite.rect.angle = visualProps.rotation
       newSprite.opacity = visualProps.opacity
     }
-    newSprite.zIndex = (this.originalTimelineItemData.config as any).zIndex
+    // 安全地获取 zIndex，所有媒体类型的配置都应该有 zIndex 属性
+    const config = this.originalTimelineItemData.config as BaseMediaProps
+    newSprite.zIndex = config.zIndex
 
     // 5. 创建新的TimelineItem（先不设置缩略图）
     const newTimelineItem: LocalTimelineItem = reactive({
@@ -277,7 +281,9 @@ export class RemoveTimelineItemCommand implements SimpleCommand {
       newSprite.rect.angle = visualProps.rotation
       newSprite.opacity = visualProps.opacity
     }
-    newSprite.zIndex = (this.originalTimelineItemData.config as any).zIndex
+    // 安全地获取 zIndex，所有媒体类型的配置都应该有 zIndex 属性
+    const config = this.originalTimelineItemData.config as BaseMediaProps
+    newSprite.zIndex = config.zIndex
 
     // 5. 创建新的TimelineItem（先不设置缩略图）
     const newTimelineItem: LocalTimelineItem = reactive({
@@ -608,11 +614,16 @@ export class DuplicateTimelineItemCommand implements SimpleCommand {
     })
 
     // 音频不需要视觉属性，但需要复制音频属性
-    const audioConfig = this.originalTimelineItemData.config as any
-    if (audioConfig && audioConfig.audioState) {
-      const audioSprite = newSprite as any
+    // 类型检查确保这是音频项目的配置
+    const audioConfig = this.originalTimelineItemData.config as AudioMediaConfig
+    if (audioConfig && ('volume' in audioConfig || 'isMuted' in audioConfig)) {
+      // 类型检查确保这是音频精灵
+      const audioSprite = newSprite as import('../../../utils/AudioVisibleSprite').AudioVisibleSprite
       if (typeof audioSprite.setAudioState === 'function') {
-        audioSprite.setAudioState(audioConfig.audioState)
+        audioSprite.setAudioState({
+          volume: audioConfig.volume ?? 1,
+          isMuted: audioConfig.isMuted ?? false,
+        })
       }
       if (typeof audioSprite.setGain === 'function' && audioConfig.gain !== undefined) {
         audioSprite.setGain(audioConfig.gain)
@@ -676,7 +687,9 @@ export class DuplicateTimelineItemCommand implements SimpleCommand {
       rect.angle = visualProps.rotation
       sprite.opacity = visualProps.opacity
     }
-    sprite.zIndex = (this.originalTimelineItemData.config as any).zIndex
+    // 安全地获取 zIndex，所有媒体类型的配置都应该有 zIndex 属性
+    const config = this.originalTimelineItemData.config as BaseMediaProps
+    sprite.zIndex = config.zIndex
   }
 
   /**
@@ -686,7 +699,8 @@ export class DuplicateTimelineItemCommand implements SimpleCommand {
     console.log('🔄 [DuplicateTimelineItemCommand] 重建文本时间轴项目...')
 
     // 从保存的配置中获取文本内容和样式
-    const textConfig = this.originalTimelineItemData.config as any
+    // 类型检查确保这是文本项目的配置
+    const textConfig = this.originalTimelineItemData.config as TextMediaConfig
     const text = textConfig.text
     const style = textConfig.style
 
@@ -1179,6 +1193,7 @@ export class UpdateTransformCommand implements SimpleCommand {
       // 处理音量更新（对视频和音频有效）
       if (hasAudioProps(timelineItem)) {
         if (this.newValues.volume !== undefined) {
+          // hasAudioProps 类型守卫确保了 config 具有音频属性
           timelineItem.config.volume = this.newValues.volume
           const sprite = timelineItem.sprite
           if (sprite && 'setVolume' in sprite) {
@@ -1187,6 +1202,7 @@ export class UpdateTransformCommand implements SimpleCommand {
         }
 
         if (this.newValues.isMuted !== undefined) {
+          // hasAudioProps 类型守卫确保了 config 具有音频属性
           timelineItem.config.isMuted = this.newValues.isMuted
           const sprite = timelineItem.sprite
           if (sprite && 'setMuted' in sprite) {
@@ -1197,10 +1213,13 @@ export class UpdateTransformCommand implements SimpleCommand {
 
       // 处理音频增益更新（仅对音频有效）
       if (timelineItem.mediaType === 'audio' && this.newValues.gain !== undefined) {
-        ;(timelineItem.config as any).gain = this.newValues.gain
-        const sprite = timelineItem.sprite
-        if (sprite && 'setGain' in sprite) {
-          ;(sprite as AudioVisibleSprite).setGain(this.newValues.gain)
+        // 类型安全的音频配置更新
+        if ('gain' in timelineItem.config) {
+          (timelineItem.config as AudioMediaConfig).gain = this.newValues.gain
+          const sprite = timelineItem.sprite
+          if (sprite && 'setGain' in sprite) {
+            (sprite as AudioVisibleSprite).setGain(this.newValues.gain)
+          }
         }
       }
 
@@ -1264,6 +1283,7 @@ export class UpdateTransformCommand implements SimpleCommand {
       // 处理音量恢复（对视频和音频有效）
       if (hasAudioProps(timelineItem)) {
         if (this.oldValues.volume !== undefined) {
+          // hasAudioProps 类型守卫确保了 config 具有音频属性
           timelineItem.config.volume = this.oldValues.volume
           const sprite = timelineItem.sprite
           if (sprite && 'setVolume' in sprite) {
@@ -1272,6 +1292,7 @@ export class UpdateTransformCommand implements SimpleCommand {
         }
 
         if (this.oldValues.isMuted !== undefined) {
+          // hasAudioProps 类型守卫确保了 config 具有音频属性
           timelineItem.config.isMuted = this.oldValues.isMuted
           const sprite = timelineItem.sprite
           if (sprite && 'setMuted' in sprite) {
@@ -1282,10 +1303,13 @@ export class UpdateTransformCommand implements SimpleCommand {
 
       // 处理音频增益恢复（仅对音频有效）
       if (timelineItem.mediaType === 'audio' && this.oldValues.gain !== undefined) {
-        ;(timelineItem.config as any).gain = this.oldValues.gain
-        const sprite = timelineItem.sprite
-        if (sprite && 'setGain' in sprite) {
-          ;(sprite as AudioVisibleSprite).setGain(this.oldValues.gain)
+        // 类型安全的音频配置恢复
+        if ('gain' in timelineItem.config) {
+          (timelineItem.config as AudioMediaConfig).gain = this.oldValues.gain
+          const sprite = timelineItem.sprite
+          if (sprite && 'setGain' in sprite) {
+            (sprite as AudioVisibleSprite).setGain(this.oldValues.gain)
+          }
         }
       }
 
@@ -1510,7 +1534,9 @@ export class SplitTimelineItemCommand implements SimpleCommand {
           sprite.rect.angle = visualProps.rotation
           sprite.opacity = visualProps.opacity
         }
-        sprite.zIndex = (this.originalTimelineItemData.config as any).zIndex
+        // 安全地获取 zIndex，所有媒体类型的配置都应该有 zIndex 属性
+        const config = this.originalTimelineItemData.config as BaseMediaProps
+        sprite.zIndex = config.zIndex
 
         // 应用音频属性
         const audioProps = getAudioPropsFromData(this.originalTimelineItemData)
@@ -1538,7 +1564,8 @@ export class SplitTimelineItemCommand implements SimpleCommand {
           })
         }
         // 应用增益设置（如果有的话）
-        const config = this.originalTimelineItemData.config as any
+        // 类型检查确保这是音频项目的配置
+        const config = this.originalTimelineItemData.config as AudioMediaConfig
         if (config.gain !== undefined) {
           sprite.setGain(config.gain)
         }
@@ -1634,7 +1661,9 @@ export class SplitTimelineItemCommand implements SimpleCommand {
         videoSprite.rect.angle = visualProps.rotation
         videoSprite.opacity = visualProps.opacity
       }
-      videoSprite.zIndex = (this.originalTimelineItemData.config as any).zIndex
+      // 安全地获取 zIndex，所有媒体类型的配置都应该有 zIndex 属性
+      const config = this.originalTimelineItemData.config as BaseMediaProps
+      videoSprite.zIndex = config.zIndex
 
       // 应用音频属性
       const audioProps = getAudioPropsFromData(this.originalTimelineItemData)
@@ -1657,7 +1686,8 @@ export class SplitTimelineItemCommand implements SimpleCommand {
       }
 
       // 应用增益设置（如果有的话）
-      const config = this.originalTimelineItemData.config as any
+      // 类型检查确保这是音频项目的配置
+      const config = this.originalTimelineItemData.config as AudioMediaConfig
       if (config.gain !== undefined) {
         audioSprite.setGain(config.gain)
       }
@@ -1850,7 +1880,7 @@ export class AddTrackCommand implements SimpleCommand {
       addTrack: (type: TrackType, name?: string, position?: number) => Track
       removeTrack: (
         trackId: string,
-        timelineItems: Ref<TimelineItem[]>,
+        timelineItems: Ref<LocalTimelineItem[]>,
         removeTimelineItemCallback?: (id: string) => void,
       ) => void
       getTrack: (trackId: string) => Track | undefined
@@ -2118,7 +2148,9 @@ export class RemoveTrackCommand implements SimpleCommand {
     }
 
     // 设置其他属性
-    newSprite.zIndex = (itemData.config as any).zIndex
+    // 安全地获取 zIndex，所有媒体类型的配置都应该有 zIndex 属性
+    const config = itemData.config as BaseMediaProps
+    newSprite.zIndex = config.zIndex
 
     // 创建新的TimelineItem
     const newTimelineItem: LocalTimelineItem = reactive({

@@ -422,7 +422,7 @@
   </div>
 </template>
 
-<script setup lang="ts">
+<script setup lang="ts" generic="T extends 'text'">
 import { ref, computed, watch } from 'vue'
 import { useVideoStore } from '../stores/videoStore'
 import { framesToTimecode, timecodeToFrames } from '../stores/utils/timeUtils'
@@ -431,10 +431,10 @@ import NumberInput from './NumberInput.vue'
 import SliderInput from './SliderInput.vue'
 import KeyframeControls from './KeyframeControls.vue'
 import TransformControls from './TransformControls.vue'
-import type { LocalTimelineItem, TextStyleConfig } from '../types'
+import type { LocalTimelineItem, TextStyleConfig, MediaType } from '../types'
 
 interface Props {
-  selectedTimelineItem: TimelineItem<'text'> | null
+  selectedTimelineItem: LocalTimelineItem<T> | null
   currentFrame: number
 }
 
@@ -869,12 +869,14 @@ const updateTargetDurationFrames = async (newDurationFrames: number) => {
 
   // 更新timelineItem的timeRange（文本项目使用ImageTimeRange）
   const newTimeRange = sprite.getTimeRange()
+  // 通过类型断言安全地更新 timeRange，因为我们知道这是文本项目
+  const timelineItem = props.selectedTimelineItem as LocalTimelineItem<'text'>
   if ('displayDuration' in newTimeRange) {
     // 如果是ImageTimeRange，直接赋值
-    props.selectedTimelineItem.timeRange = newTimeRange
+    timelineItem.timeRange = newTimeRange
   } else {
     // 如果是VideoTimeRange，转换为ImageTimeRange
-    props.selectedTimelineItem.timeRange = {
+    timelineItem.timeRange = {
       timelineStartTime: newTimeRange.timelineStartTime,
       timelineEndTime: newTimeRange.timelineEndTime,
       displayDuration: newTimeRange.timelineEndTime - newTimeRange.timelineStartTime,

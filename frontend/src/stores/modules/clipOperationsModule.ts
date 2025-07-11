@@ -21,10 +21,12 @@ export function createClipOperationsModule(
   webavModule: {
     avCanvas: {
       value: {
-        addSprite: (sprite: unknown) => void
-        removeSprite: (sprite: unknown) => void
+        addSprite: (sprite: any) => void
+        removeSprite: (sprite: any) => void
       } | null
     }
+    // 允许其他属性存在
+    [key: string]: any
   },
   mediaModule: {
     getMediaItem: (id: string) => LocalMediaItem | undefined

@@ -82,8 +82,9 @@ function createThumbnailCanvas(
   ctx.fillRect(0, 0, sizeInfo.containerWidth, sizeInfo.containerHeight)
 
   // 在居中位置绘制图像
+  // VideoFrame 和 ImageBitmap 都是有效的 CanvasImageSource
   ctx.drawImage(
-    source as any,
+    source as CanvasImageSource,
     sizeInfo.offsetX,
     sizeInfo.offsetY,
     sizeInfo.drawWidth,
@@ -311,8 +312,8 @@ export async function generateThumbnailForMediaItem(
  * @returns Promise<string | undefined> 新的缩略图URL
  */
 export async function regenerateThumbnailForTimelineItem(
-  timelineItem: TimelineItem,
-  mediaItem: MediaItem,
+  timelineItem: LocalTimelineItem,
+  mediaItem: LocalMediaItem,
 ): Promise<string | undefined> {
   try {
     console.log('🔄 [ThumbnailGenerator] 重新生成时间轴clip缩略图:', {

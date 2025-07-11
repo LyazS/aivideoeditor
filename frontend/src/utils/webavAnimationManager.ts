@@ -15,10 +15,10 @@ import { debugWebAVAnimationUpdate, isKeyframeDebugEnabled } from './keyframeDeb
  * 管理单个TimelineItem的WebAV动画
  */
 export class WebAVAnimationManager {
-  private timelineItem: TimelineItem
+  private timelineItem: LocalTimelineItem
   private isDestroyed: boolean = false
 
-  constructor(timelineItem: TimelineItem) {
+  constructor(timelineItem: LocalTimelineItem) {
     this.timelineItem = timelineItem
   }
 
@@ -161,7 +161,7 @@ class GlobalWebAVAnimationManager {
   /**
    * 添加动画管理器
    */
-  public addManager(timelineItem: TimelineItem): WebAVAnimationManager {
+  public addManager(timelineItem: LocalTimelineItem): WebAVAnimationManager {
     const manager = new WebAVAnimationManager(timelineItem)
     this.managers.set(timelineItem.id, manager)
     return manager
@@ -194,7 +194,7 @@ export const globalWebAVAnimationManager = new GlobalWebAVAnimationManager()
 /**
  * 更新TimelineItem的WebAV动画
  */
-export async function updateWebAVAnimation(timelineItem: TimelineItem): Promise<void> {
+export async function updateWebAVAnimation(timelineItem: LocalTimelineItem): Promise<void> {
   let manager = globalWebAVAnimationManager.getManager(timelineItem.id)
   if (!manager) {
     manager = globalWebAVAnimationManager.addManager(timelineItem)

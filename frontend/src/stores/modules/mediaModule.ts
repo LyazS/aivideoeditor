@@ -53,7 +53,7 @@ export function createMediaModule() {
     mediaItemId: string,
     timelineItems: Ref<LocalTimelineItem[]>,
     tracks: Ref<Track[]>,
-    avCanvas: { removeSprite: (sprite: unknown) => void } | null,
+    avCanvas: { removeSprite: (sprite: any) => void } | null,
     cleanupTimelineItem: (timelineItem: LocalTimelineItem) => void,
   ) {
     const index = mediaItems.value.findIndex((item: LocalMediaItem) => item.id === mediaItemId)

@@ -69,7 +69,7 @@ import ClipTooltip from './ClipTooltip.vue'
 import type { LocalTimelineItem, Track, AudioMediaConfig } from '../types'
 
 interface Props {
-  timelineItem: TimelineItem<'audio'>
+  timelineItem: LocalTimelineItem<'audio'>
   track?: Track
   timelineWidth: number
   totalDurationFrames: number

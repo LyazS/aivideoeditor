@@ -64,7 +64,7 @@ import type { LocalTimelineItem, Track } from '../types'
 import { getTextItemDisplayName } from '../utils/textTimelineUtils'
 
 interface Props {
-  timelineItem: TimelineItem<'text'>
+  timelineItem: LocalTimelineItem<'text'>
   track?: Track
   timelineWidth: number
   totalDurationFrames: number

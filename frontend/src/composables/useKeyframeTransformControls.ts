@@ -40,17 +40,20 @@ export function useKeyframeTransformControls(options: KeyframeTransformControlsO
   // 变换属性 - 基于TimelineItem的响应式计算属性（类型安全版本）
   const transformX = computed(() => {
     if (!selectedTimelineItem.value || !hasVisualProps(selectedTimelineItem.value)) return 0
+    // hasVisualProps 类型守卫确保了 config 具有视觉属性
     return selectedTimelineItem.value.config.x
   })
 
   const transformY = computed(() => {
     if (!selectedTimelineItem.value || !hasVisualProps(selectedTimelineItem.value)) return 0
+    // hasVisualProps 类型守卫确保了 config 具有视觉属性
     return selectedTimelineItem.value.config.y
   })
 
   const scaleX = computed(() => {
     if (!selectedTimelineItem.value || !hasVisualProps(selectedTimelineItem.value)) return 1
 
+    // hasVisualProps 类型守卫确保了 config 具有视觉属性
     const config = selectedTimelineItem.value.config
     return config.width / config.originalWidth
   })
@@ -58,18 +61,21 @@ export function useKeyframeTransformControls(options: KeyframeTransformControlsO
   const scaleY = computed(() => {
     if (!selectedTimelineItem.value || !hasVisualProps(selectedTimelineItem.value)) return 1
 
+    // hasVisualProps 类型守卫确保了 config 具有视觉属性
     const config = selectedTimelineItem.value.config
     return config.height / config.originalHeight
   })
 
   const rotation = computed(() => {
     if (!selectedTimelineItem.value || !hasVisualProps(selectedTimelineItem.value)) return 0
+    // hasVisualProps 类型守卫确保了 config 具有视觉属性
     const radians = selectedTimelineItem.value.config.rotation
     return webAVRadiansToUIDegrees(radians)
   })
 
   const opacity = computed(() => {
     if (!selectedTimelineItem.value || !hasVisualProps(selectedTimelineItem.value)) return 1
+    // hasVisualProps 类型守卫确保了 config 具有视觉属性
     return selectedTimelineItem.value.config.opacity
   })
 
@@ -82,10 +88,12 @@ export function useKeyframeTransformControls(options: KeyframeTransformControlsO
   const proportionalScale = computed({
     get: () => {
       if (!selectedTimelineItem.value || !hasVisualProps(selectedTimelineItem.value)) return true
+      // hasVisualProps 类型守卫确保了 config 具有视觉属性
       return selectedTimelineItem.value.config.proportionalScale
     },
     set: (value) => {
       if (!selectedTimelineItem.value || !hasVisualProps(selectedTimelineItem.value)) return
+      // hasVisualProps 类型守卫确保了 config 具有视觉属性
       selectedTimelineItem.value.config.proportionalScale = value
     },
   })
@@ -249,6 +257,7 @@ export function useKeyframeTransformControls(options: KeyframeTransformControlsO
 
     // 如果刚刚开启等比缩放，使用当前X缩放值作为统一缩放值，同时更新Y缩放
     if (proportionalScale.value && selectedTimelineItem.value && hasVisualProps(selectedTimelineItem.value)) {
+      // hasVisualProps 类型守卫确保了 config 具有视觉属性
       const config = selectedTimelineItem.value.config
       const newSize = {
         width: config.originalWidth * scaleX.value,
@@ -263,7 +272,8 @@ export function useKeyframeTransformControls(options: KeyframeTransformControlsO
    */
   const updateUniformScale = (newScale: number) => {
     if (proportionalScale.value && selectedTimelineItem.value && hasVisualProps(selectedTimelineItem.value)) {
-      const config = selectedTimelineItem.value.config as any // 类型断言，因为 hasVisualProps 已经确保了这是视觉媒体
+      // hasVisualProps 类型守卫确保了 config 具有视觉属性
+      const config = selectedTimelineItem.value.config
       const newSize = {
         width: config.originalWidth * newScale,
         height: config.originalHeight * newScale,
@@ -278,7 +288,8 @@ export function useKeyframeTransformControls(options: KeyframeTransformControlsO
   const setScaleX = (value: number) => {
     if (!selectedTimelineItem.value || !hasVisualProps(selectedTimelineItem.value)) return
 
-    const config = selectedTimelineItem.value.config as any // 类型断言，因为 hasVisualProps 已经确保了这是视觉媒体
+    // hasVisualProps 类型守卫确保了 config 具有视觉属性
+    const config = selectedTimelineItem.value.config
     const newScaleX = Math.max(0.01, Math.min(5, value))
     const newSize = {
       width: config.originalWidth * newScaleX,
@@ -293,7 +304,8 @@ export function useKeyframeTransformControls(options: KeyframeTransformControlsO
   const setScaleY = (value: number) => {
     if (!selectedTimelineItem.value || !hasVisualProps(selectedTimelineItem.value)) return
 
-    const config = selectedTimelineItem.value.config as any // 类型断言，因为 hasVisualProps 已经确保了这是视觉媒体
+    // hasVisualProps 类型守卫确保了 config 具有视觉属性
+    const config = selectedTimelineItem.value.config
     const newScaleY = Math.max(0.01, Math.min(5, value))
     const newSize = {
       width: config.width, // 保持X尺寸不变

@@ -10,6 +10,7 @@ import type {
   AnimationConfig,
   MediaType,
   GetMediaConfig,
+  VisualMediaConfig,
 } from '../../../types'
 import { hasVisualProps } from '../../../types'
 import { generateCommandId } from '../../../utils/idGenerator'
@@ -75,7 +76,8 @@ async function applyKeyframeSnapshot<T extends MediaType = MediaType>(
     try {
       // 类型安全的属性恢复 - 只处理视觉属性
       if (hasVisualProps(item)) {
-        const visualProps = snapshot.itemProperties as any // 临时类型断言，因为我们已经通过类型守卫确认
+        // hasVisualProps 类型守卫确保了 snapshot.itemProperties 具有视觉属性
+        const visualProps = snapshot.itemProperties as VisualMediaConfig
 
         // 恢复位置和尺寸
         if (visualProps.x !== undefined || visualProps.y !== undefined) {
@@ -83,11 +85,13 @@ async function applyKeyframeSnapshot<T extends MediaType = MediaType>(
           const { useVideoStore } = await import('../../../stores/videoStore')
           const videoStore = useVideoStore()
 
+          // hasVisualProps 类型守卫确保了 config 具有视觉属性
+          const config = item.config
           const webavCoords = projectToWebavCoords(
-            visualProps.x ?? item.config.x,
-            visualProps.y ?? item.config.y,
-            visualProps.width ?? item.config.width,
-            visualProps.height ?? item.config.height,
+            visualProps.x ?? config.x,
+            visualProps.y ?? config.y,
+            visualProps.width ?? config.width,
+            visualProps.height ?? config.height,
             videoStore.videoResolution.width,
             videoStore.videoResolution.height,
           )
@@ -184,7 +188,7 @@ export class CreateKeyframeCommand implements SimpleCommand {
             easing: item.animation.easing,
           }
         : null,
-      itemProperties: { ...item.config } as any, // 使用完整的config作为快照
+      itemProperties: { ...item.config } as GetMediaConfig<MediaType>, // 使用完整的config作为快照
     }
   }
 
@@ -348,7 +352,7 @@ export class DeleteKeyframeCommand implements SimpleCommand {
             easing: item.animation.easing,
           }
         : null,
-      itemProperties: { ...item.config } as any, // 使用完整的config作为快照
+      itemProperties: { ...item.config } as GetMediaConfig<MediaType>, // 使用完整的config作为快照
     }
   }
 
@@ -510,7 +514,7 @@ export class UpdatePropertyCommand implements SimpleCommand {
             easing: item.animation.easing,
           }
         : null,
-      itemProperties: { ...item.config } as any, // 使用完整的config作为快照
+      itemProperties: { ...item.config } as GetMediaConfig<MediaType>, // 使用完整的config作为快照
     }
   }
 
@@ -670,7 +674,7 @@ export class ClearAllKeyframesCommand implements SimpleCommand {
             easing: item.animation.easing,
           }
         : null,
-      itemProperties: { ...item.config } as any, // 使用完整的config作为快照
+      itemProperties: { ...item.config } as GetMediaConfig<MediaType>, // 使用完整的config作为快照
     }
   }
 
@@ -807,7 +811,7 @@ export class ToggleKeyframeCommand implements SimpleCommand {
             easing: item.animation.easing,
           }
         : null,
-      itemProperties: { ...item.config } as any, // 使用完整的config作为快照
+      itemProperties: { ...item.config } as GetMediaConfig<MediaType>, // 使用完整的config作为快照
     }
   }
 

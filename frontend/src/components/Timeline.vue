@@ -267,6 +267,7 @@ import type {
   TrackType,
   MediaType,
 } from '../types'
+import { hasVisualProps } from '../types'
 import TimelineVideoClip from './TimelineVideoClip.vue'
 import TimelineTextClip from './TimelineTextClip.vue'
 import TimelineAudioClip from './TimelineAudioClip.vue'
@@ -1361,8 +1362,8 @@ async function createMediaClipFromMediaItem(
       )
     }
 
-    // 创建类型安全的 TimelineItem
-    const timelineItem: TimelineItem = reactive({
+    // 创建类型安全的 LocalTimelineItem
+    const timelineItem: LocalTimelineItem = reactive({
       id: timelineItemId,
       mediaItemId: mediaItem.id,
       trackId: trackId,

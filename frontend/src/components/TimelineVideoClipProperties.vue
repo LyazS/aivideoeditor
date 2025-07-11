@@ -165,14 +165,20 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useVideoStore } from '../stores/videoStore'
-import { isVideoTimeRange } from '../types'
+import {
+  isVideoTimeRange,
+  hasVisualProps,
+  hasAudioProps,
+  hasVisualProperties,
+  hasAudioProperties,
+  type LocalTimelineItem
+} from '../types'
 import { framesToTimecode, timecodeToFrames } from '../stores/utils/timeUtils'
 import { useKeyframeTransformControls } from '../composables/useKeyframeTransformControls'
 import NumberInput from './NumberInput.vue'
 import SliderInput from './SliderInput.vue'
 import KeyframeControls from './KeyframeControls.vue'
 import TransformControls from './TransformControls.vue'
-import type { LocalTimelineItem } from '../types'
 
 interface Props {
   selectedTimelineItem: LocalTimelineItem | null
@@ -275,11 +281,20 @@ const currentResolution = computed(() => {
   if (!hasVisualProps(props.selectedTimelineItem)) {
     return { width: 0, height: 0 }
   }
-  return {
-    width: Math.round(props.selectedTimelineItem.config.width),
-    height: Math.round(props.selectedTimelineItem.config.height),
+
+  // 类型安全的配置访问 - 使用类型守卫确保属性存在
+  const config = props.selectedTimelineItem.config
+  if (hasVisualProperties(config)) {
+    return {
+      width: Math.round(config.width),
+      height: Math.round(config.height),
+    }
   }
+
+  return { width: 0, height: 0 }
 })
+
+
 
 // 其他响应式属性
 const clipName = computed({
@@ -323,16 +338,32 @@ const volume = computed(() => {
   if (!props.selectedTimelineItem || props.selectedTimelineItem.mediaType !== 'video') return 1
   // 确保 volume 和 isMuted 都有默认值（类型安全版本）
   if (!hasAudioProps(props.selectedTimelineItem)) return 1
-  const itemVolume = props.selectedTimelineItem.config.volume ?? 1
-  const itemMuted = props.selectedTimelineItem.config.isMuted ?? false
-  // 静音时显示0，否则显示实际音量
-  return itemMuted ? 0 : itemVolume
+
+  // 类型安全的配置访问
+  const config = props.selectedTimelineItem.config
+  if (hasAudioProperties(config)) {
+    const itemVolume = config.volume ?? 1
+    const itemMuted = config.isMuted ?? false
+    // 静音时显示0，否则显示实际音量
+    return itemMuted ? 0 : itemVolume
+  }
+
+  return 1
 })
 
 const isMuted = computed(() => {
   if (!props.selectedTimelineItem || !hasAudioProps(props.selectedTimelineItem)) return false
-  return props.selectedTimelineItem.config.isMuted ?? false
+
+  // 类型安全的配置访问
+  const config = props.selectedTimelineItem.config
+  if (hasAudioProperties(config)) {
+    return config.isMuted ?? false
+  }
+
+  return false
 })
+
+
 
 // NumberInput 样式定义
 const propertyInputStyle = {
@@ -482,8 +513,11 @@ const updateTargetDurationFrames = async (newDurationFrames: number) => {
     })
   }
 
-  // 更新timelineItem的timeRange
-  props.selectedTimelineItem.timeRange = sprite.getTimeRange()
+  // 更新timelineItem的timeRange（使用专用工具函数）
+  if (props.selectedTimelineItem) {
+    const { syncTimeRange } = await import('../stores/utils/timeRangeUtils')
+    syncTimeRange(props.selectedTimelineItem)
+  }
 
   // 如果有动画，需要重新设置WebAV动画时长
   if (props.selectedTimelineItem.animation && props.selectedTimelineItem.animation.isEnabled) {
@@ -527,28 +561,33 @@ const updateVolume = (newVolume: number) => {
   // volume 和 isMuted 属性属于【非动画属性】，WebAV不支持这些属性的propsChange事件
   // 因此无法遵循标准的 UI → WebAV → TimelineItem → UI 数据流向
   // 这里直接修改config是技术限制导致的必要妥协，不是架构设计缺陷
-  if (props.selectedTimelineItem.config.volume === undefined) {
-    props.selectedTimelineItem.config.volume = 1
-  }
-  if (props.selectedTimelineItem.config.isMuted === undefined) {
-    props.selectedTimelineItem.config.isMuted = false
-  }
+  const config = props.selectedTimelineItem.config
 
-  // 使用历史记录系统更新音量
-  if (clampedVolume === 0) {
-    // 设为静音，但保留原音量值
-    videoStore.updateTimelineItemTransformWithHistory(props.selectedTimelineItem.id, {
-      isMuted: true,
-    })
-  } else {
-    // 更新音量值并取消静音
-    videoStore.updateTimelineItemTransformWithHistory(props.selectedTimelineItem.id, {
-      volume: clampedVolume,
-      isMuted: false,
-    })
-  }
+  // 类型安全的属性初始化和访问
+  if (hasAudioProperties(config)) {
+    if (config.volume === undefined) {
+      config.volume = 1
+    }
+    if (config.isMuted === undefined) {
+      config.isMuted = false
+    }
 
-  console.log('✅ 音量更新成功:', clampedVolume)
+    // 使用历史记录系统更新音量
+    if (clampedVolume === 0) {
+      // 设为静音，但保留原音量值
+      videoStore.updateTimelineItemTransformWithHistory(props.selectedTimelineItem.id, {
+        isMuted: true,
+      })
+    } else {
+      // 更新音量值并取消静音
+      videoStore.updateTimelineItemTransformWithHistory(props.selectedTimelineItem.id, {
+        volume: clampedVolume,
+        isMuted: false,
+      })
+    }
+
+    console.log('✅ 音量更新成功:', clampedVolume)
+  }
 }
 
 // 切换静音状态（类型安全版本）
@@ -559,26 +598,31 @@ const toggleMute = () => {
   // volume 和 isMuted 属性属于【非动画属性】，WebAV不支持这些属性的propsChange事件
   // 因此无法遵循标准的 UI → WebAV → TimelineItem → UI 数据流向
   // 这里直接修改config是技术限制导致的必要妥协，不是架构设计缺陷
-  if (props.selectedTimelineItem.config.volume === undefined) {
-    props.selectedTimelineItem.config.volume = 1
+  const config = props.selectedTimelineItem.config
+
+  // 类型安全的属性访问和初始化
+  if (hasAudioProperties(config)) {
+    if (config.volume === undefined) {
+      config.volume = 1
+    }
+    if (config.isMuted === undefined) {
+      config.isMuted = false
+    }
+
+    const newMutedState = !config.isMuted
+
+    // 使用历史记录系统切换静音状态
+    videoStore.updateTimelineItemTransformWithHistory(props.selectedTimelineItem.id, {
+      isMuted: newMutedState,
+    })
+
+    console.log(
+      '✅ 静音状态切换:',
+      newMutedState ? '静音' : '有声',
+      '音量保持:',
+      config.volume,
+    )
   }
-  if (props.selectedTimelineItem.config.isMuted === undefined) {
-    props.selectedTimelineItem.config.isMuted = false
-  }
-
-  const newMutedState = !props.selectedTimelineItem.config.isMuted
-
-  // 使用历史记录系统切换静音状态
-  videoStore.updateTimelineItemTransformWithHistory(props.selectedTimelineItem.id, {
-    isMuted: newMutedState,
-  })
-
-  console.log(
-    '✅ 静音状态切换:',
-    newMutedState ? '静音' : '有声',
-    '音量保持:',
-    props.selectedTimelineItem.config.volume,
-  )
 }
 
 // 将归一化值(0-100)转换为实际播放速度
