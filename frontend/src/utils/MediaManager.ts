@@ -1,7 +1,7 @@
 import { directoryManager } from './DirectoryManager'
 import type { Raw } from 'vue'
 import type { MP4Clip, ImgClip, AudioClip } from '@webav/av-cliper'
-import type { MediaType, LocalMediaItem, MediaMetadata, LocalMediaReference } from '../types'
+import type { MediaType, LocalMediaItem, MediaMetadata, LocalMediaReference, MediaErrorType } from '../types'
 
 /**
  * 媒体文件管理器
@@ -534,6 +534,54 @@ export class MediaManager {
   }
 
   /**
+   * 保存错误状态媒体引用
+   * @param mediaId 媒体ID
+   * @param file 原始文件对象
+   * @param projectId 项目ID
+   * @param mediaType 媒体类型
+   * @param errorType 错误类型
+   * @param errorMessage 错误信息
+   * @returns 错误状态的媒体引用
+   */
+  async saveErrorMediaReference(
+    mediaId: string,
+    file: File,
+    projectId: string,
+    mediaType: MediaType,
+    errorType: MediaErrorType,
+    errorMessage: string
+  ): Promise<LocalMediaReference> {
+    try {
+      console.log(`💾 开始保存错误状态媒体引用: ${file.name}`)
+
+      // 创建错误状态的媒体引用
+      const errorReference: LocalMediaReference = {
+        originalFileName: file.name,
+        storedPath: '', // 错误状态没有实际存储路径
+        type: mediaType,
+        fileSize: file.size,
+        checksum: '', // 错误状态没有文件校验和
+        status: 'error',
+        errorType,
+        errorMessage,
+        errorTimestamp: new Date().toISOString(),
+        originalFile: {
+          name: file.name,
+          size: file.size,
+          type: file.type,
+          lastModified: file.lastModified
+        }
+      }
+
+      console.log(`✅ 错误状态媒体引用创建完成: ${file.name}`)
+      return errorReference
+    } catch (error) {
+      console.error('保存错误状态媒体引用失败:', error)
+      throw error
+    }
+  }
+
+  /**
    * 删除本地媒体文件和元数据
    * @param projectId 项目ID
    * @param mediaReference 媒体引用信息
@@ -588,7 +636,38 @@ export class MediaManager {
   }
 
   /**
-   * 批量加载项目的所有媒体文件
+   * 恢复错误状态的媒体项
+   * @param mediaId 媒体ID
+   * @param reference 错误状态的媒体引用
+   * @returns 错误状态的LocalMediaItem
+   */
+  private restoreErrorMediaItem(
+    mediaId: string,
+    reference: LocalMediaReference
+  ): LocalMediaItem {
+    console.log(`🔴 恢复错误状态媒体项: ${reference.originalFileName}`)
+
+    const errorMediaItem: LocalMediaItem = {
+      id: mediaId,
+      name: reference.originalFileName,
+      createdAt: reference.errorTimestamp || new Date().toISOString(),
+      file: null as any, // 错误状态没有实际文件对象
+      url: '', // 错误状态没有URL
+      duration: 0,
+      type: reference.originalFile?.type || '',
+      mediaType: reference.type,
+      mp4Clip: null,
+      imgClip: null,
+      audioClip: null,
+      isReady: false,
+      status: 'error'
+    }
+
+    return errorMediaItem
+  }
+
+  /**
+   * 批量加载项目的所有媒体文件（扩展支持错误状态媒体项）
    * @param projectId 项目ID
    * @param mediaReferences 媒体引用映射
    * @param options 加载选项
@@ -620,24 +699,44 @@ export class MediaManager {
 
         // 并行处理当前批次
         const batchPromises = batch.map(async ([mediaId, reference]) => {
-          try {
-            const mediaItem = await this.rebuildMediaItemFromLocal(mediaId, reference, projectId)
-            loadedCount++
-
-            // 报告进度
-            if (onProgress) {
-              onProgress(loadedCount, totalCount)
-            }
-
-            return mediaItem
-          } catch (error) {
-            console.error(`批次处理失败: ${reference.originalFileName}`, error)
-            // 继续处理其他文件，不中断整个流程
+          if (reference.status === 'error') {
+            // 恢复错误状态的媒体项
             loadedCount++
             if (onProgress) {
               onProgress(loadedCount, totalCount)
             }
-            return null
+            return this.restoreErrorMediaItem(mediaId, reference)
+          } else {
+            // 正常加载流程
+            try {
+              const mediaItem = await this.rebuildMediaItemFromLocal(mediaId, reference, projectId)
+              loadedCount++
+
+              // 报告进度
+              if (onProgress) {
+                onProgress(loadedCount, totalCount)
+              }
+
+              return mediaItem
+            } catch (error) {
+              console.error(`加载媒体失败，转换为错误状态: ${reference.originalFileName}`, error)
+
+              // 将加载失败的媒体转换为错误状态
+              const updatedReference: LocalMediaReference = {
+                ...reference,
+                status: 'error',
+                errorType: 'file_load_error',
+                errorMessage: error instanceof Error ? error.message : String(error),
+                errorTimestamp: new Date().toISOString()
+              }
+
+              loadedCount++
+              if (onProgress) {
+                onProgress(loadedCount, totalCount)
+              }
+
+              return this.restoreErrorMediaItem(mediaId, updatedReference)
+            }
           }
         })
 

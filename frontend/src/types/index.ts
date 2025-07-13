@@ -36,6 +36,14 @@ export type AsyncProcessingStatus = 'pending' | 'processing' | 'completed' | 'er
 export type AsyncProcessingType = 'remote-download'
 
 /**
+ * 媒体错误类型枚举
+ */
+export type MediaErrorType =
+  | 'webav_parse_error'    // WebAV解析失败（如格式不支持、文件损坏）
+  | 'file_load_error'      // 文件加载失败（如文件不存在、权限问题）
+  | 'unsupported_format'   // 不支持的文件格式
+
+/**
  * 轨道类型
  */
 export type TrackType = 'video' | 'audio' | 'text'
@@ -1105,11 +1113,27 @@ export interface BaseMediaReference {
 
 /**
  * 本地媒体引用接口 - 继承基础接口，添加本地文件相关属性
- * 用于项目配置中引用本地媒体文件
+ * 扩展支持错误状态持久化
  */
 export interface LocalMediaReference extends BaseMediaReference {
   type: MediaType
-  storedPath: string // 相对于项目目录的路径
+  storedPath: string // 正常状态：实际存储路径；错误状态：空字符串
+
+  // 新增：状态管理字段
+  status?: 'normal' | 'error'  // 默认为normal，兼容现有数据
+
+  // 新增：错误状态相关字段（仅当status为error时有值）
+  errorType?: 'webav_parse_error' | 'file_load_error' | 'unsupported_format'
+  errorMessage?: string
+  errorTimestamp?: string
+
+  // 新增：保留原始文件信息用于重试功能
+  originalFile?: {
+    name: string
+    size: number
+    type: string
+    lastModified: number
+  }
 }
 
 /**

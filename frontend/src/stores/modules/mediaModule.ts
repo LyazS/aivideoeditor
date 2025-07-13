@@ -1,6 +1,6 @@
 import { ref, type Ref } from 'vue'
 import { printDebugInfo } from '../utils/debugUtils'
-import type { LocalMediaItem, LocalTimelineItem, Track } from '../../types'
+import type { LocalMediaItem, LocalTimelineItem, Track, AsyncProcessingMediaItem } from '../../types'
 
 /**
  * 媒体管理模块
@@ -11,6 +11,9 @@ export function createMediaModule() {
 
   // 素材库
   const mediaItems = ref<LocalMediaItem[]>([])
+
+  // 异步处理素材库
+  const asyncProcessingItems = ref<AsyncProcessingMediaItem[]>([])
 
   // ==================== 媒体项目管理方法 ====================
 
@@ -145,6 +148,89 @@ export function createMediaModule() {
     }
   }
 
+  // ==================== 异步处理素材管理方法 ====================
+
+  /**
+   * 添加异步处理素材项目
+   * @param asyncProcessingItem 异步处理素材项目
+   */
+  function addAsyncProcessingItem(asyncProcessingItem: AsyncProcessingMediaItem) {
+    asyncProcessingItems.value.push(asyncProcessingItem)
+    console.log('🔄 [MediaModule] 添加异步处理素材:', {
+      id: asyncProcessingItem.id,
+      name: asyncProcessingItem.name,
+      type: asyncProcessingItem.processingType,
+      status: asyncProcessingItem.processingStatus
+    })
+  }
+
+  /**
+   * 更新异步处理素材项目
+   * @param updatedItem 更新后的异步处理素材项目
+   */
+  function updateAsyncProcessingItem(updatedItem: AsyncProcessingMediaItem) {
+    const index = asyncProcessingItems.value.findIndex(item => item.id === updatedItem.id)
+    if (index !== -1) {
+      // 使用 splice 来确保 Vue 能检测到数组变化
+      asyncProcessingItems.value.splice(index, 1, updatedItem)
+      // console.log('🔄 [MediaModule] 更新异步处理素材:', {
+      //   id: updatedItem.id,
+      //   status: updatedItem.processingStatus,
+      //   progress: updatedItem.processingProgress
+      // })
+    } else {
+      console.warn('🔄 [MediaModule] 未找到要更新的异步处理素材:', updatedItem.id)
+    }
+  }
+
+  /**
+   * 删除异步处理素材项目
+   * @param itemId 异步处理素材项目ID
+   */
+  function removeAsyncProcessingItem(itemId: string) {
+    const index = asyncProcessingItems.value.findIndex(item => item.id === itemId)
+    if (index !== -1) {
+      const item = asyncProcessingItems.value[index]
+      asyncProcessingItems.value.splice(index, 1)
+      console.log('🔄 [MediaModule] 删除异步处理素材:', {
+        id: itemId,
+        name: item.name
+      })
+    }
+  }
+
+  /**
+   * 根据ID获取异步处理素材项目
+   * @param itemId 异步处理素材项目ID
+   * @returns 异步处理素材项目或undefined
+   */
+  function getAsyncProcessingItem(itemId: string): AsyncProcessingMediaItem | undefined {
+    return asyncProcessingItems.value.find(item => item.id === itemId)
+  }
+
+  /**
+   * 将异步处理素材转换为普通素材
+   * @param asyncProcessingItem 异步处理素材项目
+   * @param localMediaItem 转换后的本地素材项目
+   */
+  function convertAsyncProcessingToLocalMedia(
+    asyncProcessingItem: AsyncProcessingMediaItem,
+    localMediaItem: LocalMediaItem
+  ) {
+    // 删除异步处理素材
+    removeAsyncProcessingItem(asyncProcessingItem.id)
+
+    // 添加到普通素材库
+    addMediaItem(localMediaItem, ref([]), ref([]))
+
+    console.log('🔄 [MediaModule] 异步处理素材转换完成:', {
+      asyncId: asyncProcessingItem.id,
+      localId: localMediaItem.id,
+      name: localMediaItem.name,
+      type: localMediaItem.mediaType
+    })
+  }
+
   // ==================== 视频分辨率管理方法 ====================
 
   /**
@@ -208,6 +294,7 @@ export function createMediaModule() {
   return {
     // 状态
     mediaItems,
+    asyncProcessingItems,
 
     // 媒体项目管理方法
     addMediaItem,
@@ -215,6 +302,13 @@ export function createMediaModule() {
     getMediaItem,
     updateMediaItemName,
     updateMediaItem,
+
+    // 异步处理素材管理方法
+    addAsyncProcessingItem,
+    updateAsyncProcessingItem,
+    removeAsyncProcessingItem,
+    getAsyncProcessingItem,
+    convertAsyncProcessingToLocalMedia,
 
     // 分辨率管理方法
     getVideoOriginalResolution,

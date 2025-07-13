@@ -1,5 +1,245 @@
 # 异步处理素材支持设计方案
 
+## 📊 当前进度总结
+
+**整体进度：Phase 1-3 完成 ✅，Phase 3.5 完成 ✅，Phase 4-7 待实现 ❌**
+
+- ✅ **Phase 1: 基础类型扩展** - 已完成所有类型定义和接口设计
+- ✅ **Phase 2: 媒体库UI扩展** - 已完成"处理中"tab、远程下载对话框和样式修复
+- ✅ **Phase 3: 网络下载处理器** - 已完成核心下载逻辑、管理器和UI集成
+- ✅ **Phase 3.5: 错误状态媒体项持久化** - 已完成错误状态媒体项的持久化支持
+- ❌ **Phase 4: 异步处理时间轴组件** - 待实现占位符组件和渲染逻辑
+- ❌ **Phase 5: 转换和重建机制** - 待实现文件类型检测和素材转换
+- ❌ **Phase 6: 持久化支持** - 待实现项目保存/加载的异步处理支持
+- ❌ **Phase 7: 集成和测试** - 待实现完整的功能集成和测试
+
+**下一步建议：开始实现 Phase 4 的异步处理时间轴组件**
+
+### 🎯 Phase 2 完成详情
+**已实现的核心功能**：
+- ✅ 媒体库"处理中"tab，支持异步处理项目管理
+- ✅ 远程下载对话框，支持URL输入和格式选择
+- ✅ 完整的状态管理系统（Pinia store）
+- ✅ 进度显示和取消功能
+- ✅ 样式系统修复，确保UI一致性
+
+**技术实现**：
+- ✅ `MediaLibrary.vue` - 添加处理中tab和UI逻辑
+- ✅ `RemoteDownloadDialog.vue` - 完整的远程下载对话框组件
+- ✅ `mediaStore.ts` - 异步处理状态管理
+- ✅ CSS变量修复 - 统一使用设计系统变量
+
+### 🎯 Phase 3 完成详情
+**已实现的核心功能**：
+- ✅ AsyncProcessingManager 核心管理器，支持处理器注册和任务管理
+- ✅ RemoteDownloadProcessor 网络下载处理器，支持进度回调和取消操作
+- ✅ 实时状态同步机制，确保UI响应式更新
+- ✅ 完整的错误处理和用户反馈系统
+- ✅ 中文文件名支持和智能文件名提取
+- ✅ 优化的UI显示，包括进度圆环和状态指示器
+
+**技术实现**：
+- ✅ `AsyncProcessingManager.ts` - 异步处理管理器单例类
+- ✅ `RemoteDownloadProcessor.ts` - 网络下载处理器实现
+- ✅ `mediaModule.ts` - 扩展支持异步处理素材管理
+- ✅ `MediaLibrary.vue` - 集成下载逻辑和UI优化
+- ✅ 后端网速限制功能 - 支持动态调整下载速度用于测试
+
+**UI/UX优化**：
+- ✅ 异步处理项目专用显示布局（无缩略图，显示状态）
+- ✅ 40px进度圆环，白色百分比文字，清晰可见
+- ✅ 不同状态的图标和颜色区分（等待/处理/完成/失败）
+- ✅ Tooltip提示显示详细状态信息
+- ✅ 完美适配50px缩略图容器高度
+
+### 🎯 Phase 3.5 完成详情 - 错误状态媒体项持久化
+**已实现的核心功能**：
+- ✅ 扩展LocalMediaReference类型定义，支持错误状态字段
+- ✅ MediaLibrary.vue错误处理逻辑增强，自动保存错误状态媒体引用
+- ✅ MediaManager功能扩展，支持错误状态媒体项的保存和恢复
+- ✅ 项目保存/加载完整支持错误状态媒体项持久化
+- ✅ 三种错误类型支持：webav解析错误、文件加载错误、不支持格式
+
+**技术实现**：
+- ✅ `types/index.ts` - 扩展LocalMediaReference接口和MediaErrorType枚举
+- ✅ `MediaLibrary.vue` - 添加saveErrorMediaReference辅助函数和错误处理逻辑
+- ✅ `MediaManager.ts` - 新增saveErrorMediaReference和restoreErrorMediaItem方法
+- ✅ `MediaManager.ts` - 扩展loadAllMediaForProject方法支持错误状态恢复
+- ✅ 项目保存/加载流程 - 确保错误状态媒体引用的完整持久化
+
+**用户体验改进**：
+- ✅ 导入失败的媒体文件不再消失，保留在素材区显示错误状态
+- ✅ 项目重新打开时错误状态媒体项被正确恢复
+- ✅ 文件加载失败时自动转换为错误状态，不影响项目使用
+- ✅ 保留原始文件信息，为未来重试功能奠定基础
+- ✅ 详细错误信息记录，便于问题诊断和用户反馈
+
+**数据完整性保障**：
+- ✅ 错误状态媒体项完整的元数据保存（文件名、大小、类型、时间戳）
+- ✅ 错误类型和错误信息的详细记录
+- ✅ 与正常媒体引用统一的管理机制，避免数据不一致
+- ✅ 项目加载时的错误状态自动检测和转换
+
+**Phase 3.5 详细技术实现**：
+
+1. **类型定义扩展** (`frontend/src/types/index.ts`)：
+```typescript
+// 扩展LocalMediaReference接口支持错误状态
+export interface LocalMediaReference extends BaseMediaReference {
+  type: MediaType
+  storedPath: string // 正常状态：实际存储路径；错误状态：空字符串
+
+  // 新增：状态管理字段
+  status?: 'normal' | 'error'  // 默认为normal，兼容现有数据
+
+  // 新增：错误状态相关字段（仅当status为error时有值）
+  errorType?: 'webav_parse_error' | 'file_load_error' | 'unsupported_format'
+  errorMessage?: string
+  errorTimestamp?: string
+
+  // 新增：保留原始文件信息用于重试功能
+  originalFile?: {
+    name: string
+    size: number
+    type: string
+    lastModified: number
+  }
+}
+
+// 新增错误类型枚举
+export type MediaErrorType =
+  | 'webav_parse_error'    // WebAV解析失败（如格式不支持、文件损坏）
+  | 'file_load_error'      // 文件加载失败（如文件不存在、权限问题）
+  | 'unsupported_format'   // 不支持的文件格式
+```
+
+2. **MediaLibrary.vue错误处理增强**：
+```typescript
+// 新增保存错误媒体引用的辅助函数
+const saveErrorMediaReference = async (
+  mediaItemId: string,
+  file: File,
+  mediaType: MediaType,
+  errorType: MediaErrorType,
+  errorMessage: string
+) => {
+  if (!videoStore.currentProjectId) return
+
+  try {
+    const { MediaManager } = await import('../utils/MediaManager')
+    const mediaManager = MediaManager.getInstance()
+
+    const errorReference = await mediaManager.saveErrorMediaReference(
+      mediaItemId, file, videoStore.currentProjectId, mediaType, errorType, errorMessage
+    )
+
+    videoStore.addMediaReference(mediaItemId, errorReference)
+    console.log(`💾 错误状态媒体引用已保存: ${file.name}`)
+  } catch (referenceError) {
+    console.warn(`保存错误状态媒体引用失败: ${file.name}`, referenceError)
+  }
+}
+
+// 在addVideoItem、addImageItem、addAudioItem的catch块中调用
+catch (error) {
+  // ... 创建错误状态MediaItem ...
+  videoStore.updateMediaItem(errorMediaItem)
+
+  // 新增：保存错误状态的媒体引用到项目
+  await saveErrorMediaReference(mediaItemId, file, 'video', 'webav_parse_error', error.message)
+
+  resolve()
+}
+```
+
+3. **MediaManager.ts功能扩展**：
+```typescript
+// 新增保存错误状态媒体引用方法
+async saveErrorMediaReference(
+  mediaId: string,
+  file: File,
+  projectId: string,
+  mediaType: MediaType,
+  errorType: MediaErrorType,
+  errorMessage: string
+): Promise<LocalMediaReference> {
+  const errorReference: LocalMediaReference = {
+    originalFileName: file.name,
+    storedPath: '', // 错误状态没有实际存储路径
+    type: mediaType,
+    fileSize: file.size,
+    checksum: '', // 错误状态没有文件校验和
+    status: 'error',
+    errorType,
+    errorMessage,
+    errorTimestamp: new Date().toISOString(),
+    originalFile: {
+      name: file.name,
+      size: file.size,
+      type: file.type,
+      lastModified: file.lastModified
+    }
+  }
+  return errorReference
+}
+
+// 新增恢复错误状态媒体项方法
+private restoreErrorMediaItem(mediaId: string, reference: LocalMediaReference): LocalMediaItem {
+  return {
+    id: mediaId,
+    name: reference.originalFileName,
+    createdAt: reference.errorTimestamp || new Date().toISOString(),
+    file: null as any, // 错误状态没有实际文件对象
+    url: '', // 错误状态没有URL
+    duration: 0,
+    type: reference.originalFile?.type || '',
+    mediaType: reference.type,
+    mp4Clip: null,
+    imgClip: null,
+    audioClip: null,
+    isReady: false,
+    status: 'error'
+  }
+}
+
+// 扩展loadAllMediaForProject方法支持错误状态
+async loadAllMediaForProject(...): Promise<LocalMediaItem[]> {
+  // ... 批处理逻辑 ...
+  const batchPromises = batch.map(async ([mediaId, reference]) => {
+    if (reference.status === 'error') {
+      // 恢复错误状态的媒体项
+      return this.restoreErrorMediaItem(mediaId, reference)
+    } else {
+      // 正常加载流程
+      try {
+        return await this.rebuildMediaItemFromLocal(mediaId, reference, projectId)
+      } catch (error) {
+        // 加载失败，转换为错误状态
+        const updatedReference: LocalMediaReference = {
+          ...reference,
+          status: 'error',
+          errorType: 'file_load_error',
+          errorMessage: error instanceof Error ? error.message : String(error),
+          errorTimestamp: new Date().toISOString()
+        }
+        return this.restoreErrorMediaItem(mediaId, updatedReference)
+      }
+    }
+  })
+  // ...
+}
+```
+
+4. **项目保存/加载流程验证**：
+- ✅ `projectModule.ts` 的 `saveCurrentProject` 方法已正确保存所有媒体引用
+- ✅ `ProjectManager.loadProjectContent` 使用 `MediaManager.loadAllMediaForProject` 加载媒体
+- ✅ 错误状态媒体引用与正常引用统一管理，确保数据一致性
+
+**测试验证场景**：
+1. **导入失败测试**：导入损坏文件 → 显示错误状态 → 保存项目 → 重新打开 → 验证恢复
+2. **文件丢失测试**：删除项目媒体文件 → 重新打开项目 → 验证自动转换为错误状态
+3. **混合状态测试**：正常+错误状态媒体项 → 保存/加载 → 验证状态正确恢复
+
 ## 概述
 
 本文档描述了为视频编辑器添加异步处理素材支持的完整设计方案。异步处理素材包括远程文件下载、本地大文件转码、AI处理等需要长时间处理的素材类型，支持占位符机制和自动类型转换。
@@ -673,9 +913,10 @@ graph TD
    - **移除AsyncProcessingClip**：从时间轴数组中移除 AsyncProcessingTimelineItem
    - 保持原有的起始位置和轨道位置（必要时重新分配轨道）
 8. **媒体库更新**（仅当文件类型支持时）：
+   - **先清理 AsyncProcessingMediaItem**：立即从异步处理列表中移除，避免同时显示两个媒体项
    - 将 LocalMediaItem 添加到媒体库
    - 从处理中tab移动到对应的tab（视频/音频/图片）
-   - 清理 AsyncProcessingMediaItem（不保留历史）
+   - **转换失败处理**：如果转换失败，异步处理项从列表中移除，不再重新添加
 9. **错误状态处理**（当文件类型不支持时）：
    - AsyncProcessingMediaItem 保持在处理中tab中，显示错误状态
    - 时间轴占位符显示红色错误状态
@@ -684,12 +925,19 @@ graph TD
     - 创建 LocalMediaReference 并添加到 localMediaReferences
     - 清理 AsyncProcessingMediaReference（不保留历史）
 
-**重要说明**：转换过程是**先添加新clip，再移除旧clip**的过程，而不是就地修改。这确保了：
+**重要说明**：转换过程针对不同组件有不同的策略：
+
+**时间轴转换**：**先添加新clip，再移除旧clip**的过程，而不是就地修改。这确保了：
 - **无缝切换**：避免时间轴出现空白期，用户体验更流畅
 - **类型安全**：AsyncProcessingTimelineItem 和 TimelineItem 是不同的类型
 - **状态清晰**：避免中间状态的混乱
 - **渲染正确**：Vue能正确识别组件类型变化并重新渲染
 - **时长准确**：根据实际文件时长调整clip范围，而不是使用预估时长
+
+**媒体库转换**：**先移除异步处理项，再添加本地素材**的过程。这确保了：
+- **避免重复显示**：防止同时显示带绿色勾的完成状态和分析中的本地素材
+- **用户体验优化**：下载完成后绿色勾媒体立即消失，只显示本地媒体分析状态
+- **简洁的错误处理**：转换失败时异步处理项自然消失，避免界面混乱
 
 #### 5.4 异步处理时间轴clip处理
 
@@ -1238,7 +1486,7 @@ AsyncProcessingMediaItem {
 2. **类型安全**：使用TypeScript类型守卫确保类型安全
 3. **状态分离**：运行时状态与持久化状态分离
 4. **无缝转换**：异步处理完成后自动转换为本地素材
-5. **错误处理**：完善的错误状态处理和重试机制
+5. **简洁错误处理**：转换失败的媒体项以错误状态保留在媒体库或自然消失
 
 #### 7.2 关键技术点
 1. **占位符机制**：AsyncProcessingTimelineItem作为时间轴占位符
@@ -1250,8 +1498,8 @@ AsyncProcessingMediaItem {
 #### 7.3 用户体验优化
 1. **视觉反馈**：不同状态的视觉区分（颜色、图标、动画）
 2. **操作限制**：异步处理clip禁用编辑功能
-3. **错误提示**：清晰的错误信息和重试选项
-4. **自动恢复**：项目重新打开时自动重启处理任务
+3. **错误提示**：清晰的错误信息显示
+4. **状态持久化**：项目重新打开时保持处理状态
 
 #### 7.4 性能考虑
 1. **内存管理**：转换完成后立即清理异步处理数据
@@ -1280,7 +1528,7 @@ AsyncProcessingMediaItem {
 - **占位符机制**：AsyncProcessingTimelineItem 作为时间轴占位符，支持实时状态更新
 - **可插拔处理器**：统一的处理器接口，支持多种异步处理类型
 - **智能转换流程**：自动检测文件类型，智能处理时长调整和轨道分配
-- **完善的错误处理**：多层次的错误处理和恢复机制
+- **简洁的错误处理**：清晰的错误状态显示和处理机制
 
 该设计方案为视频编辑器的异步处理功能提供了坚实的技术基础，能够满足各种复杂的异步处理需求，同时保持了系统的简洁性和可维护性。
 
@@ -1371,58 +1619,150 @@ function adjustTimelineItemDuration(
 - **属性面板**：
   - `processing`：显示处理类型、进度、预计时长、取消按钮
   - `unsupported`：显示错误信息、支持格式列表、重新选择/删除按钮
-  - `error`：显示错误信息、重试/删除按钮
+  - `error`：显示错误信息、删除按钮
 
 #### 10.2 错误处理策略
-- **网络超时**：显示重试按钮，支持手动重新加载
-- **URL无效**：显示错误提示，允许修改URL
+- **网络超时**：显示错误状态，用户可删除重新添加
+- **URL无效**：显示错误提示，用户可删除重新添加
 - **文件格式不支持**：
   - 处理中tab中显示红色错误状态
   - 时间轴占位符显示红色"错误"标识
   - 属性面板显示"不支持的文件类型"和支持格式列表
-  - 提供"重新选择文件"或"删除"选项
-- **处理失败**：显示具体错误信息，提供重试选项
+  - 提供"删除"选项
+- **处理失败**：显示具体错误信息，提供删除选项
 
-#### 10.3 断线恢复机制
-- **项目重新打开**：自动检查未完成的异步处理任务
-- **网络恢复**：自动重试失败的处理任务
+#### 10.3 状态持久化机制
+- **项目重新打开**：保持异步处理任务的状态
+- **状态保存**：保存处理状态到项目配置
 - **清理机制**：定期清理长时间失败的异步处理占位符
 
 ## 简化实施计划（专注网络下载）
 
 基于用户需求，重新整理实施计划，暂时只实现网络下载处理器，其他处理器类型暂不实现。
 
-### Phase 1: 基础类型扩展（1天）
-- [ ] 扩展 `types/index.ts` 添加异步处理相关类型定义
-  - [ ] `AsyncProcessingStatus` 状态枚举
-  - [ ] `AsyncProcessingType` 类型枚举（仅包含 'remote-download'）
-  - [ ] `AsyncProcessingMediaItem` 接口（继承 `BaseMediaItem`）
-  - [ ] `AsyncProcessingTimelineItem` 接口（继承 `BaseTimelineItem`）
-  - [ ] `RemoteDownloadConfig` 配置接口
-  - [ ] 类型守卫函数
-- [ ] 扩展 `ProjectConfig` 接口添加 `localMediaReferences` 和 `asyncProcessingMediaReferences` 字段
+### Phase 1: 基础类型扩展（1天）✅ **已完成**
+- [x] 扩展 `types/index.ts` 添加异步处理相关类型定义
+  - [x] `AsyncProcessingStatus` 状态枚举
+  - [x] `AsyncProcessingType` 类型枚举（仅包含 'remote-download'）
+  - [x] `AsyncProcessingMediaItem` 接口（继承 `BaseMediaItem`）
+  - [x] `AsyncProcessingTimelineItem` 接口（继承 `BaseTimelineItem`）
+  - [x] `RemoteDownloadConfig` 配置接口
+  - [x] 类型守卫函数
+- [x] 扩展 `ProjectConfig` 接口添加 `localMediaReferences` 和 `asyncProcessingMediaReferences` 字段
 
-### Phase 2: 媒体库UI扩展（1天）
-- [ ] 在 `MediaLibrary.vue` 中添加"处理中"tab
-- [ ] 扩展右键菜单，添加"远程下载"选项
-- [ ] 创建 `RemoteDownloadDialog.vue` 组件
-  - [ ] URL输入框和验证
-  - [ ] 预计时长设置（默认5秒）
-  - [ ] 素材名称输入（可选）
-  - [ ] 确认/取消按钮
+### Phase 2: 媒体库UI扩展（1天）✅ **已完成**
+- [x] 在 `MediaLibrary.vue` 中添加"处理中"tab
+- [x] 扩展右键菜单，添加"远程下载"选项
+- [x] 创建 `RemoteDownloadDialog.vue` 组件
+  - [x] URL输入框和验证
+  - [x] 预计时长设置（默认5秒）
+  - [x] 输出格式选择（MP4, WebM, MP3, WAV, JPG, PNG, GIF）
+  - [x] 素材名称自动生成（从URL提取）
+  - [x] 确认/取消按钮
+  - [x] 修复样式问题，使用正确的CSS变量
+- [x] 在 Pinia store 中添加异步处理状态管理
+  - [x] `asyncProcessingItems` 状态数组
+  - [x] 添加/更新/删除异步处理项目的方法
+  - [x] 进度更新和状态变更的响应式处理
 
-### Phase 3: 网络下载处理器（1-2天）
-- [ ] 创建 `utils/AsyncProcessingManager.ts`
-  - [ ] `AsyncProcessor` 接口定义
-  - [ ] `AsyncProcessingManager` 核心类
-  - [ ] 处理器注册和管理机制
-- [ ] 实现 `RemoteDownloadProcessor.ts`
-  - [ ] 网络下载逻辑（fetch API + 进度回调）
-  - [ ] 错误处理（网络超时、URL无效等）
-  - [ ] 取消下载支持（AbortController）
-  - [ ] 文件名提取逻辑
+#### Phase 2 实现细节
 
-### Phase 4: 异步处理时间轴组件（1天）
+**已实现的功能**：
+- 媒体库"处理中"tab，显示异步处理项目列表
+- 进度条和状态指示器，实时显示处理进度
+- 取消处理功能，支持中断正在进行的异步处理
+- 远程下载对话框，支持URL输入、格式选择、时长设置
+- 完整的状态管理，包括错误处理和状态显示
+
+### Phase 3: 网络下载处理器（1-2天）✅ **已完成**
+- [x] 创建 `utils/AsyncProcessingManager.ts`
+  - [x] `AsyncProcessor` 接口定义
+  - [x] `AsyncProcessingManager` 核心类
+  - [x] 处理器注册和管理机制
+  - [x] 实时状态更新回调机制
+- [x] 实现 `RemoteDownloadProcessor.ts`
+  - [x] 网络下载逻辑（fetch API + 进度回调）
+  - [x] 错误处理（网络超时、URL无效等）
+  - [x] 取消下载支持（AbortController）
+  - [x] 文件名提取逻辑（支持中文文件名）
+- [x] 集成到媒体库UI
+  - [x] 替换占位符代码为实际下载逻辑
+  - [x] 实时状态同步和进度更新
+  - [x] 异步处理素材转换为普通素材
+- [x] UI优化和问题修复
+  - [x] 异步处理项目专用显示布局
+  - [x] 进度圆环和百分比显示
+  - [x] 容器高度适配和响应式更新
+  - [x] 中文文件名编码支持
+- [x] 后端测试支持
+  - [x] 网速限制功能（支持动态调整）
+  - [x] 流式响应和中文文件名支持
+
+#### Phase 3 实现细节
+
+**核心架构**：
+- `AsyncProcessingManager` 单例模式管理所有异步处理任务
+- `AsyncProcessor` 接口定义统一的处理器规范
+- `RemoteDownloadProcessor` 实现网络下载功能
+- 状态更新回调机制确保UI实时响应
+
+**关键功能**：
+1. **网络下载**：
+   - 使用 fetch API 进行流式下载
+   - 支持进度回调和取消操作（AbortController）
+   - 智能文件名提取（从URL路径或Content-Disposition头）
+   - 完善的错误处理和超时机制
+
+2. **状态管理**：
+   - 异步处理素材与本地素材分离管理
+   - 实时状态同步（pending → processing → completed/error）
+   - Vue响应式更新优化（对象副本传递）
+
+3. **UI显示**：
+   - 专用的异步处理显示布局（50px高度适配）
+   - 40px进度圆环，白色百分比文字
+   - 状态图标和颜色区分（橙色等待、蓝色处理、绿色完成、红色失败）
+   - Tooltip显示详细状态信息
+
+4. **文件处理**：
+   - 支持中文文件名的URL编码/解码
+   - 自动媒体类型检测
+   - 处理完成后自动转换为普通素材
+   - **用户体验优化**：先移除异步处理项再添加本地素材，避免同时显示两个媒体项
+
+**测试支持**：
+- 后端网速限制功能（默认1MB/s，可动态调整0.1-100MB/s）
+- 流式响应模拟真实网络环境
+- 中文文件名支持测试
+
+### Phase 3.5: 错误状态媒体项持久化（0.5天）✅ **已完成**
+- [x] 扩展类型定义支持错误状态
+  - [x] 扩展 `LocalMediaReference` 接口添加错误状态字段
+  - [x] 新增 `MediaErrorType` 枚举定义三种错误类型
+  - [x] 向后兼容现有数据结构（status默认为normal）
+- [x] 增强MediaLibrary.vue错误处理逻辑
+  - [x] 创建 `saveErrorMediaReference` 辅助函数
+  - [x] 在 `addVideoItem`、`addImageItem`、`addAudioItem` 的catch块中保存错误引用
+  - [x] 支持三种错误类型：webav解析错误、文件加载错误、不支持格式
+  - [x] 保留原始文件信息用于未来重试功能
+- [x] 扩展MediaManager.ts功能
+  - [x] 新增 `saveErrorMediaReference` 方法创建错误状态媒体引用
+  - [x] 新增 `restoreErrorMediaItem` 方法恢复错误状态媒体项
+  - [x] 扩展 `loadAllMediaForProject` 方法支持错误状态媒体项加载
+  - [x] 文件加载失败时自动转换为错误状态
+- [x] 验证项目保存/加载流程
+  - [x] 确认 `projectModule.ts` 正确保存所有媒体引用（包括错误状态）
+  - [x] 确认 `ProjectManager.loadProjectContent` 使用扩展后的加载方法
+  - [x] 错误状态媒体引用与正常引用统一管理
+
+**Phase 3.5 实现效果**：
+- ✅ 导入失败的媒体文件不再消失，保留在素材区显示红色错误状态
+- ✅ 项目保存时错误状态媒体项信息被完整保存到项目配置文件
+- ✅ 项目重新打开时错误状态媒体项被正确恢复，用户可以看到之前导入失败的文件
+- ✅ 文件加载失败时（如文件被删除）自动转换为错误状态，不影响项目使用
+- ✅ 为未来的重试、删除、格式转换等功能奠定了数据基础
+
+### Phase 4: 异步处理时间轴组件（1天）❌ **待实现**
 - [ ] 创建 `TimelineAsyncProcessingClip.vue` 组件
   - [ ] 根据 `processingStatus` 显示不同状态
     - [ ] `pending`: 橙色背景，等待图标
@@ -1433,7 +1773,7 @@ function adjustTimelineItemDuration(
   - [ ] 支持基本操作（选中、删除、拖拽）
 - [ ] 在 `Timeline.vue` 中集成异步处理clip渲染
 
-### Phase 5: 转换和重建机制（1-2天）
+### Phase 5: 转换和重建机制（1-2天）❌ **待实现**
 - [ ] 实现文件类型检测逻辑
   - [ ] `isSupportedMediaType()` 函数
   - [ ] 基于文件头的媒体类型检测
@@ -1444,9 +1784,9 @@ function adjustTimelineItemDuration(
   - [ ] 轨道重新分配逻辑
 - [ ] 错误状态处理
   - [ ] 不支持文件类型的错误显示
-  - [ ] 网络错误的重试机制
+  - [ ] 网络错误的状态显示
 
-### Phase 6: 持久化支持（1天）
+### Phase 6: 持久化支持（1天）❌ **待实现**
 - [ ] 扩展 `ProjectManager.ts` 支持异步处理素材
   - [ ] 保存 `localMediaReferences` 和 `asyncProcessingMediaReferences` 到项目配置
   - [ ] 加载时恢复异步处理素材（重置运行时状态）
@@ -1454,7 +1794,7 @@ function adjustTimelineItemDuration(
 - [ ] 扩展 `MediaManager.ts` 支持异步处理素材引用
 - [ ] 更新自动保存逻辑包含异步处理素材
 
-### Phase 7: 集成和测试（1天）
+### Phase 7: 集成和测试（1天）❌ **待实现**
 - [ ] 在 `videoStore` 中集成异步处理素材管理
 - [ ] 端到端测试网络下载流程
 - [ ] 错误场景测试（网络中断、无效URL、不支持格式）
@@ -1506,12 +1846,22 @@ export class RemoteDownloadProcessor implements AsyncProcessor {
 ## 预期效果
 
 实现后用户可以：
+
+### 异步处理功能（Phase 1-3）
 1. 右键点击媒体库空白区域 → 选择"远程下载"
 2. 输入URL和预计时长 → 确认开始下载
 3. 在"处理中"tab看到下载进度
 4. 拖拽到时间轴显示占位符
 5. 下载完成后自动转换为普通素材
 6. 如果格式不支持，显示错误状态
+
+### 错误状态媒体项持久化功能（Phase 3.5）
+7. **导入失败持久化**：导入损坏或不支持的媒体文件时，素材区显示红色错误状态图标，不会消失
+8. **项目保存恢复**：保存项目后重新打开，错误状态的媒体项被正确恢复，用户可以看到之前导入失败的文件
+9. **文件丢失检测**：项目加载时如果媒体文件被删除或移动，自动转换为错误状态显示
+10. **错误信息记录**：详细记录错误类型（WebAV解析错误、文件加载错误、不支持格式）和错误信息
+11. **数据完整性**：保留原始文件信息（文件名、大小、类型、修改时间），为未来重试功能奠定基础
+12. **统一管理**：错误状态媒体项与正常媒体项使用统一的引用管理机制，确保数据一致性
 
 ## 技术风险控制
 
@@ -1672,11 +2022,15 @@ function canProcessWithType(file: File, processingType: AsyncProcessingType): bo
 - **完全本地化**：转换完成后与直接导入的本地素材完全一致，无异步处理依赖
 - **专用组件**：TimelineAsyncProcessingClip 提供专门的异步处理素材渲染和交互
 - **智能错误处理**：不支持的文件类型保持占位符状态，显示清晰的错误反馈
-- **持久化支持**：完整的项目保存和恢复机制，包括错误状态
-- **错误恢复**：完善的错误处理、重试机制和连接恢复
+- **持久化支持**：完整的项目保存和状态保持机制，包括错误状态
+- **错误状态持久化**：导入失败的媒体项不会消失，保留在素材区并在项目重新打开时正确恢复
+- **智能错误检测**：文件加载失败时自动转换为错误状态，保持项目完整性
+- **详细错误记录**：记录错误类型、错误信息、时间戳和原始文件信息，便于问题诊断
+- **统一错误管理**：错误状态媒体项与正常媒体项使用统一的引用管理机制
+- **简洁错误处理**：清晰的错误状态显示和处理机制
 - **用户体验**：直观的进度显示、状态反馈和错误提示
 - **数据一致性**：确保异步处理素材转换后的数据结构与本地素材完全相同
-- **操作灵活性**：支持重新配置、重试处理等恢复操作
+- **操作灵活性**：支持删除错误状态的处理项
 - **视觉一致性**：异步处理clip与普通clip在时间轴上有统一的视觉风格
 
 ### 5. 架构优势

@@ -9,12 +9,13 @@ import { microsecondsToFrames } from '../utils/timeUtils'
 import { globalWebAVAnimationManager } from '../../utils/webavAnimationManager'
 import type {
   LocalTimelineItem,
+  AsyncProcessingTimelineItem,
   LocalMediaItem,
   ExtendedPropsChangeEvent,
   VideoResolution,
   MediaType,
 } from '../../types'
-import { hasVisualProps, hasAudioProps } from '../../types'
+import { hasVisualProps, hasAudioProps, isAsyncProcessingTimelineItem } from '../../types'
 
 /**
  * 时间轴核心管理模块
@@ -36,7 +37,7 @@ export function createTimelineModule(
 ) {
   // ==================== 状态定义 ====================
 
-  const timelineItems = ref<LocalTimelineItem[]>([])
+  const timelineItems = ref<(LocalTimelineItem | AsyncProcessingTimelineItem)[]>([])
 
   // ==================== 双向数据同步函数 ====================
 
@@ -116,7 +117,7 @@ export function createTimelineModule(
    * 添加时间轴项目
    * @param timelineItem 要添加的时间轴项目
    */
-  function addTimelineItem(timelineItem: LocalTimelineItem) {
+  function addTimelineItem(timelineItem: LocalTimelineItem | AsyncProcessingTimelineItem) {
     // 如果没有指定轨道，默认分配到第一个轨道
     if (!timelineItem.trackId && trackModule) {
       const firstTrack = trackModule.tracks.value[0]
@@ -125,32 +126,39 @@ export function createTimelineModule(
       }
     }
 
-    // 根据轨道的可见性和静音状态设置sprite属性
-    if (trackModule) {
-      const track = trackModule.tracks.value.find((t) => t.id === timelineItem.trackId)
-      if (track && timelineItem.sprite) {
-        // 设置可见性
-        timelineItem.sprite.visible = track.isVisible
+    // 检查是否为异步处理时间轴项目
+    if (isAsyncProcessingTimelineItem(timelineItem)) {
+      // 异步处理时间轴项目不需要sprite相关的设置
+      console.log('🔧 [TimelineModule] 添加异步处理时间轴项目:', timelineItem.id)
+    } else {
+      // 本地时间轴项目的处理逻辑
+      // 根据轨道的可见性和静音状态设置sprite属性
+      if (trackModule) {
+        const track = trackModule.tracks.value.find((t) => t.id === timelineItem.trackId)
+        if (track && timelineItem.sprite) {
+          // 设置可见性
+          timelineItem.sprite.visible = track.isVisible
 
-        // 为视频片段设置轨道静音检查函数
-        if (timelineItem.mediaType === 'video' && 'setTrackMuteChecker' in timelineItem.sprite) {
-          const sprite = timelineItem.sprite as VideoVisibleSprite // VideoVisibleSprite
-          sprite.setTrackMuteChecker(() => track.isMuted)
-        }
+          // 为视频片段设置轨道静音检查函数
+          if (timelineItem.mediaType === 'video' && 'setTrackMuteChecker' in timelineItem.sprite) {
+            const sprite = timelineItem.sprite as VideoVisibleSprite // VideoVisibleSprite
+            sprite.setTrackMuteChecker(() => track.isMuted)
+          }
 
-        // 为音频片段设置轨道静音检查函数
-        if (timelineItem.mediaType === 'audio' && 'setTrackMuteChecker' in timelineItem.sprite) {
-          const sprite = timelineItem.sprite as AudioVisibleSprite // AudioVisibleSprite
-          sprite.setTrackMuteChecker(() => track.isMuted)
+          // 为音频片段设置轨道静音检查函数
+          if (timelineItem.mediaType === 'audio' && 'setTrackMuteChecker' in timelineItem.sprite) {
+            const sprite = timelineItem.sprite as AudioVisibleSprite // AudioVisibleSprite
+            sprite.setTrackMuteChecker(() => track.isMuted)
+          }
         }
       }
+
+      // 设置双向数据同步（仅本地时间轴项目）
+      setupBidirectionalSync(timelineItem)
+
+      // 初始化动画管理器（仅本地时间轴项目）
+      globalWebAVAnimationManager.addManager(timelineItem)
     }
-
-    // 设置双向数据同步
-    setupBidirectionalSync(timelineItem)
-
-    // 初始化动画管理器
-    globalWebAVAnimationManager.addManager(timelineItem)
 
     timelineItems.value.push(timelineItem)
 
@@ -181,30 +189,37 @@ export function createTimelineModule(
       const item = timelineItems.value[index]
       const mediaItem = mediaModule.getMediaItem(item.mediaItemId)
 
-      // 注意：新的事件系统使用 on 方法返回的取消函数来清理监听器
-      // 这里不需要手动清理，因为 sprite 销毁时会自动清理所有事件监听器
+      // 检查是否为异步处理时间轴项目
+      if (isAsyncProcessingTimelineItem(item)) {
+        // 异步处理时间轴项目不需要清理sprite相关资源
+        console.log('🗑️ [TimelineModule] 移除异步处理时间轴项目:', timelineItemId)
+      } else {
+        // 本地时间轴项目的清理逻辑
+        // 注意：新的事件系统使用 on 方法返回的取消函数来清理监听器
+        // 这里不需要手动清理，因为 sprite 销毁时会自动清理所有事件监听器
 
-      // 清理sprite资源
-      try {
-        if (item.sprite && typeof item.sprite.destroy === 'function') {
-          item.sprite.destroy()
+        // 清理sprite资源
+        try {
+          if (item.sprite && typeof item.sprite.destroy === 'function') {
+            item.sprite.destroy()
+          }
+        } catch (error) {
+          console.warn('清理sprite资源时出错:', error)
         }
-      } catch (error) {
-        console.warn('清理sprite资源时出错:', error)
-      }
 
-      // 从WebAV画布移除
-      try {
-        const canvas = webavModule.avCanvas.value
-        if (canvas) {
-          canvas.removeSprite(item.sprite)
+        // 从WebAV画布移除
+        try {
+          const canvas = webavModule.avCanvas.value
+          if (canvas) {
+            canvas.removeSprite(item.sprite)
+          }
+        } catch (error) {
+          console.warn('从WebAV画布移除sprite时出错:', error)
         }
-      } catch (error) {
-        console.warn('从WebAV画布移除sprite时出错:', error)
-      }
 
-      // 清理动画管理器
-      globalWebAVAnimationManager.removeManager(timelineItemId)
+        // 清理动画管理器
+        globalWebAVAnimationManager.removeManager(timelineItemId)
+      }
 
       // 从数组中移除
       timelineItems.value.splice(index, 1)
@@ -230,7 +245,7 @@ export function createTimelineModule(
    * @param timelineItemId 时间轴项目ID
    * @returns 时间轴项目或undefined
    */
-  function getTimelineItem(timelineItemId: string): LocalTimelineItem | undefined {
+  function getTimelineItem(timelineItemId: string): LocalTimelineItem | AsyncProcessingTimelineItem | undefined {
     return timelineItems.value.find((item) => item.id === timelineItemId)
   }
 
@@ -254,12 +269,12 @@ export function createTimelineModule(
       // 确保新位置不为负数
       const clampedNewPositionFrames = Math.max(0, newPositionFrames)
 
-      // 如果指定了新轨道，更新轨道ID并同步可见性
+      // 如果指定了新轨道，更新轨道ID
       if (newTrackId !== undefined) {
         item.trackId = newTrackId
 
-        // 根据新轨道的可见性设置sprite的visible属性
-        if (trackModule) {
+        // 根据新轨道的可见性设置sprite的visible属性（仅本地时间轴项目）
+        if (trackModule && !isAsyncProcessingTimelineItem(item)) {
           const newTrack = trackModule.tracks.value.find((t) => t.id === newTrackId)
           if (newTrack && item.sprite) {
             item.sprite.visible = newTrack.isVisible
@@ -268,15 +283,27 @@ export function createTimelineModule(
       }
 
       // 更新时间轴位置
-      const sprite = item.sprite
-      const currentTimeRange = sprite.getTimeRange()
-      const durationFrames = currentTimeRange.timelineEndTime - currentTimeRange.timelineStartTime // 帧数
+      if (isAsyncProcessingTimelineItem(item)) {
+        // 异步处理时间轴项目：直接更新timeRange
+        const currentTimeRange = item.timeRange
+        const durationFrames = currentTimeRange.timelineEndTime - currentTimeRange.timelineStartTime
 
-      // 使用同步函数更新timeRange（使用帧数）
-      syncTimeRange(item, {
-        timelineStartTime: clampedNewPositionFrames, // 帧数
-        timelineEndTime: clampedNewPositionFrames + durationFrames, // 帧数
-      })
+        item.timeRange = {
+          timelineStartTime: clampedNewPositionFrames,
+          timelineEndTime: clampedNewPositionFrames + durationFrames
+        }
+      } else {
+        // 本地时间轴项目：通过sprite更新
+        const sprite = item.sprite
+        const currentTimeRange = sprite.getTimeRange()
+        const durationFrames = currentTimeRange.timelineEndTime - currentTimeRange.timelineStartTime // 帧数
+
+        // 使用同步函数更新timeRange（使用帧数）
+        syncTimeRange(item, {
+          timelineStartTime: clampedNewPositionFrames, // 帧数
+          timelineEndTime: clampedNewPositionFrames + durationFrames, // 帧数
+        })
+      }
 
       printDebugInfo(
         '更新时间轴项目位置',

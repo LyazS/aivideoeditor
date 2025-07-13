@@ -1308,6 +1308,7 @@ export const useVideoStore = defineStore('video', () => {
   return {
     // 新的两层数据结构
     mediaItems: mediaModule.mediaItems,
+    asyncProcessingItems: mediaModule.asyncProcessingItems,
     timelineItems: timelineModule.timelineItems,
     tracks: trackModule.tracks,
     currentFrame: playbackModule.currentFrame,
@@ -1338,6 +1339,12 @@ export const useVideoStore = defineStore('video', () => {
     getMediaItem,
     updateMediaItemName,
     updateMediaItem,
+    // 异步处理素材管理方法
+    addAsyncProcessingItem: mediaModule.addAsyncProcessingItem,
+    updateAsyncProcessingItem: mediaModule.updateAsyncProcessingItem,
+    removeAsyncProcessingItem: mediaModule.removeAsyncProcessingItem,
+    getAsyncProcessingItem: mediaModule.getAsyncProcessingItem,
+    convertAsyncProcessingToLocalMedia: mediaModule.convertAsyncProcessingToLocalMedia,
     // 时间轴管理方法
     addTimelineItem: timelineModule.addTimelineItem,
     removeTimelineItem: timelineModule.removeTimelineItem,

@@ -137,7 +137,7 @@
           <component
             v-for="item in getClipsForTrack(track.id)"
             :key="item.id"
-            :is="getClipComponent(item.mediaType)"
+            :is="getClipComponent(item)"
             :timeline-item="item"
             :track="track"
             :timeline-width="timelineWidth"
@@ -261,16 +261,20 @@ import Playhead from './Playhead.vue'
 import SnapIndicator from './SnapIndicator.vue'
 import type {
   LocalTimelineItem,
+  AsyncProcessingTimelineItem,
+  AsyncProcessingMediaItem,
   TimelineItemDragData,
   MediaItemDragData,
   ConflictInfo,
   TrackType,
   MediaType,
+  LocalMediaItem,
 } from '../types'
-import { hasVisualProps } from '../types'
+import { hasVisualProps, isAsyncProcessingTimelineItem } from '../types'
 import TimelineVideoClip from './TimelineVideoClip.vue'
 import TimelineTextClip from './TimelineTextClip.vue'
 import TimelineAudioClip from './TimelineAudioClip.vue'
+import TimelineAsyncProcessingClip from './TimelineAsyncProcessingClip.vue'
 import TimeScale from './TimeScale.vue'
 import HoverButton from './HoverButton.vue'
 import { ContextMenu, ContextMenuItem, ContextMenuSeparator, ContextMenuGroup } from '@imengyu/vue3-context-menu'
@@ -907,9 +911,16 @@ function handleTimelineItemDragOver(event: DragEvent) {
     const conflicts = detectTimelineConflicts(clipStartTime, targetTrackId, currentDragData)
     const isConflict = conflicts.length > 0
 
-    // 获取显示名称
-    const mediaItem = videoStore.getMediaItem(draggedItem.mediaItemId)
-    const name = mediaItem?.name || 'Clip'
+    // 获取显示名称（支持异步处理时间轴项目）
+    let name = 'Clip'
+    if (isAsyncProcessingTimelineItem(draggedItem)) {
+      // 异步处理时间轴项目：从配置中获取名称
+      name = draggedItem.config.name
+    } else {
+      // 本地时间轴项目：从媒体项目中获取名称
+      const mediaItem = videoStore.getMediaItem(draggedItem.mediaItemId)
+      name = mediaItem?.name || 'Clip'
+    }
 
     // 使用统一的拖拽工具创建预览数据
     const previewData = dragUtils.createDragPreviewData(
@@ -920,7 +931,7 @@ function handleTimelineItemDragOver(event: DragEvent) {
       isConflict,
       currentDragData.selectedItems.length > 1,
       currentDragData.selectedItems.length,
-      draggedItem.mediaType,
+      draggedItem.mediaType === 'unknown' ? 'video' : draggedItem.mediaType as MediaType,
     )
 
     dragPreviewManager.updatePreview(previewData, timelineWidth.value)
@@ -993,7 +1004,8 @@ async function handleTimelineItemDrop(event: DragEvent, dragData: TimelineItemDr
   const draggedItem = videoStore.getTimelineItem(dragData.itemId)
   if (draggedItem) {
     const targetTrack = tracks.value.find((t) => t.id === targetTrackId)
-    if (targetTrack && !isMediaCompatibleWithTrack(draggedItem.mediaType, targetTrack.type)) {
+    // 异步处理项目（unknown类型）可以拖拽到任何轨道，转换时会重新分配
+    if (targetTrack && draggedItem.mediaType !== 'unknown' && !isMediaCompatibleWithTrack(draggedItem.mediaType as MediaType, targetTrack.type)) {
       // 获取媒体类型标签
       const mediaTypeLabels = {
         video: '视频',
@@ -1001,7 +1013,7 @@ async function handleTimelineItemDrop(event: DragEvent, dragData: TimelineItemDr
         audio: '音频',
         text: '文本'
       }
-      const mediaTypeLabel = mediaTypeLabels[draggedItem.mediaType] || '未知'
+      const mediaTypeLabel = mediaTypeLabels[draggedItem.mediaType as MediaType] || '未知'
       const trackTypeLabel = getTrackTypeLabel(targetTrack.type)
 
       // 根据媒体类型提供合适的建议
@@ -1058,12 +1070,18 @@ async function handleMediaItemDrop(event: DragEvent, mediaDragData: MediaItemDra
   try {
     console.log('解析的素材拖拽数据:', mediaDragData)
 
-    // 从store中获取完整的MediaItem信息
-    const mediaItem = videoStore.getMediaItem(mediaDragData.mediaItemId)
-    if (!mediaItem) {
+    // 从store中获取完整的MediaItem信息（本地素材或异步处理素材）
+    const localMediaItem = videoStore.getMediaItem(mediaDragData.mediaItemId)
+    const asyncProcessingItem = videoStore.getAsyncProcessingItem(mediaDragData.mediaItemId)
+
+    if (!localMediaItem && !asyncProcessingItem) {
       console.error('❌ 找不到对应的素材项目:', mediaDragData.mediaItemId)
       return
     }
+
+    // 确定是本地素材还是异步处理素材
+    const isAsyncProcessing = !!asyncProcessingItem
+    const mediaItem = localMediaItem || asyncProcessingItem!
 
     // 使用统一的拖拽工具计算目标位置
     const dropPosition = dragUtils.calculateDropPosition(event, timelineWidth.value)
@@ -1090,14 +1108,16 @@ async function handleMediaItemDrop(event: DragEvent, mediaDragData: MediaItemDra
     }
 
     // 检查素材类型与轨道类型的兼容性
-    if (!isMediaCompatibleWithTrack(mediaItem.mediaType, targetTrack.type)) {
+    // 异步处理素材（unknown类型）可以拖拽到任何轨道，转换时会重新分配
+    if (mediaItem.mediaType !== 'unknown' && !isMediaCompatibleWithTrack(mediaItem.mediaType as MediaType, targetTrack.type)) {
       // 获取媒体类型标签
-      const mediaTypeLabels = {
+      const mediaTypeLabels: Record<MediaType, string> = {
         video: '视频',
         image: '图片',
-        audio: '音频'
+        audio: '音频',
+        text: '文本'
       }
-      const mediaTypeLabel = mediaTypeLabels[mediaItem.mediaType] || '未知'
+      const mediaTypeLabel = mediaTypeLabels[mediaItem.mediaType as MediaType] || '未知'
       const trackTypeLabel = getTrackTypeLabel(targetTrack.type)
 
       // 根据媒体类型提供合适的建议
@@ -1130,26 +1150,93 @@ async function handleMediaItemDrop(event: DragEvent, mediaDragData: MediaItemDra
     const bufferFrames = 300 // 预留10秒缓冲（300帧）
     videoStore.expandTimelineIfNeededFrames(dropTime + bufferFrames)
 
-    // 构建createMediaClipFromMediaItem需要的参数格式
-    const mediaItemForCreation = {
-      id: mediaItem.id,
-      url: mediaItem.url,
-      name: mediaItem.name,
-      duration: mediaItem.duration,
-      mediaType: mediaItem.mediaType,
-      fileInfo: {
-        name: mediaItem.file.name,
-        type: mediaItem.file.type,
-        lastModified: mediaItem.file.lastModified,
-      },
-    }
+    if (isAsyncProcessing) {
+      // 异步处理素材：创建 AsyncProcessingTimelineItem 占位符
+      await createAsyncProcessingTimelineItem(asyncProcessingItem!, dropTime, targetTrackId)
+    } else {
+      // 本地素材：创建普通的 TimelineItem
+      const localMediaItem = mediaItem as LocalMediaItem
 
-    // 从素材库项创建媒体片段（视频或图片）
-    await createMediaClipFromMediaItem(mediaItemForCreation, dropTime, targetTrackId)
+      // 检查媒体类型是否支持创建clip
+      if (localMediaItem.mediaType === 'text') {
+        // 文本类型需要特殊处理，暂时跳过
+        console.warn('文本类型素材暂不支持通过拖拽创建')
+        return
+      }
+
+      const mediaItemForCreation = {
+        id: localMediaItem.id,
+        url: localMediaItem.url,
+        name: localMediaItem.name,
+        duration: localMediaItem.duration,
+        mediaType: localMediaItem.mediaType as 'video' | 'image' | 'audio',
+        fileInfo: {
+          name: localMediaItem.file.name,
+          type: localMediaItem.file.type,
+          lastModified: localMediaItem.file.lastModified,
+        },
+      }
+
+      // 从素材库项创建媒体片段（视频或图片）
+      await createMediaClipFromMediaItem(mediaItemForCreation, dropTime, targetTrackId)
+    }
   } catch (error) {
     console.error('Failed to parse media item data:', error)
     dialogs.showDragDataError()
   }
+}
+
+// 创建异步处理时间轴项目占位符
+async function createAsyncProcessingTimelineItem(
+  asyncProcessingItem: AsyncProcessingMediaItem,
+  dropTime: number,
+  targetTrackId: string
+) {
+  console.log('🔧 [Timeline] 创建异步处理时间轴项目占位符:', {
+    id: asyncProcessingItem.id,
+    name: asyncProcessingItem.name,
+    dropTime,
+    targetTrackId,
+    expectedDuration: asyncProcessingItem.expectedDuration
+  })
+
+  // 生成时间轴项目ID
+  const timelineItemId = `timeline_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+
+  // 创建异步处理时间轴项目
+  const asyncProcessingTimelineItem: AsyncProcessingTimelineItem = {
+    id: timelineItemId,
+    mediaItemId: asyncProcessingItem.id,
+    trackId: targetTrackId,
+    mediaType: asyncProcessingItem.mediaType,
+
+    // 时间范围
+    timeRange: {
+      timelineStartTime: dropTime,
+      timelineEndTime: dropTime + asyncProcessingItem.expectedDuration
+    },
+
+    // 异步处理状态相关
+    processingType: asyncProcessingItem.processingType,
+    processingStatus: asyncProcessingItem.processingStatus,
+    processingProgress: asyncProcessingItem.processingProgress,
+    errorMessage: asyncProcessingItem.errorMessage,
+
+    // 占位符配置
+    config: {
+      name: asyncProcessingItem.name,
+      expectedDuration: asyncProcessingItem.expectedDuration
+    },
+
+    // 标识字段
+    isAsyncProcessingPlaceholder: true,
+    sprite: null
+  }
+
+  // 添加到时间轴
+  videoStore.addTimelineItem(asyncProcessingTimelineItem as any) // 临时类型转换
+
+  console.log('✅ [Timeline] 异步处理时间轴项目占位符创建完成:', timelineItemId)
 }
 
 // 移动单个项目
@@ -1467,9 +1554,15 @@ async function handleTimelineItemPositionUpdate(
   }
 }
 
-// 根据媒体类型获取对应的Clip组件
-function getClipComponent(mediaType: MediaType) {
-  switch (mediaType) {
+// 根据时间轴项目类型获取对应的Clip组件
+function getClipComponent(item: LocalTimelineItem | AsyncProcessingTimelineItem) {
+  // 检查是否为异步处理时间轴项目
+  if (isAsyncProcessingTimelineItem(item)) {
+    return TimelineAsyncProcessingClip
+  }
+
+  // 本地时间轴项目根据媒体类型选择组件
+  switch (item.mediaType) {
     case 'text':
       return TimelineTextClip
     case 'audio':
@@ -1511,7 +1604,7 @@ async function handleTimelineItemRemove(timelineItemId: string) {
       if (item) {
         // 从WebAV画布移除VideoVisibleSprite
         const avCanvas = webAVControls.getAVCanvas()
-        if (avCanvas) {
+        if (avCanvas && item.sprite) {
           avCanvas.removeSprite(item.sprite)
         }
         // 从store中移除TimelineItem
@@ -1794,7 +1887,8 @@ async function regenerateThumbnail() {
       const timelineItem = videoStore.getTimelineItem(contextMenuTarget.value.clipId)
       const mediaItem = timelineItem ? videoStore.getMediaItem(timelineItem.mediaItemId) : null
 
-      if (timelineItem && mediaItem) {
+      // 只对本地时间轴项目进行缩略图重新生成
+      if (timelineItem && mediaItem && !isAsyncProcessingTimelineItem(timelineItem)) {
         const { regenerateThumbnailForTimelineItem } = await import('../utils/thumbnailGenerator')
         const newThumbnailUrl = await regenerateThumbnailForTimelineItem(timelineItem, mediaItem)
 
