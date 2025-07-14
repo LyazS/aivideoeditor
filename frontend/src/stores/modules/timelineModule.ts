@@ -15,7 +15,7 @@ import type {
   VideoResolution,
   MediaType,
 } from '../../types'
-import { hasVisualProps, hasAudioProps, isAsyncProcessingTimelineItem } from '../../types'
+import { hasVisualProps, hasAudioProps, isAsyncProcessingTimelineItem, getLocalTimelineItem } from '../../types'
 
 /**
  * 时间轴核心管理模块
@@ -250,6 +250,16 @@ export function createTimelineModule(
   }
 
   /**
+   * 获取本地时间轴项目（过滤掉异步处理项目）
+   * @param timelineItemId 时间轴项目ID
+   * @returns 本地时间轴项目或undefined
+   */
+  function getLocalTimelineItemById(timelineItemId: string): LocalTimelineItem | undefined {
+    const item = getTimelineItem(timelineItemId)
+    return getLocalTimelineItem(item)
+  }
+
+  /**
    * 更新时间轴项目位置
    * @param timelineItemId 时间轴项目ID
    * @param newPositionFrames 新位置（帧数）
@@ -474,6 +484,7 @@ export function createTimelineModule(
     addTimelineItem,
     removeTimelineItem,
     getTimelineItem,
+    getLocalTimelineItem: getLocalTimelineItemById,
     updateTimelineItemPosition,
     updateTimelineItemSprite,
     updateTimelineItemTransform,

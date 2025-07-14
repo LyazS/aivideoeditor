@@ -147,7 +147,7 @@ export async function createKeyframeCommandExecutor(): Promise<KeyframeCommandEx
 
   return {
     timelineModule: {
-      getTimelineItem: (id: string) => videoStore.getTimelineItem(id),
+      getTimelineItem: (id: string) => videoStore.getLocalTimelineItem(id),
     },
     webavAnimationManager: {
       updateWebAVAnimation: updateWebAVAnimation,

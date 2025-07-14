@@ -642,7 +642,7 @@ const updateTextContent = async () => {
       localText.value.trim(),
       {},
       {
-        getTimelineItem: videoStore.getTimelineItem,
+        getTimelineItem: (id: string) => videoStore.getLocalTimelineItem(id),
       },
     )
 
@@ -681,7 +681,7 @@ const updateTextStyle = async () => {
       props.selectedTimelineItem.config.text, // 保持文本内容不变
       styleToUpdate,
       {
-        getTimelineItem: videoStore.getTimelineItem,
+        getTimelineItem: (id: string) => videoStore.getLocalTimelineItem(id),
       },
     )
 

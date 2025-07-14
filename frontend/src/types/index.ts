@@ -303,6 +303,16 @@ export function isAsyncProcessingTimelineItem(item: LocalTimelineItem<MediaType>
   return 'isAsyncProcessingPlaceholder' in item && item.isAsyncProcessingPlaceholder === true
 }
 
+/**
+ * 从联合类型中获取本地时间轴项目
+ * @param item 时间轴项目（可能是本地项目或异步处理项目）
+ * @returns 本地时间轴项目或undefined
+ */
+export function getLocalTimelineItem(item: LocalTimelineItem<MediaType> | AsyncProcessingTimelineItem | undefined): LocalTimelineItem<MediaType> | undefined {
+  if (!item) return undefined
+  return !item.isAsyncProcessingPlaceholder ? item as LocalTimelineItem<MediaType> : undefined
+}
+
 export function isLocalMediaItem(item: LocalMediaItem | AsyncProcessingMediaItem): item is LocalMediaItem {
   return !('isAsyncProcessing' in item) || item.isAsyncProcessing === false
 }

@@ -702,7 +702,7 @@ export function useWebAVControls() {
             logSpriteRestore(itemData.id, 'Store reference updated')
 
             // 🔄 重新设置双向数据同步 - 这是关键步骤！
-            const syncTimelineItem = videoStore.getTimelineItem(itemData.id)
+            const syncTimelineItem = videoStore.getLocalTimelineItem(itemData.id)
             if (syncTimelineItem) {
               videoStore.setupBidirectionalSync(syncTimelineItem)
               logSpriteRestore(itemData.id, 'Bidirectional sync reestablished')

@@ -54,7 +54,7 @@ import type {
   TrackType,
   AudioMediaConfig,
 } from '../types'
-import { getVisualPropsFromData, getAudioPropsFromData } from '../types'
+import { getVisualPropsFromData, getAudioPropsFromData, getLocalTimelineItem } from '../types'
 
 export const useVideoStore = defineStore('video', () => {
   // 创建媒体管理模块
@@ -288,10 +288,10 @@ export const useVideoStore = defineStore('video', () => {
       gain?: number // 音频增益（dB）
     },
   ) {
-    // 获取要更新的时间轴项目
-    const timelineItem = timelineModule.getTimelineItem(timelineItemId)
+    // 获取要更新的时间轴项目（只处理本地项目）
+    const timelineItem = timelineModule.getLocalTimelineItem(timelineItemId)
     if (!timelineItem) {
-      console.warn(`⚠️ 时间轴项目不存在，无法更新变换属性: ${timelineItemId}`)
+      console.warn(`⚠️ 本地时间轴项目不存在，无法更新变换属性: ${timelineItemId}`)
       return
     }
 
@@ -526,10 +526,10 @@ export const useVideoStore = defineStore('video', () => {
     timelineItemId: string,
     splitTimeFrames: number,
   ) {
-    // 获取要分割的时间轴项目
-    const timelineItem = timelineModule.getTimelineItem(timelineItemId)
+    // 获取要分割的时间轴项目（只处理本地项目）
+    const timelineItem = timelineModule.getLocalTimelineItem(timelineItemId)
     if (!timelineItem) {
-      console.warn(`⚠️ 时间轴项目不存在，无法分割: ${timelineItemId}`)
+      console.warn(`⚠️ 本地时间轴项目不存在，无法分割: ${timelineItemId}`)
       return
     }
 
@@ -556,7 +556,7 @@ export const useVideoStore = defineStore('video', () => {
       {
         addTimelineItem: timelineModule.addTimelineItem,
         removeTimelineItem: timelineModule.removeTimelineItem,
-        getTimelineItem: timelineModule.getTimelineItem,
+        getTimelineItem: timelineModule.getLocalTimelineItem,
       },
       {
         addSprite: webavModule.addSprite,
@@ -575,10 +575,10 @@ export const useVideoStore = defineStore('video', () => {
    * @returns 新创建的时间轴项目ID，失败时返回null
    */
   async function duplicateTimelineItemWithHistory(timelineItemId: string): Promise<string | null> {
-    // 获取要复制的时间轴项目
-    const timelineItem = timelineModule.getTimelineItem(timelineItemId)
+    // 获取要复制的时间轴项目（只处理本地项目）
+    const timelineItem = timelineModule.getLocalTimelineItem(timelineItemId)
     if (!timelineItem) {
-      console.warn(`⚠️ 时间轴项目不存在，无法复制: ${timelineItemId}`)
+      console.warn(`⚠️ 本地时间轴项目不存在，无法复制: ${timelineItemId}`)
       return null
     }
 
@@ -593,7 +593,7 @@ export const useVideoStore = defineStore('video', () => {
       {
         addTimelineItem: timelineModule.addTimelineItem,
         removeTimelineItem: timelineModule.removeTimelineItem,
-        getTimelineItem: timelineModule.getTimelineItem,
+        getTimelineItem: timelineModule.getLocalTimelineItem,
         setupBidirectionalSync: timelineModule.setupBidirectionalSync,
       },
       {
@@ -862,10 +862,10 @@ export const useVideoStore = defineStore('video', () => {
     timelineItemId: string,
     newTimeRange: VideoTimeRange | ImageTimeRange,
   ): Promise<boolean> {
-    // 获取时间轴项目
-    const timelineItem = timelineModule.getTimelineItem(timelineItemId)
+    // 获取时间轴项目（只处理本地项目）
+    const timelineItem = timelineModule.getLocalTimelineItem(timelineItemId)
     if (!timelineItem) {
-      console.warn(`⚠️ 时间轴项目不存在，无法调整时间范围: ${timelineItemId}`)
+      console.warn(`⚠️ 本地时间轴项目不存在，无法调整时间范围: ${timelineItemId}`)
       return false
     }
 
@@ -888,7 +888,7 @@ export const useVideoStore = defineStore('video', () => {
       originalTimeRange,
       newTimeRange,
       {
-        getTimelineItem: timelineModule.getTimelineItem,
+        getTimelineItem: timelineModule.getLocalTimelineItem,
       },
       {
         getMediaItem: mediaModule.getMediaItem,
@@ -932,7 +932,7 @@ export const useVideoStore = defineStore('video', () => {
     const batchCommand = new BatchDeleteCommand(
       validItemIds,
       {
-        getTimelineItem: timelineModule.getTimelineItem,
+        getTimelineItem: timelineModule.getLocalTimelineItem,
         timelineItems: timelineModule.timelineItems,
         addTimelineItem: timelineModule.addTimelineItem,
         removeTimelineItem: timelineModule.removeTimelineItem,
@@ -1349,6 +1349,7 @@ export const useVideoStore = defineStore('video', () => {
     addTimelineItem: timelineModule.addTimelineItem,
     removeTimelineItem: timelineModule.removeTimelineItem,
     getTimelineItem: timelineModule.getTimelineItem,
+    getLocalTimelineItem: timelineModule.getLocalTimelineItem,
     getTimelineItemsForTrack: (trackId: string) =>
       getTimelineItemsByTrack(trackId, timelineModule.timelineItems.value),
     updateTimelineItemPosition: timelineModule.updateTimelineItemPosition,

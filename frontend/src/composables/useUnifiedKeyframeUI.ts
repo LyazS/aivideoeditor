@@ -287,7 +287,7 @@ export function useUnifiedKeyframeUI(
           property,
           value,
           {
-            getTimelineItem: videoStore.getTimelineItem,
+            getTimelineItem: (id: string) => videoStore.getLocalTimelineItem(id),
           },
           {
             updateWebAVAnimation: async (item) => {
