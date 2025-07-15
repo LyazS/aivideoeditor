@@ -113,7 +113,11 @@ export function printDebugInfo(
           type: 'local'
         }
       } else if (isAsyncProcessingTimelineItem(item)) {
-        // 异步处理时间轴项目
+        // 异步处理时间轴项目 - 从对应的素材项目获取状态
+        const asyncMediaItem = mediaItems.find(media =>
+          isAsyncProcessingMediaItem(media) && media.id === item.mediaItemId
+        ) as AsyncProcessingMediaItem | undefined
+
         return {
           id: item.id,
           mediaItemId: item.mediaItemId,
@@ -121,8 +125,8 @@ export function printDebugInfo(
           mediaType: item.mediaType,
           position: framesToTimecode(item.timeRange.timelineStartTime),
           hasSprite: !!item.sprite,
-          type: `async-${item.processingType}`,
-          status: `${item.processingStatus} (${item.processingProgress}%)`
+          type: `async-${asyncMediaItem?.processingType || 'unknown'}`,
+          status: asyncMediaItem ? `${asyncMediaItem.processingStatus} (${asyncMediaItem.processingProgress}%)` : 'unknown'
         }
       } else {
         // 未知类型（理论上不应该到达这里）
