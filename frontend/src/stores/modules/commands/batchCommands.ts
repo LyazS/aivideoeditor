@@ -1,6 +1,12 @@
 import { generateCommandId } from '../../../utils/idGenerator'
 import { BaseBatchCommand } from '../historyModule'
-import type { SimpleCommand, LocalTimelineItem, LocalMediaItem, Track } from '../../../types'
+import type {
+  SimpleCommand,
+  LocalTimelineItem,
+  AsyncProcessingTimelineItem,
+  LocalMediaItem,
+  Track,
+} from '../../../types'
 import { RemoveTimelineItemCommand, MoveTimelineItemCommand } from './timelineCommands'
 import type { VisibleSprite } from '@webav/av-cliper'
 
@@ -12,9 +18,8 @@ export class BatchDeleteCommand extends BaseBatchCommand {
   constructor(
     private timelineItemIds: string[],
     private timelineModule: {
-      getTimelineItem: (id: string) => LocalTimelineItem | undefined
-      timelineItems: { value: LocalTimelineItem[] }
-      addTimelineItem: (item: LocalTimelineItem) => void
+      getTimelineItem: (id: string) => LocalTimelineItem | AsyncProcessingTimelineItem | undefined
+      addTimelineItem: (item: LocalTimelineItem | AsyncProcessingTimelineItem) => void
       removeTimelineItem: (id: string) => void
     },
     private webavModule: {
@@ -22,7 +27,7 @@ export class BatchDeleteCommand extends BaseBatchCommand {
       removeSprite: (sprite: VisibleSprite) => boolean
     },
     private mediaModule: {
-      getMediaItem: (id: string) => LocalMediaItem | undefined
+      getLocalMediaItem: (id: string) => LocalMediaItem | undefined
     },
   ) {
     super(`批量删除 ${timelineItemIds.length} 个时间轴项目`)
@@ -58,14 +63,13 @@ export class BatchDeleteCommand extends BaseBatchCommand {
 export class BatchAutoArrangeTrackCommand extends BaseBatchCommand {
   constructor(
     private trackId: string,
-    private timelineItems: LocalTimelineItem[],
+    private timelineItems: (LocalTimelineItem | AsyncProcessingTimelineItem)[],
     private timelineModule: {
-      getTimelineItem: (id: string) => LocalTimelineItem | undefined
-      timelineItems: { value: LocalTimelineItem[] }
+      getTimelineItem: (id: string) => LocalTimelineItem | AsyncProcessingTimelineItem | undefined
       updateTimelineItemPosition: (id: string, position: number, trackId?: string) => void
     },
     private mediaModule: {
-      getMediaItem: (id: string) => LocalMediaItem | undefined
+      getLocalMediaItem: (id: string) => LocalMediaItem | undefined
     },
     private trackModule: {
       getTrack: (trackId: string) => Track | undefined
@@ -87,15 +91,14 @@ export class BatchAutoArrangeTrackCommand extends BaseBatchCommand {
 
     // 按时间轴开始时间排序
     const sortedItems = [...this.timelineItems].sort((a, b) => {
-      const rangeA = a.sprite.getTimeRange()
-      const rangeB = b.sprite.getTimeRange()
+      const rangeA = a.timeRange
+      const rangeB = b.timeRange
       return rangeA.timelineStartTime - rangeB.timelineStartTime
     })
 
     let currentPositionFrames = 0
     for (const item of sortedItems) {
-      const sprite = item.sprite
-      const timeRange = sprite.getTimeRange()
+      const timeRange = item.timeRange
       // 使用帧数进行所有计算
       const durationFrames = timeRange.timelineEndTime - timeRange.timelineStartTime // 帧数
 
@@ -122,7 +125,7 @@ export class BatchAutoArrangeTrackCommand extends BaseBatchCommand {
             getTimelineItem: this.timelineModule.getTimelineItem,
           },
           {
-            getMediaItem: this.mediaModule.getMediaItem,
+            getLocalMediaItem: this.mediaModule.getLocalMediaItem,
           },
         )
         this.addCommand(moveCommand)

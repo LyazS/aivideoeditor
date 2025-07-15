@@ -1,14 +1,13 @@
 import { ref, computed, type Raw, type Ref } from 'vue'
-import type { LocalTimelineItem, LocalMediaItem } from '../../types'
+import type { LocalTimelineItem, LocalMediaItem, AsyncProcessingTimelineItem } from '../../types'
 
 /**
  * 选择管理模块
  * 负责管理时间轴项目的选择状态
  */
 export function createSelectionModule(
-  timelineItems: Ref<LocalTimelineItem[]>,
-  getTimelineItem: (id: string) => LocalTimelineItem | undefined,
-  getMediaItem: (id: string) => LocalMediaItem | undefined,
+  getTimelineItem: (id: string) => LocalTimelineItem | AsyncProcessingTimelineItem | undefined,
+  getLocalMediaItem: (id: string) => LocalMediaItem | undefined,
   executeCommand: (command: any) => Promise<void>,
 ) {
   // ==================== 状态定义 ====================
@@ -135,7 +134,7 @@ export function createSelectionModule(
         syncAVCanvasSelection,
       },
       { getTimelineItem },
-      { getMediaItem },
+      { getLocalMediaItem },
     )
 
     // 执行命令（这会自动添加到历史记录）
@@ -282,7 +281,7 @@ export function createSelectionModule(
    * 获取当前选中的时间轴项目
    * @returns 选中的时间轴项目或null
    */
-  function getSelectedTimelineItem(): LocalTimelineItem | null {
+  function getSelectedTimelineItem(): LocalTimelineItem | AsyncProcessingTimelineItem | null {
     if (!selectedTimelineItemId.value) return null
     return getTimelineItem(selectedTimelineItemId.value) || null
   }

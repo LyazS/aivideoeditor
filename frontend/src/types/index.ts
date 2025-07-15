@@ -28,7 +28,13 @@ export type MediaTypeOrUnknown = MediaType | 'unknown'
 /**
  * 异步处理素材状态枚举
  */
-export type AsyncProcessingStatus = 'pending' | 'processing' | 'completed' | 'error' | 'cancelled' | 'unsupported'
+export type AsyncProcessingStatus =
+  | 'pending'
+  | 'processing'
+  | 'completed'
+  | 'error'
+  | 'cancelled'
+  | 'unsupported'
 
 /**
  * 异步处理类型枚举（当前只支持远程下载）
@@ -39,9 +45,9 @@ export type AsyncProcessingType = 'remote-download'
  * 媒体错误类型枚举
  */
 export type MediaErrorType =
-  | 'webav_parse_error'    // WebAV解析失败（如格式不支持、文件损坏）
-  | 'file_load_error'      // 文件加载失败（如文件不存在、权限问题）
-  | 'unsupported_format'   // 不支持的文件格式
+  | 'webav_parse_error' // WebAV解析失败（如格式不支持、文件损坏）
+  | 'file_load_error' // 文件加载失败（如文件不存在、权限问题）
+  | 'unsupported_format' // 不支持的文件格式
 
 /**
  * 轨道类型
@@ -295,30 +301,28 @@ export type VisualMediaConfig = VideoMediaConfig | ImageMediaConfig | TextMediaC
 /**
  * 类型守卫函数（激进重构后直接使用联合类型）
  */
-export function isLocalTimelineItem(item: LocalTimelineItem<MediaType> | AsyncProcessingTimelineItem): item is LocalTimelineItem<MediaType> {
-  return !('isAsyncProcessingPlaceholder' in item) || item.isAsyncProcessingPlaceholder === false
+export function isLocalTimelineItem(
+  item: LocalTimelineItem<MediaType> | AsyncProcessingTimelineItem | undefined,
+): item is LocalTimelineItem<MediaType> {
+  return item != null && item.isAsyncProcessingPlaceholder !== true
 }
 
-export function isAsyncProcessingTimelineItem(item: LocalTimelineItem<MediaType> | AsyncProcessingTimelineItem): item is AsyncProcessingTimelineItem {
-  return 'isAsyncProcessingPlaceholder' in item && item.isAsyncProcessingPlaceholder === true
+export function isAsyncProcessingTimelineItem(
+  item: LocalTimelineItem<MediaType> | AsyncProcessingTimelineItem | undefined,
+): item is AsyncProcessingTimelineItem {
+  return item != null && item.isAsyncProcessingPlaceholder === true
 }
 
-/**
- * 从联合类型中获取本地时间轴项目
- * @param item 时间轴项目（可能是本地项目或异步处理项目）
- * @returns 本地时间轴项目或undefined
- */
-export function getLocalTimelineItem(item: LocalTimelineItem<MediaType> | AsyncProcessingTimelineItem | undefined): LocalTimelineItem<MediaType> | undefined {
-  if (!item) return undefined
-  return !item.isAsyncProcessingPlaceholder ? item as LocalTimelineItem<MediaType> : undefined
+export function isLocalMediaItem(
+  item: LocalMediaItem | AsyncProcessingMediaItem | undefined,
+): item is LocalMediaItem {
+  return item != null && item.isAsyncProcessing !== true
 }
 
-export function isLocalMediaItem(item: LocalMediaItem | AsyncProcessingMediaItem): item is LocalMediaItem {
-  return !('isAsyncProcessing' in item) || item.isAsyncProcessing === false
-}
-
-export function isAsyncProcessingMediaItem(item: LocalMediaItem | AsyncProcessingMediaItem): item is AsyncProcessingMediaItem {
-  return 'isAsyncProcessing' in item && item.isAsyncProcessing === true
+export function isAsyncProcessingMediaItem(
+  item: LocalMediaItem | AsyncProcessingMediaItem | undefined,
+): item is AsyncProcessingMediaItem {
+  return item != null && item.isAsyncProcessing === true
 }
 
 /**
@@ -430,19 +434,6 @@ export interface DragPreviewData {
   mediaType?: MediaType // 媒体类型，用于确定默认高度
 }
 
-/**
- * 冲突信息接口
- * 用于检测和显示时间轴项目之间的重叠冲突
- */
-export interface ConflictInfo {
-  itemId: string
-  itemName: string
-  startTime: number // 开始时间（帧数）
-  endTime: number // 结束时间（帧数）
-  overlapStart: number // 重叠开始时间（帧数）
-  overlapEnd: number // 重叠结束时间（帧数）
-}
-
 // ==================== 命令模式接口 ====================
 
 /**
@@ -516,7 +507,8 @@ export interface LocalTimelineItemData<T extends MediaType = MediaType> extends 
 /**
  * 本地时间轴项目接口 - 继承 LocalTimelineItemData，添加运行时属性
  */
-export interface LocalTimelineItem<T extends MediaType = MediaType> extends LocalTimelineItemData<T> {
+export interface LocalTimelineItem<T extends MediaType = MediaType>
+  extends LocalTimelineItemData<T> {
   sprite: Raw<CustomSprite>
   thumbnailUrl?: string
   isAsyncProcessingPlaceholder?: false
@@ -604,11 +596,11 @@ export type PropertyType =
  */
 export type MediaModule = {
   mediaItems: any
-  addMediaItem: (item: LocalMediaItem) => void
-  removeMediaItem: (id: string) => void
-  getMediaItem: (id: string) => LocalMediaItem | undefined
-  updateMediaItemName: (id: string, name: string) => void
-  updateMediaItem: (id: string, updates: Partial<LocalMediaItem>) => void
+  addLocalMediaItem: (item: LocalMediaItem) => void
+  removeLocalMediaItem: (id: string) => void
+  getLocalMediaItem: (id: string) => LocalMediaItem | undefined
+  updateLocalMediaItemName: (id: string, name: string) => void
+  updateLocalMediaItem: (id: string, updates: Partial<LocalMediaItem>) => void
   setVideoElement: (id: string, element: HTMLVideoElement) => void
   getVideoOriginalResolution: (id: string) => Promise<{ width: number; height: number }>
   setImageElement: (id: string, element: HTMLImageElement) => void
@@ -684,7 +676,7 @@ export const DEBUG_GROUPS = {
  * @returns 是否为视频时间范围
  */
 export function isVideoTimeRange(
-  timeRange: VideoTimeRange | ImageTimeRange,
+  timeRange: VideoTimeRange | ImageTimeRange | AsyncProcessingTimeRange,
 ): timeRange is VideoTimeRange {
   return (
     'clipStartTime' in timeRange &&
@@ -700,7 +692,7 @@ export function isVideoTimeRange(
  * @returns 是否为图片时间范围
  */
 export function isImageTimeRange(
-  timeRange: VideoTimeRange | ImageTimeRange,
+  timeRange: VideoTimeRange | ImageTimeRange | AsyncProcessingTimeRange,
 ): timeRange is ImageTimeRange {
   return 'displayDuration' in timeRange && !('clipStartTime' in timeRange)
 }
@@ -888,8 +880,11 @@ export function getMediaTypeCategory(mediaType: MediaType): 'FILE_BASED' | 'GENE
  * @param item 时间轴项目
  * @returns 是否具有视觉属性，同时进行类型守卫
  */
-export function hasVisualProps(item: LocalTimelineItem): item is LocalTimelineItem<'video' | 'image' | 'text'> {
-  const hasVisual = item.mediaType === 'video' || item.mediaType === 'image' || item.mediaType === 'text'
+export function hasVisualProps(
+  item: LocalTimelineItem,
+): item is LocalTimelineItem<'video' | 'image' | 'text'> {
+  const hasVisual =
+    item.mediaType === 'video' || item.mediaType === 'image' || item.mediaType === 'text'
   if (hasVisual) {
     // 额外的运行时检查，确保配置确实具有视觉属性
     return hasVisualProperties(item.config)
@@ -902,7 +897,9 @@ export function hasVisualProps(item: LocalTimelineItem): item is LocalTimelineIt
  * @param item 时间轴项目
  * @returns 是否具有音频属性，同时进行类型守卫
  */
-export function hasAudioProps(item: LocalTimelineItem): item is LocalTimelineItem<'video' | 'audio'> {
+export function hasAudioProps(
+  item: LocalTimelineItem,
+): item is LocalTimelineItem<'video' | 'audio'> {
   const hasAudio = item.mediaType === 'video' || item.mediaType === 'audio'
   if (hasAudio) {
     // 额外的运行时检查，确保配置确实具有音频属性
@@ -916,8 +913,13 @@ export function hasAudioProps(item: LocalTimelineItem): item is LocalTimelineIte
  * @param itemData 时间轴项目数据
  * @returns 是否具有视觉属性，同时进行类型守卫
  */
-export function hasVisualPropsData(itemData: LocalTimelineItemData): itemData is LocalTimelineItemData<'video' | 'image' | 'text'> {
-  const hasVisual = itemData.mediaType === 'video' || itemData.mediaType === 'image' || itemData.mediaType === 'text'
+export function hasVisualPropsData(
+  itemData: LocalTimelineItemData,
+): itemData is LocalTimelineItemData<'video' | 'image' | 'text'> {
+  const hasVisual =
+    itemData.mediaType === 'video' ||
+    itemData.mediaType === 'image' ||
+    itemData.mediaType === 'text'
   if (hasVisual) {
     // 额外的运行时检查，确保配置确实具有视觉属性
     return hasVisualProperties(itemData.config)
@@ -930,13 +932,17 @@ export function hasVisualPropsData(itemData: LocalTimelineItemData): itemData is
  * @param config 媒体配置对象
  * @returns 是否具有视觉属性
  */
-export function hasVisualProperties(config: GetMediaConfig<MediaType>): config is VideoMediaConfig | ImageMediaConfig | TextMediaConfig {
-  return 'width' in config &&
-         'height' in config &&
-         'x' in config &&
-         'y' in config &&
-         'rotation' in config &&
-         'opacity' in config
+export function hasVisualProperties(
+  config: GetMediaConfig<MediaType>,
+): config is VideoMediaConfig | ImageMediaConfig | TextMediaConfig {
+  return (
+    'width' in config &&
+    'height' in config &&
+    'x' in config &&
+    'y' in config &&
+    'rotation' in config &&
+    'opacity' in config
+  )
 }
 
 /**
@@ -944,7 +950,9 @@ export function hasVisualProperties(config: GetMediaConfig<MediaType>): config i
  * @param config 媒体配置对象
  * @returns 是否具有音频属性
  */
-export function hasAudioProperties(config: GetMediaConfig<MediaType>): config is VideoMediaConfig | AudioMediaConfig {
+export function hasAudioProperties(
+  config: GetMediaConfig<MediaType>,
+): config is VideoMediaConfig | AudioMediaConfig {
   return 'volume' in config && 'isMuted' in config
 }
 
@@ -954,7 +962,7 @@ export function hasAudioProperties(config: GetMediaConfig<MediaType>): config is
  */
 export function getConfigProperty<T extends MediaType, K extends keyof GetMediaConfig<T>>(
   item: LocalTimelineItem<T>,
-  property: K
+  property: K,
 ): GetMediaConfig<T>[K] {
   return (item.config as GetMediaConfig<T>)[property]
 }
@@ -966,7 +974,7 @@ export function getConfigProperty<T extends MediaType, K extends keyof GetMediaC
 export function setConfigProperty<T extends MediaType, K extends keyof GetMediaConfig<T>>(
   item: LocalTimelineItem<T>,
   property: K,
-  value: GetMediaConfig<T>[K]
+  value: GetMediaConfig<T>[K],
 ): void {
   ;(item.config as GetMediaConfig<T>)[property] = value
 }
@@ -976,7 +984,7 @@ export function setConfigProperty<T extends MediaType, K extends keyof GetMediaC
  */
 export function hasKeyframeProperty<T extends MediaType>(
   properties: GetKeyframeProperties<T>,
-  property: keyof GetKeyframeProperties<T>
+  property: keyof GetKeyframeProperties<T>,
 ): boolean {
   return property in properties
 }
@@ -986,7 +994,7 @@ export function hasKeyframeProperty<T extends MediaType>(
  */
 export function getKeyframeProperty<T extends MediaType, K extends keyof GetKeyframeProperties<T>>(
   properties: GetKeyframeProperties<T>,
-  property: K
+  property: K,
 ): GetKeyframeProperties<T>[K] {
   return properties[property]
 }
@@ -997,7 +1005,7 @@ export function getKeyframeProperty<T extends MediaType, K extends keyof GetKeyf
 export function setKeyframeProperty<T extends MediaType, K extends keyof GetKeyframeProperties<T>>(
   properties: GetKeyframeProperties<T>,
   property: K,
-  value: GetKeyframeProperties<T>[K]
+  value: GetKeyframeProperties<T>[K],
 ): void {
   properties[property] = value
 }
@@ -1130,7 +1138,7 @@ export interface LocalMediaReference extends BaseMediaReference {
   storedPath: string // 正常状态：实际存储路径；错误状态：空字符串
 
   // 新增：状态管理字段
-  status?: 'normal' | 'error'  // 默认为normal，兼容现有数据
+  status?: 'normal' | 'error' // 默认为normal，兼容现有数据
 
   // 新增：错误状态相关字段（仅当status为error时有值）
   errorType?: 'webav_parse_error' | 'file_load_error' | 'unsupported_format'
@@ -1269,7 +1277,6 @@ export interface OverlapResult {
  */
 export interface ConflictInfo {
   itemId: string
-  itemName: string
   startTime: number
   endTime: number
   overlapStart: number

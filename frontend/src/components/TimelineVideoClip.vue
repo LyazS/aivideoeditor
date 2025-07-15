@@ -10,7 +10,10 @@
       [`video-clip--${mediaItem?.mediaType}`]: mediaItem?.mediaType,
     }"
     @select="$emit('select', $event)"
-    @update-position="(timelineItemId, newPosition, newTrackId) => $emit('update-position', timelineItemId, newPosition, newTrackId)"
+    @update-position="
+      (timelineItemId, newPosition, newTrackId) =>
+        $emit('update-position', timelineItemId, newPosition, newTrackId)
+    "
     @remove="$emit('remove', $event)"
   >
     <template #content="{ timelineItem }">
@@ -93,7 +96,7 @@ import { relativeFrameToAbsoluteFrame } from '../utils/unifiedKeyframeUtils'
 import type { LocalTimelineItem, Track } from '../types'
 
 interface Props {
-  timelineItem: LocalTimelineItem
+  timelineItem: LocalTimelineItem<'video' | 'image'>
   track?: Track
   timelineWidth: number
   totalDurationFrames: number
@@ -116,7 +119,7 @@ const baseClipRef = ref<InstanceType<typeof TimelineBaseClip>>()
 
 // 获取对应的MediaItem
 const mediaItem = computed(() => {
-  return videoStore.getMediaItem(props.timelineItem.mediaItemId)
+  return videoStore.getLocalMediaItem(props.timelineItem.mediaItemId)
 })
 
 // 获取时间轴时长（帧数）
@@ -230,19 +233,11 @@ function jumpToKeyframe(absoluteFrame: number) {
   })
 }
 
-
-
-
-
-
-
-
-
 /**
  * 调整大小后重新生成缩略图
  */
 async function regenerateThumbnailAfterResize() {
-  const mediaItem = videoStore.getMediaItem(props.timelineItem.mediaItemId)
+  const mediaItem = videoStore.getLocalMediaItem(props.timelineItem.mediaItemId)
   if (!mediaItem) {
     console.error('❌ 无法找到对应的MediaItem，跳过缩略图重新生成')
     return
@@ -288,21 +283,37 @@ onMounted(() => {
 
 /* 重叠状态的特殊样式 */
 .video-clip.overlapping {
-  background: linear-gradient(135deg, var(--color-clip-overlapping), var(--color-clip-overlapping-dark)) !important;
+  background: linear-gradient(
+    135deg,
+    var(--color-clip-overlapping),
+    var(--color-clip-overlapping-dark)
+  ) !important;
 }
 
 /* 选中状态的特殊样式 */
 .video-clip.selected {
-  background: linear-gradient(135deg, var(--color-clip-selected), var(--color-clip-selected-dark)) !important;
+  background: linear-gradient(
+    135deg,
+    var(--color-clip-selected),
+    var(--color-clip-selected-dark)
+  ) !important;
 }
 
 /* 隐藏轨道上的clip样式 */
 .video-clip.track-hidden {
-  background: linear-gradient(135deg, var(--color-clip-hidden), var(--color-clip-hidden-dark)) !important;
+  background: linear-gradient(
+    135deg,
+    var(--color-clip-hidden),
+    var(--color-clip-hidden-dark)
+  ) !important;
 }
 
 .video-clip.track-hidden.selected {
-  background: linear-gradient(135deg, var(--color-clip-hidden-selected), var(--color-clip-hidden-selected-dark)) !important;
+  background: linear-gradient(
+    135deg,
+    var(--color-clip-hidden-selected),
+    var(--color-clip-hidden-selected-dark)
+  ) !important;
 }
 
 /* 隐藏轨道上的clip内容也要调整透明度 */
@@ -404,8 +415,6 @@ onMounted(() => {
   border-radius: 2px;
   white-space: nowrap;
 }
-
-
 
 /* 关键帧标记样式 */
 .keyframes-container {

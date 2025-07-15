@@ -1,4 +1,5 @@
-import type { LocalMediaItem, LocalTimelineItem } from '../../types'
+import type { LocalMediaItem, LocalTimelineItem, AsyncProcessingTimelineItem } from '../../types'
+import { isLocalTimelineItem } from '../../types'
 
 // ==================== 查找工具 ====================
 
@@ -30,8 +31,8 @@ export function getTimelineItemAtFrames(
  */
 export function getTimelineItemsByTrack(
   trackId: string,
-  timelineItems: LocalTimelineItem[],
-): LocalTimelineItem[] {
+  timelineItems: (LocalTimelineItem | AsyncProcessingTimelineItem)[],
+): (LocalTimelineItem | AsyncProcessingTimelineItem)[] {
   return timelineItems.filter((item) => item.trackId === trackId)
 }
 
@@ -58,9 +59,11 @@ export function findOrphanedTimelineItems(
  */
 export function findTimelineItemBySprite(
   sprite: unknown,
-  timelineItems: LocalTimelineItem[],
+  timelineItems: (LocalTimelineItem | AsyncProcessingTimelineItem)[],
 ): LocalTimelineItem | null {
-  return timelineItems.find((item) => item.sprite === sprite) || null
+  // 本地时间轴项目才会有sprite
+  const localItems = timelineItems.find((item) => item.sprite === sprite)
+  return isLocalTimelineItem(localItems) ? localItems : null
 }
 
 /**

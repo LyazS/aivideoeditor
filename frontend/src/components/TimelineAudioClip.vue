@@ -90,7 +90,7 @@ const baseClipRef = ref<InstanceType<typeof TimelineBaseClip>>()
 
 // 获取对应的MediaItem
 const mediaItem = computed(() => {
-  return videoStore.getMediaItem(props.timelineItem.mediaItemId)
+  return videoStore.getLocalMediaItem(props.timelineItem.mediaItemId)
 })
 
 // 音频配置

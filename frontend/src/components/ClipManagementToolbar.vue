@@ -3,11 +3,7 @@
   <div class="clip-management-toolbar">
     <!-- 历史管理工具栏 -->
     <div class="toolbar-section">
-      <HoverButton
-        @click="undo"
-        :disabled="!videoStore.canUndo"
-        title="撤销上一个操作 (Ctrl+Z)"
-      >
+      <HoverButton @click="undo" :disabled="!videoStore.canUndo" title="撤销上一个操作 (Ctrl+Z)">
         <template #icon>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
             <path
@@ -17,11 +13,7 @@
         </template>
         撤销
       </HoverButton>
-      <HoverButton
-        @click="redo"
-        :disabled="!videoStore.canRedo"
-        title="重做下一个操作 (Ctrl+Y)"
-      >
+      <HoverButton @click="redo" :disabled="!videoStore.canRedo" title="重做下一个操作 (Ctrl+Y)">
         <template #icon>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
             <path
@@ -41,7 +33,14 @@
         :title="splitButtonTitle"
       >
         <template #icon>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
             <!-- 左方括号 [ -->
             <path d="M10 6 L10 18 M8 6 L10 6 M8 18 L10 18" />
             <!-- 右方括号 ] -->
@@ -71,10 +70,7 @@
 
     <!-- 调试按钮放在最右边 - 暂时隐藏 -->
     <div class="toolbar-section debug-section" style="display: none">
-      <HoverButton
-        @click="debugTimeline"
-        title="在控制台打印时间轴配置信息"
-      >
+      <HoverButton @click="debugTimeline" title="在控制台打印时间轴配置信息">
         <template #icon>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
             <path
@@ -124,29 +120,29 @@ const isSplitButtonDisabled = computed(() => {
 // 裁剪按钮的提示文本
 const splitButtonTitle = computed(() => {
   if (!videoStore.selectedTimelineItemId) {
-    return "请先选择一个片段"
+    return '请先选择一个片段'
   }
 
   const item = videoStore.getTimelineItem(videoStore.selectedTimelineItemId)
   if (!item) {
-    return "片段不存在"
+    return '片段不存在'
   }
 
   if (item.mediaType === 'text') {
-    return "文本类型不支持裁剪功能"
+    return '文本类型不支持裁剪功能'
   } else if (item.mediaType === 'image') {
-    return "图片类型不支持裁剪功能"
+    return '图片类型不支持裁剪功能'
   } else if (item.mediaType === 'video' || item.mediaType === 'audio') {
-    return "在当前时间位置裁剪选中的片段"
+    return '在当前时间位置裁剪选中的片段'
   } else {
-    return "该类型不支持裁剪功能"
+    return '该类型不支持裁剪功能'
   }
 })
 
 async function splitSelectedClip() {
   if (videoStore.selectedTimelineItemId) {
     const item = videoStore.getTimelineItem(videoStore.selectedTimelineItemId)
-    const mediaItem = item ? videoStore.getMediaItem(item.mediaItemId) : null
+    const mediaItem = item ? videoStore.getLocalMediaItem(item.mediaItemId) : null
     console.log(
       `🔪 开始裁剪时间轴项目: ${mediaItem?.name || '未知'} (ID: ${videoStore.selectedTimelineItemId})`,
     )
@@ -154,28 +150,19 @@ async function splitSelectedClip() {
       `📍 裁剪时间位置: ${videoStore.currentFrame}帧 (${videoStore.formattedCurrentTime})`,
     )
 
-    try {
-      // 使用带历史记录的分割方法（传入帧数）
-      await videoStore.splitTimelineItemAtTimeWithHistory(
-        videoStore.selectedTimelineItemId,
-        videoStore.currentFrame,
-      )
-      console.log('✅ 时间轴项目分割成功')
-    } catch (error) {
-      console.error('❌ 分割时间轴项目失败:', error)
-      // 如果历史记录分割失败，回退到直接分割（传入帧数）
-      await videoStore.splitTimelineItemAtTime(
-        videoStore.selectedTimelineItemId,
-        videoStore.currentFrame,
-      )
-    }
+    // 使用带历史记录的分割方法（传入帧数）
+    await videoStore.splitTimelineItemAtTimeWithHistory(
+      videoStore.selectedTimelineItemId,
+      videoStore.currentFrame,
+    )
+    console.log('✅ 时间轴项目分割成功')
   }
 }
 
 async function deleteSelectedClip() {
   if (videoStore.selectedTimelineItemId) {
     const item = videoStore.getTimelineItem(videoStore.selectedTimelineItemId)
-    const mediaItem = item ? videoStore.getMediaItem(item.mediaItemId) : null
+    const mediaItem = item ? videoStore.getLocalMediaItem(item.mediaItemId) : null
     console.log(
       `🗑️ 删除时间轴项目: ${mediaItem?.name || '未知'} (ID: ${videoStore.selectedTimelineItemId})`,
     )
@@ -256,7 +243,7 @@ function debugTimeline() {
   // 时间轴项目信息
   console.group('🎞️ 时间轴项目信息 (' + timelineItems.value.length + ' 个)')
   timelineItems.value.forEach((item, index) => {
-    const mediaItem = videoStore.getMediaItem(item.mediaItemId)
+    const mediaItem = videoStore.getLocalMediaItem(item.mediaItemId)
     // 直接从timelineItem.timeRange获取，与videostore的同步机制保持一致
     const timeRange = item.timeRange
 
@@ -264,10 +251,8 @@ function debugTimeline() {
     console.log('ID:', item.id)
     console.log('素材ID:', item.mediaItemId)
     console.log('轨道ID:', item.trackId)
-    console.log('时间轴位置 (帧):', timeRange.timelineStartTime)
     console.log('时间轴开始 (帧):', timeRange.timelineStartTime)
     console.log('时间轴结束 (帧):', timeRange.timelineEndTime)
-    console.log('播放速度:', isVideoTimeRange(timeRange) ? timeRange.playbackRate : '不适用(图片)')
     console.groupEnd()
   })
   console.groupEnd()
@@ -275,8 +260,6 @@ function debugTimeline() {
   console.log('✅ 调试信息输出完成')
   console.groupEnd()
 }
-
-
 </script>
 
 <style scoped>

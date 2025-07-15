@@ -171,7 +171,7 @@ import {
   hasAudioProps,
   hasVisualProperties,
   hasAudioProperties,
-  type LocalTimelineItem
+  type LocalTimelineItem,
 } from '../types'
 import { framesToTimecode, timecodeToFrames } from '../stores/utils/timeUtils'
 import { useKeyframeTransformControls } from '../composables/useKeyframeTransformControls'
@@ -239,7 +239,7 @@ const {
 // 选中项目对应的素材
 const selectedMediaItem = computed(() => {
   if (!props.selectedTimelineItem) return null
-  return videoStore.getMediaItem(props.selectedTimelineItem.mediaItemId) || null
+  return videoStore.getLocalMediaItem(props.selectedTimelineItem.mediaItemId) || null
 })
 
 // 时间轴时长（帧数）
@@ -294,14 +294,12 @@ const currentResolution = computed(() => {
   return { width: 0, height: 0 }
 })
 
-
-
 // 其他响应式属性
 const clipName = computed({
   get: () => selectedMediaItem.value?.name || '',
   set: (value) => {
     if (selectedMediaItem.value && value.trim()) {
-      videoStore.updateMediaItemName(selectedMediaItem.value.id, value.trim())
+      videoStore.updateLocalMediaItemName(selectedMediaItem.value.id, value.trim())
     }
   },
 })
@@ -330,7 +328,7 @@ const speedSliderSegments = [
   { position: 20, label: '1x' },
   { position: 40, label: '2x' },
   { position: 60, label: '5x' },
-  { position: 80, label: '10x' }
+  { position: 80, label: '10x' },
 ]
 
 // 音量相关 - 直接从TimelineItem读取，这是响应式的
@@ -363,8 +361,6 @@ const isMuted = computed(() => {
   return false
 })
 
-
-
 // NumberInput 样式定义
 const propertyInputStyle = {
   maxWidth: '120px',
@@ -376,14 +372,12 @@ const speedInputStyle = {
   textAlign: 'center' as const,
 }
 
-
-
 // 注意：变换属性现在由 useKeyframeTransformControls composable 提供
 
 // 更新片段名称
 const updateClipName = () => {
   if (selectedMediaItem.value && clipName.value.trim()) {
-    videoStore.updateMediaItemName(selectedMediaItem.value.id, clipName.value.trim())
+    videoStore.updateLocalMediaItemName(selectedMediaItem.value.id, clipName.value.trim())
   }
 }
 
@@ -392,17 +386,11 @@ const updatePlaybackRate = async (newRate?: number) => {
   if (props.selectedTimelineItem && props.selectedTimelineItem.mediaType === 'video') {
     const rate = newRate || playbackRate.value
 
-    try {
-      // 使用带历史记录的变换属性更新方法
-      await videoStore.updateTimelineItemTransformWithHistory(props.selectedTimelineItem.id, {
-        playbackRate: rate,
-      })
-      console.log('✅ 倍速更新成功')
-    } catch (error) {
-      console.error('❌ 更新倍速失败:', error)
-      // 如果历史记录更新失败，回退到直接更新
-      videoStore.updateTimelineItemPlaybackRate(props.selectedTimelineItem.id, rate)
-    }
+    // 使用带历史记录的变换属性更新方法
+    await videoStore.updateTimelineItemTransformWithHistory(props.selectedTimelineItem.id, {
+      playbackRate: rate,
+    })
+    console.log('✅ 倍速更新成功')
   }
 }
 
@@ -616,12 +604,7 @@ const toggleMute = () => {
       isMuted: newMutedState,
     })
 
-    console.log(
-      '✅ 静音状态切换:',
-      newMutedState ? '静音' : '有声',
-      '音量保持:',
-      config.volume,
-    )
+    console.log('✅ 静音状态切换:', newMutedState ? '静音' : '有声', '音量保持:', config.volume)
   }
 }
 
@@ -702,8 +685,6 @@ const speedToNormalized = (speed: number) => {
   align-items: center;
 }
 
-
-
 /* 音量控制样式 */
 .volume-controls {
   display: flex;
@@ -711,8 +692,6 @@ const speedToNormalized = (speed: number) => {
   gap: var(--spacing-md);
   flex: 1;
 }
-
-
 
 .mute-btn {
   background: var(--color-bg-quaternary);
@@ -739,15 +718,7 @@ const speedToNormalized = (speed: number) => {
   color: var(--color-bg-primary);
 }
 
-
-
 /* 分辨率显示样式已迁移到 styles/components/inputs.css */
 
-
-
-
-
 /* 注意：property-item, property-section, section-header 样式已在全局样式 styles/components/panels.css 中定义 */
-
-
 </style>

@@ -11,11 +11,17 @@ import type {
   LocalTimelineItem,
   AsyncProcessingTimelineItem,
   LocalMediaItem,
+  AsyncProcessingMediaItem,
   ExtendedPropsChangeEvent,
   VideoResolution,
   MediaType,
 } from '../../types'
-import { hasVisualProps, hasAudioProps, isAsyncProcessingTimelineItem, getLocalTimelineItem } from '../../types'
+import {
+  hasVisualProps,
+  hasAudioProps,
+  isAsyncProcessingTimelineItem,
+  isLocalTimelineItem,
+} from '../../types'
 
 /**
  * 时间轴核心管理模块
@@ -28,8 +34,9 @@ export function createTimelineModule(
     removeSprite?: (sprite: any) => boolean
   },
   mediaModule: {
-    getMediaItem: (id: string) => LocalMediaItem | undefined
+    getLocalMediaItem: (id: string) => LocalMediaItem | undefined
     mediaItems: Ref<LocalMediaItem[]>
+    getAllMediaItems: () => (LocalMediaItem | AsyncProcessingMediaItem)[]
   },
   trackModule?: {
     tracks: Ref<{ id: string; name: string; isVisible: boolean; isMuted: boolean }[]>
@@ -158,25 +165,24 @@ export function createTimelineModule(
 
       // 初始化动画管理器（仅本地时间轴项目）
       globalWebAVAnimationManager.addManager(timelineItem)
+      const mediaItem = mediaModule.getLocalMediaItem(timelineItem.mediaItemId)
+      printDebugInfo(
+        '添加素材到时间轴',
+        {
+          timelineItemId: timelineItem.id,
+          mediaItemId: timelineItem.mediaItemId,
+          mediaItemName: mediaItem?.name || '未知',
+          trackId: timelineItem.trackId,
+          position: timelineItem.timeRange.timelineStartTime / 1000000,
+          spriteVisible: timelineItem.sprite?.visible,
+        },
+        mediaModule.getAllMediaItems(),
+        timelineItems.value,
+        trackModule?.tracks.value || [],
+      )
     }
 
     timelineItems.value.push(timelineItem)
-
-    const mediaItem = mediaModule.getMediaItem(timelineItem.mediaItemId)
-    printDebugInfo(
-      '添加素材到时间轴',
-      {
-        timelineItemId: timelineItem.id,
-        mediaItemId: timelineItem.mediaItemId,
-        mediaItemName: mediaItem?.name || '未知',
-        trackId: timelineItem.trackId,
-        position: timelineItem.timeRange.timelineStartTime / 1000000,
-        spriteVisible: timelineItem.sprite?.visible,
-      },
-      mediaModule.mediaItems.value,
-      timelineItems.value,
-      trackModule?.tracks.value || [],
-    )
   }
 
   /**
@@ -187,7 +193,7 @@ export function createTimelineModule(
     const index = timelineItems.value.findIndex((item) => item.id === timelineItemId)
     if (index > -1) {
       const item = timelineItems.value[index]
-      const mediaItem = mediaModule.getMediaItem(item.mediaItemId)
+      const mediaItem = mediaModule.getLocalMediaItem(item.mediaItemId)
 
       // 检查是否为异步处理时间轴项目
       if (isAsyncProcessingTimelineItem(item)) {
@@ -233,7 +239,7 @@ export function createTimelineModule(
           trackId: item.trackId,
           position: item.timeRange.timelineStartTime / 30, // timelineStartTime 是帧数，除以30得到秒数
         },
-        mediaModule.mediaItems.value,
+        mediaModule.getAllMediaItems(),
         timelineItems.value,
         trackModule?.tracks.value || [],
       )
@@ -245,7 +251,9 @@ export function createTimelineModule(
    * @param timelineItemId 时间轴项目ID
    * @returns 时间轴项目或undefined
    */
-  function getTimelineItem(timelineItemId: string): LocalTimelineItem | AsyncProcessingTimelineItem | undefined {
+  function getTimelineItem(
+    timelineItemId: string,
+  ): LocalTimelineItem | AsyncProcessingTimelineItem | undefined {
     return timelineItems.value.find((item) => item.id === timelineItemId)
   }
 
@@ -254,9 +262,9 @@ export function createTimelineModule(
    * @param timelineItemId 时间轴项目ID
    * @returns 本地时间轴项目或undefined
    */
-  function getLocalTimelineItemById(timelineItemId: string): LocalTimelineItem | undefined {
+  function getLocalTimelineItem(timelineItemId: string): LocalTimelineItem | undefined {
     const item = getTimelineItem(timelineItemId)
-    return getLocalTimelineItem(item)
+    return isLocalTimelineItem(item) ? item : undefined
   }
 
   /**
@@ -270,11 +278,11 @@ export function createTimelineModule(
     newPositionFrames: number,
     newTrackId?: string,
   ) {
-    const item = timelineItems.value.find((item) => item.id === timelineItemId)
+    const item = getTimelineItem(timelineItemId)
     if (item) {
       const oldPositionFrames = item.timeRange.timelineStartTime // 帧数
       const oldTrackId = item.trackId
-      const mediaItem = mediaModule.getMediaItem(item.mediaItemId)
+      const mediaItem = mediaModule.getLocalMediaItem(item.mediaItemId)
 
       // 确保新位置不为负数
       const clampedNewPositionFrames = Math.max(0, newPositionFrames)
@@ -300,7 +308,7 @@ export function createTimelineModule(
 
         item.timeRange = {
           timelineStartTime: clampedNewPositionFrames,
-          timelineEndTime: clampedNewPositionFrames + durationFrames
+          timelineEndTime: clampedNewPositionFrames + durationFrames,
         }
       } else {
         // 本地时间轴项目：通过sprite更新
@@ -329,7 +337,7 @@ export function createTimelineModule(
           trackChanged: oldTrackId !== item.trackId,
           positionClamped: newPositionFrames !== clampedNewPositionFrames,
         },
-        mediaModule.mediaItems.value,
+        mediaModule.getAllMediaItems(),
         timelineItems.value,
         trackModule?.tracks.value || [],
       )
@@ -341,13 +349,13 @@ export function createTimelineModule(
    * @param timelineItemId 时间轴项目ID
    * @param newSprite 新的sprite实例
    */
-  function updateTimelineItemSprite(
+  function updateLocalTimelineItemSprite(
     timelineItemId: string,
     newSprite: Raw<VideoVisibleSprite | ImageVisibleSprite | AudioVisibleSprite>,
   ) {
-    const item = timelineItems.value.find((item) => item.id === timelineItemId)
+    const item = getLocalTimelineItem(timelineItemId)
     if (item) {
-      const mediaItem = mediaModule.getMediaItem(item.mediaItemId)
+      const mediaItem = mediaModule.getLocalMediaItem(item.mediaItemId)
 
       // 清理旧的sprite资源
       try {
@@ -369,7 +377,7 @@ export function createTimelineModule(
           trackId: item.trackId,
           position: microsecondsToFrames(item.timeRange.timelineStartTime),
         },
-        mediaModule.mediaItems.value,
+        mediaModule.getAllMediaItems(),
         timelineItems.value,
         trackModule?.tracks.value || [],
       )
@@ -382,7 +390,7 @@ export function createTimelineModule(
    * 更新TimelineItem的VisibleSprite变换属性
    * 这会触发propsChange事件，自动同步到TimelineItem，然后更新属性面板显示
    */
-  function updateTimelineItemTransform(
+  function updateLocalTimelineItemTransform(
     timelineItemId: string,
     transform: {
       x?: number
@@ -394,7 +402,7 @@ export function createTimelineModule(
       zIndex?: number
     },
   ) {
-    const item = timelineItems.value.find((item) => item.id === timelineItemId)
+    const item = getLocalTimelineItem(timelineItemId)
     if (!item) return
 
     const sprite = item.sprite
@@ -480,14 +488,15 @@ export function createTimelineModule(
     timelineItems,
 
     // 方法
-    setupBidirectionalSync,
     addTimelineItem,
     removeTimelineItem,
     getTimelineItem,
-    getLocalTimelineItem: getLocalTimelineItemById,
+    // 
+    setupBidirectionalSync,
+    getLocalTimelineItem,
     updateTimelineItemPosition,
-    updateTimelineItemSprite,
-    updateTimelineItemTransform,
+    updateLocalTimelineItemSprite,
+    updateLocalTimelineItemTransform,
   }
 }
 

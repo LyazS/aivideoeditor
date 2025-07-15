@@ -146,7 +146,7 @@
           <!-- 移除按钮 -->
           <button
             class="remove-btn"
-            @click.stop="removeMediaItem(item.id)"
+            @click.stop="removeLocalMediaItem(item.id)"
             @mousedown.stop
             title="移除素材"
           >
@@ -487,7 +487,7 @@ const handleEmptyAreaContextMenu = (event: MouseEvent) => {
 // 菜单项处理方法
 const handleDeleteMediaItem = () => {
   if (selectedMediaItem.value) {
-    removeMediaItem(selectedMediaItem.value.id)
+    removeLocalMediaItem(selectedMediaItem.value.id)
   }
   showContextMenu.value = false
 }
@@ -718,7 +718,7 @@ const processConcurrentFiles = async (files: File[], maxConcurrency: number) => 
   const executing: Promise<void>[] = []
 
   for (const file of files) {
-    const promise = addMediaItem(file).then(() => {
+    const promise = addLocalMediaItem(file).then(() => {
       // 从执行队列中移除已完成的任务
       executing.splice(executing.indexOf(promise), 1)
     })
@@ -737,7 +737,7 @@ const processConcurrentFiles = async (files: File[], maxConcurrency: number) => 
 }
 
 // 添加素材项
-const addMediaItem = async (file: File): Promise<void> => {
+const addLocalMediaItem = async (file: File): Promise<void> => {
   const startTime = Date.now()
   return new Promise(async (resolve) => {
     console.log(
@@ -794,7 +794,7 @@ const addVideoItem = async (
     console.log(`📋 创建解析中的MediaItem: ${parsingMediaItem.name} (ID: ${mediaItemId})`)
 
     // 先添加解析中状态的素材到store
-    videoStore.addMediaItem(parsingMediaItem)
+    videoStore.addLocalMediaItem(parsingMediaItem)
 
     // 异步创建MP4Clip
     console.log(`🎬 Creating MP4Clip for: ${file.name}`)
@@ -848,7 +848,7 @@ const addVideoItem = async (
     console.log(`📐 视频原始分辨率: ${meta.width}x${meta.height}`)
 
     // 更新store中的MediaItem
-    videoStore.updateMediaItem(readyMediaItem)
+    videoStore.updateLocalMediaItem(readyMediaItem)
 
     const processingTime = ((Date.now() - startTime) / 1000).toFixed(2)
     console.log(`✅ [并发处理] 视频文件处理完成: ${file.name} (耗时: ${processingTime}s)`)
@@ -868,10 +868,10 @@ const addVideoItem = async (
     }
 
     console.log(`🔴 [并发处理] 视频文件转换失败，设置为错误状态: ${file.name}`)
-    videoStore.updateMediaItem(errorMediaItem)
+    videoStore.updateLocalMediaItem(errorMediaItem)
 
     // 新增：保存错误状态的媒体引用到项目
-    await saveErrorMediaReference(mediaItemId, file, 'video', 'webav_parse_error', error.message)
+    await saveErrorMediaReference(mediaItemId, file, 'video', 'webav_parse_error', error instanceof Error ? error.message : String(error))
 
     resolve()
   }
@@ -905,7 +905,7 @@ const addImageItem = async (
   console.log(`📋 创建解析中的图片MediaItem: ${parsingMediaItem.name} (ID: ${mediaItemId})`)
 
   // 先添加解析中状态的素材到store
-  videoStore.addMediaItem(parsingMediaItem)
+  videoStore.addLocalMediaItem(parsingMediaItem)
 
   const img = document.createElement('img')
 
@@ -953,7 +953,7 @@ const addImageItem = async (
       console.log(`📐 图片原始分辨率: ${img.naturalWidth}x${img.naturalHeight}`)
 
       // 更新store中的MediaItem
-      videoStore.updateMediaItem(readyMediaItem)
+      videoStore.updateLocalMediaItem(readyMediaItem)
 
       const processingTime = ((Date.now() - startTime) / 1000).toFixed(2)
       console.log(`✅ [并发处理] 图片文件处理完成: ${file.name} (耗时: ${processingTime}s)`)
@@ -976,10 +976,10 @@ const addImageItem = async (
       }
 
       console.log(`🔴 [并发处理] 图片文件转换失败，设置为错误状态: ${file.name}`)
-      videoStore.updateMediaItem(errorMediaItem)
+      videoStore.updateLocalMediaItem(errorMediaItem)
 
       // 新增：保存错误状态的媒体引用到项目
-      await saveErrorMediaReference(mediaItemId, file, 'image', 'webav_parse_error', error.message)
+      await saveErrorMediaReference(mediaItemId, file, 'image', 'webav_parse_error', error instanceof Error ? error.message : String(error))
 
       resolve()
     }
@@ -1000,7 +1000,7 @@ const addImageItem = async (
     }
 
     console.log(`🔴 [并发处理] 图片文件加载失败，设置为错误状态: ${file.name}`)
-    videoStore.updateMediaItem(errorMediaItem)
+    videoStore.updateLocalMediaItem(errorMediaItem)
 
     // 新增：保存错误状态的媒体引用到项目
     await saveErrorMediaReference(mediaItemId, file, 'image', 'file_load_error', '图片文件加载失败')
@@ -1041,7 +1041,7 @@ const addAudioItem = async (
     console.log(`📋 创建解析中的音频MediaItem: ${parsingMediaItem.name} (ID: ${mediaItemId})`)
 
     // 先添加解析中状态的素材到store
-    videoStore.addMediaItem(parsingMediaItem)
+    videoStore.addLocalMediaItem(parsingMediaItem)
 
     // 异步创建AudioClip
     console.log(`🎵 Creating AudioClip for: ${file.name}`)
@@ -1091,7 +1091,7 @@ const addAudioItem = async (
       `📋 更新音频MediaItem为完成状态: ${readyMediaItem.name} (时长: ${framesToTimecode(readyMediaItem.duration)})`,
     )
 
-    videoStore.updateMediaItem(readyMediaItem)
+    videoStore.updateLocalMediaItem(readyMediaItem)
 
     const processingTime = ((Date.now() - startTime) / 1000).toFixed(2)
     console.log(`✅ [并发处理] 音频文件处理完成: ${file.name} (耗时: ${processingTime}s)`)
@@ -1111,10 +1111,10 @@ const addAudioItem = async (
     }
 
     console.log(`🔴 [并发处理] 音频文件转换失败，设置为错误状态: ${file.name}`)
-    videoStore.updateMediaItem(errorMediaItem)
+    videoStore.updateLocalMediaItem(errorMediaItem)
 
     // 新增：保存错误状态的媒体引用到项目
-    await saveErrorMediaReference(mediaItemId, file, 'audio', 'webav_parse_error', error.message)
+    await saveErrorMediaReference(mediaItemId, file, 'audio', 'webav_parse_error', error instanceof Error ? error.message : String(error))
 
     resolve()
   }
@@ -1128,8 +1128,8 @@ function generateAudioDefaultIcon(): string {
 }
 
 // 移除素材项
-const removeMediaItem = async (id: string) => {
-  const item = videoStore.getMediaItem(id)
+const removeLocalMediaItem = async (id: string) => {
+  const item = videoStore.getLocalMediaItem(id)
   if (item) {
     // 检查是否有相关的时间轴项目
     const relatedTimelineItems = videoStore.timelineItems.filter(
@@ -1149,7 +1149,7 @@ const removeMediaItem = async (id: string) => {
         }
 
         // 从store中移除MediaItem（会自动移除相关的TimelineItem和本地文件）
-        await videoStore.removeMediaItem(id)
+        await videoStore.removeLocalMediaItem(id)
 
         console.log(`✅ 素材库项目删除完成: ${item.name}`)
         dialogs.showSuccess('删除成功', `素材 "${item.name}" 已从项目中删除`)

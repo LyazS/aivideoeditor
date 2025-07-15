@@ -155,7 +155,7 @@ const videoStore = useVideoStore()
 // 选中项目对应的素材
 const selectedMediaItem = computed(() => {
   if (!props.selectedTimelineItem) return null
-  return videoStore.getMediaItem(props.selectedTimelineItem.mediaItemId) || null
+  return videoStore.getLocalMediaItem(props.selectedTimelineItem.mediaItemId) || null
 })
 
 // 时间轴时长（帧数）
@@ -183,7 +183,7 @@ const clipName = computed({
   get: () => selectedMediaItem.value?.name || '',
   set: (value) => {
     if (selectedMediaItem.value && value.trim()) {
-      videoStore.updateMediaItemName(selectedMediaItem.value.id, value.trim())
+      videoStore.updateLocalMediaItemName(selectedMediaItem.value.id, value.trim())
     }
   },
 })
@@ -217,7 +217,7 @@ const speedSliderSegments = [
   { position: 20, label: '1x' },
   { position: 40, label: '2x' },
   { position: 60, label: '5x' },
-  { position: 80, label: '10x' }
+  { position: 80, label: '10x' },
 ]
 
 // 倍速输入框样式
@@ -265,7 +265,7 @@ const gainInputStyle = {
 // 更新片段名称
 const updateClipName = () => {
   if (selectedMediaItem.value && clipName.value.trim()) {
-    videoStore.updateMediaItemName(selectedMediaItem.value.id, clipName.value.trim())
+    videoStore.updateLocalMediaItemName(selectedMediaItem.value.id, clipName.value.trim())
   }
 }
 
@@ -441,17 +441,11 @@ const updatePlaybackRate = async (newRate?: number) => {
   if (props.selectedTimelineItem) {
     const rate = newRate || playbackRate.value
 
-    try {
-      // 使用带历史记录的变换属性更新方法
-      await videoStore.updateTimelineItemTransformWithHistory(props.selectedTimelineItem.id, {
-        playbackRate: rate,
-      })
-      console.log('✅ 音频倍速更新成功')
-    } catch (error) {
-      console.error('❌ 更新音频倍速失败:', error)
-      // 如果历史记录更新失败，回退到直接更新
-      videoStore.updateTimelineItemPlaybackRate(props.selectedTimelineItem.id, rate)
-    }
+    // 使用带历史记录的变换属性更新方法
+    await videoStore.updateTimelineItemTransformWithHistory(props.selectedTimelineItem.id, {
+      playbackRate: rate,
+    })
+    console.log('✅ 音频倍速更新成功')
   }
 }
 

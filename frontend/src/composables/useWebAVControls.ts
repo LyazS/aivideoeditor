@@ -6,6 +6,7 @@ import { ImageVisibleSprite } from '../utils/ImageVisibleSprite'
 import type { VideoTimeRange, ImageTimeRange } from '../types'
 // 删除 hasVisualProps 导入，因为已被删除
 import { useVideoStore } from '../stores/videoStore'
+import { isLocalTimelineItem } from '../types'
 import {
   framesToMicroseconds,
   microsecondsToFrames,
@@ -528,29 +529,32 @@ export function useWebAVControls() {
       isPlaying: videoStore.isPlaying,
     }
 
-    // 备份所有时间轴项目的元数据
+    // 备份所有本地时间轴项目的元数据（异步处理项目不需要备份，因为它们没有sprite）
     const timelineItems = videoStore.timelineItems
     for (const item of timelineItems) {
-      // 获取素材名称用于备份（特殊处理文本类型）
-      let mediaName: string
-      if (item.mediaType === 'text') {
-        // 类型检查确保这是文本项目，配置应该有文本属性
-        const textConfig = item.config as import('../types').TextMediaConfig
-        mediaName = item.mediaName || `文本: ${textConfig?.text?.substring(0, 10) || '未知'}...`
-      } else {
-        const mediaItem = videoStore.getMediaItem(item.mediaItemId)
-        mediaName = mediaItem?.name || '未知素材'
-      }
+      // 只处理本地时间轴项目
+      if (isLocalTimelineItem(item)) {
+        // 获取素材名称用于备份（特殊处理文本类型）
+        let mediaName: string
+        if (item.mediaType === 'text') {
+          // 类型检查确保这是文本项目，配置应该有文本属性
+          const textConfig = item.config as import('../types').TextMediaConfig
+          mediaName = item.mediaName || `文本: ${textConfig?.text?.substring(0, 10) || '未知'}...`
+        } else {
+          const mediaItem = videoStore.getLocalMediaItem(item.mediaItemId)
+          mediaName = mediaItem?.name || '未知素材'
+        }
 
-      backup.timelineItems.push({
-        id: item.id,
-        mediaItemId: item.mediaItemId,
-        trackId: item.trackId,
-        mediaType: item.mediaType,
-        timeRange: { ...item.timeRange },
-        config: { ...item.config },
-        mediaName,
-      })
+        backup.timelineItems.push({
+          id: item.id,
+          mediaItemId: item.mediaItemId,
+          trackId: item.trackId,
+          mediaType: item.mediaType,
+          timeRange: { ...item.timeRange },
+          config: { ...item.config },
+          mediaName,
+        })
+      }
     }
 
     logCanvasBackup(backup.timelineItems.length, {
@@ -632,7 +636,7 @@ export function useWebAVControls() {
             )
 
             // 从原始素材重新创建sprite
-            const mediaItem = videoStore.getMediaItem(itemData.mediaItemId)
+            const mediaItem = videoStore.getLocalMediaItem(itemData.mediaItemId)
             if (!mediaItem) {
               throw new Error(`Media item not found: ${itemData.mediaItemId}`)
             }
@@ -698,7 +702,7 @@ export function useWebAVControls() {
             logSpriteRestore(itemData.id, 'Added to canvas')
 
             // 更新store中的引用
-            videoStore.updateTimelineItemSprite(itemData.id, markRaw(newSprite))
+            videoStore.updateLocalTimelineItemSprite(itemData.id, markRaw(newSprite))
             logSpriteRestore(itemData.id, 'Store reference updated')
 
             // 🔄 重新设置双向数据同步 - 这是关键步骤！

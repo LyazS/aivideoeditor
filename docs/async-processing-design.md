@@ -143,7 +143,7 @@ const saveErrorMediaReference = async (
 // 在addVideoItem、addImageItem、addAudioItem的catch块中调用
 catch (error) {
   // ... 创建错误状态MediaItem ...
-  videoStore.updateMediaItem(errorMediaItem)
+  videoStore.updateLocalMediaItem(errorMediaItem)
 
   // 新增：保存错误状态的媒体引用到项目
   await saveErrorMediaReference(mediaItemId, file, 'video', 'webav_parse_error', error.message)

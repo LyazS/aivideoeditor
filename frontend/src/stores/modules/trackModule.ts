@@ -1,5 +1,6 @@
 import { ref, type Ref } from 'vue'
-import type { Track, LocalTimelineItem, TrackType } from '../../types'
+import type { Track, LocalTimelineItem, AsyncProcessingTimelineItem, TrackType } from '../../types'
+import { isLocalTimelineItem } from '../../types'
 import { VideoVisibleSprite } from '../../utils/VideoVisibleSprite'
 import { AudioVisibleSprite } from '../../utils/AudioVisibleSprite'
 import { generateTrackId } from '../../utils/idGenerator'
@@ -104,7 +105,7 @@ export function createTrackModule() {
    */
   function removeTrack(
     trackId: string,
-    timelineItems: Ref<LocalTimelineItem[]>,
+    timelineItems: Ref<(LocalTimelineItem | AsyncProcessingTimelineItem)[]>,
     removeTimelineItemCallback?: (timelineItemId: string) => void,
   ) {
     // 不能删除最后一个轨道
@@ -148,7 +149,10 @@ export function createTrackModule() {
    * @param trackId 轨道ID
    * @param timelineItems 时间轴项目列表（用于同步sprite可见性）
    */
-  function toggleTrackVisibility(trackId: string, timelineItems?: Ref<LocalTimelineItem[]>) {
+  function toggleTrackVisibility(
+    trackId: string,
+    timelineItems?: Ref<(LocalTimelineItem | AsyncProcessingTimelineItem)[]>,
+  ) {
     const track = tracks.value.find((t) => t.id === trackId)
     if (track) {
       // 音频轨道不支持可见性控制，只支持静音控制
@@ -163,7 +167,7 @@ export function createTrackModule() {
       if (timelineItems) {
         const trackItems = timelineItems.value.filter((item) => item.trackId === trackId)
         trackItems.forEach((item) => {
-          if (item.sprite) {
+          if (isLocalTimelineItem(item) && item.sprite) {
             item.sprite.visible = track.isVisible
           }
         })
@@ -193,7 +197,10 @@ export function createTrackModule() {
    * @param trackId 轨道ID
    * @param timelineItems 时间轴项目列表（用于同步sprite静音状态）
    */
-  function toggleTrackMute(trackId: string, timelineItems?: Ref<LocalTimelineItem[]>) {
+  function toggleTrackMute(
+    trackId: string,
+    timelineItems?: Ref<(LocalTimelineItem | AsyncProcessingTimelineItem)[]>,
+  ) {
     const track = tracks.value.find((t) => t.id === trackId)
     if (track) {
       // 检查轨道类型是否支持静音操作
@@ -214,7 +221,7 @@ export function createTrackModule() {
             (item) => item.trackId === trackId && item.mediaType === 'video',
           )
           trackItems.forEach((item) => {
-            if (item.sprite && 'setTrackMuteChecker' in item.sprite) {
+            if (isLocalTimelineItem(item) && item.sprite && 'setTrackMuteChecker' in item.sprite) {
               // 为每个VideoVisibleSprite设置轨道静音检查函数
               const sprite = item.sprite as VideoVisibleSprite
               sprite.setTrackMuteChecker(() => track.isMuted)
@@ -227,7 +234,7 @@ export function createTrackModule() {
             (item) => item.trackId === trackId && item.mediaType === 'audio',
           )
           trackItems.forEach((item) => {
-            if (item.sprite && 'setTrackMuteChecker' in item.sprite) {
+            if (isLocalTimelineItem(item) && item.sprite && 'setTrackMuteChecker' in item.sprite) {
               // 为每个AudioVisibleSprite设置轨道静音检查函数
               const sprite = item.sprite as AudioVisibleSprite
               sprite.setTrackMuteChecker(() => track.isMuted)

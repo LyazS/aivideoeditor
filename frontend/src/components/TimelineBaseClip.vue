@@ -13,18 +13,18 @@
     @mouseleave="hideTooltip"
   >
     <!-- 左侧调整把手 -->
-    <div 
+    <div
       class="resize-handle resize-handle-left"
       @mousedown.stop="startResize('left', $event)"
     ></div>
-    
+
     <!-- 内容区域 - 由子组件定义 -->
     <div class="clip-content">
       <slot name="content" :timeline-item="timelineItem" />
     </div>
-    
+
     <!-- 右侧调整把手 -->
-    <div 
+    <div
       class="resize-handle resize-handle-right"
       @mousedown.stop="startResize('right', $event)"
     ></div>
@@ -39,12 +39,12 @@ import { useDragUtils } from '../composables/useDragUtils'
 import { usePlaybackControls } from '../composables/usePlaybackControls'
 import { framesToTimecode, alignFramesToFrame } from '../stores/utils/timeUtils'
 import { hasOverlapInTrack } from '../utils/timeOverlapUtils'
-import type { LocalTimelineItem, Track, VideoTimeRange, ImageTimeRange } from '../types'
+import type { MediaType, LocalTimelineItem, Track, VideoTimeRange, ImageTimeRange } from '../types'
 import { isVideoTimeRange } from '../types'
 
 // TimelineBaseClip通用接口
 interface Props {
-  timelineItem: LocalTimelineItem
+  timelineItem: LocalTimelineItem<MediaType>
   track?: Track
   timelineWidth: number
   totalDurationFrames: number
@@ -94,10 +94,10 @@ const tooltipClipTop = ref(0)
 // 通用计算属性
 const clipClasses = computed(() => ({
   'base-clip': true,
-  'overlapping': isOverlapping.value,
-  'selected': isSelected.value,
-  'dragging': isDragging.value,
-  'resizing': isResizing.value,
+  overlapping: isOverlapping.value,
+  selected: isSelected.value,
+  dragging: isDragging.value,
+  resizing: isResizing.value,
   'track-hidden': !isTrackVisible.value,
 }))
 
@@ -245,7 +245,7 @@ function createSimpleDragPreview(): HTMLElement {
   if (selectedCount > 1) {
     preview.textContent = `${selectedCount} 项目`
   } else {
-    const mediaItem = videoStore.getMediaItem(props.timelineItem.mediaItemId)
+    const mediaItem = videoStore.getLocalMediaItem(props.timelineItem.mediaItemId)
     const clipName = mediaItem?.name || 'Clip'
     preview.textContent = clipName.length > 8 ? clipName.substring(0, 6) + '..' : clipName
   }
@@ -352,7 +352,7 @@ function handleResize(event: MouseEvent) {
     const snapResult = snapManager.calculateClipResizeSnap(
       newLeftFrames,
       props.timelineWidth,
-      props.timelineItem.id // 排除当前片段
+      props.timelineItem.id, // 排除当前片段
     )
 
     if (snapResult.snapped) {
@@ -361,7 +361,7 @@ function handleResize(event: MouseEvent) {
       if (snapResult.snapPoint) {
         snapIndicatorManager.show(snapResult.snapPoint, props.timelineWidth, {
           timelineOffset: { x: 150, y: 0 },
-          lineHeight: 400
+          lineHeight: 400,
         })
       }
     } else {
@@ -384,7 +384,7 @@ function handleResize(event: MouseEvent) {
     const snapResult = snapManager.calculateClipResizeSnap(
       newRightFrames,
       props.timelineWidth,
-      props.timelineItem.id // 排除当前片段
+      props.timelineItem.id, // 排除当前片段
     )
 
     if (snapResult.snapped) {
@@ -393,7 +393,7 @@ function handleResize(event: MouseEvent) {
       if (snapResult.snapPoint) {
         snapIndicatorManager.show(snapResult.snapPoint, props.timelineWidth, {
           timelineOffset: { x: 150, y: 0 },
-          lineHeight: 400
+          lineHeight: 400,
         })
       }
     } else {
@@ -439,7 +439,10 @@ async function stopResize() {
     const currentTimeRange = props.timelineItem.timeRange
     let newTimeRange: VideoTimeRange | ImageTimeRange
 
-    if ((props.timelineItem.mediaType === 'video' || props.timelineItem.mediaType === 'audio') && isVideoTimeRange(currentTimeRange)) {
+    if (
+      (props.timelineItem.mediaType === 'video' || props.timelineItem.mediaType === 'audio') &&
+      isVideoTimeRange(currentTimeRange)
+    ) {
       // 视频和音频都使用 VideoTimeRange 结构
       newTimeRange = {
         timelineStartTime: newTimelineStartTimeFrames,
@@ -460,7 +463,8 @@ async function stopResize() {
 
     try {
       // 关键帧位置调整
-      const oldDurationFrames = currentTimeRange.timelineEndTime - currentTimeRange.timelineStartTime
+      const oldDurationFrames =
+        currentTimeRange.timelineEndTime - currentTimeRange.timelineStartTime
       const newDurationFrames = newTimeRange.timelineEndTime - newTimeRange.timelineStartTime
 
       if (props.timelineItem.animation && props.timelineItem.animation.keyframes.length > 0) {

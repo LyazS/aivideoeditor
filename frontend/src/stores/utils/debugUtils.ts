@@ -1,5 +1,5 @@
-import type { LocalMediaItem, LocalTimelineItem } from '../../types'
-import { requiresMediaItem } from '../../types'
+import type { LocalMediaItem, LocalTimelineItem, AsyncProcessingMediaItem, AsyncProcessingTimelineItem } from '../../types'
+import { requiresMediaItem, isLocalMediaItem, isAsyncProcessingMediaItem, isLocalTimelineItem, isAsyncProcessingTimelineItem } from '../../types'
 import { framesToTimecode } from './timeUtils'
 
 // ==================== 调试开关 ====================
@@ -40,15 +40,15 @@ window.disableTimelineDebug = () => {
  * 打印调试信息，包括操作详情、素材库状态、时间轴状态等
  * @param operation 操作名称
  * @param details 操作详情
- * @param mediaItems 素材库数据
- * @param timelineItems 时间轴数据
+ * @param mediaItems 素材库数据（支持本地和异步处理素材）
+ * @param timelineItems 时间轴数据（支持本地和异步处理时间轴项目）
  * @param tracks 轨道数据
  */
 export function printDebugInfo(
   operation: string,
   details: unknown,
-  mediaItems: LocalMediaItem[],
-  timelineItems: LocalTimelineItem[],
+  mediaItems: (LocalMediaItem | AsyncProcessingMediaItem)[],
+  timelineItems: (LocalTimelineItem | AsyncProcessingTimelineItem)[],
   tracks: { id: string; name: string }[],
 ) {
   const timestamp = new Date().toLocaleTimeString()
@@ -60,40 +60,115 @@ export function printDebugInfo(
 
   console.log('📚 素材库状态 (mediaItems):')
   console.table(
-    mediaItems.map((item) => ({
-      id: item.id,
-      name: item.name,
-      duration: `${item.duration.toFixed(2)}s`,
-      type: item.type,
-      hasMP4Clip: !!item.mp4Clip,
-    })),
+    mediaItems.map((item) => {
+      if (isLocalMediaItem(item)) {
+        // 本地媒体项目
+        return {
+          id: item.id,
+          name: item.name,
+          duration: `${item.duration.toFixed(2)}s`,
+          type: item.type,
+          mediaType: item.mediaType,
+          hasMP4Clip: !!item.mp4Clip,
+          status: 'local'
+        }
+      } else if (isAsyncProcessingMediaItem(item)) {
+        // 异步处理媒体项目
+        return {
+          id: item.id,
+          name: item.name,
+          duration: `${item.expectedDuration}帧 (预计)`,
+          type: item.processingType,
+          mediaType: item.mediaType,
+          hasMP4Clip: false,
+          status: `${item.processingStatus} (${item.processingProgress}%)`
+        }
+      } else {
+        // 未知类型（理论上不应该到达这里）
+        return {
+          id: (item as any).id || 'unknown',
+          name: (item as any).name || 'unknown',
+          duration: 'unknown',
+          type: 'unknown',
+          mediaType: 'unknown',
+          hasMP4Clip: false,
+          status: 'unknown'
+        }
+      }
+    }),
   )
 
   console.log('🎞️ 时间轴状态 (timelineItems):')
   console.table(
-    timelineItems.map((item) => ({
-      id: item.id,
-      mediaItemId: item.mediaItemId,
-      trackId: item.trackId,
-      position: framesToTimecode(item.timeRange.timelineStartTime),
-      hasSprite: !!item.sprite,
-    })),
+    timelineItems.map((item) => {
+      if (isLocalTimelineItem(item)) {
+        // 本地时间轴项目
+        return {
+          id: item.id,
+          mediaItemId: item.mediaItemId,
+          trackId: item.trackId,
+          mediaType: item.mediaType,
+          position: framesToTimecode(item.timeRange.timelineStartTime),
+          hasSprite: !!item.sprite,
+          type: 'local'
+        }
+      } else if (isAsyncProcessingTimelineItem(item)) {
+        // 异步处理时间轴项目
+        return {
+          id: item.id,
+          mediaItemId: item.mediaItemId,
+          trackId: item.trackId,
+          mediaType: item.mediaType,
+          position: framesToTimecode(item.timeRange.timelineStartTime),
+          hasSprite: !!item.sprite,
+          type: `async-${item.processingType}`,
+          status: `${item.processingStatus} (${item.processingProgress}%)`
+        }
+      } else {
+        // 未知类型（理论上不应该到达这里）
+        return {
+          id: (item as any).id || 'unknown',
+          mediaItemId: (item as any).mediaItemId || 'unknown',
+          trackId: (item as any).trackId || 'unknown',
+          mediaType: 'unknown',
+          position: 'unknown',
+          hasSprite: false,
+          type: 'unknown'
+        }
+      }
+    }),
   )
 
   console.log('📊 统计信息:')
-  console.log(`- 素材库项目数: ${mediaItems.length}`)
-  console.log(`- 时间轴项目数: ${timelineItems.length}`)
+  const localMediaCount = mediaItems.filter(isLocalMediaItem).length
+  const asyncMediaCount = mediaItems.filter(isAsyncProcessingMediaItem).length
+  const localTimelineCount = timelineItems.filter(isLocalTimelineItem).length
+  const asyncTimelineCount = timelineItems.filter(isAsyncProcessingTimelineItem).length
+
+  console.log(`- 素材库项目数: ${mediaItems.length} (本地: ${localMediaCount}, 异步处理: ${asyncMediaCount})`)
+  console.log(`- 时间轴项目数: ${timelineItems.length} (本地: ${localTimelineCount}, 异步处理: ${asyncTimelineCount})`)
   console.log(`- 轨道数: ${tracks.length}`)
 
   // 检查引用关系（只检查需要素材库项目的媒体类型）
   const orphanedTimelineItems = timelineItems.filter((timelineItem) => {
-    // 只检查需要素材库项目的媒体类型
-    if (!requiresMediaItem(timelineItem.mediaType)) {
+    // 跳过异步处理时间轴项目，它们有自己的引用逻辑
+    if (isAsyncProcessingTimelineItem(timelineItem)) {
       return false
     }
 
-    // 检查是否有对应的素材库项目
-    return !mediaItems.find((mediaItem) => mediaItem.id === timelineItem.mediaItemId)
+    // 对于本地时间轴项目，检查是否需要素材库项目
+    if (isLocalTimelineItem(timelineItem)) {
+      // 只检查需要素材库项目的媒体类型
+      if (!requiresMediaItem(timelineItem.mediaType)) {
+        return false
+      }
+
+      // 检查是否有对应的素材库项目
+      return !mediaItems.find((mediaItem) => mediaItem.id === timelineItem.mediaItemId)
+    }
+
+    // 其他未知类型，跳过检查
+    return false
   })
 
   if (orphanedTimelineItems.length > 0) {

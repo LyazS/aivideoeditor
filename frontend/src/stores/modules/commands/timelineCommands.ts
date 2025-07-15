@@ -1,13 +1,17 @@
 import { generateCommandId } from '../../../utils/idGenerator'
 import { framesToMicroseconds, framesToTimecode } from '../../utils/timeUtils'
+import { cloneDeep } from 'lodash'
 import type {
   SimpleCommand,
   LocalTimelineItem,
   LocalMediaItem,
+  AsyncProcessingTimelineItem,
+  AsyncProcessingMediaItem,
   Track,
   TrackType,
   VideoTimeRange,
   ImageTimeRange,
+  AsyncProcessingTimeRange,
   LocalTimelineItemData,
   TransformData,
   TextMediaConfig,
@@ -22,6 +26,10 @@ import {
   getAudioPropsFromData,
   hasVisualProps,
   hasAudioProps,
+  isLocalTimelineItem,
+  isAsyncProcessingTimelineItem,
+  isLocalMediaItem,
+  isAsyncProcessingMediaItem,
 } from '../../../types'
 import { VideoVisibleSprite } from '../../../utils/VideoVisibleSprite'
 import { ImageVisibleSprite } from '../../../utils/ImageVisibleSprite'
@@ -32,48 +40,72 @@ import type { VisibleSprite } from '@webav/av-cliper'
 
 /**
  * 添加时间轴项目命令
- * 支持添加时间轴项目的撤销/重做操作
- * 采用统一重建逻辑：每次执行都从原始素材重新创建sprite
+ * 支持添加本地和异步时间轴项目的撤销/重做操作
+ * 采用统一重建逻辑：每次执行都从原始素材重新创建sprite（本地项目）或重建占位符（异步项目）
  */
 export class AddTimelineItemCommand implements SimpleCommand {
   public readonly id: string
   public readonly description: string
-  private originalTimelineItemData: LocalTimelineItemData // 保存原始timelineItem数据用于重建
+  private originalTimelineItemData: LocalTimelineItemData | null = null // 本地项目的重建数据
+  private originalAsyncTimelineItem: AsyncProcessingTimelineItem | null = null // 异步项目的完整数据
 
   constructor(
-    timelineItem: LocalTimelineItem, // 注意：不再保存timelineItem引用，只保存重建数据
+    timelineItem: LocalTimelineItem | AsyncProcessingTimelineItem, // 支持本地和异步项目
     private timelineModule: {
-      addTimelineItem: (item: LocalTimelineItem) => void
+      addTimelineItem: (item: LocalTimelineItem | AsyncProcessingTimelineItem) => void
       removeTimelineItem: (id: string) => void
-      getTimelineItem: (id: string) => LocalTimelineItem | undefined
+      getTimelineItem: (id: string) => LocalTimelineItem | AsyncProcessingTimelineItem | undefined
     },
     private webavModule: {
       addSprite: (sprite: VisibleSprite) => Promise<boolean>
       removeSprite: (sprite: VisibleSprite) => boolean
     },
     private mediaModule: {
-      getMediaItem: (id: string) => LocalMediaItem | undefined
+      getLocalMediaItem: (id: string) => LocalMediaItem | AsyncProcessingMediaItem | undefined
     },
   ) {
     this.id = generateCommandId()
-    const mediaItem = this.mediaModule.getMediaItem(timelineItem.mediaItemId)
-    this.description = `添加时间轴项目: ${mediaItem?.name || '未知素材'}`
 
-    // 保存原始数据用于重建sprite（类型安全版本）
-    this.originalTimelineItemData = createLocalTimelineItemData(timelineItem)
+    // 使用类型守卫来区分本地和异步项目
+    if (isLocalTimelineItem(timelineItem)) {
+      // 本地项目处理逻辑
+      const mediaItem = this.mediaModule.getLocalMediaItem(timelineItem.mediaItemId)
+      this.description = `添加时间轴项目: ${mediaItem?.name || '未知素材'}`
+
+      // 保存原始数据用于重建sprite（类型安全版本）
+      this.originalTimelineItemData = createLocalTimelineItemData(timelineItem)
+    } else if (isAsyncProcessingTimelineItem(timelineItem)) {
+      // 异步项目处理逻辑
+      const mediaItem = this.mediaModule.getLocalMediaItem(timelineItem.mediaItemId)
+      this.description = `添加异步处理项目: ${mediaItem?.name || '未知素材'}`
+
+      // 保存异步项目的完整数据（使用 lodash 深拷贝避免引用问题）
+      this.originalAsyncTimelineItem = cloneDeep(timelineItem)
+    } else {
+      throw new Error('不支持的时间轴项目类型')
+    }
   }
 
   /**
-   * 从原始素材重建完整的TimelineItem
+   * 从原始素材重建完整的本地TimelineItem
    * 统一重建逻辑：每次都从原始素材完全重新创建
    */
-  private async rebuildTimelineItem(): Promise<LocalTimelineItem> {
-    console.log('🔄 开始从源头重建时间轴项目...')
+  private async rebuildLocalTimelineItem(): Promise<LocalTimelineItem> {
+    if (!this.originalTimelineItemData) {
+      throw new Error('本地时间轴项目数据不存在')
+    }
+
+    console.log('🔄 开始从源头重建本地时间轴项目...')
 
     // 1. 获取原始素材
-    const mediaItem = this.mediaModule.getMediaItem(this.originalTimelineItemData.mediaItemId)
+    const mediaItem = this.mediaModule.getLocalMediaItem(this.originalTimelineItemData.mediaItemId)
     if (!mediaItem) {
       throw new Error(`原始素材不存在: ${this.originalTimelineItemData.mediaItemId}`)
+    }
+
+    // 确保是本地媒体项目
+    if (!isLocalMediaItem(mediaItem)) {
+      throw new Error(`媒体项目类型不匹配，期望本地媒体项目: ${mediaItem.id}`)
     }
 
     if (!mediaItem.isReady) {
@@ -110,14 +142,16 @@ export class AddTimelineItemCommand implements SimpleCommand {
       sprite: markRaw(newSprite),
       thumbnailUrl: undefined, // 先设为undefined，稍后重新生成
       config: { ...this.originalTimelineItemData.config },
-      animation: this.originalTimelineItemData.animation ? { ...this.originalTimelineItemData.animation } : undefined,
+      animation: this.originalTimelineItemData.animation
+        ? { ...this.originalTimelineItemData.animation }
+        : undefined,
       mediaName: this.originalTimelineItemData.mediaName,
     })
 
     // 6. 重新生成缩略图（异步执行，不阻塞重建过程）
     this.regenerateThumbnailForAddedItem(newTimelineItem, mediaItem)
 
-    console.log('🔄 重建时间轴项目完成:', {
+    console.log('🔄 重建本地时间轴项目完成:', {
       id: newTimelineItem.id,
       mediaType: mediaItem.mediaType,
       timeRange: this.originalTimelineItemData.timeRange,
@@ -129,25 +163,72 @@ export class AddTimelineItemCommand implements SimpleCommand {
   }
 
   /**
+   * 重建异步处理时间轴项目占位符
+   * 不需要创建sprite，只需要重建占位符数据
+   */
+  private rebuildAsyncTimelineItem(): AsyncProcessingTimelineItem {
+    if (!this.originalAsyncTimelineItem) {
+      throw new Error('异步时间轴项目数据不存在')
+    }
+
+    console.log('🔄 开始重建异步处理时间轴项目占位符...')
+
+    // 使用 lodash 深拷贝确保完全独立的数据副本
+    const newAsyncTimelineItem: AsyncProcessingTimelineItem = cloneDeep(
+      this.originalAsyncTimelineItem,
+    )
+
+    console.log('🔄 重建异步处理时间轴项目完成:', {
+      id: newAsyncTimelineItem.id,
+      mediaType: newAsyncTimelineItem.mediaType,
+      processingType: newAsyncTimelineItem.processingType,
+      processingStatus: newAsyncTimelineItem.processingStatus,
+      timeRange: newAsyncTimelineItem.timeRange,
+    })
+
+    return newAsyncTimelineItem
+  }
+
+  /**
    * 执行命令：添加时间轴项目
-   * 统一重建逻辑：每次执行都从原始素材重新创建
+   * 统一重建逻辑：每次执行都从原始素材重新创建（本地项目）或重建占位符（异步项目）
    */
   async execute(): Promise<void> {
     try {
-      console.log(`🔄 执行添加操作：从源头重建时间轴项目...`)
+      if (this.originalTimelineItemData) {
+        // 本地项目处理逻辑
+        console.log(`🔄 执行添加操作：从源头重建本地时间轴项目...`)
 
-      // 从原始素材重新创建TimelineItem和sprite
-      const newTimelineItem = await this.rebuildTimelineItem()
+        // 从原始素材重新创建TimelineItem和sprite
+        const newTimelineItem = await this.rebuildLocalTimelineItem()
 
-      // 1. 添加到时间轴
-      this.timelineModule.addTimelineItem(newTimelineItem)
+        // 1. 添加到时间轴
+        this.timelineModule.addTimelineItem(newTimelineItem)
 
-      // 2. 添加sprite到WebAV画布
-      await this.webavModule.addSprite(newTimelineItem.sprite)
+        // 2. 添加sprite到WebAV画布
+        await this.webavModule.addSprite(newTimelineItem.sprite)
 
-      console.log(`✅ 已添加时间轴项目: ${this.originalTimelineItemData.mediaName}`)
+        console.log(`✅ 已添加本地时间轴项目: ${this.originalTimelineItemData.mediaName}`)
+      } else if (this.originalAsyncTimelineItem) {
+        // 异步项目处理逻辑
+        console.log(`🔄 执行添加操作：重建异步处理时间轴项目占位符...`)
+
+        // 重建异步处理时间轴项目占位符
+        const newAsyncTimelineItem = this.rebuildAsyncTimelineItem()
+
+        // 1. 添加到时间轴（异步项目不需要添加sprite到WebAV画布）
+        this.timelineModule.addTimelineItem(newAsyncTimelineItem)
+
+        console.log(`✅ 已添加异步处理时间轴项目: ${newAsyncTimelineItem.config.name}`)
+      } else {
+        throw new Error('没有有效的时间轴项目数据')
+      }
     } catch (error) {
-      console.error(`❌ 添加时间轴项目失败: ${this.originalTimelineItemData.mediaName}`, error)
+      const itemName =
+        this.originalTimelineItemData?.mediaName ||
+        this.originalAsyncTimelineItem?.config.name ||
+        '未知项目'
+      console.error(`❌ 添加时间轴项目失败: ${itemName}`, error)
       throw error
     }
   }
@@ -157,20 +238,45 @@ export class AddTimelineItemCommand implements SimpleCommand {
    */
   undo(): void {
     try {
-      // 检查项目是否仍然存在
-      const existingItem = this.timelineModule.getTimelineItem(this.originalTimelineItemData.id)
-      if (!existingItem) {
-        console.warn(`⚠️ 时间轴项目不存在，无法撤销: ${this.originalTimelineItemData.id}`)
-        return
-      }
+      if (this.originalTimelineItemData) {
+        // 本地项目撤销逻辑
+        const existingItem = this.timelineModule.getTimelineItem(this.originalTimelineItemData.id)
+        if (!existingItem) {
+          console.warn(`⚠️ 本地时间轴项目不存在，无法撤销: ${this.originalTimelineItemData.id}`)
+          return
+        }
 
-      // 移除时间轴项目（这会自动处理sprite的清理）
-      this.timelineModule.removeTimelineItem(this.originalTimelineItemData.id)
-      const mediaItem = this.mediaModule.getMediaItem(this.originalTimelineItemData.mediaItemId)
-      console.log(`↩️ 已撤销添加时间轴项目: ${mediaItem?.name || '未知素材'}`)
+        // 移除时间轴项目（这会自动处理sprite的清理）
+        this.timelineModule.removeTimelineItem(this.originalTimelineItemData.id)
+        const mediaItem = this.mediaModule.getLocalMediaItem(
+          this.originalTimelineItemData.mediaItemId,
+        )
+        console.log(`↩️ 已撤销添加本地时间轴项目: ${mediaItem?.name || '未知素材'}`)
+      } else if (this.originalAsyncTimelineItem) {
+        // 异步项目撤销逻辑
+        const existingItem = this.timelineModule.getTimelineItem(this.originalAsyncTimelineItem.id)
+        if (!existingItem) {
+          console.warn(
+            `⚠️ 异步处理时间轴项目不存在，无法撤销: ${this.originalAsyncTimelineItem.id}`,
+          )
+          return
+        }
+
+        // 移除异步处理时间轴项目
+        this.timelineModule.removeTimelineItem(this.originalAsyncTimelineItem.id)
+        const mediaItem = this.mediaModule.getLocalMediaItem(
+          this.originalAsyncTimelineItem.mediaItemId,
+        )
+        console.log(`↩️ 已撤销添加异步处理时间轴项目: ${mediaItem?.name || '未知素材'}`)
+      } else {
+        console.warn('⚠️ 没有有效的时间轴项目数据，无法撤销')
+      }
     } catch (error) {
-      const mediaItem = this.mediaModule.getMediaItem(this.originalTimelineItemData.mediaItemId)
-      console.error(`❌ 撤销添加时间轴项目失败: ${mediaItem?.name || '未知素材'}`, error)
+      const itemName =
+        this.originalTimelineItemData?.mediaName ||
+        this.originalAsyncTimelineItem?.config.name ||
+        '未知项目'
+      console.error(`❌ 撤销添加时间轴项目失败: ${itemName}`, error)
       throw error
     }
   }
@@ -180,7 +286,16 @@ export class AddTimelineItemCommand implements SimpleCommand {
    * @param timelineItem 添加的时间轴项目
    * @param mediaItem 对应的媒体项目
    */
-  private async regenerateThumbnailForAddedItem(timelineItem: LocalTimelineItem, mediaItem: LocalMediaItem) {
+  private async regenerateThumbnailForAddedItem(
+    timelineItem: LocalTimelineItem,
+    mediaItem: LocalMediaItem,
+  ) {
+    // 确保是本地媒体项目
+    if (!isLocalMediaItem(mediaItem)) {
+      console.warn('⚠️ 非本地媒体项目，跳过缩略图生成')
+      return
+    }
+
     // 音频不需要缩略图
     if (mediaItem.mediaType === 'audio') {
       console.log('🎵 音频不需要缩略图，跳过生成')
@@ -207,58 +322,89 @@ export class AddTimelineItemCommand implements SimpleCommand {
 
 /**
  * 移除时间轴项目命令
- * 支持移除时间轴项目的撤销/重做操作
+ * 支持移除本地和异步时间轴项目的撤销/重做操作
  * 遵循"从源头重建"原则：保存完整的重建元数据，撤销时从原始素材重新创建
  */
 export class RemoveTimelineItemCommand implements SimpleCommand {
   public readonly id: string
   public readonly description: string
-  private originalTimelineItemData: LocalTimelineItemData // 保存重建所需的完整元数据
+  private originalTimelineItemData: LocalTimelineItemData | null = null // 本地项目的重建数据
+  private originalAsyncTimelineItem: AsyncProcessingTimelineItem | null = null // 异步项目的完整数据
 
   constructor(
     private timelineItemId: string,
-    timelineItem: LocalTimelineItem, // 要删除的时间轴项目
+    timelineItem: LocalTimelineItem | AsyncProcessingTimelineItem, // 支持本地和异步项目
     private timelineModule: {
-      addTimelineItem: (item: LocalTimelineItem) => void
+      addTimelineItem: (item: LocalTimelineItem | AsyncProcessingTimelineItem) => void
       removeTimelineItem: (id: string) => void
-      getTimelineItem: (id: string) => LocalTimelineItem | undefined
+      getTimelineItem: (id: string) => LocalTimelineItem | AsyncProcessingTimelineItem | undefined
     },
     private webavModule: {
       addSprite: (sprite: VisibleSprite) => Promise<boolean>
       removeSprite: (sprite: VisibleSprite) => boolean
     },
     private mediaModule: {
-      getMediaItem: (id: string) => LocalMediaItem | undefined
+      getLocalMediaItem: (id: string) => LocalMediaItem | AsyncProcessingMediaItem | undefined
     },
   ) {
     this.id = generateCommandId()
 
-    const mediaItem = this.mediaModule.getMediaItem(timelineItem.mediaItemId)
-    this.description = `移除时间轴项目: ${mediaItem?.name || '未知素材'}`
+    // 使用类型守卫来区分本地和异步项目
+    if (isLocalTimelineItem(timelineItem)) {
+      // 本地项目处理逻辑
+      const mediaItem = this.mediaModule.getLocalMediaItem(timelineItem.mediaItemId)
+      this.description = `移除时间轴项目: ${mediaItem?.name || '未知素材'}`
 
-    // 🎯 关键：保存重建所需的完整元数据，而不是对象引用
-    this.originalTimelineItemData = createLocalTimelineItemData(timelineItem)
+      // 🎯 关键：保存重建所需的完整元数据，而不是对象引用
+      this.originalTimelineItemData = createLocalTimelineItemData(timelineItem)
 
-    console.log('💾 保存删除项目的重建数据:', {
-      id: this.originalTimelineItemData.id,
-      mediaItemId: this.originalTimelineItemData.mediaItemId,
-      mediaType: this.originalTimelineItemData.mediaType,
-      timeRange: this.originalTimelineItemData.timeRange,
-      config: this.originalTimelineItemData.config,
-    })
+      console.log('💾 保存删除本地项目的重建数据:', {
+        id: this.originalTimelineItemData.id,
+        mediaItemId: this.originalTimelineItemData.mediaItemId,
+        mediaType: this.originalTimelineItemData.mediaType,
+        timeRange: this.originalTimelineItemData.timeRange,
+        config: this.originalTimelineItemData.config,
+      })
+    } else if (isAsyncProcessingTimelineItem(timelineItem)) {
+      // 异步项目处理逻辑
+      const mediaItem = this.mediaModule.getLocalMediaItem(timelineItem.mediaItemId)
+      this.description = `移除异步处理项目: ${mediaItem?.name || '未知素材'}`
+
+      // 保存异步项目的完整数据（使用 lodash 深拷贝避免引用问题）
+      this.originalAsyncTimelineItem = cloneDeep(timelineItem)
+
+      console.log('💾 保存删除异步项目的数据:', {
+        id: this.originalAsyncTimelineItem.id,
+        mediaItemId: this.originalAsyncTimelineItem.mediaItemId,
+        processingType: this.originalAsyncTimelineItem.processingType,
+        processingStatus: this.originalAsyncTimelineItem.processingStatus,
+        timeRange: this.originalAsyncTimelineItem.timeRange,
+      })
+    } else {
+      throw new Error('不支持的时间轴项目类型')
+    }
   }
 
   /**
-   * 从原始素材重建sprite和timelineItem
+   * 从原始素材重建本地时间轴项目的sprite和timelineItem
    * 遵循"从源头重建"原则，每次都完全重新创建
    */
-  private async rebuildTimelineItem(): Promise<LocalTimelineItem> {
-    console.log('🔄 开始从源头重建时间轴项目...')
+  private async rebuildLocalTimelineItem(): Promise<LocalTimelineItem> {
+    if (!this.originalTimelineItemData) {
+      throw new Error('本地时间轴项目数据不存在')
+    }
+
+    console.log('🔄 开始从源头重建本地时间轴项目...')
 
     // 1. 获取原始素材
-    const mediaItem = this.mediaModule.getMediaItem(this.originalTimelineItemData.mediaItemId)
+    const mediaItem = this.mediaModule.getLocalMediaItem(this.originalTimelineItemData.mediaItemId)
     if (!mediaItem) {
       throw new Error(`原始素材不存在: ${this.originalTimelineItemData.mediaItemId}`)
+    }
+
+    // 确保是本地媒体项目
+    if (!isLocalMediaItem(mediaItem)) {
+      throw new Error(`媒体项目类型不匹配，期望本地媒体项目: ${mediaItem.id}`)
     }
 
     if (!mediaItem.isReady) {
@@ -295,14 +441,16 @@ export class RemoveTimelineItemCommand implements SimpleCommand {
       sprite: markRaw(newSprite),
       thumbnailUrl: undefined, // 先设为undefined，稍后重新生成
       config: { ...this.originalTimelineItemData.config },
-      animation: this.originalTimelineItemData.animation ? { ...this.originalTimelineItemData.animation } : undefined,
+      animation: this.originalTimelineItemData.animation
+        ? { ...this.originalTimelineItemData.animation }
+        : undefined,
       mediaName: this.originalTimelineItemData.mediaName,
     })
 
     // 6. 重新生成缩略图（异步执行，不阻塞重建过程）
     this.regenerateThumbnailForRemovedItem(newTimelineItem, mediaItem)
 
-    console.log('🔄 重建时间轴项目完成:', {
+    console.log('🔄 重建本地时间轴项目完成:', {
       id: newTimelineItem.id,
       mediaType: mediaItem.mediaType,
       timeRange: this.originalTimelineItemData.timeRange,
@@ -311,6 +459,33 @@ export class RemoveTimelineItemCommand implements SimpleCommand {
     })
 
     return newTimelineItem
+  }
+
+  /**
+   * 重建异步处理时间轴项目占位符
+   * 不需要创建sprite，只需要重建占位符数据
+   */
+  private rebuildAsyncTimelineItem(): AsyncProcessingTimelineItem {
+    if (!this.originalAsyncTimelineItem) {
+      throw new Error('异步时间轴项目数据不存在')
+    }
+
+    console.log('🔄 开始重建异步处理时间轴项目占位符...')
+
+    // 使用 lodash 深拷贝确保完全独立的数据副本
+    const newAsyncTimelineItem: AsyncProcessingTimelineItem = cloneDeep(
+      this.originalAsyncTimelineItem,
+    )
+
+    console.log('🔄 重建异步处理时间轴项目完成:', {
+      id: newAsyncTimelineItem.id,
+      mediaType: newAsyncTimelineItem.mediaType,
+      processingType: newAsyncTimelineItem.processingType,
+      processingStatus: newAsyncTimelineItem.processingStatus,
+      timeRange: newAsyncTimelineItem.timeRange,
+    })
+
+    return newAsyncTimelineItem
   }
 
   /**
@@ -328,11 +503,25 @@ export class RemoveTimelineItemCommand implements SimpleCommand {
       // 删除时间轴项目（这会自动处理sprite的清理和WebAV画布移除）
       this.timelineModule.removeTimelineItem(this.timelineItemId)
 
-      const mediaItem = this.mediaModule.getMediaItem(this.originalTimelineItemData.mediaItemId)
-      console.log(`🗑️ 已删除时间轴项目: ${mediaItem?.name || '未知素材'}`)
+      if (this.originalTimelineItemData) {
+        // 本地项目删除日志
+        const mediaItem = this.mediaModule.getLocalMediaItem(
+          this.originalTimelineItemData.mediaItemId,
+        )
+        console.log(`🗑️ 已删除本地时间轴项目: ${mediaItem?.name || '未知素材'}`)
+      } else if (this.originalAsyncTimelineItem) {
+        // 异步项目删除日志
+        const mediaItem = this.mediaModule.getLocalMediaItem(
+          this.originalAsyncTimelineItem.mediaItemId,
+        )
+        console.log(`🗑️ 已删除异步处理时间轴项目: ${mediaItem?.name || '未知素材'}`)
+      }
     } catch (error) {
-      const mediaItem = this.mediaModule.getMediaItem(this.originalTimelineItemData.mediaItemId)
-      console.error(`❌ 删除时间轴项目失败: ${mediaItem?.name || '未知素材'}`, error)
+      const itemName =
+        this.originalTimelineItemData?.mediaName ||
+        this.originalAsyncTimelineItem?.config.name ||
+        '未知项目'
+      console.error(`❌ 删除时间轴项目失败: ${itemName}`, error)
       throw error
     }
   }
@@ -343,22 +532,46 @@ export class RemoveTimelineItemCommand implements SimpleCommand {
    */
   async undo(): Promise<void> {
     try {
-      console.log(`🔄 撤销删除操作：重建时间轴项目...`)
+      if (this.originalTimelineItemData) {
+        // 本地项目撤销逻辑
+        console.log(`🔄 撤销删除操作：重建本地时间轴项目...`)
 
-      // 从原始素材重新创建TimelineItem和sprite
-      const newTimelineItem = await this.rebuildTimelineItem()
+        // 从原始素材重新创建TimelineItem和sprite
+        const newTimelineItem = await this.rebuildLocalTimelineItem()
 
-      // 1. 添加到时间轴
-      this.timelineModule.addTimelineItem(newTimelineItem)
+        // 1. 添加到时间轴
+        this.timelineModule.addTimelineItem(newTimelineItem)
 
-      // 2. 添加sprite到WebAV画布
-      await this.webavModule.addSprite(newTimelineItem.sprite)
+        // 2. 添加sprite到WebAV画布
+        await this.webavModule.addSprite(newTimelineItem.sprite)
 
-      const mediaItem = this.mediaModule.getMediaItem(this.originalTimelineItemData.mediaItemId)
-      console.log(`↩️ 已撤销删除时间轴项目: ${mediaItem?.name || '未知素材'}`)
+        const mediaItem = this.mediaModule.getLocalMediaItem(
+          this.originalTimelineItemData.mediaItemId,
+        )
+        console.log(`↩️ 已撤销删除本地时间轴项目: ${mediaItem?.name || '未知素材'}`)
+      } else if (this.originalAsyncTimelineItem) {
+        // 异步项目撤销逻辑
+        console.log(`🔄 撤销删除操作：重建异步处理时间轴项目占位符...`)
+
+        // 重建异步处理时间轴项目占位符
+        const newAsyncTimelineItem = this.rebuildAsyncTimelineItem()
+
+        // 1. 添加到时间轴（异步项目不需要添加sprite到WebAV画布）
+        this.timelineModule.addTimelineItem(newAsyncTimelineItem)
+
+        const mediaItem = this.mediaModule.getLocalMediaItem(
+          this.originalAsyncTimelineItem.mediaItemId,
+        )
+        console.log(`↩️ 已撤销删除异步处理时间轴项目: ${mediaItem?.name || '未知素材'}`)
+      } else {
+        throw new Error('没有有效的时间轴项目数据')
+      }
     } catch (error) {
-      const mediaItem = this.mediaModule.getMediaItem(this.originalTimelineItemData.mediaItemId)
-      console.error(`❌ 撤销删除时间轴项目失败: ${mediaItem?.name || '未知素材'}`, error)
+      const itemName =
+        this.originalTimelineItemData?.mediaName ||
+        this.originalAsyncTimelineItem?.config.name ||
+        '未知项目'
+      console.error(`❌ 撤销删除时间轴项目失败: ${itemName}`, error)
       throw error
     }
   }
@@ -372,6 +585,12 @@ export class RemoveTimelineItemCommand implements SimpleCommand {
     timelineItem: LocalTimelineItem,
     mediaItem: LocalMediaItem,
   ) {
+    // 确保是本地媒体项目
+    if (!isLocalMediaItem(mediaItem)) {
+      console.warn('⚠️ 非本地媒体项目，跳过缩略图生成')
+      return
+    }
+
     // 音频不需要缩略图
     if (mediaItem.mediaType === 'audio') {
       console.log('🎵 音频不需要缩略图，跳过生成')
@@ -398,23 +617,24 @@ export class RemoveTimelineItemCommand implements SimpleCommand {
 
 /**
  * 复制时间轴项目命令
- * 支持复制时间轴项目的撤销/重做操作
+ * 支持复制本地和异步时间轴项目的撤销/重做操作
  * 遵循"从源头重建"原则：保存完整的重建元数据，撤销时删除复制的项目
  */
 export class DuplicateTimelineItemCommand implements SimpleCommand {
   public readonly id: string
   public readonly description: string
-  private originalTimelineItemData: LocalTimelineItemData // 保存原始项目的重建元数据
+  private originalTimelineItemData: LocalTimelineItemData | null = null // 本地项目的重建数据
+  private originalAsyncTimelineItem: AsyncProcessingTimelineItem | null = null // 异步项目的完整数据
   public readonly newTimelineItemId: string // 新创建的项目ID
 
   constructor(
     private originalTimelineItemId: string,
-    originalTimelineItem: LocalTimelineItem, // 要复制的原始时间轴项目
+    originalTimelineItem: LocalTimelineItem | AsyncProcessingTimelineItem, // 支持本地和异步项目
     private newPositionFrames: number, // 新项目的时间位置（帧数）
     private timelineModule: {
-      addTimelineItem: (item: LocalTimelineItem) => void
+      addTimelineItem: (item: LocalTimelineItem | AsyncProcessingTimelineItem) => void
       removeTimelineItem: (id: string) => void
-      getTimelineItem: (id: string) => LocalTimelineItem | undefined
+      getTimelineItem: (id: string) => LocalTimelineItem | AsyncProcessingTimelineItem | undefined
       setupBidirectionalSync: (item: LocalTimelineItem) => void
     },
     private webavModule: {
@@ -422,16 +642,29 @@ export class DuplicateTimelineItemCommand implements SimpleCommand {
       removeSprite: (sprite: VisibleSprite) => boolean
     },
     private mediaModule: {
-      getMediaItem: (id: string) => LocalMediaItem | undefined
+      getLocalMediaItem: (id: string) => LocalMediaItem | AsyncProcessingMediaItem | undefined
     },
     private canvasResolution: { width: number; height: number }, // 画布分辨率
   ) {
     this.id = generateCommandId()
-    const mediaItem = this.mediaModule.getMediaItem(originalTimelineItem.mediaItemId)
-    this.description = `复制时间轴项目: ${mediaItem?.name || '未知素材'}`
 
-    // 保存原始项目的完整重建元数据
-    this.originalTimelineItemData = createLocalTimelineItemData(originalTimelineItem)
+    // 使用类型守卫来区分本地和异步项目
+    if (isLocalTimelineItem(originalTimelineItem)) {
+      // 本地项目处理逻辑
+      const mediaItem = this.mediaModule.getLocalMediaItem(originalTimelineItem.mediaItemId)
+      this.description = `复制时间轴项目: ${mediaItem?.name || '未知素材'}`
+
+      // 保存原始项目的完整重建元数据
+      this.originalTimelineItemData = createLocalTimelineItemData(originalTimelineItem)
+    } else if (isAsyncProcessingTimelineItem(originalTimelineItem)) {
+      // 异步项目处理逻辑
+      this.description = `复制异步处理项目: ${originalTimelineItem.config.name || '未知素材'}`
+
+      // 保存异步项目的完整数据（使用 lodash 深拷贝避免引用问题）
+      this.originalAsyncTimelineItem = cloneDeep(originalTimelineItem)
+    } else {
+      throw new Error('不支持的时间轴项目类型')
+    }
 
     // 生成新项目的ID
     this.newTimelineItemId = `timeline_item_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`
@@ -440,7 +673,26 @@ export class DuplicateTimelineItemCommand implements SimpleCommand {
   /**
    * 从原始素材重建复制的时间轴项目
    */
-  private async rebuildDuplicatedItem(): Promise<LocalTimelineItem> {
+  private async rebuildDuplicatedItem(): Promise<LocalTimelineItem | AsyncProcessingTimelineItem> {
+    if (this.originalTimelineItemData) {
+      // 本地项目重建逻辑
+      return this.rebuildLocalDuplicatedItem()
+    } else if (this.originalAsyncTimelineItem) {
+      // 异步项目重建逻辑
+      return this.rebuildAsyncDuplicatedItem()
+    } else {
+      throw new Error('没有有效的时间轴项目数据')
+    }
+  }
+
+  /**
+   * 重建本地时间轴项目的复制
+   */
+  private async rebuildLocalDuplicatedItem(): Promise<LocalTimelineItem> {
+    if (!this.originalTimelineItemData) {
+      throw new Error('本地时间轴项目数据不存在')
+    }
+
     // 根据媒体类型分发到对应的重建方法
     switch (this.originalTimelineItemData.mediaType) {
       case 'text':
@@ -457,14 +709,53 @@ export class DuplicateTimelineItemCommand implements SimpleCommand {
   }
 
   /**
+   * 重建异步处理时间轴项目的复制
+   */
+  private rebuildAsyncDuplicatedItem(): AsyncProcessingTimelineItem {
+    if (!this.originalAsyncTimelineItem) {
+      throw new Error('异步时间轴项目数据不存在')
+    }
+
+    console.log('🔄 [DuplicateTimelineItemCommand] 重建异步处理时间轴项目复制...')
+
+    // 使用 lodash 深拷贝确保完全独立的数据副本
+    const newAsyncTimelineItem: AsyncProcessingTimelineItem = cloneDeep(
+      this.originalAsyncTimelineItem,
+    )
+
+    // 更新新项目的属性
+    newAsyncTimelineItem.id = this.newTimelineItemId
+    newAsyncTimelineItem.timeRange.timelineStartTime = this.newPositionFrames
+
+    console.log('🔄 重建异步处理时间轴项目复制完成:', {
+      id: newAsyncTimelineItem.id,
+      mediaType: newAsyncTimelineItem.mediaType,
+      processingType: newAsyncTimelineItem.processingType,
+      processingStatus: newAsyncTimelineItem.processingStatus,
+      timeRange: newAsyncTimelineItem.timeRange,
+    })
+
+    return newAsyncTimelineItem
+  }
+
+  /**
    * 重建视频时间轴项目
    */
   private async rebuildVideoItem(): Promise<LocalTimelineItem> {
+    if (!this.originalTimelineItemData) {
+      throw new Error('本地时间轴项目数据不存在')
+    }
+
     console.log('🔄 [DuplicateTimelineItemCommand] 重建视频时间轴项目...')
 
-    const mediaItem = this.mediaModule.getMediaItem(this.originalTimelineItemData.mediaItemId)
+    const mediaItem = this.mediaModule.getLocalMediaItem(this.originalTimelineItemData.mediaItemId)
     if (!mediaItem) {
       throw new Error(`找不到素材项目: ${this.originalTimelineItemData.mediaItemId}`)
+    }
+
+    // 确保是本地媒体项目
+    if (!isLocalMediaItem(mediaItem)) {
+      throw new Error(`媒体项目类型不匹配，期望本地媒体项目: ${mediaItem.id}`)
     }
 
     // 检查素材是否已经解析完成
@@ -509,7 +800,9 @@ export class DuplicateTimelineItemCommand implements SimpleCommand {
       sprite: markRaw(newSprite),
       thumbnailUrl: undefined,
       config: { ...this.originalTimelineItemData.config },
-      animation: this.originalTimelineItemData.animation ? { ...this.originalTimelineItemData.animation } : undefined,
+      animation: this.originalTimelineItemData.animation
+        ? { ...this.originalTimelineItemData.animation }
+        : undefined,
       mediaName: this.originalTimelineItemData.mediaName,
     })
 
@@ -524,11 +817,20 @@ export class DuplicateTimelineItemCommand implements SimpleCommand {
    * 重建图片时间轴项目
    */
   private async rebuildImageItem(): Promise<LocalTimelineItem> {
+    if (!this.originalTimelineItemData) {
+      throw new Error('本地时间轴项目数据不存在')
+    }
+
     console.log('🔄 [DuplicateTimelineItemCommand] 重建图片时间轴项目...')
 
-    const mediaItem = this.mediaModule.getMediaItem(this.originalTimelineItemData.mediaItemId)
+    const mediaItem = this.mediaModule.getLocalMediaItem(this.originalTimelineItemData.mediaItemId)
     if (!mediaItem) {
       throw new Error(`找不到素材项目: ${this.originalTimelineItemData.mediaItemId}`)
+    }
+
+    // 确保是本地媒体项目
+    if (!isLocalMediaItem(mediaItem)) {
+      throw new Error(`媒体项目类型不匹配，期望本地媒体项目: ${mediaItem.id}`)
     }
 
     // 检查素材是否已经解析完成
@@ -569,7 +871,9 @@ export class DuplicateTimelineItemCommand implements SimpleCommand {
       sprite: markRaw(newSprite),
       thumbnailUrl: undefined,
       config: { ...this.originalTimelineItemData.config },
-      animation: this.originalTimelineItemData.animation ? { ...this.originalTimelineItemData.animation } : undefined,
+      animation: this.originalTimelineItemData.animation
+        ? { ...this.originalTimelineItemData.animation }
+        : undefined,
       mediaName: this.originalTimelineItemData.mediaName,
     })
 
@@ -584,11 +888,20 @@ export class DuplicateTimelineItemCommand implements SimpleCommand {
    * 重建音频时间轴项目
    */
   private async rebuildAudioItem(): Promise<LocalTimelineItem> {
+    if (!this.originalTimelineItemData) {
+      throw new Error('本地时间轴项目数据不存在')
+    }
+
     console.log('🔄 [DuplicateTimelineItemCommand] 重建音频时间轴项目...')
 
-    const mediaItem = this.mediaModule.getMediaItem(this.originalTimelineItemData.mediaItemId)
+    const mediaItem = this.mediaModule.getLocalMediaItem(this.originalTimelineItemData.mediaItemId)
     if (!mediaItem) {
       throw new Error(`找不到素材项目: ${this.originalTimelineItemData.mediaItemId}`)
+    }
+
+    // 确保是本地媒体项目
+    if (!isLocalMediaItem(mediaItem)) {
+      throw new Error(`媒体项目类型不匹配，期望本地媒体项目: ${mediaItem.id}`)
     }
 
     // 检查素材是否已经解析完成
@@ -618,7 +931,8 @@ export class DuplicateTimelineItemCommand implements SimpleCommand {
     const audioConfig = this.originalTimelineItemData.config as AudioMediaConfig
     if (audioConfig && ('volume' in audioConfig || 'isMuted' in audioConfig)) {
       // 类型检查确保这是音频精灵
-      const audioSprite = newSprite as import('../../../utils/AudioVisibleSprite').AudioVisibleSprite
+      const audioSprite =
+        newSprite as import('../../../utils/AudioVisibleSprite').AudioVisibleSprite
       if (typeof audioSprite.setAudioState === 'function') {
         audioSprite.setAudioState({
           volume: audioConfig.volume ?? 1,
@@ -647,7 +961,9 @@ export class DuplicateTimelineItemCommand implements SimpleCommand {
       sprite: markRaw(newSprite),
       thumbnailUrl: undefined, // 音频不需要缩略图
       config: { ...this.originalTimelineItemData.config },
-      animation: this.originalTimelineItemData.animation ? { ...this.originalTimelineItemData.animation } : undefined,
+      animation: this.originalTimelineItemData.animation
+        ? { ...this.originalTimelineItemData.animation }
+        : undefined,
       mediaName: this.originalTimelineItemData.mediaName,
     })
 
@@ -660,6 +976,9 @@ export class DuplicateTimelineItemCommand implements SimpleCommand {
    * 应用视觉属性到精灵
    */
   private async applyVisualProperties(sprite: any): Promise<void> {
+    if (!this.originalTimelineItemData) {
+      throw new Error('本地时间轴项目数据不存在')
+    }
     const visualProps = getVisualPropsFromData(this.originalTimelineItemData)
     if (visualProps) {
       // 导入坐标转换工具
@@ -696,6 +1015,10 @@ export class DuplicateTimelineItemCommand implements SimpleCommand {
    * 重建文本时间轴项目（文本clip没有MediaItem）
    */
   private async rebuildTextItem(): Promise<LocalTimelineItem> {
+    if (!this.originalTimelineItemData) {
+      throw new Error('本地时间轴项目数据不存在')
+    }
+
     console.log('🔄 [DuplicateTimelineItemCommand] 重建文本时间轴项目...')
 
     // 从保存的配置中获取文本内容和样式
@@ -776,7 +1099,9 @@ export class DuplicateTimelineItemCommand implements SimpleCommand {
       sprite: markRaw(newSprite),
       thumbnailUrl: undefined, // 文本项目不需要缩略图
       config: { ...this.originalTimelineItemData.config },
-      animation: this.originalTimelineItemData.animation ? { ...this.originalTimelineItemData.animation } : undefined,
+      animation: this.originalTimelineItemData.animation
+        ? { ...this.originalTimelineItemData.animation }
+        : undefined,
       mediaName: this.originalTimelineItemData.mediaName,
     })
 
@@ -798,15 +1123,27 @@ export class DuplicateTimelineItemCommand implements SimpleCommand {
       // 1. 添加到时间轴
       this.timelineModule.addTimelineItem(newTimelineItem)
 
-      // 2. 设置双向数据同步
-      this.timelineModule.setupBidirectionalSync(newTimelineItem)
+      if (isLocalTimelineItem(newTimelineItem)) {
+        // 本地项目处理逻辑
+        // 2. 设置双向数据同步
+        this.timelineModule.setupBidirectionalSync(newTimelineItem)
 
-      // 3. 添加sprite到WebAV画布
-      await this.webavModule.addSprite(newTimelineItem.sprite)
+        // 3. 添加sprite到WebAV画布
+        await this.webavModule.addSprite(newTimelineItem.sprite)
 
-      console.log(`✅ 已复制时间轴项目: ${this.originalTimelineItemData.mediaName}`)
+        console.log(
+          `✅ 已复制本地时间轴项目: ${this.originalTimelineItemData?.mediaName || '未知素材'}`,
+        )
+      } else if (isAsyncProcessingTimelineItem(newTimelineItem)) {
+        // 异步项目处理逻辑（不需要设置双向同步和添加sprite）
+        console.log(`✅ 已复制异步处理时间轴项目: ${newTimelineItem.config.name || '未知素材'}`)
+      }
     } catch (error) {
-      console.error(`❌ 复制时间轴项目失败: ${this.originalTimelineItemData.mediaName}`, error)
+      const itemName =
+        this.originalTimelineItemData?.mediaName ||
+        this.originalAsyncTimelineItem?.config.name ||
+        '未知项目'
+      console.error(`❌ 复制时间轴项目失败: ${itemName}`, error)
       throw error
     }
   }
@@ -821,11 +1158,24 @@ export class DuplicateTimelineItemCommand implements SimpleCommand {
       // 删除复制的时间轴项目
       this.timelineModule.removeTimelineItem(this.newTimelineItemId)
 
-      const mediaItem = this.mediaModule.getMediaItem(this.originalTimelineItemData.mediaItemId)
-      console.log(`↩️ 已撤销复制时间轴项目: ${mediaItem?.name || '未知素材'}`)
+      if (this.originalTimelineItemData) {
+        // 本地项目撤销日志
+        const mediaItem = this.mediaModule.getLocalMediaItem(
+          this.originalTimelineItemData.mediaItemId,
+        )
+        console.log(`↩️ 已撤销复制本地时间轴项目: ${mediaItem?.name || '未知素材'}`)
+      } else if (this.originalAsyncTimelineItem) {
+        // 异步项目撤销日志
+        console.log(
+          `↩️ 已撤销复制异步处理时间轴项目: ${this.originalAsyncTimelineItem.config.name || '未知素材'}`,
+        )
+      }
     } catch (error) {
-      const mediaItem = this.mediaModule.getMediaItem(this.originalTimelineItemData.mediaItemId)
-      console.error(`❌ 撤销复制时间轴项目失败: ${mediaItem?.name || '未知素材'}`, error)
+      const itemName =
+        this.originalTimelineItemData?.mediaName ||
+        this.originalAsyncTimelineItem?.config.name ||
+        '未知项目'
+      console.error(`❌ 撤销复制时间轴项目失败: ${itemName}`, error)
       throw error
     }
   }
@@ -865,7 +1215,7 @@ export class DuplicateTimelineItemCommand implements SimpleCommand {
 
 /**
  * 移动时间轴项目命令
- * 支持时间轴项目位置移动的撤销/重做操作
+ * 支持本地和异步时间轴项目位置移动的撤销/重做操作
  * 包括时间位置移动和轨道间移动
  */
 export class MoveTimelineItemCommand implements SimpleCommand {
@@ -880,29 +1230,39 @@ export class MoveTimelineItemCommand implements SimpleCommand {
     private newTrackId: string, // 新的轨道ID
     private timelineModule: {
       updateTimelineItemPosition: (id: string, positionFrames: number, trackId?: string) => void
-      getTimelineItem: (id: string) => LocalTimelineItem | undefined
+      getTimelineItem: (id: string) => LocalTimelineItem | AsyncProcessingTimelineItem | undefined
     },
     private mediaModule: {
-      getMediaItem: (id: string) => LocalMediaItem | undefined
+      getLocalMediaItem: (id: string) => LocalMediaItem | AsyncProcessingMediaItem | undefined
     },
   ) {
     this.id = generateCommandId()
 
     const timelineItem = this.timelineModule.getTimelineItem(timelineItemId)
-    const mediaItem = timelineItem ? this.mediaModule.getMediaItem(timelineItem.mediaItemId) : null
+    let itemName = '未知素材'
+
+    // 根据项目类型获取名称
+    if (timelineItem) {
+      if (isLocalTimelineItem(timelineItem)) {
+        const mediaItem = this.mediaModule.getLocalMediaItem(timelineItem.mediaItemId)
+        itemName = mediaItem?.name || '未知素材'
+      } else if (isAsyncProcessingTimelineItem(timelineItem)) {
+        itemName = timelineItem.config.name || '未知素材'
+      }
+    }
 
     // 生成描述信息
     const positionChanged = this.oldPositionFrames !== this.newPositionFrames
     const trackChanged = oldTrackId !== newTrackId
 
     if (positionChanged && trackChanged) {
-      this.description = `移动时间轴项目: ${mediaItem?.name || '未知素材'} (位置: ${this.oldPositionFrames}帧→${this.newPositionFrames}帧, 轨道: ${oldTrackId}→${newTrackId})`
+      this.description = `移动时间轴项目: ${itemName} (位置: ${this.oldPositionFrames}帧→${this.newPositionFrames}帧, 轨道: ${oldTrackId}→${newTrackId})`
     } else if (positionChanged) {
-      this.description = `移动时间轴项目: ${mediaItem?.name || '未知素材'} (位置: ${this.oldPositionFrames}帧→${this.newPositionFrames}帧)`
+      this.description = `移动时间轴项目: ${itemName} (位置: ${this.oldPositionFrames}帧→${this.newPositionFrames}帧)`
     } else if (trackChanged) {
-      this.description = `移动时间轴项目: ${mediaItem?.name || '未知素材'} (轨道: ${oldTrackId}→${newTrackId})`
+      this.description = `移动时间轴项目: ${itemName} (轨道: ${oldTrackId}→${newTrackId})`
     } else {
-      this.description = `移动时间轴项目: ${mediaItem?.name || '未知素材'} (无变化)`
+      this.description = `移动时间轴项目: ${itemName} (无变化)`
     }
 
     console.log('💾 保存移动操作数据:', {
@@ -936,16 +1296,30 @@ export class MoveTimelineItemCommand implements SimpleCommand {
         trackIdToSet,
       )
 
-      const mediaItem = this.mediaModule.getMediaItem(timelineItem.mediaItemId)
+      // 根据项目类型获取名称
+      let itemName = '未知素材'
+      if (isLocalTimelineItem(timelineItem)) {
+        const mediaItem = this.mediaModule.getLocalMediaItem(timelineItem.mediaItemId)
+        itemName = mediaItem?.name || '未知素材'
+      } else if (isAsyncProcessingTimelineItem(timelineItem)) {
+        itemName = timelineItem.config.name || '未知素材'
+      }
+
       console.log(
-        `🔄 已移动时间轴项目: ${mediaItem?.name || '未知素材'} 到位置 ${this.newPositionFrames}帧, 轨道 ${this.newTrackId}`,
+        `🔄 已移动时间轴项目: ${itemName} 到位置 ${this.newPositionFrames}帧, 轨道 ${this.newTrackId}`,
       )
     } catch (error) {
       const timelineItem = this.timelineModule.getTimelineItem(this.timelineItemId)
-      const mediaItem = timelineItem
-        ? this.mediaModule.getMediaItem(timelineItem.mediaItemId)
-        : null
-      console.error(`❌ 移动时间轴项目失败: ${mediaItem?.name || '未知素材'}`, error)
+      let itemName = '未知素材'
+      if (timelineItem) {
+        if (isLocalTimelineItem(timelineItem)) {
+          const mediaItem = this.mediaModule.getLocalMediaItem(timelineItem.mediaItemId)
+          itemName = mediaItem?.name || '未知素材'
+        } else if (isAsyncProcessingTimelineItem(timelineItem)) {
+          itemName = timelineItem.config.name || '未知素材'
+        }
+      }
+      console.error(`❌ 移动时间轴项目失败: ${itemName}`, error)
       throw error
     }
   }
@@ -970,16 +1344,30 @@ export class MoveTimelineItemCommand implements SimpleCommand {
         trackIdToSet,
       )
 
-      const mediaItem = this.mediaModule.getMediaItem(timelineItem.mediaItemId)
+      // 根据项目类型获取名称
+      let itemName = '未知素材'
+      if (isLocalTimelineItem(timelineItem)) {
+        const mediaItem = this.mediaModule.getLocalMediaItem(timelineItem.mediaItemId)
+        itemName = mediaItem?.name || '未知素材'
+      } else if (isAsyncProcessingTimelineItem(timelineItem)) {
+        itemName = timelineItem.config.name || '未知素材'
+      }
+
       console.log(
-        `↩️ 已撤销移动时间轴项目: ${mediaItem?.name || '未知素材'} 回到位置 ${this.oldPositionFrames}帧, 轨道 ${this.oldTrackId}`,
+        `↩️ 已撤销移动时间轴项目: ${itemName} 回到位置 ${this.oldPositionFrames}帧, 轨道 ${this.oldTrackId}`,
       )
     } catch (error) {
       const timelineItem = this.timelineModule.getTimelineItem(this.timelineItemId)
-      const mediaItem = timelineItem
-        ? this.mediaModule.getMediaItem(timelineItem.mediaItemId)
-        : null
-      console.error(`❌ 撤销移动时间轴项目失败: ${mediaItem?.name || '未知素材'}`, error)
+      let itemName = '未知素材'
+      if (timelineItem) {
+        if (isLocalTimelineItem(timelineItem)) {
+          const mediaItem = this.mediaModule.getLocalMediaItem(timelineItem.mediaItemId)
+          itemName = mediaItem?.name || '未知素材'
+        } else if (isAsyncProcessingTimelineItem(timelineItem)) {
+          itemName = timelineItem.config.name || '未知素材'
+        }
+      }
+      console.error(`❌ 撤销移动时间轴项目失败: ${itemName}`, error)
       throw error
     }
   }
@@ -1036,11 +1424,11 @@ export class UpdateTransformCommand implements SimpleCommand {
       gain?: number // 音频增益（dB）
     },
     private timelineModule: {
-      updateTimelineItemTransform: (id: string, transform: TransformData) => void
-      getTimelineItem: (id: string) => LocalTimelineItem | undefined
+      updateLocalTimelineItemTransform: (id: string, transform: TransformData) => void
+      getLocalTimelineItem: (id: string) => LocalTimelineItem | undefined
     },
     private mediaModule: {
-      getMediaItem: (id: string) => LocalMediaItem | undefined
+      getLocalMediaItem: (id: string) => LocalMediaItem | undefined
     },
     private clipOperationsModule?: {
       updateTimelineItemPlaybackRate: (id: string, rate: number) => void
@@ -1048,8 +1436,10 @@ export class UpdateTransformCommand implements SimpleCommand {
   ) {
     this.id = generateCommandId()
 
-    const timelineItem = this.timelineModule.getTimelineItem(timelineItemId)
-    const mediaItem = timelineItem ? this.mediaModule.getMediaItem(timelineItem.mediaItemId) : null
+    const timelineItem = this.timelineModule.getLocalTimelineItem(timelineItemId)
+    const mediaItem = timelineItem
+      ? this.mediaModule.getLocalMediaItem(timelineItem.mediaItemId)
+      : null
 
     // 生成描述信息
     this.description = this.generateDescription(mediaItem?.name || '未知素材')
@@ -1138,7 +1528,9 @@ export class UpdateTransformCommand implements SimpleCommand {
     }
 
     if (this.newValues.gain !== undefined && this.oldValues.gain !== undefined) {
-      changes.push(`增益: ${this.oldValues.gain.toFixed(1)}dB → ${this.newValues.gain.toFixed(1)}dB`)
+      changes.push(
+        `增益: ${this.oldValues.gain.toFixed(1)}dB → ${this.newValues.gain.toFixed(1)}dB`,
+      )
     }
 
     const changeText = changes.length > 0 ? ` (${changes.join(', ')})` : ''
@@ -1151,7 +1543,7 @@ export class UpdateTransformCommand implements SimpleCommand {
   async execute(): Promise<void> {
     try {
       // 检查项目是否存在
-      const timelineItem = this.timelineModule.getTimelineItem(this.timelineItemId)
+      const timelineItem = this.timelineModule.getLocalTimelineItem(this.timelineItemId)
       if (!timelineItem) {
         console.warn(`⚠️ 时间轴项目不存在，无法更新变换属性: ${this.timelineItemId}`)
         return
@@ -1174,7 +1566,7 @@ export class UpdateTransformCommand implements SimpleCommand {
       )
 
       if (Object.keys(filteredTransform).length > 0) {
-        this.timelineModule.updateTimelineItemTransform(this.timelineItemId, filteredTransform)
+        this.timelineModule.updateLocalTimelineItemTransform(this.timelineItemId, filteredTransform)
       }
 
       // 处理倍速更新（对视频和音频有效）
@@ -1215,20 +1607,20 @@ export class UpdateTransformCommand implements SimpleCommand {
       if (timelineItem.mediaType === 'audio' && this.newValues.gain !== undefined) {
         // 类型安全的音频配置更新
         if ('gain' in timelineItem.config) {
-          (timelineItem.config as AudioMediaConfig).gain = this.newValues.gain
+          ;(timelineItem.config as AudioMediaConfig).gain = this.newValues.gain
           const sprite = timelineItem.sprite
           if (sprite && 'setGain' in sprite) {
-            (sprite as AudioVisibleSprite).setGain(this.newValues.gain)
+            ;(sprite as AudioVisibleSprite).setGain(this.newValues.gain)
           }
         }
       }
 
-      const mediaItem = this.mediaModule.getMediaItem(timelineItem.mediaItemId)
+      const mediaItem = this.mediaModule.getLocalMediaItem(timelineItem.mediaItemId)
       console.log(`🎯 已更新变换属性: ${mediaItem?.name || '未知素材'}`)
     } catch (error) {
-      const timelineItem = this.timelineModule.getTimelineItem(this.timelineItemId)
+      const timelineItem = this.timelineModule.getLocalTimelineItem(this.timelineItemId)
       const mediaItem = timelineItem
-        ? this.mediaModule.getMediaItem(timelineItem.mediaItemId)
+        ? this.mediaModule.getLocalMediaItem(timelineItem.mediaItemId)
         : null
       console.error(`❌ 更新变换属性失败: ${mediaItem?.name || '未知素材'}`, error)
       throw error
@@ -1241,7 +1633,7 @@ export class UpdateTransformCommand implements SimpleCommand {
   async undo(): Promise<void> {
     try {
       // 检查项目是否存在
-      const timelineItem = this.timelineModule.getTimelineItem(this.timelineItemId)
+      const timelineItem = this.timelineModule.getLocalTimelineItem(this.timelineItemId)
       if (!timelineItem) {
         console.warn(`⚠️ 时间轴项目不存在，无法撤销变换属性: ${this.timelineItemId}`)
         return
@@ -1264,7 +1656,7 @@ export class UpdateTransformCommand implements SimpleCommand {
       )
 
       if (Object.keys(filteredTransform).length > 0) {
-        this.timelineModule.updateTimelineItemTransform(this.timelineItemId, filteredTransform)
+        this.timelineModule.updateLocalTimelineItemTransform(this.timelineItemId, filteredTransform)
       }
 
       // 处理倍速恢复（对视频和音频有效）
@@ -1305,20 +1697,20 @@ export class UpdateTransformCommand implements SimpleCommand {
       if (timelineItem.mediaType === 'audio' && this.oldValues.gain !== undefined) {
         // 类型安全的音频配置恢复
         if ('gain' in timelineItem.config) {
-          (timelineItem.config as AudioMediaConfig).gain = this.oldValues.gain
+          ;(timelineItem.config as AudioMediaConfig).gain = this.oldValues.gain
           const sprite = timelineItem.sprite
           if (sprite && 'setGain' in sprite) {
-            (sprite as AudioVisibleSprite).setGain(this.oldValues.gain)
+            ;(sprite as AudioVisibleSprite).setGain(this.oldValues.gain)
           }
         }
       }
 
-      const mediaItem = this.mediaModule.getMediaItem(timelineItem.mediaItemId)
+      const mediaItem = this.mediaModule.getLocalMediaItem(timelineItem.mediaItemId)
       console.log(`↩️ 已撤销变换属性更新: ${mediaItem?.name || '未知素材'}`)
     } catch (error) {
-      const timelineItem = this.timelineModule.getTimelineItem(this.timelineItemId)
+      const timelineItem = this.timelineModule.getLocalTimelineItem(this.timelineItemId)
       const mediaItem = timelineItem
-        ? this.mediaModule.getMediaItem(timelineItem.mediaItemId)
+        ? this.mediaModule.getLocalMediaItem(timelineItem.mediaItemId)
         : null
       console.error(`❌ 撤销变换属性更新失败: ${mediaItem?.name || '未知素材'}`, error)
       throw error
@@ -1331,12 +1723,12 @@ export class UpdateTransformCommand implements SimpleCommand {
    * @param newDurationFrames 新的时长（帧数）
    */
   private updateTimelineItemDuration(timelineItemId: string, newDurationFrames: number): void {
-    const timelineItem = this.timelineModule.getTimelineItem(timelineItemId)
+    const timelineItem = this.timelineModule.getLocalTimelineItem(timelineItemId)
     if (!timelineItem) return
 
     const sprite = timelineItem.sprite
     const timeRange = sprite.getTimeRange()
-    const mediaItem = this.mediaModule.getMediaItem(timelineItem.mediaItemId)
+    const mediaItem = this.mediaModule.getLocalMediaItem(timelineItem.mediaItemId)
 
     if (!mediaItem) return
 
@@ -1427,12 +1819,12 @@ export class SplitTimelineItemCommand implements SimpleCommand {
       removeSprite: (sprite: VisibleSprite) => boolean
     },
     private mediaModule: {
-      getMediaItem: (id: string) => LocalMediaItem | undefined
+      getLocalMediaItem: (id: string) => LocalMediaItem | undefined
     },
   ) {
     this.id = generateCommandId()
 
-    const mediaItem = this.mediaModule.getMediaItem(originalTimelineItem.mediaItemId)
+    const mediaItem = this.mediaModule.getLocalMediaItem(originalTimelineItem.mediaItemId)
     this.description = `分割时间轴项目: ${mediaItem?.name || '未知素材'} (在 ${framesToTimecode(splitTimeFrames)})`
 
     // 🎯 关键：保存原始项目的完整重建元数据
@@ -1464,7 +1856,7 @@ export class SplitTimelineItemCommand implements SimpleCommand {
     console.log('🔄 开始从源头重建分割后的时间轴项目...')
 
     // 1. 获取原始素材
-    const mediaItem = this.mediaModule.getMediaItem(this.originalTimelineItemData.mediaItemId)
+    const mediaItem = this.mediaModule.getLocalMediaItem(this.originalTimelineItemData.mediaItemId)
     if (!mediaItem) {
       throw new Error(`原始素材不存在: ${this.originalTimelineItemData.mediaItemId}`)
     }
@@ -1585,7 +1977,9 @@ export class SplitTimelineItemCommand implements SimpleCommand {
       sprite: markRaw(firstSprite),
       thumbnailUrl: undefined, // 先设为undefined，稍后重新生成
       config: { ...this.originalTimelineItemData.config },
-      animation: this.originalTimelineItemData.animation ? { ...this.originalTimelineItemData.animation } : undefined,
+      animation: this.originalTimelineItemData.animation
+        ? { ...this.originalTimelineItemData.animation }
+        : undefined,
       mediaName: this.originalTimelineItemData.mediaName,
     })
 
@@ -1598,7 +1992,9 @@ export class SplitTimelineItemCommand implements SimpleCommand {
       sprite: markRaw(secondSprite),
       thumbnailUrl: undefined, // 先设为undefined，稍后重新生成
       config: { ...this.originalTimelineItemData.config },
-      animation: this.originalTimelineItemData.animation ? { ...this.originalTimelineItemData.animation } : undefined,
+      animation: this.originalTimelineItemData.animation
+        ? { ...this.originalTimelineItemData.animation }
+        : undefined,
       mediaName: this.originalTimelineItemData.mediaName,
     })
 
@@ -1624,7 +2020,7 @@ export class SplitTimelineItemCommand implements SimpleCommand {
     console.log('🔄 开始从源头重建原始时间轴项目...')
 
     // 1. 获取原始素材
-    const mediaItem = this.mediaModule.getMediaItem(this.originalTimelineItemData.mediaItemId)
+    const mediaItem = this.mediaModule.getLocalMediaItem(this.originalTimelineItemData.mediaItemId)
     if (!mediaItem) {
       throw new Error(`原始素材不存在: ${this.originalTimelineItemData.mediaItemId}`)
     }
@@ -1703,7 +2099,9 @@ export class SplitTimelineItemCommand implements SimpleCommand {
       sprite: markRaw(newSprite),
       thumbnailUrl: undefined, // 先设为undefined，稍后重新生成
       config: { ...this.originalTimelineItemData.config },
-      animation: this.originalTimelineItemData.animation ? { ...this.originalTimelineItemData.animation } : undefined,
+      animation: this.originalTimelineItemData.animation
+        ? { ...this.originalTimelineItemData.animation }
+        : undefined,
       mediaName: this.originalTimelineItemData.mediaName,
     })
 
@@ -1777,12 +2175,16 @@ export class SplitTimelineItemCommand implements SimpleCommand {
       await this.webavModule.addSprite(firstItem.sprite)
       await this.webavModule.addSprite(secondItem.sprite)
 
-      const mediaItem = this.mediaModule.getMediaItem(this.originalTimelineItemData.mediaItemId)
+      const mediaItem = this.mediaModule.getLocalMediaItem(
+        this.originalTimelineItemData.mediaItemId,
+      )
       console.log(
         `🔪 已分割时间轴项目: ${mediaItem?.name || '未知素材'} 在 ${framesToTimecode(this.splitTimeFrames)}`,
       )
     } catch (error) {
-      const mediaItem = this.mediaModule.getMediaItem(this.originalTimelineItemData.mediaItemId)
+      const mediaItem = this.mediaModule.getLocalMediaItem(
+        this.originalTimelineItemData.mediaItemId,
+      )
       console.error(`❌ 分割时间轴项目失败: ${mediaItem?.name || '未知素材'}`, error)
       throw error
     }
@@ -1809,10 +2211,14 @@ export class SplitTimelineItemCommand implements SimpleCommand {
       // 4. 添加sprite到WebAV画布
       await this.webavModule.addSprite(originalItem.sprite)
 
-      const mediaItem = this.mediaModule.getMediaItem(this.originalTimelineItemData.mediaItemId)
+      const mediaItem = this.mediaModule.getLocalMediaItem(
+        this.originalTimelineItemData.mediaItemId,
+      )
       console.log(`↩️ 已撤销分割时间轴项目: ${mediaItem?.name || '未知素材'}`)
     } catch (error) {
-      const mediaItem = this.mediaModule.getMediaItem(this.originalTimelineItemData.mediaItemId)
+      const mediaItem = this.mediaModule.getLocalMediaItem(
+        this.originalTimelineItemData.mediaItemId,
+      )
       console.error(`❌ 撤销分割时间轴项目失败: ${mediaItem?.name || '未知素材'}`, error)
       throw error
     }
@@ -1923,7 +2329,9 @@ export class AddTrackCommand implements SimpleCommand {
       this.newTrackId = newTrack.id
       this.trackData = { ...newTrack }
 
-      console.log(`✅ 已添加轨道: ${newTrack.name} (ID: ${newTrack.id}, 类型: ${newTrack.type}, 位置: ${this.position ?? '末尾'})`)
+      console.log(
+        `✅ 已添加轨道: ${newTrack.name} (ID: ${newTrack.id}, 类型: ${newTrack.type}, 位置: ${this.position ?? '末尾'})`,
+      )
     } catch (error) {
       console.error(`❌ 添加轨道失败: ${this.trackName || `${this.trackType}轨道`}`, error)
       throw error
@@ -2029,14 +2437,15 @@ export class RenameTrackCommand implements SimpleCommand {
 
 /**
  * 删除轨道命令
- * 支持删除轨道的撤销/重做操作
+ * 支持删除轨道的撤销/重做操作，兼容本地和异步时间轴项目
  * 遵循"从源头重建"原则：保存轨道信息和所有受影响的时间轴项目信息，撤销时完全重建
  */
 export class RemoveTrackCommand implements SimpleCommand {
   public readonly id: string
   public readonly description: string
   private trackData: Track // 保存被删除的轨道数据
-  private affectedTimelineItems: LocalTimelineItemData[] = [] // 保存被删除的时间轴项目的重建元数据
+  private affectedLocalTimelineItems: LocalTimelineItemData[] = [] // 保存被删除的本地时间轴项目的重建元数据
+  private affectedAsyncTimelineItems: AsyncProcessingTimelineItem[] = [] // 保存被删除的异步时间轴项目的完整数据
 
   constructor(
     private trackId: string,
@@ -2044,25 +2453,25 @@ export class RemoveTrackCommand implements SimpleCommand {
       addTrack: (type: TrackType, name?: string) => Track
       removeTrack: (
         trackId: string,
-        timelineItems: Ref<LocalTimelineItem[]>,
+        timelineItems: Ref<(LocalTimelineItem | AsyncProcessingTimelineItem)[]>,
         removeTimelineItemCallback?: (id: string) => void,
       ) => void
       getTrack: (trackId: string) => Track | undefined
       tracks: { value: Track[] }
     },
     private timelineModule: {
-      addTimelineItem: (item: LocalTimelineItem) => void
+      addTimelineItem: (item: LocalTimelineItem | AsyncProcessingTimelineItem) => void
       removeTimelineItem: (id: string) => void
-      getTimelineItem: (id: string) => LocalTimelineItem | undefined
+      getTimelineItem: (id: string) => LocalTimelineItem | AsyncProcessingTimelineItem | undefined
       setupBidirectionalSync: (item: LocalTimelineItem) => void
-      timelineItems: { value: LocalTimelineItem[] }
+      timelineItems: { value: (LocalTimelineItem | AsyncProcessingTimelineItem)[] }
     },
     private webavModule: {
       addSprite: (sprite: VisibleSprite) => Promise<boolean>
       removeSprite: (sprite: VisibleSprite) => boolean
     },
     private mediaModule: {
-      getMediaItem: (id: string) => LocalMediaItem | undefined
+      getLocalMediaItem: (id: string) => LocalMediaItem | AsyncProcessingMediaItem | undefined
     },
   ) {
     this.id = generateCommandId()
@@ -2080,12 +2489,18 @@ export class RemoveTrackCommand implements SimpleCommand {
     const affectedItems = this.timelineModule.timelineItems.value.filter(
       (item) => item.trackId === trackId,
     )
-    this.affectedTimelineItems = affectedItems.map((item) => {
-      return createLocalTimelineItemData(item)
-    })
+
+    // 分别处理本地和异步项目
+    for (const item of affectedItems) {
+      if (isLocalTimelineItem(item)) {
+        this.affectedLocalTimelineItems.push(createLocalTimelineItemData(item))
+      } else if (isAsyncProcessingTimelineItem(item)) {
+        this.affectedAsyncTimelineItems.push(cloneDeep(item))
+      }
+    }
 
     console.log(
-      `📋 准备删除轨道: ${track.name}, 受影响的时间轴项目: ${this.affectedTimelineItems.length}个`,
+      `📋 准备删除轨道: ${track.name}, 受影响的项目: ${this.affectedLocalTimelineItems.length}个本地项目, ${this.affectedAsyncTimelineItems.length}个异步项目`,
     )
   }
 
@@ -2098,9 +2513,14 @@ export class RemoveTrackCommand implements SimpleCommand {
       return await this.rebuildTextTimelineItem(itemData as LocalTimelineItemData<'text'>)
     }
 
-    const mediaItem = this.mediaModule.getMediaItem(itemData.mediaItemId)
+    const mediaItem = this.mediaModule.getLocalMediaItem(itemData.mediaItemId)
     if (!mediaItem) {
       throw new Error(`找不到素材项目: ${itemData.mediaItemId}`)
+    }
+
+    // 确保是本地媒体项目
+    if (!isLocalMediaItem(mediaItem)) {
+      throw new Error(`媒体项目类型不匹配，期望本地媒体项目: ${mediaItem.id}`)
     }
 
     // 检查素材是否已经解析完成
@@ -2172,7 +2592,9 @@ export class RemoveTrackCommand implements SimpleCommand {
   /**
    * 重建文本时间轴项目
    */
-  private async rebuildTextTimelineItem(itemData: LocalTimelineItemData<'text'>): Promise<LocalTimelineItem<'text'>> {
+  private async rebuildTextTimelineItem(
+    itemData: LocalTimelineItemData<'text'>,
+  ): Promise<LocalTimelineItem<'text'>> {
     console.log('🔄 [RemoveTrackCommand] 重建文本时间轴项目...')
 
     // 从保存的配置中获取文本内容和样式
@@ -2183,7 +2605,7 @@ export class RemoveTrackCommand implements SimpleCommand {
     console.log('📝 [RemoveTrackCommand] 文本重建参数:', {
       text: text.substring(0, 20) + '...',
       style,
-      timeRange: itemData.timeRange
+      timeRange: itemData.timeRange,
     })
 
     // 动态导入TextVisibleSprite
@@ -2257,8 +2679,10 @@ export class RemoveTrackCommand implements SimpleCommand {
         this.timelineModule.removeTimelineItem,
       )
 
+      const totalAffectedItems =
+        this.affectedLocalTimelineItems.length + this.affectedAsyncTimelineItems.length
       console.log(
-        `✅ 已删除轨道: ${this.trackData.name}, 删除了 ${this.affectedTimelineItems.length} 个时间轴项目`,
+        `✅ 已删除轨道: ${this.trackData.name}, 删除了 ${totalAffectedItems} 个时间轴项目 (${this.affectedLocalTimelineItems.length}个本地项目, ${this.affectedAsyncTimelineItems.length}个异步项目)`,
       )
     } catch (error) {
       console.error(`❌ 删除轨道失败: ${this.trackData.name}`, error)
@@ -2285,9 +2709,9 @@ export class RemoveTrackCommand implements SimpleCommand {
         tracks.splice(insertIndex, 0, { ...this.trackData })
       }
 
-      // 2. 重建所有受影响的时间轴项目
-      for (const itemData of this.affectedTimelineItems) {
-        console.log(`🔄 重建时间轴项目: ${itemData.id}`)
+      // 2. 重建所有受影响的本地时间轴项目
+      for (const itemData of this.affectedLocalTimelineItems) {
+        console.log(`🔄 重建本地时间轴项目: ${itemData.id}`)
 
         const newTimelineItem = await this.rebuildTimelineItem(itemData)
 
@@ -2301,8 +2725,18 @@ export class RemoveTrackCommand implements SimpleCommand {
         await this.webavModule.addSprite(newTimelineItem.sprite)
       }
 
+      // 3. 重建所有受影响的异步时间轴项目
+      for (const asyncItem of this.affectedAsyncTimelineItems) {
+        console.log(`🔄 重建异步处理时间轴项目: ${asyncItem.id}`)
+
+        // 异步项目不需要重建sprite，直接添加到时间轴
+        this.timelineModule.addTimelineItem(asyncItem)
+      }
+
+      const totalAffectedItems =
+        this.affectedLocalTimelineItems.length + this.affectedAsyncTimelineItems.length
       console.log(
-        `↩️ 已撤销删除轨道: ${this.trackData.name}, 恢复了 ${this.affectedTimelineItems.length} 个时间轴项目`,
+        `↩️ 已撤销删除轨道: ${this.trackData.name}, 恢复了 ${totalAffectedItems} 个时间轴项目 (${this.affectedLocalTimelineItems.length}个本地项目, ${this.affectedAsyncTimelineItems.length}个异步项目)`,
       )
     } catch (error) {
       console.error(`❌ 撤销删除轨道失败: ${this.trackData.name}`, error)
@@ -2325,10 +2759,13 @@ export class ToggleTrackVisibilityCommand implements SimpleCommand {
     private trackId: string,
     private trackModule: {
       getTrack: (trackId: string) => Track | undefined
-      toggleTrackVisibility: (trackId: string, timelineItems?: Ref<LocalTimelineItem[]>) => void
+      toggleTrackVisibility: (
+        trackId: string,
+        timelineItems?: Ref<(LocalTimelineItem | AsyncProcessingTimelineItem)[]>,
+      ) => void
     },
     private timelineModule: {
-      timelineItems: { value: LocalTimelineItem[] }
+      timelineItems: { value: (LocalTimelineItem | AsyncProcessingTimelineItem)[] }
     },
   ) {
     this.id = generateCommandId()
@@ -2420,10 +2857,13 @@ export class ToggleTrackMuteCommand implements SimpleCommand {
     private trackId: string,
     private trackModule: {
       getTrack: (trackId: string) => Track | undefined
-      toggleTrackMute: (trackId: string, timelineItems?: Ref<LocalTimelineItem[]>) => void
+      toggleTrackMute: (
+        trackId: string,
+        timelineItems?: Ref<(LocalTimelineItem | AsyncProcessingTimelineItem)[]>,
+      ) => void
     },
     private timelineModule: {
-      timelineItems: Ref<LocalTimelineItem[]>
+      timelineItems: Ref<(LocalTimelineItem | AsyncProcessingTimelineItem)[]>
     },
   ) {
     this.id = `toggle-track-mute-${trackId}-${Date.now()}`
@@ -2493,24 +2933,24 @@ export class ToggleTrackMuteCommand implements SimpleCommand {
 
 /**
  * 调整时间轴项目大小命令
- * 支持时间范围调整（拖拽边缘）的撤销/重做操作
+ * 支持本地和异步时间轴项目时间范围调整（拖拽边缘）的撤销/重做操作
  * 保存调整前的时间范围，撤销时恢复原始时间范围
  */
 export class ResizeTimelineItemCommand implements SimpleCommand {
   public readonly id: string
   public readonly description: string
-  private originalTimeRange: VideoTimeRange | ImageTimeRange
-  private newTimeRange: VideoTimeRange | ImageTimeRange
+  private originalTimeRange: VideoTimeRange | ImageTimeRange | AsyncProcessingTimeRange
+  private newTimeRange: VideoTimeRange | ImageTimeRange | AsyncProcessingTimeRange
 
   constructor(
     private timelineItemId: string,
-    originalTimeRange: VideoTimeRange | ImageTimeRange, // 原始时间范围
-    newTimeRange: VideoTimeRange | ImageTimeRange, // 新的时间范围
+    originalTimeRange: VideoTimeRange | ImageTimeRange | AsyncProcessingTimeRange, // 原始时间范围
+    newTimeRange: VideoTimeRange | ImageTimeRange | AsyncProcessingTimeRange, // 新的时间范围
     private timelineModule: {
-      getTimelineItem: (id: string) => LocalTimelineItem | undefined
+      getTimelineItem: (id: string) => LocalTimelineItem | AsyncProcessingTimelineItem | undefined
     },
     private mediaModule: {
-      getMediaItem: (id: string) => LocalMediaItem | undefined
+      getLocalMediaItem: (id: string) => LocalMediaItem | AsyncProcessingMediaItem | undefined
     },
   ) {
     this.id = generateCommandId()
@@ -2521,7 +2961,17 @@ export class ResizeTimelineItemCommand implements SimpleCommand {
 
     // 获取时间轴项目信息用于描述
     const timelineItem = this.timelineModule.getTimelineItem(timelineItemId)
-    const mediaItem = timelineItem ? this.mediaModule.getMediaItem(timelineItem.mediaItemId) : null
+    let itemName = '未知素材'
+
+    // 根据项目类型获取名称
+    if (timelineItem) {
+      if (isLocalTimelineItem(timelineItem)) {
+        const mediaItem = this.mediaModule.getLocalMediaItem(timelineItem.mediaItemId)
+        itemName = mediaItem?.name || '未知素材'
+      } else if (isAsyncProcessingTimelineItem(timelineItem)) {
+        itemName = timelineItem.config.name || '未知素材'
+      }
+    }
 
     // 使用帧数计算时长，提供更精确的显示
     const originalDurationFrames =
@@ -2531,9 +2981,9 @@ export class ResizeTimelineItemCommand implements SimpleCommand {
     const originalStartFrames = this.originalTimeRange.timelineStartTime
     const newStartFrames = this.newTimeRange.timelineStartTime
 
-    this.description = `调整时间范围: ${mediaItem?.name || '未知素材'} (${framesToTimecode(originalDurationFrames)} → ${framesToTimecode(newDurationFrames)})`
+    this.description = `调整时间范围: ${itemName} (${framesToTimecode(originalDurationFrames)} → ${framesToTimecode(newDurationFrames)})`
 
-    console.log(`📋 准备调整时间范围: ${mediaItem?.name || '未知素材'}`, {
+    console.log(`📋 准备调整时间范围: ${itemName}`, {
       原始时长: framesToTimecode(originalDurationFrames),
       新时长: framesToTimecode(newDurationFrames),
       原始位置: framesToTimecode(originalStartFrames),
@@ -2544,49 +2994,69 @@ export class ResizeTimelineItemCommand implements SimpleCommand {
   /**
    * 应用时间范围到sprite和timelineItem
    */
-  private applyTimeRange(timeRange: VideoTimeRange | ImageTimeRange): void {
+  private applyTimeRange(
+    timeRange: VideoTimeRange | ImageTimeRange | AsyncProcessingTimeRange,
+  ): void {
     const timelineItem = this.timelineModule.getTimelineItem(this.timelineItemId)
     if (!timelineItem) {
       throw new Error(`找不到时间轴项目: ${this.timelineItemId}`)
     }
 
-    const sprite = timelineItem.sprite
+    if (isLocalTimelineItem(timelineItem)) {
+      // 本地项目处理逻辑
+      const sprite = timelineItem.sprite
 
-    // 根据媒体类型设置时间范围（直接使用 timelineItem.mediaType，避免冗余的 MediaItem 获取）
-    if (timelineItem.mediaType === 'video' && isVideoTimeRange(timeRange)) {
-      // 视频类型：保持clipStartTime和clipEndTime，更新timeline时间
-      sprite.setTimeRange({
-        clipStartTime: timeRange.clipStartTime,
-        clipEndTime: timeRange.clipEndTime,
+      // 确保时间范围类型匹配本地项目的需求
+      if ('clipStartTime' in timeRange || 'displayDuration' in timeRange) {
+        const localTimeRange = timeRange as VideoTimeRange | ImageTimeRange
+
+        // 根据媒体类型设置时间范围
+        if (timelineItem.mediaType === 'video' && isVideoTimeRange(localTimeRange)) {
+          // 视频类型：保持clipStartTime和clipEndTime，更新timeline时间
+          sprite.setTimeRange({
+            clipStartTime: localTimeRange.clipStartTime,
+            clipEndTime: localTimeRange.clipEndTime,
+            timelineStartTime: localTimeRange.timelineStartTime,
+            timelineEndTime: localTimeRange.timelineEndTime,
+          })
+        } else if (timelineItem.mediaType === 'audio' && isVideoTimeRange(localTimeRange)) {
+          // 音频类型：保持clipStartTime和clipEndTime，更新timeline时间（与视频相同）
+          sprite.setTimeRange({
+            clipStartTime: localTimeRange.clipStartTime,
+            clipEndTime: localTimeRange.clipEndTime,
+            timelineStartTime: localTimeRange.timelineStartTime,
+            timelineEndTime: localTimeRange.timelineEndTime,
+          })
+        } else if (timelineItem.mediaType === 'image' && isImageTimeRange(localTimeRange)) {
+          // 图片类型：设置displayDuration
+          sprite.setTimeRange({
+            timelineStartTime: localTimeRange.timelineStartTime,
+            timelineEndTime: localTimeRange.timelineEndTime,
+            displayDuration: localTimeRange.displayDuration,
+          })
+        } else if (timelineItem.mediaType === 'text' && isImageTimeRange(localTimeRange)) {
+          // 文本类型：与图片类似，设置displayDuration
+          sprite.setTimeRange({
+            timelineStartTime: localTimeRange.timelineStartTime,
+            timelineEndTime: localTimeRange.timelineEndTime,
+            displayDuration: localTimeRange.displayDuration,
+          })
+        } else {
+          throw new Error(`不支持的媒体类型或时间范围类型组合: ${timelineItem.mediaType}`)
+        }
+
+        // 同步timeRange到TimelineItem
+        timelineItem.timeRange = sprite.getTimeRange()
+      } else {
+        throw new Error('本地项目需要完整的时间范围信息')
+      }
+    } else if (isAsyncProcessingTimelineItem(timelineItem)) {
+      // 异步项目处理逻辑：直接更新timeRange（异步项目没有sprite）
+      timelineItem.timeRange = {
         timelineStartTime: timeRange.timelineStartTime,
         timelineEndTime: timeRange.timelineEndTime,
-      })
-    } else if (timelineItem.mediaType === 'audio' && isVideoTimeRange(timeRange)) {
-      // 音频类型：保持clipStartTime和clipEndTime，更新timeline时间（与视频相同）
-      sprite.setTimeRange({
-        clipStartTime: timeRange.clipStartTime,
-        clipEndTime: timeRange.clipEndTime,
-        timelineStartTime: timeRange.timelineStartTime,
-        timelineEndTime: timeRange.timelineEndTime,
-      })
-    } else if (timelineItem.mediaType === 'image' && isImageTimeRange(timeRange)) {
-      // 图片类型：设置displayDuration
-      sprite.setTimeRange({
-        timelineStartTime: timeRange.timelineStartTime,
-        timelineEndTime: timeRange.timelineEndTime,
-        displayDuration: timeRange.displayDuration,
-      })
-    } else if (timelineItem.mediaType === 'text' && isImageTimeRange(timeRange)) {
-      // 文本类型：与图片类似，设置displayDuration
-      sprite.setTimeRange({
-        timelineStartTime: timeRange.timelineStartTime,
-        timelineEndTime: timeRange.timelineEndTime,
-        displayDuration: timeRange.displayDuration,
-      })
+      }
     }
-
-    // 同步timeRange到TimelineItem
-    timelineItem.timeRange = sprite.getTimeRange()
   }
 
   /**
@@ -2600,7 +3070,7 @@ export class ResizeTimelineItemCommand implements SimpleCommand {
 
       const timelineItem = this.timelineModule.getTimelineItem(this.timelineItemId)
       const mediaItem = timelineItem
-        ? this.mediaModule.getMediaItem(timelineItem.mediaItemId)
+        ? this.mediaModule.getLocalMediaItem(timelineItem.mediaItemId)
         : null
       const newDurationFrames =
         this.newTimeRange.timelineEndTime - this.newTimeRange.timelineStartTime
@@ -2611,7 +3081,7 @@ export class ResizeTimelineItemCommand implements SimpleCommand {
     } catch (error) {
       const timelineItem = this.timelineModule.getTimelineItem(this.timelineItemId)
       const mediaItem = timelineItem
-        ? this.mediaModule.getMediaItem(timelineItem.mediaItemId)
+        ? this.mediaModule.getLocalMediaItem(timelineItem.mediaItemId)
         : null
       console.error(`❌ 调整时间范围失败: ${mediaItem?.name || '未知素材'}`, error)
       throw error
@@ -2629,7 +3099,7 @@ export class ResizeTimelineItemCommand implements SimpleCommand {
 
       const timelineItem = this.timelineModule.getTimelineItem(this.timelineItemId)
       const mediaItem = timelineItem
-        ? this.mediaModule.getMediaItem(timelineItem.mediaItemId)
+        ? this.mediaModule.getLocalMediaItem(timelineItem.mediaItemId)
         : null
       const originalDurationFrames =
         this.originalTimeRange.timelineEndTime - this.originalTimeRange.timelineStartTime
@@ -2640,7 +3110,7 @@ export class ResizeTimelineItemCommand implements SimpleCommand {
     } catch (error) {
       const timelineItem = this.timelineModule.getTimelineItem(this.timelineItemId)
       const mediaItem = timelineItem
-        ? this.mediaModule.getMediaItem(timelineItem.mediaItemId)
+        ? this.mediaModule.getLocalMediaItem(timelineItem.mediaItemId)
         : null
       console.error(`❌ 撤销调整时间范围失败: ${mediaItem?.name || '未知素材'}`, error)
       throw error
@@ -2650,7 +3120,7 @@ export class ResizeTimelineItemCommand implements SimpleCommand {
 
 /**
  * 选择时间轴项目命令
- * 支持单选和多选操作的撤销/重做
+ * 支持本地和异步时间轴项目的单选和多选操作的撤销/重做
  * 记录选择状态的变化，支持恢复到之前的选择状态
  */
 export class SelectTimelineItemsCommand implements SimpleCommand {
@@ -2668,10 +3138,10 @@ export class SelectTimelineItemsCommand implements SimpleCommand {
       syncAVCanvasSelection: () => void
     },
     private timelineModule: {
-      getTimelineItem: (id: string) => LocalTimelineItem | undefined
+      getTimelineItem: (id: string) => LocalTimelineItem | AsyncProcessingTimelineItem | undefined
     },
     private mediaModule: {
-      getMediaItem: (id: string) => LocalMediaItem | undefined
+      getLocalMediaItem: (id: string) => LocalMediaItem | undefined
     },
   ) {
     this.id = generateCommandId()
@@ -2723,10 +3193,16 @@ export class SelectTimelineItemsCommand implements SimpleCommand {
   private generateDescription(): string {
     const itemNames = this.itemIds.map((id) => {
       const timelineItem = this.timelineModule.getTimelineItem(id)
-      const mediaItem = timelineItem
-        ? this.mediaModule.getMediaItem(timelineItem.mediaItemId)
-        : null
-      return mediaItem?.name || '未知素材'
+      if (!timelineItem) return '未知项目'
+
+      // 根据项目类型获取名称
+      if (isLocalTimelineItem(timelineItem)) {
+        const mediaItem = this.mediaModule.getLocalMediaItem(timelineItem.mediaItemId)
+        return mediaItem?.name || '未知素材'
+      } else if (isAsyncProcessingTimelineItem(timelineItem)) {
+        return timelineItem.config.name || '未知素材'
+      }
+      return '未知项目'
     })
 
     if (this.mode === 'replace') {

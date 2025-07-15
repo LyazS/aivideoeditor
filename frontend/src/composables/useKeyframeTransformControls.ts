@@ -218,7 +218,7 @@ export function useKeyframeTransformControls(options: KeyframeTransformControlsO
       } catch (error) {
         console.error('❌ 更新其他变换属性失败:', error)
         // 如果历史记录更新失败，回退到直接更新
-        videoStore.updateTimelineItemTransform(selectedTimelineItem.value.id, otherTransform)
+        videoStore.updateLocalTimelineItemTransform(selectedTimelineItem.value.id, otherTransform)
       }
     }
 

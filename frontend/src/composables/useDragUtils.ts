@@ -1,5 +1,11 @@
 import { useVideoStore } from '../stores/videoStore'
-import type { TimelineItemDragData, MediaItemDragData, MediaType, TrackType } from '../types'
+import type {
+  TimelineItemDragData,
+  MediaItemDragData,
+  MediaType,
+  TrackType,
+  MediaTypeOrUnknown,
+} from '../types'
 import { alignFramesToFrame } from '../stores/utils/timeUtils'
 import { useSnapManager } from './useSnapManager'
 
@@ -103,7 +109,7 @@ export function useDragUtils() {
   /**
    * 根据媒体类型计算clip高度
    */
-  function getClipHeightByMediaType(mediaType: MediaType): number {
+  function getClipHeightByMediaType(mediaType: MediaTypeOrUnknown): number {
     // 统一所有类型的clip高度为50px
     return 50 // 所有clip统一高度50px，轨道高度60px，上下各留5px间距
   }
@@ -168,8 +174,12 @@ export function useDragUtils() {
   /**
    * 检查媒体类型与轨道类型的兼容性
    */
-  function isMediaCompatibleWithTrack(mediaType: MediaType, trackType: TrackType): boolean {
+  function isMediaCompatibleWithTrack(
+    mediaType: MediaTypeOrUnknown,
+    trackType: TrackType,
+  ): boolean {
     // 视频轨道支持视频和图片素材
+    if (mediaType === 'unknown') return true
     if (trackType === 'video') {
       return mediaType === 'video' || mediaType === 'image'
     }
@@ -190,10 +200,7 @@ export function useDragUtils() {
   /**
    * 根据媒体类型寻找最近的兼容轨道
    */
-  function findNearestCompatibleTrack(
-    mouseY: number,
-    mediaType: MediaType,
-  ): string | null {
+  function findNearestCompatibleTrack(mouseY: number, mediaType: MediaTypeOrUnknown): string | null {
     const tracks = videoStore.tracks
     if (tracks.length === 0) return null
 
@@ -230,7 +237,7 @@ export function useDragUtils() {
     event: DragEvent,
     timelineWidth: number,
     dragOffset?: { x: number; y: number },
-    enableSnapping: boolean = true
+    enableSnapping: boolean = true,
   ) {
     const targetElement = event.target as HTMLElement
     const trackContent = targetElement.closest('.track-content')
@@ -244,7 +251,7 @@ export function useDragUtils() {
     let targetTrackId = trackContent.getAttribute('data-track-id') || videoStore.tracks[0]?.id || ''
 
     // 获取拖拽的媒体类型和排除的片段ID
-    let draggedMediaType: MediaType | null = null
+    let draggedMediaType: MediaTypeOrUnknown | null = null
     let excludeClipIds: string[] = []
 
     // 检查是否是时间轴项目拖拽
@@ -268,14 +275,16 @@ export function useDragUtils() {
 
     // 如果能获取到媒体类型，检查轨道兼容性
     if (draggedMediaType) {
-      const currentTrack = videoStore.tracks.find(t => t.id === targetTrackId)
+      const currentTrack = videoStore.tracks.find((t) => t.id === targetTrackId)
       if (currentTrack && !isMediaCompatibleWithTrack(draggedMediaType, currentTrack.type)) {
         // 当前轨道不兼容，寻找最近的兼容轨道
         const nearestCompatibleTrackId = findNearestCompatibleTrack(event.clientY, draggedMediaType)
         if (nearestCompatibleTrackId) {
           targetTrackId = nearestCompatibleTrackId
           // 更新trackContent为新的目标轨道
-          const newTrackContent = document.querySelector(`[data-track-id="${targetTrackId}"]`) as HTMLElement
+          const newTrackContent = document.querySelector(
+            `[data-track-id="${targetTrackId}"]`,
+          ) as HTMLElement
           if (newTrackContent) {
             const newRect = newTrackContent.getBoundingClientRect()
             // 重新计算mouseX相对于新轨道的位置
@@ -286,13 +295,13 @@ export function useDragUtils() {
               timelineWidth,
               dragOffset,
               enableSnapping,
-              excludeClipIds
+              excludeClipIds,
             )
             return {
               dropTime: dropResult.frame,
               targetTrackId,
               trackContent: newTrackContent,
-              snapResult: dropResult.snapResult
+              snapResult: dropResult.snapResult,
             }
           }
         }
@@ -305,14 +314,14 @@ export function useDragUtils() {
       timelineWidth,
       dragOffset,
       enableSnapping,
-      excludeClipIds
+      excludeClipIds,
     )
 
     return {
       dropTime: dropResult.frame,
       targetTrackId,
       trackContent,
-      snapResult: dropResult.snapResult
+      snapResult: dropResult.snapResult,
     }
   }
 
@@ -324,7 +333,7 @@ export function useDragUtils() {
     timelineWidth: number,
     dragOffset?: { x: number; y: number },
     enableSnapping: boolean = true,
-    excludeClipIds?: string[]
+    excludeClipIds?: string[],
   ): { frame: number; snapResult?: any } {
     // 使用帧数进行精确计算
     let dropFrames: number
@@ -351,8 +360,8 @@ export function useDragUtils() {
         timelineWidth,
         excludeClipIds || [],
         {
-          temporaryDisabled: false
-        }
+          temporaryDisabled: false,
+        },
       )
 
       // 如果发生了吸附，使用吸附后的帧数

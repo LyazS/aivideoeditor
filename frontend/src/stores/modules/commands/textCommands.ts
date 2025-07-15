@@ -29,7 +29,6 @@ export class AddTextItemCommand implements SimpleCommand {
     private timelineModule: {
       addTimelineItem: (item: LocalTimelineItem<'text'>) => void
       removeTimelineItem: (id: string) => void
-      getTimelineItem: (id: string) => LocalTimelineItem | undefined
     },
     private webavModule: {
       addSprite: (sprite: any) => Promise<boolean>

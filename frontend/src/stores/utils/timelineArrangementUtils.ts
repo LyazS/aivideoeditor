@@ -1,6 +1,6 @@
 import type { Ref } from 'vue'
-import type { LocalTimelineItem } from '../../types'
-import { isVideoTimeRange } from '../../types'
+import type { LocalTimelineItem, AsyncProcessingTimelineItem } from '../../types'
+import { isVideoTimeRange, isImageTimeRange, isLocalTimelineItem } from '../../types'
 
 // ==================== 自动整理工具 ====================
 
@@ -9,7 +9,10 @@ import { isVideoTimeRange } from '../../types'
  * @param timelineItems 时间轴项目数组的ref
  * @param trackId 要整理的轨道ID
  */
-export function autoArrangeTrackItems(timelineItems: Ref<LocalTimelineItem[]>, trackId: string) {
+export function autoArrangeTrackItems(
+  timelineItems: Ref<(LocalTimelineItem | AsyncProcessingTimelineItem)[]>,
+  trackId: string,
+) {
   // 获取指定轨道的所有项目
   const trackItems = timelineItems.value.filter((item) => item.trackId === trackId)
 
@@ -20,36 +23,60 @@ export function autoArrangeTrackItems(timelineItems: Ref<LocalTimelineItem[]>, t
 
   // 按时间轴开始时间排序
   const sortedItems = trackItems.sort((a, b) => {
-    const rangeA = a.sprite.getTimeRange()
-    const rangeB = b.sprite.getTimeRange()
+    const rangeA = a.timeRange
+    const rangeB = b.timeRange
     return rangeA.timelineStartTime - rangeB.timelineStartTime
   })
 
   let currentPositionFrames = 0
   for (const item of sortedItems) {
-    const sprite = item.sprite
-    const timeRange = sprite.getTimeRange()
+    const timeRange = item.timeRange
+
     // 使用帧数进行所有计算
     const durationFrames = timeRange.timelineEndTime - timeRange.timelineStartTime // 帧数
 
-    // 更新时间轴位置 - 根据媒体类型设置不同的时间范围
-    if (item.mediaType === 'video' && isVideoTimeRange(timeRange)) {
-      sprite.setTimeRange({
-        clipStartTime: timeRange.clipStartTime,
-        clipEndTime: timeRange.clipEndTime,
-        timelineStartTime: currentPositionFrames, // 帧数
-        timelineEndTime: currentPositionFrames + durationFrames, // 帧数
-      })
+    if (isLocalTimelineItem(item)) {
+      // 更新时间轴位置 - 根据媒体类型设置不同的时间范围
+      if (item.mediaType === 'video' && isVideoTimeRange(timeRange)) {
+        item.sprite.setTimeRange({
+          clipStartTime: timeRange.clipStartTime,
+          clipEndTime: timeRange.clipEndTime,
+          timelineStartTime: currentPositionFrames, // 帧数
+          timelineEndTime: currentPositionFrames + durationFrames, // 帧数
+        })
+      } else if (item.mediaType === 'image' && isImageTimeRange(timeRange)) {
+        // 图片类型
+        item.sprite.setTimeRange({
+          timelineStartTime: currentPositionFrames, // 帧数
+          timelineEndTime: currentPositionFrames + durationFrames, // 帧数
+        })
+      } else if (item.mediaType === 'text' && isImageTimeRange(timeRange)) {
+        // 文本类型
+        item.sprite.setTimeRange({
+          timelineStartTime: currentPositionFrames, // 帧数
+          timelineEndTime: currentPositionFrames + durationFrames, // 帧数
+        })
+      } else if (item.mediaType === 'audio' && isVideoTimeRange(timeRange)) {
+        // 音频类型
+        item.sprite.setTimeRange({
+          clipStartTime: timeRange.clipStartTime,
+          clipEndTime: timeRange.clipEndTime,
+          timelineStartTime: currentPositionFrames, // 帧数
+          timelineEndTime: currentPositionFrames + durationFrames, // 帧数
+        })
+      }
+
+      // 从sprite获取更新后的完整timeRange（包含自动计算的effectiveDuration）
+      item.timeRange = item.sprite.getTimeRange()
+      currentPositionFrames += durationFrames
     } else {
-      // 图片类型
-      sprite.setTimeRange({
-        timelineStartTime: currentPositionFrames, // 帧数
-        timelineEndTime: currentPositionFrames + durationFrames, // 帧数
-      })
+      // 异步处理项目：直接更新timeRange
+      item.timeRange = {
+        timelineStartTime: currentPositionFrames,
+        timelineEndTime: currentPositionFrames + durationFrames,
+      }
+      currentPositionFrames += durationFrames
     }
-    // 从sprite获取更新后的完整timeRange（包含自动计算的effectiveDuration）
-    item.timeRange = sprite.getTimeRange()
-    currentPositionFrames += durationFrames
   }
 
   console.log(`✅ 轨道 ${trackId} 的片段自动整理完成，共整理 ${sortedItems.length} 个片段`)
@@ -59,9 +86,11 @@ export function autoArrangeTrackItems(timelineItems: Ref<LocalTimelineItem[]>, t
  * 自动整理时间轴项目，按轨道分组并在每个轨道内按时间排序
  * @param timelineItems 时间轴项目数组的ref
  */
-export function autoArrangeTimelineItems(timelineItems: Ref<LocalTimelineItem[]>) {
+export function autoArrangeTimelineItems(
+  timelineItems: Ref<(LocalTimelineItem | AsyncProcessingTimelineItem)[]>,
+) {
   // 按轨道分组，然后在每个轨道内按时间位置排序
-  const trackGroups = new Map<string, LocalTimelineItem[]>()
+  const trackGroups = new Map<string, (LocalTimelineItem | AsyncProcessingTimelineItem)[]>()
 
   timelineItems.value.forEach((item) => {
     if (!trackGroups.has(item.trackId)) {

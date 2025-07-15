@@ -17,9 +17,7 @@
         <div class="selected-items-list">
           <div v-for="item in multiSelectInfo.items" :key="item?.id" class="selected-item">
             <span class="item-name">
-              {{
-                item ? getItemDisplayName(item) : '未知素材'
-              }}
+              {{ item ? getItemDisplayName(item) : '未知素材' }}
             </span>
             <span class="item-type">{{ getItemTypeLabel(item?.mediaType) }}</span>
           </div>
@@ -33,7 +31,7 @@
           v-if="
             selectedTimelineItem.mediaType === 'video' || selectedTimelineItem.mediaType === 'image'
           "
-          :selected-timeline-item="selectedTimelineItem"
+          :selected-timeline-item="selectedTimelineItem as LocalTimelineItem<'video' | 'image'>"
           :current-frame="currentFrame"
         />
 
@@ -111,7 +109,7 @@ const getItemDisplayName = (item: any) => {
     return text.length > 15 ? text.substring(0, 15) + '...' : text
   } else {
     // 其他类型显示素材名称
-    return videoStore.getMediaItem(item.mediaItemId)?.name || '未知素材'
+    return videoStore.getLocalMediaItem(item.mediaItemId)?.name || '未知素材'
   }
 }
 

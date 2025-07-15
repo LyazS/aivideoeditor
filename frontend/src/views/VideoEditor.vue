@@ -95,6 +95,7 @@ import VideoPreviewEngine from '../components/VideoPreviewEngine.vue'
 import HoverButton from '../components/HoverButton.vue'
 import LoadingOverlay from '../components/LoadingOverlay.vue'
 import EditProjectDialog from '../components/EditProjectDialog.vue'
+import { isLocalTimelineItem, isAsyncProcessingTimelineItem } from '../types'
 
 const route = useRoute()
 const videoStore = useVideoStore()
@@ -229,17 +230,31 @@ function debugProject() {
       })),
 
       // 时间轴项目数据
-      timelineItems: videoStore.timelineItems.map(item => ({
-        id: item.id,
-        mediaItemId: item.mediaItemId,
-        trackId: item.trackId,
-        mediaType: item.mediaType,
-        timeRange: item.timeRange,
-        config: item.config,
-        thumbnailUrl: item.thumbnailUrl ? 'blob URL存在' : null,
-        hasSprite: !!item.sprite,
-        mediaName: videoStore.getMediaItem(item.mediaItemId)?.name || 'Unknown'
-      })),
+      timelineItems: videoStore.timelineItems.map(item => {
+        // 根据项目类型获取媒体名称
+        let mediaName = 'Unknown'
+        let thumbnailUrl = null
+        if (isLocalTimelineItem(item)) {
+          // 本地时间轴项目：从本地媒体项目获取名称
+          mediaName = videoStore.getLocalMediaItem(item.mediaItemId)?.name || 'Unknown'
+          thumbnailUrl = item.thumbnailUrl ? 'blob URL存在' : null
+        } else if (isAsyncProcessingTimelineItem(item)) {
+          // 异步处理时间轴项目：从异步处理媒体项目获取名称
+          mediaName = videoStore.getAsyncProcessingItem(item.mediaItemId)?.name || item.config.name || 'Unknown'
+        }
+
+        return {
+          id: item.id,
+          mediaItemId: item.mediaItemId,
+          trackId: item.trackId,
+          mediaType: item.mediaType,
+          timeRange: item.timeRange,
+          config: item.config,
+          thumbnailUrl,
+          hasSprite: !!item.sprite,
+          mediaName
+        }
+      }),
 
       // 媒体引用映射
       mediaReferences: videoStore.mediaReferences,
@@ -265,15 +280,27 @@ function debugProject() {
     const persistenceData = {
       timeline: {
         tracks: videoStore.tracks,
-        timelineItems: videoStore.timelineItems.map(item => ({
-          id: item.id,
-          mediaItemId: item.mediaItemId,
-          trackId: item.trackId,
-          mediaType: item.mediaType,
-          timeRange: item.timeRange,
-          config: item.config,
-          mediaName: videoStore.getMediaItem(item.mediaItemId)?.name || 'Unknown'
-        })),
+        timelineItems: videoStore.timelineItems.map(item => {
+          // 根据项目类型获取媒体名称
+          let mediaName = 'Unknown'
+          if (isLocalTimelineItem(item)) {
+            // 本地时间轴项目：从本地媒体项目获取名称
+            mediaName = videoStore.getLocalMediaItem(item.mediaItemId)?.name || 'Unknown'
+          } else if (isAsyncProcessingTimelineItem(item)) {
+            // 异步处理时间轴项目：从异步处理媒体项目获取名称
+            mediaName = videoStore.getAsyncProcessingItem(item.mediaItemId)?.name || item.config.name || 'Unknown'
+          }
+
+          return {
+            id: item.id,
+            mediaItemId: item.mediaItemId,
+            trackId: item.trackId,
+            mediaType: item.mediaType,
+            timeRange: item.timeRange,
+            config: item.config,
+            mediaName
+          }
+        }),
         mediaItems: videoStore.mediaItems.map(item => ({
           id: item.id,
           name: item.name,

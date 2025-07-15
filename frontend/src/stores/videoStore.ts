@@ -54,7 +54,11 @@ import type {
   TrackType,
   AudioMediaConfig,
 } from '../types'
-import { getVisualPropsFromData, getAudioPropsFromData, getLocalTimelineItem } from '../types'
+import {
+  getVisualPropsFromData,
+  getAudioPropsFromData,
+  isAsyncProcessingTimelineItem,
+} from '../types'
 
 export const useVideoStore = defineStore('video', () => {
   // 创建媒体管理模块
@@ -76,12 +80,7 @@ export const useVideoStore = defineStore('video', () => {
   const projectModule = createProjectModule()
 
   // 创建时间轴核心管理模块
-  const timelineModule = createTimelineModule(
-    configModule,
-    webavModule,
-    mediaModule,
-    trackModule,
-  )
+  const timelineModule = createTimelineModule(configModule, webavModule, mediaModule, trackModule)
 
   // 总时长（帧数版本）
   const totalDurationFrames = computed(() => {
@@ -106,27 +105,20 @@ export const useVideoStore = defineStore('video', () => {
 
   // 创建选择管理模块（需要在historyModule之后创建）
   const selectionModule = createSelectionModule(
-    timelineModule.timelineItems,
     timelineModule.getTimelineItem,
-    mediaModule.getMediaItem,
+    mediaModule.getLocalMediaItem,
     historyModule.executeCommand,
   )
 
   // 创建视频片段操作模块（需要在其他模块之后创建）
-  const clipOperationsModule = createClipOperationsModule(
-    webavModule,
-    mediaModule,
-    timelineModule,
-    selectionModule,
-    trackModule,
-  )
+  const clipOperationsModule = createClipOperationsModule(timelineModule)
 
   // ==================== 双向数据同步函数 ====================
 
   // ==================== 素材管理方法 ====================
   // 使用媒体模块的方法，但需要包装以提供额外的依赖
-  function addMediaItem(mediaItem: LocalMediaItem) {
-    mediaModule.addMediaItem(mediaItem, timelineModule.timelineItems, trackModule.tracks)
+  function addLocalMediaItem(mediaItem: LocalMediaItem) {
+    mediaModule.addLocalMediaItem(mediaItem, timelineModule.timelineItems, trackModule.tracks)
   }
 
   // ==================== 历史记录包装方法 ====================
@@ -155,7 +147,7 @@ export const useVideoStore = defineStore('video', () => {
         removeSprite: webavModule.removeSprite,
       },
       {
-        getMediaItem: mediaModule.getMediaItem,
+        getLocalMediaItem: mediaModule.getLocalMediaItem,
       },
     )
     await historyModule.executeCommand(command)
@@ -176,7 +168,6 @@ export const useVideoStore = defineStore('video', () => {
       {
         addTimelineItem: timelineModule.addTimelineItem,
         removeTimelineItem: timelineModule.removeTimelineItem,
-        getTimelineItem: timelineModule.getTimelineItem,
       },
       {
         addSprite: webavModule.addSprite,
@@ -211,7 +202,7 @@ export const useVideoStore = defineStore('video', () => {
         removeSprite: webavModule.removeSprite,
       },
       {
-        getMediaItem: mediaModule.getMediaItem,
+        getLocalMediaItem: mediaModule.getLocalMediaItem,
       },
     )
     await historyModule.executeCommand(command)
@@ -260,7 +251,7 @@ export const useVideoStore = defineStore('video', () => {
         getTimelineItem: timelineModule.getTimelineItem,
       },
       {
-        getMediaItem: mediaModule.getMediaItem,
+        getLocalMediaItem: mediaModule.getLocalMediaItem,
       },
     )
     await historyModule.executeCommand(command)
@@ -339,7 +330,10 @@ export const useVideoStore = defineStore('video', () => {
 
     if (newTransform.playbackRate !== undefined) {
       // 获取当前倍速（对视频和音频有效）
-      if ((timelineItem.mediaType === 'video' || timelineItem.mediaType === 'audio') && 'playbackRate' in timelineItem.timeRange) {
+      if (
+        (timelineItem.mediaType === 'video' || timelineItem.mediaType === 'audio') &&
+        'playbackRate' in timelineItem.timeRange
+      ) {
         oldTransform.playbackRate = timelineItem.timeRange.playbackRate || 1
       } else {
         oldTransform.playbackRate = 1 // 图片和文本默认为1
@@ -383,11 +377,11 @@ export const useVideoStore = defineStore('video', () => {
       oldTransform,
       newTransform,
       {
-        updateTimelineItemTransform: timelineModule.updateTimelineItemTransform,
-        getTimelineItem: timelineModule.getTimelineItem,
+        updateLocalTimelineItemTransform: timelineModule.updateLocalTimelineItemTransform,
+        getLocalTimelineItem: timelineModule.getLocalTimelineItem,
       },
       {
-        getMediaItem: mediaModule.getMediaItem,
+        getLocalMediaItem: mediaModule.getLocalMediaItem,
       },
       {
         updateTimelineItemPlaybackRate: clipOperationsModule.updateTimelineItemPlaybackRate,
@@ -563,7 +557,7 @@ export const useVideoStore = defineStore('video', () => {
         removeSprite: webavModule.removeSprite,
       },
       {
-        getMediaItem: mediaModule.getMediaItem,
+        getLocalMediaItem: mediaModule.getLocalMediaItem,
       },
     )
     await historyModule.executeCommand(command)
@@ -601,7 +595,7 @@ export const useVideoStore = defineStore('video', () => {
         removeSprite: webavModule.removeSprite,
       },
       {
-        getMediaItem: mediaModule.getMediaItem,
+        getLocalMediaItem: mediaModule.getLocalMediaItem,
       },
       configModule.videoResolution.value, // 传入画布分辨率
     )
@@ -644,8 +638,6 @@ export const useVideoStore = defineStore('video', () => {
     }
   }
 
-
-
   /**
    * 带历史记录的删除轨道方法
    * @param trackId 要删除的轨道ID
@@ -685,7 +677,7 @@ export const useVideoStore = defineStore('video', () => {
         removeSprite: webavModule.removeSprite,
       },
       {
-        getMediaItem: mediaModule.getMediaItem,
+        getLocalMediaItem: mediaModule.getLocalMediaItem,
       },
     )
 
@@ -764,11 +756,10 @@ export const useVideoStore = defineStore('video', () => {
       trackItems,
       {
         getTimelineItem: timelineModule.getTimelineItem,
-        timelineItems: timelineModule.timelineItems,
         updateTimelineItemPosition: timelineModule.updateTimelineItemPosition,
       },
       {
-        getMediaItem: mediaModule.getMediaItem,
+        getLocalMediaItem: mediaModule.getLocalMediaItem,
       },
       {
         getTrack: trackModule.getTrack,
@@ -891,7 +882,7 @@ export const useVideoStore = defineStore('video', () => {
         getTimelineItem: timelineModule.getLocalTimelineItem,
       },
       {
-        getMediaItem: mediaModule.getMediaItem,
+        getLocalMediaItem: mediaModule.getLocalMediaItem,
       },
     )
 
@@ -933,7 +924,6 @@ export const useVideoStore = defineStore('video', () => {
       validItemIds,
       {
         getTimelineItem: timelineModule.getLocalTimelineItem,
-        timelineItems: timelineModule.timelineItems,
         addTimelineItem: timelineModule.addTimelineItem,
         removeTimelineItem: timelineModule.removeTimelineItem,
       },
@@ -942,7 +932,7 @@ export const useVideoStore = defineStore('video', () => {
         removeSprite: webavModule.removeSprite,
       },
       {
-        getMediaItem: mediaModule.getMediaItem,
+        getLocalMediaItem: mediaModule.getLocalMediaItem,
       },
     )
 
@@ -955,12 +945,12 @@ export const useVideoStore = defineStore('video', () => {
     }
   }
 
-  async function removeMediaItem(mediaItemId: string) {
+  async function removeLocalMediaItem(mediaItemId: string) {
     // 获取媒体引用信息，用于删除本地文件
     const mediaReference = projectModule.getMediaReference(mediaItemId)
 
     // 先从内存中删除
-    mediaModule.removeMediaItem(
+    mediaModule.removeLocalMediaItem(
       mediaItemId,
       timelineModule.timelineItems,
       trackModule.tracks,
@@ -976,7 +966,10 @@ export const useVideoStore = defineStore('video', () => {
       try {
         const { MediaManager } = await import('../utils/MediaManager')
         const mediaManager = MediaManager.getInstance()
-        await mediaManager.deleteMediaFromProject(projectModule.currentProject.value.id, mediaReference)
+        await mediaManager.deleteMediaFromProject(
+          projectModule.currentProject.value.id,
+          mediaReference,
+        )
         console.log(`✅ 本地媒体文件已删除: ${mediaReference.originalFileName}`)
       } catch (error) {
         console.error(`❌ 删除本地媒体文件失败: ${mediaReference.originalFileName}`, error)
@@ -985,17 +978,17 @@ export const useVideoStore = defineStore('video', () => {
     }
   }
 
-  function getMediaItem(mediaItemId: string): LocalMediaItem | undefined {
-    return mediaModule.getMediaItem(mediaItemId)
+  function getLocalMediaItem(mediaItemId: string): LocalMediaItem | undefined {
+    return mediaModule.getLocalMediaItem(mediaItemId)
   }
 
   // ==================== 素材名称管理 ====================
-  function updateMediaItemName(mediaItemId: string, newName: string) {
-    mediaModule.updateMediaItemName(mediaItemId, newName)
+  function updateLocalMediaItemName(mediaItemId: string, newName: string) {
+    mediaModule.updateLocalMediaItemName(mediaItemId, newName)
   }
 
-  function updateMediaItem(mediaItem: LocalMediaItem) {
-    mediaModule.updateMediaItem(mediaItem)
+  function updateLocalMediaItem(mediaItem: LocalMediaItem) {
+    mediaModule.updateLocalMediaItem(mediaItem)
   }
 
   // ==================== 分辨率管理方法 ====================
@@ -1062,7 +1055,7 @@ export const useVideoStore = defineStore('video', () => {
           continue
         }
 
-        const mediaItem = mediaModule.getMediaItem(itemData.mediaItemId)
+        const mediaItem = mediaModule.getLocalMediaItem(itemData.mediaItemId)
         if (!mediaItem) {
           console.warn(`⚠️ 跳过时间轴项目，对应的媒体项目不存在: ${itemData.mediaItemId}`)
           continue
@@ -1120,6 +1113,9 @@ export const useVideoStore = defineStore('video', () => {
     let rebuiltCount = 0
     for (const timelineItem of items) {
       try {
+        if (isAsyncProcessingTimelineItem(timelineItem)) {
+          continue
+        }
         console.log(`🔄 重建sprite: ${timelineItem.id} (${rebuiltCount + 1}/${items.length})`)
 
         // 特殊处理文本类型的时间轴项目
@@ -1132,7 +1128,7 @@ export const useVideoStore = defineStore('video', () => {
           newSprite = await TextVisibleSprite.create(textConfig.text, textConfig.style)
         } else {
           // 其他类型：从媒体项目创建sprite
-          const mediaItem = mediaModule.getMediaItem(timelineItem.mediaItemId)
+          const mediaItem = mediaModule.getLocalMediaItem(timelineItem.mediaItemId)
           if (!mediaItem) {
             console.warn(`⚠️ 跳过时间轴项目，对应的媒体项目不存在: ${timelineItem.mediaItemId}`)
             continue
@@ -1264,7 +1260,7 @@ export const useVideoStore = defineStore('video', () => {
         await avCanvas.addSprite(newSprite)
 
         // 更新store中的sprite引用
-        timelineModule.updateTimelineItemSprite(timelineItem.id, markRaw(newSprite))
+        timelineModule.updateLocalTimelineItemSprite(timelineItem.id, markRaw(newSprite))
 
         // 重新设置双向数据同步
         timelineModule.setupBidirectionalSync(timelineItem)
@@ -1284,10 +1280,13 @@ export const useVideoStore = defineStore('video', () => {
         // 重新生成缩略图（因为之前的blob URL可能已失效）
         // 文本类型不需要缩略图，音频类型也不需要缩略图
         if (timelineItem.mediaType !== 'audio' && timelineItem.mediaType !== 'text') {
-          const mediaItem = mediaModule.getMediaItem(timelineItem.mediaItemId)
+          const mediaItem = mediaModule.getLocalMediaItem(timelineItem.mediaItemId)
           if (mediaItem) {
             console.log(`🖼️ 重新生成缩略图: ${timelineItem.id}`)
-            const newThumbnailUrl = await regenerateThumbnailForTimelineItem(timelineItem, mediaItem)
+            const newThumbnailUrl = await regenerateThumbnailForTimelineItem(
+              timelineItem,
+              mediaItem,
+            )
             if (newThumbnailUrl) {
               timelineItem.thumbnailUrl = newThumbnailUrl
               console.log(`✅ 缩略图重新生成完成: ${timelineItem.id}`)
@@ -1334,11 +1333,12 @@ export const useVideoStore = defineStore('video', () => {
       viewportModule.getMaxZoomLevelForTimeline(timelineWidth),
     getMaxScrollOffset: viewportModule.getMaxScrollOffsetForTimeline,
     // 素材管理方法
-    addMediaItem,
-    removeMediaItem,
-    getMediaItem,
-    updateMediaItemName,
-    updateMediaItem,
+    addLocalMediaItem,
+    removeLocalMediaItem,
+    getLocalMediaItem,
+    updateLocalMediaItemName,
+    updateLocalMediaItem,
+    getAllMediaItems: mediaModule.getAllMediaItems,
     // 异步处理素材管理方法
     addAsyncProcessingItem: mediaModule.addAsyncProcessingItem,
     updateAsyncProcessingItem: mediaModule.updateAsyncProcessingItem,
@@ -1353,9 +1353,9 @@ export const useVideoStore = defineStore('video', () => {
     getTimelineItemsForTrack: (trackId: string) =>
       getTimelineItemsByTrack(trackId, timelineModule.timelineItems.value),
     updateTimelineItemPosition: timelineModule.updateTimelineItemPosition,
-    updateTimelineItemSprite: timelineModule.updateTimelineItemSprite,
+    updateLocalTimelineItemSprite: timelineModule.updateLocalTimelineItemSprite,
     setupBidirectionalSync: timelineModule.setupBidirectionalSync,
-    updateTimelineItemTransform: timelineModule.updateTimelineItemTransform,
+    updateLocalTimelineItemTransform: timelineModule.updateLocalTimelineItemTransform,
     // 统一选择管理API
     selectTimelineItems: selectionModule.selectTimelineItems,
     selectTimelineItemsWithHistory: selectionModule.selectTimelineItemsWithHistory,
@@ -1378,13 +1378,7 @@ export const useVideoStore = defineStore('video', () => {
     clearMultiSelection: selectionModule.clearMultiSelection,
     isInMultiSelection: selectionModule.isInMultiSelection,
     // 视频片段操作方法
-    duplicateTimelineItem: clipOperationsModule.duplicateTimelineItem,
-    splitTimelineItemAtTime: clipOperationsModule.splitTimelineItemAtTime,
     updateTimelineItemPlaybackRate: clipOperationsModule.updateTimelineItemPlaybackRate,
-    getTimelineItemAtTime: (time: number) => {
-      const frames = secondsToFrames(time)
-      return getTimelineItemAtFrames(frames, timelineModule.timelineItems.value)
-    },
     autoArrangeTimelineItems: () => autoArrangeTimelineItems(timelineModule.timelineItems),
     autoArrangeTrackItems: (trackId: string) =>
       autoArrangeTrackItems(timelineModule.timelineItems, trackId),

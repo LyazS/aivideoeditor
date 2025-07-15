@@ -33,6 +33,7 @@ import { usePlaybackControls } from '../composables/usePlaybackControls'
 import { useSnapManager } from '../composables/useSnapManager'
 import { alignFramesToFrame, framesToMicroseconds } from '../stores/utils/timeUtils'
 import { relativeFrameToAbsoluteFrame } from '../utils/unifiedKeyframeUtils'
+import { isAsyncProcessingTimelineItem } from '../types'
 
 interface PlayheadProps {
   /** 时间轴容器宽度 */
@@ -97,34 +98,6 @@ const clipBoundaryFrames = computed(() => {
     })
     lastBoundariesString = currentBoundariesString
   }
-
-  return result
-})
-
-/**
- * 计算所有关键帧的绝对位置 - 使用computed自动缓存
- */
-const keyframePositions = computed(() => {
-  const positions: number[] = []
-
-  // 遍历所有时间轴项目，收集关键帧位置
-  videoStore.timelineItems.forEach((item) => {
-    if (item.animation && item.animation.keyframes.length > 0) {
-      item.animation.keyframes.forEach((keyframe) => {
-        // 将相对帧数转换为绝对帧数
-        const absoluteFrame = relativeFrameToAbsoluteFrame(keyframe.framePosition, item.timeRange)
-        positions.push(absoluteFrame)
-      })
-    }
-  })
-
-  // 去重并排序
-  const result = [...new Set(positions)].sort((a, b) => a - b)
-
-  console.log('🎯 更新关键帧位置缓存:', {
-    关键帧数量: result.length,
-    关键帧位置: result,
-  })
 
   return result
 })

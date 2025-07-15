@@ -1,6 +1,7 @@
 import { ref, watch, onUnmounted } from 'vue'
 import { useVideoStore } from '../stores/videoStore'
 import type { AutoSaveConfig, AutoSaveState } from '../types'
+import { isLocalTimelineItem, isAsyncProcessingTimelineItem } from '../types'
 
 /**
  * 自动保存 Composable
@@ -82,20 +83,37 @@ export function useAutoSave(config: Partial<AutoSaveConfig> = {}) {
       const projectData = {
         timeline: {
           tracks: videoStore.tracks,
-          timelineItems: videoStore.timelineItems.map(item => ({
-            id: item.id,
-            mediaItemId: item.mediaItemId,
-            trackId: item.trackId,
-            mediaType: item.mediaType,
-            timeRange: item.timeRange,
-            config: item.config,
-            animation: item.animation, // 保存动画配置
-            // 注意：不保存 thumbnailUrl，这是运行时生成的blob URL
-            // 对于文本类型，使用item.mediaName；对于其他类型，从MediaItem获取
-            mediaName: item.mediaType === 'text'
-              ? item.mediaName || `文本: ${('text' in item.config) ? item.config.text?.substring(0, 10) || '未知' : '未知'}...`
-              : videoStore.getMediaItem(item.mediaItemId)?.name || 'Unknown'
-          })),
+          timelineItems: videoStore.timelineItems.map(item => {
+            // 根据项目类型获取媒体名称和动画配置
+            let mediaName = 'Unknown'
+            let animation = undefined
+
+            if (isLocalTimelineItem(item)) {
+              // 本地时间轴项目：获取完整信息
+              animation = item.animation // 保存动画配置
+              if (item.mediaType === 'text') {
+                mediaName = item.mediaName || `文本: ${('text' in item.config) ? item.config.text?.substring(0, 10) || '未知' : '未知'}...`
+              } else {
+                mediaName = videoStore.getLocalMediaItem(item.mediaItemId)?.name || 'Unknown'
+              }
+            } else if (isAsyncProcessingTimelineItem(item)) {
+              // 异步处理时间轴项目：从异步处理媒体项目或配置获取名称
+              mediaName = videoStore.getAsyncProcessingItem(item.mediaItemId)?.name || item.config.name || 'Unknown'
+              // 异步处理项目没有动画配置
+            }
+
+            return {
+              id: item.id,
+              mediaItemId: item.mediaItemId,
+              trackId: item.trackId,
+              mediaType: item.mediaType,
+              timeRange: item.timeRange,
+              config: item.config,
+              animation, // 保存动画配置（异步项目为undefined）
+              // 注意：不保存 thumbnailUrl，这是运行时生成的blob URL
+              mediaName
+            }
+          }),
           mediaItems: videoStore.mediaItems.map(item => ({
             id: item.id,
             name: item.name,

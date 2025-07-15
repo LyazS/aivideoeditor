@@ -78,7 +78,7 @@ catch (error) {
   }
 
   console.log(`🔴 [并发处理] 媒体文件转换失败，设置为错误状态: ${file.name}`)
-  videoStore.updateMediaItem(errorMediaItem)
+  videoStore.updateLocalMediaItem(errorMediaItem)
 
   // 新增：保存错误状态的媒体引用
   if (videoStore.currentProjectId) {
@@ -327,7 +327,7 @@ catch (error) {
   }
 
   console.log(`🔴 [并发处理] 视频文件转换失败，设置为错误状态: ${file.name}`)
-  videoStore.updateMediaItem(errorMediaItem)
+  videoStore.updateLocalMediaItem(errorMediaItem)
 
   // 新增：保存错误状态的媒体引用到项目
   await saveErrorMediaReference(mediaItemId, file, 'video', 'webav_parse_error', error.message)
