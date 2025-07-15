@@ -181,8 +181,7 @@ export class AddTimelineItemCommand implements SimpleCommand {
     console.log('🔄 重建异步处理时间轴项目完成:', {
       id: newAsyncTimelineItem.id,
       mediaType: newAsyncTimelineItem.mediaType,
-      processingType: newAsyncTimelineItem.processingType,
-      processingStatus: newAsyncTimelineItem.processingStatus,
+      mediaItemId: newAsyncTimelineItem.mediaItemId,
       timeRange: newAsyncTimelineItem.timeRange,
     })
 
@@ -376,8 +375,6 @@ export class RemoveTimelineItemCommand implements SimpleCommand {
       console.log('💾 保存删除异步项目的数据:', {
         id: this.originalAsyncTimelineItem.id,
         mediaItemId: this.originalAsyncTimelineItem.mediaItemId,
-        processingType: this.originalAsyncTimelineItem.processingType,
-        processingStatus: this.originalAsyncTimelineItem.processingStatus,
         timeRange: this.originalAsyncTimelineItem.timeRange,
       })
     } else {
@@ -480,8 +477,7 @@ export class RemoveTimelineItemCommand implements SimpleCommand {
     console.log('🔄 重建异步处理时间轴项目完成:', {
       id: newAsyncTimelineItem.id,
       mediaType: newAsyncTimelineItem.mediaType,
-      processingType: newAsyncTimelineItem.processingType,
-      processingStatus: newAsyncTimelineItem.processingStatus,
+      mediaItemId: newAsyncTimelineItem.mediaItemId,
       timeRange: newAsyncTimelineItem.timeRange,
     })
 
@@ -730,8 +726,7 @@ export class DuplicateTimelineItemCommand implements SimpleCommand {
     console.log('🔄 重建异步处理时间轴项目复制完成:', {
       id: newAsyncTimelineItem.id,
       mediaType: newAsyncTimelineItem.mediaType,
-      processingType: newAsyncTimelineItem.processingType,
-      processingStatus: newAsyncTimelineItem.processingStatus,
+      mediaItemId: newAsyncTimelineItem.mediaItemId,
       timeRange: newAsyncTimelineItem.timeRange,
     })
 

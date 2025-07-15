@@ -1,37 +1,38 @@
 <template>
-  <div
-    :class="clipClasses"
-    :style="clipStyle"
-    :data-media-type="timelineItem.mediaType"
-    :data-timeline-item-id="timelineItem.id"
-    :draggable="true"
-    @dragstart="handleDragStart"
-    @dragend="handleDragEnd"
-    @click="selectClip"
-    @mouseenter="showTooltip"
-    @mousemove="updateTooltipPosition"
-    @mouseleave="hideTooltip"
+  <TimelineBaseClip
+    ref="baseClipRef"
+    :timeline-item="timelineItem"
+    :track="track"
+    :timeline-width="timelineWidth"
+    :total-duration-frames="totalDurationFrames"
+    class="async-processing-clip"
+    :class="asyncClipClasses"
+    @select="$emit('select', $event)"
+    @update-position="(timelineItemId, newPosition, newTrackId) => $emit('update-position', timelineItemId, newPosition, newTrackId)"
+    @remove="$emit('remove', $event)"
+    @resize-update="handleResizeUpdate"
   >
-    <!-- 异步处理clip内容区域 -->
-    <div class="async-processing-content">
+    <template #content>
+      <!-- 异步处理clip内容区域 -->
+      <div class="async-processing-content">
       <!-- 状态指示器 -->
-      <div class="status-indicator" :class="`status-${timelineItem.processingStatus}`">
+      <div class="status-indicator" :class="`status-${currentProcessingStatus}`">
         <!-- 处理类型图标 -->
-        <div class="processing-icon" :class="`type-${timelineItem.processingType}`">
+        <div class="processing-icon" :class="`type-${currentProcessingType}`">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-            <path :d="getProcessingTypeIcon(timelineItem.processingType)" />
+            <path :d="getProcessingTypeIcon(currentProcessingType)" />
           </svg>
         </div>
 
         <!-- 状态内容 -->
         <div class="status-content">
           <!-- 等待状态 -->
-          <div v-if="timelineItem.processingStatus === 'pending'" class="status-pending">
+          <div v-if="currentProcessingStatus === 'pending'" class="status-pending">
             <span class="status-text">等待中</span>
           </div>
 
           <!-- 处理中状态 -->
-          <div v-else-if="timelineItem.processingStatus === 'processing'" class="status-processing">
+          <div v-else-if="currentProcessingStatus === 'processing'" class="status-processing">
             <!-- 进度圆环 -->
             <div class="progress-ring">
               <svg width="32" height="32" class="progress-svg">
@@ -56,60 +57,61 @@
                   transform="rotate(-90 16 16)"
                 />
               </svg>
-              <span class="progress-text">{{ Math.round(timelineItem.processingProgress) }}%</span>
+              <span class="progress-text">{{ Math.round(currentProcessingProgress) }}%</span>
             </div>
           </div>
 
           <!-- 完成状态 -->
-          <div v-else-if="timelineItem.processingStatus === 'completed'" class="status-completed">
+          <div v-else-if="currentProcessingStatus === 'completed'" class="status-completed">
             <span class="status-text">已完成</span>
           </div>
 
           <!-- 错误状态 -->
-          <div v-else-if="timelineItem.processingStatus === 'error'" class="status-error">
+          <div v-else-if="currentProcessingStatus === 'error'" class="status-error">
             <span class="status-text">错误</span>
           </div>
 
           <!-- 不支持状态 -->
-          <div v-else-if="timelineItem.processingStatus === 'unsupported'" class="status-unsupported">
+          <div v-else-if="currentProcessingStatus === 'unsupported'" class="status-unsupported">
             <span class="status-text">不支持</span>
           </div>
 
           <!-- 取消状态 -->
-          <div v-else-if="timelineItem.processingStatus === 'cancelled'" class="status-cancelled">
+          <div v-else-if="currentProcessingStatus === 'cancelled'" class="status-cancelled">
             <span class="status-text">已取消</span>
           </div>
         </div>
       </div>
 
-      <!-- 素材名称 -->
-      <div class="clip-name">
-        {{ timelineItem.config.name }}
+        <!-- 素材名称 -->
+        <div class="clip-name">
+          {{ props.timelineItem.config.name }}
+        </div>
       </div>
-    </div>
 
-  <!-- Tooltip组件 -->
-  <ClipTooltip
-    :visible="showTooltipFlag"
-    :title="timelineItem.config.name"
-    :media-type="timelineItem.mediaType === 'unknown' ? 'video' : timelineItem.mediaType"
-    :duration="framesToTimecode(timelineItem.timeRange.timelineEndTime - timelineItem.timeRange.timelineStartTime)"
-    :position="framesToTimecode(timelineItem.timeRange.timelineStartTime)"
-    :mouse-x="tooltipMouseX"
-    :mouse-y="tooltipMouseY"
-    :clip-top="tooltipClipTop"
-  />
-  </div>
+      <!-- Tooltip组件 -->
+      <ClipTooltip
+        v-if="baseClipRef?.showTooltipFlag"
+        :visible="baseClipRef?.showTooltipFlag || false"
+        :title="props.timelineItem.config.name"
+        :media-type="props.timelineItem.mediaType === 'unknown' ? 'video' : props.timelineItem.mediaType"
+        :duration="formatDurationFromFrames(props.timelineItem.timeRange.timelineEndTime - props.timelineItem.timeRange.timelineStartTime)"
+        :position="formatDurationFromFrames(props.timelineItem.timeRange.timelineStartTime)"
+        :mouse-x="baseClipRef?.tooltipMouseX || 0"
+        :mouse-y="baseClipRef?.tooltipMouseY || 0"
+        :clip-top="baseClipRef?.tooltipClipTop || 0"
+      />
+    </template>
+  </TimelineBaseClip>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onUnmounted } from 'vue'
+import { ref, computed } from 'vue'
 import { useVideoStore } from '../stores/videoStore'
-import { useDragUtils } from '../composables/useDragUtils'
-import { usePlaybackControls } from '../composables/usePlaybackControls'
 import { framesToTimecode } from '../stores/utils/timeUtils'
+import TimelineBaseClip from './TimelineBaseClip.vue'
 import ClipTooltip from './ClipTooltip.vue'
-import type { AsyncProcessingTimelineItem, Track, AsyncProcessingType } from '../types'
+import type { AsyncProcessingTimelineItem, Track, AsyncProcessingType, ImageTimeRange } from '../types'
 
 interface Props {
   timelineItem: AsyncProcessingTimelineItem
@@ -128,48 +130,45 @@ const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
 
 const videoStore = useVideoStore()
-const dragUtils = useDragUtils()
-const { pauseForEditing } = usePlaybackControls()
 
-// Tooltip相关状态
-const showTooltipFlag = ref(false)
-const tooltipMouseX = ref(0)
-const tooltipMouseY = ref(0)
-const tooltipClipTop = ref(0)
+// TimelineBaseClip组件引用
+const baseClipRef = ref<InstanceType<typeof TimelineBaseClip>>()
 
-// 拖拽状态
-const isDragging = ref(false)
+// 实时获取素材区的最新异步处理状态
+const currentAsyncItem = computed(() => {
+  return videoStore.getAsyncProcessingItem(props.timelineItem.mediaItemId)
+})
 
-// 计算clip的样式类
-const clipClasses = computed(() => [
-  'timeline-async-processing-clip',
-  `status-${props.timelineItem.processingStatus}`,
-  `type-${props.timelineItem.processingType}`,
+// 实时状态计算属性 - 完全依赖素材区的状态，提供合理的默认值
+const currentProcessingType = computed(() => {
+  return currentAsyncItem.value?.processingType || 'remote-download'
+})
+
+const currentProcessingStatus = computed(() => {
+  return currentAsyncItem.value?.processingStatus || 'pending'
+})
+
+const currentProcessingProgress = computed(() => {
+  return currentAsyncItem.value?.processingProgress ?? 0
+})
+
+const currentErrorMessage = computed(() => {
+  return currentAsyncItem.value?.errorMessage
+})
+
+// 异步clip特有的样式类 - 使用实时状态
+const asyncClipClasses = computed(() => [
+  `status-${currentProcessingStatus.value}`,
+  `type-${currentProcessingType.value}`,
   {
-    'selected': videoStore.selectedTimelineItemIds.has(props.timelineItem.id),
-    'disabled': ['error', 'unsupported', 'cancelled'].includes(props.timelineItem.processingStatus),
-    'dragging': isDragging.value
+    'disabled': ['error', 'unsupported', 'cancelled'].includes(currentProcessingStatus.value),
   }
 ])
 
-// 计算clip的位置和大小样式
-const clipStyle = computed(() => {
-  const timeRange = props.timelineItem.timeRange
-  const startPixel = videoStore.frameToPixel(timeRange.timelineStartTime, props.timelineWidth)
-  const endPixel = videoStore.frameToPixel(timeRange.timelineEndTime, props.timelineWidth)
-  const width = Math.max(endPixel - startPixel, 20) // 最小宽度20px
-
-  return {
-    left: `${startPixel}px`,
-    width: `${width}px`,
-    height: `${props.track?.height || 60}px`
-  }
-})
-
-// 进度圆环计算
+// 进度圆环计算 - 使用实时进度
 const progressCircumference = computed(() => 2 * Math.PI * 12) // r=12的圆周长
 const progressOffset = computed(() => {
-  const progress = props.timelineItem.processingProgress / 100
+  const progress = currentProcessingProgress.value / 100
   return progressCircumference.value * (1 - progress)
 })
 
@@ -215,151 +214,89 @@ function getStatusLabel(status: string): string {
   }
 }
 
-// 选择clip
-function selectClip() {
-  emit('select', props.timelineItem.id)
-}
 
-// 拖拽开始
-function handleDragStart(event: DragEvent) {
-  console.log('🎯 [AsyncProcessingClip拖拽] dragstart事件触发:', props.timelineItem.id)
 
-  // 检查是否应该启动拖拽
-  if (event.ctrlKey) {
-    console.log('🚫 [AsyncProcessingClip拖拽] Ctrl+拖拽被禁用')
-    event.preventDefault()
-    return
+/**
+ * 处理来自BaseClip的resize-update事件
+ */
+async function handleResizeUpdate(
+  itemId: string,
+  newStartTime: number,
+  newEndTime: number,
+  direction: 'left' | 'right'
+) {
+  console.log('🔧 [AsyncProcessingClip] 处理resize-update事件:', {
+    itemId,
+    newStartTime,
+    newEndTime,
+    direction,
+  })
+
+  // 构建新的时间范围对象（异步处理clip使用ImageTimeRange结构）
+  const newTimeRange: ImageTimeRange = {
+    timelineStartTime: newStartTime,
+    timelineEndTime: newEndTime,
+    displayDuration: newEndTime - newStartTime,
   }
 
-  // 暂停播放并处理拖拽
-  pauseForEditing('异步处理时间轴项目拖拽')
-  hideTooltip()
-  dragUtils.ensureItemSelected(props.timelineItem.id)
+  try {
+    // 使用带历史记录的调整方法
+    const success = await videoStore.resizeTimelineItemWithHistory(
+      props.timelineItem.id,
+      newTimeRange,
+    )
 
-  // 设置拖拽状态
-  isDragging.value = true
-
-  // 设置拖拽数据
-  const dragOffset = { x: event.offsetX, y: event.offsetY }
-  const dragData = dragUtils.setTimelineItemDragData(
-    event,
-    props.timelineItem.id,
-    props.timelineItem.trackId,
-    props.timelineItem.timeRange.timelineStartTime,
-    Array.from(videoStore.selectedTimelineItemIds),
-    dragOffset,
-  )
-
-  console.log('📦 [AsyncProcessingClip拖拽] 拖拽数据已设置:', dragData)
+    if (success) {
+      console.log('✅ [AsyncProcessingClip] 时间范围调整成功')
+    } else {
+      console.error('❌ [AsyncProcessingClip] 时间范围调整失败')
+    }
+  } catch (error) {
+    console.error('❌ [AsyncProcessingClip] 调整时间范围时出错:', error)
+  }
 }
 
-// 拖拽结束
-function handleDragEnd(event: DragEvent) {
-  console.log('🏁 [AsyncProcessingClip拖拽] dragend事件触发')
-
-  // 清除拖拽状态
-  isDragging.value = false
-  dragUtils.clearDragData()
+// 格式化时长显示
+function formatDurationFromFrames(frames: number): string {
+  return framesToTimecode(frames)
 }
 
-// 显示tooltip
-function showTooltip(event: MouseEvent) {
-  showTooltipFlag.value = true
 
-  // 获取clip元素的位置信息
-  const clipElement = event.currentTarget as HTMLElement
-  const clipRect = clipElement.getBoundingClientRect()
-
-  // 更新tooltip位置数据
-  tooltipMouseX.value = event.clientX
-  tooltipMouseY.value = event.clientY
-  tooltipClipTop.value = clipRect.top
-}
-
-// 更新tooltip位置
-function updateTooltipPosition(event: MouseEvent) {
-  // 只有在tooltip显示时才更新位置
-  if (!showTooltipFlag.value) return
-
-  // 获取clip元素的位置信息
-  const clipElement = event.currentTarget as HTMLElement
-  const clipRect = clipElement.getBoundingClientRect()
-
-  // 更新tooltip位置数据
-  tooltipMouseX.value = event.clientX
-  tooltipMouseY.value = event.clientY
-  tooltipClipTop.value = clipRect.top
-}
-
-// 隐藏tooltip
-function hideTooltip() {
-  showTooltipFlag.value = false
-}
-
-// 清理
-onUnmounted(() => {
-  hideTooltip()
-})
 </script>
 
 <style scoped>
-.timeline-async-processing-clip {
-  position: absolute;
-  top: 0;
-  border-radius: 4px;
-  cursor: pointer;
-  user-select: none;
-  transition: all 0.2s ease;
-  border: 2px solid transparent;
-  overflow: hidden;
-}
-
-/* 在拖拽时禁用过渡效果，避免延迟 */
-.timeline-async-processing-clip.dragging {
-  transition: none !important;
-}
-
-/* 选中状态 */
-.timeline-async-processing-clip.selected {
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 1px var(--color-primary);
-}
+/* 异步处理clip特有样式 - 基础样式由TimelineBaseClip提供 */
 
 /* 禁用状态 */
-.timeline-async-processing-clip.disabled {
+.async-processing-clip.disabled {
   opacity: 0.7;
   cursor: not-allowed;
 }
 
 /* 状态样式 */
-.timeline-async-processing-clip.status-pending {
-  background: linear-gradient(135deg, #f39c12, #e67e22);
-  border-color: #e67e22;
+.async-processing-clip.status-pending {
+  background: linear-gradient(135deg, #f39c12, #e67e22) !important;
 }
 
-.timeline-async-processing-clip.status-processing {
-  background: linear-gradient(135deg, #3498db, #2980b9);
-  border-color: #2980b9;
+.async-processing-clip.status-processing {
+  background: linear-gradient(135deg, #3498db, #2980b9) !important;
 }
 
-.timeline-async-processing-clip.status-completed {
-  background: linear-gradient(135deg, #27ae60, #229954);
-  border-color: #229954;
+.async-processing-clip.status-completed {
+  background: linear-gradient(135deg, #27ae60, #229954) !important;
 }
 
-.timeline-async-processing-clip.status-error,
-.timeline-async-processing-clip.status-unsupported {
-  background: linear-gradient(135deg, #e74c3c, #c0392b);
-  border-color: #c0392b;
+.async-processing-clip.status-error,
+.async-processing-clip.status-unsupported {
+  background: linear-gradient(135deg, #e74c3c, #c0392b) !important;
 }
 
-.timeline-async-processing-clip.status-cancelled {
-  background: linear-gradient(135deg, #95a5a6, #7f8c8d);
-  border-color: #7f8c8d;
+.async-processing-clip.status-cancelled {
+  background: linear-gradient(135deg, #95a5a6, #7f8c8d) !important;
 }
 
 /* 处理类型图标颜色 */
-.timeline-async-processing-clip.type-remote-download .processing-icon {
+.async-processing-clip.type-remote-download .processing-icon {
   color: rgba(255, 255, 255, 0.9);
 }
 

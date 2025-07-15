@@ -9,8 +9,9 @@
     @select="$emit('select', $event)"
     @update-position="(timelineItemId, newPosition, newTrackId) => $emit('update-position', timelineItemId, newPosition, newTrackId)"
     @remove="$emit('remove', $event)"
+    @resize-update="handleResizeUpdate"
   >
-    <template #content="{ timelineItem }">
+    <template #content>
       <!-- 文本内容显示区域 -->
       <div class="text-content">
         <!-- 文本预览 -->
@@ -179,6 +180,64 @@ function jumpToKeyframe(absoluteFrame: number) {
     targetFrame: absoluteFrame,
     timecode: framesToTimecode(absoluteFrame),
   })
+}
+
+/**
+ * 处理来自BaseClip的resize-update事件
+ */
+async function handleResizeUpdate(
+  itemId: string,
+  newStartTime: number,
+  newEndTime: number,
+  direction: 'left' | 'right'
+) {
+  console.log('🔧 [TextClip] 处理resize-update事件:', {
+    itemId,
+    newStartTime,
+    newEndTime,
+    direction,
+  })
+
+  // 构建新的时间范围对象（文本使用ImageTimeRange结构）
+  const newTimeRange = {
+    timelineStartTime: newStartTime,
+    timelineEndTime: newEndTime,
+    displayDuration: newEndTime - newStartTime,
+  }
+
+  try {
+    // 处理关键帧位置调整
+    const currentTimeRange = props.timelineItem.timeRange
+    const oldDurationFrames = currentTimeRange.timelineEndTime - currentTimeRange.timelineStartTime
+    const newDurationFrames = newTimeRange.timelineEndTime - newTimeRange.timelineStartTime
+
+    if (props.timelineItem.animation && props.timelineItem.animation.keyframes.length > 0) {
+      const { adjustKeyframesForDurationChange } = await import('../utils/unifiedKeyframeUtils')
+      adjustKeyframesForDurationChange(props.timelineItem, oldDurationFrames, newDurationFrames)
+      console.log('🎬 [TextClip] Keyframes adjusted for duration change')
+    }
+
+    // 使用带历史记录的调整方法
+    const success = await videoStore.resizeTimelineItemWithHistory(
+      props.timelineItem.id,
+      newTimeRange,
+    )
+
+    if (success) {
+      console.log('✅ [TextClip] 时间范围调整成功')
+
+      // 如果有动画，需要重新设置WebAV动画时长
+      if (props.timelineItem.animation && props.timelineItem.animation.isEnabled) {
+        const { updateWebAVAnimation } = await import('../utils/webavAnimationManager')
+        await updateWebAVAnimation(props.timelineItem)
+        console.log('🎬 [TextClip] Animation duration updated after clip resize')
+      }
+    } else {
+      console.error('❌ [TextClip] 时间范围调整失败')
+    }
+  } catch (error) {
+    console.error('❌ [TextClip] 调整时间范围时出错:', error)
+  }
 }
 
 // 格式化时长显示

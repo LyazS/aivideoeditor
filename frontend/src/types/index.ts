@@ -516,19 +516,16 @@ export interface LocalTimelineItem<T extends MediaType = MediaType>
 
 /**
  * 异步处理时间轴项目接口 - 继承基础接口，添加异步处理相关属性
+ *
+ * 注意：异步处理状态相关字段（processingType、processingStatus、processingProgress、errorMessage）
+ * 不在此接口中定义，应该通过 mediaItemId 从对应的 AsyncProcessingMediaItem 实时获取
  */
 export interface AsyncProcessingTimelineItem extends BaseTimelineItem {
   mediaType: MediaTypeOrUnknown // 处理前为'unknown'，处理后为实际类型
-  mediaItemId: string // 指向 AsyncProcessingMediaItem.id
+  mediaItemId: string // 指向 AsyncProcessingMediaItem.id，通过此ID获取实时状态
 
   // 时间范围 - 使用基础时间范围接口
   timeRange: AsyncProcessingTimeRange
-
-  // 异步处理状态相关
-  processingType: AsyncProcessingType
-  processingStatus: AsyncProcessingStatus
-  processingProgress: number // 0-100
-  errorMessage?: string
 
   // 占位符配置
   config: {

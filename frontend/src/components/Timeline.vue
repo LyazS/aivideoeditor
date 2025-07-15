@@ -1209,12 +1209,6 @@ async function createAsyncProcessingTimelineItem(
       timelineEndTime: dropTime + asyncProcessingItem.expectedDuration
     },
 
-    // 异步处理状态相关
-    processingType: asyncProcessingItem.processingType,
-    processingStatus: asyncProcessingItem.processingStatus,
-    processingProgress: asyncProcessingItem.processingProgress,
-    errorMessage: asyncProcessingItem.errorMessage,
-
     // 占位符配置
     config: {
       name: asyncProcessingItem.name,

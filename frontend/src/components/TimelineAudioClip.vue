@@ -9,8 +9,9 @@
     @select="$emit('select', $event)"
     @update-position="(timelineItemId, newPosition, newTrackId) => $emit('update-position', timelineItemId, newPosition, newTrackId)"
     @remove="$emit('remove', $event)"
+    @resize-update="handleResizeUpdate"
   >
-    <template #content="{ timelineItem }">
+    <template #content>
       <!-- 音频内容显示区域 -->
       <div class="audio-content">
         <!-- 音频波形显示 -->
@@ -151,6 +152,67 @@ const tooltipPosition = ref({ x: 0, y: 0 })
 
 function formatDurationFromFrames(frames: number): string {
   return framesToTimecode(frames)
+}
+
+/**
+ * 处理来自BaseClip的resize-update事件
+ */
+async function handleResizeUpdate(
+  itemId: string,
+  newStartTime: number,
+  newEndTime: number,
+  direction: 'left' | 'right'
+) {
+  console.log('🔧 [AudioClip] 处理resize-update事件:', {
+    itemId,
+    newStartTime,
+    newEndTime,
+    direction,
+  })
+
+  // 构建新的时间范围对象（音频使用VideoTimeRange结构）
+  const currentTimeRange = props.timelineItem.timeRange
+  const newTimeRange = {
+    timelineStartTime: newStartTime,
+    timelineEndTime: newEndTime,
+    clipStartTime: currentTimeRange.clipStartTime,
+    clipEndTime: currentTimeRange.clipEndTime,
+    effectiveDuration: newEndTime - newStartTime,
+    playbackRate: currentTimeRange.playbackRate || 1.0,
+  }
+
+  try {
+    // 处理关键帧位置调整
+    const oldDurationFrames = currentTimeRange.timelineEndTime - currentTimeRange.timelineStartTime
+    const newDurationFrames = newTimeRange.timelineEndTime - newTimeRange.timelineStartTime
+
+    if (props.timelineItem.animation && props.timelineItem.animation.keyframes.length > 0) {
+      const { adjustKeyframesForDurationChange } = await import('../utils/unifiedKeyframeUtils')
+      adjustKeyframesForDurationChange(props.timelineItem, oldDurationFrames, newDurationFrames)
+      console.log('🎬 [AudioClip] Keyframes adjusted for duration change')
+    }
+
+    // 使用带历史记录的调整方法
+    const success = await videoStore.resizeTimelineItemWithHistory(
+      props.timelineItem.id,
+      newTimeRange,
+    )
+
+    if (success) {
+      console.log('✅ [AudioClip] 时间范围调整成功')
+
+      // 如果有动画，需要重新设置WebAV动画时长
+      if (props.timelineItem.animation && props.timelineItem.animation.isEnabled) {
+        const { updateWebAVAnimation } = await import('../utils/webavAnimationManager')
+        await updateWebAVAnimation(props.timelineItem)
+        console.log('🎬 [AudioClip] Animation duration updated after clip resize')
+      }
+    } else {
+      console.error('❌ [AudioClip] 时间范围调整失败')
+    }
+  } catch (error) {
+    console.error('❌ [AudioClip] 调整时间范围时出错:', error)
+  }
 }
 
 onMounted(() => {

@@ -20,7 +20,7 @@
 
     <!-- 内容区域 - 由子组件定义 -->
     <div class="clip-content">
-      <slot name="content" :timeline-item="timelineItem" />
+      <slot name="content" />
     </div>
 
     <!-- 右侧调整把手 -->
@@ -34,17 +34,15 @@
 <script setup lang="ts">
 import { ref, computed, onUnmounted } from 'vue'
 import { useVideoStore } from '../stores/videoStore'
-import { useWebAVControls } from '../composables/useWebAVControls'
 import { useDragUtils } from '../composables/useDragUtils'
 import { usePlaybackControls } from '../composables/usePlaybackControls'
-import { framesToTimecode, alignFramesToFrame } from '../stores/utils/timeUtils'
+import { alignFramesToFrame } from '../stores/utils/timeUtils'
 import { hasOverlapInTrack } from '../utils/timeOverlapUtils'
-import type { MediaType, LocalTimelineItem, Track, VideoTimeRange, ImageTimeRange } from '../types'
-import { isVideoTimeRange } from '../types'
+import type { MediaType, LocalTimelineItem, Track, AsyncProcessingTimelineItem } from '../types'
 
 // TimelineBaseClip通用接口
 interface Props {
-  timelineItem: LocalTimelineItem<MediaType>
+  timelineItem: LocalTimelineItem<MediaType> | AsyncProcessingTimelineItem
   track?: Track
   timelineWidth: number
   totalDurationFrames: number
@@ -56,6 +54,7 @@ interface Emits {
   (e: 'drag-end', itemId: string, event: DragEvent): void
   (e: 'resize-start', itemId: string, direction: 'left' | 'right'): void
   (e: 'resize-end', itemId: string, direction: 'left' | 'right'): void
+  (e: 'resize-update', itemId: string, newStartTime: number, newEndTime: number, direction: 'left' | 'right'): void
   (e: 'update-position', timelineItemId: string, newPosition: number, newTrackId?: string): void
   (e: 'remove', timelineItemId: string): void
 }
@@ -65,7 +64,6 @@ const emit = defineEmits<Emits>()
 
 // 依赖注入
 const videoStore = useVideoStore()
-const webAVControls = useWebAVControls()
 const dragUtils = useDragUtils()
 const { pauseForEditing } = usePlaybackControls()
 
@@ -412,99 +410,55 @@ function handleResize(event: MouseEvent) {
   tempResizePositionFrames.value = newTimelinePositionFrames
 }
 
-async function stopResize() {
-  if (isResizing.value) {
-    // 使用帧数计算新的时间范围
-    const newTimelineStartTimeFrames = tempResizePositionFrames.value
-    const newTimelineEndTimeFrames = tempResizePositionFrames.value + tempDurationFrames.value
+function stopResize() {
+  if (!isResizing.value) return
 
-    // 验证时间范围的有效性
-    if (newTimelineEndTimeFrames <= newTimelineStartTimeFrames) {
-      console.error('❌ [TimelineBaseClip] 无效的时间范围:', {
-        startFrames: newTimelineStartTimeFrames,
-        endFrames: newTimelineEndTimeFrames,
-      })
-      return
-    }
+  console.log('🛑 [TimelineBaseClip] 停止调整大小')
 
-    console.log('🔧 [TimelineBaseClip] 调整大小 - 设置时间范围:', {
-      mediaType: props.timelineItem.mediaType,
-      timelineStartTimeFrames: newTimelineStartTimeFrames,
-      timelineEndTimeFrames: newTimelineEndTimeFrames,
-      durationFrames: tempDurationFrames.value,
-    })
+  // 计算最终的时间范围
+  const newTimelineStartTimeFrames = tempResizePositionFrames.value
+  const newTimelineEndTimeFrames = tempResizePositionFrames.value + tempDurationFrames.value
 
-    // 所有媒体类型都支持时长调整，不需要依赖MediaItem
-    // 构建新的时间范围对象
-    const currentTimeRange = props.timelineItem.timeRange
-    let newTimeRange: VideoTimeRange | ImageTimeRange
-
-    if (
-      (props.timelineItem.mediaType === 'video' || props.timelineItem.mediaType === 'audio') &&
-      isVideoTimeRange(currentTimeRange)
-    ) {
-      // 视频和音频都使用 VideoTimeRange 结构
-      newTimeRange = {
-        timelineStartTime: newTimelineStartTimeFrames,
-        timelineEndTime: newTimelineEndTimeFrames,
-        clipStartTime: currentTimeRange.clipStartTime,
-        clipEndTime: currentTimeRange.clipEndTime,
-        effectiveDuration: newTimelineEndTimeFrames - newTimelineStartTimeFrames,
-        playbackRate: currentTimeRange.playbackRate || 1.0,
-      }
-    } else {
-      // 图片和文本类型都使用 ImageTimeRange 结构
-      newTimeRange = {
-        timelineStartTime: newTimelineStartTimeFrames,
-        timelineEndTime: newTimelineEndTimeFrames,
-        displayDuration: newTimelineEndTimeFrames - newTimelineStartTimeFrames,
-      }
-    }
-
-    try {
-      // 关键帧位置调整
-      const oldDurationFrames =
-        currentTimeRange.timelineEndTime - currentTimeRange.timelineStartTime
-      const newDurationFrames = newTimeRange.timelineEndTime - newTimeRange.timelineStartTime
-
-      if (props.timelineItem.animation && props.timelineItem.animation.keyframes.length > 0) {
-        const { adjustKeyframesForDurationChange } = await import('../utils/unifiedKeyframeUtils')
-        adjustKeyframesForDurationChange(props.timelineItem, oldDurationFrames, newDurationFrames)
-        console.log('🎬 [TimelineBaseClip] Keyframes adjusted for duration change')
-      }
-
-      // 使用带历史记录的调整方法
-      const success = await videoStore.resizeTimelineItemWithHistory(
-        props.timelineItem.id,
-        newTimeRange,
-      )
-
-      if (success) {
-        console.log('✅ [TimelineBaseClip] 时间范围调整成功')
-
-        // 如果有动画，需要重新设置WebAV动画时长
-        if (props.timelineItem.animation && props.timelineItem.animation.isEnabled) {
-          const { updateWebAVAnimation } = await import('../utils/webavAnimationManager')
-          await updateWebAVAnimation(props.timelineItem)
-          console.log('🎬 [TimelineBaseClip] Animation duration updated after clip resize')
-        }
-      } else {
-        console.error('❌ [TimelineBaseClip] 时间范围调整失败')
-      }
-    } catch (error) {
-      console.error('❌ [TimelineBaseClip] 调整时间范围时出错:', error)
-    }
+  // 验证时间范围的有效性
+  if (newTimelineStartTimeFrames < 0 || tempDurationFrames.value <= 0) {
+    console.warn('⚠️ [TimelineBaseClip] 无效的时间范围，取消调整')
+    isResizing.value = false
+    resizeDirection.value = null
+    document.removeEventListener('mousemove', handleResize)
+    document.removeEventListener('mouseup', stopResize)
+    snapIndicatorManager.hide(true)
+    emit('resize-end', props.timelineItem.id, resizeDirection.value || 'left')
+    return
   }
 
+  // 检查是否有实际的变化
+  if (tempDurationFrames.value !== resizeStartDurationFrames.value ||
+      tempResizePositionFrames.value !== resizeStartPositionFrames.value) {
+
+    console.log('🔧 [TimelineBaseClip] 调整大小 - 发送resize-update事件:', {
+      itemId: props.timelineItem.id,
+      newStartTime: newTimelineStartTimeFrames,
+      newEndTime: newTimelineEndTimeFrames,
+      direction: resizeDirection.value,
+    })
+
+    // 发送resize-update事件，让具体的clip组件处理时间范围更新
+    emit('resize-update',
+      props.timelineItem.id,
+      newTimelineStartTimeFrames,
+      newTimelineEndTimeFrames,
+      resizeDirection.value || 'left'
+    )
+  }
+
+  // 清理resize状态
   isResizing.value = false
+  const direction = resizeDirection.value
   resizeDirection.value = null
   document.removeEventListener('mousemove', handleResize)
   document.removeEventListener('mouseup', stopResize)
-
-  // 隐藏吸附指示器
   snapIndicatorManager.hide(true)
-
-  emit('resize-end', props.timelineItem.id, resizeDirection.value!)
+  emit('resize-end', props.timelineItem.id, direction || 'left')
 }
 
 // ==================== Tooltip相关方法 ====================

@@ -15,14 +15,15 @@
         $emit('update-position', timelineItemId, newPosition, newTrackId)
     "
     @remove="$emit('remove', $event)"
+    @resize-update="handleResizeUpdate"
   >
-    <template #content="{ timelineItem }">
+    <template #content>
       <!-- 缩略图容器 - 只在showDetails时显示 -->
       <div v-if="showDetails" class="clip-thumbnail">
         <!-- 显示已生成的缩略图 -->
         <img
-          v-if="timelineItem.thumbnailUrl"
-          :src="timelineItem.thumbnailUrl"
+          v-if="props.timelineItem.thumbnailUrl"
+          :src="props.timelineItem.thumbnailUrl"
           class="thumbnail-image"
           alt="缩略图"
         />
@@ -93,7 +94,7 @@ import ClipTooltip from './ClipTooltip.vue'
 
 import { framesToTimecode } from '../stores/utils/timeUtils'
 import { relativeFrameToAbsoluteFrame } from '../utils/unifiedKeyframeUtils'
-import type { LocalTimelineItem, Track } from '../types'
+import type { LocalTimelineItem, Track, VideoTimeRange, ImageTimeRange } from '../types'
 
 interface Props {
   timelineItem: LocalTimelineItem<'video' | 'image'>
@@ -231,6 +232,86 @@ function jumpToKeyframe(absoluteFrame: number) {
     targetFrame: absoluteFrame,
     timecode: framesToTimecode(absoluteFrame),
   })
+}
+
+/**
+ * 处理来自BaseClip的resize-update事件
+ */
+async function handleResizeUpdate(
+  itemId: string,
+  newStartTime: number,
+  newEndTime: number,
+  direction: 'left' | 'right'
+) {
+  console.log('🔧 [VideoClip] 处理resize-update事件:', {
+    itemId,
+    newStartTime,
+    newEndTime,
+    direction,
+    mediaType: props.timelineItem.mediaType,
+  })
+
+  // 构建新的时间范围对象
+  const currentTimeRange = props.timelineItem.timeRange
+  let newTimeRange: VideoTimeRange | ImageTimeRange
+
+  if (
+    (props.timelineItem.mediaType === 'video' || props.timelineItem.mediaType === 'image') &&
+    'clipStartTime' in currentTimeRange
+  ) {
+    // 视频和图片都使用 VideoTimeRange 结构
+    newTimeRange = {
+      timelineStartTime: newStartTime,
+      timelineEndTime: newEndTime,
+      clipStartTime: currentTimeRange.clipStartTime,
+      clipEndTime: currentTimeRange.clipEndTime,
+      effectiveDuration: newEndTime - newStartTime,
+      playbackRate: currentTimeRange.playbackRate || 1.0,
+    }
+  } else {
+    // 图片类型使用 ImageTimeRange 结构
+    newTimeRange = {
+      timelineStartTime: newStartTime,
+      timelineEndTime: newEndTime,
+      displayDuration: newEndTime - newStartTime,
+    }
+  }
+
+  try {
+    // 处理关键帧位置调整
+    const oldDurationFrames = currentTimeRange.timelineEndTime - currentTimeRange.timelineStartTime
+    const newDurationFrames = newTimeRange.timelineEndTime - newTimeRange.timelineStartTime
+
+    if (props.timelineItem.animation && props.timelineItem.animation.keyframes.length > 0) {
+      const { adjustKeyframesForDurationChange } = await import('../utils/unifiedKeyframeUtils')
+      adjustKeyframesForDurationChange(props.timelineItem, oldDurationFrames, newDurationFrames)
+      console.log('🎬 [VideoClip] Keyframes adjusted for duration change')
+    }
+
+    // 使用带历史记录的调整方法
+    const success = await videoStore.resizeTimelineItemWithHistory(
+      props.timelineItem.id,
+      newTimeRange,
+    )
+
+    if (success) {
+      console.log('✅ [VideoClip] 时间范围调整成功')
+
+      // 如果有动画，需要重新设置WebAV动画时长
+      if (props.timelineItem.animation && props.timelineItem.animation.isEnabled) {
+        const { updateWebAVAnimation } = await import('../utils/webavAnimationManager')
+        await updateWebAVAnimation(props.timelineItem)
+        console.log('🎬 [VideoClip] Animation duration updated after clip resize')
+      }
+
+      // 重新生成缩略图
+      await regenerateThumbnailAfterResize()
+    } else {
+      console.error('❌ [VideoClip] 时间范围调整失败')
+    }
+  } catch (error) {
+    console.error('❌ [VideoClip] 调整时间范围时出错:', error)
+  }
 }
 
 /**
