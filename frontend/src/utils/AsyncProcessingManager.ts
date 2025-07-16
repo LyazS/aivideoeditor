@@ -117,7 +117,8 @@ export class AsyncProcessingManager {
       processingConfig: config,
       startedAt: new Date().toISOString(),
       thumbnailUrl: this.getDefaultThumbnail(processingType),
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      isConverting: false // 初始状态不在转换中
     }
 
     this.asyncProcessingMediaItems.set(id, mediaItem)
@@ -334,7 +335,7 @@ export class AsyncProcessingManager {
    */
   private detectMediaType(file: File): AsyncProcessingMediaItem['mediaType'] {
     const mimeType = file.type.toLowerCase()
-    
+
     if (mimeType.startsWith('video/')) {
       return 'video'
     } else if (mimeType.startsWith('audio/')) {
@@ -344,11 +345,11 @@ export class AsyncProcessingManager {
     } else {
       // 根据文件扩展名进行二次检测
       const extension = file.name.toLowerCase().split('.').pop() || ''
-      
+
       const videoExtensions = ['mp4', 'avi', 'mov', 'mkv', 'wmv', 'flv', 'webm', 'm4v', '3gp']
       const audioExtensions = ['mp3', 'wav', 'aac', 'flac', 'ogg', 'm4a', 'wma']
       const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg', 'tiff']
-      
+
       if (videoExtensions.includes(extension)) {
         return 'video'
       } else if (audioExtensions.includes(extension)) {
@@ -356,9 +357,22 @@ export class AsyncProcessingManager {
       } else if (imageExtensions.includes(extension)) {
         return 'image'
       }
-      
+
       return 'unknown'
     }
+  }
+
+  /**
+   * 检查文件类型是否支持
+   * @param file 文件对象
+   * @returns 是否支持该文件类型
+   */
+  isSupportedMediaType(file: File): boolean {
+    const detectedType = this.detectMediaType(file)
+
+    // 支持的媒体类型：video, audio, image
+    // 不支持的类型：unknown, text（文本类型由其他方式处理）
+    return ['video', 'audio', 'image'].includes(detectedType)
   }
 
   /**

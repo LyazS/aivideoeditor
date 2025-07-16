@@ -331,11 +331,20 @@ const filteredMediaItems = computed(() => {
     ...videoStore.asyncProcessingItems
   ]
 
+  // 过滤掉转换中的异步处理素材（isConverting: true）
+  const visibleItems = allMediaItems.filter(item => {
+    if (isAsyncProcessingMediaItem(item)) {
+      // 隐藏转换中的异步处理素材
+      return !item.isConverting
+    }
+    return true
+  })
+
   if (activeTab.value === 'all') {
-    return allMediaItems
+    return visibleItems
   }
 
-  return allMediaItems.filter(item => {
+  return visibleItems.filter(item => {
     if (activeTab.value === 'video') {
       // 本地素材：视频和图片
       if (isLocalMediaItem(item)) {
@@ -533,31 +542,10 @@ const handleRemoteDownload = () => {
   showContextMenu.value = false
 }
 
-// 将异步处理素材转换为普通素材
+// 将异步处理素材转换为普通素材（使用工具函数）
 const convertAsyncProcessingToLocalMedia = async (asyncProcessingItem: AsyncProcessingMediaItem) => {
-  if (!asyncProcessingItem.processedFile) {
-    throw new Error('没有处理完成的文件')
-  }
-
-  console.log('🔄 [MediaLibrary] 开始转换异步处理素材:', asyncProcessingItem.name)
-
-  try {
-    // 先从异步处理列表中移除，避免同时显示两个项目
-    videoStore.removeAsyncProcessingItem(asyncProcessingItem.id)
-
-    // 使用现有的文件处理逻辑
-    const files = [asyncProcessingItem.processedFile]
-    await processFiles(files)
-
-    console.log('✅ [MediaLibrary] 异步处理素材转换完成:', asyncProcessingItem.name)
-  } catch (error) {
-    console.error('❌ [MediaLibrary] 转换异步处理素材失败:', error)
-
-    // 转换失败时不重新添加回异步处理列表，让其自然消失
-    console.log(`🔴 [MediaLibrary] 异步处理素材转换失败，不再重新添加: ${asyncProcessingItem.name}`)
-
-    throw error
-  }
+  const { convertAsyncProcessingToLocalMedia: convertFunction } = await import('../utils/mediaConversionUtils')
+  return convertFunction(asyncProcessingItem, processFiles)
 }
 
 const handleRemoteDownloadSubmit = async (config: RemoteDownloadConfig, expectedDuration: number, name?: string) => {

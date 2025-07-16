@@ -179,8 +179,8 @@ export interface AsyncProcessingMediaItem extends BaseMediaItem {
   startedAt?: string // 开始处理时间
   completedAt?: string // 完成处理时间
 
-  // 转换状态标记（转换完成后设置为true）
-  isConverted?: boolean
+  // 转换状态标记
+  isConverting: boolean // 转换中标记，UI层面隐藏显示（必须字段）
 }
 
 /**
