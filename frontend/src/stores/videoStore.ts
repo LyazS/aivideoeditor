@@ -954,7 +954,7 @@ export const useVideoStore = defineStore('video', () => {
       mediaItemId,
       timelineModule.timelineItems,
       trackModule.tracks,
-      webavModule.avCanvas.value, // AVCanvas 有 removeSprite 方法，类型兼容
+      webavModule,
       () => {}, // 清理回调，目前为空
     )
 
@@ -980,6 +980,15 @@ export const useVideoStore = defineStore('video', () => {
 
   function getLocalMediaItem(mediaItemId: string): LocalMediaItem | undefined {
     return mediaModule.getLocalMediaItem(mediaItemId)
+  }
+
+  function removeAsyncProcessingItem(itemId: string) {
+    // 调用mediaModule的removeAsyncProcessingItem，传入时间轴项目引用和删除回调
+    mediaModule.removeAsyncProcessingItem(
+      itemId,
+      timelineModule.timelineItems,
+      timelineModule.removeTimelineItem
+    )
   }
 
   // ==================== 素材名称管理 ====================
@@ -1342,7 +1351,7 @@ export const useVideoStore = defineStore('video', () => {
     // 异步处理素材管理方法
     addAsyncProcessingItem: mediaModule.addAsyncProcessingItem,
     updateAsyncProcessingItem: mediaModule.updateAsyncProcessingItem,
-    removeAsyncProcessingItem: mediaModule.removeAsyncProcessingItem,
+    removeAsyncProcessingItem,
     getAsyncProcessingItem: mediaModule.getAsyncProcessingItem,
     convertAsyncProcessingToLocalMedia: mediaModule.convertAsyncProcessingToLocalMedia,
     // 时间轴管理方法

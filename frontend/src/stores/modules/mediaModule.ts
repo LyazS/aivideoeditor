@@ -62,8 +62,8 @@ export function createMediaModule() {
     mediaItemId: string,
     timelineItems: Ref<(LocalTimelineItem | AsyncProcessingTimelineItem)[]>,
     tracks: Ref<Track[]>,
-    avCanvas: { removeSprite: (sprite: any) => void } | null,
-    cleanupTimelineItem: (timelineItem: LocalTimelineItem) => void,
+    webavModule: { removeSprite: (sprite: any) => void } | null,
+    cleanupTimelineItem: (timelineItem: LocalTimelineItem | AsyncProcessingTimelineItem) => void,
   ) {
     const index = mediaItems.value.findIndex((item: LocalMediaItem) => item.id === mediaItemId)
     if (index > -1) {
@@ -86,13 +86,9 @@ export function createMediaModule() {
         }
 
         // 从WebAV画布移除
-        try {
-          if (avCanvas) {
-            avCanvas.removeSprite(timelineItem.sprite)
-            console.log(`✅ 从WebAV画布移除sprite: ${timelineItem.id}`)
-          }
-        } catch (error) {
-          console.warn('从WebAV画布移除sprite时出错:', error)
+        if (webavModule) {
+          webavModule.removeSprite(timelineItem.sprite)
+          console.log(`✅ 从WebAV画布移除sprite: ${timelineItem.id}`)
         }
 
         // 调用外部清理回调
@@ -202,16 +198,45 @@ export function createMediaModule() {
   /**
    * 删除异步处理素材项目
    * @param itemId 异步处理素材项目ID
+   * @param timelineItems 时间轴项目引用（可选，用于清理相关时间轴项目）
+   * @param removeTimelineItemCallback 删除时间轴项目的回调函数（可选）
    */
-  function removeAsyncProcessingItem(itemId: string) {
+  function removeAsyncProcessingItem(
+    itemId: string,
+    timelineItems?: Ref<(LocalTimelineItem | AsyncProcessingTimelineItem)[]>,
+    removeTimelineItemCallback?: (timelineItemId: string) => void
+  ) {
     const index = asyncProcessingItems.value.findIndex((item) => item.id === itemId)
     if (index !== -1) {
       const item = asyncProcessingItems.value[index]
+
+      // 如果提供了时间轴项目引用，清理相关的异步处理时间轴项目
+      if (timelineItems && removeTimelineItemCallback) {
+        const relatedTimelineItems = timelineItems.value.filter(
+          (timelineItem) => timelineItem.mediaItemId === itemId
+        )
+
+        // 删除相关的时间轴项目
+        relatedTimelineItems.forEach((timelineItem) => {
+          console.log(`🧹 清理异步处理时间轴项目: ${timelineItem.id}`)
+          removeTimelineItemCallback(timelineItem.id)
+        })
+
+        console.log('🔄 [MediaModule] 删除异步处理素材及相关时间轴项目:', {
+          id: itemId,
+          name: item.name,
+          removedTimelineItemsCount: relatedTimelineItems.length,
+          removedTimelineItemIds: relatedTimelineItems.map((item) => item.id),
+        })
+      } else {
+        console.log('🔄 [MediaModule] 删除异步处理素材:', {
+          id: itemId,
+          name: item.name,
+        })
+      }
+
+      // 从异步处理素材数组中移除
       asyncProcessingItems.value.splice(index, 1)
-      console.log('🔄 [MediaModule] 删除异步处理素材:', {
-        id: itemId,
-        name: item.name,
-      })
     }
   }
 

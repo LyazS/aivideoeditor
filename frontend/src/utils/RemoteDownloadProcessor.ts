@@ -128,19 +128,25 @@ export class RemoteDownloadProcessor implements AsyncProcessor {
       return file
 
     } catch (error) {
-      console.error('❌ [RemoteDownloadProcessor] 下载失败:', error)
-      
       if (error instanceof Error) {
         if (error.name === 'AbortError') {
+          // 取消操作是正常行为，不需要打印错误日志
+          console.log('🔄 [RemoteDownloadProcessor] 下载已取消')
           throw new Error('下载已取消')
-        } else if (error.message.includes('Failed to fetch')) {
-          throw new Error('网络连接失败，请检查URL是否正确或网络连接')
-        } else if (error.message.includes('HTTP')) {
-          throw new Error(`服务器响应错误: ${error.message}`)
         } else {
-          throw new Error(`下载失败: ${error.message}`)
+          // 只有真正的错误才打印错误日志
+          console.error('❌ [RemoteDownloadProcessor] 下载失败:', error)
+
+          if (error.message.includes('Failed to fetch')) {
+            throw new Error('网络连接失败，请检查URL是否正确或网络连接')
+          } else if (error.message.includes('HTTP')) {
+            throw new Error(`服务器响应错误: ${error.message}`)
+          } else {
+            throw new Error(`下载失败: ${error.message}`)
+          }
         }
       } else {
+        console.error('❌ [RemoteDownloadProcessor] 下载失败:', error)
         throw new Error('下载过程中发生未知错误')
       }
     } finally {

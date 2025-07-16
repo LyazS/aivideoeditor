@@ -190,10 +190,16 @@ export class AsyncProcessingManager {
       })
 
     } catch (error) {
-      console.error('❌ [AsyncProcessingManager] 处理失败:', error)
-      
       const errorMessage = error instanceof Error ? error.message : '未知错误'
-      this.updateProcessingStatus(id, 'error', 0, errorMessage, onStatusUpdate)
+
+      // 区分取消操作和真正的错误
+      if (errorMessage === '下载已取消') {
+        console.log('🔄 [AsyncProcessingManager] 处理已取消:', id)
+        this.updateProcessingStatus(id, 'cancelled', 0, errorMessage, onStatusUpdate)
+      } else {
+        console.error('❌ [AsyncProcessingManager] 处理失败:', error)
+        this.updateProcessingStatus(id, 'error', 0, errorMessage, onStatusUpdate)
+      }
     } finally {
       // 清理取消控制器
       this.processingTasks.delete(id)

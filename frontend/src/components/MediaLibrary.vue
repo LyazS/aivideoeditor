@@ -146,7 +146,7 @@
           <!-- 移除按钮 -->
           <button
             class="remove-btn"
-            @click.stop="removeLocalMediaItem(item.id)"
+            @click.stop="isLocalMediaItem(item) ? removeLocalMediaItem(item.id) : removeAsyncProcessingMediaItem(item.id)"
             @mousedown.stop
             title="移除素材"
           >
@@ -245,8 +245,9 @@ const activeTab = ref<TabType>('all')
 
 // 右键菜单相关状态
 const showContextMenu = ref(false)
-const contextMenuType = ref<'media-item' | 'empty'>('empty')
+const contextMenuType = ref<'media-item' | 'async-processing-item' | 'empty'>('empty')
 const selectedMediaItem = ref<LocalMediaItem | null>(null)
+const selectedAsyncProcessingItem = ref<AsyncProcessingMediaItem | null>(null)
 const contextMenuOptions = ref({
   x: 0,
   y: 0,
@@ -293,6 +294,16 @@ const currentMenuItems = computed((): MenuItem[] => {
         label: '删除素材',
         icon: 'M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z',
         onClick: () => handleDeleteMediaItem(),
+      }
+    ]
+  }
+
+  if (contextMenuType.value === 'async-processing-item' && selectedAsyncProcessingItem.value) {
+    return [
+      {
+        label: '删除异步处理素材',
+        icon: 'M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z',
+        onClick: () => handleDeleteAsyncProcessingItem(),
       }
     ]
   } else {
@@ -432,6 +443,7 @@ const showImportMenu = (event?: MouseEvent) => {
 
   contextMenuType.value = 'empty'
   selectedMediaItem.value = null
+  selectedAsyncProcessingItem.value = null
   showContextMenu.value = true
 }
 
@@ -446,6 +458,7 @@ const handleContextMenu = (event: MouseEvent) => {
   // 默认显示空白区域菜单
   contextMenuType.value = 'empty'
   selectedMediaItem.value = null
+  selectedAsyncProcessingItem.value = null
   showContextMenu.value = true
 }
 
@@ -460,6 +473,7 @@ const handleMediaItemContextMenu = (event: MouseEvent, item: LocalMediaItem) => 
   // 设置为素材项菜单
   contextMenuType.value = 'media-item'
   selectedMediaItem.value = item
+  selectedAsyncProcessingItem.value = null
   showContextMenu.value = true
 }
 
@@ -467,8 +481,15 @@ const handleAsyncProcessingItemContextMenu = (event: MouseEvent, item: AsyncProc
   event.preventDefault()
   event.stopPropagation()
 
-  // TODO: 在 Phase 3 中实现异步处理素材的右键菜单
-  console.log('🔄 [MediaLibrary] 异步处理素材右键菜单:', item.name)
+  // 更新菜单位置
+  contextMenuOptions.value.x = event.clientX
+  contextMenuOptions.value.y = event.clientY
+
+  // 设置为异步处理素材菜单
+  contextMenuType.value = 'async-processing-item'
+  selectedMediaItem.value = null
+  selectedAsyncProcessingItem.value = item
+  showContextMenu.value = true
 }
 
 const handleEmptyAreaContextMenu = (event: MouseEvent) => {
@@ -481,6 +502,7 @@ const handleEmptyAreaContextMenu = (event: MouseEvent) => {
   // 显示空白区域菜单
   contextMenuType.value = 'empty'
   selectedMediaItem.value = null
+  selectedAsyncProcessingItem.value = null
   showContextMenu.value = true
 }
 
@@ -491,6 +513,15 @@ const handleDeleteMediaItem = () => {
   }
   showContextMenu.value = false
 }
+
+const handleDeleteAsyncProcessingItem = () => {
+  if (selectedAsyncProcessingItem.value) {
+    removeAsyncProcessingMediaItem(selectedAsyncProcessingItem.value.id)
+  }
+  showContextMenu.value = false
+}
+
+
 
 const handleImportFromMenu = () => {
   triggerFileInput()
@@ -1156,6 +1187,44 @@ const removeLocalMediaItem = async (id: string) => {
       } catch (error) {
         console.error(`❌ 删除素材失败: ${item.name}`, error)
         dialogs.showError('删除失败', `删除素材 "${item.name}" 时发生错误`)
+      }
+    }
+  }
+}
+
+// 移除异步处理素材项
+const removeAsyncProcessingMediaItem = async (id: string) => {
+  const item = videoStore.getAsyncProcessingItem(id)
+  if (item) {
+    // 检查是否有相关的时间轴项目
+    const relatedTimelineItems = videoStore.timelineItems.filter(
+      (timelineItem) => timelineItem.mediaItemId === id,
+    )
+
+    // 根据处理状态显示不同的确认信息
+    let confirmMessage = `确定要删除异步处理素材 "${item.name}" 吗？`
+    if (['pending', 'processing'].includes(item.processingStatus)) {
+      confirmMessage += '\n\n⚠️ 这将取消正在进行的处理任务。'
+    }
+    if (relatedTimelineItems.length > 0) {
+      confirmMessage += `\n\n同时还会删除时间轴上的 ${relatedTimelineItems.length} 个相关片段。`
+    }
+
+    if (confirm(confirmMessage)) {
+      console.log(`🗑️ 准备删除异步处理素材: ${item.name} (ID: ${id})`)
+
+      try {
+        // 从AsyncProcessingManager中删除（删除会先取消再删除）
+        asyncProcessingManager.removeAsyncProcessingMediaItem(id)
+
+        // 从store中移除异步处理素材（会自动移除相关的时间轴项目）
+        videoStore.removeAsyncProcessingItem(id)
+
+        console.log(`✅ 异步处理素材删除完成: ${item.name}`)
+        dialogs.showSuccess('删除成功', `异步处理素材 "${item.name}" 已删除`)
+      } catch (error) {
+        console.error(`❌ 删除异步处理素材失败: ${item.name}`, error)
+        dialogs.showError('删除失败', `删除异步处理素材 "${item.name}" 时发生错误`)
       }
     }
   }
