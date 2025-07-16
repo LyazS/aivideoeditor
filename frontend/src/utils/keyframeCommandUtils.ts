@@ -141,9 +141,7 @@ export async function createKeyframeCommandExecutor(): Promise<KeyframeCommandEx
   // 动态导入WebAV动画管理器
   const { updateWebAVAnimation } = await import('./webavAnimationManager')
 
-  // 动态导入WebAV控制器
-  const { useWebAVControls } = await import('../composables/useWebAVControls')
-  const webAVControls = useWebAVControls()
+  // WebAV控制器现在通过videoStore提供
 
   return {
     timelineModule: {
@@ -156,7 +154,7 @@ export async function createKeyframeCommandExecutor(): Promise<KeyframeCommandEx
       executeCommand: (command: any) => videoStore.executeCommand(command),
     },
     playbackControls: {
-      seekTo: (frame: number) => webAVControls.seekTo(frame),
+      seekTo: (frame: number) => videoStore.webAVSeekTo(frame),
     },
   }
 }

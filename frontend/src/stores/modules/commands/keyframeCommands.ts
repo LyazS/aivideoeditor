@@ -121,11 +121,7 @@ async function applyKeyframeSnapshot<T extends MediaType = MediaType>(
       // 触发渲染更新
       const { useVideoStore } = await import('../../../stores/videoStore')
       const videoStore = useVideoStore()
-      const avCanvas = videoStore.avCanvas
-      if (avCanvas) {
-        const currentTime = videoStore.currentFrame * (1000000 / 30)
-        avCanvas.previewFrame(currentTime)
-      }
+      videoStore.webAVSeekTo(videoStore.currentFrame)
     } catch (error) {
       console.error('🎬 [Keyframe Command] Failed to restore properties via WebAV:', error)
       // 如果WebAV更新失败，回退到直接更新TimelineItem

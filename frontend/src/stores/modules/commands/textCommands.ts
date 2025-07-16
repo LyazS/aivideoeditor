@@ -285,7 +285,7 @@ export class RemoveTextItemCommand implements SimpleCommand {
       getTimelineItem: (id: string) => LocalTimelineItem<'text'> | undefined
     },
     private webavModule: {
-      addSprite: (sprite: any) => boolean
+      addSprite: (sprite: any) => Promise<boolean>
       removeSprite: (sprite: any) => boolean
     }
   ) {
@@ -327,7 +327,7 @@ export class RemoveTextItemCommand implements SimpleCommand {
         this.timelineModule.addTimelineItem(this.removedItem)
 
         // 2. 重新添加sprite到WebAV画布
-        this.webavModule.addSprite(this.removedItem.sprite)
+        await this.webavModule.addSprite(this.removedItem.sprite)
 
         console.log(`✅ [RemoveTextItemCommand] 文本项目恢复成功: ${this.removedItem.id}`)
       }

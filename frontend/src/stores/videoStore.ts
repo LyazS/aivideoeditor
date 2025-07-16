@@ -1110,10 +1110,7 @@ export const useVideoStore = defineStore('video', () => {
     }
 
     // 等待WebAV画布准备好
-    const avCanvas = webavModule.avCanvas.value
-    if (!avCanvas) {
-      throw new Error('WebAV画布未准备好，无法重建sprite')
-    }
+    await webavModule.waitForWebAVReady()
 
     // 导入sprite工厂函数和缩略图生成函数
     const { createSpriteFromMediaItem } = await import('../utils/spriteFactory')
@@ -1266,7 +1263,7 @@ export const useVideoStore = defineStore('video', () => {
         }
 
         // 添加到画布
-        await avCanvas.addSprite(newSprite)
+        await webavModule.addSprite(newSprite)
 
         // 更新store中的sprite引用
         timelineModule.updateLocalTimelineItemSprite(timelineItem.id, markRaw(newSprite))
@@ -1485,6 +1482,34 @@ export const useVideoStore = defineStore('video', () => {
     resetWebAVToDefaults: webavModule.resetToDefaults,
     addSpriteToCanvas: webavModule.addSprite,
     removeSpriteFromCanvas: webavModule.removeSprite,
+
+    // WebAV 画布容器管理
+    createCanvasContainer: webavModule.createCanvasContainer,
+    initializeCanvas: webavModule.initializeCanvas,
+    getAVCanvas: webavModule.getAVCanvas,
+    getCanvasContainer: webavModule.getCanvasContainer,
+
+    // WebAV 播放控制
+    webAVPlay: webavModule.play,
+    webAVPause: webavModule.pause,
+    webAVSeekTo: webavModule.seekTo,
+
+    // WebAV Clip创建和管理
+    createMP4Clip: webavModule.createMP4Clip,
+    createImgClip: webavModule.createImgClip,
+    createAudioClip: webavModule.createAudioClip,
+    cloneMP4Clip: webavModule.cloneMP4Clip,
+    cloneImgClip: webavModule.cloneImgClip,
+    cloneAudioClip: webavModule.cloneAudioClip,
+
+    // WebAV 实例管理
+    destroyWebAV: webavModule.destroy,
+    isWebAVReadyGlobal: webavModule.isWebAVReadyGlobal,
+    waitForWebAVReady: webavModule.waitForWebAVReady,
+
+    // WebAV 画布销毁和重建
+    destroyCanvas: webavModule.destroyCanvas,
+    recreateCanvas: webavModule.recreateCanvas,
     // 历史管理方法
     canUndo: historyModule.canUndo,
     canRedo: historyModule.canRedo,

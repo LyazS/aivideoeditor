@@ -30,8 +30,7 @@ import {
 export function createTimelineModule(
   configModule: { videoResolution: { value: VideoResolution } },
   webavModule: {
-    avCanvas: { value: { removeSprite: (spr: any) => void } | null }
-    removeSprite?: (sprite: any) => boolean
+    removeSprite: (sprite: any) => boolean
   },
   mediaModule: {
     getLocalMediaItem: (id: string) => LocalMediaItem | undefined
@@ -214,13 +213,8 @@ export function createTimelineModule(
         }
 
         // 从WebAV画布移除
-        try {
-          const canvas = webavModule.avCanvas.value
-          if (canvas) {
-            canvas.removeSprite(item.sprite)
-          }
-        } catch (error) {
-          console.warn('从WebAV画布移除sprite时出错:', error)
+        if (item.sprite) {
+          webavModule.removeSprite(item.sprite)
         }
 
         // 清理动画管理器
@@ -491,7 +485,7 @@ export function createTimelineModule(
     addTimelineItem,
     removeTimelineItem,
     getTimelineItem,
-    // 
+    //
     setupBidirectionalSync,
     getLocalTimelineItem,
     updateTimelineItemPosition,

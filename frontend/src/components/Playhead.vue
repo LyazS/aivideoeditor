@@ -28,7 +28,6 @@
 <script setup lang="ts">
 import { ref, computed, onUnmounted } from 'vue'
 import { useVideoStore } from '../stores/videoStore'
-import { useWebAVControls } from '../composables/useWebAVControls'
 import { usePlaybackControls } from '../composables/usePlaybackControls'
 import { useSnapManager } from '../composables/useSnapManager'
 import { alignFramesToFrame, framesToMicroseconds } from '../stores/utils/timeUtils'
@@ -59,7 +58,6 @@ const props = withDefaults(defineProps<PlayheadProps>(), {
 })
 
 const videoStore = useVideoStore()
-const webAVControls = useWebAVControls()
 const { pauseForEditing } = usePlaybackControls()
 const snapManager = useSnapManager()
 
@@ -193,7 +191,7 @@ function jumpToClickPosition(event: MouseEvent) {
   const alignedFrames = alignFramesToFrame(snappedFrames)
 
   // 通过WebAV设置帧数
-  webAVControls.seekTo(alignedFrames)
+  videoStore.webAVSeekTo(alignedFrames)
 }
 
 /**
@@ -249,7 +247,7 @@ function handleDragPlayhead(event: MouseEvent) {
   const alignedFrames = alignFramesToFrame(snappedFrames)
 
   // 通过WebAV设置帧数
-  webAVControls.seekTo(alignedFrames)
+  videoStore.webAVSeekTo(alignedFrames)
 }
 
 /**
@@ -301,7 +299,7 @@ function handleTimelineClick(event: MouseEvent) {
   const alignedFrames = alignFramesToFrame(snappedFrames)
 
   // 通过WebAV设置帧数
-  webAVControls.seekTo(alignedFrames)
+  videoStore.webAVSeekTo(alignedFrames)
 }
 
 /**

@@ -400,21 +400,21 @@ export class MediaManager {
     try {
       console.log(`🔄 开始从源头重建WebAV Clip: ${file.name} (${mediaType})`)
 
-      // 动态导入useWebAVControls以避免循环依赖
-      const { useWebAVControls } = await import('../composables/useWebAVControls')
-      const webAVControls = useWebAVControls()
+      // 动态导入videoStore以避免循环依赖
+      const { useVideoStore } = await import('../stores/videoStore')
+      const videoStore = useVideoStore()
 
       let clip: Raw<MP4Clip> | Raw<ImgClip> | Raw<AudioClip>
 
       switch (mediaType) {
         case 'video':
-          clip = await webAVControls.createMP4Clip(file)
+          clip = await videoStore.createMP4Clip(file)
           break
         case 'image':
-          clip = await webAVControls.createImgClip(file)
+          clip = await videoStore.createImgClip(file)
           break
         case 'audio':
-          clip = await webAVControls.createAudioClip(file)
+          clip = await videoStore.createAudioClip(file)
           break
         default:
           throw new Error(`不支持的媒体类型: ${mediaType}`)

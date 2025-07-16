@@ -1,7 +1,6 @@
 import type { LocalMediaItem } from '../types'
 import { VideoVisibleSprite } from './VideoVisibleSprite'
 import { ImageVisibleSprite } from './ImageVisibleSprite'
-import { useWebAVControls } from '../composables/useWebAVControls'
 import { AudioVisibleSprite } from '../utils/AudioVisibleSprite'
 
 /**
@@ -20,25 +19,27 @@ export async function createSpriteFromMediaItem(
     throw new Error(`素材尚未解析完成: ${mediaItem.name}`)
   }
 
-  const webAVControls = useWebAVControls()
+  // 动态导入videoStore以避免循环依赖
+  const { useVideoStore } = await import('../stores/videoStore')
+  const videoStore = useVideoStore()
 
   if (mediaItem.mediaType === 'video') {
     if (!mediaItem.mp4Clip) {
       throw new Error(`视频素材解析失败，无法创建sprite: ${mediaItem.name}`)
     }
-    const clonedMP4Clip = await webAVControls.cloneMP4Clip(mediaItem.mp4Clip)
+    const clonedMP4Clip = await videoStore.cloneMP4Clip(mediaItem.mp4Clip)
     return new VideoVisibleSprite(clonedMP4Clip)
   } else if (mediaItem.mediaType === 'image') {
     if (!mediaItem.imgClip) {
       throw new Error(`图片素材解析失败，无法创建sprite: ${mediaItem.name}`)
     }
-    const clonedImgClip = await webAVControls.cloneImgClip(mediaItem.imgClip)
+    const clonedImgClip = await videoStore.cloneImgClip(mediaItem.imgClip)
     return new ImageVisibleSprite(clonedImgClip)
   } else if (mediaItem.mediaType === 'audio') {
     if (!mediaItem.audioClip) {
       throw new Error(`音频素材解析失败，无法创建sprite: ${mediaItem.name}`)
     }
-    const clonedAudioClip = await webAVControls.cloneAudioClip(mediaItem.audioClip)
+    const clonedAudioClip = await videoStore.cloneAudioClip(mediaItem.audioClip)
     return new AudioVisibleSprite(clonedAudioClip)
   } else {
     throw new Error(`不支持的媒体类型: ${mediaItem.mediaType}`)

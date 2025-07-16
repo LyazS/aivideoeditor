@@ -55,7 +55,7 @@ export function createMediaModule() {
    * @param mediaItemId 媒体项目ID
    * @param timelineItems 时间轴项目引用
    * @param tracks 轨道引用
-   * @param avCanvas WebAV画布引用
+   * @param webavModule WebAV模块引用
    * @param cleanupTimelineItem 清理时间轴项目的回调函数
    */
   function removeLocalMediaItem(

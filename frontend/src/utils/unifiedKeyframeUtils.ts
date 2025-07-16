@@ -468,11 +468,7 @@ export async function updatePropertiesBatchViaWebAV(
     // 触发渲染更新
     const { useVideoStore } = await import('../stores/videoStore')
     const videoStore = useVideoStore()
-    const avCanvas = videoStore.avCanvas
-    if (avCanvas) {
-      const currentTime = videoStore.currentFrame * (1000000 / 30) // 转换为微秒
-      avCanvas.previewFrame(currentTime)
-    }
+    videoStore.webAVSeekTo(videoStore.currentFrame)
   } catch (error) {
     console.error('批量更新属性失败:', error)
   }
@@ -603,11 +599,7 @@ async function updatePropertyViaWebAV(
     // 触发渲染更新
     const { useVideoStore } = await import('../stores/videoStore')
     const videoStore = useVideoStore()
-    const avCanvas = videoStore.avCanvas
-    if (avCanvas) {
-      const currentTime = videoStore.currentFrame * (1000000 / 30)
-      avCanvas.previewFrame(currentTime)
-    }
+    videoStore.webAVSeekTo(videoStore.currentFrame)
   } catch (error) {
     console.error('🎬 [Unified Keyframe] Failed to update property via WebAV:', error)
   }

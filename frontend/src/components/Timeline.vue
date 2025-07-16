@@ -234,7 +234,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, nextTick, markRaw, reactive, h } from 'vue'
 import { useVideoStore } from '../stores/videoStore'
-import { useWebAVControls, waitForWebAVReady, isWebAVReady } from '../composables/useWebAVControls'
+// WebAV功能现在通过videoStore提供
 import { usePlaybackControls } from '../composables/usePlaybackControls'
 import { getDragPreviewManager } from '../composables/useDragPreview'
 import { useDragUtils } from '../composables/useDragUtils'
@@ -294,7 +294,6 @@ defineOptions({
 })
 
 const videoStore = useVideoStore()
-const webAVControls = useWebAVControls()
 const { pauseForEditing } = usePlaybackControls()
 const dragPreviewManager = getDragPreviewManager()
 const dragUtils = useDragUtils()
@@ -1300,10 +1299,7 @@ async function createMediaClipFromMediaItem(
   try {
     // 等待WebAV初始化完成
     console.log('等待WebAV初始化完成...')
-    const isReady = await waitForWebAVReady(10000) // 等待最多10秒
-    if (!isReady) {
-      throw new Error('WebAV初始化超时，请稍后重试')
-    }
+    await videoStore.waitForWebAVReady() // 阻塞直到WebAV初始化完成
 
     // 获取对应的MediaItem
     const storeMediaItem = videoStore.getLocalMediaItem(mediaItem.id)
@@ -1619,9 +1615,8 @@ async function handleTimelineItemRemove(timelineItemId: string) {
       const item = videoStore.getTimelineItem(timelineItemId)
       if (item) {
         // 从WebAV画布移除VideoVisibleSprite
-        const avCanvas = webAVControls.getAVCanvas()
-        if (avCanvas && item.sprite) {
-          avCanvas.removeSprite(item.sprite)
+        if (item.sprite) {
+          videoStore.removeSpriteFromCanvas(item.sprite)
         }
         // 从store中移除TimelineItem
         videoStore.removeTimelineItem(timelineItemId)

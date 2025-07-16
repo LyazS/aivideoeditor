@@ -47,12 +47,10 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useVideoStore } from '../stores/videoStore'
-import { useWebAVControls } from '../composables/useWebAVControls'
 import { usePlaybackControls } from '../composables/usePlaybackControls'
 import HoverButton from './HoverButton.vue'
 
 const videoStore = useVideoStore()
-const webAVControls = useWebAVControls()
 const { safePlaybackOperation, restartPlayback } = usePlaybackControls()
 
 const isPlaying = computed(() => videoStore.isPlaying)
@@ -63,10 +61,10 @@ function togglePlayPause() {
   safePlaybackOperation(() => {
     if (isPlaying.value) {
       // 通过WebAV暂停，WebAV会触发事件更新store状态
-      webAVControls.pause()
+      videoStore.webAVPause()
     } else {
       // 通过WebAV播放，WebAV会触发事件更新store状态
-      webAVControls.play()
+      videoStore.webAVPlay()
     }
   }, '播放/暂停切换')
 }
@@ -74,9 +72,9 @@ function togglePlayPause() {
 function stop() {
   safePlaybackOperation(() => {
     // 暂停播放并跳转到开始位置
-    webAVControls.pause()
+    videoStore.webAVPause()
     // 只通过WebAV设置时间，WebAV会触发timeupdate事件更新Store
-    webAVControls.seekTo(0)
+    videoStore.webAVSeekTo(0)
   }, '停止播放')
 }
 

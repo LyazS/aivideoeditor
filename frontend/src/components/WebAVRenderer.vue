@@ -20,7 +20,6 @@
 import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { useVideoStore } from '../stores/videoStore'
 import type { VideoResolution } from '../types'
-import { useWebAVControls } from '../composables/useWebAVControls'
 import {
   logRendererState,
   logComponentLifecycle,
@@ -34,14 +33,13 @@ interface ExtendedHTMLElement extends HTMLElement {
 }
 
 const videoStore = useVideoStore()
-const webAVControls = useWebAVControls()
 
 // 组件引用
 const canvasContainerWrapper = ref<HTMLElement>()
 const rendererContainer = ref<HTMLElement>()
 
 // 计算属性
-const error = computed(() => webAVControls.error.value)
+const error = computed(() => videoStore.webAVError)
 
 // 画布原始尺寸（基于视频分辨率）
 const canvasWidth = computed(() => videoStore.videoResolution.width)
@@ -102,10 +100,10 @@ const initializeWebAVCanvas = async (): Promise<void> => {
   }
 
   // 检查是否已经初始化
-  const existingCanvas = webAVControls.getAVCanvas()
+  const existingCanvas = videoStore.getAVCanvas()
   if (existingCanvas) {
     console.log('♻️ [WebAV Renderer] WebAV Canvas already exists, reusing existing instance')
-    const existingContainer = webAVControls.getCanvasContainer()
+    const existingContainer = videoStore.getCanvasContainer()
     if (existingContainer && !canvasContainerWrapper.value.contains(existingContainer)) {
       canvasContainerWrapper.value.appendChild(existingContainer)
       console.log('✅ [WebAV Renderer] Existing container attached successfully')
@@ -124,7 +122,7 @@ const initializeWebAVCanvas = async (): Promise<void> => {
     console.log('🏗️ [WebAV Renderer] Creating new WebAV canvas setup...')
 
     // 程序化创建画布容器
-    const canvasContainer = webAVControls.createCanvasContainer({
+    const canvasContainer = videoStore.createCanvasContainer({
       width: canvasDisplaySize.value.width,
       height: canvasDisplaySize.value.height,
       className: 'webav-canvas-container',
@@ -139,7 +137,7 @@ const initializeWebAVCanvas = async (): Promise<void> => {
     console.log('✅ [WebAV Renderer] Canvas container appended to wrapper')
 
     // 初始化WebAV画布
-    await webAVControls.initializeCanvas(canvasContainer, {
+    await videoStore.initializeCanvas(canvasContainer, {
       width: canvasWidth.value,
       height: canvasHeight.value,
       bgColor: '#000000', // WebAV库要求的格式，保持不变
@@ -173,7 +171,7 @@ const recreateCanvasWithNewSize = async (newResolution: VideoResolution): Promis
     console.log('开始销毁旧画布并备份内容...')
 
     // 销毁旧画布并备份内容
-    const backup = await webAVControls.destroyCanvas()
+    const backup = await videoStore.destroyCanvas()
 
     console.log('开始重新创建画布...')
 
@@ -181,7 +179,7 @@ const recreateCanvasWithNewSize = async (newResolution: VideoResolution): Promis
     canvasContainerWrapper.value.innerHTML = ''
 
     // 程序化创建新的画布容器
-    const newCanvasContainer = webAVControls.createCanvasContainer({
+    const newCanvasContainer = videoStore.createCanvasContainer({
       width: canvasDisplaySize.value.width,
       height: canvasDisplaySize.value.height,
       className: 'webav-canvas-container',
@@ -195,7 +193,7 @@ const recreateCanvasWithNewSize = async (newResolution: VideoResolution): Promis
     canvasContainerWrapper.value.appendChild(newCanvasContainer)
 
     // 重新创建画布
-    await webAVControls.recreateCanvas(
+    await videoStore.recreateCanvas(
       newCanvasContainer,
       {
         width: newResolution.width,
@@ -246,7 +244,7 @@ watch(
   canvasDisplaySize,
   (newSize) => {
     // 更新实际的WebAV画布容器尺寸
-    const canvasContainer = webAVControls.getCanvasContainer()
+    const canvasContainer = videoStore.getCanvasContainer()
     if (canvasContainer) {
       canvasContainer.style.width = `${newSize.width}px`
       canvasContainer.style.height = `${newSize.height}px`
@@ -429,7 +427,7 @@ onUnmounted(() => {
 defineExpose({
   initializeWebAVCanvas,
   recreateCanvasWithNewSize,
-  getAVCanvas: webAVControls.getAVCanvas,
+  getAVCanvas: videoStore.getAVCanvas,
 })
 </script>
 

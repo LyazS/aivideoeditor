@@ -1,5 +1,4 @@
 import { useVideoStore } from '../stores/videoStore'
-import { useWebAVControls, isWebAVReady } from './useWebAVControls'
 
 /**
  * 统一的播放控制工具函数
@@ -7,7 +6,6 @@ import { useWebAVControls, isWebAVReady } from './useWebAVControls'
  */
 export function usePlaybackControls() {
   const videoStore = useVideoStore()
-  const webAVControls = useWebAVControls()
 
   /**
    * 安全地暂停播放
@@ -15,9 +13,9 @@ export function usePlaybackControls() {
    * @param reason 暂停原因，用于调试日志
    */
   function pauseForEditing(reason: string = '编辑操作') {
-    if (isWebAVReady() && videoStore.isPlaying) {
+    if (videoStore.isWebAVReadyGlobal() && videoStore.isPlaying) {
       console.log(`⏸️ 因${reason}暂停播放`)
-      webAVControls.pause()
+      videoStore.webAVPause()
       return true // 返回是否实际执行了暂停
     }
     return false
@@ -29,7 +27,7 @@ export function usePlaybackControls() {
    * @returns 是否就绪
    */
   function ensureWebAVReady(operation: string = '操作'): boolean {
-    if (!isWebAVReady()) {
+    if (!videoStore.isWebAVReadyGlobal()) {
       console.warn(`⚠️ WebAV canvas not ready for ${operation}`)
       return false
     }
@@ -66,10 +64,10 @@ export function usePlaybackControls() {
     const wasPlaying = videoStore.isPlaying
     if (wasPlaying) {
       console.log('🔄 重启播放以应用新设置')
-      webAVControls.pause()
+      videoStore.webAVPause()
       setTimeout(() => {
-        if (isWebAVReady()) {
-          webAVControls.play()
+        if (videoStore.isWebAVReadyGlobal()) {
+          videoStore.webAVPlay()
         }
       }, delay)
     }

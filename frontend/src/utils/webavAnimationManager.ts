@@ -94,17 +94,12 @@ export class WebAVAnimationManager {
         const { useVideoStore } = await import('../stores/videoStore')
         const videoStore = useVideoStore()
 
-        // 使用项目时间轴的绝对时间，AVCanvas会自动处理各个sprite的相对时间
-        const currentTime = videoStore.currentFrame * (1000000 / 30) // 转换为微秒
-        const avCanvas = videoStore.avCanvas
-        if (avCanvas) {
-          avCanvas.previewFrame(currentTime)
-        }
+        // 使用项目时间轴的绝对时间，通过videoStore统一管理
+        const currentFrame = videoStore.currentFrame
+        videoStore.webAVSeekTo(currentFrame)
 
-        console.log('🎬 [WebAV Animation] Triggered AVCanvas.previewFrame for immediate update:', {
+        console.log('🎬 [WebAV Animation] Triggered WebAV seekTo for immediate update:', {
           currentFrame: videoStore.currentFrame,
-          currentTime,
-          hasAVCanvas: !!avCanvas,
         })
       } catch (preFrameError) {
         console.warn('🎬 [WebAV Animation] Failed to trigger previewFrame:', preFrameError)

@@ -57,7 +57,7 @@ import { ref, computed } from 'vue'
 import { useVideoStore } from '../stores/videoStore'
 import { framesToTimecode } from '../stores/utils/timeUtils'
 import { relativeFrameToAbsoluteFrame } from '../utils/unifiedKeyframeUtils'
-import { useWebAVControls } from '../composables/useWebAVControls'
+// WebAV功能现在通过videoStore提供
 import { usePlaybackControls } from '../composables/usePlaybackControls'
 import TimelineBaseClip from './TimelineBaseClip.vue'
 import ClipTooltip from './ClipTooltip.vue'
@@ -81,8 +81,7 @@ const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
 const videoStore = useVideoStore()
 
-// WebAV控制器
-const webAVControls = useWebAVControls()
+// 播放控制
 const { pauseForEditing } = usePlaybackControls()
 
 // TimelineBaseClip组件引用
@@ -173,7 +172,7 @@ function jumpToKeyframe(absoluteFrame: number) {
   pauseForEditing('关键帧跳转')
 
   // 通过WebAV控制器跳转到指定帧
-  webAVControls.seekTo(absoluteFrame)
+  videoStore.webAVSeekTo(absoluteFrame)
 
   console.log('🎯 [关键帧跳转] 跳转到关键帧:', {
     itemId: props.timelineItem.id,

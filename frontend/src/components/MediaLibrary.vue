@@ -204,7 +204,7 @@
 <script setup lang="ts">
 import { ref, markRaw, computed } from 'vue'
 import { useVideoStore } from '../stores/videoStore'
-import { useWebAVControls } from '../composables/useWebAVControls'
+// WebAV功能现在通过videoStore提供
 import { useDialogs } from '../composables/useDialogs'
 import { useDragUtils } from '../composables/useDragUtils'
 import { framesToTimecode, secondsToFrames } from '../stores/utils/timeUtils'
@@ -229,7 +229,6 @@ import RemoteDownloadDialog from './RemoteDownloadDialog.vue'
 import { ContextMenu, ContextMenuItem, ContextMenuSeparator } from '@imengyu/vue3-context-menu'
 
 const videoStore = useVideoStore()
-const webAVControls = useWebAVControls()
 const dialogs = useDialogs()
 const dragUtils = useDragUtils()
 const fileInput = ref<HTMLInputElement>()
@@ -817,7 +816,7 @@ const addVideoItem = async (
 
     // 异步创建MP4Clip
     console.log(`🎬 Creating MP4Clip for: ${file.name}`)
-    const mp4Clip = await webAVControls.createMP4Clip(file)
+    const mp4Clip = await videoStore.createMP4Clip(file)
     console.log(`✅ MP4Clip created successfully for: ${file.name}`)
 
     // 获取MP4Clip的元数据
@@ -933,7 +932,7 @@ const addImageItem = async (
 
       // 异步创建ImgClip
       console.log(`🖼️ Creating ImgClip for: ${file.name}`)
-      const imgClip = await webAVControls.createImgClip(file)
+      const imgClip = await videoStore.createImgClip(file)
       console.log(`✅ ImgClip created successfully for: ${file.name}`)
 
       // 生成缩略图
@@ -1064,7 +1063,7 @@ const addAudioItem = async (
 
     // 异步创建AudioClip
     console.log(`🎵 Creating AudioClip for: ${file.name}`)
-    const audioClip = await webAVControls.createAudioClip(file)
+    const audioClip = await videoStore.createAudioClip(file)
     console.log(`✅ AudioClip created successfully for: ${file.name}`)
 
     // 获取AudioClip的元数据

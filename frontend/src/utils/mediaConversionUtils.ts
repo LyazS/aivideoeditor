@@ -346,11 +346,9 @@ export async function rebuildTimelineClips(timelineClipInfos: any[], newLocalMed
       )
 
       // 3. 等待WebAV初始化完成
-      const { waitForWebAVReady } = await import('../composables/useWebAVControls')
-      const isReady = await waitForWebAVReady(10000)
-      if (!isReady) {
-        throw new Error('WebAV初始化超时')
-      }
+      const { useVideoStore } = await import('../stores/videoStore')
+      const videoStore = useVideoStore()
+      await videoStore.waitForWebAVReady() // 阻塞直到WebAV初始化完成
 
       // 4. 创建新的时间轴项目
       await createTimelineItemFromLocalMedia(

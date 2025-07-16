@@ -10,7 +10,7 @@ import type {
   KeyframeButtonState,
   KeyframeProperties,
 } from '../types'
-import { useWebAVControls } from './useWebAVControls'
+// WebAV功能现在通过videoStore提供
 import { useVideoStore } from '../stores/videoStore'
 import {
   hasAnimation,
@@ -36,10 +36,7 @@ export function useUnifiedKeyframeUI(
   timelineItem: Ref<LocalTimelineItem | null>,
   currentFrame: Ref<number>,
 ) {
-  // WebAV控制器，用于正确的时间跳转
-  const webAVControls = useWebAVControls()
-
-  // 视频存储，用于显示通知
+  // 视频存储，用于显示通知和WebAV控制
   const videoStore = useVideoStore()
 
   // ==================== 计算属性 ====================
@@ -252,14 +249,14 @@ export function useUnifiedKeyframeUI(
    * 跳转到指定帧
    */
   const jumpToFrame = async (frame: number) => {
-    webAVControls.seekTo(frame)
+    videoStore.webAVSeekTo(frame)
   }
 
   /**
    * 跳转到指定帧（别名方法）
    */
   const seekToFrame = async (frame: number) => {
-    webAVControls.seekTo(frame)
+    videoStore.webAVSeekTo(frame)
   }
 
   /**
@@ -295,7 +292,7 @@ export function useUnifiedKeyframeUI(
               await updateWebAVAnimation(item)
             },
           },
-          webAVControls, // 播放头控制器
+          { seekTo: videoStore.webAVSeekTo }, // 播放头控制器
         )
       })
 
