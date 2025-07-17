@@ -343,14 +343,16 @@ export function createMediaModule() {
 
     // 使用 Vue watch 监听状态变化，immediate: true 会立即检查当前状态
     return new Promise((resolve, reject) => {
-      const unwatch = watch(
+      let unwatch: (() => void) | null = null
+
+      unwatch = watch(
         () => mediaItem.status,
         (newStatus) => {
           if (newStatus === 'ready') {
-            unwatch()
+            unwatch?.()
             resolve(true)
           } else if (newStatus === 'error') {
-            unwatch()
+            unwatch?.()
             reject(new Error(`媒体项目解析失败: ${mediaItem.name}`))
           }
           // 如果是 'parsing' 状态，继续等待
