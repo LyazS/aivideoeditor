@@ -19,7 +19,7 @@ export function createTrackModule() {
       type: 'video',
       isVisible: true,
       isMuted: false,
-      height: 80,
+      height: 60,
     },
     {
       id: generateTrackId(),
@@ -61,9 +61,9 @@ export function createTrackModule() {
 
     // 根据轨道类型设置默认高度
     const defaultHeights = {
-      video: 80, // 视频轨道标准高度
-      audio: 60, // 音频轨道较矮
-      text: 60, // 文本轨道，比视频轨道矮20px
+      video: 60, // 视频轨道统一高度
+      audio: 60, // 音频轨道统一高度
+      text: 60, // 文本轨道统一高度
     }
 
     // 计算同类型轨道的数量，用于生成默认名称
@@ -328,7 +328,7 @@ export function createTrackModule() {
    */
   function resetTracksToDefaults() {
     const defaultHeights = {
-      video: 80,
+      video: 60,
       audio: 60,
       text: 60,
     }
@@ -336,7 +336,7 @@ export function createTrackModule() {
     tracks.value.forEach((track) => {
       track.isVisible = true
       track.isMuted = false
-      track.height = defaultHeights[track.type] || 80
+      track.height = defaultHeights[track.type] || 60
     })
     console.log('🔄 所有轨道已重置为默认状态')
   }

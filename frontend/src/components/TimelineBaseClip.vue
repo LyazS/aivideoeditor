@@ -119,7 +119,7 @@ const clipStyle = computed(() => {
 
   // 计算垂直居中位置
   const clipHeight = parseInt(getClipHeight())
-  const trackHeight = props.track?.height || 80 // 默认轨道高度80px
+  const trackHeight = props.track?.height || 60 // 默认轨道高度60px
   const topOffset = Math.max(5, (trackHeight - clipHeight) / 2) // 至少5px的上边距
 
   return {
@@ -151,15 +151,8 @@ const isTrackVisible = computed(() => {
 
 // 计算clip高度的辅助方法
 function getClipHeight(): string {
-  // 根据媒体类型返回不同的高度
-  switch (props.timelineItem.mediaType) {
-    case 'text':
-      return '40px' // 文本clip，比文本轨道(60px)矮20px，上下各留10px间距
-    case 'audio':
-      return '50px' // 音频clip中等高度
-    default:
-      return '60px' // 视频/图片clip标准高度
-  }
+  // 统一所有类型的clip高度为50px
+  return '50px' // 所有clip统一高度50px，轨道高度60px，上下各留5px间距
 }
 
 // ==================== 原生拖拽API事件处理 ====================
