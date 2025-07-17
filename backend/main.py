@@ -22,8 +22,9 @@ app.add_middleware(
 MEDIA_FILES_PATH = "E:/Downloads"  # 修改为你想要的路径
 
 # 网速限制配置（字节/秒）
-DOWNLOAD_SPEED_LIMIT = 100 * 1024  # 1MB/s，可以调整这个值来模拟不同网速
+DOWNLOAD_SPEED_LIMIT = 10240 // 4 * 1024  # 1MB/s，可以调整这个值来模拟不同网速
 CHUNK_SIZE = 8192  # 8KB 每个数据块
+
 
 def _get_media_type(file_extension: str) -> str:
     """
@@ -35,9 +36,28 @@ def _get_media_type(file_extension: str) -> str:
     Returns:
         媒体类型字符串
     """
-    video_extensions = {'.mp4', '.avi', '.mov', '.mkv', '.wmv', '.flv', '.webm', '.m4v', '.3gp'}
-    audio_extensions = {'.mp3', '.wav', '.aac', '.flac', '.ogg', '.m4a', '.wma'}
-    image_extensions = {'.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.svg', '.tiff'}
+    video_extensions = {
+        ".mp4",
+        ".avi",
+        ".mov",
+        ".mkv",
+        ".wmv",
+        ".flv",
+        ".webm",
+        ".m4v",
+        ".3gp",
+    }
+    audio_extensions = {".mp3", ".wav", ".aac", ".flac", ".ogg", ".m4a", ".wma"}
+    image_extensions = {
+        ".jpg",
+        ".jpeg",
+        ".png",
+        ".gif",
+        ".bmp",
+        ".webp",
+        ".svg",
+        ".tiff",
+    }
 
     if file_extension in video_extensions:
         return "video"
@@ -47,6 +67,7 @@ def _get_media_type(file_extension: str) -> str:
         return "image"
     else:
         return "unknown"
+
 
 def _get_mime_type(file_extension: str) -> str:
     """
@@ -60,41 +81,41 @@ def _get_mime_type(file_extension: str) -> str:
     """
     mime_types = {
         # 视频格式
-        '.mp4': 'video/mp4',
-        '.avi': 'video/avi',
-        '.mov': 'video/quicktime',
-        '.mkv': 'video/x-matroska',
-        '.wmv': 'video/x-ms-wmv',
-        '.flv': 'video/x-flv',
-        '.webm': 'video/webm',
-        '.m4v': 'video/mp4',
-        '.3gp': 'video/3gpp',
-
+        ".mp4": "video/mp4",
+        ".avi": "video/avi",
+        ".mov": "video/quicktime",
+        ".mkv": "video/x-matroska",
+        ".wmv": "video/x-ms-wmv",
+        ".flv": "video/x-flv",
+        ".webm": "video/webm",
+        ".m4v": "video/mp4",
+        ".3gp": "video/3gpp",
         # 音频格式
-        '.mp3': 'audio/mpeg',
-        '.wav': 'audio/wav',
-        '.aac': 'audio/aac',
-        '.flac': 'audio/flac',
-        '.ogg': 'audio/ogg',
-        '.m4a': 'audio/mp4',
-        '.wma': 'audio/x-ms-wma',
-
+        ".mp3": "audio/mpeg",
+        ".wav": "audio/wav",
+        ".aac": "audio/aac",
+        ".flac": "audio/flac",
+        ".ogg": "audio/ogg",
+        ".m4a": "audio/mp4",
+        ".wma": "audio/x-ms-wma",
         # 图片格式
-        '.jpg': 'image/jpeg',
-        '.jpeg': 'image/jpeg',
-        '.png': 'image/png',
-        '.gif': 'image/gif',
-        '.bmp': 'image/bmp',
-        '.webp': 'image/webp',
-        '.svg': 'image/svg+xml',
-        '.tiff': 'image/tiff',
+        ".jpg": "image/jpeg",
+        ".jpeg": "image/jpeg",
+        ".png": "image/png",
+        ".gif": "image/gif",
+        ".bmp": "image/bmp",
+        ".webp": "image/webp",
+        ".svg": "image/svg+xml",
+        ".tiff": "image/tiff",
     }
 
-    return mime_types.get(file_extension, 'application/octet-stream')
+    return mime_types.get(file_extension, "application/octet-stream")
+
 
 @app.get("/")
 async def root():
     return {"message": "AI Video Editor Backend is running"}
+
 
 @app.get("/config/download-speed")
 async def get_download_speed():
@@ -102,8 +123,9 @@ async def get_download_speed():
     return {
         "speed_limit_bytes_per_second": DOWNLOAD_SPEED_LIMIT,
         "speed_limit_mbps": round(DOWNLOAD_SPEED_LIMIT / 1024 / 1024, 2),
-        "chunk_size": CHUNK_SIZE
+        "chunk_size": CHUNK_SIZE,
     }
+
 
 @app.post("/config/download-speed/{speed_mbps}")
 async def set_download_speed(speed_mbps: float):
@@ -118,13 +140,16 @@ async def set_download_speed(speed_mbps: float):
 
     DOWNLOAD_SPEED_LIMIT = int(speed_mbps * 1024 * 1024)
 
-    print(f"Download speed limit updated to {speed_mbps} MB/s ({DOWNLOAD_SPEED_LIMIT} bytes/s)")
+    print(
+        f"Download speed limit updated to {speed_mbps} MB/s ({DOWNLOAD_SPEED_LIMIT} bytes/s)"
+    )
 
     return {
         "message": f"Download speed limit set to {speed_mbps} MB/s",
         "speed_limit_bytes_per_second": DOWNLOAD_SPEED_LIMIT,
-        "speed_limit_mbps": speed_mbps
+        "speed_limit_mbps": speed_mbps,
     }
+
 
 async def _generate_file_stream(file_path: Path):
     """
@@ -136,7 +161,7 @@ async def _generate_file_stream(file_path: Path):
     Yields:
         文件数据块
     """
-    with open(file_path, 'rb') as file:
+    with open(file_path, "rb") as file:
         start_time = time.time()
         bytes_sent = 0
 
@@ -154,6 +179,7 @@ async def _generate_file_stream(file_path: Path):
                 await asyncio.sleep(expected_time - elapsed_time)
 
             yield chunk
+
 
 @app.get("/media/{file_name:path}")
 async def get_media_file(file_name: str):
@@ -175,22 +201,28 @@ async def get_media_file(file_name: str):
 
     # 检查文件是否存在
     if not file_path.exists():
-        raise HTTPException(status_code=404, detail=f"File '{decoded_file_name}' not found")
+        raise HTTPException(
+            status_code=404, detail=f"File '{decoded_file_name}' not found"
+        )
 
     # 检查是否是文件（不是目录）
     if not file_path.is_file():
-        raise HTTPException(status_code=400, detail=f"'{decoded_file_name}' is not a file")
+        raise HTTPException(
+            status_code=400, detail=f"'{decoded_file_name}' is not a file"
+        )
 
     # 获取文件的MIME类型和大小
     file_extension = file_path.suffix.lower()
     mime_type = _get_mime_type(file_extension)
     file_size = file_path.stat().st_size
 
-    print(f"Serving file: {decoded_file_name} ({file_size} bytes) at {DOWNLOAD_SPEED_LIMIT/1024/1024:.1f} MB/s")
+    print(
+        f"Serving file: {decoded_file_name} ({file_size} bytes) at {DOWNLOAD_SPEED_LIMIT/1024/1024:.1f} MB/s"
+    )
 
     # 处理中文文件名的编码问题
     # 使用 RFC 5987 标准的 filename* 参数来支持 UTF-8 编码的文件名
-    encoded_filename = quote(file_path.name.encode('utf-8'))
+    encoded_filename = quote(file_path.name.encode("utf-8"))
 
     # 返回流式响应
     return StreamingResponse(
@@ -198,10 +230,11 @@ async def get_media_file(file_name: str):
         media_type=mime_type,
         headers={
             "Content-Length": str(file_size),
-            "Content-Disposition": f'attachment; filename*=UTF-8\'\'{encoded_filename}',
-            "Accept-Ranges": "bytes"
-        }
+            "Content-Disposition": f"attachment; filename*=UTF-8''{encoded_filename}",
+            "Accept-Ranges": "bytes",
+        },
     )
+
 
 @app.get("/media")
 async def list_media_files():
@@ -214,11 +247,32 @@ async def list_media_files():
     # 支持的媒体文件后缀
     SUPPORTED_EXTENSIONS = {
         # 视频格式
-        '.mp4', '.avi', '.mov', '.mkv', '.wmv', '.flv', '.webm', '.m4v', '.3gp',
+        ".mp4",
+        ".avi",
+        ".mov",
+        ".mkv",
+        ".wmv",
+        ".flv",
+        ".webm",
+        ".m4v",
+        ".3gp",
         # 音频格式
-        '.mp3', '.wav', '.aac', '.flac', '.ogg', '.m4a', '.wma',
+        ".mp3",
+        ".wav",
+        ".aac",
+        ".flac",
+        ".ogg",
+        ".m4a",
+        ".wma",
         # 图片格式
-        '.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.svg', '.tiff'
+        ".jpg",
+        ".jpeg",
+        ".png",
+        ".gif",
+        ".bmp",
+        ".webp",
+        ".svg",
+        ".tiff",
     }
 
     media_path = Path(MEDIA_FILES_PATH)
@@ -234,19 +288,22 @@ async def list_media_files():
         if file_path.is_file():
             # 检查文件后缀是否为支持的媒体格式
             if file_path.suffix.lower() in SUPPORTED_EXTENSIONS:
-                files.append({
-                    "name": file_path.name,  # 保持原始文件名
-                    "size": file_path.stat().st_size,
-                    "url": f"/media/{quote(file_path.name)}",  # URL编码文件名
-                    "type": _get_media_type(file_path.suffix.lower())
-                })
+                files.append(
+                    {
+                        "name": file_path.name,  # 保持原始文件名
+                        "size": file_path.stat().st_size,
+                        "url": f"/media/{quote(file_path.name)}",  # URL编码文件名
+                        "type": _get_media_type(file_path.suffix.lower()),
+                    }
+                )
 
     return {"files": files, "total": len(files)}
 
+
 if __name__ == "__main__":
     import uvicorn
-    
+
     # 确保媒体文件目录存在
     Path(MEDIA_FILES_PATH).mkdir(parents=True, exist_ok=True)
-    
+
     uvicorn.run(app, host="0.0.0.0", port=8900)
