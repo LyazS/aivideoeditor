@@ -57,12 +57,12 @@
           :key="item.id"
           class="media-item"
           :class="{
-            parsing: isLocalMediaItem(item) && !item.isReady,
+            parsing: isLocalMediaItem(item) && item.status === 'parsing',
             'async-processing': isAsyncProcessingMediaItem(item),
             [`status-${isAsyncProcessingMediaItem(item) ? item.processingStatus : (isLocalMediaItem(item) ? item.status : 'ready')}`]: true
           }"
           :data-media-item-id="item.id"
-          :draggable="isLocalMediaItem(item) ? item.isReady : (isAsyncProcessingMediaItem(item) ? true : false)"
+          :draggable="isLocalMediaItem(item) ? item.status === 'ready' : (isAsyncProcessingMediaItem(item) ? true : false)"
           @dragstart="isLocalMediaItem(item) ? handleItemDragStart($event, item) : (isAsyncProcessingMediaItem(item) ? handleAsyncProcessingItemDragStart($event, item) : null)"
           @dragend="handleItemDragEnd"
           @contextmenu="isLocalMediaItem(item) ? handleMediaItemContextMenu($event, item) : handleAsyncProcessingItemContextMenu($event, item)"
@@ -135,7 +135,7 @@
 
               <!-- 右上角时长标签（视频和音频显示） -->
               <div v-if="item.mediaType === 'video' || item.mediaType === 'audio'" class="duration-badge">
-                {{ item.status === 'error' ? '转换失败' : (item.isReady ? formatDuration(item.duration) : '分析中') }}
+                {{ item.status === 'error' ? '转换失败' : (item.status === 'ready' ? formatDuration(item.duration) : '分析中') }}
               </div>
             </template>
           </div>
@@ -803,7 +803,6 @@ const addVideoItem = async (
     mp4Clip: null, // 解析中时为null
     imgClip: null,
     audioClip: null,
-    isReady: false, // 标记为未准备好
     status: 'parsing', // 解析中状态
   }
 
@@ -855,7 +854,6 @@ const addVideoItem = async (
       ...parsingMediaItem,
       duration: durationFrames, // 使用MP4Clip的准确时长
       mp4Clip: markRaw(mp4Clip), // 使用markRaw避免Vue响应式包装
-      isReady: true, // 标记为准备好
       status: 'ready', // 已准备好状态
       thumbnailUrl, // 添加缩略图URL
     }
@@ -878,7 +876,6 @@ const addVideoItem = async (
     // 如果解析失败，将媒体项状态设置为错误，保留在媒体库中让用户知道
     const errorMediaItem: LocalMediaItem = {
       ...parsingMediaItem,
-      isReady: false,
       status: 'error',
       mp4Clip: null,
       duration: 0,
@@ -916,7 +913,6 @@ const addImageItem = async (
     mp4Clip: null,
     imgClip: null, // 解析中时为null
     audioClip: null,
-    isReady: false, // 标记为未准备好
     status: 'parsing', // 解析中状态
   }
 
@@ -960,7 +956,6 @@ const addImageItem = async (
       const readyMediaItem: LocalMediaItem = {
         ...parsingMediaItem,
         imgClip: markRaw(imgClip), // 使用markRaw避免Vue响应式包装
-        isReady: true, // 标记为准备好
         status: 'ready', // 已准备好状态
         thumbnailUrl, // 添加缩略图URL
       }
@@ -986,7 +981,6 @@ const addImageItem = async (
       // 如果解析失败，将媒体项状态设置为错误，保留在媒体库中让用户知道
       const errorMediaItem: LocalMediaItem = {
         ...parsingMediaItem,
-        isReady: false,
         status: 'error',
         imgClip: null,
         duration: 0,
@@ -1010,7 +1004,6 @@ const addImageItem = async (
     // 如果图片加载失败，将媒体项状态设置为错误，保留在媒体库中让用户知道
     const errorMediaItem: LocalMediaItem = {
       ...parsingMediaItem,
-      isReady: false,
       status: 'error',
       imgClip: null,
       duration: 0,
@@ -1050,7 +1043,6 @@ const addAudioItem = async (
     mp4Clip: null,
     imgClip: null,
     audioClip: null, // 解析中时为null
-    isReady: false,
     status: 'parsing',
   }
 
@@ -1100,7 +1092,6 @@ const addAudioItem = async (
       ...parsingMediaItem,
       duration: durationFrames,
       audioClip: markRaw(audioClip),
-      isReady: true,
       status: 'ready',
       thumbnailUrl,
     }
@@ -1121,7 +1112,6 @@ const addAudioItem = async (
     // 如果解析失败，将媒体项状态设置为错误，保留在媒体库中让用户知道
     const errorMediaItem: LocalMediaItem = {
       ...parsingMediaItem,
-      isReady: false,
       status: 'error',
       audioClip: null,
       duration: 0,
@@ -1219,10 +1209,10 @@ const removeAsyncProcessingMediaItem = async (id: string) => {
 
 // 素材项拖拽开始
 const handleItemDragStart = (event: DragEvent, item: LocalMediaItem) => {
-  console.log('🎯 [MediaLibrary] 开始拖拽素材:', item.name, 'isReady:', item.isReady)
+  console.log('🎯 [MediaLibrary] 开始拖拽素材:', item.name, 'status:', item.status)
 
   // 如果素材还未解析完成，阻止拖拽
-  if (!item.isReady) {
+  if (item.status !== 'ready') {
     event.preventDefault()
     console.log('❌ [MediaLibrary] 素材解析中，无法拖拽:', item.name)
     return

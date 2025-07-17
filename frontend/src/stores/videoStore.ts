@@ -1140,7 +1140,7 @@ export const useVideoStore = defineStore('video', () => {
             continue
           }
 
-          if (!mediaItem.isReady) {
+          if (mediaItem.status !== 'ready') {
             console.warn(`⚠️ 跳过时间轴项目，媒体项目尚未准备好: ${mediaItem.name}`)
             continue
           }
@@ -1345,6 +1345,7 @@ export const useVideoStore = defineStore('video', () => {
     updateLocalMediaItemName,
     updateLocalMediaItem,
     getAllMediaItems: mediaModule.getAllMediaItems,
+    waitForMediaItemReady: mediaModule.waitForMediaItemReady,
     // 异步处理素材管理方法
     addAsyncProcessingItem: mediaModule.addAsyncProcessingItem,
     updateAsyncProcessingItem: mediaModule.updateAsyncProcessingItem,

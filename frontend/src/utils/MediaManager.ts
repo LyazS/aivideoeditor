@@ -514,7 +514,6 @@ export class MediaManager {
         mp4Clip: reference.type === 'video' ? clip as Raw<MP4Clip> : null,
         imgClip: reference.type === 'image' ? clip as Raw<ImgClip> : null,
         audioClip: reference.type === 'audio' ? clip as Raw<AudioClip> : null,
-        isReady: true,
         status: 'ready',
         thumbnailUrl
       }
@@ -659,7 +658,6 @@ export class MediaManager {
       mp4Clip: null,
       imgClip: null,
       audioClip: null,
-      isReady: false,
       status: 'error'
     }
 

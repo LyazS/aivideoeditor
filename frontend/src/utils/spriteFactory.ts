@@ -15,7 +15,7 @@ export async function createSpriteFromMediaItem(
   mediaItem: LocalMediaItem,
 ): Promise<VideoVisibleSprite | ImageVisibleSprite | AudioVisibleSprite> {
   // 检查媒体项目是否已准备好
-  if (!mediaItem.isReady) {
+  if (mediaItem.status !== 'ready') {
     throw new Error(`素材尚未解析完成: ${mediaItem.name}`)
   }
 

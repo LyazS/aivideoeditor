@@ -108,7 +108,7 @@ export class AddTimelineItemCommand implements SimpleCommand {
       throw new Error(`媒体项目类型不匹配，期望本地媒体项目: ${mediaItem.id}`)
     }
 
-    if (!mediaItem.isReady) {
+    if (mediaItem.status !== 'ready') {
       throw new Error(`素材尚未解析完成: ${mediaItem.name}`)
     }
 
@@ -404,7 +404,7 @@ export class RemoveTimelineItemCommand implements SimpleCommand {
       throw new Error(`媒体项目类型不匹配，期望本地媒体项目: ${mediaItem.id}`)
     }
 
-    if (!mediaItem.isReady) {
+    if (mediaItem.status !== 'ready') {
       throw new Error(`素材尚未解析完成: ${mediaItem.name}`)
     }
 
@@ -754,7 +754,7 @@ export class DuplicateTimelineItemCommand implements SimpleCommand {
     }
 
     // 检查素材是否已经解析完成
-    if (!mediaItem.isReady || !mediaItem.mp4Clip) {
+    if (mediaItem.status !== 'ready' || !mediaItem.mp4Clip) {
       throw new Error('视频素材还在解析中，无法复制')
     }
 
@@ -829,7 +829,7 @@ export class DuplicateTimelineItemCommand implements SimpleCommand {
     }
 
     // 检查素材是否已经解析完成
-    if (!mediaItem.isReady || !mediaItem.imgClip) {
+    if (mediaItem.status !== 'ready' || !mediaItem.imgClip) {
       throw new Error('图片素材还在解析中，无法复制')
     }
 
@@ -900,7 +900,7 @@ export class DuplicateTimelineItemCommand implements SimpleCommand {
     }
 
     // 检查素材是否已经解析完成
-    if (!mediaItem.isReady || !mediaItem.audioClip) {
+    if (mediaItem.status !== 'ready' || !mediaItem.audioClip) {
       throw new Error('音频素材还在解析中，无法复制')
     }
 
@@ -1857,7 +1857,7 @@ export class SplitTimelineItemCommand implements SimpleCommand {
     }
 
     // 检查素材是否已准备好并且是支持分割的类型
-    if (!mediaItem.isReady) {
+    if (mediaItem.status !== 'ready') {
       throw new Error(`素材尚未解析完成: ${mediaItem.name}`)
     }
 
@@ -2021,7 +2021,7 @@ export class SplitTimelineItemCommand implements SimpleCommand {
     }
 
     // 检查素材是否已准备好并且是支持的类型
-    if (!mediaItem.isReady) {
+    if (mediaItem.status !== 'ready') {
       throw new Error(`素材尚未解析完成: ${mediaItem.name}`)
     }
 
@@ -2519,7 +2519,7 @@ export class RemoveTrackCommand implements SimpleCommand {
     }
 
     // 检查素材是否已经解析完成
-    if (!mediaItem.isReady || (!mediaItem.mp4Clip && !mediaItem.imgClip && !mediaItem.audioClip)) {
+    if (mediaItem.status !== 'ready' || (!mediaItem.mp4Clip && !mediaItem.imgClip && !mediaItem.audioClip)) {
       throw new Error('素材还在解析中，无法重建')
     }
 

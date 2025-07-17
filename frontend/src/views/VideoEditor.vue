@@ -221,7 +221,6 @@ function debugProject() {
         duration: item.duration,
         type: item.type,
         mediaType: item.mediaType,
-        isReady: item.isReady,
         status: item.status,
         thumbnailUrl: item.thumbnailUrl ? 'blob URL存在' : null,
         hasMP4Clip: !!item.mp4Clip,
@@ -264,7 +263,7 @@ function debugProject() {
         totalMediaItems: videoStore.mediaItems.length,
         totalTimelineItems: videoStore.timelineItems.length,
         totalTracks: videoStore.tracks.length,
-        readyMediaItems: videoStore.mediaItems.filter(item => item.isReady).length,
+        readyMediaItems: videoStore.mediaItems.filter(item => item.status === 'ready').length,
         mediaReferencesCount: Object.keys(videoStore.mediaReferences).length
       }
     }

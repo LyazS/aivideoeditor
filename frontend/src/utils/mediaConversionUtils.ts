@@ -7,54 +7,7 @@ import type { LocalMediaItem, AsyncProcessingMediaItem, AsyncProcessingTimelineI
 import { useVideoStore } from '../stores/videoStore'
 import { markRaw } from 'vue'
 
-/**
- * 等待本地素材解析完成
- * @param mediaItemId 本地素材项目ID
- * @param timeout 超时时间（毫秒），默认30秒
- * @returns Promise<LocalMediaItem> 解析完成的本地素材项目
- */
-export async function waitForMediaItemReady(
-  mediaItemId: string,
-  timeout: number = 30000
-): Promise<LocalMediaItem> {
-  const videoStore = useVideoStore()
-  const startTime = Date.now()
-
-  return new Promise((resolve, reject) => {
-    const checkReady = () => {
-      const mediaItem = videoStore.getLocalMediaItem(mediaItemId)
-      
-      if (!mediaItem) {
-        reject(new Error(`找不到媒体项目: ${mediaItemId}`))
-        return
-      }
-
-      // 检查是否解析完成
-      if (mediaItem.isReady && mediaItem.status === 'ready') {
-        console.log(`✅ [MediaConversion] 媒体项目解析完成: ${mediaItem.name}`)
-        resolve(mediaItem)
-        return
-      }
-
-      // 检查是否解析失败
-      if (mediaItem.status === 'error') {
-        reject(new Error(`媒体项目解析失败: ${mediaItem.name}`))
-        return
-      }
-
-      // 检查超时
-      if (Date.now() - startTime > timeout) {
-        reject(new Error(`等待媒体项目解析超时: ${mediaItem.name}`))
-        return
-      }
-
-      // 继续等待
-      setTimeout(checkReady, 100) // 每100ms检查一次
-    }
-
-    checkReady()
-  })
-}
+// waitForMediaItemReady函数已移除，现在使用videoStore.waitForMediaItemReady方法
 
 /**
  * 保存时间轴clip信息
@@ -346,8 +299,6 @@ export async function rebuildTimelineClips(timelineClipInfos: any[], newLocalMed
       )
 
       // 3. 等待WebAV初始化完成
-      const { useVideoStore } = await import('../stores/videoStore')
-      const videoStore = useVideoStore()
       await videoStore.waitForWebAVReady() // 阻塞直到WebAV初始化完成
 
       // 4. 创建新的时间轴项目
@@ -433,7 +384,7 @@ export async function convertAsyncProcessingToLocalMedia(
     }
 
     console.log('⏳ [MediaConversion] 等待本地素材解析完成...')
-    await waitForMediaItemReady(newLocalMediaItem.id)
+    await videoStore.waitForMediaItemReady(newLocalMediaItem.id)
 
     // 6. 重建时间轴clip
     await rebuildTimelineClips(timelineClipInfos, newLocalMediaItem)

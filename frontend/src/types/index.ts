@@ -148,8 +148,7 @@ export interface LocalMediaItem extends BaseMediaItem {
   mp4Clip: Raw<MP4Clip> | null
   imgClip: Raw<ImgClip> | null
   audioClip: Raw<AudioClip> | null
-  isReady: boolean
-  status: MediaStatus
+  status: MediaStatus // 唯一状态源（响应式）
   thumbnailUrl?: string
   isAsyncProcessing?: false // 明确标识为本地媒体
 }
@@ -602,6 +601,7 @@ export type MediaModule = {
   getVideoOriginalResolution: (id: string) => Promise<{ width: number; height: number }>
   setImageElement: (id: string, element: HTMLImageElement) => void
   getImageOriginalResolution: (id: string) => Promise<{ width: number; height: number }>
+  waitForMediaItemReady: (mediaItemId: string) => Promise<boolean>
 }
 
 // ==================== 缩略图生成相关接口 ====================

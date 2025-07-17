@@ -1,4 +1,4 @@
-import { ref, type Ref } from 'vue'
+import { ref, watch, type Ref } from 'vue'
 import { printDebugInfo } from '../utils/debugUtils'
 import type {
   LocalMediaItem,
@@ -326,6 +326,40 @@ export function createMediaModule() {
     return { width: 1920, height: 1080 }
   }
 
+  // ==================== 异步等待方法 ====================
+
+  /**
+   * 等待媒体项目解析完成
+   * 使用Vue的watch机制监听status状态变化，更符合响应式编程模式
+   * @param mediaItemId 媒体项目ID
+   * @returns Promise<boolean> 解析成功返回true，解析失败抛出错误
+   */
+  function waitForMediaItemReady(mediaItemId: string): Promise<boolean> {
+    const mediaItem = getLocalMediaItem(mediaItemId)
+
+    if (!mediaItem) {
+      return Promise.reject(new Error(`找不到媒体项目: ${mediaItemId}`))
+    }
+
+    // 使用 Vue watch 监听状态变化，immediate: true 会立即检查当前状态
+    return new Promise((resolve, reject) => {
+      const unwatch = watch(
+        () => mediaItem.status,
+        (newStatus) => {
+          if (newStatus === 'ready') {
+            unwatch()
+            resolve(true)
+          } else if (newStatus === 'error') {
+            unwatch()
+            reject(new Error(`媒体项目解析失败: ${mediaItem.name}`))
+          }
+          // 如果是 'parsing' 状态，继续等待
+        },
+        { immediate: true } // 立即执行一次，检查当前状态
+      )
+    })
+  }
+
   // ==================== 导出接口 ====================
 
   return {
@@ -351,6 +385,9 @@ export function createMediaModule() {
     // 分辨率管理方法
     getVideoOriginalResolution,
     getImageOriginalResolution,
+
+    // 异步等待方法
+    waitForMediaItemReady,
   }
 }
 

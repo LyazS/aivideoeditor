@@ -1308,7 +1308,7 @@ async function createMediaClipFromMediaItem(
     }
 
     // 检查素材是否已经解析完成
-    if (!storeMediaItem.isReady) {
+    if (storeMediaItem.status !== 'ready') {
       throw new Error('素材还在解析中，请稍后再试')
     }
 
