@@ -209,18 +209,7 @@ import { useDialogs } from '../composables/useDialogs'
 import { useDragUtils } from '../composables/useDragUtils'
 import { framesToTimecode, secondsToFrames } from '../stores/utils/timeUtils'
 import type { LocalMediaItem, AsyncProcessingMediaItem, RemoteDownloadConfig, MediaType, MediaErrorType } from '../types'
-
-// 临时联合类型，用于支持异步处理素材显示
-type AnyMediaItem = LocalMediaItem | AsyncProcessingMediaItem
-
-// 临时类型守卫函数
-function isLocalMediaItem(item: AnyMediaItem): item is LocalMediaItem {
-  return !('isAsyncProcessing' in item) || item.isAsyncProcessing === false
-}
-
-function isAsyncProcessingMediaItem(item: AnyMediaItem): item is AsyncProcessingMediaItem {
-  return 'isAsyncProcessing' in item && item.isAsyncProcessing === true
-}
+import {isLocalMediaItem, isAsyncProcessingMediaItem} from '../types'
 import { generateThumbnailForMediaItem } from '../utils/thumbnailGenerator'
 import { mediaManager } from '../utils/MediaManager'
 import { asyncProcessingManager } from '../utils/AsyncProcessingManager'
@@ -325,7 +314,7 @@ const currentMenuItems = computed((): MenuItem[] => {
 // 计算过滤后的素材列表
 const filteredMediaItems = computed(() => {
   // 合并本地素材和异步处理素材
-  const allMediaItems: AnyMediaItem[] = [
+  const allMediaItems: (LocalMediaItem | AsyncProcessingMediaItem)[] = [
     ...videoStore.mediaItems,
     ...videoStore.asyncProcessingItems
   ]
@@ -382,7 +371,7 @@ const setActiveTab = (tabType: TabType) => {
 // 获取tab对应的素材数量
 const getTabCount = (tabType: TabType) => {
   // 合并本地素材和异步处理素材
-  const allMediaItems: AnyMediaItem[] = [
+  const allMediaItems: (LocalMediaItem | AsyncProcessingMediaItem)[] = [
     ...videoStore.mediaItems,
     ...videoStore.asyncProcessingItems
   ]

@@ -249,29 +249,6 @@ export function createMediaModule() {
     return asyncProcessingItems.value.find((item) => item.id === itemId)
   }
 
-  /**
-   * 将异步处理素材转换为普通素材
-   * @param asyncProcessingItem 异步处理素材项目
-   * @param localMediaItem 转换后的本地素材项目
-   */
-  function convertAsyncProcessingToLocalMedia(
-    asyncProcessingItem: AsyncProcessingMediaItem,
-    localMediaItem: LocalMediaItem,
-  ) {
-    // 删除异步处理素材
-    removeAsyncProcessingItem(asyncProcessingItem.id)
-
-    // 添加到普通素材库
-    addLocalMediaItem(localMediaItem, ref([]), ref([]))
-
-    console.log('🔄 [MediaModule] 异步处理素材转换完成:', {
-      asyncId: asyncProcessingItem.id,
-      localId: localMediaItem.id,
-      name: localMediaItem.name,
-      type: localMediaItem.mediaType,
-    })
-  }
-
   // ==================== 视频分辨率管理方法 ====================
 
   /**
@@ -382,7 +359,6 @@ export function createMediaModule() {
     updateAsyncProcessingItem,
     removeAsyncProcessingItem,
     getAsyncProcessingItem,
-    convertAsyncProcessingToLocalMedia,
 
     // 分辨率管理方法
     getVideoOriginalResolution,

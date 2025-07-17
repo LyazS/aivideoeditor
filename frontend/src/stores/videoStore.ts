@@ -1351,7 +1351,6 @@ export const useVideoStore = defineStore('video', () => {
     updateAsyncProcessingItem: mediaModule.updateAsyncProcessingItem,
     removeAsyncProcessingItem,
     getAsyncProcessingItem: mediaModule.getAsyncProcessingItem,
-    convertAsyncProcessingToLocalMedia: mediaModule.convertAsyncProcessingToLocalMedia,
     // 时间轴管理方法
     addTimelineItem: timelineModule.addTimelineItem,
     removeTimelineItem: timelineModule.removeTimelineItem,
