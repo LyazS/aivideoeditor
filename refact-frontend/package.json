@@ -13,13 +13,19 @@
     "format": "prettier --write src/"
   },
   "dependencies": {
+    "@imengyu/vue3-context-menu": "^1.5.1",
+    "@webav/av-canvas": "^1.1.5",
+    "@webav/av-cliper": "^1.1.5",
+    "lodash": "^4.17.21",
     "pinia": "^3.0.3",
     "vue": "^3.5.17",
     "vue-router": "^4.5.1"
   },
   "devDependencies": {
     "@tsconfig/node22": "^22.0.2",
+    "@types/lodash": "^4.17.19",
     "@types/node": "^22.15.32",
+    "@types/wicg-file-system-access": "^2023.10.6",
     "@vitejs/plugin-vue": "^6.0.0",
     "@vue/eslint-config-prettier": "^10.2.0",
     "@vue/eslint-config-typescript": "^14.5.1",

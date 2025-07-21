@@ -1,85 +1,76 @@
 <script setup lang="ts">
-import { RouterLink, RouterView } from 'vue-router'
-import HelloWorld from './components/HelloWorld.vue'
+import { RouterView } from 'vue-router'
+import { onMounted } from 'vue'
+import { initializeUnifiedStores } from './stores/unified'
+import NotificationContainer from './components/NotificationContainer.vue'
+
+// 初始化统一Store
+onMounted(() => {
+  initializeUnifiedStores()
+})
 </script>
 
 <template>
-  <header>
-    <img alt="Vue logo" class="logo" src="@/assets/logo.svg" width="125" height="125" />
+  <div id="app">
+    <!-- 主要路由视图 -->
+    <RouterView />
 
-    <div class="wrapper">
-      <HelloWorld msg="You did it!" />
-
-      <nav>
-        <RouterLink to="/">Home</RouterLink>
-        <RouterLink to="/about">About</RouterLink>
-      </nav>
-    </div>
-  </header>
-
-  <RouterView />
+    <!-- 全局通知容器 -->
+    <NotificationContainer />
+  </div>
 </template>
 
-<style scoped>
-header {
-  line-height: 1.5;
-  max-height: 100vh;
+<style>
+/* 引入通用样式 */
+@import './styles/common.css';
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
 }
 
-.logo {
-  display: block;
-  margin: 0 auto 2rem;
+#app {
+  width: 100vw;
+  height: 100vh;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  overflow: hidden;
 }
 
-nav {
-  width: 100%;
-  font-size: 12px;
-  text-align: center;
-  margin-top: 2rem;
+body {
+  margin: 0;
+  padding: 0;
 }
 
-nav a.router-link-exact-active {
-  color: var(--color-text);
+/* 全局应用自定义滚动条样式 */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-bg-active) var(--color-bg-primary);
 }
 
-nav a.router-link-exact-active:hover {
-  background-color: transparent;
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
 }
 
-nav a {
-  display: inline-block;
-  padding: 0 1rem;
-  border-left: 1px solid var(--color-border);
+*::-webkit-scrollbar-track {
+  background: var(--color-bg-primary);
+  border-radius: var(--border-radius-medium);
 }
 
-nav a:first-of-type {
-  border: 0;
+*::-webkit-scrollbar-thumb {
+  background: var(--color-bg-active);
+  border-radius: var(--border-radius-medium);
+  border: 1px solid var(--color-bg-tertiary);
 }
 
-@media (min-width: 1024px) {
-  header {
-    display: flex;
-    place-items: center;
-    padding-right: calc(var(--section-gap) / 2);
-  }
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--color-border-secondary);
+}
 
-  .logo {
-    margin: 0 2rem 0 0;
-  }
-
-  header .wrapper {
-    display: flex;
-    place-items: flex-start;
-    flex-wrap: wrap;
-  }
-
-  nav {
-    text-align: left;
-    margin-left: -1rem;
-    font-size: 1rem;
-
-    padding: 1rem 0;
-    margin-top: 1rem;
-  }
+*::-webkit-scrollbar-corner {
+  background: var(--color-bg-primary);
 }
 </style>

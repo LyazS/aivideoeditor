@@ -1,0 +1,62 @@
+/* 通用按钮样式 */
+
+.btn {
+  background: var(--color-bg-active);
+  border: 1px solid var(--color-border-secondary);
+  border-radius: var(--border-radius-medium);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  padding: var(--spacing-xs) var(--spacing-md);
+  font-size: var(--font-size-base);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.btn:hover {
+  background: var(--color-border-secondary);
+  color: var(--color-text-primary);
+  border-color: var(--color-border-hover);
+}
+
+.btn:active {
+  background: var(--color-border-hover);
+  transform: translateY(1px);
+}
+
+.btn.btn-primary {
+  background: var(--color-accent-primary);
+  border-color: var(--color-accent-primary);
+  color: var(--color-text-primary);
+}
+
+.btn.btn-primary:hover {
+  background: var(--color-accent-primary-hover);
+  border-color: var(--color-accent-primary-hover);
+}
+
+.btn.btn-danger {
+  background: var(--color-accent-error);
+  border-color: var(--color-accent-error);
+  color: var(--color-text-primary);
+}
+
+.btn.btn-danger:hover {
+  background: var(--color-accent-error-hover);
+  border-color: var(--color-accent-error-hover);
+}
+
+.btn.btn-small {
+  padding: var(--spacing-xs);
+  font-size: var(--font-size-sm);
+  width: 24px;
+  height: 24px;
+}
+
+.btn.btn-icon {
+  padding: var(--spacing-xs);
+  min-width: 24px;
+  height: 24px;
+}

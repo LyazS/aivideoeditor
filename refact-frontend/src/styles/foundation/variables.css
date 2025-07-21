@@ -1,0 +1,84 @@
+/* CSS变量定义 - 基础设计系统变量 */
+
+:root {
+  /* 颜色变量 */
+  --color-bg-primary: #1a1a1a;
+  --color-bg-secondary: #2a2a2a;
+  --color-bg-tertiary: #333;
+  --color-bg-quaternary: #444;
+  --color-bg-hover: #3a3a3a;
+  --color-bg-active: #555;
+
+  --color-border-primary: #555;
+  --color-border-secondary: #666;
+  --color-border-hover: #777;
+  --color-border-focus: #4caf50;
+
+  --color-text-primary: #fff;
+  --color-text-secondary: #ccc;
+  --color-text-tertiary: #aaa;
+  --color-text-muted: #888;
+  --color-text-hint: #999;
+
+  --color-accent-primary: #4caf50;
+  --color-accent-primary-hover: #45a049;
+  --color-accent-secondary: #2196f3;
+  --color-accent-warning: #ff6b6b;
+  --color-accent-error: #f44336;
+  --color-accent-error-hover: #d32f2f;
+
+  /* 视频片段颜色 */
+  --color-clip-primary: #4a90e2;
+  --color-clip-primary-dark: #357abd;
+  --color-clip-selected: #ff6b35;
+  --color-clip-selected-dark: #f7931e;
+  --color-clip-overlapping: #e74c3c;
+  --color-clip-overlapping-dark: #c0392b;
+  --color-clip-hidden: #666;
+  --color-clip-hidden-dark: #555;
+  --color-clip-hidden-selected: #cc5529;
+  --color-clip-hidden-selected-dark: #c4741a;
+
+  /* 关键帧颜色 */
+  --color-keyframe-primary: #00ff88;
+  --color-keyframe-hover: #00cc6a;
+  --color-keyframe-active: #00aa55;
+
+  /* 特殊颜色 */
+  --color-speed-indicator: #ffd700;
+
+  /* 拖拽预览颜色 */
+  --color-drag-preview-normal: rgba(128, 128, 128, 0.6);
+  --color-drag-preview-conflict: rgba(255, 68, 68, 0.6);
+  --color-drag-border-normal: #888888;
+  --color-drag-border-conflict: #ff4444;
+
+  /* 尺寸变量 */
+  --border-radius-small: 3px;
+  --border-radius-medium: 4px;
+  --border-radius-large: 6px;
+  --border-radius-xlarge: 8px;
+
+  --spacing-xs: 4px;
+  --spacing-sm: 6px;
+  --spacing-md: 8px;
+  --spacing-lg: 12px;
+  --spacing-xl: 16px;
+  --spacing-xxl: 24px;
+
+  /* 字体变量 */
+  --font-size-xs: 10px;
+  --font-size-sm: 11px;
+  --font-size-base: 12px;
+  --font-size-md: 13px;
+  --font-size-lg: 14px;
+
+  /* 阴影变量 */
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 2px 12px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.3);
+
+  /* 过渡变量 */
+  --transition-fast: 0.2s;
+  --transition-medium: 0.3s;
+}
