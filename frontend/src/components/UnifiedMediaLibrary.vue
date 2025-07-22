@@ -52,7 +52,7 @@
             d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"
           />
         </svg>
-        <p v-if="unifiedStore.mediaModule.getAllUnifiedMediaItems().length === 0">拖拽文件到此处导入</p>
+        <p v-if="unifiedStore.mediaModule.mediaItems.length === 0">拖拽文件到此处导入</p>
         <p v-else>当前分类暂无素材</p>
         <p class="hint">支持 MP4, WebM, AVI 等视频格式、JPG, PNG, GIF 等图片格式和 MP3, WAV, M4A 等音频格式</p>
       </div>
@@ -90,10 +90,10 @@
                 <div v-else-if="['asyncprocessing', 'webavdecoding'].includes(item.mediaStatus)" class="processing-status processing">
                   <div
                     class="progress-circle"
-                    :style="{ '--progress': (item.getProgress() || 0) * 100 }"
-                    :title="`处理中 ${Math.round((item.getProgress() || 0) * 100)}%`"
+                    :style="{ '--progress': item.getProgress() || 0 }"
+                    :title="`处理中 ${Math.round(item.getProgress() || 0)}%`"
                   >
-                    <div class="progress-text">{{ Math.round((item.getProgress() || 0) * 100) }}%</div>
+                    <div class="progress-text">{{ Math.round(item.getProgress() || 0) }}%</div>
                   </div>
                 </div>
               </div>
@@ -290,7 +290,7 @@ const currentMenuItems = computed((): MenuItem[] => {
 
 // 计算过滤后的素材列表
 const filteredMediaItems = computed(() => {
-  const allItems = unifiedStore.mediaModule.getAllUnifiedMediaItems()
+  const allItems = unifiedStore.mediaModule.mediaItems
 
   if (activeTab.value === 'all') {
     return allItems
@@ -315,33 +315,27 @@ const setActiveTab = (tabType: TabType) => {
   activeTab.value = tabType
 }
 
-// 获取tab对应的素材数量
-const getTabCount = (tabType: TabType) => {
-  const allItems = unifiedStore.mediaModule.getAllUnifiedMediaItems()
+// 计算各个tab的素材数量
+const tabCounts = computed(() => {
+  const allItems = unifiedStore.mediaModule.mediaItems
 
-  if (tabType === 'all') {
-    return allItems.length
-  }
-
-  if (tabType === 'video') {
-    return allItems.filter(item =>
+  return {
+    all: allItems.length,
+    video: allItems.filter(item =>
       item.mediaType === 'video' || item.mediaType === 'image' || item.mediaType === 'unknown'
-    ).length
-  }
-
-  if (tabType === 'audio') {
-    return allItems.filter(item =>
+    ).length,
+    audio: allItems.filter(item =>
       item.mediaType === 'audio' || item.mediaType === 'unknown'
-    ).length
-  }
-
-  if (tabType === 'processing') {
-    return allItems.filter(item =>
+    ).length,
+    processing: allItems.filter(item =>
       ['pending', 'asyncprocessing', 'webavdecoding'].includes(item.mediaStatus)
     ).length
   }
+})
 
-  return 0
+// 获取tab对应的素材数量
+const getTabCount = (tabType: TabType) => {
+  return tabCounts.value[tabType] || 0
 }
 
 // 格式化时长显示（使用时间码格式）
@@ -669,7 +663,7 @@ const debugMediaItems = () => {
   console.log('🔍 [调试] 统一媒体项目状态调试信息')
   console.log('=' .repeat(80))
 
-  const allItems = unifiedStore.mediaModule.getAllUnifiedMediaItems()
+  const allItems = unifiedStore.mediaModule.mediaItems
   console.log(`📊 总计媒体项目数量: ${allItems.length}`)
 
   if (allItems.length === 0) {
@@ -697,7 +691,7 @@ const debugMediaItems = () => {
     console.log(`   时长: ${item.duration ? `${item.duration} 帧 (${framesToTimecode(item.duration)})` : '未知'}`)
     console.log(`   创建时间: ${item.createdAt}`)
     console.log(`   数据源类型: ${item.source?.constructor?.name || '未知'}`)
-    console.log(`   进度: ${item.getProgress ? `${Math.round((item.getProgress() || 0) * 100)}%` : '不支持'}`)
+    console.log(`   进度: ${item.getProgress ? `${Math.round(item.getProgress() || 0)}%` : '不支持'}`)
     console.log(`   URL: ${item.getUrl() || '无'}`)
 
     // 数据源详细信息

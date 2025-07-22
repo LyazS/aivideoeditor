@@ -139,13 +139,112 @@ export class UnifiedMediaItem {
     console.log(`🎬 [UNIFIED-MEDIA] 开始WebAV处理: ${this.name} (ID: ${this.id})`)
 
     try {
-      // TODO: 实现WebAV处理逻辑
-      // 这里应该创建对应的WebAV Clip对象
+      // 获取文件对象和媒体类型
+      const file = this.getFile()
+      if (!file) {
+        throw new Error('无法获取文件对象')
+      }
 
-      // 暂时直接设置为ready状态
-      setTimeout(() => {
-        this.transitionTo('ready')
-      }, 100)
+      // 确定媒体类型
+      const mediaType = this.determineMediaType(file)
+      if (mediaType === 'unknown') {
+        throw new Error(`不支持的文件类型: ${file.type}`)
+      }
+
+      // 更新媒体类型
+      this.mediaType = mediaType
+      console.log(`🎬 [UNIFIED-MEDIA] 检测到媒体类型: ${mediaType} (${this.name})`)
+
+      // 动态导入WebAV模块以避免循环依赖
+      const { useUnifiedStore } = await import('./stores/UnifiedStore')
+      const unifiedStore = useUnifiedStore()
+
+      // 创建对应的WebAV Clip对象
+      let clip: any
+      let originalWidth: number | undefined
+      let originalHeight: number | undefined
+      let duration: number | undefined
+
+      switch (mediaType) {
+        case 'video':
+          console.log(`🎬 [UNIFIED-MEDIA] 创建MP4Clip: ${this.name}`)
+          clip = await unifiedStore.createMP4Clip(file)
+          const videoMeta = await clip.ready
+          originalWidth = videoMeta.width
+          originalHeight = videoMeta.height
+          duration = Math.round((videoMeta.duration / 1_000_000) * 30) // 微秒转帧数（30fps）
+          break
+
+        case 'image':
+          console.log(`🎬 [UNIFIED-MEDIA] 创建ImgClip: ${this.name}`)
+          clip = await unifiedStore.createImgClip(file)
+          const imageMeta = await clip.ready
+          originalWidth = imageMeta.width
+          originalHeight = imageMeta.height
+          duration = 150 // 图片固定5秒（150帧@30fps）
+          break
+
+        case 'audio':
+          console.log(`🎬 [UNIFIED-MEDIA] 创建AudioClip: ${this.name}`)
+          clip = await unifiedStore.createAudioClip(file)
+          const audioMeta = await clip.ready
+          duration = Math.round((audioMeta.duration / 1_000_000) * 30) // 微秒转帧数（30fps）
+          break
+
+        default:
+          throw new Error(`不支持的媒体类型: ${mediaType}`)
+      }
+
+      // 创建WebAV对象
+      this.webav = {
+        originalWidth,
+        originalHeight
+      }
+
+      // 根据媒体类型设置对应的clip
+      if (mediaType === 'video') {
+        this.webav.mp4Clip = clip
+      } else if (mediaType === 'image') {
+        this.webav.imgClip = clip
+      } else if (mediaType === 'audio') {
+        this.webav.audioClip = clip
+      }
+
+      // 设置时长
+      if (duration !== undefined) {
+        this.duration = duration
+      }
+
+      // 生成缩略图（音频除外）
+      if (mediaType !== 'audio') {
+        try {
+          console.log(`🖼️ [UNIFIED-MEDIA] 开始生成缩略图: ${this.name}`)
+
+          // 动态导入缩略图生成器以避免循环依赖
+          const { generateThumbnailForMediaItem } = await import('../utils/thumbnailGenerator')
+
+          const thumbnailUrl = await generateThumbnailForMediaItem({
+            mediaType,
+            mp4Clip: mediaType === 'video' ? clip : undefined,
+            imgClip: mediaType === 'image' ? clip : undefined,
+          })
+
+          if (thumbnailUrl) {
+            this.webav.thumbnailUrl = thumbnailUrl
+            console.log(`✅ [UNIFIED-MEDIA] 缩略图生成成功: ${this.name}`)
+          } else {
+            console.warn(`⚠️ [UNIFIED-MEDIA] 缩略图生成失败: ${this.name}`)
+          }
+        } catch (error) {
+          console.error(`❌ [UNIFIED-MEDIA] 缩略图生成错误: ${this.name}`, error)
+          // 缩略图生成失败不影响整体流程
+        }
+      }
+
+      console.log(`✅ [UNIFIED-MEDIA] WebAV处理完成: ${this.name} (${mediaType}, ${duration}帧)`)
+
+      // 转换到ready状态
+      this.transitionTo('ready')
 
     } catch (error) {
       console.error(`❌ [UNIFIED-MEDIA] WebAV处理失败: ${this.name}`, error)
@@ -159,6 +258,68 @@ export class UnifiedMediaItem {
         reason: 'WebAV处理失败'
       })
     }
+  }
+
+  /**
+   * 获取文件对象
+   */
+  private getFile(): File | undefined {
+    // 检查是否为用户选择文件数据源
+    if (this.source && typeof (this.source as any).getSelectedFile === 'function') {
+      return (this.source as any).getSelectedFile()
+    }
+
+    // 其他数据源类型的处理可以在这里添加
+    return undefined
+  }
+
+  /**
+   * 确定文件的媒体类型
+   */
+  private determineMediaType(file: File): 'video' | 'audio' | 'image' | 'unknown' {
+    const mimeType = file.type.toLowerCase()
+
+    // 支持的媒体类型
+    const videoTypes = [
+      'video/mp4', 'video/webm', 'video/ogg', 'video/avi', 'video/mov',
+      'video/quicktime', 'video/x-msvideo', 'video/x-ms-wmv'
+    ]
+    const audioTypes = [
+      'audio/mp3', 'audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/aac',
+      'audio/flac', 'audio/x-wav'
+    ]
+    const imageTypes = [
+      'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp',
+      'image/bmp', 'image/svg+xml'
+    ]
+
+    // 检查MIME类型
+    if (videoTypes.includes(mimeType)) return 'video'
+    if (audioTypes.includes(mimeType)) return 'audio'
+    if (imageTypes.includes(mimeType)) return 'image'
+
+    // 如果MIME类型不可用，尝试从文件扩展名判断
+    if (!mimeType) {
+      const extension = this.getFileExtension(file.name).toLowerCase()
+
+      const videoExtensions = ['mp4', 'webm', 'ogg', 'avi', 'mov', 'wmv']
+      const audioExtensions = ['mp3', 'wav', 'ogg', 'aac', 'flac']
+      const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg']
+
+      if (videoExtensions.includes(extension)) return 'video'
+      if (audioExtensions.includes(extension)) return 'audio'
+      if (imageExtensions.includes(extension)) return 'image'
+    }
+
+    return 'unknown'
+  }
+
+  /**
+   * 获取文件扩展名
+   */
+  private getFileExtension(filename: string): string {
+    const lastDotIndex = filename.lastIndexOf('.')
+    return lastDotIndex > 0 ? filename.substring(lastDotIndex + 1) : ''
   }
 
   /**
@@ -269,7 +430,7 @@ export class UnifiedMediaItem {
   }
 
   /**
-   * 获取处理进度（0-1）
+   * 获取处理进度（0-100）
    */
   getProgress(): number | undefined {
     return this.source?.getProgress?.()
