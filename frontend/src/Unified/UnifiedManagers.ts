@@ -1,8 +1,36 @@
 /**
- * 统一管理器类型设计
- * 
- * 定义各种管理器的接口，包括数据源管理器、媒体项目管理器、
- * 时间轴项目管理器、命令历史管理器等
+ * 统一管理器API契约文档
+ *
+ * ⚠️ 重要说明：此文件仅作为API契约文档和类型定义使用
+ *
+ * 📋 文件作用：
+ * 1. 定义各种管理器应该提供的功能接口
+ * 2. 作为开发团队的API设计参考文档
+ * 3. 提供TypeScript类型定义支持
+ *
+ * 🚫 不要直接实现这些接口为管理器类！
+ *
+ * ✅ 正确的实现方式：
+ * - 使用 Pinia Store 模块 (stores/modules/)
+ * - 使用 Vue Composables (composables/)
+ * - 使用工具函数模块 (utils/)
+ *
+ * 📖 示例：
+ * ```typescript
+ * // ❌ 错误：不要这样实现
+ * class MediaManagerImpl implements UnifiedMediaManager { ... }
+ *
+ * // ✅ 正确：使用现有架构
+ * export const useMediaStore = defineStore('media', () => {
+ *   // 实现 UnifiedMediaManager 接口中定义的功能
+ * })
+ *
+ * export function useMediaManager() {
+ *   // 封装复杂的媒体操作逻辑
+ * }
+ * ```
+ *
+ * 🎯 目标：保持项目架构一致性，使用 Vue 3 + Pinia 最佳实践
  */
 
 import type { BaseDataSource } from './sources/BaseDataSource'
@@ -10,124 +38,14 @@ import type { UnifiedMediaItem } from './UnifiedMediaItem'
 import type { UnifiedTimelineItem } from './UnifiedTimelineItem'
 import type { UnifiedCommand, StateSnapshot } from './UnifiedCommand'
 
-// ==================== 数据源管理器接口 ====================
+// ==================== 媒体项目管理器API契约 ====================
 
 /**
- * 数据源管理器基础接口
- */
-export interface DataSourceManager<T extends BaseDataSource> {
-  /**
-   * 开始获取数据源
-   */
-  startAcquisition(source: T, taskId: string): void
-  
-  /**
-   * 取消获取操作
-   */
-  cancelAcquisition(taskId: string): void
-  
-  /**
-   * 获取正在进行的任务数量
-   */
-  getActiveTaskCount(): number
-  
-  /**
-   * 获取任务状态
-   */
-  getTaskStatus(taskId: string): string | undefined
-  
-  /**
-   * 清理已完成的任务
-   */
-  cleanupCompletedTasks(): void
-}
-
-/**
- * 用户选择文件管理器接口
- */
-export interface UserSelectedFileManager extends DataSourceManager<BaseDataSource> {
-  /**
-   * 验证文件有效性
-   */
-  validateFile(file: File): Promise<boolean>
-  
-  /**
-   * 获取文件类型
-   */
-  detectFileType(file: File): Promise<string>
-  
-  /**
-   * 批量处理文件
-   */
-  processBatch(files: File[]): Promise<void>
-}
-
-/**
- * 工程文件管理器接口
- */
-export interface ProjectFileManager extends DataSourceManager<BaseDataSource> {
-  /**
-   * 检查文件是否存在
-   */
-  checkFileExists(filePath: string): Promise<boolean>
-  
-  /**
-   * 重新定位文件
-   */
-  relocateFile(originalPath: string, newFile: File): Promise<void>
-  
-  /**
-   * 批量重新定位文件
-   */
-  batchRelocateFiles(relocations: Array<{ originalPath: string; newFile: File }>): Promise<void>
-  
-  /**
-   * 获取缺失文件列表
-   */
-  getMissingFiles(): string[]
-}
-
-/**
- * 远程文件管理器接口
- */
-export interface RemoteFileManager extends DataSourceManager<BaseDataSource> {
-  /**
-   * 设置并发下载限制
-   */
-  setConcurrencyLimit(limit: number): void
-  
-  /**
-   * 获取下载统计信息
-   */
-  getDownloadStats(): {
-    totalDownloads: number
-    activeDownloads: number
-    completedDownloads: number
-    failedDownloads: number
-    totalBytes: number
-    downloadedBytes: number
-  }
-  
-  /**
-   * 暂停所有下载
-   */
-  pauseAllDownloads(): void
-  
-  /**
-   * 恢复所有下载
-   */
-  resumeAllDownloads(): void
-  
-  /**
-   * 清理下载缓存
-   */
-  clearDownloadCache(): void
-}
-
-// ==================== 媒体项目管理器接口 ====================
-
-/**
- * 统一媒体项目管理器接口
+ * 统一媒体项目管理器API契约
+ *
+ * 📋 功能说明：定义媒体项目管理应该提供的核心功能
+ * 🏗️ 实现方式：通过 stores/modules/mediaModule.ts 和相关 composables 实现
+ * 📖 使用示例：const mediaStore = useMediaStore()
  */
 export interface UnifiedMediaManager {
   /**
@@ -180,10 +98,14 @@ export interface UnifiedMediaManager {
   }
 }
 
-// ==================== 时间轴项目管理器接口 ====================
+// ==================== 时间轴项目管理器API契约 ====================
 
 /**
- * 统一时间轴项目管理器接口
+ * 统一时间轴项目管理器API契约
+ *
+ * 📋 功能说明：定义时间轴项目管理应该提供的核心功能
+ * 🏗️ 实现方式：通过 stores/modules/timelineModule.ts 和相关 composables 实现
+ * 📖 使用示例：const timelineStore = useVideoStore() // timelineModule 集成在 videoStore 中
  */
 export interface UnifiedTimelineManager {
   /**
@@ -237,10 +159,14 @@ export interface UnifiedTimelineManager {
   batchUpdateTimelineItems(updates: Array<{ id: string; updates: Partial<UnifiedTimelineItem> }>): Promise<void>
 }
 
-// ==================== Sprite生命周期管理器接口 ====================
+// ==================== Sprite生命周期管理器API契约 ====================
 
 /**
- * Sprite生命周期管理器接口
+ * Sprite生命周期管理器API契约
+ *
+ * 📋 功能说明：定义Sprite生命周期管理应该提供的核心功能
+ * 🏗️ 实现方式：通过 stores/modules/webavModule.ts 和相关工具函数实现
+ * 📖 使用示例：const webavStore = useVideoStore() // webavModule 集成在 videoStore 中
  */
 export interface SpriteLifecycleManager {
   /**
@@ -283,10 +209,14 @@ export interface SpriteLifecycleManager {
   }
 }
 
-// ==================== 命令历史管理器接口 ====================
+// ==================== 命令历史管理器API契约 ====================
 
 /**
- * 命令历史管理器接口
+ * 命令历史管理器API契约
+ *
+ * 📋 功能说明：定义命令历史管理应该提供的核心功能
+ * 🏗️ 实现方式：通过 stores/modules/historyModule.ts 和相关 composables 实现
+ * 📖 使用示例：const historyStore = useVideoStore() // historyModule 集成在 videoStore 中
  */
 export interface CommandHistoryManager {
   /**
@@ -350,10 +280,14 @@ export interface CommandHistoryManager {
   restoreSnapshot(snapshot: StateSnapshot): Promise<void>
 }
 
-// ==================== 通知管理器接口 ====================
+// ==================== 通知管理器API契约 ====================
 
 /**
- * 通知管理器接口
+ * 通知管理器API契约
+ *
+ * 📋 功能说明：定义通知管理应该提供的核心功能
+ * 🏗️ 实现方式：通过 stores/modules/notificationModule.ts 和相关组件实现
+ * 📖 使用示例：const notificationStore = useVideoStore() // notificationModule 集成在 videoStore 中
  */
 export interface NotificationManager {
   /**
@@ -395,51 +329,4 @@ export interface NotificationManager {
    * 关闭所有通知
    */
   closeAll(): void
-}
-
-// ==================== 管理器工厂接口 ====================
-
-/**
- * 管理器工厂接口
- */
-export interface ManagerFactory {
-  /**
-   * 创建用户选择文件管理器
-   */
-  createUserSelectedFileManager(): UserSelectedFileManager
-  
-  /**
-   * 创建工程文件管理器
-   */
-  createProjectFileManager(): ProjectFileManager
-  
-  /**
-   * 创建远程文件管理器
-   */
-  createRemoteFileManager(): RemoteFileManager
-  
-  /**
-   * 创建统一媒体管理器
-   */
-  createUnifiedMediaManager(): UnifiedMediaManager
-  
-  /**
-   * 创建统一时间轴管理器
-   */
-  createUnifiedTimelineManager(): UnifiedTimelineManager
-  
-  /**
-   * 创建Sprite生命周期管理器
-   */
-  createSpriteLifecycleManager(): SpriteLifecycleManager
-  
-  /**
-   * 创建命令历史管理器
-   */
-  createCommandHistoryManager(): CommandHistoryManager
-  
-  /**
-   * 创建通知管理器
-   */
-  createNotificationManager(): NotificationManager
 }

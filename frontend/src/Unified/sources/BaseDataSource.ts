@@ -4,6 +4,7 @@
  * 基于重构文档的统一异步源架构，定义数据源的基础抽象类和通用接口
  * 数据源负责处理不同来源的文件获取逻辑，与媒体项目的处理逻辑分离
  */
+import {generateUUID4}from '@/utils/idGenerator.ts'
 
 /**
  * 数据源状态类型
@@ -37,11 +38,14 @@ export const DATA_SOURCE_TO_MEDIA_STATUS_MAP = {
 } as const
 
 /**
- * 数据源管理器接口（前向声明）
+ * 数据源管理器基类前向声明（避免循环导入）
  */
-export interface DataSourceManager<T extends BaseDataSource> {
-  startAcquisition(source: T, taskId: string): void
+interface BaseDataSourceManager<T extends BaseDataSource> {
+  // startAcquisition(source: T, taskId: string): void
   cancelAcquisition(taskId: string): void
+  // getActiveTaskCount(): number
+  // getTaskStatus(taskId: string): string | undefined
+  // cleanupCompletedTasks(): void
 }
 
 /**
@@ -124,7 +128,7 @@ export abstract class BaseDataSource {
    * 开始获取文件
    */
   startAcquisition(): void {
-    this.taskId = this.generateTaskId()
+    this.taskId = generateUUID4()
     this.executeAcquisition()
   }
 
@@ -150,7 +154,7 @@ export abstract class BaseDataSource {
   /**
    * 获取对应的管理器实例
    */
-  protected abstract getManager(): DataSourceManager<BaseDataSource>
+  protected abstract getManager(): BaseDataSourceManager<BaseDataSource>
 
   /**
    * 执行具体的获取逻辑
@@ -162,7 +166,7 @@ export abstract class BaseDataSource {
   /**
    * 设置为获取中状态
    */
-  protected setAcquiring(): void {
+  setAcquiring(): void {
     this.status = 'acquiring'
     this.progress = 0
     this.errorMessage = undefined
@@ -172,7 +176,7 @@ export abstract class BaseDataSource {
   /**
    * 设置为已获取状态
    */
-  protected setAcquired(file: File, url: string): void {
+  setAcquired(file: File, url: string): void {
     this.file = file
     this.url = url
     this.status = 'acquired'
@@ -183,7 +187,7 @@ export abstract class BaseDataSource {
   /**
    * 设置为错误状态
    */
-  protected setError(message: string): void {
+  setError(message: string): void {
     this.status = 'error'
     this.errorMessage = message
     this.notifyUpdate()
@@ -192,7 +196,7 @@ export abstract class BaseDataSource {
   /**
    * 设置为取消状态
    */
-  protected setCancelled(): void {
+  setCancelled(): void {
     this.status = 'cancelled'
     this.notifyUpdate()
   }
@@ -229,13 +233,6 @@ export abstract class BaseDataSource {
    */
   private notifyUpdate(): void {
     this.onUpdate?.(this)
-  }
-
-  /**
-   * 生成任务ID
-   */
-  private generateTaskId(): string {
-    return `task_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
   }
 }
 

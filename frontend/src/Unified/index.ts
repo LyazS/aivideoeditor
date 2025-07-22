@@ -8,7 +8,7 @@
 // ==================== 数据源相关类型 ====================
 
 // 基础数据源类型
-export type { DataSourceStatus, DataSourceManager } from './sources/BaseDataSource'
+export type { DataSourceStatus } from './sources/BaseDataSource'
 
 export {
   BaseDataSource,
@@ -17,51 +17,100 @@ export {
   mapDataSourceStatusToMediaStatus,
 } from './sources/BaseDataSource'
 
-// 扩展数据源类型
+// 数据源管理器类型
 export type {
-  UnifiedDataSource,
-  ProjectFileInfo,
-  RemoteFileConfig,
-  DownloadStats,
-} from './sources'
+  AcquisitionTask,
+  AcquisitionTaskStatus,
+  ManagerStats,
+  ManagerConfig,
+  GlobalManagerStats,
+} from './managers'
+
+export {
+  BaseDataSourceManager,
+  DataSourceManagerRegistry,
+  UserSelectedFileManager,
+  getManagerRegistry,
+  registerManager,
+  getManager,
+  initializeDataSourceManagers,
+  getRegisteredManagerTypes,
+  cleanupAllManagerTasks,
+  printGlobalManagerStats,
+} from './managers'
+
+// 扩展数据源类型
+export type { UnifiedDataSource, RemoteFileConfig, DownloadStats } from './sources'
 
 export {
   UserSelectedFileSource,
-  ProjectFileSource,
   RemoteFileSource,
   isUserSelectedSource,
-  isProjectFileSource,
   isRemoteSource,
-  createUserSelectedFileSource,
-  createProjectFileSource,
-  createRemoteFileSource,
 } from './sources'
-
-
 
 // ==================== 媒体项目相关类型 ====================
 
-export type {
-  MediaType,
-  MediaStatus,
-  TransitionContext,
-  WebAVObjects,
-  UnifiedMediaItem,
-  CreateUnifiedMediaItemOptions,
-} from './UnifiedMediaItem'
+export type { MediaType, WebAVObjects, UnifiedMediaItem } from './UnifiedMediaItem'
 
-export {
-  VALID_MEDIA_TRANSITIONS,
-  isValidMediaTransition,
-  createUnifiedMediaItem,
-  isUnifiedMediaItem,
-} from './UnifiedMediaItem'
+// ==================== 状态转换相关类型 ====================
+
+// 媒体状态相关
+export type { MediaStatus } from './contexts/MediaTransitionContext'
+
+// 时间轴状态相关
+export type { TimelineItemStatus } from './contexts/TimelineStatusContext'
+
+// 状态转换历史记录
+export type { StateTransitionRecord } from './contexts/BaseTransitionContext'
+
+// ==================== 转换上下文相关类型 ====================
+
+// 通用基础上下文
+export type {
+  BaseTransitionContext,
+  ProgressInfo,
+  ErrorInfo,
+  FileInfo,
+  NetworkInfo,
+  BaseProgressContext,
+  BaseErrorContext,
+  BaseFileContext,
+  BaseNetworkContext,
+} from './contexts/BaseTransitionContext'
+
+// 媒体项目转换上下文
+export type {
+  AsyncProcessingContext,
+  ProgressUpdateContext,
+  DownloadCompletedContext,
+  ParseCompletedContext,
+  ErrorContext,
+  CancelledContext,
+  RetryContext,
+  MissingContext,
+  UserInputContext,
+  ServerMetadataContext,
+  BatchProcessingContext,
+  MediaTransitionContext,
+} from './contexts/MediaTransitionContext'
+
+// 时间轴项目状态上下文
+export type {
+  TimelineStatusContext,
+  DownloadContext,
+  ParseContext,
+  ProcessingContext,
+  ReadyContext,
+  ErrorContext as TimelineErrorContext,
+  ProgressExtension,
+  ErrorExtension,
+  TimelineStatusContextUnion,
+} from './contexts/TimelineStatusContext'
 // ==================== 时间轴项目相关类型 ====================
 
 export type {
-  TimelineItemStatus,
-  TimelineStatusContext,
-  TimeRange,
+  UnifiedBaseTimeRange as TimeRange,
   VisualMediaProps,
   VideoMediaConfig,
   ImageMediaConfig,
@@ -73,21 +122,9 @@ export type {
   CustomSprite,
   ExtendedPropsChangeEvent,
   UnifiedTimelineItem,
-  CreateUnifiedTimelineItemOptions,
 } from './UnifiedTimelineItem'
 
-export {
-  VALID_TIMELINE_TRANSITIONS,
-  isValidTimelineTransition,
-  MEDIA_TO_TIMELINE_STATUS_MAP,
-  mapMediaStatusToTimelineStatus,
-  createUnifiedTimelineItem,
-  createTimelineStatusContext,
-  createLoadingContext,
-  createErrorContext,
-  createReadyContext,
-  isUnifiedTimelineItem,
-} from './UnifiedTimelineItem'
+export { MEDIA_TO_TIMELINE_STATUS_MAP } from './UnifiedTimelineItem'
 
 // ==================== 命令系统相关类型 ====================
 
@@ -95,39 +132,20 @@ export type {
   UnifiedCommand,
   StateSnapshot,
   TimelineItemSnapshot,
-  MediaItemSnapshot,
   BatchSnapshot,
   CommandTransitionContext,
   BatchCommand,
 } from './UnifiedCommand'
 
-export {
-  TimelineItemCommand,
-  MoveTimelineItemCommand,
-  DeleteTimelineItemCommand,
-  BatchCommandImpl,
-  isUnifiedCommand,
-} from './UnifiedCommand'
-
 // ==================== 管理器相关类型 ====================
 
 export type {
-  DataSourceManager as IDataSourceManager,
-  UserSelectedFileManager,
-  ProjectFileManager,
-  RemoteFileManager,
   UnifiedMediaManager,
   UnifiedTimelineManager,
   SpriteLifecycleManager,
   CommandHistoryManager,
   NotificationManager,
-  ManagerFactory,
 } from './UnifiedManagers'
-
-// ==================== 类型守卫函数 ====================
-
-// 从各自的文件中导入类型守卫函数
-export { isUnifiedDataSource } from './sources'
 
 // ==================== 工具函数 ====================
 
@@ -139,20 +157,13 @@ export function generateTimestamp(): number {
 }
 
 /**
- * 创建基础转换上下文
+ * 数据源管理器初始化相关工具函数
  */
-export function createBaseTransitionContext(
-  source: string,
-  reason: string,
-  metadata?: Record<string, any>,
-): { timestamp: number; source: string; reason: string; metadata?: Record<string, any> } {
-  return {
-    timestamp: generateTimestamp(),
-    source,
-    reason,
-    metadata,
-  }
-}
+export {
+  initDataSourceManagers,
+  isDataSourceManagersInitialized,
+  getDataSourceManagersStatus,
+} from './utils/dataSourceManagerInit'
 
 // ==================== 常量定义 ====================
 
@@ -212,4 +223,3 @@ export const UNIFIED_ERROR_CODES = {
   COMMAND_UNDO_FAILED: 'COMMAND_UNDO_FAILED',
   COMMAND_INVALID_STATE: 'COMMAND_INVALID_STATE',
 } as const
-

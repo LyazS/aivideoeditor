@@ -6,7 +6,6 @@
  */
 
 import { BaseDataSource } from './BaseDataSource'
-import type { DataSourceManager } from '../UnifiedManagers'
 
 /**
  * 远程文件配置接口
@@ -74,7 +73,7 @@ export class RemoteFileSource extends BaseDataSource {
     }
   }
 
-  protected getManager(): DataSourceManager<RemoteFileSource> {
+  protected getManager(): any {
     // 这里应该返回RemoteFileManager的单例实例
     throw new Error('RemoteFileManager not implemented yet')
   }
@@ -125,17 +124,4 @@ export class RemoteFileSource extends BaseDataSource {
  */
 export function isRemoteSource(source: any): source is RemoteFileSource {
   return source?.getType?.() === 'remote'
-}
-
-// ==================== 工厂函数 ====================
-
-/**
- * 创建远程文件数据源
- */
-export function createRemoteFileSource(
-  url: string,
-  config?: RemoteFileConfig,
-  onUpdate?: (source: RemoteFileSource) => void,
-): RemoteFileSource {
-  return new RemoteFileSource(url, config, onUpdate)
 }

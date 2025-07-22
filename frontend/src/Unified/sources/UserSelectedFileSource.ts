@@ -6,7 +6,7 @@
  */
 
 import { BaseDataSource } from './BaseDataSource'
-import type { DataSourceManager } from '../UnifiedManagers'
+import { UserSelectedFileManager } from '../managers/UserSelectedFileManager'
 
 /**
  * 用户选择文件数据源
@@ -29,10 +29,8 @@ export class UserSelectedFileSource extends BaseDataSource {
     return this.selectedFile
   }
 
-  protected getManager(): DataSourceManager<UserSelectedFileSource> {
-    // 这里应该返回UserSelectedFileManager的单例实例
-    // 实际实现时需要导入对应的管理器
-    throw new Error('UserSelectedFileManager not implemented yet')
+  protected getManager(): UserSelectedFileManager {
+    return UserSelectedFileManager.getInstance()
   }
 
   protected executeAcquisition(): void {
@@ -47,16 +45,4 @@ export class UserSelectedFileSource extends BaseDataSource {
  */
 export function isUserSelectedSource(source: any): source is UserSelectedFileSource {
   return source?.getType?.() === 'user-selected'
-}
-
-// ==================== 工厂函数 ====================
-
-/**
- * 创建用户选择文件数据源
- */
-export function createUserSelectedFileSource(
-  file: File,
-  onUpdate?: (source: UserSelectedFileSource) => void,
-): UserSelectedFileSource {
-  return new UserSelectedFileSource(file, onUpdate)
 }
