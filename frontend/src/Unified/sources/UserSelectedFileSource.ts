@@ -19,7 +19,9 @@ export class UserSelectedFileSource extends BaseDataSource {
     private selectedFile: File,
     onUpdate?: (source: UserSelectedFileSource) => void,
   ) {
+    console.log(`📁 [UNIFIED-MEDIA] UserSelectedFileSource 构造: ${selectedFile.name}`)
     super('user-selected', onUpdate)
+    console.log(`📁 [UNIFIED-MEDIA] UserSelectedFileSource 构造完成: ${selectedFile.name}`)
   }
 
   /**
@@ -34,7 +36,9 @@ export class UserSelectedFileSource extends BaseDataSource {
   }
 
   protected executeAcquisition(): void {
+    console.log(`🚀 [UNIFIED-MEDIA] UserSelectedFileSource 开始执行获取: ${this.selectedFile.name} (任务ID: ${this.taskId})`)
     this.getManager().startAcquisition(this, this.taskId!)
+    console.log(`🚀 [UNIFIED-MEDIA] UserSelectedFileSource 已提交给管理器: ${this.selectedFile.name}`)
   }
 }
 

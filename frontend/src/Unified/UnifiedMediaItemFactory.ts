@@ -71,20 +71,38 @@ export class UnifiedMediaItemFactory {
     file: File,
     options?: UserFileCreateOptions
   ): Promise<UnifiedMediaItem> {
+    console.log(`🏭 [UNIFIED-MEDIA] Factory.fromUserSelectedFile 开始创建: ${file.name}`)
+    console.log(`🏭 [UNIFIED-MEDIA] 文件信息: 大小=${(file.size / 1024 / 1024).toFixed(2)}MB, 类型=${file.type}`)
+
     // 动态导入以避免循环依赖
     const { UserSelectedFileSource } = await import('./sources/UserSelectedFileSource')
-    
-    const source = new UserSelectedFileSource(file)
+
+    const itemId = generateUUID4()
+    console.log(`🏭 [UNIFIED-MEDIA] 创建 UnifiedMediaItem: ${file.name} (ID: ${itemId})`)
     const item = new UnifiedMediaItem(
-      generateUUID4(),
+      itemId,
       file.name,
-      source,
+      null as any, // 临时占位，稍后设置
       {
         mediaType: 'unknown', // 将在处理过程中确定
         onStatusChanged: options?.onStatusChanged,
       }
     )
-    
+
+    console.log(`🏭 [UNIFIED-MEDIA] 创建 UserSelectedFileSource: ${file.name}`)
+    const source = new UserSelectedFileSource(file, (source) => {
+      console.log(`🔗 [UNIFIED-MEDIA] 数据源回调触发: ${file.name}`)
+      item['handleSourceStatusChange'](source)
+    })
+
+    // 设置数据源
+    item.source = source
+
+    // 自动启动数据源获取过程
+    console.log(`🏭 [UNIFIED-MEDIA] 启动数据源获取: ${file.name} (ID: ${itemId})`)
+    source.startAcquisition()
+
+    console.log(`🏭 [UNIFIED-MEDIA] Factory.fromUserSelectedFile 完成: ${file.name} (ID: ${itemId})`)
     return item
   }
 
@@ -154,7 +172,10 @@ export class UnifiedMediaItemFactory {
         onStatusChanged: options?.onStatusChanged,
       }
     )
-    
+
+    // 自动启动数据源获取过程
+    source.startAcquisition()
+
     return item
   }
 

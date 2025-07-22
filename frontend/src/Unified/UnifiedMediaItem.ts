@@ -76,6 +76,8 @@ export class UnifiedMediaItem {
       ) => void
     },
   ) {
+    console.log(`📦 [UNIFIED-MEDIA] UnifiedMediaItem 构造函数开始: ${name} (ID: ${id})`)
+
     this.id = id
     this.name = name
     this.source = source
@@ -87,9 +89,77 @@ export class UnifiedMediaItem {
     if (options?.onStatusChanged) {
       this.onStatusChanged = options.onStatusChanged
     }
+
+    console.log(`📦 [UNIFIED-MEDIA] UnifiedMediaItem 构造完成: ${name} (ID: ${id}, 状态: ${this.mediaStatus})`)
   }
 
   // ==================== 状态机方法 ====================
+
+  /**
+   * 处理数据源状态变化
+   */
+  public handleSourceStatusChange(source: UnifiedDataSource): void {
+    console.log(`🔗 [UNIFIED-MEDIA] 数据源状态变化: ${this.name} (ID: ${this.id}) 数据源状态=${source.getStatus()}`)
+
+    const sourceStatus = source.getStatus()
+
+    // 根据数据源状态转换媒体项目状态
+    switch (sourceStatus) {
+      case 'acquiring':
+        this.transitionTo('asyncprocessing')
+        break
+      case 'acquired':
+        // 数据源获取完成，开始WebAV处理
+        this.transitionTo('webavdecoding')
+        this.startWebAVProcessing()
+        break
+      case 'error':
+        this.transitionTo('error', {
+          type: 'error',
+          errorMessage: source.getError() || '数据源获取失败',
+          errorCode: 'SOURCE_ERROR',
+          retryable: false,
+          timestamp: Date.now(),
+          source: 'data_source',
+          reason: '数据源获取失败'
+        })
+        break
+      case 'cancelled':
+        this.transitionTo('cancelled')
+        break
+      default:
+        console.log(`🔗 [UNIFIED-MEDIA] 未处理的数据源状态: ${sourceStatus}`)
+    }
+  }
+
+  /**
+   * 开始WebAV处理
+   */
+  private async startWebAVProcessing(): Promise<void> {
+    console.log(`🎬 [UNIFIED-MEDIA] 开始WebAV处理: ${this.name} (ID: ${this.id})`)
+
+    try {
+      // TODO: 实现WebAV处理逻辑
+      // 这里应该创建对应的WebAV Clip对象
+
+      // 暂时直接设置为ready状态
+      setTimeout(() => {
+        this.transitionTo('ready')
+      }, 100)
+
+    } catch (error) {
+      console.error(`❌ [UNIFIED-MEDIA] WebAV处理失败: ${this.name}`, error)
+      this.transitionTo('error', {
+        type: 'error',
+        errorMessage: error instanceof Error ? error.message : '未知错误',
+        errorCode: 'WEBAV_ERROR',
+        retryable: false,
+        timestamp: Date.now(),
+        source: 'webav_processing',
+        reason: 'WebAV处理失败'
+      })
+    }
+  }
 
   /**
    * 状态转换方法 - 由数据源管理器调用
@@ -97,16 +167,21 @@ export class UnifiedMediaItem {
    * @param context 转换上下文（可选）- 用于传递状态转换的附加信息
    */
   transitionTo(newStatus: MediaStatus, context?: MediaTransitionContext): void {
+    console.log(`🔄 [UNIFIED-MEDIA] 状态转换请求: ${this.name} (ID: ${this.id}) ${this.mediaStatus} → ${newStatus}`)
+
     if (!this.canTransitionTo(newStatus)) {
-      console.warn(`无效的状态转换: ${this.mediaStatus} → ${newStatus}`)
+      console.warn(`❌ [UNIFIED-MEDIA] 无效的状态转换: ${this.name} (ID: ${this.id}) ${this.mediaStatus} → ${newStatus}`)
       return
     }
 
     const oldStatus = this.mediaStatus
     this.mediaStatus = newStatus
 
+    console.log(`✅ [UNIFIED-MEDIA] 状态转换成功: ${this.name} (ID: ${this.id}) ${oldStatus} → ${newStatus}`)
+
     // 调用状态变化钩子
     if (this.onStatusChanged) {
+      console.log(`📞 [UNIFIED-MEDIA] 调用状态变化回调: ${this.name} (ID: ${this.id})`)
       this.onStatusChanged(oldStatus, newStatus, context)
     }
   }

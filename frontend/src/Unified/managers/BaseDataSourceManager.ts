@@ -74,6 +74,8 @@ export abstract class BaseDataSourceManager<T extends BaseDataSource> {
    * 开始获取任务
    */
   startAcquisition(source: T, taskId: string): void {
+    console.log(`🎯 [UNIFIED-MEDIA] BaseDataSourceManager.startAcquisition 开始: 任务ID=${taskId}`)
+
     const task: AcquisitionTask<T> = {
       id: taskId,
       source,
@@ -84,7 +86,10 @@ export abstract class BaseDataSourceManager<T extends BaseDataSource> {
 
     this.tasks.set(taskId, task)
     this.taskQueue.push(taskId)
+
+    console.log(`🎯 [UNIFIED-MEDIA] 任务已加入队列: 任务ID=${taskId}, 队列长度=${this.taskQueue.length}`)
     this.processQueue()
+    console.log(`🎯 [UNIFIED-MEDIA] BaseDataSourceManager.startAcquisition 完成: 任务ID=${taskId}`)
   }
 
   /**
@@ -174,47 +179,64 @@ export abstract class BaseDataSourceManager<T extends BaseDataSource> {
    * 处理任务队列
    */
   protected processQueue(): void {
+    console.log(`⚙️ [UNIFIED-MEDIA] BaseDataSourceManager.processQueue 开始: 运行中=${this.currentRunningTasks}, 最大并发=${this.maxConcurrentTasks}, 队列长度=${this.taskQueue.length}`)
+
     while (
-      this.currentRunningTasks < this.maxConcurrentTasks && 
+      this.currentRunningTasks < this.maxConcurrentTasks &&
       this.taskQueue.length > 0
     ) {
       const taskId = this.taskQueue.shift()!
       const task = this.tasks.get(taskId)
-      
+
+      console.log(`⚙️ [UNIFIED-MEDIA] 处理队列任务: 任务ID=${taskId}, 任务状态=${task?.status}`)
+
       if (task && task.status === 'pending') {
+        console.log(`⚙️ [UNIFIED-MEDIA] 启动任务: 任务ID=${taskId}`)
         this.runTask(task)
       }
     }
+
+    console.log(`⚙️ [UNIFIED-MEDIA] BaseDataSourceManager.processQueue 完成: 运行中=${this.currentRunningTasks}, 队列长度=${this.taskQueue.length}`)
   }
 
   /**
    * 运行单个任务
    */
   protected async runTask(task: AcquisitionTask<T>): Promise<void> {
+    console.log(`🏃 [UNIFIED-MEDIA] BaseDataSourceManager.runTask 开始: 任务ID=${task.id}`)
+
     task.status = 'running'
     task.startedAt = Date.now()
     task.abortController = new AbortController()
-    
+
     this.currentRunningTasks++
+    console.log(`🏃 [UNIFIED-MEDIA] 设置数据源为acquiring状态: 任务ID=${task.id}`)
     task.source.setAcquiring()
 
     try {
+      console.log(`🏃 [UNIFIED-MEDIA] 执行任务: 任务ID=${task.id}`)
       await this.executeTask(task)
       task.status = 'completed'
       task.completedAt = Date.now()
+      console.log(`✅ [UNIFIED-MEDIA] 任务执行成功: 任务ID=${task.id}`)
     } catch (error) {
       task.status = 'failed'
       task.error = error instanceof Error ? error.message : String(error)
+      console.error(`❌ [UNIFIED-MEDIA] 任务执行失败: 任务ID=${task.id}, 错误=${task.error}`)
       task.source.setError(task.error)
-      
+
       // 检查是否需要重试
       if (this.shouldRetry(task)) {
+        console.log(`🔄 [UNIFIED-MEDIA] 任务将重试: 任务ID=${task.id}, 重试次数=${task.retryCount}`)
         setTimeout(() => {
           this.retryAcquisition(task.id)
         }, this.getRetryDelay(task.retryCount))
+      } else {
+        console.log(`❌ [UNIFIED-MEDIA] 任务不再重试: 任务ID=${task.id}`)
       }
     } finally {
       this.currentRunningTasks--
+      console.log(`🏃 [UNIFIED-MEDIA] BaseDataSourceManager.runTask 完成: 任务ID=${task.id}, 运行中任务数=${this.currentRunningTasks}`)
       this.processQueue() // 处理队列中的下一个任务
     }
   }

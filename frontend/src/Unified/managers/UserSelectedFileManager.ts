@@ -100,10 +100,13 @@ export class UserSelectedFileManager extends BaseDataSourceManager<UserSelectedF
     const source = task.source
     const selectedFile = source.getSelectedFile()
 
+    console.log(`🔍 [UNIFIED-MEDIA] UserSelectedFileManager.executeTask 开始: ${selectedFile.name} (任务ID: ${task.id})`)
+
     try {
       // 验证文件
+      console.log(`🔍 [UNIFIED-MEDIA] 开始验证文件: ${selectedFile.name}`)
       const validationResult = await this.validateFile(selectedFile, task.abortController?.signal)
-      
+
       if (task.abortController?.signal?.aborted) {
         throw new Error('任务已取消')
       }
@@ -113,13 +116,14 @@ export class UserSelectedFileManager extends BaseDataSourceManager<UserSelectedF
       }
 
       // 验证成功，设置数据源状态
+      console.log(`🔍 [UNIFIED-MEDIA] 文件验证成功，设置为acquired状态: ${selectedFile.name} (类型: ${validationResult.mediaType})`)
       source.setAcquired(selectedFile, validationResult.fileUrl!)
-      
-      console.log(`✅ 用户选择文件验证成功: ${selectedFile.name} (${validationResult.mediaType})`)
-      
+
+      console.log(`✅ [UNIFIED-MEDIA] 用户选择文件验证成功: ${selectedFile.name} (${validationResult.mediaType})`)
+
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error)
-      console.error(`❌ 用户选择文件验证失败: ${selectedFile.name} - ${errorMessage}`)
+      console.error(`❌ [UNIFIED-MEDIA] 用户选择文件验证失败: ${selectedFile.name} - ${errorMessage}`)
       throw error
     }
   }

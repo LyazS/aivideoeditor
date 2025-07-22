@@ -128,8 +128,11 @@ export abstract class BaseDataSource {
    * 开始获取文件
    */
   startAcquisition(): void {
+    console.log(`🎯 [UNIFIED-MEDIA] BaseDataSource.startAcquisition 开始: 类型=${this.sourceType}`)
     this.taskId = generateUUID4()
+    console.log(`🎯 [UNIFIED-MEDIA] 生成任务ID: ${this.taskId}`)
     this.executeAcquisition()
+    console.log(`🎯 [UNIFIED-MEDIA] BaseDataSource.startAcquisition 完成: 任务ID=${this.taskId}`)
   }
 
   /**
@@ -167,6 +170,7 @@ export abstract class BaseDataSource {
    * 设置为获取中状态
    */
   setAcquiring(): void {
+    console.log(`🔄 [UNIFIED-MEDIA] BaseDataSource.setAcquiring: 类型=${this.sourceType}, 任务ID=${this.taskId}`)
     this.status = 'acquiring'
     this.progress = 0
     this.errorMessage = undefined
@@ -177,6 +181,7 @@ export abstract class BaseDataSource {
    * 设置为已获取状态
    */
   setAcquired(file: File, url: string): void {
+    console.log(`✅ [UNIFIED-MEDIA] BaseDataSource.setAcquired: 类型=${this.sourceType}, 文件=${file.name}, URL=${url.substring(0, 50)}...`)
     this.file = file
     this.url = url
     this.status = 'acquired'
@@ -188,6 +193,7 @@ export abstract class BaseDataSource {
    * 设置为错误状态
    */
   setError(message: string): void {
+    console.error(`❌ [UNIFIED-MEDIA] BaseDataSource.setError: 类型=${this.sourceType}, 错误=${message}`)
     this.status = 'error'
     this.errorMessage = message
     this.notifyUpdate()
@@ -232,6 +238,7 @@ export abstract class BaseDataSource {
    * 通知状态更新
    */
   private notifyUpdate(): void {
+    console.log(`📢 [UNIFIED-MEDIA] BaseDataSource.notifyUpdate: 类型=${this.sourceType}, 状态=${this.status}, 进度=${this.progress}%`)
     this.onUpdate?.(this)
   }
 }
