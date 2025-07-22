@@ -8,8 +8,7 @@
 
 import type { Raw } from 'vue'
 import type { MediaType } from './UnifiedMediaItem'
-import type { TimelineStatusContext } from './index'
-import type { TimelineItemStatus } from './index'
+import type { TimelineStatusContext, TimelineItemStatus } from './contexts/TimelineStatusContext'
 
 // ==================== 基础类型定义 ====================
 

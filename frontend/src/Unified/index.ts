@@ -51,7 +51,17 @@ export {
 
 // ==================== 媒体项目相关类型 ====================
 
-export type { MediaType, WebAVObjects, UnifiedMediaItem } from './UnifiedMediaItem'
+export type { MediaType, WebAVObjects } from './UnifiedMediaItem'
+export { UnifiedMediaItem } from './UnifiedMediaItem'
+
+// 媒体项目工厂
+export type {
+  BaseCreateOptions,
+  UserFileCreateOptions,
+  RemoteFileCreateOptions,
+  BatchCreateOptions,
+} from './UnifiedMediaItemFactory'
+export { UnifiedMediaItemFactory } from './UnifiedMediaItemFactory'
 
 // ==================== 状态转换相关类型 ====================
 
