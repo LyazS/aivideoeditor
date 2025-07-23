@@ -90,7 +90,9 @@ export class UnifiedMediaItem {
       this.onStatusChanged = options.onStatusChanged
     }
 
-    console.log(`📦 [UNIFIED-MEDIA] UnifiedMediaItem 构造完成: ${name} (ID: ${id}, 状态: ${this.mediaStatus})`)
+    console.log(
+      `📦 [UNIFIED-MEDIA] UnifiedMediaItem 构造完成: ${name} (ID: ${id}, 状态: ${this.mediaStatus})`,
+    )
   }
 
   // ==================== 状态机方法 ====================
@@ -99,7 +101,9 @@ export class UnifiedMediaItem {
    * 处理数据源状态变化
    */
   public handleSourceStatusChange(source: UnifiedDataSource): void {
-    console.log(`🔗 [UNIFIED-MEDIA] 数据源状态变化: ${this.name} (ID: ${this.id}) 数据源状态=${source.getStatus()}`)
+    console.log(
+      `🔗 [UNIFIED-MEDIA] 数据源状态变化: ${this.name} (ID: ${this.id}) 数据源状态=${source.getStatus()}`,
+    )
 
     const sourceStatus = source.getStatus()
 
@@ -121,7 +125,7 @@ export class UnifiedMediaItem {
           retryable: false,
           timestamp: Date.now(),
           source: 'data_source',
-          reason: '数据源获取失败'
+          reason: '数据源获取失败',
         })
         break
       case 'cancelled':
@@ -198,7 +202,7 @@ export class UnifiedMediaItem {
       // 创建WebAV对象
       this.webav = {
         originalWidth,
-        originalHeight
+        originalHeight,
       }
 
       // 根据媒体类型设置对应的clip
@@ -245,7 +249,6 @@ export class UnifiedMediaItem {
 
       // 转换到ready状态
       this.transitionTo('ready')
-
     } catch (error) {
       console.error(`❌ [UNIFIED-MEDIA] WebAV处理失败: ${this.name}`, error)
       this.transitionTo('error', {
@@ -255,7 +258,7 @@ export class UnifiedMediaItem {
         retryable: false,
         timestamp: Date.now(),
         source: 'webav_processing',
-        reason: 'WebAV处理失败'
+        reason: 'WebAV处理失败',
       })
     }
   }
@@ -281,16 +284,32 @@ export class UnifiedMediaItem {
 
     // 支持的媒体类型
     const videoTypes = [
-      'video/mp4', 'video/webm', 'video/ogg', 'video/avi', 'video/mov',
-      'video/quicktime', 'video/x-msvideo', 'video/x-ms-wmv'
+      'video/mp4',
+      'video/webm',
+      'video/ogg',
+      'video/avi',
+      'video/mov',
+      'video/quicktime',
+      'video/x-msvideo',
+      'video/x-ms-wmv',
     ]
     const audioTypes = [
-      'audio/mp3', 'audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/aac',
-      'audio/flac', 'audio/x-wav'
+      'audio/mp3',
+      'audio/mpeg',
+      'audio/wav',
+      'audio/ogg',
+      'audio/aac',
+      'audio/flac',
+      'audio/x-wav',
     ]
     const imageTypes = [
-      'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp',
-      'image/bmp', 'image/svg+xml'
+      'image/jpeg',
+      'image/jpg',
+      'image/png',
+      'image/gif',
+      'image/webp',
+      'image/bmp',
+      'image/svg+xml',
     ]
 
     // 检查MIME类型
@@ -328,17 +347,23 @@ export class UnifiedMediaItem {
    * @param context 转换上下文（可选）- 用于传递状态转换的附加信息
    */
   transitionTo(newStatus: MediaStatus, context?: MediaTransitionContext): void {
-    console.log(`🔄 [UNIFIED-MEDIA] 状态转换请求: ${this.name} (ID: ${this.id}) ${this.mediaStatus} → ${newStatus}`)
+    console.log(
+      `🔄 [UNIFIED-MEDIA] 状态转换请求: ${this.name} (ID: ${this.id}) ${this.mediaStatus} → ${newStatus}`,
+    )
 
     if (!this.canTransitionTo(newStatus)) {
-      console.warn(`❌ [UNIFIED-MEDIA] 无效的状态转换: ${this.name} (ID: ${this.id}) ${this.mediaStatus} → ${newStatus}`)
+      console.warn(
+        `❌ [UNIFIED-MEDIA] 无效的状态转换: ${this.name} (ID: ${this.id}) ${this.mediaStatus} → ${newStatus}`,
+      )
       return
     }
 
     const oldStatus = this.mediaStatus
     this.mediaStatus = newStatus
 
-    console.log(`✅ [UNIFIED-MEDIA] 状态转换成功: ${this.name} (ID: ${this.id}) ${oldStatus} → ${newStatus}`)
+    console.log(
+      `✅ [UNIFIED-MEDIA] 状态转换成功: ${this.name} (ID: ${this.id}) ${oldStatus} → ${newStatus}`,
+    )
 
     // 调用状态变化钩子
     if (this.onStatusChanged) {
@@ -467,6 +492,13 @@ export class UnifiedMediaItem {
   // ==================== 状态查询方法 ====================
 
   /**
+   * 是否为pending状态
+   */
+  isPending(): boolean {
+    return this.mediaStatus === 'pending'
+  }
+
+  /**
    * 是否已就绪
    */
   isReady(): boolean {
@@ -485,6 +517,20 @@ export class UnifiedMediaItem {
    */
   hasError(): boolean {
     return this.mediaStatus === 'error'
+  }
+
+  /**
+   * 是否处于任何错误状态（包括错误、取消、缺失）
+   */
+  hasAnyError(): boolean {
+    return this.mediaStatus === 'error' || this.mediaStatus === 'cancelled' || this.mediaStatus === 'missing'
+  }
+
+  /**
+   * 是否正在解析中（包括等待和处理中状态）
+   */
+  isParsing(): boolean {
+    return this.isPending() || this.isProcessing()
   }
 
   /**

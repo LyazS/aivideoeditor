@@ -64,21 +64,21 @@
           :key="item.id"
           class="media-item"
           :class="{
-            parsing: ['pending', 'asyncprocessing', 'webavdecoding'].includes(item.mediaStatus),
+            parsing: item.isParsing(),
             [getMediaStatusClass(item.mediaStatus)]: true
           }"
           :data-media-item-id="item.id"
-          :draggable="item.mediaStatus === 'ready'"
+          :draggable="item.isReady()"
           @dragstart="handleItemDragStart($event, item)"
           @dragend="handleItemDragEnd"
           @contextmenu="handleMediaItemContextMenu($event, item.id)"
         >
           <div class="media-thumbnail">
             <!-- 处理中状态：显示进度 -->
-            <template v-if="['pending', 'asyncprocessing', 'webavdecoding'].includes(item.mediaStatus)">
+            <template v-if="item.isParsing()">
               <div class="async-processing-display">
                 <!-- 等待状态 -->
-                <div v-if="item.mediaStatus === 'pending'" class="processing-status pending">
+                <div v-if="item.isPending()" class="processing-status pending">
                   <div class="status-icon" title="等待中">
                     <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor">
                       <path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4Z" />
@@ -87,7 +87,7 @@
                 </div>
 
                 <!-- 处理中状态：显示进度 -->
-                <div v-else-if="['asyncprocessing', 'webavdecoding'].includes(item.mediaStatus)" class="processing-status processing">
+                <div v-else-if="item.isProcessing()" class="processing-status processing">
                   <div
                     class="progress-circle"
                     :style="{ '--progress': item.getProgress() || 0 }"
@@ -100,7 +100,7 @@
             </template>
 
             <!-- 错误状态显示 -->
-            <template v-else-if="['error', 'cancelled', 'missing'].includes(item.mediaStatus)">
+            <template v-else-if="item.hasAnyError()">
               <div class="local-error-display">
                 <div class="status-icon" title="处理失败">
                   <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor">
@@ -113,6 +113,7 @@
             <!-- 正常状态：显示缩略图 -->
             <template v-else>
               <!-- WebAV生成的缩略图 -->
+              <span>测试ready</span>
               <img
                 v-if="getThumbnailUrl(item)"
                 :src="getThumbnailUrl(item)"
@@ -126,7 +127,7 @@
 
               <!-- 右上角时长标签（视频和音频显示） -->
               <div v-if="item.mediaType === 'video' || item.mediaType === 'audio'" class="duration-badge">
-                {{ ['error', 'cancelled', 'missing'].includes(item.mediaStatus) ? '处理失败' : (item.mediaStatus === 'ready' && item.duration ? formatDuration(item.duration) : '处理中') }}
+                {{ item.hasAnyError() ? '处理失败' : (item.isReady() && item.duration ? formatDuration(item.duration) : '处理中') }}
               </div>
             </template>
           </div>
@@ -304,7 +305,7 @@ const filteredMediaItems = computed(() => {
       return item.mediaType === 'audio' || item.mediaType === 'unknown'
     }
     if (activeTab.value === 'processing') {
-      return ['pending', 'asyncprocessing', 'webavdecoding'].includes(item.mediaStatus)
+      return item.isParsing()
     }
     return true
   })
@@ -328,7 +329,7 @@ const tabCounts = computed(() => {
       item.mediaType === 'audio' || item.mediaType === 'unknown'
     ).length,
     processing: allItems.filter(item =>
-      ['pending', 'asyncprocessing', 'webavdecoding'].includes(item.mediaStatus)
+      item.isParsing()
     ).length
   }
 })
@@ -596,7 +597,7 @@ const handleItemDragStart = (event: DragEvent, item: any) => {
   console.log('🎯 [UnifiedMediaLibrary] 开始拖拽媒体项目:', item.name, 'status:', item.mediaStatus)
 
   // 如果媒体项目还未就绪，阻止拖拽
-  if (item.mediaStatus !== 'ready') {
+  if (!item.isReady()) {
     event.preventDefault()
     console.log('❌ [UnifiedMediaLibrary] 媒体项目未就绪，无法拖拽:', item.name)
     return
