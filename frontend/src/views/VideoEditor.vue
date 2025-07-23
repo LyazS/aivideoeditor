@@ -64,17 +64,20 @@
     </div>
 
     <!-- 视频编辑器主体 -->
-    <div class="editor-content" :class="{ 'loading-hidden': videoStore.showLoadingProgress }">
+    <!-- <div class="editor-content" :class="{ 'loading-hidden': videoStore.showLoadingProgress }">
+      <VideoPreviewEngine />
+    </div> -->
+    <div class="editor-content">
       <VideoPreviewEngine />
     </div>
 
     <!-- 加载进度覆盖层 -->
-    <LoadingOverlay
+    <!-- <LoadingOverlay
       :visible="videoStore.showLoadingProgress"
       :stage="videoStore.loadingStage"
       :progress="videoStore.loadingProgress"
       :details="videoStore.loadingDetails"
-    />
+    /> -->
 
     <!-- 编辑项目对话框 -->
     <EditProjectDialog

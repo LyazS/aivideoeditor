@@ -5,7 +5,7 @@
       <div class="preview-section" :style="{ height: previewHeight + '%' }">
         <!-- 左侧：素材库 -->
         <div class="media-library-panel" :style="{ width: leftPanelWidth + 'px' }">
-          <MediaLibrary />
+          <!-- <MediaLibrary /> -->
         </div>
 
         <!-- 左侧分割器 -->
@@ -58,7 +58,7 @@
 
         <!-- 右侧：属性面板 -->
         <div class="properties-panel-container" :style="{ width: rightPanelWidth + 'px' }">
-          <PropertiesPanel />
+          <!-- <PropertiesPanel /> -->
         </div>
       </div>
 
@@ -71,14 +71,14 @@
       <div class="timeline-section" :style="{ height: timelineHeight + '%' }">
         <!-- 片段管理工具栏在时间刻度上方 -->
         <div class="clip-management-toolbar">
-          <ClipManagementToolbar />
+          <!-- <ClipManagementToolbar /> -->
         </div>
         <!-- 只有WebAV初始化完成后才显示Timeline -->
-        <Timeline v-if="videoStore.isWebAVReady" />
+        <!-- <Timeline v-if="videoStore.isWebAVReady" />
         <div v-else class="timeline-loading">
           <div class="loading-spinner"></div>
           <p>正在初始化WebAV引擎...</p>
-        </div>
+        </div> -->
       </div>
     </div>
 
