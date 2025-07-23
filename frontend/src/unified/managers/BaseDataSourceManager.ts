@@ -3,8 +3,8 @@
  * 基于"核心数据与行为分离"的重构方案
  */
 
-import { UnifiedDataSourceActions, DataSourceQueries } from './BaseDataSource'
-import type { UnifiedDataSourceData } from './DataSourceTypes'
+import { UnifiedDataSourceActions, DataSourceQueries } from '../sources/BaseDataSource'
+import type { UnifiedDataSourceData } from '../sources/DataSourceTypes'
 
 // ==================== 任务相关接口 ====================
 

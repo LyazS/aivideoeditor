@@ -4,8 +4,8 @@
  */
 
 import { DataSourceManager, type AcquisitionTask } from './BaseDataSourceManager'
-import type { UserSelectedFileSourceData } from './UserSelectedFileSource'
-import { UserSelectedFileActions, SUPPORTED_MEDIA_TYPES, FILE_SIZE_LIMITS } from './UserSelectedFileSource'
+import type { UserSelectedFileSourceData } from '../sources/UserSelectedFileSource'
+import { UserSelectedFileActions, SUPPORTED_MEDIA_TYPES, FILE_SIZE_LIMITS } from '../sources/UserSelectedFileSource'
 
 // ==================== 用户选择文件管理器 ====================
 
@@ -90,7 +90,7 @@ export class UserSelectedFileManager extends DataSourceManager<UserSelectedFileS
     }
 
     // 为每个文件创建数据源
-    const { DataSourceFactory } = await import('./DataSourceTypes')
+    const { DataSourceFactory } = await import('../sources/DataSourceTypes')
     const sources = files.map(file => {
       return DataSourceFactory.createUserSelectedSource(file)
     })

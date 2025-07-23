@@ -17,22 +17,19 @@ export {
   
   // 基础查询函数
   DataSourceQueries as BaseDataSourceQueries
-} from './BaseDataSource'
+} from './sources/BaseDataSource'
 
 // ==================== 统一数据源类型系统 ====================
 export {
   // 统一类型定义
   type UnifiedDataSourceData,
-  
+
   // 工厂函数
   DataSourceFactory,
-  
-  // 类型守卫
-  DataSourceTypeGuards,
-  
-  // 扩展查询函数
+
+  // 扩展查询函数（包含类型查询功能）
   DataSourceQueries
-} from './DataSourceTypes'
+} from './sources/DataSourceTypes'
 
 // ==================== 用户选择文件数据源 ====================
 export {
@@ -55,7 +52,7 @@ export {
   
   // 查询函数
   UserSelectedFileQueries
-} from './UserSelectedFileSource'
+} from './sources/UserSelectedFileSource'
 
 // ==================== 远程文件数据源 ====================
 export {
@@ -79,7 +76,7 @@ export {
   
   // 查询函数
   RemoteFileQueries
-} from './RemoteFileSource'
+} from './sources/RemoteFileSource'
 
 // ==================== 管理器基础类 ====================
 export {
@@ -90,29 +87,47 @@ export {
   
   // 基础管理器类
   DataSourceManager
-} from './BaseDataSourceManager'
+} from './managers/BaseDataSourceManager'
 
 // ==================== 具体管理器实现 ====================
 export {
   // 用户选择文件管理器
   UserSelectedFileManager
-} from './UserSelectedFileManager'
+} from './managers/UserSelectedFileManager'
 
 export {
   // 远程文件管理器
   RemoteFileManager,
   type RemoteFileManagerConfig,
   DEFAULT_MANAGER_CONFIG
-} from './RemoteFileManager'
+} from './managers/RemoteFileManager'
 
 // ==================== 管理器注册中心 ====================
 export {
   // 注册中心类
   DataSourceManagerRegistry,
-  
+
   // 便捷函数
   getManagerRegistry,
   startDataSourceAcquisition,
   cancelDataSourceAcquisition,
   retryDataSourceAcquisition
-} from './DataSourceManagerRegistry'
+} from './managers/DataSourceManagerRegistry'
+
+// ==================== 统一媒体项目 ====================
+export {
+  // 类型定义
+  type UnifiedMediaItemData,
+  type MediaStatus,
+  type MediaType,
+  type WebAVObjects,
+
+  // 工厂函数
+  createUnifiedMediaItemData,
+
+  // 查询函数
+  UnifiedMediaItemQueries,
+
+  // 行为函数
+  UnifiedMediaItemActions
+} from './UnifiedMediaItem'

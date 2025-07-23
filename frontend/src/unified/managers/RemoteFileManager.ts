@@ -4,8 +4,8 @@
  */
 
 import { DataSourceManager, type AcquisitionTask } from './BaseDataSourceManager'
-import type { RemoteFileSourceData } from './RemoteFileSource'
-import { RemoteFileActions, RemoteFileQueries } from './RemoteFileSource'
+import type { RemoteFileSourceData } from '../sources/RemoteFileSource'
+import { RemoteFileActions, RemoteFileQueries } from '../sources/RemoteFileSource'
 
 // ==================== 下载管理器配置 ====================
 
@@ -158,7 +158,7 @@ export class RemoteFileManager extends DataSourceManager<RemoteFileSourceData> {
     }
 
     // 为每个URL创建数据源
-    const { DataSourceFactory } = await import('./DataSourceTypes')
+    const { DataSourceFactory } = await import('../sources/DataSourceTypes')
     const sources = urls.map(url => {
       return DataSourceFactory.createRemoteSource(url, {
         timeout: this.config.defaultTimeout,

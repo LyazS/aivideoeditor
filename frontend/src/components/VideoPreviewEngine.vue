@@ -6,6 +6,7 @@
         <!-- 左侧：素材库 -->
         <div class="media-library-panel" :style="{ width: leftPanelWidth + 'px' }">
           <!-- <MediaLibrary /> -->
+           <UnifiedMediaLibrary/>
         </div>
 
         <!-- 左侧分割器 -->
@@ -178,6 +179,7 @@ import PlaybackControls from './PlaybackControls.vue'
 import ClipManagementToolbar from './ClipManagementToolbar.vue'
 import MediaLibrary from './MediaLibrary.vue'
 import PropertiesPanel from './PropertiesPanel.vue'
+import UnifiedMediaLibrary from './UnifiedMediaLibrary.vue'
 import { useVideoStore } from '../stores/videoStore'
 import { useKeyboardShortcuts } from '../composables/useKeyboardShortcuts'
 import { logWebAVReadyStateChange, logComponentLifecycle } from '../utils/webavDebug'

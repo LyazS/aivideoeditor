@@ -4,7 +4,7 @@
  */
 
 import { DataSourceManager } from './BaseDataSourceManager'
-import type { UnifiedDataSourceData } from './DataSourceTypes'
+import type { UnifiedDataSourceData } from '../sources/DataSourceTypes'
 import { UserSelectedFileManager } from './UserSelectedFileManager'
 import { RemoteFileManager } from './RemoteFileManager'
 
