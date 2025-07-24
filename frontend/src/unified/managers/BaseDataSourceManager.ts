@@ -3,7 +3,7 @@
  * 基于"核心数据与行为分离"的重构方案
  */
 
-import { UnifiedDataSourceActions, DataSourceQueries } from '../sources/BaseDataSource'
+import { DataSourceDataActions, DataSourceBusinessActions, DataSourceStateActions, DataSourceQueries } from '../sources/BaseDataSource'
 import type { UnifiedDataSourceData } from '../sources/DataSourceTypes'
 
 // ==================== 任务相关接口 ====================
@@ -70,7 +70,7 @@ export abstract class DataSourceManager<T extends UnifiedDataSourceData> {
     this.taskQueue.push(taskId)
     
     // 设置数据源的任务ID
-    UnifiedDataSourceActions.setTaskId(source, taskId)
+    DataSourceDataActions.setTaskId(source, taskId)
     
     this.processQueue()
   }
@@ -90,8 +90,8 @@ export abstract class DataSourceManager<T extends UnifiedDataSourceData> {
     task.completedAt = Date.now()
 
     // 更新数据源状态
-    UnifiedDataSourceActions.setCancelled(task.source)
-    UnifiedDataSourceActions.clearTaskId(task.source)
+    DataSourceBusinessActions.cancel(task.source)
+    DataSourceDataActions.clearTaskId(task.source)
 
     // 从队列中移除
     const queueIndex = this.taskQueue.indexOf(taskId)
@@ -130,7 +130,7 @@ export abstract class DataSourceManager<T extends UnifiedDataSourceData> {
     this.taskQueue.push(taskId)
     
     // 重置数据源状态
-    UnifiedDataSourceActions.setStatus(task.source, 'pending')
+    DataSourceStateActions.setPending(task.source)
     
     this.processQueue()
 
@@ -162,7 +162,7 @@ export abstract class DataSourceManager<T extends UnifiedDataSourceData> {
     for (const [taskId, task] of completedTasks) {
       // 清理数据源资源
       if (task.status === 'cancelled') {
-        UnifiedDataSourceActions.cleanup(task.source)
+        DataSourceBusinessActions.cleanup(task.source)
       }
       
       this.tasks.delete(taskId)
@@ -249,7 +249,7 @@ export abstract class DataSourceManager<T extends UnifiedDataSourceData> {
       }
 
       // 清理任务ID
-      UnifiedDataSourceActions.clearTaskId(task.source)
+      DataSourceDataActions.clearTaskId(task.source)
 
     } catch (error) {
       // 任务执行失败
@@ -269,7 +269,7 @@ export abstract class DataSourceManager<T extends UnifiedDataSourceData> {
         }, this.getRetryDelay(task.retryCount))
       } else {
         // 重试次数用尽，清理任务ID
-        UnifiedDataSourceActions.clearTaskId(task.source)
+        DataSourceDataActions.clearTaskId(task.source)
       }
     } finally {
       this.currentRunningTasks--

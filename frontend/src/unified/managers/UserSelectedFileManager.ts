@@ -7,7 +7,7 @@
 import { DataSourceManager, type AcquisitionTask } from './BaseDataSourceManager'
 import type { UserSelectedFileSourceData, FileValidationResult } from '../sources/UserSelectedFileSource'
 import { SUPPORTED_MEDIA_TYPES, FILE_SIZE_LIMITS, getMediaTypeFromMimeType } from '../utils/mediaTypeDetector'
-import { UnifiedDataSourceActions, DataSourceQueries } from '../sources/BaseDataSource'
+import { DataSourceBusinessActions, DataSourceDataActions, DataSourceQueries } from '../sources/BaseDataSource'
 import { nextTick } from 'vue'
 
 // ==================== 用户选择文件管理器 ====================
@@ -49,8 +49,7 @@ export class UserSelectedFileManager extends DataSourceManager<UserSelectedFileS
 
       // 检查执行结果
       if (task.source.status === 'acquired') {
-        // 成功完成，检测并设置媒体类型
-        await this.detectAndSetMediaType(task.source)
+        // 成功完成（媒体类型检测已在获取过程中完成）
         return
       } else if (task.source.status === 'error') {
         throw new Error(task.source.errorMessage || '文件处理失败')
@@ -71,26 +70,31 @@ export class UserSelectedFileManager extends DataSourceManager<UserSelectedFileS
   private async executeAcquisition(source: UserSelectedFileSourceData): Promise<void> {
     try {
       // 设置为获取中状态
-      UnifiedDataSourceActions.setAcquiring(source)
+      DataSourceBusinessActions.startAcquisition(source)
       // 针对这种瞬间就能完成异步获取的操作，需要nextTick来等待DOM更新
       await nextTick()
       // 验证文件有效性
       const validationResult = this.validateFile(source.selectedFile)
       if (!validationResult.isValid) {
         console.error(`❌ [UserSelectedFile] 文件验证失败: ${source.selectedFile.name} - ${validationResult.errorMessage}`)
-        UnifiedDataSourceActions.setError(source, validationResult.errorMessage || '文件验证失败')
+        DataSourceBusinessActions.setError(source, validationResult.errorMessage || '文件验证失败')
         return
       }
 
       // 创建URL
       const url = URL.createObjectURL(source.selectedFile)
 
-      // 设置为已获取状态
-      UnifiedDataSourceActions.setAcquired(source, source.selectedFile, url)
+      // 使用新的业务协调层方法，包含媒体类型检测
+      await DataSourceBusinessActions.completeAcquisitionWithTypeDetection(
+        source,
+        source.selectedFile,
+        url,
+        async (src) => await this.detectAndSetMediaType(src as UserSelectedFileSourceData)
+      )
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : '文件处理失败'
       console.error(`❌ [UserSelectedFile] 文件获取失败: ${source.selectedFile.name} - ${errorMessage}`)
-      UnifiedDataSourceActions.setError(source, errorMessage)
+      DataSourceBusinessActions.setError(source, errorMessage)
     }
   }
 
@@ -286,7 +290,7 @@ export class UserSelectedFileManager extends DataSourceManager<UserSelectedFileS
     }
 
     // 清理之前的状态
-    UnifiedDataSourceActions.cleanup(source)
+    DataSourceBusinessActions.cleanup(source)
 
     // 重新执行获取
     await this.executeAcquisition(source)
@@ -301,10 +305,10 @@ export class UserSelectedFileManager extends DataSourceManager<UserSelectedFileS
     }
 
     // 清理资源
-    UnifiedDataSourceActions.cleanup(source)
+    DataSourceBusinessActions.cleanup(source)
 
     // 设置为取消状态
-    UnifiedDataSourceActions.setCancelled(source)
+    DataSourceBusinessActions.cancel(source)
   }
 
   /**

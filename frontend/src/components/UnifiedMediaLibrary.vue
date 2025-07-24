@@ -467,10 +467,17 @@ const handleRemoteDownloadSubmit = async (config: any, expectedDuration: number,
     // 创建远程数据源
     const remoteSource = DataSourceFactory.createRemoteSource(config.url, config)
 
+    // 如果用户没有提供名称，从URL中提取文件名
+    let mediaItemName = name
+    if (!mediaItemName) {
+      const { RemoteFileManager } = await import('../unified/managers/RemoteFileManager')
+      mediaItemName = RemoteFileManager.extractFileNameFromUrl(config.url)
+    }
+
     // 创建统一媒体项目
     const mediaItem = unifiedStore.createUnifiedMediaItemData(
       Date.now().toString() + Math.random().toString(36).substring(2, 11),
-      name || '远程文件',
+      mediaItemName,
       remoteSource,
       {
         duration: expectedDuration ? secondsToFrames(expectedDuration) : undefined,

@@ -7,7 +7,7 @@
 import { DataSourceManager, type AcquisitionTask } from './BaseDataSourceManager'
 import type { RemoteFileSourceData, RemoteFileConfig, DownloadProgress } from '../sources/RemoteFileSource'
 import { RemoteFileQueries, DEFAULT_REMOTE_CONFIG } from '../sources/RemoteFileSource'
-import { UnifiedDataSourceActions, DataSourceQueries } from '../sources/BaseDataSource'
+import { DataSourceBusinessActions, DataSourceDataActions, DataSourceQueries } from '../sources/BaseDataSource'
 
 // ==================== 下载管理器配置 ====================
 
@@ -79,8 +79,7 @@ export class RemoteFileManager extends DataSourceManager<RemoteFileSourceData> {
 
       // 检查执行结果
       if (task.source.status === 'acquired') {
-        // 下载成功，检测并设置媒体类型
-        await this.detectAndSetMediaType(task.source)
+        // 下载成功（媒体类型检测已在下载过程中完成）
         return
       } else if (task.source.status === 'error') {
         throw new Error(task.source.errorMessage || '下载失败')
@@ -103,11 +102,11 @@ export class RemoteFileManager extends DataSourceManager<RemoteFileSourceData> {
   private async executeAcquisition(source: RemoteFileSourceData): Promise<void> {
     try {
       // 设置为获取中状态
-      UnifiedDataSourceActions.setAcquiring(source)
+      DataSourceBusinessActions.startAcquisition(source)
 
       // 验证URL
       if (!this.isValidUrl(source.remoteUrl)) {
-        UnifiedDataSourceActions.setError(source, '无效的URL地址')
+        DataSourceBusinessActions.setError(source, '无效的URL地址')
         return
       }
 
@@ -119,7 +118,7 @@ export class RemoteFileManager extends DataSourceManager<RemoteFileSourceData> {
 
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : '下载失败'
-      UnifiedDataSourceActions.setError(source, errorMessage)
+      DataSourceBusinessActions.setError(source, errorMessage)
     }
   }
 
@@ -181,8 +180,16 @@ export class RemoteFileManager extends DataSourceManager<RemoteFileSourceData> {
       const file = new File([blob], fileName, { type: contentType })
       const url = URL.createObjectURL(file)
 
-      // 设置为已获取状态
-      UnifiedDataSourceActions.setAcquired(source, file, url)
+      // 使用新的业务协调层方法，包含媒体类型检测
+      await DataSourceBusinessActions.completeAcquisitionWithTypeDetection(
+        source,
+        file,
+        url,
+        async (src) => await this.detectAndSetMediaType(src as RemoteFileSourceData)
+      )
+
+      // 更新媒体项目名称为实际的文件名
+      await this.updateMediaItemNameWithFileName(source, fileName)
 
     } catch (error) {
       clearTimeout(timeoutId)
@@ -205,7 +212,7 @@ export class RemoteFileManager extends DataSourceManager<RemoteFileSourceData> {
 
     // 计算进度百分比
     const progress = totalBytes > 0 ? (downloadedBytes / totalBytes) * 100 : 0
-    UnifiedDataSourceActions.setProgress(source, progress)
+    DataSourceDataActions.setProgress(source, progress)
 
     // 计算下载速度
     if (source.startTime) {
@@ -231,7 +238,32 @@ export class RemoteFileManager extends DataSourceManager<RemoteFileSourceData> {
   }
 
   /**
-   * 提取文件名
+   * 从URL预提取文件名（静态方法，用于创建媒体项目时）
+   */
+  static extractFileNameFromUrl(url: string): string {
+    try {
+      const urlObj = new URL(url)
+      const pathname = urlObj.pathname
+      const fileName = pathname.split('/').pop()
+      if (fileName && fileName.includes('.')) {
+        // 解码URL编码的文件名
+        try {
+          return decodeURIComponent(fileName)
+        } catch {
+          return fileName
+        }
+      }
+    } catch (error) {
+      // URL解析失败，使用默认名称
+    }
+
+    // 生成默认文件名
+    const timestamp = Date.now()
+    return `remote_file_${timestamp}`
+  }
+
+  /**
+   * 提取文件名（完整版，包含HTTP响应头信息）
    */
   private extractFileName(url: string, response: Response): string {
     // 尝试从Content-Disposition头获取文件名
@@ -346,7 +378,7 @@ export class RemoteFileManager extends DataSourceManager<RemoteFileSourceData> {
     }
 
     // 清理之前的状态
-    UnifiedDataSourceActions.cleanup(source)
+    DataSourceBusinessActions.cleanup(source)
 
     // 重置下载统计
     source.downloadedBytes = 0
@@ -367,7 +399,7 @@ export class RemoteFileManager extends DataSourceManager<RemoteFileSourceData> {
     }
 
     // 清理资源
-    UnifiedDataSourceActions.cleanup(source)
+    DataSourceBusinessActions.cleanup(source)
 
     // 重置下载统计
     source.downloadedBytes = 0
@@ -376,7 +408,7 @@ export class RemoteFileManager extends DataSourceManager<RemoteFileSourceData> {
     source.startTime = undefined
 
     // 设置为取消状态
-    UnifiedDataSourceActions.setCancelled(source)
+    DataSourceBusinessActions.cancel(source)
   }
 
   /**
@@ -461,6 +493,36 @@ export class RemoteFileManager extends DataSourceManager<RemoteFileSourceData> {
       }
     } catch (error) {
       console.error('媒体类型检测失败:', error)
+    }
+  }
+
+  /**
+   * 更新媒体项目名称为实际的文件名（从HTTP响应头获取的更准确的文件名）
+   */
+  private async updateMediaItemNameWithFileName(source: RemoteFileSourceData, fileName: string): Promise<void> {
+    try {
+      // 使用媒体模块方法查找对应的媒体项目
+      const { useUnifiedStore } = await import('../../stores/unifiedStore')
+      const unifiedStore = useUnifiedStore()
+      const mediaItem = unifiedStore.getMediaItemBySourceId(source.id)
+
+      if (mediaItem) {
+        // 从URL提取的文件名（用于比较）
+        const urlFileName = RemoteFileManager.extractFileNameFromUrl(source.remoteUrl)
+
+        // 如果当前名称是从URL提取的文件名，或者是默认的"远程文件"，则更新为更准确的文件名
+        if (mediaItem.name === urlFileName || mediaItem.name === '远程文件' || mediaItem.name.startsWith('remote_file_')) {
+          const { UnifiedMediaItemActions } = await import('../UnifiedMediaItem')
+          UnifiedMediaItemActions.updateName(mediaItem, fileName)
+          console.log(`📝 [RemoteFileManager] 媒体项目名称已更新为更准确的文件名: ${mediaItem.name} -> ${fileName}`)
+        } else {
+          console.log(`📝 [RemoteFileManager] 媒体项目已有自定义名称，跳过更新: ${mediaItem.name}`)
+        }
+      } else {
+        console.warn(`找不到数据源ID为 ${source.id} 的媒体项目`)
+      }
+    } catch (error) {
+      console.error('更新媒体项目名称失败:', error)
     }
   }
 
