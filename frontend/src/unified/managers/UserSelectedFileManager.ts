@@ -40,24 +40,23 @@ export class UserSelectedFileManager extends DataSourceManager<UserSelectedFileS
    * 执行具体的获取任务
    */
   protected async executeTask(task: AcquisitionTask<UserSelectedFileSourceData>): Promise<void> {
-    // 用户选择文件是同步操作，包装为Promise以保持接口一致
-    return new Promise<void>((resolve, reject) => {
-      try {
-        // 使用行为函数执行获取
-        UserSelectedFileActions.executeAcquisition(task.source)
-        
-        // 检查执行结果
-        if (task.source.status === 'acquired') {
-          resolve()
-        } else if (task.source.status === 'error') {
-          reject(new Error(task.source.errorMessage || '文件处理失败'))
-        } else {
-          reject(new Error('文件处理状态异常'))
-        }
-      } catch (error) {
-        reject(error)
+    try {
+      // 使用行为函数执行获取
+      await UserSelectedFileActions.executeAcquisition(task.source)
+
+      // 检查执行结果
+      if (task.source.status === 'acquired') {
+        // 成功完成
+        return
+      } else if (task.source.status === 'error') {
+        throw new Error(task.source.errorMessage || '文件处理失败')
+      } else {
+        throw new Error('文件处理状态异常')
       }
-    })
+    } catch (error) {
+      // 重新抛出错误，让基类处理
+      throw error
+    }
   }
 
   /**
@@ -71,7 +70,7 @@ export class UserSelectedFileManager extends DataSourceManager<UserSelectedFileS
    * 获取最大重试次数
    * 用户选择文件通常不需要重试，因为文件验证失败通常是永久性的
    */
-  protected getMaxRetries(source: UserSelectedFileSourceData): number {
+  protected getMaxRetries(_source: UserSelectedFileSourceData): number {
     return 1
   }
 

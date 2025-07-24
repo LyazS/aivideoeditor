@@ -2,7 +2,7 @@
  * 用户选择文件数据源特定行为函数和查询函数
  * 基于"核心数据与行为分离"的重构方案
  */
-
+import { nextTick } from 'vue'
 import type {
   BaseDataSourceData
 } from './BaseDataSource'
@@ -70,13 +70,13 @@ export const SUPPORTED_MEDIA_TYPES = {
     'video/mkv'
   ],
   audio: [
-    'audio/mp3',
-    'audio/wav',
-    'audio/ogg',
-    'audio/aac',
-    'audio/flac',
-    'audio/m4a',
-    'audio/wma'
+    'audio/mpeg',     // .mp3
+    'audio/wav',      // .wav
+    'audio/ogg',      // .ogg
+    'audio/aac',      // .aac
+    'audio/flac',     // .flac
+    'audio/mp4',      // .m4a
+    'audio/x-ms-wma'  // .wma
   ],
   image: [
     'image/jpeg',
@@ -119,26 +119,28 @@ export const UserSelectedFileActions = {
   /**
    * 执行文件获取
    */
-  executeAcquisition(source: UserSelectedFileSourceData): void {
+  async executeAcquisition(source: UserSelectedFileSourceData): Promise<void> {
     try {
       // 设置为获取中状态
       UnifiedDataSourceActions.setAcquiring(source)
-      
+      // 针对这种瞬间就能完成异步获取的操作，需要nextTick来等待DOM更新
+      await nextTick()
       // 验证文件有效性
       const validationResult = this.validateFile(source.selectedFile)
       if (!validationResult.isValid) {
+        console.error(`❌ [UserSelectedFile] 文件验证失败: ${source.selectedFile.name} - ${validationResult.errorMessage}`)
         UnifiedDataSourceActions.setError(source, validationResult.errorMessage || '文件验证失败')
         return
       }
 
       // 创建URL
       const url = URL.createObjectURL(source.selectedFile)
-      
+
       // 设置为已获取状态
       UnifiedDataSourceActions.setAcquired(source, source.selectedFile, url)
-      
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : '文件处理失败'
+      console.error(`❌ [UserSelectedFile] 文件获取失败: ${source.selectedFile.name} - ${errorMessage}`)
       UnifiedDataSourceActions.setError(source, errorMessage)
     }
   },
@@ -166,9 +168,10 @@ export const UserSelectedFileActions = {
     // 检查文件类型
     const mediaType = this.getMediaType(file.type)
     if (!mediaType) {
+      console.error(`❌ [UserSelectedFile] 不支持的文件类型: ${file.type || '未知'} (${file.name})`)
       return {
         isValid: false,
-        errorMessage: `不支持的文件类型: ${file.type || '未知'}`
+        errorMessage: this.getUnsupportedFileTypeMessage(file.type, file.name)
       }
     }
 
@@ -179,7 +182,7 @@ export const UserSelectedFileActions = {
       const limitMB = Math.round(sizeLimit / (1024 * 1024))
       return {
         isValid: false,
-        errorMessage: `文件过大: ${sizeMB}MB，最大支持 ${limitMB}MB`
+        errorMessage: this.getFileSizeExceededMessage(sizeMB, limitMB, mediaType)
       }
     }
 
@@ -187,7 +190,7 @@ export const UserSelectedFileActions = {
     if (!this.isValidFileName(file.name)) {
       return {
         isValid: false,
-        errorMessage: '文件名包含非法字符'
+        errorMessage: this.getInvalidFileNameMessage(file.name)
       }
     }
 
@@ -236,6 +239,101 @@ export const UserSelectedFileActions = {
     }
 
     return true
+  },
+
+  /**
+   * 生成不支持文件类型的详细错误信息
+   */
+  getUnsupportedFileTypeMessage(fileType: string, fileName: string): string {
+    const fileExtension = fileName.toLowerCase().split('.').pop() || ''
+    const displayType = fileType || '未知'
+
+    // 根据文件扩展名提供更具体的建议
+    const suggestions = this.getSupportedFormatSuggestions(fileExtension)
+
+    return `不支持的文件类型: ${displayType}${fileExtension ? ` (.${fileExtension})` : ''}。${suggestions}`
+  },
+
+  /**
+   * 生成文件大小超限的详细错误信息
+   */
+  getFileSizeExceededMessage(actualSizeMB: number, limitMB: number, mediaType: 'video' | 'audio' | 'image'): string {
+    const typeNames = {
+      video: '视频',
+      audio: '音频',
+      image: '图片'
+    }
+
+    return `${typeNames[mediaType]}文件过大: ${actualSizeMB}MB，最大支持 ${limitMB}MB。请选择较小的文件或使用压缩工具减小文件大小。`
+  },
+
+  /**
+   * 生成无效文件名的详细错误信息
+   */
+  getInvalidFileNameMessage(fileName: string): string {
+    if (!fileName || fileName.length === 0) {
+      return '文件名为空，请选择有效的文件。'
+    }
+
+    if (fileName.length > 255) {
+      return `文件名过长（${fileName.length}字符），最大支持255字符。请重命名文件后重试。`
+    }
+
+    const invalidChars = /[<>:"/\\|?*\x00-\x1f]/
+    if (invalidChars.test(fileName)) {
+      return '文件名包含非法字符（如 < > : " / \\ | ? *），请重命名文件后重试。'
+    }
+
+    const reservedNames = /^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])(\.|$)/i
+    if (reservedNames.test(fileName)) {
+      return '文件名使用了系统保留名称，请重命名文件后重试。'
+    }
+
+    return '文件名格式无效，请检查文件名是否符合规范。'
+  },
+
+  /**
+   * 根据文件扩展名提供支持格式建议
+   */
+  getSupportedFormatSuggestions(fileExtension: string): string {
+    // 常见的不支持格式及其建议
+    const suggestions: Record<string, string> = {
+      // 视频格式建议
+      'rmvb': '建议转换为 MP4、WebM 或 MOV 格式',
+      'rm': '建议转换为 MP4、WebM 或 MOV 格式',
+      'asf': '建议转换为 MP4、WebM 或 MOV 格式',
+      'vob': '建议转换为 MP4、WebM 或 MOV 格式',
+      'ts': '建议转换为 MP4、WebM 或 MOV 格式',
+
+      // 音频格式建议
+      'wma': '建议转换为 MP3、WAV 或 AAC 格式',
+      'ra': '建议转换为 MP3、WAV 或 AAC 格式',
+      'amr': '建议转换为 MP3、WAV 或 AAC 格式',
+
+      // 图片格式建议
+      'tiff': '建议转换为 JPG、PNG 或 WebP 格式',
+      'tif': '建议转换为 JPG、PNG 或 WebP 格式',
+      'psd': '建议导出为 JPG、PNG 或 WebP 格式',
+      'ai': '建议导出为 JPG、PNG 或 WebP 格式',
+
+      // 文档格式
+      'pdf': '这是文档格式，请选择媒体文件',
+      'doc': '这是文档格式，请选择媒体文件',
+      'docx': '这是文档格式，请选择媒体文件',
+      'txt': '这是文本格式，请选择媒体文件',
+
+      // 压缩格式
+      'zip': '这是压缩文件，请解压后选择媒体文件',
+      'rar': '这是压缩文件，请解压后选择媒体文件',
+      '7z': '这是压缩文件，请解压后选择媒体文件'
+    }
+
+    if (suggestions[fileExtension]) {
+      return suggestions[fileExtension] + '。'
+    }
+
+    // 默认建议
+    return '支持的格式：视频(MP4、WebM、MOV、AVI、MKV、FLV)、音频(MP3、WAV、AAC、FLAC、OGG、M4A)、图片(JPG、PNG、GIF、WebP、BMP)。'
   },
 
   /**

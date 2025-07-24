@@ -7,6 +7,7 @@ import {
   UnifiedMediaItemQueries,
   UnifiedMediaItemActions
 } from '@/unified'
+import { microsecondsToFrames, secondsToFrames } from '../utils/timeUtils'
 
 // ==================== 统一媒体项目调试工具 ====================
 
@@ -274,8 +275,9 @@ export function createUnifiedMediaModule() {
         thumbnailUrl = mediaItem.source.url
       } else if (mediaItem.mediaType === 'audio') {
         clip = await webavModule.createAudioClip(mediaItem.source.file)
-        // 音频使用默认图标
-        thumbnailUrl = undefined
+        // 音频使用全局默认图标
+        const { AUDIO_DEFAULT_THUMBNAIL_URL } = await import('../../constants/audioIcon')
+        thumbnailUrl = AUDIO_DEFAULT_THUMBNAIL_URL
       } else {
         throw new Error(`不支持的媒体类型: ${mediaItem.mediaType}`)
       }
@@ -305,12 +307,11 @@ export function createUnifiedMediaModule() {
       // 设置时长（帧数）
       if (mediaItem.mediaType === 'video' || mediaItem.mediaType === 'audio') {
         // 视频和音频：从clip元数据获取时长并转换为帧数
-        const durationSeconds = meta.duration / 1_000_000 // 微秒转秒
-        const durationFrames = Math.round(durationSeconds * 30) // 假设30fps
+        const durationFrames = microsecondsToFrames(meta.duration)
         UnifiedMediaItemActions.setDuration(mediaItem, durationFrames)
       } else if (mediaItem.mediaType === 'image') {
-        // 图片：固定5秒（150帧@30fps）
-        UnifiedMediaItemActions.setDuration(mediaItem, 150)
+        // 图片：固定5秒
+        UnifiedMediaItemActions.setDuration(mediaItem, secondsToFrames(5))
       }
 
       // 转换到ready状态
@@ -319,7 +320,13 @@ export function createUnifiedMediaModule() {
       console.log(`✅ [UnifiedMediaModule] WebAV解析完成: ${mediaItem.name}`)
 
     } catch (error) {
-      console.error(`❌ [UnifiedMediaModule] WebAV解析失败: ${mediaItem.name}`, error)
+      console.error(`❌ [UnifiedMediaModule] WebAV解析失败: ${mediaItem.name}`, {
+        mediaType: mediaItem.mediaType,
+        sourceType: mediaItem.source.type,
+        sourceStatus: mediaItem.source.status,
+        errorMessage: error instanceof Error ? error.message : String(error)
+      })
+
       UnifiedMediaItemActions.transitionTo(mediaItem, 'error')
     }
   }
@@ -365,12 +372,13 @@ export function createUnifiedMediaModule() {
   /**
    * 处理数据源状态变化，自动同步到媒体状态
    * @param mediaItem 媒体项目
+   * @param newSourceStatus 新的数据源状态
+   * @param oldSourceStatus 旧的数据源状态
    */
-  function handleSourceStatusChange(mediaItem: UnifiedMediaItemData) {
-    const sourceStatus = mediaItem.source.status
+  function handleSourceStatusChange(mediaItem: UnifiedMediaItemData, newSourceStatus: string, oldSourceStatus?: string) {
     const currentMediaStatus = mediaItem.mediaStatus
 
-    console.log(`🔄 [UnifiedMediaModule] 数据源状态变化: ${mediaItem.name} - 数据源: ${sourceStatus}, 媒体: ${currentMediaStatus}`)
+    console.log(`🔄 [UnifiedMediaModule] 数据源状态变化: ${mediaItem.name} - 数据源: ${oldSourceStatus || 'unknown'} → ${newSourceStatus}, 媒体: ${currentMediaStatus}`)
 
     // 数据源状态到媒体状态的映射
     const statusMap: Record<string, MediaStatus> = {
@@ -382,9 +390,9 @@ export function createUnifiedMediaModule() {
       'missing': 'missing'
     }
 
-    const targetMediaStatus = statusMap[sourceStatus]
+    const targetMediaStatus = statusMap[newSourceStatus]
     if (!targetMediaStatus) {
-      console.warn(`🚨 [UnifiedMediaModule] 未知的数据源状态: ${sourceStatus}`)
+      console.warn(`🚨 [UnifiedMediaModule] 未知的数据源状态: ${newSourceStatus} (${mediaItem.name})`)
       return
     }
 
@@ -393,23 +401,7 @@ export function createUnifiedMediaModule() {
       return
     }
 
-    // 特殊处理：如果数据源从pending直接跳到acquired，需要先转换到asyncprocessing
-    if (currentMediaStatus === 'pending' && targetMediaStatus === 'webavdecoding') {
-      console.log(`🔧 [UnifiedMediaModule] 检测到快速状态跳转，先转换到asyncprocessing`)
-      const success1 = UnifiedMediaItemActions.transitionTo(mediaItem, 'asyncprocessing')
-      if (success1) {
-        // 然后转换到webavdecoding
-        const success2 = UnifiedMediaItemActions.transitionTo(mediaItem, 'webavdecoding')
-        if (success2) {
-          console.log(`✅ [UnifiedMediaModule] 完成两步状态转换: pending → asyncprocessing → webavdecoding`)
-          // 启动WebAV解析
-          startWebAVProcessing(mediaItem)
-        }
-      }
-      return
-    }
-
-    // 正常的状态转换
+    // 执行状态转换
     const success = UnifiedMediaItemActions.transitionTo(mediaItem, targetMediaStatus)
     if (success) {
       console.log(`✅ [UnifiedMediaModule] 媒体状态转换成功: ${currentMediaStatus} → ${targetMediaStatus}`)
@@ -419,7 +411,7 @@ export function createUnifiedMediaModule() {
         startWebAVProcessing(mediaItem)
       }
     } else {
-      console.error(`❌ [UnifiedMediaModule] 媒体状态转换失败: ${currentMediaStatus} → ${targetMediaStatus}`)
+      console.error(`❌ [UnifiedMediaModule] 媒体状态转换失败: ${currentMediaStatus} → ${targetMediaStatus} (${mediaItem.name})`)
     }
   }
 
@@ -429,10 +421,16 @@ export function createUnifiedMediaModule() {
    */
   function startMediaProcessing(mediaItem: UnifiedMediaItemData) {
     // 监听数据源状态变化
-    watch(
+    const unwatch = watch(
       () => mediaItem.source.status,
-      () => {
-        handleSourceStatusChange(mediaItem)
+      (newStatus, oldStatus) => {
+        handleSourceStatusChange(mediaItem, newStatus, oldStatus)
+
+        // 当状态变为终态时，自动清理watcher
+        if (['acquired', 'error', 'cancelled', 'missing'].includes(newStatus)) {
+          unwatch()
+          console.log(`🧹 [UnifiedMediaModule] 已清理数据源状态watcher: ${mediaItem.name} (${newStatus})`)
+        }
       },
       { immediate: true }
     )
@@ -451,7 +449,7 @@ export function createUnifiedMediaModule() {
         UnifiedMediaItemActions.transitionTo(mediaItem, 'error')
       }
     }).catch(error => {
-      console.error(`❌ [UnifiedMediaModule] 导入数据源管理器失败:`, error)
+      console.error(`❌ [UnifiedMediaModule] 导入数据源管理器失败: ${mediaItem.name}`, error)
       UnifiedMediaItemActions.transitionTo(mediaItem, 'error')
     })
   }

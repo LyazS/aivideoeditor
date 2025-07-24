@@ -1,4 +1,5 @@
 import type { LocalTimelineItem, AsyncProcessingTimelineItem } from '../../types'
+import { secondsToFrames } from './timeUtils'
 
 // ==================== 时长计算工具 ====================
 
@@ -48,7 +49,7 @@ export function calculateTotalDurationFrames(
  */
 export function calculateMaxVisibleDurationFrames(
   contentEndTimeFrames: number,
-  defaultDurationFrames: number = 1800, // 60秒 * 30fps
+  defaultDurationFrames: number = secondsToFrames(60), // 60秒转换为帧数
 ): number {
   if (contentEndTimeFrames === 0) {
     return defaultDurationFrames

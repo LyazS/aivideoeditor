@@ -65,7 +65,7 @@
           class="media-item"
           :class="{
             parsing: item.mediaStatus === 'webavdecoding',
-            'async-processing': isAsyncProcessingMediaItem(item),
+            'async-processing': ['pending', 'asyncprocessing', 'webavdecoding'].includes(item.mediaStatus),
             [`status-${item.mediaStatus}`]: true
           }"
           :data-media-item-id="item.id"
@@ -76,19 +76,27 @@
         >
           <div class="media-thumbnail">
             <!-- 异步处理项目：显示进度 -->
-            <template v-if="isAsyncProcessingMediaItem(item)">
+            <!-- 等待状态 -->
+            <template v-if="item.mediaStatus === 'pending'">
               <div class="async-processing-display">
-                <!-- 等待状态 -->
-                <div v-if="item.mediaStatus === 'pending'" class="processing-status pending">
+                <div class="processing-status pending">
                   <div class="status-icon" title="等待中">
                     <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor">
                       <path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4Z" />
                     </svg>
                   </div>
                 </div>
+              </div>
+              <!-- 时长标签 -->
+              <div v-if="item.mediaType === 'video' || item.mediaType === 'audio'" class="duration-badge">
+                等待中
+              </div>
+            </template>
 
-                <!-- 处理中状态：显示大的进度百分比 -->
-                <div v-else-if="item.mediaStatus === 'asyncprocessing'" class="processing-status processing">
+            <!-- 异步处理中状态 -->
+            <template v-else-if="item.mediaStatus === 'asyncprocessing'">
+              <div class="async-processing-display">
+                <div class="processing-status processing">
                   <div
                     class="progress-circle"
                     :style="{ '--progress': item.source.progress }"
@@ -97,40 +105,44 @@
                     <div class="progress-text">{{ item.source.progress }}%</div>
                   </div>
                 </div>
-
-                <!-- WebAV解析中状态 -->
-                <div v-else-if="item.mediaStatus === 'webavdecoding'" class="processing-status processing">
-                  <div class="status-icon" title="解析中">
-                    <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M12,4V2A10,10 0 0,0 2,12H4A8,8 0 0,1 12,4Z" />
-                    </svg>
-                  </div>
-                </div>
-
-                <!-- 错误状态 -->
-                <div v-else-if="item.mediaStatus === 'error'" class="processing-status error">
-                  <div class="status-icon" title="处理失败">
-                    <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M12,2C17.53,2 22,6.47 22,12C22,17.53 17.53,22 12,22C6.47,22 2,17.53 2,12C2,6.47 6.47,2 12,2M15.59,7L12,10.59L8.41,7L7,8.41L10.59,12L7,15.59L8.41,17L12,13.41L15.59,17L17,15.59L13.41,12L17,8.41L15.59,7Z" />
-                    </svg>
-                  </div>
-                </div>
+              </div>
+              <!-- 时长标签 -->
+              <div v-if="item.mediaType === 'video' || item.mediaType === 'audio'" class="duration-badge">
+                分析中
               </div>
             </template>
 
-            <!-- 本地素材：显示缩略图 -->
-            <template v-else>
-              <!-- 错误状态显示 -->
-              <div v-if="item.mediaStatus === 'error'" class="local-error-display">
-                <div class="status-icon" title="转换失败">
+            <!-- WebAV解析中状态 -->
+            <template v-else-if="item.mediaStatus === 'webavdecoding'">
+              <div class="thumbnail-placeholder">
+                <div class="loading-spinner"></div>
+              </div>
+              <!-- 时长标签 -->
+              <div v-if="item.mediaType === 'video' || item.mediaType === 'audio'" class="duration-badge">
+                分析中
+              </div>
+            </template>
+
+            <!-- 错误状态 -->
+            <template v-else-if="item.mediaStatus === 'error'">
+              <div class="local-error-display">
+                <div class="status-icon" :title="item.source.errorMessage || '转换失败'">
                   <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M12,2C17.53,2 22,6.47 22,12C22,17.53 17.53,22 12,22C6.47,22 2,17.53 2,12C2,6.47 6.47,2 12,2M15.59,7L12,10.59L8.41,7L7,8.41L10.59,12L7,15.59L8.41,17L12,13.41L15.59,17L17,15.59L13.41,12L17,8.41L15.59,7Z" />
                   </svg>
                 </div>
               </div>
-              <!-- 正常状态：WebAV生成的缩略图 -->
+              <!-- 时长标签 -->
+              <div v-if="item.mediaType === 'video' || item.mediaType === 'audio'" class="duration-badge">
+                转换失败
+              </div>
+            </template>
+
+            <!-- 就绪状态：显示缩略图 -->
+            <template v-else>
+              <!-- WebAV生成的缩略图 -->
               <img
-                v-else-if="item.webav?.thumbnailUrl"
+                v-if="item.webav?.thumbnailUrl"
                 :src="item.webav.thumbnailUrl"
                 class="thumbnail-image"
                 alt="缩略图"
@@ -142,7 +154,7 @@
 
               <!-- 右上角时长标签（视频和音频显示） -->
               <div v-if="item.mediaType === 'video' || item.mediaType === 'audio'" class="duration-badge">
-                {{ item.mediaStatus === 'error' ? '转换失败' : (item.mediaStatus === 'ready' && item.duration ? formatDuration(item.duration) : '分析中') }}
+                {{ item.mediaStatus === 'ready' && item.duration ? formatDuration(item.duration) : '分析中' }}
               </div>
             </template>
           </div>
@@ -495,8 +507,19 @@ const handleFileSelect = (event: Event) => {
 // 拖拽处理
 const handleDragOver = (event: DragEvent) => {
   event.preventDefault()
-  event.dataTransfer!.dropEffect = 'copy'
-  isDragOver.value = true
+
+  // 使用统一的拖拽工具检查拖拽数据类型
+  const dragType = dragUtils.getDragDataType(event)
+
+  // 只对外部文件拖拽显示拖拽效果和高亮
+  if (dragType === 'files') {
+    event.dataTransfer!.dropEffect = 'copy'
+    isDragOver.value = true
+  } else {
+    // 内部素材拖拽或其他类型，不显示拖拽效果
+    event.dataTransfer!.dropEffect = 'none'
+    isDragOver.value = false
+  }
 }
 
 const handleDragLeave = (event: DragEvent) => {
@@ -512,51 +535,60 @@ const handleDrop = (event: DragEvent) => {
   event.preventDefault()
   isDragOver.value = false
 
-  const files = Array.from(event.dataTransfer?.files || [])
-  processFiles(files)
+  // 使用统一的拖拽工具检查拖拽数据类型
+  const dragType = dragUtils.getDragDataType(event)
+
+  console.log('🎯 [UnifiedMediaLibrary] 检测到拖拽类型:', dragType)
+
+  // 只处理外部文件拖拽，忽略内部素材拖拽
+  if (dragType === 'files') {
+    const files = Array.from(event.dataTransfer?.files || [])
+    if (files.length > 0) {
+      console.log('📁 [UnifiedMediaLibrary] 处理外部文件拖拽:', files.map(f => f.name))
+      processFiles(files)
+    }
+  } else if (dragType === 'media-item') {
+    console.log('🚫 [UnifiedMediaLibrary] 忽略内部素材拖拽，不进行文件导入')
+    // 内部素材拖拽不应该触发文件导入，直接忽略
+  } else {
+    console.log('❓ [UnifiedMediaLibrary] 未知拖拽类型，忽略')
+  }
 }
 
-// 支持的音频文件类型
-const SUPPORTED_AUDIO_TYPES = [
-  'audio/mpeg',     // .mp3
-  'audio/wav',      // .wav
-  'audio/mp4',      // .m4a
-  'audio/aac',      // .aac
-  'audio/ogg',      // .ogg
-  'audio/webm',     // .webm
-]
-
-// 处理文件 - 并行处理，限制最大并发数为5
+// 处理文件 - 统一使用 UserSelectedFileSource 的详细验证
 const processFiles = async (files: File[]) => {
-  const mediaFiles = files.filter(
-    (file) => file.type.startsWith('video/') ||
-              file.type.startsWith('image/') ||
-              SUPPORTED_AUDIO_TYPES.includes(file.type),
-  )
+  console.log(`📁 开始处理 ${files.length} 个文件`)
 
-  if (mediaFiles.length === 0) {
-    dialogs.showFileTypeError()
+  // 直接处理所有文件，让 UserSelectedFileSource 进行详细验证
+  // 管理器内部会处理并发控制和错误处理
+  const results = await Promise.allSettled(files.map(file => addMediaItem(file)))
+
+  // 统计处理结果
+  const successful = results.filter(result => result.status === 'fulfilled').length
+  const failed = results.filter(result => result.status === 'rejected').length
+
+  if (successful === 0 && failed > 0) {
+    // 所有文件都处理失败，显示提示
+    dialogs.showError('文件处理失败', '所选文件均无法处理，请检查文件格式是否支持')
     return
   }
 
-  console.log(`📁 开始处理 ${mediaFiles.length} 个文件`)
+  // 分析成功处理的文件类型，确定tab跳转逻辑
+  const allMediaItems = unifiedStore.getAllMediaItems()
+  const recentItems = allMediaItems.slice(-successful) // 获取最近添加的项目
 
-  // 分析文件类型，确定tab跳转逻辑
   const fileTypeCounts = {
     video: 0,
     audio: 0
   }
 
-  mediaFiles.forEach(file => {
-    if (file.type.startsWith('video/') || file.type.startsWith('image/')) {
+  recentItems.forEach(item => {
+    if (item.mediaType === 'video' || item.mediaType === 'image') {
       fileTypeCounts.video++
-    } else if (SUPPORTED_AUDIO_TYPES.includes(file.type)) {
+    } else if (item.mediaType === 'audio') {
       fileTypeCounts.audio++
     }
   })
-
-  // 直接处理所有文件，管理器内部会处理并发控制
-  await Promise.all(mediaFiles.map(file => addMediaItem(file)))
 
   // 根据素材类型自动跳转到对应tab
   if (fileTypeCounts.video > 0 && fileTypeCounts.audio > 0) {
@@ -573,7 +605,7 @@ const processFiles = async (files: File[]) => {
     console.log(`📂 自动切换到音频tab (仅音频: ${fileTypeCounts.audio})`)
   }
 
-  console.log(`✅ 所有文件处理完成`)
+  console.log(`✅ 文件处理完成 - 成功: ${successful}, 失败: ${failed}`)
 }
 
 
@@ -615,7 +647,7 @@ const getMediaTypeFromFile = (file: File): MediaType | 'unknown' => {
     return 'video'
   } else if (file.type.startsWith('image/')) {
     return 'image'
-  } else if (SUPPORTED_AUDIO_TYPES.includes(file.type)) {
+  } else if (file.type.startsWith('audio/')) {
     return 'audio'
   }
   return 'unknown'
@@ -672,10 +704,7 @@ const handleItemDragEnd = () => {
   dragUtils.clearDragData()
 }
 
-// 判断是否为异步处理媒体项目（兼容性函数）
-const isAsyncProcessingMediaItem = (item: UnifiedMediaItemData) => {
-  return item.mediaStatus === 'asyncprocessing' || item.mediaStatus === 'webavdecoding' || item.mediaStatus === 'pending'
-}
+
 
 // 调试统一媒体项目
 const debugMediaItems = () => {
@@ -1239,9 +1268,32 @@ const debugMediaItems = () => {
   border: 2px solid #e74c3c;
 }
 
+/* 从旧组件复制的样式 */
+.thumbnail-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(0, 0, 0, 0.3);
+}
+
+.loading-spinner {
+  width: 12px;
+  height: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-top: 1px solid var(--color-text-primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
 @keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 /* 自定义滚动条样式 */
