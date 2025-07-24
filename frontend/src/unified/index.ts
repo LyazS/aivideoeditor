@@ -37,19 +37,12 @@ export {
   type UserSelectedFileSourceData,
   type FileValidationResult,
   
-  // 配置常量
-  SUPPORTED_MEDIA_TYPES,
-  FILE_SIZE_LIMITS,
-  
   // 工厂函数
   UserSelectedFileSourceFactory,
   
   // 类型守卫
   UserSelectedFileTypeGuards,
-  
-  // 行为函数
-  UserSelectedFileActions,
-  
+
   // 查询函数
   UserSelectedFileQueries
 } from './sources/UserSelectedFileSource'
@@ -61,19 +54,16 @@ export {
   type RemoteFileConfig,
   type DownloadStats,
   type DownloadProgress,
-  
+
   // 配置常量
   DEFAULT_REMOTE_CONFIG,
-  
+
   // 工厂函数
   RemoteFileSourceFactory,
-  
+
   // 类型守卫
   RemoteFileTypeGuards,
-  
-  // 行为函数
-  RemoteFileActions,
-  
+
   // 查询函数
   RemoteFileQueries
 } from './sources/RemoteFileSource'
@@ -131,3 +121,21 @@ export {
   // 行为函数
   UnifiedMediaItemActions
 } from './UnifiedMediaItem'
+
+// ==================== 媒体类型检测工具 ====================
+export {
+  // 类型定义
+  type DetectedMediaType,
+  
+  // 配置常量
+  SUPPORTED_MEDIA_TYPES,
+  FILE_SIZE_LIMITS,
+  
+  // 检测函数
+  detectFileMediaType,
+  isSupportedMediaType,
+  isSupportedMimeType,
+  getMediaTypeFromMimeType,
+  getMediaTypeDisplayName,
+  getMediaTypeIcon
+} from './utils/mediaTypeDetector'

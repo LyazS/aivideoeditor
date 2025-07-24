@@ -152,6 +152,7 @@ export const useUnifiedStore = defineStore('unified', () => {
     addMediaItem,
     removeMediaItem,
     getMediaItem: unifiedMediaModule.getMediaItem,
+    getMediaItemBySourceId: unifiedMediaModule.getMediaItemBySourceId,
     updateMediaItemName: unifiedMediaModule.updateMediaItemName,
     updateMediaItem: unifiedMediaModule.updateMediaItem,
     getAllMediaItems: unifiedMediaModule.getAllMediaItems,

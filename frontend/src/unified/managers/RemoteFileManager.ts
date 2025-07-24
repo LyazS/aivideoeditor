@@ -1,11 +1,13 @@
 /**
  * 远程文件管理器（响应式重构版）
  * 专注于下载管理和并发控制，限制并发数，支持进度报告
+ * 包含所有远程文件相关的业务逻辑和操作行为
  */
 
 import { DataSourceManager, type AcquisitionTask } from './BaseDataSourceManager'
-import type { RemoteFileSourceData } from '../sources/RemoteFileSource'
-import { RemoteFileActions, RemoteFileQueries } from '../sources/RemoteFileSource'
+import type { RemoteFileSourceData, RemoteFileConfig, DownloadProgress } from '../sources/RemoteFileSource'
+import { RemoteFileQueries, DEFAULT_REMOTE_CONFIG } from '../sources/RemoteFileSource'
+import { UnifiedDataSourceActions, DataSourceQueries } from '../sources/BaseDataSource'
 
 // ==================== 下载管理器配置 ====================
 
@@ -72,12 +74,13 @@ export class RemoteFileManager extends DataSourceManager<RemoteFileSourceData> {
     this.downloadControllers.set(task.id, controller)
 
     try {
-      // 使用行为函数执行下载
-      await RemoteFileActions.executeAcquisition(task.source)
-      
+      // 直接执行下载逻辑
+      await this.executeAcquisition(task.source)
+
       // 检查执行结果
       if (task.source.status === 'acquired') {
-        // 下载成功
+        // 下载成功，检测并设置媒体类型
+        await this.detectAndSetMediaType(task.source)
         return
       } else if (task.source.status === 'error') {
         throw new Error(task.source.errorMessage || '下载失败')
@@ -90,6 +93,290 @@ export class RemoteFileManager extends DataSourceManager<RemoteFileSourceData> {
       // 清理下载控制器
       this.downloadControllers.delete(task.id)
     }
+  }
+
+  // ==================== 远程文件特定行为方法 ====================
+
+  /**
+   * 执行文件获取
+   */
+  private async executeAcquisition(source: RemoteFileSourceData): Promise<void> {
+    try {
+      // 设置为获取中状态
+      UnifiedDataSourceActions.setAcquiring(source)
+
+      // 验证URL
+      if (!this.isValidUrl(source.remoteUrl)) {
+        UnifiedDataSourceActions.setError(source, '无效的URL地址')
+        return
+      }
+
+      // 合并配置
+      const config = { ...DEFAULT_REMOTE_CONFIG, ...source.config }
+
+      // 开始下载
+      await this.downloadFile(source, config)
+
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : '下载失败'
+      UnifiedDataSourceActions.setError(source, errorMessage)
+    }
+  }
+
+  /**
+   * 下载文件
+   */
+  private async downloadFile(source: RemoteFileSourceData, config: Required<RemoteFileConfig>): Promise<void> {
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), config.timeout)
+
+    try {
+      // 记录开始时间
+      source.startTime = Date.now()
+
+      // 发起请求
+      const response = await fetch(source.remoteUrl, {
+        headers: config.headers,
+        signal: controller.signal
+      })
+
+      clearTimeout(timeoutId)
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+      }
+
+      // 获取文件大小
+      const contentLength = response.headers.get('content-length')
+      const totalBytes = contentLength ? parseInt(contentLength, 10) : 0
+      source.totalBytes = totalBytes
+
+      // 获取文件名和MIME类型
+      const fileName = this.extractFileName(source.remoteUrl, response)
+      const contentType = response.headers.get('content-type') || 'application/octet-stream'
+
+      // 读取响应流
+      const reader = response.body?.getReader()
+      if (!reader) {
+        throw new Error('无法读取响应流')
+      }
+
+      const chunks: Uint8Array[] = []
+      let downloadedBytes = 0
+
+      while (true) {
+        const { done, value } = await reader.read()
+
+        if (done) break
+
+        chunks.push(value)
+        downloadedBytes += value.length
+
+        // 更新下载进度
+        this.updateDownloadProgress(source, downloadedBytes, totalBytes)
+      }
+
+      // 创建文件对象，包含正确的MIME类型
+      const blob = new Blob(chunks)
+      const file = new File([blob], fileName, { type: contentType })
+      const url = URL.createObjectURL(file)
+
+      // 设置为已获取状态
+      UnifiedDataSourceActions.setAcquired(source, file, url)
+
+    } catch (error) {
+      clearTimeout(timeoutId)
+
+      if (error instanceof Error) {
+        if (error.name === 'AbortError') {
+          throw new Error('下载超时')
+        }
+        throw error
+      }
+      throw new Error('下载失败')
+    }
+  }
+
+  /**
+   * 更新下载进度
+   */
+  private updateDownloadProgress(source: RemoteFileSourceData, downloadedBytes: number, totalBytes: number): void {
+    source.downloadedBytes = downloadedBytes
+
+    // 计算进度百分比
+    const progress = totalBytes > 0 ? (downloadedBytes / totalBytes) * 100 : 0
+    UnifiedDataSourceActions.setProgress(source, progress)
+
+    // 计算下载速度
+    if (source.startTime) {
+      const elapsedTime = (Date.now() - source.startTime) / 1000 // 秒
+      if (elapsedTime > 0) {
+        const speed = downloadedBytes / elapsedTime // 字节/秒
+        source.downloadSpeed = this.formatSpeed(speed)
+      }
+    }
+  }
+
+  /**
+   * 格式化下载速度
+   */
+  private formatSpeed(bytesPerSecond: number): string {
+    if (bytesPerSecond < 1024) {
+      return `${bytesPerSecond.toFixed(0)} B/s`
+    } else if (bytesPerSecond < 1024 * 1024) {
+      return `${(bytesPerSecond / 1024).toFixed(1)} KB/s`
+    } else {
+      return `${(bytesPerSecond / (1024 * 1024)).toFixed(1)} MB/s`
+    }
+  }
+
+  /**
+   * 提取文件名
+   */
+  private extractFileName(url: string, response: Response): string {
+    // 尝试从Content-Disposition头获取文件名
+    const contentDisposition = response.headers.get('content-disposition')
+    if (contentDisposition) {
+      const match = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/)
+      if (match && match[1]) {
+        let filename = match[1].replace(/['"]/g, '')
+        // 解码URL编码的文件名
+        try {
+          filename = decodeURIComponent(filename)
+        } catch {
+          // 解码失败，使用原始文件名
+        }
+        return filename
+      }
+    }
+
+    // 从URL中提取文件名
+    try {
+      const urlObj = new URL(url)
+      const pathname = urlObj.pathname
+      const fileName = pathname.split('/').pop()
+      if (fileName && fileName.includes('.')) {
+        // 解码URL编码的文件名
+        try {
+          return decodeURIComponent(fileName)
+        } catch {
+          return fileName
+        }
+      }
+    } catch (error) {
+      // URL解析失败，使用默认名称
+    }
+
+    // 根据Content-Type生成默认文件名
+    const contentType = response.headers.get('content-type')
+    const extension = this.getExtensionFromContentType(contentType)
+    const timestamp = Date.now()
+
+    return `download_${timestamp}${extension}`
+  }
+
+  /**
+   * 根据Content-Type获取文件扩展名
+   */
+  private getExtensionFromContentType(contentType: string | null): string {
+    if (!contentType) {
+      return '.bin'
+    }
+
+    const mimeType = contentType.toLowerCase().split(';')[0].trim()
+
+    const mimeToExtension: Record<string, string> = {
+      // 视频格式
+      'video/mp4': '.mp4',
+      'video/avi': '.avi',
+      'video/quicktime': '.mov',
+      'video/x-matroska': '.mkv',
+      'video/x-ms-wmv': '.wmv',
+      'video/x-flv': '.flv',
+      'video/webm': '.webm',
+      'video/3gpp': '.3gp',
+
+      // 音频格式
+      'audio/mpeg': '.mp3',
+      'audio/wav': '.wav',
+      'audio/aac': '.aac',
+      'audio/flac': '.flac',
+      'audio/ogg': '.ogg',
+      'audio/mp4': '.m4a',
+      'audio/x-ms-wma': '.wma',
+
+      // 图片格式
+      'image/jpeg': '.jpg',
+      'image/png': '.png',
+      'image/gif': '.gif',
+      'image/bmp': '.bmp',
+      'image/webp': '.webp',
+      'image/svg+xml': '.svg',
+      'image/tiff': '.tiff',
+
+      // 其他常见格式
+      'application/octet-stream': '.bin',
+      'text/plain': '.txt',
+      'application/json': '.json',
+      'application/xml': '.xml',
+      'text/html': '.html'
+    }
+
+    return mimeToExtension[mimeType] || '.bin'
+  }
+
+  /**
+   * 验证URL
+   */
+  private isValidUrl(url: string): boolean {
+    try {
+      const urlObj = new URL(url)
+      return urlObj.protocol === 'http:' || urlObj.protocol === 'https:'
+    } catch (error) {
+      return false
+    }
+  }
+
+  /**
+   * 重试获取
+   */
+  async retryAcquisition(source: RemoteFileSourceData): Promise<void> {
+    if (!DataSourceQueries.canRetry(source)) {
+      return
+    }
+
+    // 清理之前的状态
+    UnifiedDataSourceActions.cleanup(source)
+
+    // 重置下载统计
+    source.downloadedBytes = 0
+    source.totalBytes = 0
+    source.downloadSpeed = undefined
+    source.startTime = undefined
+
+    // 重新执行获取
+    await this.executeAcquisition(source)
+  }
+
+  /**
+   * 取消获取
+   */
+  cancelAcquisition(source: RemoteFileSourceData): void {
+    if (!DataSourceQueries.canCancel(source)) {
+      return
+    }
+
+    // 清理资源
+    UnifiedDataSourceActions.cleanup(source)
+
+    // 重置下载统计
+    source.downloadedBytes = 0
+    source.totalBytes = 0
+    source.downloadSpeed = undefined
+    source.startTime = undefined
+
+    // 设置为取消状态
+    UnifiedDataSourceActions.setCancelled(source)
   }
 
   /**
@@ -144,6 +431,40 @@ export class RemoteFileManager extends DataSourceManager<RemoteFileSourceData> {
   }
 
   // ==================== 特定功能方法 ====================
+
+  /**
+   * 检测并设置媒体类型
+   */
+  private async detectAndSetMediaType(source: RemoteFileSourceData): Promise<void> {
+    if (!source.file) {
+      console.warn('文件不存在，无法检测媒体类型')
+      return
+    }
+
+    try {
+      // 使用工具函数检测媒体类型
+      const { detectFileMediaType } = await import('../utils/mediaTypeDetector')
+      const detectedType = detectFileMediaType(source.file)
+
+      // 使用媒体模块方法查找对应的媒体项目
+      const { useUnifiedStore } = await import('../../stores/unifiedStore')
+      const unifiedStore = useUnifiedStore()
+      const mediaItem = unifiedStore.getMediaItemBySourceId(source.id)
+
+      if (mediaItem && mediaItem.mediaType === 'unknown') {
+        mediaItem.mediaType = detectedType
+        console.log(`🔍 [RemoteFileManager] 媒体类型检测并设置完成: ${source.file.name} -> ${detectedType}`)
+      } else if (!mediaItem) {
+        console.warn(`找不到数据源ID为 ${source.id} 的媒体项目`)
+      } else {
+        console.log(`媒体项目 ${mediaItem.name} 的类型已经是 ${mediaItem.mediaType}，跳过设置`)
+      }
+    } catch (error) {
+      console.error('媒体类型检测失败:', error)
+    }
+  }
+
+
 
   /**
    * 批量下载远程文件

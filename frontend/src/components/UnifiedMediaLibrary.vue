@@ -100,9 +100,9 @@
                   <div
                     class="progress-circle"
                     :style="{ '--progress': item.source.progress }"
-                    :title="`处理中 ${item.source.progress}%`"
+                    :title="`处理中 ${item.source.progress.toFixed(2)}%`"
                   >
-                    <div class="progress-text">{{ item.source.progress }}%</div>
+                    <div class="progress-text">{{ item.source.progress.toFixed(2) }}%</div>
                   </div>
                 </div>
               </div>
@@ -756,7 +756,7 @@ const debugMediaItems = () => {
     名称: item.name,
     数据源类型: item.source.type,
     数据源状态: item.source.status,
-    进度: item.source.progress + '%',
+    进度: item.source.progress.toFixed(2) + '%',
     错误信息: item.source.errorMessage || '无',
     任务ID: item.source.taskId || '无'
   })))
@@ -788,7 +788,7 @@ const debugMediaItems = () => {
     数据源: {
       类型: item.source.type,
       状态: item.source.status,
-      进度: item.source.progress + '%',
+      进度: item.source.progress.toFixed(2) + '%',
       文件: item.source.file?.name || '无',
       URL: item.source.url || '无'
     }

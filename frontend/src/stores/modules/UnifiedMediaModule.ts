@@ -138,6 +138,15 @@ export function createUnifiedMediaModule() {
   }
 
   /**
+   * 根据数据源ID查找对应的媒体项目
+   * @param sourceId 数据源ID
+   * @returns 媒体项目或undefined
+   */
+  function getMediaItemBySourceId(sourceId: string): UnifiedMediaItemData | undefined {
+    return mediaItems.value.find((item: UnifiedMediaItemData) => item.source.id === sourceId)
+  }
+
+  /**
    * 获取所有媒体项目
    * @returns 所有媒体项目的数组
    */
@@ -541,6 +550,7 @@ export function createUnifiedMediaModule() {
     addMediaItem,
     removeMediaItem,
     getMediaItem,
+    getMediaItemBySourceId,
     updateMediaItemName,
     updateMediaItem,
     getAllMediaItems,
