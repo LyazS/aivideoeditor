@@ -25,9 +25,9 @@
           <div class="controls-section">
             <!-- 时间显示 -->
             <div class="time-display">
-              {{ framesToTimecode(videoStore.currentFrame) }} /
+              {{ framesToTimecode(unifiedStore.currentFrame) }} /
               {{
-                framesToTimecode(videoStore.contentEndTimeFrames || videoStore.totalDurationFrames)
+                framesToTimecode(unifiedStore.contentEndTimeFrames || unifiedStore.totalDurationFrames)
               }}
             </div>
             <!-- 中间播放控制 -->
@@ -75,11 +75,12 @@
           <!-- <ClipManagementToolbar /> -->
         </div>
         <!-- 只有WebAV初始化完成后才显示Timeline -->
-        <!-- <Timeline v-if="videoStore.isWebAVReady" />
+        <!-- <Timeline v-if="videoStore.isWebAVReady" /> -->
+        <UnifiedTimeline v-if="unifiedStore.isWebAVReady" />
         <div v-else class="timeline-loading">
           <div class="loading-spinner"></div>
           <p>正在初始化WebAV引擎...</p>
-        </div> -->
+        </div>
       </div>
     </div>
 
@@ -175,24 +176,26 @@
 import { ref, computed, watch, onUnmounted, onMounted } from 'vue'
 import PreviewWindow from './PreviewWindow.vue'
 import Timeline from './Timeline.vue'
+import UnifiedTimeline from './UnifiedTimeline.vue'
 import PlaybackControls from './PlaybackControls.vue'
 import ClipManagementToolbar from './ClipManagementToolbar.vue'
 import MediaLibrary from './MediaLibrary.vue'
 import PropertiesPanel from './PropertiesPanel.vue'
 import UnifiedMediaLibrary from './UnifiedMediaLibrary.vue'
 import { useVideoStore } from '../stores/videoStore'
+import { useUnifiedStore } from '../stores/unifiedStore'
 import { useKeyboardShortcuts } from '../composables/useKeyboardShortcuts'
 import { logWebAVReadyStateChange, logComponentLifecycle } from '../utils/webavDebug'
 import { framesToTimecode } from '../stores/utils/timeUtils'
 
-const videoStore = useVideoStore()
+const unifiedStore = useUnifiedStore()
 
 // 注册全局快捷键
 useKeyboardShortcuts()
 
 // 添加WebAV就绪状态监听
 watch(
-  () => videoStore.isWebAVReady,
+  () => unifiedStore.isWebAVReady,
   (isReady, wasReady) => {
     logWebAVReadyStateChange(isReady, wasReady)
   },
@@ -220,8 +223,8 @@ const adjustPanelWidths = () => {
 
 onMounted(() => {
   logComponentLifecycle('VideoPreviewEngine', 'mounted', {
-    isWebAVReady: videoStore.isWebAVReady,
-    hasAVCanvas: !!videoStore.avCanvas,
+    isWebAVReady: unifiedStore.isWebAVReady,
+    hasAVCanvas: !!unifiedStore.avCanvas,
   })
 
   // 添加窗口大小变化监听器
@@ -238,7 +241,7 @@ const showResolutionModal = ref(false)
 
 // 从videoStore获取当前分辨率，而不是使用硬编码的默认值
 const currentResolution = computed(() => {
-  const resolution = videoStore.videoResolution
+  const resolution = unifiedStore.videoResolution
   // 根据分辨率判断类别
   const aspectRatio = resolution.width / resolution.height
   let category = '横屏'
@@ -497,7 +500,7 @@ function confirmSelection() {
   }
 
   // 更新videoStore中的分辨率
-  videoStore.setVideoResolution(selectedResolution)
+  unifiedStore.setVideoResolution(selectedResolution)
 
   showResolutionModal.value = false
   showCustomResolution.value = false
