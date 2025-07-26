@@ -1,9 +1,9 @@
 import { defineStore } from 'pinia'
 import { computed } from 'vue'
 import { createUnifiedMediaModule } from './modules/UnifiedMediaModule'
-import { createConfigModule } from './modules/configModule'
-import { createPlaybackModule } from './modules/playbackModule'
-import { createWebAVModule } from './modules/webavModule'
+import { createConfigModule } from '@/stores/modules/configModule'
+import { createPlaybackModule } from '@/stores/modules/playbackModule'
+import { createWebAVModule } from '@/stores/modules/webavModule'
 import type { UnifiedMediaItemData, MediaType } from '@/unified'
 
 /**

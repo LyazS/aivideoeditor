@@ -7,7 +7,7 @@ import {
   UnifiedMediaItemQueries,
   UnifiedMediaItemActions
 } from '@/unified'
-import { microsecondsToFrames, secondsToFrames } from '../utils/timeUtils'
+import { microsecondsToFrames, secondsToFrames } from '@/stores/utils/timeUtils'
 
 // ==================== 统一媒体项目调试工具 ====================
 
@@ -268,7 +268,7 @@ export function createUnifiedMediaModule() {
       }
 
       // 动态导入webavModule
-      const { createWebAVModule } = await import('./webavModule')
+      const { createWebAVModule } = await import('../../stores/modules/webavModule')
       const webavModule = createWebAVModule()
 
       // 根据媒体类型创建对应的WebAV Clip
@@ -285,7 +285,7 @@ export function createUnifiedMediaModule() {
       } else if (mediaItem.mediaType === 'audio') {
         clip = await webavModule.createAudioClip(mediaItem.source.file)
         // 音频使用全局默认图标
-        const { AUDIO_DEFAULT_THUMBNAIL_URL } = await import('../../constants/audioIcon')
+        const { AUDIO_DEFAULT_THUMBNAIL_URL } = await import('../constants/audioIcon')
         thumbnailUrl = AUDIO_DEFAULT_THUMBNAIL_URL
       } else {
         throw new Error(`不支持的媒体类型: ${mediaItem.mediaType}`)

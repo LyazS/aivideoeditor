@@ -222,15 +222,15 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { useUnifiedStore } from '../stores/unifiedStore'
-import { useDialogs } from '../composables/useDialogs'
-import { useDragUtils } from '../composables/useDragUtils'
-import { framesToTimecode, secondsToFrames } from '../stores/utils/timeUtils'
+import { useUnifiedStore } from '@/unified/unifiedStore'
+import { useDialogs } from '@/composables/useDialogs'
+import { useDragUtils } from '@/composables/useDragUtils'
+import { framesToTimecode, secondsToFrames } from '@/stores/utils/timeUtils'
 import type { UnifiedMediaItemData, MediaType } from '@/unified'
 import { DataSourceFactory } from '@/unified'
 
-import HoverButton from './HoverButton.vue'
-import RemoteDownloadDialog from './RemoteDownloadDialog.vue'
+import HoverButton from '@/components/HoverButton.vue'
+import RemoteDownloadDialog from '@/components/RemoteDownloadDialog.vue'
 import { ContextMenu, ContextMenuItem, ContextMenuSeparator } from '@imengyu/vue3-context-menu'
 
 const unifiedStore = useUnifiedStore()
@@ -470,7 +470,7 @@ const handleRemoteDownloadSubmit = async (config: any, expectedDuration: number,
     // 如果用户没有提供名称，从URL中提取文件名
     let mediaItemName = name
     if (!mediaItemName) {
-      const { RemoteFileManager } = await import('../unified/managers/RemoteFileManager')
+      const { RemoteFileManager } = await import('@/unified/managers/RemoteFileManager')
       mediaItemName = RemoteFileManager.extractFileNameFromUrl(config.url)
     }
 
