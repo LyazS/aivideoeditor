@@ -149,7 +149,7 @@
           :key="line.time"
           class="grid-line"
           :class="{ 'frame-line': line.isFrame }"
-          :style="{ left: 150 + videoStore.frameToPixel(line.time, timelineWidth) + 'px' }"
+          :style="{ left: 150 + unifiedStore.frameToPixel(line.time, timelineWidth) + 'px' }"
         ></div>
       </div>
     </div>
@@ -234,6 +234,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, nextTick, markRaw, reactive, h } from 'vue'
 import { useVideoStore } from '../stores/videoStore'
+import { useUnifiedStore } from '../stores/unifiedStore'
 import { usePlaybackControls } from '../composables/usePlaybackControls'
 import { getDragPreviewManager } from '../composables/useDragPreview'
 import { useDragUtils } from '../composables/useDragUtils'
@@ -296,7 +297,7 @@ defineOptions({
   name: 'UnifiedTimelineEditor',
 })
 
-const videoStore = useVideoStore()
+const unifiedStore = useUnifiedStore()
 const { pauseForEditing } = usePlaybackControls()
 const dragPreviewManager = getDragPreviewManager()
 const dragUtils = useDragUtils()
@@ -306,7 +307,7 @@ const snapIndicatorManager = getSnapIndicatorManager()
 const timelineBody = ref<HTMLElement>()
 const timelineWidth = ref(800)
 
-const tracks = computed(() => videoStore.tracks)
+const tracks = computed(() => unifiedStore.tracks)
 
 // 编辑轨道名称相关
 const editingTrackId = ref<string | null>(null)
@@ -331,11 +332,11 @@ const contextMenuOptions = ref({
 
 // 获取指定轨道的统一时间轴项目
 function getClipsForTrack(trackId: string): UnifiedTimelineItem[] {
-  // 暂时使用现有的时间轴项目，后续需要转换为统一时间轴项目
-  const existingItems = videoStore.getTimelineItemsForTrack(trackId)
+  // 使用正确的方法名称
+  const existingItems = unifiedStore.getTimelineItemsByTrack(trackId)
 
   // 将现有时间轴项目转换为统一时间轴项目（临时方案）
-  return existingItems.map(item => convertToUnifiedTimelineItem(item))
+  return existingItems.map((item: any) => convertToUnifiedTimelineItem(item))
 }
 
 // 临时转换函数：将现有时间轴项目转换为统一时间轴项目
@@ -356,17 +357,22 @@ function convertToUnifiedTimelineItem(item: any): UnifiedTimelineItem {
 // 轨道管理方法
 async function addNewTrack(type: TrackType = 'video') {
   try {
-    const newTrackId = await videoStore.addTrackWithHistory(type)
-    if (newTrackId) {
-      console.log('✅ 轨道添加成功，新轨道ID:', newTrackId, '类型:', type)
+    // addTrackWithHistory 返回 void，不返回轨道ID
+    await unifiedStore.addTrackWithHistory({
+      id: `track-${Date.now()}`,
+      name: `${getTrackTypeLabel(type)}轨道`,
+      type: type,
+      height: 80,
+      isVisible: true,
+      isMuted: false
+    })
 
-      if (type === 'text') {
-        dialogs.showSuccess('文本轨道创建成功！现在可以右键点击轨道添加文本内容。')
-      } else if (type === 'audio') {
-        dialogs.showSuccess('音频轨道创建成功！现在可以拖拽音频文件到轨道中。')
-      }
-    } else {
-      console.error('❌ 轨道添加失败')
+    console.log('✅ 轨道添加成功，类型:', type)
+
+    if (type === 'text') {
+      dialogs.showSuccess('文本轨道创建成功！现在可以右键点击轨道添加文本内容。')
+    } else if (type === 'audio') {
+      dialogs.showSuccess('音频轨道创建成功！现在可以拖拽音频文件到轨道中。')
     }
   } catch (error) {
     console.error('❌ 添加轨道时出错:', error)
@@ -383,19 +389,24 @@ async function addNewTrackAfter(type: TrackType, afterTrackId: string) {
       return
     }
 
-    const newTrackId = await videoStore.addTrackWithHistory(type, undefined, afterTrackIndex + 1)
-    if (newTrackId) {
-      console.log('✅ 轨道添加成功，新轨道ID:', newTrackId, '类型:', type, '位置:', afterTrackIndex + 1)
+    // addTrackWithHistory 只接受一个参数，不支持位置参数
+    await unifiedStore.addTrackWithHistory({
+      id: `track-${Date.now()}`,
+      name: `${getTrackTypeLabel(type)}轨道`,
+      type: type,
+      height: 80,
+      isVisible: true,
+      isMuted: false
+    })
 
-      if (type === 'text') {
-        dialogs.showSuccess('文本轨道创建成功！现在可以右键点击轨道添加文本内容。')
-      } else if (type === 'audio') {
-        dialogs.showSuccess('音频轨道创建成功！现在可以拖拽音频文件到轨道中。')
-      } else if (type === 'video') {
-        dialogs.showSuccess('视频轨道创建成功！现在可以拖拽视频文件到轨道中。')
-      }
-    } else {
-      console.error('❌ 轨道添加失败')
+    console.log('✅ 轨道添加成功，类型:', type, '位置:', afterTrackIndex + 1)
+
+    if (type === 'text') {
+      dialogs.showSuccess('文本轨道创建成功！现在可以右键点击轨道添加文本内容。')
+    } else if (type === 'audio') {
+      dialogs.showSuccess('音频轨道创建成功！现在可以拖拽音频文件到轨道中。')
+    } else if (type === 'video') {
+      dialogs.showSuccess('视频轨道创建成功！现在可以拖拽视频文件到轨道中。')
     }
   } catch (error) {
     console.error('❌ 添加轨道时出错:', error)
@@ -462,13 +473,13 @@ function handleWheel(event: WheelEvent) {
     // 缩放
     event.preventDefault()
     const delta = event.deltaY > 0 ? -0.1 : 0.1
-    const newZoomLevel = Math.max(0.1, Math.min(5, videoStore.zoomLevel + delta))
-    videoStore.setZoomLevel(newZoomLevel)
+    const newZoomLevel = Math.max(0.1, Math.min(5, unifiedStore.zoomLevel + delta))
+    unifiedStore.setZoomLevel(newZoomLevel)
   } else {
     // 水平滚动
     const delta = event.deltaY
-    const newScrollOffset = Math.max(0, videoStore.scrollOffset + delta)
-    videoStore.setScrollOffset(newScrollOffset)
+    const newScrollOffset = Math.max(0, unifiedStore.scrollOffset + delta)
+    unifiedStore.setScrollOffset(newScrollOffset)
   }
 }
 
@@ -537,10 +548,10 @@ function handleTimelineClick(event: MouseEvent) {
   // 处理时间轴点击事件
   const rect = (event.currentTarget as HTMLElement).getBoundingClientRect()
   const clickX = event.clientX - rect.left
-  const framePosition = videoStore.pixelToFrame(clickX, timelineWidth.value)
+  const framePosition = unifiedStore.pixelToFrame(clickX, timelineWidth.value)
 
   // 设置播放头位置
-  videoStore.setCurrentFrame(framePosition)
+  unifiedStore.setCurrentFrame(framePosition)
 }
 
 // 拖拽处理函数
@@ -632,7 +643,7 @@ function handleMediaItemDragOver(event: DragEvent) {
   }
 }
 
-function handleTimelineItemDrop(event: DragEvent, dragData: TimelineItemDragData) {
+async function handleTimelineItemDrop(event: DragEvent, dragData: TimelineItemDragData) {
   console.log('🎯 [UnifiedTimeline] 处理时间轴项目拖拽放置:', dragData)
 
   const dropPosition = dragUtils.calculateDropPosition(
@@ -648,16 +659,45 @@ function handleTimelineItemDrop(event: DragEvent, dragData: TimelineItemDragData
 
   const { dropTime, targetTrackId } = dropPosition
 
-  // 这里应该调用统一时间轴项目的移动方法
-  // 暂时使用现有的方法
-  console.log('📍 [UnifiedTimeline] 拖拽目标位置:', {
-    dropTime,
-    targetTrackId,
-    selectedItems: dragData.selectedItems,
-  })
+  try {
+    // 获取要移动的时间轴项目
+    const timelineItem = unifiedStore.getTimelineItem(dragData.itemId)
+    if (!timelineItem) {
+      console.error('❌ [UnifiedTimeline] 找不到要移动的时间轴项目:', dragData.itemId)
+      return
+    }
+
+    console.log('📦 [UnifiedTimeline] 找到时间轴项目:', timelineItem.config.name)
+
+    // 获取当前位置和轨道信息
+    const currentStartTime = timelineItem.timeRange.timelineStartTime
+    const currentTrackId = timelineItem.trackId || dragData.trackId
+
+    // 使用带历史记录的移动方法
+    await unifiedStore.moveTimelineItemWithHistory(
+      dragData.itemId,
+      currentStartTime,  // 旧位置
+      dropTime,          // 新位置
+      currentTrackId,    // 旧轨道
+      targetTrackId      // 新轨道
+    )
+
+    console.log('✅ [UnifiedTimeline] 时间轴项目移动成功:', {
+      itemId: dragData.itemId,
+      name: timelineItem.config.name,
+      fromTime: currentStartTime,
+      toTime: dropTime,
+      fromTrack: timelineItem.trackId,
+      toTrack: targetTrackId,
+      offsetFrames: dropTime - currentStartTime,
+    })
+  } catch (error) {
+    console.error('❌ [UnifiedTimeline] 移动时间轴项目失败:', error)
+    // 可以在这里显示错误提示
+  }
 }
 
-function handleMediaItemDrop(event: DragEvent, mediaDragData: MediaItemDragData) {
+async function handleMediaItemDrop(event: DragEvent, mediaDragData: MediaItemDragData) {
   console.log('🎯 [UnifiedTimeline] 处理素材库拖拽放置:', mediaDragData)
 
   const dropPosition = dragUtils.calculateDropPosition(event, timelineWidth.value)
@@ -669,12 +709,142 @@ function handleMediaItemDrop(event: DragEvent, mediaDragData: MediaItemDragData)
 
   const { dropTime, targetTrackId } = dropPosition
 
-  // 这里应该创建新的统一时间轴项目
-  console.log('📍 [UnifiedTimeline] 素材拖拽目标位置:', {
-    dropTime,
-    targetTrackId,
-    mediaItem: mediaDragData,
-  })
+  try {
+    // 从统一媒体库获取完整的媒体项目信息
+    const mediaItem = unifiedStore.getMediaItem(mediaDragData.mediaItemId)
+    if (!mediaItem) {
+      console.error('❌ [UnifiedTimeline] 找不到对应的媒体项目:', mediaDragData.mediaItemId)
+      return
+    }
+
+    console.log('📦 [UnifiedTimeline] 找到媒体项目:', mediaItem)
+
+    // 使用工厂函数创建时间轴项目
+    const { createTimelineItemForMediaType } = await import('../unified/timelineitem/factory')
+
+    // 计算结束时间（使用媒体项目的持续时间）
+    const duration = mediaItem.duration || 300 // 默认5秒（300帧 @ 60fps）
+    const endTime = dropTime + duration
+
+    // 创建统一时间轴项目
+    const timelineItem = createTimelineItemForMediaType(mediaDragData.mediaType, {
+      mediaItemId: mediaDragData.mediaItemId,
+      trackId: targetTrackId,
+      name: mediaDragData.name,
+      startTime: dropTime,
+      endTime: endTime,
+      initialStatus: 'loading' // 初始状态为loading，后续会异步处理
+    })
+
+    console.log('🏭 [UnifiedTimeline] 创建时间轴项目:', timelineItem)
+
+    // 使用带历史记录的方法添加时间轴项目
+    await unifiedStore.addTimelineItemWithHistory(timelineItem)
+
+    console.log('✅ [UnifiedTimeline] 素材拖拽创建时间轴项目成功:', {
+      itemId: timelineItem.id,
+      name: timelineItem.config.name,
+      dropTime,
+      targetTrackId,
+      mediaType: mediaDragData.mediaType,
+    })
+
+    // 异步处理状态更新：检查媒体项目状态并创建sprite
+    processTimelineItemAsync(timelineItem, mediaItem)
+  } catch (error) {
+    console.error('❌ [UnifiedTimeline] 创建时间轴项目失败:', error)
+    // 可以在这里显示错误提示
+  }
+}
+
+// 异步处理时间轴项目状态更新
+async function processTimelineItemAsync(timelineItem: UnifiedTimelineItem, mediaItem: any) {
+  try {
+    console.log('🔄 [UnifiedTimeline] 开始处理时间轴项目状态更新:', timelineItem.id)
+
+    // 检查媒体项目是否已准备好
+    if (mediaItem.mediaStatus !== 'ready') {
+      console.log('⏳ [UnifiedTimeline] 媒体项目尚未准备好，等待状态更新:', mediaItem.name)
+
+      // 设置监听器等待媒体项目准备好
+      const checkMediaStatus = () => {
+        const updatedMediaItem = unifiedStore.getMediaItem(mediaItem.id)
+        if (updatedMediaItem && updatedMediaItem.mediaStatus === 'ready') {
+          console.log('✅ [UnifiedTimeline] 媒体项目已准备好，继续处理:', updatedMediaItem.name)
+          // 递归调用自己来处理已准备好的媒体项目
+          processTimelineItemAsync(timelineItem, updatedMediaItem)
+        }
+      }
+
+      // 使用定时器检查状态（简单实现，实际项目中可以使用更优雅的响应式监听）
+      const statusCheckInterval = setInterval(() => {
+        const updatedMediaItem = unifiedStore.getMediaItem(mediaItem.id)
+        if (updatedMediaItem && updatedMediaItem.mediaStatus === 'ready') {
+          clearInterval(statusCheckInterval)
+          checkMediaStatus()
+        }
+      }, 500) // 每500ms检查一次
+
+      // 设置超时，避免无限等待
+      setTimeout(() => {
+        clearInterval(statusCheckInterval)
+        console.warn('⚠️ [UnifiedTimeline] 媒体项目状态检查超时:', mediaItem.name)
+      }, 30000) // 30秒超时
+
+      return
+    }
+
+    // 导入必要的模块
+    const { UnifiedTimelineItemActions, TIMELINE_CONTEXT_TEMPLATES } = await import('../unified/timelineitem')
+    const { createSpriteFromMediaItem } = await import('../utils/spriteFactory')
+
+    // 创建 sprite
+    console.log('🎨 [UnifiedTimeline] 创建 sprite:', mediaItem.name)
+    const sprite = await createSpriteFromMediaItem(mediaItem)
+
+    // 设置时间范围
+    if ('setTimeRange' in sprite) {
+      sprite.setTimeRange({
+        timelineStartTime: timelineItem.timeRange.timelineStartTime,
+        timelineEndTime: timelineItem.timeRange.timelineEndTime,
+        clipStartTime: 0,
+        clipEndTime: mediaItem.duration || (timelineItem.timeRange.timelineEndTime - timelineItem.timeRange.timelineStartTime)
+      })
+    }
+
+    // 更新时间轴项目的 sprite
+    timelineItem.sprite = sprite
+
+    // 转换状态到 ready
+    const readyContext = TIMELINE_CONTEXT_TEMPLATES.ready({
+      duration: mediaItem.duration,
+      resolution: mediaItem.resolution || '1920x1080',
+      format: mediaItem.format || 'unknown'
+    })
+
+    UnifiedTimelineItemActions.transitionToReady(timelineItem, readyContext)
+
+    // 添加 sprite 到 WebAV
+    try {
+      await unifiedStore.addSpriteToCanvas(sprite)
+      console.log('✅ [UnifiedTimeline] Sprite 添加到 WebAV 成功')
+    } catch (error) {
+      console.warn('⚠️ [UnifiedTimeline] Sprite 添加到 WebAV 失败:', error)
+    }
+
+    console.log('✅ [UnifiedTimeline] 时间轴项目状态更新完成:', timelineItem.id)
+  } catch (error) {
+    console.error('❌ [UnifiedTimeline] 处理时间轴项目状态更新失败:', error)
+
+    // 转换到错误状态
+    try {
+      const { UnifiedTimelineItemActions, TIMELINE_CONTEXT_TEMPLATES } = await import('../unified/timelineitem')
+      const errorContext = TIMELINE_CONTEXT_TEMPLATES.error((error as Error).message)
+      UnifiedTimelineItemActions.transitionToError(timelineItem, errorContext)
+    } catch (transitionError) {
+      console.error('❌ [UnifiedTimeline] 转换到错误状态失败:', transitionError)
+    }
+  }
 }
 
 // 轨道操作函数
@@ -685,12 +855,8 @@ async function removeTrack(trackId: string) {
   }
 
   try {
-    const success = await videoStore.removeTrackWithHistory(trackId)
-    if (success) {
-      console.log('✅ 轨道删除成功')
-    } else {
-      console.error('❌ 轨道删除失败')
-    }
+    await unifiedStore.removeTrackWithHistory(trackId)
+    console.log('✅ 轨道删除成功')
   } catch (error) {
     console.error('❌ 删除轨道时出错:', error)
   }
@@ -698,12 +864,8 @@ async function removeTrack(trackId: string) {
 
 async function toggleVisibility(trackId: string) {
   try {
-    const success = await videoStore.toggleTrackVisibilityWithHistory(trackId)
-    if (success) {
-      console.log('✅ 轨道可见性切换成功')
-    } else {
-      console.error('❌ 轨道可见性切换失败')
-    }
+    await unifiedStore.toggleTrackVisibilityWithHistory(trackId)
+    console.log('✅ 轨道可见性切换成功')
   } catch (error) {
     console.error('❌ 切换轨道可见性时出错:', error)
   }
@@ -711,12 +873,8 @@ async function toggleVisibility(trackId: string) {
 
 async function toggleMute(trackId: string) {
   try {
-    const success = await videoStore.toggleTrackMuteWithHistory(trackId)
-    if (success) {
-      console.log('✅ 轨道静音状态切换成功')
-    } else {
-      console.error('❌ 轨道静音状态切换失败')
-    }
+    await unifiedStore.toggleTrackMuteWithHistory(trackId)
+    console.log('✅ 轨道静音状态切换成功')
   } catch (error) {
     console.error('❌ 切换轨道静音状态时出错:', error)
   }
@@ -724,12 +882,8 @@ async function toggleMute(trackId: string) {
 
 async function autoArrangeTrack(trackId: string) {
   try {
-    const success = await videoStore.autoArrangeTrackWithHistory(trackId)
-    if (success) {
-      console.log('✅ 轨道自动排列成功')
-    } else {
-      console.error('❌ 轨道自动排列失败')
-    }
+    await unifiedStore.autoArrangeTrackWithHistory(trackId)
+    console.log('✅ 轨道自动排列成功')
   } catch (error) {
     console.error('❌ 自动排列轨道时出错:', error)
   }
@@ -746,15 +900,11 @@ async function startRename(track: { id: string; name: string }) {
 async function finishRename() {
   if (editingTrackId.value && editingTrackName.value.trim()) {
     try {
-      const success = await videoStore.renameTrackWithHistory(
+      await unifiedStore.renameTrackWithHistory(
         editingTrackId.value,
         editingTrackName.value.trim(),
       )
-      if (success) {
-        console.log('✅ 轨道重命名成功')
-      } else {
-        console.error('❌ 轨道重命名失败')
-      }
+      console.log('✅ 轨道重命名成功')
     } catch (error) {
       console.error('❌ 重命名轨道时出错:', error)
     }
@@ -797,7 +947,7 @@ function renderTimelineItem(item: UnifiedTimelineItem, track: Track) {
   const commonProps = {
     track: track,
     timelineWidth: timelineWidth.value,
-    totalDurationFrames: videoStore.totalDurationFrames,
+    totalDurationFrames: unifiedStore.totalDurationFrames,
     onSelect: handleSelectClip,
     'onUpdate-position': handleTimelineItemPositionUpdate,
     onRemove: handleTimelineItemRemove
@@ -813,13 +963,13 @@ function renderTimelineItem(item: UnifiedTimelineItem, track: Track) {
 // 网格线计算
 const gridLines = computed(() => {
   const lines = []
-  const totalDurationFrames = videoStore.totalDurationFrames
+  const totalDurationFrames = unifiedStore.totalDurationFrames
   const pixelsPerFrame = calculatePixelsPerFrame(
     timelineWidth.value,
     totalDurationFrames,
-    videoStore.zoomLevel,
+    unifiedStore.zoomLevel,
   )
-  const pixelsPerSecond = pixelsPerFrame * videoStore.frameRate
+  const pixelsPerSecond = pixelsPerFrame * unifiedStore.frameRate
 
   // 根据缩放级别决定网格间隔
   let intervalFrames = 150 // 默认每5秒一条网格线
@@ -842,8 +992,8 @@ const gridLines = computed(() => {
   const { startFrames, endFrames } = calculateVisibleFrameRange(
     timelineWidth.value,
     totalDurationFrames,
-    videoStore.zoomLevel,
-    videoStore.scrollOffset,
+    unifiedStore.zoomLevel,
+    unifiedStore.scrollOffset,
   )
 
   // 生成主网格线

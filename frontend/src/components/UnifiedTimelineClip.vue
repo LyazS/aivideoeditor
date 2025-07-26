@@ -123,6 +123,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useVideoStore } from '../stores/videoStore'
+import { useUnifiedStore } from '../stores/unifiedStore'
 import { framesToTimecode } from '../stores/utils/timeUtils'
 import UnifiedTimelineBaseClip from './UnifiedTimelineBaseClip.vue'
 import UnifiedClipTooltip from './UnifiedClipTooltip.vue'
@@ -155,7 +156,7 @@ interface Emits {
 const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
 
-const videoStore = useVideoStore()
+const unifiedStore = useUnifiedStore()
 const baseClipRef = ref<InstanceType<typeof UnifiedTimelineBaseClip>>()
 
 // Tooltip相关状态
@@ -215,7 +216,7 @@ const clipClasses = computed(() => ({
 // 尺寸计算
 const clipWidth = computed(() => {
   const duration = props.timelineItem.timeRange.timelineEndTime - props.timelineItem.timeRange.timelineStartTime
-  return videoStore.frameToPixel(duration, props.timelineWidth)
+  return unifiedStore.frameToPixel(duration, props.timelineWidth)
 })
 
 const clipHeight = computed(() => props.track?.height || 60)

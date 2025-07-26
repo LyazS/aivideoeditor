@@ -3,13 +3,9 @@ import type { UnifiedTimelineItem } from '../../unified/timelineitem'
 import type {
   UnifiedTrack,
   UnifiedTrackType,
-  UnifiedTrackStatus,
-  UnifiedTrackConfig,
-  UnifiedTrackSummary,
 } from '../../unified/track'
 import {
   DEFAULT_UNIFIED_TRACK_CONFIGS,
-  generateUnifiedTrackName,
 } from '../../unified/track'
 import { generateTrackId } from '../../utils/idGenerator'
 
@@ -67,13 +63,6 @@ export function createUnifiedTrackModule() {
   }
 
   /**
-   * 生成轨道默认名称
-   */
-  function generateTrackName(type: UnifiedTrackType): string {
-    return generateUnifiedTrackName(type, tracks.value)
-  }
-
-  /**
    * 更新轨道的updatedAt时间戳
    */
   function updateTrackTimestamp(track: UnifiedTrack): void {
@@ -83,29 +72,38 @@ export function createUnifiedTrackModule() {
   // ==================== 轨道管理方法 ====================
 
   /**
-   * 添加新轨道
-   * @param config 轨道配置
+   * 添加新轨道 - 兼容trackModule接口
+   * @param type 轨道类型
+   * @param name 轨道名称（可选）
+   * @param position 插入位置（可选，默认为末尾）
    * @returns 新创建的轨道对象
    */
-  function addTrack(config: UnifiedTrackConfig): UnifiedTrack {
+  function addTrack(type: UnifiedTrackType = 'video', name?: string, position?: number): UnifiedTrack {
     const now = new Date().toISOString()
-    const defaultConfig = DEFAULT_UNIFIED_TRACK_CONFIGS[config.type]
+    const defaultConfig = DEFAULT_UNIFIED_TRACK_CONFIGS[type]
 
-    // 确定插入位置
-    const position = config.position ?? tracks.value.length
-    const order = position
+    // 计算同类型轨道的数量，用于生成默认名称
+    const sameTypeCount = tracks.value.filter((t) => t.type === type).length + 1
+    const typeNames = {
+      video: '视频轨道',
+      audio: '音频轨道',
+      text: '文本轨道',
+    }
+
+    // 确定插入位置和顺序
+    const insertPosition = position ?? tracks.value.length
+    const order = insertPosition
 
     const newTrack: UnifiedTrack = {
       id: generateTrackId(),
-      name: config.name || generateTrackName(config.type),
-      type: config.type,
-      status: config.status || 'active',
-      isVisible: config.isVisible ?? defaultConfig.isVisible ?? true,
-      isMuted: config.isMuted ?? defaultConfig.isMuted ?? false,
-      height: config.height ?? defaultConfig.height ?? 60,
+      name: name || `${typeNames[type]} ${sameTypeCount}`,
+      type,
+      status: 'active',
+      isVisible: defaultConfig.isVisible ?? true,
+      isMuted: defaultConfig.isMuted ?? false,
+      height: defaultConfig.height ?? 60,
       order,
-      color: config.color ?? defaultConfig.color,
-      description: config.description,
+      color: defaultConfig.color,
       createdAt: now,
       updatedAt: now,
     }
@@ -119,8 +117,8 @@ export function createUnifiedTrackModule() {
     })
 
     // 插入新轨道
-    if (position >= 0 && position <= tracks.value.length) {
-      tracks.value.splice(position, 0, newTrack)
+    if (insertPosition >= 0 && insertPosition <= tracks.value.length) {
+      tracks.value.splice(insertPosition, 0, newTrack)
     } else {
       tracks.value.push(newTrack)
     }
@@ -129,48 +127,47 @@ export function createUnifiedTrackModule() {
       id: newTrack.id,
       name: newTrack.name,
       type: newTrack.type,
-      status: newTrack.status,
-      position,
+      position: insertPosition,
       totalTracks: tracks.value.length,
     })
 
     return newTrack
   }
 
+
+
   /**
-   * 删除轨道
+   * 删除轨道 - 兼容trackModule接口
    * @param trackId 要删除的轨道ID
    * @param timelineItems 时间轴项目引用（用于删除该轨道上的所有项目）
    * @param removeTimelineItemCallback 删除时间轴项目的回调函数
    */
   function removeTrack(
     trackId: string,
-    timelineItems?: Ref<UnifiedTimelineItem[]>,
+    timelineItems: Ref<UnifiedTimelineItem[]>,
     removeTimelineItemCallback?: (timelineItemId: string) => void,
-  ): boolean {
+  ) {
     // 不能删除最后一个轨道
     if (tracks.value.length <= 1) {
       console.warn('⚠️ 不能删除最后一个轨道')
-      return false
+      return
     }
 
     const trackIndex = tracks.value.findIndex((t) => t.id === trackId)
     if (trackIndex === -1) {
       console.warn('⚠️ 找不到要删除的轨道:', trackId)
-      return false
+      return
     }
 
     const trackToRemove = tracks.value[trackIndex]
 
     // 删除该轨道上的所有时间轴项目
-    if (timelineItems && removeTimelineItemCallback) {
-      const affectedItems = timelineItems.value.filter((item) => item.trackId === trackId)
-      affectedItems.forEach((item) => {
+    const affectedItems = timelineItems.value.filter((item) => item.trackId === trackId)
+    affectedItems.forEach((item) => {
+      if (removeTimelineItemCallback) {
         removeTimelineItemCallback(item.id)
-      })
-
-      console.log(`🗑️ 删除轨道上的 ${affectedItems.length} 个时间轴项目`)
-    }
+      }
+    })
 
     // 删除轨道
     tracks.value.splice(trackIndex, 1)
@@ -186,31 +183,32 @@ export function createUnifiedTrackModule() {
     console.log('🗑️ 删除轨道:', {
       removedTrackId: trackId,
       removedTrackName: trackToRemove.name,
+      deletedItemsCount: affectedItems.length,
       remainingTracks: tracks.value.length,
     })
-
-    return true
   }
 
+
+
   /**
-   * 切换轨道可见性
+   * 切换轨道可见性 - 兼容trackModule接口
    * @param trackId 轨道ID
    * @param timelineItems 时间轴项目列表（用于同步sprite可见性）
    */
   function toggleTrackVisibility(
     trackId: string,
     timelineItems?: Ref<UnifiedTimelineItem[]>,
-  ): boolean {
+  ) {
     const track = tracks.value.find((t) => t.id === trackId)
     if (!track) {
       console.warn('⚠️ 找不到轨道:', trackId)
-      return false
+      return
     }
 
     // 音频轨道不支持可见性控制
     if (track.type === 'audio') {
       console.warn('⚠️ 音频轨道不支持可见性控制，请使用静音功能')
-      return false
+      return
     }
 
     track.isVisible = !track.isVisible
@@ -240,26 +238,24 @@ export function createUnifiedTrackModule() {
         isVisible: track.isVisible,
       })
     }
-
-    return true
   }
 
   /**
-   * 切换轨道静音状态
+   * 切换轨道静音状态 - 兼容trackModule接口
    * @param trackId 轨道ID
    * @param timelineItems 时间轴项目列表（用于同步sprite静音状态）
    */
-  function toggleTrackMute(trackId: string, timelineItems?: Ref<UnifiedTimelineItem[]>): boolean {
+  function toggleTrackMute(trackId: string, timelineItems?: Ref<UnifiedTimelineItem[]>) {
     const track = tracks.value.find((t) => t.id === trackId)
     if (!track) {
       console.warn('⚠️ 找不到轨道:', trackId)
-      return false
+      return
     }
 
     // 文本轨道不支持静音操作
     if (track.type === 'text') {
       console.warn('⚠️ 文本轨道不支持静音操作')
-      return false
+      return
     }
 
     track.isMuted = !track.isMuted
@@ -297,136 +293,54 @@ export function createUnifiedTrackModule() {
         isMuted: track.isMuted,
       })
     }
-
-    return true
   }
 
   /**
-   * 重命名轨道
+   * 重命名轨道 - 兼容trackModule接口
    * @param trackId 轨道ID
    * @param newName 新名称
    */
-  function renameTrack(trackId: string, newName: string): boolean {
+  function renameTrack(trackId: string, newName: string) {
     const track = tracks.value.find((t) => t.id === trackId)
-    if (!track) {
+    if (track && newName.trim()) {
+      const oldName = track.name
+      track.name = newName.trim()
+      updateTrackTimestamp(track)
+      console.log('✏️ 重命名轨道:', {
+        trackId,
+        oldName,
+        newName: track.name,
+      })
+    } else if (!track) {
       console.warn('⚠️ 找不到轨道:', trackId)
-      return false
-    }
-
-    if (!newName.trim()) {
+    } else {
       console.warn('⚠️ 无效的轨道名称:', newName)
-      return false
     }
-
-    const oldName = track.name
-    track.name = newName.trim()
-    updateTrackTimestamp(track)
-
-    console.log('✏️ 重命名轨道:', {
-      trackId,
-      oldName,
-      newName: track.name,
-    })
-
-    return true
   }
 
   /**
-   * 设置轨道高度
+   * 设置轨道高度 - 兼容trackModule接口
    * @param trackId 轨道ID
    * @param height 新高度
    */
-  function setTrackHeight(trackId: string, height: number): boolean {
+  function setTrackHeight(trackId: string, height: number) {
     const track = tracks.value.find((t) => t.id === trackId)
-    if (!track) {
+    if (track && height > 0) {
+      track.height = height
+      updateTrackTimestamp(track)
+      console.log('📏 设置轨道高度:', {
+        trackId,
+        trackName: track.name,
+        height,
+      })
+    } else if (!track) {
       console.warn('⚠️ 找不到轨道:', trackId)
-      return false
-    }
-
-    if (height <= 0) {
+    } else {
       console.warn('⚠️ 无效的轨道高度:', height)
-      return false
     }
-
-    track.height = height
-    updateTrackTimestamp(track)
-
-    console.log('📏 设置轨道高度:', {
-      trackId,
-      trackName: track.name,
-      height,
-    })
-
-    return true
   }
 
-  /**
-   * 设置轨道状态
-   * @param trackId 轨道ID
-   * @param status 新状态
-   */
-  function setTrackStatus(trackId: string, status: UnifiedTrackStatus): boolean {
-    const track = tracks.value.find((t) => t.id === trackId)
-    if (!track) {
-      console.warn('⚠️ 找不到轨道:', trackId)
-      return false
-    }
 
-    const oldStatus = track.status
-    track.status = status
-    updateTrackTimestamp(track)
-
-    console.log('🔄 设置轨道状态:', {
-      trackId,
-      trackName: track.name,
-      oldStatus,
-      newStatus: status,
-    })
-
-    return true
-  }
-
-  /**
-   * 重排序轨道
-   * @param trackId 轨道ID
-   * @param newOrder 新的顺序位置
-   */
-  function reorderTrack(trackId: string, newOrder: number): boolean {
-    const trackIndex = tracks.value.findIndex((t) => t.id === trackId)
-    if (trackIndex === -1) {
-      console.warn('⚠️ 找不到轨道:', trackId)
-      return false
-    }
-
-    if (newOrder < 0 || newOrder >= tracks.value.length) {
-      console.warn('⚠️ 无效的轨道顺序:', newOrder)
-      return false
-    }
-
-    const track = tracks.value[trackIndex]
-    const oldOrder = track.order
-
-    // 移除轨道
-    tracks.value.splice(trackIndex, 1)
-
-    // 插入到新位置
-    tracks.value.splice(newOrder, 0, track)
-
-    // 重新计算所有轨道的order
-    tracks.value.forEach((t, index) => {
-      t.order = index
-      updateTrackTimestamp(t)
-    })
-
-    console.log('🔄 重排序轨道:', {
-      trackId,
-      trackName: track.name,
-      oldOrder,
-      newOrder,
-    })
-
-    return true
-  }
 
   // ==================== 查询方法 ====================
 
@@ -440,51 +354,18 @@ export function createUnifiedTrackModule() {
   }
 
   /**
-   * 获取指定类型的轨道列表
-   * @param type 轨道类型
-   * @returns 轨道数组
-   */
-  function getTracksByType(type: UnifiedTrackType): UnifiedTrack[] {
-    return tracks.value.filter((t) => t.type === type)
-  }
-
-  /**
-   * 获取活跃状态的轨道列表
-   * @returns 活跃轨道数组
-   */
-  function getActiveTracks(): UnifiedTrack[] {
-    return tracks.value.filter((t) => t.status === 'active')
-  }
-
-  /**
    * 获取所有轨道的摘要信息
-   * @param timelineItems 时间轴项目列表（用于计算项目数量）
    * @returns 轨道摘要数组
    */
-  function getTracksSummary(timelineItems?: Ref<UnifiedTimelineItem[]>): UnifiedTrackSummary[] {
+  function getTracksSummary() {
     return tracks.value.map((track) => ({
       id: track.id,
       name: track.name,
       type: track.type,
-      status: track.status,
       isVisible: track.isVisible,
       isMuted: track.isMuted,
       height: track.height,
-      order: track.order,
-      itemCount: timelineItems
-        ? timelineItems.value.filter((item) => item.trackId === track.id).length
-        : 0,
     }))
-  }
-
-  /**
-   * 检查轨道名称是否已存在
-   * @param name 轨道名称
-   * @param excludeId 排除的轨道ID（用于重命名时检查）
-   * @returns 是否存在
-   */
-  function isTrackNameExists(name: string, excludeId?: string): boolean {
-    return tracks.value.some((t) => t.name === name && t.id !== excludeId)
   }
 
   // ==================== 批量操作方法 ====================
@@ -527,13 +408,7 @@ export function createUnifiedTrackModule() {
     console.log(`✅ 轨道恢复完成: ${tracks.value.length}个轨道`)
   }
 
-  /**
-   * 清空所有轨道
-   */
-  function clearAllTracks(): void {
-    tracks.value = []
-    console.log('🗑️ 已清空所有轨道')
-  }
+
 
   // ==================== 导出接口 ====================
 
@@ -541,32 +416,19 @@ export function createUnifiedTrackModule() {
     // 状态
     tracks,
 
-    // 核心方法
+    // 方法 - 与trackModule保持一致的接口
     addTrack,
     removeTrack,
     toggleTrackVisibility,
     toggleTrackMute,
     renameTrack,
     setTrackHeight,
-    setTrackStatus,
-    reorderTrack,
-
-    // 查询方法
     getTrack,
-    getTracksByType,
-    getActiveTracks,
     getTracksSummary,
-    isTrackNameExists,
-
-    // 批量操作方法
     resetTracksToDefaults,
-    restoreTracks,
-    clearAllTracks,
 
-    // 工具函数
-    createDefaultTrack,
-    generateTrackName,
-    updateTrackTimestamp,
+    // 恢复方法
+    restoreTracks,
   }
 }
 

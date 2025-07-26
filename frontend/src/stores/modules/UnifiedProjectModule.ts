@@ -39,8 +39,8 @@ export function createUnifiedProjectModule() {
   const loadingStage = ref('') // 当前加载阶段
   const loadingDetails = ref('') // 详细信息
 
-  // 统一媒体项目引用映射（用于持久化）
-  const unifiedMediaReferences = ref<Record<string, any>>({})
+  // 媒体引用映射（用于持久化）
+  const mediaReferences = ref<Record<string, any>>({})
 
   // ==================== 计算属性 ====================
 
@@ -140,7 +140,7 @@ export function createUnifiedProjectModule() {
 
       const projectConfig = await projectManager.createProject(name, template)
       currentProject.value = projectConfig
-      unifiedMediaReferences.value = {}
+      mediaReferences.value = {}
       lastSaved.value = new Date()
 
       updateLoadingProgress('统一项目创建完成', 100)
@@ -166,13 +166,13 @@ export function createUnifiedProjectModule() {
     try {
       isSaving.value = true
       console.log(`💾 [UnifiedProject] 保存项目: ${currentProject.value.name}`)
-      
+
       // 合并项目数据
       const updatedProject: ProjectConfig = {
         ...currentProject.value,
         ...projectData,
-        // 使用统一媒体引用替代原有的localMediaReferences
-        localMediaReferences: unifiedMediaReferences.value,
+        // 使用媒体引用替代原有的localMediaReferences
+        localMediaReferences: mediaReferences.value,
         asyncProcessingMediaReferences: {},
         updatedAt: new Date().toISOString()
       }
@@ -191,74 +191,74 @@ export function createUnifiedProjectModule() {
   }
 
   /**
-   * 添加统一媒体引用
+   * 添加媒体引用
    * @param mediaItemId 媒体项目ID
-   * @param mediaReference 统一媒体引用
+   * @param mediaReference 媒体引用
    */
-  function addUnifiedMediaReference(mediaItemId: string, mediaReference: any): void {
-    unifiedMediaReferences.value[mediaItemId] = mediaReference
-    console.log(`📎 [UnifiedProject] 添加统一媒体引用: ${mediaItemId}`)
+  function addMediaReference(mediaItemId: string, mediaReference: any): void {
+    mediaReferences.value[mediaItemId] = mediaReference
+    console.log(`📎 [UnifiedProject] 添加媒体引用: ${mediaItemId}`)
   }
 
   /**
-   * 移除统一媒体引用
+   * 移除媒体引用
    * @param mediaItemId 媒体项目ID
    */
-  function removeUnifiedMediaReference(mediaItemId: string): void {
-    delete unifiedMediaReferences.value[mediaItemId]
-    console.log(`🗑️ [UnifiedProject] 移除统一媒体引用: ${mediaItemId}`)
+  function removeMediaReference(mediaItemId: string): void {
+    delete mediaReferences.value[mediaItemId]
+    console.log(`🗑️ [UnifiedProject] 移除媒体引用: ${mediaItemId}`)
   }
 
   /**
-   * 获取统一媒体引用
+   * 获取媒体引用
    * @param mediaItemId 媒体项目ID
    */
-  function getUnifiedMediaReference(mediaItemId: string): any | undefined {
-    return unifiedMediaReferences.value[mediaItemId]
+  function getMediaReference(mediaItemId: string): any | undefined {
+    return mediaReferences.value[mediaItemId]
   }
 
   /**
-   * 清理无效的统一媒体引用
+   * 清理无效的媒体引用
    * 移除那些在project.json中存在但实际媒体文件已丢失的引用
-   * @param loadedMediaItems 成功加载的统一媒体项目列表
+   * @param loadedMediaItems 成功加载的媒体项目列表
    */
-  async function cleanupInvalidUnifiedMediaReferences(loadedMediaItems: UnifiedMediaItemData[]): Promise<void> {
+  async function cleanupInvalidMediaReferences(loadedMediaItems: UnifiedMediaItemData[]): Promise<void> {
     const loadedMediaIds = new Set(loadedMediaItems.map(item => item.id))
-    const originalReferencesCount = Object.keys(unifiedMediaReferences.value).length
+    const originalReferencesCount = Object.keys(mediaReferences.value).length
 
-    console.log(`🧹 [UnifiedProject] 检查统一媒体引用一致性: ${originalReferencesCount} 个引用, ${loadedMediaItems.length} 个成功加载`)
+    console.log(`🧹 [UnifiedProject] 检查媒体引用一致性: ${originalReferencesCount} 个引用, ${loadedMediaItems.length} 个成功加载`)
 
     // 找出无效的媒体引用（在引用中存在但未成功加载的）
     const invalidMediaIds: string[] = []
-    for (const mediaId in unifiedMediaReferences.value) {
+    for (const mediaId in mediaReferences.value) {
       if (!loadedMediaIds.has(mediaId)) {
         invalidMediaIds.push(mediaId)
       }
     }
 
     if (invalidMediaIds.length > 0) {
-      console.log(`🧹 [UnifiedProject] 发现 ${invalidMediaIds.length} 个无效统一媒体引用，开始清理...`)
+      console.log(`🧹 [UnifiedProject] 发现 ${invalidMediaIds.length} 个无效媒体引用，开始清理...`)
 
       // 移除无效的媒体引用
       for (const mediaId of invalidMediaIds) {
-        const reference = unifiedMediaReferences.value[mediaId]
-        console.log(`🧹 [UnifiedProject] 清理无效统一媒体引用: ${mediaId}`)
-        delete unifiedMediaReferences.value[mediaId]
+        const reference = mediaReferences.value[mediaId]
+        console.log(`🧹 [UnifiedProject] 清理无效媒体引用: ${mediaId}`)
+        delete mediaReferences.value[mediaId]
       }
 
       // 立即保存更新后的项目配置
       try {
         if (currentProject.value) {
-          // 更新当前项目的统一媒体引用
-          currentProject.value.localMediaReferences = { ...unifiedMediaReferences.value }
+          // 更新当前项目的媒体引用
+          currentProject.value.localMediaReferences = { ...mediaReferences.value }
           await projectManager.saveProject(currentProject.value)
-          console.log(`🧹 [UnifiedProject] ✅ 统一媒体引用清理完成: 移除 ${invalidMediaIds.length} 个无效引用 (${originalReferencesCount} -> ${Object.keys(unifiedMediaReferences.value).length})`)
+          console.log(`🧹 [UnifiedProject] ✅ 媒体引用清理完成: 移除 ${invalidMediaIds.length} 个无效引用 (${originalReferencesCount} -> ${Object.keys(mediaReferences.value).length})`)
         }
       } catch (error) {
         console.error('🧹 [UnifiedProject] ❌ 保存清理后的项目配置失败:', error)
       }
     } else {
-      console.log(`🧹 [UnifiedProject] ✅ 统一媒体引用检查完成: 所有 ${originalReferencesCount} 个引用都有效`)
+      console.log(`🧹 [UnifiedProject] ✅ 媒体引用检查完成: 所有 ${originalReferencesCount} 个引用都有效`)
     }
   }
 
@@ -306,14 +306,14 @@ export function createUnifiedProjectModule() {
   }
 
   /**
-   * 加载统一项目内容（统一媒体项目、统一时间轴项目等）
+   * 加载项目内容（媒体项目、时间轴项目等）
    * @param projectId 项目ID
    */
-  async function loadUnifiedProjectContent(projectId: string): Promise<void> {
+  async function loadProjectContent(projectId: string): Promise<void> {
     if (!projectId || projectId === 'undefined') {
       console.log('📂 [UnifiedProject] 新项目，跳过内容加载')
       currentProject.value = null
-      unifiedMediaReferences.value = {}
+      mediaReferences.value = {}
       lastSaved.value = null
       isProjectContentReady.value = true
       return
@@ -321,8 +321,8 @@ export function createUnifiedProjectModule() {
 
     try {
       isLoading.value = true
-      updateLoadingProgress('开始加载统一项目内容...', 5)
-      console.log(`📂 [UnifiedProject] 开始加载统一项目内容: ${projectId}`)
+      updateLoadingProgress('开始加载项目内容...', 5)
+      console.log(`📂 [UnifiedProject] 开始加载项目内容: ${projectId}`)
 
       // 获取预加载的设置（如果有的话）
       const { useVideoStore } = await import('../videoStore')
@@ -338,7 +338,7 @@ export function createUnifiedProjectModule() {
         loadMedia: true,
         loadTimeline: true,
         onProgress: (stage, progress) => {
-          updateLoadingProgress(`统一项目: ${stage}`, progress)
+          updateLoadingProgress(stage, progress)
         }
       })
 
@@ -347,156 +347,68 @@ export function createUnifiedProjectModule() {
 
         // 设置项目配置
         currentProject.value = projectConfig
-        unifiedMediaReferences.value = projectConfig.localMediaReferences || {}
+        mediaReferences.value = projectConfig.localMediaReferences || {}
         lastSaved.value = new Date(projectConfig.updatedAt)
 
-        // 转换为统一媒体项目并恢复到统一媒体模块
+        // 恢复媒体项目到VideoStore中
         if (mediaItems && mediaItems.length > 0) {
-          console.log(`📁 [UnifiedProject] 转换并恢复统一媒体项目: ${mediaItems.length}个文件`)
-          await restoreUnifiedMediaItems(mediaItems)
-          console.log(`✅ [UnifiedProject] 统一媒体项目恢复完成: ${mediaItems.length}个文件`)
+          console.log(`📁 [UnifiedProject] 恢复媒体项目: ${mediaItems.length}个文件`)
+          videoStore.restoreMediaItems(mediaItems)
+          console.log(`✅ [UnifiedProject] 媒体项目恢复完成: ${mediaItems.length}个文件`)
         }
 
-        // 转换为统一轨道并恢复到统一轨道模块
+        // 恢复轨道结构
         if (tracks && tracks.length > 0) {
-          console.log(`📋 [UnifiedProject] 转换并恢复统一轨道: ${tracks.length}个轨道`)
-          await restoreUnifiedTracks(tracks)
-          console.log(`✅ [UnifiedProject] 统一轨道恢复完成: ${tracks.length}个轨道`)
+          console.log(`📋 [UnifiedProject] 恢复轨道结构: ${tracks.length}个轨道`)
+          videoStore.restoreTracks(tracks)
+          console.log(`✅ [UnifiedProject] 轨道结构恢复完成: ${tracks.length}个轨道`)
         }
 
-        // 转换为统一时间轴项目并恢复到统一时间轴模块
+        // 恢复时间轴项目
         if (timelineItems && timelineItems.length > 0) {
-          console.log(`⏰ [UnifiedProject] 转换并恢复统一时间轴项目: ${timelineItems.length}个项目`)
-          await restoreUnifiedTimelineItems(timelineItems)
-          console.log(`✅ [UnifiedProject] 统一时间轴项目恢复完成: ${timelineItems.length}个项目`)
+          console.log(`⏰ [UnifiedProject] 恢复时间轴项目: ${timelineItems.length}个项目`)
+          await videoStore.restoreTimelineItems(timelineItems)
+          console.log(`✅ [UnifiedProject] 时间轴项目恢复完成: ${timelineItems.length}个项目`)
         }
 
-        updateLoadingProgress('统一项目内容加载完成', 100)
-        console.log(`✅ [UnifiedProject] 统一项目内容加载成功: ${projectConfig.name}`)
+        updateLoadingProgress('项目内容加载完成', 100)
+        console.log(`✅ [UnifiedProject] 项目内容加载成功: ${projectConfig.name}`)
       } else {
         console.warn(`❌ [UnifiedProject] 项目不存在: ${projectId}`)
       }
 
       isProjectContentReady.value = true
     } catch (error) {
-      console.error('❌ [UnifiedProject] 加载统一项目内容失败:', error)
+      console.error('❌ [UnifiedProject] 加载项目内容失败:', error)
       throw error
     } finally {
       resetLoadingState()
     }
   }
 
-  /**
-   * 恢复统一媒体项目到统一媒体模块
-   * @param mediaItems 传统媒体项目列表
-   */
-  async function restoreUnifiedMediaItems(mediaItems: any[]): Promise<void> {
-    // 动态导入统一媒体模块以避免循环依赖
-    const { useVideoStore } = await import('../videoStore')
-    const videoStore = useVideoStore()
 
-    // 检查是否有统一媒体模块
-    if (videoStore.unifiedMediaModule) {
-      console.log(`🔄 [UnifiedProject] 使用统一媒体模块恢复媒体项目`)
-
-      // 将传统媒体项目转换为统一媒体项目
-      for (const mediaItem of mediaItems) {
-        try {
-          // 这里需要根据实际的统一媒体项目接口进行转换
-          // 暂时使用原有的恢复方法
-          videoStore.restoreMediaItems([mediaItem])
-        } catch (error) {
-          console.error(`❌ [UnifiedProject] 恢复统一媒体项目失败: ${mediaItem.id}`, error)
-        }
-      }
-    } else {
-      // 回退到传统媒体模块
-      console.log(`🔄 [UnifiedProject] 回退到传统媒体模块恢复媒体项目`)
-      videoStore.restoreMediaItems(mediaItems)
-    }
-  }
-
-  /**
-   * 恢复统一轨道到统一轨道模块
-   * @param tracks 传统轨道列表
-   */
-  async function restoreUnifiedTracks(tracks: any[]): Promise<void> {
-    // 动态导入统一轨道模块以避免循环依赖
-    const { useVideoStore } = await import('../videoStore')
-    const videoStore = useVideoStore()
-
-    // 检查是否有统一轨道模块
-    if (videoStore.unifiedTrackModule) {
-      console.log(`🔄 [UnifiedProject] 使用统一轨道模块恢复轨道`)
-
-      // 将传统轨道转换为统一轨道
-      for (const track of tracks) {
-        try {
-          // 这里需要根据实际的统一轨道接口进行转换
-          // 暂时使用原有的恢复方法
-          videoStore.restoreTracks([track])
-        } catch (error) {
-          console.error(`❌ [UnifiedProject] 恢复统一轨道失败: ${track.id}`, error)
-        }
-      }
-    } else {
-      // 回退到传统轨道模块
-      console.log(`🔄 [UnifiedProject] 回退到传统轨道模块恢复轨道`)
-      videoStore.restoreTracks(tracks)
-    }
-  }
-
-  /**
-   * 恢复统一时间轴项目到统一时间轴模块
-   * @param timelineItems 传统时间轴项目列表
-   */
-  async function restoreUnifiedTimelineItems(timelineItems: any[]): Promise<void> {
-    // 动态导入统一时间轴模块以避免循环依赖
-    const { useVideoStore } = await import('../videoStore')
-    const videoStore = useVideoStore()
-
-    // 检查是否有统一时间轴模块
-    if (videoStore.unifiedTimelineModule) {
-      console.log(`🔄 [UnifiedProject] 使用统一时间轴模块恢复时间轴项目`)
-
-      // 将传统时间轴项目转换为统一时间轴项目
-      for (const timelineItem of timelineItems) {
-        try {
-          // 这里需要根据实际的统一时间轴项目接口进行转换
-          // 暂时使用原有的恢复方法
-          await videoStore.restoreTimelineItems([timelineItem])
-        } catch (error) {
-          console.error(`❌ [UnifiedProject] 恢复统一时间轴项目失败: ${timelineItem.id}`, error)
-        }
-      }
-    } else {
-      // 回退到传统时间轴模块
-      console.log(`🔄 [UnifiedProject] 回退到传统时间轴模块恢复时间轴项目`)
-      await videoStore.restoreTimelineItems(timelineItems)
-    }
-  }
 
   /**
    * 清除当前项目
    */
   function clearCurrentProject(): void {
     currentProject.value = null
-    unifiedMediaReferences.value = {}
+    mediaReferences.value = {}
     lastSaved.value = null
-    console.log('🧹 [UnifiedProject] 已清除当前统一项目')
+    console.log('🧹 [UnifiedProject] 已清除当前项目')
   }
 
   /**
-   * 获取统一项目摘要信息
+   * 获取项目摘要信息
    */
-  function getUnifiedProjectSummary() {
+  function getProjectSummary() {
     return {
       currentProject: currentProject.value,
       currentProjectId: currentProjectId.value,
       currentProjectName: currentProjectName.value,
       projectStatus: projectStatus.value,
       hasCurrentProject: hasCurrentProject.value,
-      unifiedMediaReferencesCount: Object.keys(unifiedMediaReferences.value).length,
+      mediaReferencesCount: Object.keys(mediaReferences.value).length,
       isSaving: isSaving.value,
       isLoading: isLoading.value,
       lastSaved: lastSaved.value,
@@ -517,7 +429,7 @@ export function createUnifiedProjectModule() {
     isSaving,
     isLoading,
     lastSaved,
-    unifiedMediaReferences,
+    mediaReferences,
 
     // 加载进度状态
     loadingProgress,
@@ -527,24 +439,17 @@ export function createUnifiedProjectModule() {
     isProjectSettingsReady,
     isProjectContentReady,
 
-    // 项目管理方法
+    // 方法
     createProject,
     saveCurrentProject,
     preloadProjectSettings,
-    loadUnifiedProjectContent,
+    loadProjectContent,
     clearCurrentProject,
-    getUnifiedProjectSummary,
-
-    // 统一媒体引用管理方法
-    addUnifiedMediaReference,
-    removeUnifiedMediaReference,
-    getUnifiedMediaReference,
-    cleanupInvalidUnifiedMediaReferences,
-
-    // 统一内容恢复方法
-    restoreUnifiedMediaItems,
-    restoreUnifiedTracks,
-    restoreUnifiedTimelineItems,
+    addMediaReference,
+    removeMediaReference,
+    getMediaReference,
+    cleanupInvalidMediaReferences,
+    getProjectSummary,
 
     // 加载进度方法
     updateLoadingProgress,

@@ -1,6 +1,5 @@
 import { ref, type Ref } from 'vue'
 import type { UnifiedTimelineItem } from '../../unified/timelineitem'
-import { UnifiedTimelineItemActions } from '../../unified/timelineitem'
 import type { UnifiedTrack } from '../../unified/track'
 
 /**
@@ -244,6 +243,92 @@ export function createUnifiedTimelineModule(
   }
 
   /**
+   * 获取已准备好的时间轴项目（可进行操作的项目）
+   * @param itemId 项目ID
+   * @returns 已准备好的时间轴项目或undefined
+   */
+  function getReadyTimelineItem(itemId: string): UnifiedTimelineItem | undefined {
+    const item = getTimelineItem(itemId)
+    // 在统一架构中，只有ready状态的项目才能进行sprite操作
+    return item && item.timelineStatus === 'ready' ? item : undefined
+  }
+
+  /**
+   * 为TimelineItem设置双向数据同步（兼容接口）
+   * @param timelineItem TimelineItem实例
+   */
+  function setupBidirectionalSync(timelineItem: UnifiedTimelineItem) {
+    // 在统一架构中，双向同步通过状态管理自动处理
+    // 这里提供兼容接口，实际同步逻辑在状态更新时处理
+    console.log('🔄 设置双向数据同步:', timelineItem.id)
+
+    // 如果有sprite，设置基本的事件监听
+    if (timelineItem.sprite && typeof timelineItem.sprite.on === 'function') {
+      timelineItem.sprite.on('propsChange', (changedProps: any) => {
+        // 同步属性变化到配置
+        if (changedProps.rect && hasVisualProps(timelineItem)) {
+          const config = timelineItem.config.mediaConfig
+          if (config && 'x' in config) {
+            if (changedProps.rect.x !== undefined) config.x = changedProps.rect.x
+            if (changedProps.rect.y !== undefined) config.y = changedProps.rect.y
+            if (changedProps.rect.w !== undefined) config.width = changedProps.rect.w
+            if (changedProps.rect.h !== undefined) config.height = changedProps.rect.h
+            if (changedProps.rect.angle !== undefined) config.rotation = changedProps.rect.angle
+          }
+        }
+
+        if (changedProps.opacity !== undefined && hasVisualProps(timelineItem)) {
+          const config = timelineItem.config.mediaConfig
+          if (config && 'opacity' in config) {
+            config.opacity = changedProps.opacity
+          }
+        }
+
+        if (changedProps.zIndex !== undefined) {
+          const config = timelineItem.config.mediaConfig
+          if (config && 'zIndex' in config) {
+            config.zIndex = changedProps.zIndex
+          }
+        }
+      })
+    }
+  }
+
+  /**
+   * 更新时间轴项目的sprite（仅限已准备好的项目）
+   * @param timelineItemId 时间轴项目ID
+   * @param newSprite 新的sprite实例
+   */
+  function updateTimelineItemSprite(timelineItemId: string, newSprite: any) {
+    const item = getReadyTimelineItem(timelineItemId)
+    if (!item) {
+      console.warn('⚠️ 时间轴项目不存在:', timelineItemId)
+      return
+    }
+
+    // 清理旧的sprite资源
+    if (item.sprite && typeof item.sprite.destroy === 'function') {
+      try {
+        item.sprite.destroy()
+      } catch (error) {
+        console.warn('清理旧sprite资源时出错:', error)
+      }
+    }
+
+    // 更新sprite引用
+    item.sprite = newSprite
+
+    // 重新设置双向同步
+    setupBidirectionalSync(item)
+
+    console.log('🔄 更新时间轴项目sprite:', {
+      id: timelineItemId,
+      name: item.config.name,
+      trackId: item.trackId,
+    })
+  }
+
+  /**
    * 更新时间轴项目位置
    * @param itemId 项目ID
    * @param position 新位置
@@ -330,37 +415,30 @@ export function createUnifiedTimelineModule(
   }
 
   /**
-   * 更新时间轴项目变换属性
+   * 更新时间轴项目变换属性（仅限已准备好的项目）
    * @param itemId 项目ID
    * @param transform 变换属性
-   * @returns 操作结果
    */
   function updateTimelineItemTransform(
     itemId: string,
     transform: TimelineItemTransform
-  ): TimelineOperationResult {
+  ) {
     const item = getTimelineItem(itemId)
     if (!item) {
-      return {
-        success: false,
-        message: `时间轴项目不存在: ${itemId}`,
-      }
+      console.warn('⚠️ 时间轴项目不存在:', itemId)
+      return
     }
 
     // 检查项目是否支持变换属性
     if (!hasVisualProps(item)) {
-      return {
-        success: false,
-        message: '该时间轴项目不支持视觉变换属性',
-      }
+      console.warn('⚠️ 该时间轴项目不支持视觉变换属性:', itemId)
+      return
     }
 
     const config = item.config.mediaConfig
     if (!config || !('x' in config)) {
-      return {
-        success: false,
-        message: '时间轴项目配置不支持变换属性',
-      }
+      console.warn('⚠️ 时间轴项目配置不支持变换属性:', itemId)
+      return
     }
 
     // 更新配置
@@ -415,287 +493,9 @@ export function createUnifiedTimelineModule(
       name: item.config.name,
       transform,
     })
-
-    return {
-      success: true,
-      data: item,
-    }
   }
 
-  /**
-   * 更新时间轴项目状态
-   * @param itemId 项目ID
-   * @param newStatus 新状态
-   * @param context 状态上下文
-   * @returns 操作结果
-   */
-  function updateTimelineItemStatus(
-    itemId: string,
-    newStatus: UnifiedTimelineItem['timelineStatus'],
-    context?: any
-  ): TimelineOperationResult {
-    const item = getTimelineItem(itemId)
-    if (!item) {
-      return {
-        success: false,
-        message: `时间轴项目不存在: ${itemId}`,
-      }
-    }
 
-    // 使用统一行为函数进行状态转换
-    const success = UnifiedTimelineItemActions.transitionTo(item, newStatus, context)
-    if (!success) {
-      return {
-        success: false,
-        message: `状态转换失败: ${item.timelineStatus} → ${newStatus}`,
-      }
-    }
-
-    updateItemTimestamp(item)
-
-    console.log('🔄 更新时间轴项目状态:', {
-      id: itemId,
-      name: item.config.name,
-      newStatus,
-    })
-
-    return {
-      success: true,
-      data: item,
-    }
-  }
-
-  // ==================== 查询方法 ====================
-
-  /**
-   * 获取指定轨道上的时间轴项目
-   * @param trackId 轨道ID
-   * @returns 时间轴项目数组
-   */
-  function getTimelineItemsByTrack(trackId: string): UnifiedTimelineItem[] {
-    return timelineItems.value.filter(item => item.trackId === trackId)
-  }
-
-  /**
-   * 获取指定媒体类型的时间轴项目
-   * @param mediaType 媒体类型
-   * @returns 时间轴项目数组
-   */
-  function getTimelineItemsByMediaType(mediaType: string): UnifiedTimelineItem[] {
-    return timelineItems.value.filter(item => item.mediaType === mediaType)
-  }
-
-  /**
-   * 获取指定状态的时间轴项目
-   * @param status 状态
-   * @returns 时间轴项目数组
-   */
-  function getTimelineItemsByStatus(status: UnifiedTimelineItem['timelineStatus']): UnifiedTimelineItem[] {
-    return timelineItems.value.filter(item => item.timelineStatus === status)
-  }
-
-  /**
-   * 获取指定时间范围内的时间轴项目
-   * @param startTime 开始时间（微秒）
-   * @param endTime 结束时间（微秒）
-   * @returns 时间轴项目数组
-   */
-  function getTimelineItemsInRange(startTime: number, endTime: number): UnifiedTimelineItem[] {
-    return timelineItems.value.filter(item => {
-      return item.timeRange.timelineStartTime < endTime &&
-             item.timeRange.timelineEndTime > startTime
-    })
-  }
-
-  /**
-   * 检查时间轴项目是否与指定时间范围重叠
-   * @param itemId 项目ID
-   * @param startTime 开始时间（微秒）
-   * @param endTime 结束时间（微秒）
-   * @returns 是否重叠
-   */
-  function isTimelineItemOverlapping(itemId: string, startTime: number, endTime: number): boolean {
-    const item = getTimelineItem(itemId)
-    if (!item) return false
-
-    return item.timeRange.timelineStartTime < endTime &&
-           item.timeRange.timelineEndTime > startTime
-  }
-
-  /**
-   * 获取时间轴项目的总时长
-   * @returns 总时长（微秒）
-   */
-  function getTotalDuration(): number {
-    if (timelineItems.value.length === 0) return 0
-
-    const maxEndTime = Math.max(...timelineItems.value.map(item => item.timeRange.timelineEndTime))
-    return maxEndTime
-  }
-
-  /**
-   * 获取时间轴统计信息
-   * @returns 统计信息
-   */
-  function getTimelineStats(): {
-    totalItems: number
-    byMediaType: Record<string, number>
-    byStatus: Record<string, number>
-    byTrack: Record<string, number>
-    totalDuration: number
-  } {
-    const stats = {
-      totalItems: timelineItems.value.length,
-      byMediaType: {} as Record<string, number>,
-      byStatus: {} as Record<string, number>,
-      byTrack: {} as Record<string, number>,
-      totalDuration: getTotalDuration(),
-    }
-
-    timelineItems.value.forEach(item => {
-      // 按媒体类型统计
-      stats.byMediaType[item.mediaType] = (stats.byMediaType[item.mediaType] || 0) + 1
-
-      // 按状态统计
-      stats.byStatus[item.timelineStatus] = (stats.byStatus[item.timelineStatus] || 0) + 1
-
-      // 按轨道统计
-      if (item.trackId) {
-        stats.byTrack[item.trackId] = (stats.byTrack[item.trackId] || 0) + 1
-      }
-    })
-
-    return stats
-  }
-
-  // ==================== 批量操作方法 ====================
-
-  /**
-   * 批量添加时间轴项目
-   * @param items 要添加的时间轴项目数组
-   * @returns 操作结果
-   */
-  function addTimelineItems(items: UnifiedTimelineItem[]): TimelineOperationResult {
-    const results: { item: UnifiedTimelineItem; success: boolean; message?: string }[] = []
-
-    for (const item of items) {
-      const result = addTimelineItem(item)
-      results.push({
-        item,
-        success: result.success,
-        message: result.message,
-      })
-    }
-
-    const successCount = results.filter(r => r.success).length
-    const failureCount = results.length - successCount
-
-    console.log(`📦 批量添加时间轴项目: ${successCount}成功, ${failureCount}失败`)
-
-    return {
-      success: failureCount === 0,
-      message: failureCount > 0 ? `${failureCount}个项目添加失败` : undefined,
-      data: results,
-    }
-  }
-
-  /**
-   * 批量移除时间轴项目
-   * @param itemIds 要移除的项目ID数组
-   * @returns 操作结果
-   */
-  function removeTimelineItems(itemIds: string[]): TimelineOperationResult {
-    const results: { itemId: string; success: boolean; message?: string }[] = []
-
-    for (const itemId of itemIds) {
-      const result = removeTimelineItem(itemId)
-      results.push({
-        itemId,
-        success: result.success,
-        message: result.message,
-      })
-    }
-
-    const successCount = results.filter(r => r.success).length
-    const failureCount = results.length - successCount
-
-    console.log(`🗑️ 批量移除时间轴项目: ${successCount}成功, ${failureCount}失败`)
-
-    return {
-      success: failureCount === 0,
-      message: failureCount > 0 ? `${failureCount}个项目移除失败` : undefined,
-      data: results,
-    }
-  }
-
-  /**
-   * 清空所有时间轴项目
-   * @returns 操作结果
-   */
-  function clearAllTimelineItems(): TimelineOperationResult {
-    const itemCount = timelineItems.value.length
-
-    // 清理所有sprite资源
-    timelineItems.value.forEach(item => {
-      if (item.sprite && typeof item.sprite.destroy === 'function') {
-        try {
-          item.sprite.destroy()
-        } catch (error) {
-          console.warn('清理sprite资源时出错:', error)
-        }
-      }
-    })
-
-    // 清空数组
-    timelineItems.value = []
-
-    console.log(`🗑️ 清空所有时间轴项目: ${itemCount}个项目`)
-
-    return {
-      success: true,
-      data: { removedCount: itemCount },
-    }
-  }
-
-  /**
-   * 恢复时间轴项目列表（用于项目加载）
-   * @param restoredItems 要恢复的时间轴项目数组
-   * @returns 操作结果
-   */
-  function restoreTimelineItems(restoredItems: UnifiedTimelineItem[]): TimelineOperationResult {
-    console.log(`📋 开始恢复时间轴项目: ${restoredItems.length}个项目`)
-
-    // 清空现有项目
-    clearAllTimelineItems()
-
-    // 添加恢复的项目
-    const result = addTimelineItems(restoredItems)
-
-    console.log(`✅ 时间轴项目恢复完成: ${timelineItems.value.length}个项目`)
-
-    return result
-  }
-
-  /**
-   * 按轨道排序时间轴项目
-   * @param trackOrder 轨道顺序数组
-   * @returns 排序后的时间轴项目数组
-   */
-  function sortTimelineItemsByTrack(trackOrder: string[]): UnifiedTimelineItem[] {
-    const trackOrderMap = new Map(trackOrder.map((trackId, index) => [trackId, index]))
-
-    return [...timelineItems.value].sort((a, b) => {
-      const aOrder = trackOrderMap.get(a.trackId || '') ?? Infinity
-      const bOrder = trackOrderMap.get(b.trackId || '') ?? Infinity
-
-      if (aOrder !== bOrder) {
-        return aOrder - bOrder
-      }
-
-      // 同一轨道内按时间排序
-      return a.timeRange.timelineStartTime - b.timeRange.timelineStartTime
-    })
-  }
 
   // ==================== 导出接口 ====================
 
@@ -703,34 +503,15 @@ export function createUnifiedTimelineModule(
     // 状态
     timelineItems,
 
-    // 核心方法
+    // 方法
     addTimelineItem,
     removeTimelineItem,
     getTimelineItem,
+    getReadyTimelineItem,
+    setupBidirectionalSync,
     updateTimelineItemPosition,
+    updateTimelineItemSprite,
     updateTimelineItemTransform,
-    updateTimelineItemStatus,
-
-    // 查询方法
-    getTimelineItemsByTrack,
-    getTimelineItemsByMediaType,
-    getTimelineItemsByStatus,
-    getTimelineItemsInRange,
-    isTimelineItemOverlapping,
-    getTotalDuration,
-    getTimelineStats,
-
-    // 批量操作方法
-    addTimelineItems,
-    removeTimelineItems,
-    clearAllTimelineItems,
-    restoreTimelineItems,
-    sortTimelineItemsByTrack,
-
-    // 工具函数
-    validateTimelineItem,
-    findAvailableTrack,
-    updateItemTimestamp,
   }
 }
 

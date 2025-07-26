@@ -73,6 +73,7 @@
         <!-- 片段管理工具栏在时间刻度上方 -->
         <div class="clip-management-toolbar">
           <!-- <ClipManagementToolbar /> -->
+           <UnifiedClipManagementToolbar />
         </div>
         <!-- 只有WebAV初始化完成后才显示Timeline -->
         <!-- <Timeline v-if="videoStore.isWebAVReady" /> -->
@@ -182,6 +183,7 @@ import ClipManagementToolbar from './ClipManagementToolbar.vue'
 import MediaLibrary from './MediaLibrary.vue'
 import PropertiesPanel from './PropertiesPanel.vue'
 import UnifiedMediaLibrary from './UnifiedMediaLibrary.vue'
+import UnifiedClipManagementToolbar from './UnifiedClipManagementToolbar.vue'
 import { useVideoStore } from '../stores/videoStore'
 import { useUnifiedStore } from '../stores/unifiedStore'
 import { useKeyboardShortcuts } from '../composables/useKeyboardShortcuts'

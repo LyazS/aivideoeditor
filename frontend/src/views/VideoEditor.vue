@@ -93,15 +93,16 @@
 import { ref, computed, onBeforeMount, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useVideoStore } from '../stores/videoStore'
+import { useUnifiedStore } from '../stores/unifiedStore'
 import { useAutoSave } from '../composables/useAutoSave'
 import VideoPreviewEngine from '../components/VideoPreviewEngine.vue'
 import HoverButton from '../components/HoverButton.vue'
 import LoadingOverlay from '../components/LoadingOverlay.vue'
 import EditProjectDialog from '../components/EditProjectDialog.vue'
-import { isLocalTimelineItem, isAsyncProcessingTimelineItem } from '../types'
+
 
 const route = useRoute()
-const videoStore = useVideoStore()
+const videoStore = useUnifiedStore()
 
 // 初始化自动保存
 const autoSave = useAutoSave({
@@ -214,47 +215,43 @@ function debugProject() {
       mediaItems: videoStore.mediaItems.map(item => ({
         id: item.id,
         name: item.name,
-        file: item.file ? {
-          name: item.file.name,
-          size: item.file.size,
-          type: item.file.type,
-          lastModified: item.file.lastModified
-        } : null,
-        url: item.url,
-        duration: item.duration,
-        type: item.type,
+        createdAt: item.createdAt,
+        mediaStatus: item.mediaStatus,
         mediaType: item.mediaType,
-        status: item.status,
-        thumbnailUrl: item.thumbnailUrl ? 'blob URL存在' : null,
-        hasMP4Clip: !!item.mp4Clip,
-        hasImgClip: !!item.imgClip,
-        hasAudioClip: !!item.audioClip
+        duration: item.duration,
+        sourceType: item.source.type,
+        sourceStatus: item.source.status,
+        sourceUrl: item.source.url,
+        hasWebAV: !!item.webav,
+        // 从source中获取文件信息（如果是用户选择的文件）
+        fileInfo: item.source.type === 'user-selected' && item.source.selectedFile ? {
+          name: item.source.selectedFile.name,
+          size: item.source.selectedFile.size,
+          type: item.source.selectedFile.type,
+          lastModified: item.source.selectedFile.lastModified
+        } : null
       })),
 
       // 时间轴项目数据
       timelineItems: videoStore.timelineItems.map(item => {
-        // 根据项目类型获取媒体名称
-        let mediaName = 'Unknown'
-        let thumbnailUrl = null
-        if (isLocalTimelineItem(item)) {
-          // 本地时间轴项目：从本地媒体项目获取名称
-          mediaName = videoStore.getLocalMediaItem(item.mediaItemId)?.name || 'Unknown'
-          thumbnailUrl = item.thumbnailUrl ? 'blob URL存在' : null
-        } else if (isAsyncProcessingTimelineItem(item)) {
-          // 异步处理时间轴项目：从异步处理媒体项目获取名称
-          mediaName = videoStore.getAsyncProcessingItem(item.mediaItemId)?.name || item.config.name || 'Unknown'
-        }
+        // 获取关联的媒体项目名称
+        const mediaItem = videoStore.getMediaItem(item.mediaItemId)
+        const mediaName = mediaItem?.name || item.config.name || 'Unknown'
 
         return {
           id: item.id,
           mediaItemId: item.mediaItemId,
           trackId: item.trackId,
           mediaType: item.mediaType,
+          timelineStatus: item.timelineStatus,
           timeRange: item.timeRange,
           config: item.config,
-          thumbnailUrl,
           hasSprite: !!item.sprite,
-          mediaName
+          mediaName,
+          statusContext: item.statusContext ? {
+            stage: item.statusContext.stage,
+            message: item.statusContext.message
+          } : null
         }
       }),
 
@@ -266,7 +263,7 @@ function debugProject() {
         totalMediaItems: videoStore.mediaItems.length,
         totalTimelineItems: videoStore.timelineItems.length,
         totalTracks: videoStore.tracks.length,
-        readyMediaItems: videoStore.mediaItems.filter(item => item.status === 'ready').length,
+        readyMediaItems: videoStore.mediaItems.filter(item => item.mediaStatus === 'ready').length,
         mediaReferencesCount: Object.keys(videoStore.mediaReferences).length
       }
     }
@@ -283,21 +280,16 @@ function debugProject() {
       timeline: {
         tracks: videoStore.tracks,
         timelineItems: videoStore.timelineItems.map(item => {
-          // 根据项目类型获取媒体名称
-          let mediaName = 'Unknown'
-          if (isLocalTimelineItem(item)) {
-            // 本地时间轴项目：从本地媒体项目获取名称
-            mediaName = videoStore.getLocalMediaItem(item.mediaItemId)?.name || 'Unknown'
-          } else if (isAsyncProcessingTimelineItem(item)) {
-            // 异步处理时间轴项目：从异步处理媒体项目获取名称
-            mediaName = videoStore.getAsyncProcessingItem(item.mediaItemId)?.name || item.config.name || 'Unknown'
-          }
+          // 获取关联的媒体项目名称
+          const mediaItem = videoStore.getMediaItem(item.mediaItemId)
+          const mediaName = mediaItem?.name || item.config.name || 'Unknown'
 
           return {
             id: item.id,
             mediaItemId: item.mediaItemId,
             trackId: item.trackId,
             mediaType: item.mediaType,
+            timelineStatus: item.timelineStatus,
             timeRange: item.timeRange,
             config: item.config,
             mediaName
@@ -306,9 +298,11 @@ function debugProject() {
         mediaItems: videoStore.mediaItems.map(item => ({
           id: item.id,
           name: item.name,
-          type: item.type,
+          createdAt: item.createdAt,
+          mediaStatus: item.mediaStatus,
           mediaType: item.mediaType,
-          duration: item.duration
+          duration: item.duration,
+          sourceType: item.source.type
         }))
       },
       settings: {

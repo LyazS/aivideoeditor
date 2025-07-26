@@ -33,7 +33,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onUnmounted } from 'vue'
-import { useVideoStore } from '../stores/videoStore'
+import { useUnifiedStore } from '../stores/unifiedStore'
 import { useDragUtils } from '../composables/useDragUtils'
 import { usePlaybackControls } from '../composables/usePlaybackControls'
 import { alignFramesToFrame } from '../stores/utils/timeUtils'
@@ -59,7 +59,7 @@ interface Emits {
 const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
 
-const videoStore = useVideoStore()
+const unifiedStore = useUnifiedStore()
 const dragUtils = useDragUtils()
 const { pauseForEditing } = usePlaybackControls()
 
@@ -102,8 +102,8 @@ const clipStyle = computed(() => {
     ? tempDurationFrames.value
     : timeRange.timelineEndTime - timeRange.timelineStartTime
 
-  const leftPixels = videoStore.frameToPixel(positionFrames, props.timelineWidth)
-  const widthPixels = videoStore.frameToPixel(durationFrames, props.timelineWidth)
+  const leftPixels = unifiedStore.frameToPixel(positionFrames, props.timelineWidth)
+  const widthPixels = unifiedStore.frameToPixel(durationFrames, props.timelineWidth)
 
   return {
     left: `${leftPixels}px`,
@@ -176,7 +176,7 @@ function startResize(direction: 'left' | 'right', event: MouseEvent) {
 
   function handleMouseMove(e: MouseEvent) {
     const deltaX = e.clientX - startX
-    const deltaFrames = videoStore.pixelToFrame(Math.abs(deltaX), props.timelineWidth) * (deltaX >= 0 ? 1 : -1)
+    const deltaFrames = unifiedStore.pixelToFrame(Math.abs(deltaX), props.timelineWidth) * (deltaX >= 0 ? 1 : -1)
 
     if (direction === 'left') {
       // 调整开始时间

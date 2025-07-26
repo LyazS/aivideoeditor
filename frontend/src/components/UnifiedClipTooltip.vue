@@ -56,7 +56,6 @@ interface Props {
 }
 
 const props = defineProps<Props>()
-const videoStore = useVideoStore()
 
 // 计算属性
 const visible = computed(() => true) // 由父组件控制显示
