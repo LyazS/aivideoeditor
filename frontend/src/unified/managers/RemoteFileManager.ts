@@ -479,7 +479,7 @@ export class RemoteFileManager extends DataSourceManager<RemoteFileSourceData> {
       const detectedType = detectFileMediaType(source.file)
 
       // 使用媒体模块方法查找对应的媒体项目
-      const { useUnifiedStore } = await import('../../stores/unifiedStore')
+      const { useUnifiedStore } = await import('../unifiedStore')
       const unifiedStore = useUnifiedStore()
       const mediaItem = unifiedStore.getMediaItemBySourceId(source.id)
 
@@ -502,7 +502,7 @@ export class RemoteFileManager extends DataSourceManager<RemoteFileSourceData> {
   private async updateMediaItemNameWithFileName(source: RemoteFileSourceData, fileName: string): Promise<void> {
     try {
       // 使用媒体模块方法查找对应的媒体项目
-      const { useUnifiedStore } = await import('../../stores/unifiedStore')
+      const { useUnifiedStore } = await import('../unifiedStore')
       const unifiedStore = useUnifiedStore()
       const mediaItem = unifiedStore.getMediaItemBySourceId(source.id)
 
@@ -512,7 +512,7 @@ export class RemoteFileManager extends DataSourceManager<RemoteFileSourceData> {
 
         // 如果当前名称是从URL提取的文件名，或者是默认的"远程文件"，则更新为更准确的文件名
         if (mediaItem.name === urlFileName || mediaItem.name === '远程文件' || mediaItem.name.startsWith('remote_file_')) {
-          const { UnifiedMediaItemActions } = await import('../UnifiedMediaItem')
+          const { UnifiedMediaItemActions } = await import('../mediaitem')
           UnifiedMediaItemActions.updateName(mediaItem, fileName)
           console.log(`📝 [RemoteFileManager] 媒体项目名称已更新为更准确的文件名: ${mediaItem.name} -> ${fileName}`)
         } else {

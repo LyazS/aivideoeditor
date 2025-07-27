@@ -120,7 +120,7 @@ export {
 
   // 行为函数
   UnifiedMediaItemActions
-} from './UnifiedMediaItem'
+} from './mediaitem'
 
 // ==================== 媒体类型检测工具 ====================
 export {

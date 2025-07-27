@@ -343,7 +343,7 @@ export class UserSelectedFileManager extends DataSourceManager<UserSelectedFileS
       const detectedType = detectFileMediaType(source.file)
 
       // 使用媒体模块方法查找对应的媒体项目
-      const { useUnifiedStore } = await import('../../stores/unifiedStore')
+      const { useUnifiedStore } = await import('../unifiedStore')
       const unifiedStore = useUnifiedStore()
       const mediaItem = unifiedStore.getMediaItemBySourceId(source.id)
 
