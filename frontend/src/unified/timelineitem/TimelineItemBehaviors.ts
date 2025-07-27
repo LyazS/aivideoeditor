@@ -5,8 +5,7 @@
 
 import type {
   UnifiedTimelineItemData,
-  TimelineItemStatus,
-  TimelineStatusContext
+  TimelineItemStatus
 } from './TimelineItemData'
 import { VALID_TIMELINE_TRANSITIONS } from './TimelineItemData'
 
@@ -15,12 +14,11 @@ import { VALID_TIMELINE_TRANSITIONS } from './TimelineItemData'
 
 /**
  * 状态转换行为函数 - 无状态纯函数
- * 基于3状态 + 类型安全 TimelineStatusContext 的转换
+ * 基于简化的3状态转换，状态显示信息通过关联媒体项目计算
  */
 export async function transitionTimelineStatus(
   data: UnifiedTimelineItemData,
-  newStatus: TimelineItemStatus,
-  context?: TimelineStatusContext
+  newStatus: TimelineItemStatus
 ): Promise<void> {
   if (!canTransitionTo(data, newStatus)) {
     throw new Error(`Invalid timeline transition: ${data.timelineStatus} → ${newStatus}`)
@@ -28,12 +26,11 @@ export async function transitionTimelineStatus(
 
   const oldStatus = data.timelineStatus
   data.timelineStatus = newStatus // ✅ 自动触发响应式更新
-  data.statusContext = context // 统一存储所有差异信息
 
   // 精灵生命周期管理 - 更清晰的3分支
   await handleSpriteLifecycle(data, oldStatus, newStatus)
 
-  console.log(`✅ 时间轴项目状态转换: ${oldStatus} → ${newStatus}`, context)
+  console.log(`✅ 时间轴项目状态转换: ${oldStatus} → ${newStatus}`)
 }
 
 /**
@@ -88,8 +85,7 @@ async function createSprite(data: UnifiedTimelineItemData): Promise<void> {
   // 通过 SpriteLifecycleManager 创建并添加 Sprite
   const spriteId = await SpriteLifecycleManager.createAndAddSprite(
     mediaData,
-    data,
-    null // 不再传递上下文，SpriteLifecycleManager 直接基于媒体数据工作
+    data
   )
 
   data.spriteId = spriteId // ✅ 响应式更新

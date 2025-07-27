@@ -5,10 +5,10 @@
 
 import type {
   UnifiedTimelineItemData,
-  TimelineItemStatus,
-  TimelineStatusContext
+  TimelineItemStatus
 } from './TimelineItemData'
-import { TimelineContextUtils } from './ContextUtils'
+import { TimelineStatusDisplayUtils } from './TimelineStatusDisplayUtils'
+import { useUnifiedStore } from '../unifiedStore'
 
 // ==================== 状态查询函数 ====================
 
@@ -51,17 +51,9 @@ export function canEdit(data: UnifiedTimelineItemData): boolean {
  * 获取状态显示文本
  */
 export function getStatusText(data: UnifiedTimelineItemData): string {
-  const context = data.statusContext
-  if (!context) return '未知状态'
-  
-  switch (context.stage) {
-    case 'downloading': return '下载中...'
-    case 'parsing': return '解析中...'
-    case 'processing': return '处理中...'
-    case 'ready': return '就绪'
-    case 'error': return '错误'
-    default: return context.message || '处理中...'
-  }
+  const unifiedStore = useUnifiedStore()
+  const mediaData = unifiedStore.getMediaItem(data.mediaItemId)
+  return mediaData ? TimelineStatusDisplayUtils.getStatusText(mediaData) : '未知状态'
 }
 
 /**
@@ -72,22 +64,24 @@ export function getProgressInfo(data: UnifiedTimelineItemData): {
   percent: number
   text: string
 } {
-  const context = data.statusContext
-  if (!context || !TimelineContextUtils.hasProgress(context)) {
+  const unifiedStore = useUnifiedStore()
+  const mediaData = unifiedStore.getMediaItem(data.mediaItemId)
+  if (!mediaData) {
     return { hasProgress: false, percent: 0, text: '' }
   }
 
-  let text = `${context.progress.percent}%`
-  
-  if (TimelineContextUtils.isDownload(context) && context.downloadSpeed) {
-    text += ` (${context.downloadSpeed})`
-  } else if (TimelineContextUtils.isParse(context) && context.currentStep) {
-    text = context.currentStep
+  const progressInfo = TimelineStatusDisplayUtils.getProgressInfo(mediaData)
+  if (!progressInfo.hasProgress) {
+    return { hasProgress: false, percent: 0, text: '' }
   }
+
+  const text = progressInfo.speed
+    ? `${progressInfo.percent}% (${progressInfo.speed})`
+    : `${progressInfo.percent}%`
 
   return {
     hasProgress: true,
-    percent: context.progress.percent,
+    percent: progressInfo.percent,
     text
   }
 }
@@ -100,15 +94,17 @@ export function getErrorInfo(data: UnifiedTimelineItemData): {
   message: string
   recoverable: boolean
 } {
-  const context = data.statusContext
-  if (!context || !TimelineContextUtils.hasError(context)) {
+  const unifiedStore = useUnifiedStore()
+  const mediaData = unifiedStore.getMediaItem(data.mediaItemId)
+  if (!mediaData) {
     return { hasError: false, message: '', recoverable: false }
   }
 
+  const errorInfo = TimelineStatusDisplayUtils.getErrorInfo(mediaData)
   return {
-    hasError: true,
-    message: context.error.message,
-    recoverable: context.error.recoverable
+    hasError: errorInfo.hasError,
+    message: errorInfo.message || '',
+    recoverable: errorInfo.recoverable || false
   }
 }
 

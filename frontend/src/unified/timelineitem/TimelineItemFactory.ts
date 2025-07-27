@@ -26,7 +26,6 @@ export function createTimelineItemData(options: CreateTimelineItemOptions): Unif
     mediaItemId: options.mediaItemId,
     trackId: options.trackId,
     timelineStatus: options.initialStatus || 'loading',
-    statusContext: options.statusContext, // 不再设置默认上下文，UI组件直接基于媒体数据计算
     mediaType: options.mediaType || 'unknown',
     timeRange: options.timeRange,
     config: options.config,
@@ -173,8 +172,7 @@ export function cloneTimelineItemData(
     timeRange: overrides?.timeRange || { ...original.timeRange },
     config: overrides?.config || { ...original.config },
     mediaType: overrides?.mediaType || original.mediaType,
-    initialStatus: overrides?.initialStatus || original.timelineStatus,
-    statusContext: overrides?.statusContext || original.statusContext
+    initialStatus: overrides?.initialStatus || original.timelineStatus
   })
 }
 

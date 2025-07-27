@@ -8,7 +8,6 @@ export type {
   // 核心数据类型
   UnifiedTimelineItemData,
   TimelineItemStatus,
-  TimelineStatusContext,
   BasicTimelineConfig,
   TransformData,
   CreateTimelineItemOptions
@@ -45,13 +44,10 @@ export {
 
 // ==================== 状态显示工具导出 ====================
 export {
-  // 向后兼容的上下文工具类
-  TimelineContextUtils,
-
-  // 新的状态显示工具类
+  // 状态显示工具类
   TimelineStatusDisplayUtils,
   createStatusDisplayComputeds
-} from './ContextUtils'
+} from './TimelineStatusDisplayUtils'
 
 // 状态显示类型导出
 export type { StatusDisplayInfo } from './TimelineStatusDisplayUtils'
@@ -245,7 +241,7 @@ import {
   sortByTime
 } from './TimelineItemQueries'
 
-import { TimelineContextUtils, TimelineStatusDisplayUtils, createStatusDisplayComputeds } from './ContextUtils'
+import { TimelineStatusDisplayUtils, createStatusDisplayComputeds } from './TimelineStatusDisplayUtils'
 import { SpriteLifecycleManager } from './SpriteLifecycleManager'
 import { TimelineMediaSyncManager } from './TimelineMediaSyncManager'
 import type { UnifiedTimelineItemData } from './TimelineItemData'
@@ -299,8 +295,7 @@ export default {
 
   // 工具类
   Utils: {
-    Context: TimelineContextUtils, // 向后兼容
-    Display: TimelineStatusDisplayUtils, // 新的状态显示工具
+    Display: TimelineStatusDisplayUtils, // 状态显示工具
     createStatusComputeds: createStatusDisplayComputeds
   },
 

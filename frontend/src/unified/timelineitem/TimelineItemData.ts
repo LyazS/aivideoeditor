@@ -37,16 +37,13 @@ export const MEDIA_TO_TIMELINE_STATUS_MAP = {
   'missing': 'error'              // 文件缺失 → 错误
 } as const
 
-// ==================== 简化的状态上下文类型 ====================
+// ==================== 移除复杂的上下文系统 ====================
 
 /**
- * 简化的状态上下文类型
- * 不再使用复杂的上下文模板，直接基于媒体项目状态计算显示信息
- *
- * 注意：这个类型现在主要用于向后兼容，实际的状态显示逻辑
- * 应该使用 TimelineStatusDisplayUtils 直接基于媒体数据计算
+ * 注意：已移除复杂的 statusContext 系统
+ * 状态显示信息现在直接基于关联媒体项目状态计算
+ * 使用 TimelineStatusDisplayUtils 获取状态显示信息
  */
-export type TimelineStatusContext = any // 简化为any，逐步移除
 
 // ==================== 配置类型 ====================
 
@@ -99,9 +96,10 @@ export interface BasicTimelineConfig {
 
 /**
  * 统一时间轴项目数据接口 - 纯响应式状态对象
- * 
+ *
  * 设计理念：
  * - 纯数据对象，使用 reactive() 包装
+ * - 移除复杂的上下文模板，状态显示直接基于关联媒体项目计算
  * - 所有状态变化自动触发Vue组件更新
  * - 与数据源、媒体项目采用一致的架构模式
  */
@@ -110,25 +108,22 @@ export interface UnifiedTimelineItemData {
   readonly id: string
   mediaItemId: string // 关联的统一媒体项目ID
   trackId?: string
-  
+
   // ==================== 状态管理 ====================
   timelineStatus: TimelineItemStatus // 仅3状态：ready|loading|error
-  
-  // ==================== 状态上下文 - 动态状态信息 ====================
-  statusContext?: TimelineStatusContext // 承载当前状态的详细信息和UI展示数据
-  
+
   // ==================== 媒体信息 ====================
   mediaType: MediaType | 'unknown' // 从关联的媒体项目同步
-  
+
   // ==================== 时间范围 ====================
   timeRange: {
     timelineStartTime: number // 时间轴开始时间（帧数）
     timelineEndTime: number   // 时间轴结束时间（帧数）
   }
-  
+
   // ==================== 基础配置 ====================
   config: BasicTimelineConfig // 静态配置信息
-  
+
   // ==================== Sprite引用 ====================
   spriteId?: string // Sprite ID，由SpriteLifecycleManager管理
 }
@@ -145,5 +140,4 @@ export interface CreateTimelineItemOptions {
   config: BasicTimelineConfig
   mediaType?: MediaType | 'unknown'
   initialStatus?: TimelineItemStatus
-  statusContext?: TimelineStatusContext
 }
