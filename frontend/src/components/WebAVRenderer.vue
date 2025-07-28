@@ -18,7 +18,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
-import { useVideoStore } from '../stores/videoStore'
+import { useUnifiedStore } from '@/unified/unifiedStore'
 import type { VideoResolution } from '../types'
 import {
   logRendererState,
@@ -32,18 +32,18 @@ interface ExtendedHTMLElement extends HTMLElement {
   _resizeObserver?: ResizeObserver
 }
 
-const videoStore = useVideoStore()
+const unifiedStore = useUnifiedStore()
 
 // 组件引用
 const canvasContainerWrapper = ref<HTMLElement>()
 const rendererContainer = ref<HTMLElement>()
 
 // 计算属性
-const error = computed(() => videoStore.webAVError)
+const error = computed(() => unifiedStore.webAVError)
 
 // 画布原始尺寸（基于视频分辨率）
-const canvasWidth = computed(() => videoStore.videoResolution.width)
-const canvasHeight = computed(() => videoStore.videoResolution.height)
+const canvasWidth = computed(() => unifiedStore.videoResolution.width)
+const canvasHeight = computed(() => unifiedStore.videoResolution.height)
 
 // 容器尺寸
 const containerWidth = ref(800)
@@ -100,10 +100,10 @@ const initializeWebAVCanvas = async (): Promise<void> => {
   }
 
   // 检查是否已经初始化
-  const existingCanvas = videoStore.getAVCanvas()
+  const existingCanvas = unifiedStore.getAVCanvas()
   if (existingCanvas) {
     console.log('♻️ [WebAV Renderer] WebAV Canvas already exists, reusing existing instance')
-    const existingContainer = videoStore.getCanvasContainer()
+    const existingContainer = unifiedStore.getCanvasContainer()
     if (existingContainer && !canvasContainerWrapper.value.contains(existingContainer)) {
       canvasContainerWrapper.value.appendChild(existingContainer)
       console.log('✅ [WebAV Renderer] Existing container attached successfully')
@@ -122,7 +122,7 @@ const initializeWebAVCanvas = async (): Promise<void> => {
     console.log('🏗️ [WebAV Renderer] Creating new WebAV canvas setup...')
 
     // 程序化创建画布容器
-    const canvasContainer = videoStore.createCanvasContainer({
+    const canvasContainer = unifiedStore.createCanvasContainer({
       width: canvasDisplaySize.value.width,
       height: canvasDisplaySize.value.height,
       className: 'webav-canvas-container',
@@ -137,7 +137,7 @@ const initializeWebAVCanvas = async (): Promise<void> => {
     console.log('✅ [WebAV Renderer] Canvas container appended to wrapper')
 
     // 初始化WebAV画布
-    await videoStore.initializeCanvas(canvasContainer, {
+    await unifiedStore.initializeCanvas(canvasContainer, {
       width: canvasWidth.value,
       height: canvasHeight.value,
       bgColor: '#000000', // WebAV库要求的格式，保持不变
@@ -171,7 +171,7 @@ const recreateCanvasWithNewSize = async (newResolution: VideoResolution): Promis
     console.log('开始销毁旧画布并备份内容...')
 
     // 销毁旧画布并备份内容
-    const backup = await videoStore.destroyCanvas()
+    const backup = await unifiedStore.destroyCanvas()
 
     console.log('开始重新创建画布...')
 
@@ -179,7 +179,7 @@ const recreateCanvasWithNewSize = async (newResolution: VideoResolution): Promis
     canvasContainerWrapper.value.innerHTML = ''
 
     // 程序化创建新的画布容器
-    const newCanvasContainer = videoStore.createCanvasContainer({
+    const newCanvasContainer = unifiedStore.createCanvasContainer({
       width: canvasDisplaySize.value.width,
       height: canvasDisplaySize.value.height,
       className: 'webav-canvas-container',
@@ -193,7 +193,7 @@ const recreateCanvasWithNewSize = async (newResolution: VideoResolution): Promis
     canvasContainerWrapper.value.appendChild(newCanvasContainer)
 
     // 重新创建画布
-    await videoStore.recreateCanvas(
+    await unifiedStore.recreateCanvas(
       newCanvasContainer,
       {
         width: newResolution.width,
@@ -220,7 +220,7 @@ const recreateCanvasWithNewSize = async (newResolution: VideoResolution): Promis
  * 监听分辨率变化并重新创建画布
  */
 watch(
-  () => videoStore.videoResolution,
+  () => unifiedStore.videoResolution,
   async (newResolution, oldResolution) => {
     console.log('Video resolution changed:', newResolution)
 
@@ -244,7 +244,7 @@ watch(
   canvasDisplaySize,
   (newSize) => {
     // 更新实际的WebAV画布容器尺寸
-    const canvasContainer = videoStore.getCanvasContainer()
+    const canvasContainer = unifiedStore.getCanvasContainer()
     if (canvasContainer) {
       canvasContainer.style.width = `${newSize.width}px`
       canvasContainer.style.height = `${newSize.height}px`
@@ -263,7 +263,7 @@ watch(
  * 监听播放状态变化，同步到WebAV
  */
 watch(
-  () => videoStore.isPlaying,
+  () => unifiedStore.isPlaying,
   (isPlaying) => {
     // 注意：这里我们不直接控制WebAV播放，因为WebAV应该是播放状态的主控
     // 这个监听主要用于调试和状态同步检查
@@ -336,7 +336,7 @@ async function waitForProjectSettingsReady(): Promise<void> {
   console.log('🔄 [LIFECYCLE] WebAVRenderer.waitForProjectSettingsReady 开始')
 
   return new Promise((resolve) => {
-    if (videoStore.isProjectSettingsReady) {
+    if (unifiedStore.isProjectSettingsReady) {
       console.log('🔄 [LIFECYCLE] WebAVRenderer 设置已就绪，立即返回')
       resolve()
       return
@@ -344,7 +344,7 @@ async function waitForProjectSettingsReady(): Promise<void> {
 
     console.log('🔄 [LIFECYCLE] WebAVRenderer 开始监听设置状态变化')
     const unwatch = watch(
-      () => videoStore.isProjectSettingsReady,
+      () => unifiedStore.isProjectSettingsReady,
       (isReady) => {
         console.log('🔄 [LIFECYCLE] WebAVRenderer 监听到设置状态变化:', isReady)
         if (isReady) {
@@ -379,9 +379,9 @@ onMounted(async () => {
     console.log('✅ [WebAV Renderer] Resize observer setup completed')
 
     // 检查项目设置状态（应该在父组件onBeforeMount中已完成）
-    console.log('🔄 [LIFECYCLE] WebAVRenderer 检查项目设置状态:', videoStore.isProjectSettingsReady)
+    console.log('🔄 [LIFECYCLE] WebAVRenderer 检查项目设置状态:', unifiedStore.isProjectSettingsReady)
 
-    if (!videoStore.isProjectSettingsReady) {
+    if (!unifiedStore.isProjectSettingsReady) {
       console.log('🔄 [LIFECYCLE] WebAVRenderer 等待项目设置完成')
       await waitForProjectSettingsReady()
       console.log('🔄 [LIFECYCLE] WebAVRenderer 项目设置等待完成')
@@ -400,7 +400,7 @@ onMounted(async () => {
       totalMountTime: `${totalMountTime.toFixed(2)}ms`,
       containerSize: containerWidth.value + 'x' + containerHeight.value,
       canvasDisplaySize: canvasDisplaySize.value,
-      isWebAVReady: videoStore.isWebAVReady,
+      isWebAVReady: unifiedStore.isWebAVReady,
     })
   } catch (err) {
     const totalMountTime = mountTimer.end()
@@ -427,7 +427,7 @@ onUnmounted(() => {
 defineExpose({
   initializeWebAVCanvas,
   recreateCanvasWithNewSize,
-  getAVCanvas: videoStore.getAVCanvas,
+  getAVCanvas: unifiedStore.getAVCanvas,
 })
 </script>
 

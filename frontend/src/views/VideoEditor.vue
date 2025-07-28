@@ -1,7 +1,7 @@
 <template>
   <div class="video-editor-view">
     <!-- 状态栏 -->
-    <div class="status-bar-container" :class="{ 'loading-hidden': videoStore.showLoadingProgress }">
+    <div class="status-bar-container" :class="{ 'loading-hidden': unifiedStore.showProjectLoadingProgress }">
       <div class="status-bar">
         <div class="status-content">
           <!-- 左侧：返回按钮和保存状态 -->
@@ -64,20 +64,17 @@
     </div>
 
     <!-- 视频编辑器主体 -->
-    <!-- <div class="editor-content" :class="{ 'loading-hidden': videoStore.showLoadingProgress }">
-      <VideoPreviewEngine />
-    </div> -->
-    <div class="editor-content">
+    <div class="editor-content" :class="{ 'loading-hidden': unifiedStore.showProjectLoadingProgress }">
       <VideoPreviewEngine />
     </div>
 
     <!-- 加载进度覆盖层 -->
-    <!-- <LoadingOverlay
-      :visible="videoStore.showLoadingProgress"
-      :stage="videoStore.loadingStage"
-      :progress="videoStore.loadingProgress"
-      :details="videoStore.loadingDetails"
-    /> -->
+    <LoadingOverlay
+      :visible="unifiedStore.showProjectLoadingProgress"
+      :stage="unifiedStore.projectLoadingStage"
+      :progress="unifiedStore.projectLoadingProgress"
+      :details="unifiedStore.projectLoadingDetails"
+    />
 
     <!-- 编辑项目对话框 -->
     <EditProjectDialog
@@ -92,16 +89,16 @@
 <script setup lang="ts">
 import { ref, computed, onBeforeMount, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
-import { useVideoStore } from '../stores/videoStore'
+import { useUnifiedStore } from '@/unified/unifiedStore'
 import { useAutoSave } from '../composables/useAutoSave'
 import VideoPreviewEngine from '../components/VideoPreviewEngine.vue'
 import HoverButton from '../components/HoverButton.vue'
 import LoadingOverlay from '../components/LoadingOverlay.vue'
 import EditProjectDialog from '../components/EditProjectDialog.vue'
-import { isLocalTimelineItem, isAsyncProcessingTimelineItem } from '../types'
+// 移除不再使用的类型检查导入，新架构使用统一类型
 
 const route = useRoute()
-const videoStore = useVideoStore()
+const unifiedStore = useUnifiedStore()
 
 // 初始化自动保存
 const autoSave = useAutoSave({
@@ -114,10 +111,10 @@ const autoSave = useAutoSave({
 const projectTitle = ref('未命名项目')
 const showEditDialog = ref(false)
 
-// 计算属性 - 使用store中的项目状态
-const projectStatus = computed(() => videoStore.projectStatus)
-const isSaving = computed(() => videoStore.isSaving)
-const currentProject = computed(() => videoStore.currentProject)
+// 计算属性 - 使用store中的项目状态（适配新的API）
+const projectStatus = computed(() => unifiedStore.projectStatus)
+const isSaving = computed(() => unifiedStore.isProjectSaving) // 新API：isSaving → isProjectSaving
+const currentProject = computed(() => unifiedStore.currentProject)
 
 // 方法
 function goBack() {
@@ -165,7 +162,7 @@ async function handleSaveProject(data: { name: string; description: string }) {
 
   try {
     // 更新项目信息
-    await videoStore.saveCurrentProject({
+    await unifiedStore.saveCurrentProject({
       name: data.name,
       description: data.description
     })
@@ -187,87 +184,91 @@ function debugProject() {
   console.log('🔍 [调试] 开始打印项目JSON数据...')
 
   try {
-    // 构建完整的项目数据
+    // 构建完整的项目数据（适配新的 useUnifiedStore API）
     const projectData = {
-      // 基本信息
+      // 基本信息（使用新的属性名）
       projectInfo: {
-        currentProject: videoStore.currentProject,
-        currentProjectId: videoStore.currentProjectId,
-        currentProjectName: videoStore.currentProjectName,
-        projectStatus: videoStore.projectStatus,
-        hasCurrentProject: videoStore.hasCurrentProject,
-        isSaving: videoStore.isSaving,
-        lastSaved: videoStore.lastSaved
+        currentProject: unifiedStore.currentProject,
+        currentProjectId: unifiedStore.currentProjectId,
+        currentProjectName: unifiedStore.currentProjectName,
+        projectStatus: unifiedStore.projectStatus,
+        hasCurrentProject: unifiedStore.hasCurrentProject,
+        isSaving: unifiedStore.isProjectSaving, // 新API：isSaving → isProjectSaving
+        lastSaved: unifiedStore.lastProjectSaved // 新API：lastSaved → lastProjectSaved
       },
 
       // 项目设置
       settings: {
-        videoResolution: videoStore.videoResolution,
-        frameRate: videoStore.frameRate,
-        timelineDurationFrames: videoStore.timelineDurationFrames
+        videoResolution: unifiedStore.videoResolution,
+        frameRate: unifiedStore.frameRate,
+        timelineDurationFrames: unifiedStore.timelineDurationFrames
       },
 
       // 轨道数据
-      tracks: videoStore.tracks,
+      tracks: unifiedStore.tracks,
 
-      // 媒体项目数据（包含运行时状态）
-      mediaItems: videoStore.mediaItems.map(item => ({
+      // 统一媒体项目数据（适配 UnifiedMediaItemData 结构）
+      mediaItems: unifiedStore.mediaItems.map(item => ({
         id: item.id,
         name: item.name,
-        file: item.file ? {
-          name: item.file.name,
-          size: item.file.size,
-          type: item.file.type,
-          lastModified: item.file.lastModified
-        } : null,
-        url: item.url,
-        duration: item.duration,
-        type: item.type,
+        createdAt: item.createdAt,
+        mediaStatus: item.mediaStatus, // 新结构：status → mediaStatus
         mediaType: item.mediaType,
-        status: item.status,
-        thumbnailUrl: item.thumbnailUrl ? 'blob URL存在' : null,
-        hasMP4Clip: !!item.mp4Clip,
-        hasImgClip: !!item.imgClip,
-        hasAudioClip: !!item.audioClip
+        duration: item.duration,
+
+        // 数据源信息（新结构）
+        source: {
+          type: item.source.type,
+          status: item.source.status,
+          progress: item.source.progress,
+          file: item.source.file ? {
+            name: item.source.file.name,
+            size: item.source.file.size,
+            type: item.source.file.type,
+            lastModified: item.source.file.lastModified
+          } : null,
+          url: item.source.url || null
+        },
+
+        // WebAV对象信息（新结构）
+        webav: item.webav ? {
+          hasMP4Clip: !!item.webav.mp4Clip,
+          hasImgClip: !!item.webav.imgClip,
+          hasAudioClip: !!item.webav.audioClip,
+          thumbnailUrl: item.webav.thumbnailUrl ? 'blob URL存在' : null,
+          originalWidth: item.webav.originalWidth,
+          originalHeight: item.webav.originalHeight
+        } : null
       })),
 
-      // 时间轴项目数据
-      timelineItems: videoStore.timelineItems.map(item => {
-        // 根据项目类型获取媒体名称
-        let mediaName = 'Unknown'
-        let thumbnailUrl = null
-        if (isLocalTimelineItem(item)) {
-          // 本地时间轴项目：从本地媒体项目获取名称
-          mediaName = videoStore.getLocalMediaItem(item.mediaItemId)?.name || 'Unknown'
-          thumbnailUrl = item.thumbnailUrl ? 'blob URL存在' : null
-        } else if (isAsyncProcessingTimelineItem(item)) {
-          // 异步处理时间轴项目：从异步处理媒体项目获取名称
-          mediaName = videoStore.getAsyncProcessingItem(item.mediaItemId)?.name || item.config.name || 'Unknown'
-        }
+      // 统一时间轴项目数据（适配 UnifiedTimelineItemData 结构）
+      timelineItems: unifiedStore.timelineItems.map(item => {
+        // 使用新的统一媒体项目查询方法
+        const mediaItem = unifiedStore.getMediaItem(item.mediaItemId)
+        const mediaName = mediaItem?.name || 'Unknown'
 
         return {
           id: item.id,
           mediaItemId: item.mediaItemId,
           trackId: item.trackId,
           mediaType: item.mediaType,
+          timelineStatus: item.timelineStatus, // 新结构：3状态系统
           timeRange: item.timeRange,
           config: item.config,
-          thumbnailUrl,
           hasSprite: !!item.sprite,
           mediaName
         }
       }),
 
-      // 媒体引用映射
-      mediaReferences: videoStore.mediaReferences,
-
-      // 统计信息
+      // 统计信息（使用新的查询方法）
       statistics: {
-        totalMediaItems: videoStore.mediaItems.length,
-        totalTimelineItems: videoStore.timelineItems.length,
-        totalTracks: videoStore.tracks.length,
-        readyMediaItems: videoStore.mediaItems.filter(item => item.status === 'ready').length,
-        mediaReferencesCount: Object.keys(videoStore.mediaReferences).length
+        totalMediaItems: unifiedStore.mediaItems.length,
+        totalTimelineItems: unifiedStore.timelineItems.length,
+        totalTracks: unifiedStore.tracks.length,
+        readyMediaItems: unifiedStore.getReadyMediaItems().length, // 使用新的查询方法
+        processingMediaItems: unifiedStore.getProcessingMediaItems().length,
+        errorMediaItems: unifiedStore.getErrorMediaItems().length,
+        mediaStats: unifiedStore.getMediaItemsStats() // 新的统计方法
       }
     }
 
@@ -275,48 +276,43 @@ function debugProject() {
     console.log('📊 [调试] 完整项目数据:', projectData)
 
     // 打印格式化的JSON
-    console.log('📄 [调试] 项目JSON (格式化):')
+    console.log('� [调试] 项目JSON (格式化):')
     console.log(JSON.stringify(projectData, null, 2))
 
     // 打印持久化数据（不包含运行时状态）
     const persistenceData = {
       timeline: {
-        tracks: videoStore.tracks,
-        timelineItems: videoStore.timelineItems.map(item => {
-          // 根据项目类型获取媒体名称
-          let mediaName = 'Unknown'
-          if (isLocalTimelineItem(item)) {
-            // 本地时间轴项目：从本地媒体项目获取名称
-            mediaName = videoStore.getLocalMediaItem(item.mediaItemId)?.name || 'Unknown'
-          } else if (isAsyncProcessingTimelineItem(item)) {
-            // 异步处理时间轴项目：从异步处理媒体项目获取名称
-            mediaName = videoStore.getAsyncProcessingItem(item.mediaItemId)?.name || item.config.name || 'Unknown'
-          }
+        tracks: unifiedStore.tracks,
+        timelineItems: unifiedStore.timelineItems.map(item => {
+          // 使用新的统一媒体项目查询方法
+          const mediaItem = unifiedStore.getMediaItem(item.mediaItemId)
+          const mediaName = mediaItem?.name || 'Unknown'
 
           return {
             id: item.id,
             mediaItemId: item.mediaItemId,
             trackId: item.trackId,
             mediaType: item.mediaType,
+            timelineStatus: item.timelineStatus,
             timeRange: item.timeRange,
             config: item.config,
             mediaName
           }
         }),
-        mediaItems: videoStore.mediaItems.map(item => ({
+        mediaItems: unifiedStore.mediaItems.map(item => ({
           id: item.id,
           name: item.name,
-          type: item.type,
+          createdAt: item.createdAt,
           mediaType: item.mediaType,
-          duration: item.duration
+          duration: item.duration,
+          sourceType: item.source.type
         }))
       },
       settings: {
-        videoResolution: videoStore.videoResolution,
-        frameRate: videoStore.frameRate,
-        timelineDurationFrames: videoStore.timelineDurationFrames
-      },
-      mediaReferences: videoStore.mediaReferences
+        videoResolution: unifiedStore.videoResolution,
+        frameRate: unifiedStore.frameRate,
+        timelineDurationFrames: unifiedStore.timelineDurationFrames
+      }
     }
 
     console.log('💾 [调试] 持久化数据 (将保存到project.json):')
@@ -324,6 +320,9 @@ function debugProject() {
 
     // 在浏览器中显示通知
     console.log('✅ [调试] 项目JSON数据已打印到控制台，请查看开发者工具')
+
+    // 将unifiedStore暴露到全局，方便调试
+    ;(window as any).unifiedStore = unifiedStore
 
   } catch (error) {
     console.error('❌ [调试] 打印项目数据失败:', error)
@@ -361,7 +360,7 @@ onBeforeMount(async () => {
 
   try {
     console.log('� [LIFECYCLE] VideoEditor 开始预加载项目设置')
-    await videoStore.preloadProjectSettings(projectId)
+    await unifiedStore.preloadProjectSettings(projectId)
     console.log('🔄 [LIFECYCLE] VideoEditor 项目设置预加载完成')
   } catch (error) {
     console.error('🔄 [LIFECYCLE] VideoEditor 预加载项目设置失败:', error)
@@ -388,11 +387,11 @@ onMounted(async () => {
 
   try {
     console.log('📂 [VideoEditor] 开始加载项目内容...')
-    await videoStore.loadProjectContent(projectId)
+    await unifiedStore.loadProjectContent(projectId)
 
-    if (videoStore.hasCurrentProject) {
-      projectTitle.value = videoStore.currentProjectName
-      console.log('✅ [VideoEditor] 项目内容加载完成:', videoStore.currentProjectName)
+    if (unifiedStore.hasCurrentProject) {
+      projectTitle.value = unifiedStore.currentProjectName
+      console.log('✅ [VideoEditor] 项目内容加载完成:', unifiedStore.currentProjectName)
 
       // 启用自动保存
       autoSave.enableAutoSave()

@@ -51,11 +51,11 @@
 
 <script setup lang="ts">
 import { ref, watch } from 'vue'
-import type { ProjectConfig } from '../types'
+import type { UnifiedProjectConfig } from '@/unified/project/types'
 
 interface Props {
   show: boolean
-  project: ProjectConfig | null
+  project: UnifiedProjectConfig | null
   isSaving?: boolean
 }
 
