@@ -13,6 +13,7 @@ import type {
   BasicTimelineConfig,
   TransformData
 } from './TimelineItemData'
+import type { BaseTimeRange } from '../../types'
 
 
 // ==================== 工厂函数 ====================
@@ -78,7 +79,7 @@ export function createDefaultTransform(): TransformData {
 export function createVideoTimelineItem(options: {
   mediaItemId: string
   trackId?: string
-  timeRange: { timelineStartTime: number; timelineEndTime: number }
+  timeRange: BaseTimeRange // 使用旧架构的BaseTimeRange
   name: string
   clipStartTime?: number
   clipEndTime?: number
@@ -107,7 +108,7 @@ export function createVideoTimelineItem(options: {
 export function createAudioTimelineItem(options: {
   mediaItemId: string
   trackId?: string
-  timeRange: { timelineStartTime: number; timelineEndTime: number }
+  timeRange: BaseTimeRange // 使用旧架构的BaseTimeRange
   name: string
   volume?: number
   isMuted?: boolean
@@ -136,7 +137,7 @@ export function createAudioTimelineItem(options: {
 export function createImageTimelineItem(options: {
   mediaItemId: string
   trackId?: string
-  timeRange: { timelineStartTime: number; timelineEndTime: number }
+  timeRange: BaseTimeRange // 使用旧架构的BaseTimeRange
   name: string
   displayDuration?: number
   transform?: TransformData
@@ -233,7 +234,7 @@ export function validateTimelineItemData(data: UnifiedTimelineItemData): {
   }
 
   // 检查状态一致性
-  if (data.timelineStatus === 'ready' && !data.spriteId) {
+  if (data.timelineStatus === 'ready' && !data.sprite) {
     errors.push('就绪状态的项目必须有关联的Sprite')
   }
 

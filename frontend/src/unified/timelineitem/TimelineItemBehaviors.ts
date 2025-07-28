@@ -8,6 +8,7 @@ import type {
   TimelineItemStatus
 } from './TimelineItemData'
 import { VALID_TIMELINE_TRANSITIONS } from './TimelineItemData'
+import type { BaseTimeRange } from '../../types'
 
 
 // ==================== 状态转换行为函数 ====================
@@ -41,8 +42,6 @@ async function handleSpriteLifecycle(
   oldStatus: TimelineItemStatus,
   newStatus: TimelineItemStatus
 ): Promise<void> {
-  // 动态导入SpriteLifecycleManager以避免循环依赖
-  const { SpriteLifecycleManager } = await import('./SpriteLifecycleManager')
   
   switch (newStatus) {
     case 'ready':
@@ -65,9 +64,6 @@ async function handleSpriteLifecycle(
  * 创建Sprite函数
  */
 async function createSprite(data: UnifiedTimelineItemData): Promise<void> {
-  // 动态导入以避免循环依赖
-  const { SpriteLifecycleManager } = await import('./SpriteLifecycleManager')
-
   // 检查时间轴项目是否为就绪状态
   if (data.timelineStatus !== 'ready') {
     throw new Error('时间轴项目必须为就绪状态才能创建Sprite')
@@ -82,29 +78,30 @@ async function createSprite(data: UnifiedTimelineItemData): Promise<void> {
     return
   }
 
-  // 通过 SpriteLifecycleManager 创建并添加 Sprite
-  const spriteId = await SpriteLifecycleManager.createAndAddSprite(
-    mediaData,
-    data
-  )
+  // 通过新的方式创建Sprite
+  const { createSpriteForTimelineData } = await import('./TimelineItemSpriteOperations')
 
-  data.spriteId = spriteId // ✅ 响应式更新
+  // 需要获取AVCanvas实例，这里暂时使用占位符
+  const avCanvas = null as any // TODO: 需要从外部传入AVCanvas实例
+
+  await createSpriteForTimelineData(data, mediaData, avCanvas)
 }
 
 /**
  * 销毁Sprite函数
  */
 async function destroySprite(data: UnifiedTimelineItemData): Promise<void> {
-  if (!data.spriteId) {
+  if (!data.sprite) {
     return
   }
 
   // 动态导入以避免循环依赖
-  const { SpriteLifecycleManager } = await import('./SpriteLifecycleManager')
+  const { destroySpriteForTimelineData } = await import('./TimelineItemSpriteOperations')
 
-  // 通过 SpriteLifecycleManager 移除 Sprite（AVCanvas 会自动销毁）
-  await SpriteLifecycleManager.removeSprite(data.spriteId)
-  data.spriteId = undefined // ✅ 响应式更新
+  // 需要获取AVCanvas实例，这里暂时使用占位符
+  const avCanvas = null as any // TODO: 需要从外部传入AVCanvas实例
+
+  await destroySpriteForTimelineData(data, avCanvas)
 }
 
 // ==================== 查询函数 ====================
@@ -125,7 +122,7 @@ export function canTransitionTo(
  * 检查是否为就绪状态
  */
 export function isReady(data: UnifiedTimelineItemData): boolean {
-  return data.timelineStatus === 'ready' && !!data.spriteId
+  return data.timelineStatus === 'ready' && !!data.sprite
 }
 
 /**
@@ -196,7 +193,7 @@ export function resetToLoading(data: UnifiedTimelineItemData): Promise<void> {
  */
 export function updateTimeRange(
   data: UnifiedTimelineItemData,
-  newRange: { timelineStartTime: number; timelineEndTime: number }
+  newRange: BaseTimeRange // 使用旧架构的BaseTimeRange
 ): void {
   if (newRange.timelineEndTime <= newRange.timelineStartTime) {
     throw new Error('结束时间必须大于开始时间')
@@ -209,7 +206,7 @@ export function updateTimeRange(
   data.timeRange = newRange // ✅ 响应式更新
 
   // 如果有sprite，同步更新sprite的时间范围
-  if (data.spriteId) {
+  if (data.sprite) {
     updateSpriteTimeRange(data, newRange)
   }
 }
@@ -250,13 +247,13 @@ export function resizeTimelineItem(
  */
 async function updateSpriteTimeRange(
   data: UnifiedTimelineItemData,
-  timeRange: { timelineStartTime: number; timelineEndTime: number }
+  timeRange: BaseTimeRange // 使用旧架构的BaseTimeRange
 ): Promise<void> {
-  if (!data.spriteId) return
+  if (!data.sprite) return
 
   try {
-    const { SpriteLifecycleManager } = await import('./SpriteLifecycleManager')
-    await SpriteLifecycleManager.updateSpriteProperties(data.spriteId, { timeRange })
+    const { updateSpriteTimeRange } = await import('./TimelineItemSpriteOperations')
+    updateSpriteTimeRange(data.sprite, timeRange)
   } catch (error) {
     console.error('更新Sprite时间范围失败:', error)
   }

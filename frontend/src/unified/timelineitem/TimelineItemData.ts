@@ -3,7 +3,9 @@
  * 基于"核心数据与行为分离"的重构方案
  */
 
+import type { Raw } from 'vue'
 import type { MediaType } from '../mediaitem'
+import type { BaseTimeRange, CustomSprite } from '../../types'
 
 // ==================== 基础类型定义 ====================
 
@@ -116,16 +118,13 @@ export interface UnifiedTimelineItemData {
   mediaType: MediaType | 'unknown' // 从关联的媒体项目同步
 
   // ==================== 时间范围 ====================
-  timeRange: {
-    timelineStartTime: number // 时间轴开始时间（帧数）
-    timelineEndTime: number   // 时间轴结束时间（帧数）
-  }
+  timeRange: BaseTimeRange // 使用旧架构的BaseTimeRange，兼容customvisiblesprite
 
   // ==================== 基础配置 ====================
   config: BasicTimelineConfig // 静态配置信息
 
   // ==================== Sprite引用 ====================
-  spriteId?: string // Sprite ID，由SpriteLifecycleManager管理
+  sprite?: Raw<CustomSprite> // 直接持有Sprite引用，与时间轴项目生命周期一致
 }
 
 // ==================== 工厂函数选项类型 ====================
@@ -136,8 +135,10 @@ export interface UnifiedTimelineItemData {
 export interface CreateTimelineItemOptions {
   mediaItemId: string
   trackId?: string
-  timeRange: { timelineStartTime: number; timelineEndTime: number }
+  timeRange: BaseTimeRange // 使用旧架构的BaseTimeRange
   config: BasicTimelineConfig
   mediaType?: MediaType | 'unknown'
   initialStatus?: TimelineItemStatus
 }
+
+

@@ -8,13 +8,13 @@ export {
   // 基础类型定义
   type BaseDataSourceData,
   type DataSourceStatus,
-  
+
   // 常量
   DATA_SOURCE_TO_MEDIA_STATUS_MAP,
-  
+
   // 通用行为函数
   UnifiedDataSourceActions,
-  
+
   // 基础查询函数
   DataSourceQueries as BaseDataSourceQueries
 } from './sources/BaseDataSource'
@@ -36,10 +36,10 @@ export {
   // 类型定义
   type UserSelectedFileSourceData,
   type FileValidationResult,
-  
+
   // 工厂函数
   UserSelectedFileSourceFactory,
-  
+
   // 类型守卫
   UserSelectedFileTypeGuards,
 
@@ -74,7 +74,7 @@ export {
   type AcquisitionTaskStatus,
   type AcquisitionTask,
   type ManagerStats,
-  
+
   // 基础管理器类
   DataSourceManager
 } from './managers/BaseDataSourceManager'
@@ -126,11 +126,11 @@ export {
 export {
   // 类型定义
   type DetectedMediaType,
-  
+
   // 配置常量
   SUPPORTED_MEDIA_TYPES,
   FILE_SIZE_LIMITS,
-  
+
   // 检测函数
   detectFileMediaType,
   isSupportedMediaType,
@@ -139,3 +139,110 @@ export {
   getMediaTypeDisplayName,
   getMediaTypeIcon
 } from './utils/mediaTypeDetector'
+
+// ==================== 统一轨道系统 ====================
+export {
+  // 轨道类型定义
+  type UnifiedTrackData,
+  type UnifiedTrackType,
+
+  // 工厂函数和类型守卫
+  createUnifiedTrackData,
+  isVideoTrack,
+  isAudioTrack,
+  isTextTrack,
+  isSubtitleTrack,
+  isEffectTrack,
+  generateTrackId
+} from './track'
+
+// ==================== 统一时间轴项目系统 ====================
+export {
+  // 时间轴项目类型定义
+  type UnifiedTimelineItemData,
+  type TimelineItemStatus,
+  type BasicTimelineConfig,
+  type TransformData,
+  type CreateTimelineItemOptions,
+
+  // 工厂函数
+  createTimelineItemData,
+  createVideoTimelineItem,
+  createAudioTimelineItem,
+  createImageTimelineItem,
+  cloneTimelineItemData,
+  duplicateTimelineItem,
+
+  // 状态转换函数
+  transitionTimelineStatus,
+  setLoading,
+  setReady,
+  setError,
+
+  // 查询函数
+  isReady,
+  isLoading,
+  hasError,
+  getDuration,
+  getStatusText,
+
+  // 管理器
+  TimelineMediaSyncManager
+} from './timelineitem'
+
+// ==================== 统一模块系统 ====================
+export {
+  // 统一轨道模块
+  createUnifiedTrackModule,
+  type UnifiedTrackModule
+} from './modules/UnifiedTrackModule'
+
+export {
+  // 统一媒体模块
+  createUnifiedMediaModule,
+  type UnifiedMediaModule
+} from './modules/UnifiedMediaModule'
+
+export {
+  // 统一时间轴模块
+  createUnifiedTimelineModule,
+  type UnifiedTimelineModule
+} from './modules/UnifiedTimelineModule'
+
+export {
+  // 统一视口模块
+  createUnifiedViewportModule,
+  type UnifiedViewportModule
+} from './modules/UnifiedViewportModule'
+
+export {
+  // 统一选择模块
+  createUnifiedSelectionModule,
+  type UnifiedSelectionModule
+} from './modules/UnifiedSelectionModule'
+
+export {
+  // 统一片段操作模块
+  createUnifiedClipOperationsModule,
+  type UnifiedClipOperationsModule
+} from './modules/UnifiedClipOperationsModule'
+
+// ==================== 统一工具函数 ====================
+export {
+  // 时间范围工具
+  syncTimeRange,
+  validateBaseTimeRange,
+  validateTimelineItemTimeRange,
+  calculateDuration,
+  containsFrame,
+  isTimeRangeOverlapping,
+  calculateOverlapDuration,
+  moveTimelineItem,
+  resizeTimelineItem,
+  trimTimelineItem,
+  UnifiedTimeRangeUtils,
+
+  // WebAV动画管理器
+  UnifiedWebAVAnimationManager,
+  globalUnifiedWebAVAnimationManager
+} from './utils'

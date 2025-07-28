@@ -120,10 +120,6 @@ export {
 
 // ==================== 管理器导出 ====================
 export {
-  SpriteLifecycleManager
-} from './SpriteLifecycleManager'
-
-export {
   TimelineMediaSyncManager
 } from './TimelineMediaSyncManager'
 
@@ -242,7 +238,6 @@ import {
 } from './TimelineItemQueries'
 
 import { TimelineStatusDisplayUtils, createStatusDisplayComputeds } from './TimelineStatusDisplayUtils'
-import { SpriteLifecycleManager } from './SpriteLifecycleManager'
 import { TimelineMediaSyncManager } from './TimelineMediaSyncManager'
 import type { UnifiedTimelineItemData } from './TimelineItemData'
 
@@ -301,7 +296,6 @@ export default {
 
   // 管理器
   Managers: {
-    SpriteLifecycle: SpriteLifecycleManager,
     MediaSync: TimelineMediaSyncManager
   }
 }

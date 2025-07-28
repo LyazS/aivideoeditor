@@ -16,7 +16,7 @@ import { useUnifiedStore } from '../unifiedStore'
  * 检查是否为就绪状态
  */
 export function isReady(data: UnifiedTimelineItemData): boolean {
-  return data.timelineStatus === 'ready' && !!data.spriteId
+  return data.timelineStatus === 'ready' && !!data.sprite
 }
 
 /**
