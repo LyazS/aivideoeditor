@@ -110,6 +110,7 @@ export {
   type UnifiedMediaItemData,
   type MediaStatus,
   type MediaType,
+  type MediaTypeOrUnknown,
   type WebAVObjects,
 
   // 工厂函数
@@ -161,16 +162,15 @@ export {
   // 时间轴项目类型定义
   type UnifiedTimelineItemData,
   type TimelineItemStatus,
-  type BasicTimelineConfig,
   type TransformData,
   type CreateTimelineItemOptions,
 
   // 工厂函数
-  createTimelineItemData,
+  createUnknownTimelineItem,
   createVideoTimelineItem,
   createAudioTimelineItem,
   createImageTimelineItem,
-  cloneTimelineItemData,
+  cloneTimelineItem,
   duplicateTimelineItem,
 
   // 状态转换函数
@@ -178,6 +178,19 @@ export {
   setLoading,
   setReady,
   setError,
+
+  // 类型转换函数
+  convertUnknownToKnown,
+
+  // 类型守卫函数
+  isKnownTimelineItem,
+  isUnknownTimelineItem,
+  isVideoTimelineItem,
+  isImageTimelineItem,
+  isAudioTimelineItem,
+  isTextTimelineItem,
+  hasVisualProperties,
+  hasAudioProperties,
 
   // 查询函数
   isReady,

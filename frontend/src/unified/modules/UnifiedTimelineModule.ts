@@ -1,9 +1,10 @@
 import { ref, type Raw, type Ref } from 'vue'
+import type { MediaTypeOrUnknown } from '../mediaitem'
 import type {
   UnifiedTimelineItemData,
-  AnyTimelineItem,
   KnownTimelineItem,
-  UnknownTimelineItem
+  UnknownTimelineItem,
+  UnknownMediaConfig
 } from '../timelineitem/TimelineItemData'
 import {
   isVideoTimelineItem,
@@ -11,9 +12,9 @@ import {
   isAudioTimelineItem,
   isTextTimelineItem,
   isUnknownTimelineItem,
-  isKnownTimelineItem,
-  convertUnknownToKnown
-} from '../timelineitem/TimelineItemData'
+  isKnownTimelineItem
+} from '../timelineitem/TimelineItemQueries'
+import { convertUnknownToKnown } from '../timelineitem/TimelineItemBehaviors'
 import { TimelineItemFactory } from '../timelineitem/TimelineItemFactory'
 import type { UnifiedMediaItemData } from '../mediaitem/types'
 import type { UnifiedTrackData } from '../track/TrackTypes'
@@ -21,10 +22,8 @@ import type {
   BaseTimeRange,
   CustomSprite,
   MediaType,
-  MediaTypeOrUnknown,
   VideoTimeRange,
-  ImageTimeRange,
-  BasicTimelineConfig
+  ImageTimeRange
 } from '../../types'
 import { VideoVisibleSprite } from '../../utils/VideoVisibleSprite'
 import { ImageVisibleSprite } from '../../utils/ImageVisibleSprite'
@@ -68,7 +67,7 @@ export function createUnifiedTimelineModule(
 ) {
   // ==================== 状态定义 ====================
 
-  const timelineItems = ref<AnyTimelineItem[]>([])
+  const timelineItems = ref<UnifiedTimelineItemData<MediaTypeOrUnknown>[]>([])
 
   // ==================== 双向数据同步函数 ====================
 
@@ -86,7 +85,7 @@ export function createUnifiedTimelineModule(
    * - opacity: 通过自定义回调实现类似数据流向
    * - volume, isMuted: WebAV不支持相关事件，只能直接修改config
    */
-  function setupBidirectionalSync(timelineItem: AnyTimelineItem) {
+  function setupBidirectionalSync(timelineItem: UnifiedTimelineItemData<MediaTypeOrUnknown>) {
     // 只有已知类型且就绪状态的时间轴项目才需要双向同步
     if (!isKnownTimelineItem(timelineItem) || timelineItem.timelineStatus !== 'ready') {
       return
@@ -105,7 +104,7 @@ export function createUnifiedTimelineModule(
   /**
    * 检查时间轴项目是否具有视觉属性
    */
-  function hasVisualProps(timelineItem: AnyTimelineItem): boolean {
+  function hasVisualProps(timelineItem: UnifiedTimelineItemData<MediaTypeOrUnknown>): boolean {
     return isVideoTimelineItem(timelineItem) ||
            isImageTimelineItem(timelineItem) ||
            isTextTimelineItem(timelineItem)
@@ -114,7 +113,7 @@ export function createUnifiedTimelineModule(
   /**
    * 检查时间轴项目是否具有音频属性
    */
-  function hasAudioProps(timelineItem: AnyTimelineItem): boolean {
+  function hasAudioProps(timelineItem: UnifiedTimelineItemData<MediaTypeOrUnknown>): boolean {
     return isVideoTimelineItem(timelineItem) || isAudioTimelineItem(timelineItem)
   }
 
@@ -124,7 +123,7 @@ export function createUnifiedTimelineModule(
    * 添加时间轴项目
    * @param timelineItem 要添加的时间轴项目
    */
-  function addTimelineItem(timelineItem: AnyTimelineItem) {
+  function addTimelineItem(timelineItem: UnifiedTimelineItemData<MediaTypeOrUnknown>) {
     // 如果没有指定轨道，默认分配到第一个轨道
     if (!timelineItem.trackId && trackModule) {
       const firstTrack = trackModule.tracks.value[0]
@@ -169,7 +168,7 @@ export function createUnifiedTimelineModule(
    * @param timelineItemId 要移除的时间轴项目ID
    */
   function removeTimelineItem(timelineItemId: string) {
-    const index = timelineItems.value.findIndex((item) => item.id === timelineItemId)
+    const index = timelineItems.value.findIndex((item: UnifiedTimelineItemData<MediaTypeOrUnknown>) => item.id === timelineItemId)
     if (index > -1) {
       const item = timelineItems.value[index]
       const mediaItem = mediaModule.getMediaItem(item.mediaItemId)
@@ -204,8 +203,8 @@ export function createUnifiedTimelineModule(
    * @param timelineItemId 时间轴项目ID
    * @returns 时间轴项目或undefined
    */
-  function getTimelineItem(timelineItemId: string): AnyTimelineItem | undefined {
-    return timelineItems.value.find((item) => item.id === timelineItemId)
+  function getTimelineItem(timelineItemId: string): UnifiedTimelineItemData<MediaTypeOrUnknown> | undefined {
+    return timelineItems.value.find((item: UnifiedTimelineItemData<MediaTypeOrUnknown>) => item.id === timelineItemId)
   }
 
   /**
@@ -398,19 +397,19 @@ export function createUnifiedTimelineModule(
     convertUnknownToKnown,
 
     // 状态转换函数（简化版本）
-    transitionTimelineStatus: (item: AnyTimelineItem, newStatus: 'loading' | 'ready' | 'error') => {
+    transitionTimelineStatus: (item: UnifiedTimelineItemData<MediaTypeOrUnknown>, newStatus: 'loading' | 'ready' | 'error') => {
       item.timelineStatus = newStatus
     },
-    setLoading: (item: AnyTimelineItem) => { item.timelineStatus = 'loading' },
-    setReady: (item: AnyTimelineItem) => { item.timelineStatus = 'ready' },
-    setError: (item: AnyTimelineItem) => { item.timelineStatus = 'error' },
+    setLoading: (item: UnifiedTimelineItemData<MediaTypeOrUnknown>) => { item.timelineStatus = 'loading' },
+    setReady: (item: UnifiedTimelineItemData<MediaTypeOrUnknown>) => { item.timelineStatus = 'ready' },
+    setError: (item: UnifiedTimelineItemData<MediaTypeOrUnknown>) => { item.timelineStatus = 'error' },
 
     // 查询函数（简化版本）
-    isReady: (item: AnyTimelineItem) => item.timelineStatus === 'ready',
-    isLoading: (item: AnyTimelineItem) => item.timelineStatus === 'loading',
-    hasError: (item: AnyTimelineItem) => item.timelineStatus === 'error',
-    getDuration: (item: AnyTimelineItem) => item.timeRange.timelineEndTime - item.timeRange.timelineStartTime,
-    getStatusText: (item: AnyTimelineItem) => {
+    isReady: (item: UnifiedTimelineItemData<MediaTypeOrUnknown>) => item.timelineStatus === 'ready',
+    isLoading: (item: UnifiedTimelineItemData<MediaTypeOrUnknown>) => item.timelineStatus === 'loading',
+    hasError: (item: UnifiedTimelineItemData<MediaTypeOrUnknown>) => item.timelineStatus === 'error',
+    getDuration: (item: UnifiedTimelineItemData<MediaTypeOrUnknown>) => item.timeRange.timelineEndTime - item.timeRange.timelineStartTime,
+    getStatusText: (item: UnifiedTimelineItemData<MediaTypeOrUnknown>) => {
       switch (item.timelineStatus) {
         case 'loading': return '加载中'
         case 'ready': return '就绪'
@@ -418,11 +417,11 @@ export function createUnifiedTimelineModule(
         default: return '未知'
       }
     },
-    filterByStatus: (items: AnyTimelineItem[], status: 'loading' | 'ready' | 'error') =>
+    filterByStatus: (items: UnifiedTimelineItemData<MediaTypeOrUnknown>[], status: 'loading' | 'ready' | 'error') =>
       items.filter(item => item.timelineStatus === status),
-    filterByTrack: (items: AnyTimelineItem[], trackId: string) =>
+    filterByTrack: (items: UnifiedTimelineItemData<MediaTypeOrUnknown>[], trackId: string) =>
       items.filter(item => item.trackId === trackId),
-    sortByTime: (items: AnyTimelineItem[]) =>
+    sortByTime: (items: UnifiedTimelineItemData<MediaTypeOrUnknown>[]) =>
       [...items].sort((a, b) => a.timeRange.timelineStartTime - b.timeRange.timelineStartTime),
 
     // 辅助函数

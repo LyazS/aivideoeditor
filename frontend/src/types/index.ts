@@ -244,8 +244,6 @@ interface AudioMediaProps {
  * 视频媒体配置：同时具有视觉和音频属性
  */
 export interface VideoMediaConfig extends VisualMediaProps<'video'>, AudioMediaProps {
-  /** 配置名称 */
-  name: string
   // 视频特有属性（预留）
   // playbackRate?: number // 倍速可能在 timeRange 中更合适
 }
@@ -254,8 +252,6 @@ export interface VideoMediaConfig extends VisualMediaProps<'video'>, AudioMediaP
  * 图片媒体配置：只有视觉属性
  */
 export interface ImageMediaConfig extends VisualMediaProps<'image'> {
-  /** 配置名称 */
-  name: string
   // 图片特有属性（预留）
   // filters?: ImageFilterConfig[]
 }
@@ -264,8 +260,6 @@ export interface ImageMediaConfig extends VisualMediaProps<'image'> {
  * 音频媒体配置：只有音频属性
  */
 export interface AudioMediaConfig extends BaseMediaProps<'audio'>, AudioMediaProps {
-  /** 配置名称 */
-  name: string
   /** 增益（dB） */
   gain: number
   // 音频特有属性（预留）
@@ -277,8 +271,6 @@ export interface AudioMediaConfig extends BaseMediaProps<'audio'>, AudioMediaPro
  * 文本媒体配置：继承视觉媒体属性，添加文本特有属性
  */
 export interface TextMediaConfig extends VisualMediaProps<'text'> {
-  /** 配置名称 */
-  name: string
   /** 文本内容 */
   text: string
   /** 文本样式配置 */
@@ -300,15 +292,7 @@ type MediaConfigMap = {
  */
 export type GetMediaConfig<T extends MediaType> = MediaConfigMap[T]
 
-/**
- * 基础时间轴配置接口 - 用于未知媒体类型的占位符配置
- */
-export interface BasicTimelineConfig {
-  /** 配置名称 */
-  name: string
-  /** 预计时长（帧数） */
-  expectedDuration: number
-}
+
 
 /**
  * 视觉媒体配置联合类型

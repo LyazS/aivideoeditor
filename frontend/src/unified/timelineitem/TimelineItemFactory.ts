@@ -5,9 +5,8 @@
 
 import { reactive } from 'vue'
 import { generateUUID4 } from '@/utils/idGenerator'
+import type { MediaType, MediaTypeOrUnknown } from '../mediaitem'
 import type {
-  MediaType,
-  MediaTypeOrUnknown,
   VideoTimeRange,
   ImageTimeRange,
   BaseTimeRange,
@@ -15,14 +14,12 @@ import type {
   ImageMediaConfig,
   AudioMediaConfig,
   TextMediaConfig,
-  BasicTimelineConfig,
   GetMediaConfig
 } from '../../types'
 import type {
   UnifiedTimelineItemData,
   KnownTimelineItem,
-  UnknownTimelineItem,
-  AnyTimelineItem
+  UnknownMediaConfig
 } from './TimelineItemData'
 
 // ==================== 基础工厂函数 ====================
@@ -60,7 +57,7 @@ export function createUnknownTimelineItem(options: {
   mediaItemId: string
   trackId: string
   timeRange: BaseTimeRange
-  config: BasicTimelineConfig
+  config: UnknownMediaConfig
   timelineStatus?: 'loading' | 'ready' | 'error'
 }): UnifiedTimelineItemData<'unknown'> {
   return reactive({
@@ -133,9 +130,8 @@ export function createTextTimelineItem(options: {
 /**
  * 创建默认视频配置
  */
-export function createDefaultVideoConfig(name: string): VideoMediaConfig {
+export function createDefaultVideoConfig(): VideoMediaConfig {
   return {
-    name,
     // 视觉属性
     x: 0,
     y: 0,
@@ -157,9 +153,8 @@ export function createDefaultVideoConfig(name: string): VideoMediaConfig {
 /**
  * 创建默认图片配置
  */
-export function createDefaultImageConfig(name: string): ImageMediaConfig {
+export function createDefaultImageConfig(): ImageMediaConfig {
   return {
-    name,
     // 视觉属性
     x: 0,
     y: 0,
@@ -178,9 +173,8 @@ export function createDefaultImageConfig(name: string): ImageMediaConfig {
 /**
  * 创建默认音频配置
  */
-export function createDefaultAudioConfig(name: string): AudioMediaConfig {
+export function createDefaultAudioConfig(): AudioMediaConfig {
   return {
-    name,
     // 音频属性
     volume: 1,
     isMuted: false,
@@ -193,9 +187,8 @@ export function createDefaultAudioConfig(name: string): AudioMediaConfig {
 /**
  * 创建默认文本配置
  */
-export function createDefaultTextConfig(name: string, text: string = '新文本'): TextMediaConfig {
+export function createDefaultTextConfig(text: string = '新文本'): TextMediaConfig {
   return {
-    name,
     // 视觉属性
     x: 960, // 居中
     y: 540, // 居中
@@ -223,9 +216,9 @@ export function createDefaultTextConfig(name: string, text: string = '新文本'
 }
 
 /**
- * 创建默认基础配置（用于未知类型）
+ * 创建默认未知媒体配置（用于未知类型）
  */
-export function createDefaultBasicConfig(name: string, expectedDuration: number): BasicTimelineConfig {
+export function createDefaultUnknownConfig(name: string, expectedDuration: number): UnknownMediaConfig {
   return {
     name,
     expectedDuration
@@ -307,7 +300,7 @@ export function createVideoTimelineItemWithDefaults(options: {
   )
   
   const config = {
-    ...createDefaultVideoConfig(options.name),
+    ...createDefaultVideoConfig(),
     ...options.configOverrides
   }
 
@@ -333,7 +326,7 @@ export function createImageTimelineItemWithDefaults(options: {
   const timeRange = createImageTimeRange(options.timelineStartTime, options.timelineEndTime)
   
   const config = {
-    ...createDefaultImageConfig(options.name),
+    ...createDefaultImageConfig(),
     ...options.configOverrides
   }
 
@@ -368,7 +361,7 @@ export function createAudioTimelineItemWithDefaults(options: {
   )
   
   const config = {
-    ...createDefaultAudioConfig(options.name),
+    ...createDefaultAudioConfig(),
     ...options.configOverrides
   }
 
@@ -395,7 +388,7 @@ export function createTextTimelineItemWithDefaults(options: {
   const timeRange = createImageTimeRange(options.timelineStartTime, options.timelineEndTime)
   
   const config = {
-    ...createDefaultTextConfig(options.name, options.text),
+    ...createDefaultTextConfig(options.text),
     ...options.configOverrides
   }
 
@@ -420,7 +413,7 @@ export function createUnknownTimelineItemWithDefaults(options: {
 }): UnifiedTimelineItemData<'unknown'> {
   const timeRange = createBaseTimeRange(options.timelineStartTime, options.timelineEndTime)
   const expectedDuration = options.expectedDuration || (options.timelineEndTime - options.timelineStartTime)
-  const config = createDefaultBasicConfig(options.name, expectedDuration)
+  const config = createDefaultUnknownConfig(options.name, expectedDuration)
 
   return createUnknownTimelineItem({
     mediaItemId: options.mediaItemId,
@@ -442,7 +435,7 @@ export function cloneTimelineItem<T extends MediaTypeOrUnknown>(
     mediaItemId?: string
     trackId?: string
     timeRange?: T extends 'unknown' ? BaseTimeRange : (T extends 'video' | 'audio' ? VideoTimeRange : ImageTimeRange)
-    config?: T extends 'unknown' ? BasicTimelineConfig : GetMediaConfig<T & MediaType>
+    config?: T extends 'unknown' ? UnknownMediaConfig : GetMediaConfig<T & MediaType>
     timelineStatus?: 'loading' | 'ready' | 'error'
   }
 ): UnifiedTimelineItemData<T> {
@@ -472,8 +465,7 @@ export function duplicateTimelineItem<T extends MediaTypeOrUnknown>(
   }
 
   const newConfig = {
-    ...original.config,
-    name: `${original.config.name} (副本)`
+    ...original.config
   }
 
   return cloneTimelineItem(original, {
@@ -506,8 +498,9 @@ export function validateTimelineItem<T extends MediaTypeOrUnknown>(
     errors.push('缺少轨道ID')
   }
 
-  if (!item.config?.name) {
-    errors.push('缺少项目名称')
+  // 配置验证（根据媒体类型进行不同的验证）
+  if (!item.config) {
+    errors.push('缺少配置信息')
   }
 
   // 检查时间范围
@@ -569,7 +562,7 @@ export const TimelineItemFactory = {
   createDefaultImageConfig,
   createDefaultAudioConfig,
   createDefaultTextConfig,
-  createDefaultBasicConfig,
+  createDefaultUnknownConfig,
   
   // 时间范围创建函数
   createVideoTimeRange,

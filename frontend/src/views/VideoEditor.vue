@@ -242,7 +242,7 @@ function debugProject() {
       })),
 
       // 统一时间轴项目数据（适配 UnifiedTimelineItemData 结构）
-      timelineItems: unifiedStore.timelineItems.map(item => {
+      timelineItems: unifiedStore.timelineItems.map((item: any) => {
         // 使用新的统一媒体项目查询方法
         const mediaItem = unifiedStore.getMediaItem(item.mediaItemId)
         const mediaName = mediaItem?.name || 'Unknown'
@@ -283,7 +283,7 @@ function debugProject() {
     const persistenceData = {
       timeline: {
         tracks: unifiedStore.tracks,
-        timelineItems: unifiedStore.timelineItems.map(item => {
+        timelineItems: unifiedStore.timelineItems.map((item: any) => {
           // 使用新的统一媒体项目查询方法
           const mediaItem = unifiedStore.getMediaItem(item.mediaItemId)
           const mediaName = mediaItem?.name || 'Unknown'

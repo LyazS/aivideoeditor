@@ -13,6 +13,7 @@ import type { AVCanvas } from '@webav/av-canvas'
 import type { UnifiedMediaItemData } from '../mediaitem'
 import type { UnifiedTimelineItemData, TransformData } from './TimelineItemData'
 import type { BaseTimeRange, CustomSprite } from '../../types'
+import { hasVisualProperties } from './TimelineItemQueries'
 
 // 从旧架构导入Sprite类
 import { VideoVisibleSprite } from '../../utils/VideoVisibleSprite'
@@ -81,15 +82,20 @@ function setupSpriteProperties(
     timelineEndTime: timelineData.timeRange.timelineEndTime
   })
 
-  // 设置基础变换属性
-  const config = timelineData.config
-  if (config.transform) {
-    updateSpriteTransform(sprite, config.transform)
-  }
+  // 设置基础变换属性（使用类型守卫）
+  if (hasVisualProperties(timelineData)) {
+    // 类型守卫确保了timelineData.config具有视觉属性
+    const config = timelineData.config
+    updateSpriteTransform(sprite, {
+      x: config.x,
+      y: config.y,
+      width: config.width,
+      height: config.height,
+      rotation: config.rotation
+    })
 
-  // 设置透明度
-  if (config.transform?.opacity !== undefined) {
-    sprite.opacity = config.transform.opacity
+    // 设置透明度
+    sprite.opacity = config.opacity
   }
 }
 
@@ -352,10 +358,20 @@ export async function syncConfigToSprite(
   // 同步时间范围
   updates.timeRange = timelineData.timeRange
   
-  // 同步变换属性
-  if (timelineData.config.transform) {
-    updates.transform = timelineData.config.transform
-    updates.opacity = timelineData.config.transform.opacity
+  // 同步变换属性（使用类型守卫）
+  if (hasVisualProperties(timelineData)) {
+    // 类型守卫确保了timelineData.config具有视觉属性
+    const config = timelineData.config
+    updates.transform = {
+      x: config.x,
+      y: config.y,
+      width: config.width,
+      height: config.height,
+      rotation: config.rotation
+    }
+
+    // 同步透明度
+    updates.opacity = config.opacity
   }
   
   await updateSpriteForTimelineData(timelineData, updates)

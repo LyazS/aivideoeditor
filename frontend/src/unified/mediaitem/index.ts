@@ -7,6 +7,7 @@
 export type {
   MediaStatus,
   MediaType,
+  MediaTypeOrUnknown,
   WebAVObjects,
   UnifiedMediaItemData
 } from './types'

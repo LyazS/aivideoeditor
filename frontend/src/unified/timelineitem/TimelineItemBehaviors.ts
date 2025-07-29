@@ -3,12 +3,16 @@
  * 基于"核心数据与行为分离"的重构方案 - 无状态纯函数
  */
 
+import type { MediaTypeOrUnknown } from '../mediaitem'
 import type {
   UnifiedTimelineItemData,
-  TimelineItemStatus
+  TimelineItemStatus,
+  UnknownTimelineItem,
+  GetExtendedMediaConfig,
+  GetTimeRange
 } from './TimelineItemData'
 import { VALID_TIMELINE_TRANSITIONS } from './TimelineItemData'
-import type { BaseTimeRange } from '../../types'
+import type { BaseTimeRange, MediaType } from '../../types'
 
 
 // ==================== 状态转换行为函数 ====================
@@ -121,28 +125,28 @@ export function canTransitionTo(
 /**
  * 检查是否为就绪状态
  */
-export function isReady(data: UnifiedTimelineItemData): boolean {
+export function isReady(data: UnifiedTimelineItemData<MediaTypeOrUnknown>): boolean {
   return data.timelineStatus === 'ready' && !!data.sprite
 }
 
 /**
  * 检查是否正在加载
  */
-export function isLoading(data: UnifiedTimelineItemData): boolean {
+export function isLoading(data: UnifiedTimelineItemData<MediaTypeOrUnknown>): boolean {
   return data.timelineStatus === 'loading'
 }
 
 /**
  * 检查是否有错误
  */
-export function hasError(data: UnifiedTimelineItemData): boolean {
+export function hasError(data: UnifiedTimelineItemData<MediaTypeOrUnknown>): boolean {
   return data.timelineStatus === 'error'
 }
 
 /**
  * 获取项目持续时间（帧数）
  */
-export function getDuration(data: UnifiedTimelineItemData): number {
+export function getDuration(data: UnifiedTimelineItemData<MediaTypeOrUnknown>): number {
   return data.timeRange.timelineEndTime - data.timeRange.timelineStartTime
 }
 
@@ -257,4 +261,24 @@ async function updateSpriteTimeRange(
   } catch (error) {
     console.error('更新Sprite时间范围失败:', error)
   }
+}
+
+// ==================== 类型转换函数 ====================
+
+/**
+ * 将未知类型的时间轴项目转换为已知类型
+ * 用于异步处理完成后的类型转换
+ */
+export function convertUnknownToKnown<T extends MediaType>(
+  unknownItem: UnknownTimelineItem,
+  newMediaType: T,
+  newConfig: GetExtendedMediaConfig<T>,
+  newTimeRange: GetTimeRange<T>
+): UnifiedTimelineItemData<T> {
+  return {
+    ...unknownItem,
+    mediaType: newMediaType,
+    config: newConfig,
+    timeRange: newTimeRange,
+  } as UnifiedTimelineItemData<T>
 }

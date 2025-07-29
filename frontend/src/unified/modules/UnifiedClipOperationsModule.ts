@@ -6,6 +6,7 @@ import { ImageVisibleSprite } from '../../utils/ImageVisibleSprite'
 import { AudioVisibleSprite } from '../../utils/AudioVisibleSprite'
 import { syncTimeRange } from '../utils/UnifiedTimeRangeUtils'
 import { isReady } from '../timelineitem/TimelineItemQueries'
+import { isVideoTimeRange } from '../../types'
 
 /**
  * 统一片段操作模块
@@ -52,9 +53,8 @@ export function createUnifiedClipOperationsModule(
       
       // 计算裁剪时长（对于视频/音频）
       let clipDurationFrames = 0
-      if (item.config.videoConfig?.clipStartTime !== undefined && 
-          item.config.videoConfig?.clipEndTime !== undefined) {
-        clipDurationFrames = item.config.videoConfig.clipEndTime - item.config.videoConfig.clipStartTime
+      if (isVideoTimeRange(timeRange)) {
+        clipDurationFrames = timeRange.clipEndTime - timeRange.clipStartTime
       } else {
         // 如果没有裁剪配置，使用当前时间轴时长
         clipDurationFrames = timeRange.timelineEndTime - timeRange.timelineStartTime
@@ -64,7 +64,7 @@ export function createUnifiedClipOperationsModule(
       newDurationFrames = Math.round(clipDurationFrames / clampedRate)
 
       // 如果有关键帧，先调整位置
-      if (item.config.transform && hasKeyframes(item)) {
+      if (hasKeyframes(item)) {
         adjustKeyframesForDurationChange(item, oldDurationFrames, newDurationFrames)
           .then(() => {
             console.log('🎬 [UnifiedClipOperations] Keyframes adjusted for speed change:', {
@@ -92,11 +92,10 @@ export function createUnifiedClipOperationsModule(
       syncTimeRange(item)
     }
 
-    // 更新配置中的播放速度
-    if (!item.config.transform) {
-      item.config.transform = {}
+    // 更新时间范围中的播放速度（对于视频/音频）
+    if (isVideoTimeRange(item.timeRange)) {
+      item.timeRange.playbackRate = clampedRate
     }
-    item.config.transform.playbackRate = clampedRate
 
     // 如果有动画，需要重新设置WebAV动画时长
     if (hasAnimation(item)) {
@@ -134,7 +133,10 @@ export function createUnifiedClipOperationsModule(
    * 获取当前播放速度
    */
   function getCurrentPlaybackRate(item: UnifiedTimelineItemData): number {
-    return item.config.transform?.playbackRate || 1
+    if (isVideoTimeRange(item.timeRange)) {
+      return item.timeRange.playbackRate || 1
+    }
+    return 1
   }
 
   /**

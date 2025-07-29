@@ -28,6 +28,11 @@ export type MediaStatus =
 export type MediaType = 'video' | 'image' | 'audio' | 'text'
 
 /**
+ * 异步处理素材在处理前使用 'unknown' 类型，处理后使用实际检测到的类型
+ */
+export type MediaTypeOrUnknown = MediaType | 'unknown'
+
+/**
  * WebAV对象接口
  */
 export interface WebAVObjects {

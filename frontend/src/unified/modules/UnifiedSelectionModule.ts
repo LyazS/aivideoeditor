@@ -133,15 +133,8 @@ export function createUnifiedSelectionModule(
     // 创建选择命令
     const command = new UnifiedSelectTimelineItemsCommand(
       itemIds,
-      mode,
-      {
-        selectedTimelineItemIds,
-        selectTimelineItems: (ids: string[], m: 'replace' | 'toggle') =>
-          selectTimelineItems(ids, m, false),
-        syncAVCanvasSelection,
-      },
-      { getTimelineItem },
-      { getMediaItem },
+      undefined, // trackId
+      mode === 'toggle' // addToSelection
     )
 
     // 执行命令（这会自动添加到历史记录）

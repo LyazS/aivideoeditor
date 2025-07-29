@@ -10,7 +10,7 @@
  */
 
 import type { Raw } from 'vue'
-import type { MediaType } from '../mediaitem'
+import type { MediaType, MediaTypeOrUnknown } from '../mediaitem'
 import type {
   BaseTimeRange,
   VideoTimeRange,
@@ -20,7 +20,7 @@ import type {
   VideoMediaConfig,
   ImageMediaConfig,
   AudioMediaConfig,
-  TextMediaConfig
+  TextMediaConfig,
 } from '../../types'
 
 // ==================== 基础类型定义 ====================
@@ -29,35 +29,32 @@ import type {
  * 时间轴项目状态类型 - 3状态简化版
  */
 export type TimelineItemStatus =
-  | 'ready'    // 完全就绪，可用于时间轴
-  | 'loading'  // 正在处理中，包含下载、解析、等待
-  | 'error'    // 不可用状态，包含错误、缺失、取消
+  | 'ready' // 完全就绪，可用于时间轴
+  | 'loading' // 正在处理中，包含下载、解析、等待
+  | 'error' // 不可用状态，包含错误、缺失、取消
 
-/**
- * 媒体类型（包含unknown用于异步处理）
- */
-export type MediaTypeOrUnknown = MediaType | 'unknown'
+
 
 /**
  * 状态转换规则定义
  */
 export const VALID_TIMELINE_TRANSITIONS: Record<TimelineItemStatus, TimelineItemStatus[]> = {
-  'loading': ['ready', 'error'],
-  'ready': ['loading', 'error'],
-  'error': ['loading']
+  loading: ['ready', 'error'],
+  ready: ['loading', 'error'],
+  error: ['loading'],
 } as const
 
 /**
  * 媒体状态到时间轴状态的映射表
  */
 export const MEDIA_TO_TIMELINE_STATUS_MAP = {
-  'pending': 'loading',           // 等待开始 → 加载中
-  'asyncprocessing': 'loading',   // 异步处理中 → 加载中
-  'webavdecoding': 'loading',     // WebAV解析中 → 加载中
-  'ready': 'ready',               // 就绪 → 就绪
-  'error': 'error',               // 错误 → 错误
-  'cancelled': 'error',           // 已取消 → 错误
-  'missing': 'error'              // 文件缺失 → 错误
+  pending: 'loading', // 等待开始 → 加载中
+  asyncprocessing: 'loading', // 异步处理中 → 加载中
+  webavdecoding: 'loading', // WebAV解析中 → 加载中
+  ready: 'ready', // 就绪 → 就绪
+  error: 'error', // 错误 → 错误
+  cancelled: 'error', // 已取消 → 错误
+  missing: 'error', // 文件缺失 → 错误
 } as const
 
 // ==================== 时间范围类型映射 ====================
@@ -65,13 +62,17 @@ export const MEDIA_TO_TIMELINE_STATUS_MAP = {
 /**
  * 根据媒体类型获取对应的时间范围类型
  */
-type GetTimeRange<T extends MediaTypeOrUnknown> =
-  T extends 'video' ? VideoTimeRange :
-  T extends 'audio' ? VideoTimeRange :
-  T extends 'image' ? ImageTimeRange :
-  T extends 'text' ? ImageTimeRange :
-  T extends 'unknown' ? BaseTimeRange :
-  BaseTimeRange
+export type GetTimeRange<T extends MediaTypeOrUnknown> = T extends 'video'
+  ? VideoTimeRange
+  : T extends 'audio'
+    ? VideoTimeRange
+    : T extends 'image'
+      ? ImageTimeRange
+      : T extends 'text'
+        ? ImageTimeRange
+        : T extends 'unknown'
+          ? BaseTimeRange
+          : BaseTimeRange
 
 // ==================== 配置类型映射 ====================
 
@@ -167,77 +168,7 @@ export type KnownTimelineItem =
  */
 export type UnknownTimelineItem = UnifiedTimelineItemData<'unknown'>
 
-/**
- * 完整的时间轴项目联合类型
- */
-export type AnyTimelineItem = KnownTimelineItem | UnknownTimelineItem
 
-// ==================== 类型守卫函数 ====================
-
-/**
- * 检查是否为已知媒体类型的时间轴项目
- */
-export function isKnownTimelineItem(
-  item: AnyTimelineItem
-): item is KnownTimelineItem {
-  return item.mediaType !== 'unknown'
-}
-
-/**
- * 检查是否为未知媒体类型的时间轴项目
- */
-export function isUnknownTimelineItem(
-  item: AnyTimelineItem
-): item is UnknownTimelineItem {
-  return item.mediaType === 'unknown'
-}
-
-/**
- * 媒体类型特定的类型守卫
- */
-export function isVideoTimelineItem(
-  item: AnyTimelineItem
-): item is UnifiedTimelineItemData<'video'> {
-  return item.mediaType === 'video'
-}
-
-export function isImageTimelineItem(
-  item: AnyTimelineItem
-): item is UnifiedTimelineItemData<'image'> {
-  return item.mediaType === 'image'
-}
-
-export function isAudioTimelineItem(
-  item: AnyTimelineItem
-): item is UnifiedTimelineItemData<'audio'> {
-  return item.mediaType === 'audio'
-}
-
-export function isTextTimelineItem(
-  item: AnyTimelineItem
-): item is UnifiedTimelineItemData<'text'> {
-  return item.mediaType === 'text'
-}
-
-// ==================== 类型转换函数 ====================
-
-/**
- * 将未知类型的时间轴项目转换为已知类型
- * 用于异步处理完成后的类型转换
- */
-export function convertUnknownToKnown<T extends MediaType>(
-  unknownItem: UnknownTimelineItem,
-  newMediaType: T,
-  newConfig: GetExtendedMediaConfig<T>,
-  newTimeRange: GetTimeRange<T>
-): UnifiedTimelineItemData<T> {
-  return {
-    ...unknownItem,
-    mediaType: newMediaType,
-    config: newConfig,
-    timeRange: newTimeRange,
-  } as UnifiedTimelineItemData<T>
-}
 
 // ==================== 工厂函数选项类型 ====================
 
@@ -275,13 +206,3 @@ export interface CreateTimelineItemOptions {
   mediaType?: MediaTypeOrUnknown
   initialStatus?: TimelineItemStatus
 }
-
-// ==================== 向后兼容的类型别名 ====================
-
-/**
- * 基础时间轴配置（向后兼容）
- * @deprecated 使用 UnknownMediaConfig 替代
- */
-export type BasicTimelineConfig = UnknownMediaConfig
-
-

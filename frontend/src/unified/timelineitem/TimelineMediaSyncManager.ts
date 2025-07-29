@@ -7,10 +7,10 @@ import { watch, type WatchStopHandle } from 'vue'
 import type { UnifiedMediaItemData } from '../mediaitem'
 import type {
   UnifiedTimelineItemData,
-  BasicTimelineConfig,
+  UnknownMediaConfig,
 } from './TimelineItemData'
 import { MEDIA_TO_TIMELINE_STATUS_MAP } from './TimelineItemData'
-import { createTimelineItemData } from './TimelineItemFactory'
+import { createUnknownTimelineItem } from './TimelineItemFactory'
 import { transitionTimelineStatus } from './TimelineItemBehaviors'
 
 
@@ -102,7 +102,7 @@ export class TimelineMediaSyncManager {
     mediaItemId: string,
     trackId: string,
     timeRange: { timelineStartTime: number; timelineEndTime: number },
-    config: BasicTimelineConfig
+    config: UnknownMediaConfig
   ): UnifiedTimelineItemData | null {
     const mediaData = this.mediaItems.get(mediaItemId)
 
@@ -112,12 +112,11 @@ export class TimelineMediaSyncManager {
     }
 
     // 创建响应式TimelineItem数据
-    const timelineData = createTimelineItemData({
+    const timelineData = createUnknownTimelineItem({
       mediaItemId,
       trackId,
       timeRange,
-      config,
-      mediaType: mediaData.mediaType
+      config
     })
 
     // 根据MediaItem状态设置初始状态
@@ -142,7 +141,7 @@ export class TimelineMediaSyncManager {
     mediaItemId: string
     trackId: string
     timeRange: { timelineStartTime: number; timelineEndTime: number }
-    config: BasicTimelineConfig
+    config: UnknownMediaConfig
   }>): UnifiedTimelineItemData[] {
     const results: UnifiedTimelineItemData[] = []
 

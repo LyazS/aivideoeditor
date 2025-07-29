@@ -8,10 +8,15 @@ export type {
   // 核心数据类型
   UnifiedTimelineItemData,
   TimelineItemStatus,
-  BasicTimelineConfig,
   TransformData,
-  CreateTimelineItemOptions
+  CreateTimelineItemOptions,
+  UnknownMediaConfig,
+  KnownTimelineItem,
+  UnknownTimelineItem
 } from './TimelineItemData'
+
+// 从mediaitem模块导入MediaTypeOrUnknown
+export type { MediaTypeOrUnknown } from '../mediaitem'
 
 // ==================== 常量导出 ====================
 export {
@@ -22,9 +27,8 @@ export {
 // ==================== 工厂函数导出 ====================
 export {
   // 主要工厂函数
-  createTimelineItemData,
-  createBasicTimelineConfig,
-  createDefaultTransform,
+  createUnknownTimelineItem,
+  createDefaultUnknownConfig,
 
   // 便捷工厂函数
   createVideoTimelineItem,
@@ -32,11 +36,11 @@ export {
   createImageTimelineItem,
 
   // 克隆和复制函数
-  cloneTimelineItemData,
+  cloneTimelineItem,
   duplicateTimelineItem,
 
   // 验证函数
-  validateTimelineItemData,
+  validateTimelineItem,
 
   // 工厂函数集合
   TimelineItemFactory
@@ -69,7 +73,10 @@ export {
   // 时间范围操作函数
   updateTimeRange,
   moveTimelineItem,
-  resizeTimelineItem
+  resizeTimelineItem,
+
+  // 类型转换函数
+  convertUnknownToKnown
 } from './TimelineItemBehaviors'
 
 // 从 TimelineItemBehaviors 导出的状态查询函数（避免与 TimelineItemQueries 冲突）
@@ -83,6 +90,16 @@ export {
 
 // ==================== 查询工具导出 ====================
 export {
+  // 类型守卫函数
+  isKnownTimelineItem,
+  isUnknownTimelineItem,
+  isVideoTimelineItem,
+  isImageTimelineItem,
+  isAudioTimelineItem,
+  isTextTimelineItem,
+  hasVisualProperties,
+  hasAudioProperties,
+
   // 状态查询（主要使用这些）
   isReady,
   isLoading,
@@ -202,13 +219,13 @@ export {
 
 // 导入所有需要的函数用于默认导出
 import {
-  createTimelineItemData,
+  createUnknownTimelineItem,
   createVideoTimelineItem,
   createAudioTimelineItem,
   createImageTimelineItem,
-  cloneTimelineItemData,
+  cloneTimelineItem,
   duplicateTimelineItem,
-  validateTimelineItemData
+  validateTimelineItem
 } from './TimelineItemFactory'
 
 import {
@@ -220,10 +237,19 @@ import {
   resetToLoading,
   updateTimeRange,
   moveTimelineItem,
-  resizeTimelineItem
+  resizeTimelineItem,
+  convertUnknownToKnown
 } from './TimelineItemBehaviors'
 
 import {
+  isKnownTimelineItem,
+  isUnknownTimelineItem,
+  isVideoTimelineItem,
+  isImageTimelineItem,
+  isAudioTimelineItem,
+  isTextTimelineItem,
+  hasVisualProperties,
+  hasAudioProperties,
   isReady,
   isLoading,
   hasError,
@@ -240,6 +266,7 @@ import {
 import { TimelineStatusDisplayUtils, createStatusDisplayComputeds } from './TimelineStatusDisplayUtils'
 import { TimelineMediaSyncManager } from './TimelineMediaSyncManager'
 import type { UnifiedTimelineItemData } from './TimelineItemData'
+import type { MediaTypeOrUnknown } from '../mediaitem'
 
 /**
  * 默认导出：统一时间轴项目工具集合
@@ -247,13 +274,13 @@ import type { UnifiedTimelineItemData } from './TimelineItemData'
 export default {
   // 工厂函数
   Factory: {
-    create: createTimelineItemData,
+    create: createUnknownTimelineItem,
     createVideo: createVideoTimelineItem,
     createAudio: createAudioTimelineItem,
     createImage: createImageTimelineItem,
-    clone: cloneTimelineItemData,
+    clone: cloneTimelineItem,
     duplicate: duplicateTimelineItem,
-    validate: validateTimelineItemData
+    validate: validateTimelineItem
   },
 
   // 行为函数
@@ -270,15 +297,29 @@ export default {
     // 时间范围操作
     updateTimeRange,
     moveItem: moveTimelineItem,
-    resizeItem: resizeTimelineItem
+    resizeItem: resizeTimelineItem,
+
+    // 类型转换函数
+    convertUnknownToKnown
   },
 
   // 查询函数
   Queries: {
+    // 类型守卫
+    isKnownTimelineItem,
+    isUnknownTimelineItem,
+    isVideoTimelineItem,
+    isImageTimelineItem,
+    isAudioTimelineItem,
+    isTextTimelineItem,
+    hasVisualProperties,
+    hasAudioProperties,
+
+    // 状态查询
     isReady,
     isLoading,
     hasError,
-    canPlay: (data: UnifiedTimelineItemData) => isReady(data) && hasValidTimeRange(data),
+    canPlay: (data: UnifiedTimelineItemData<MediaTypeOrUnknown>) => isReady(data) && hasValidTimeRange(data),
     getDuration,
     getStatusText,
     getProgressInfo,
