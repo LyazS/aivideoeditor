@@ -53,3 +53,14 @@ export {
   // 全局管理器
   globalUnifiedWebAVAnimationManager
 } from './UnifiedWebAVAnimationManager'
+
+// ==================== 统一Sprite工厂 ====================
+export {
+  // 主要工厂函数
+  createSpriteFromUnifiedMediaItem,
+  
+  // 辅助函数
+  canCreateSpriteFromUnifiedMediaItem,
+  getSpriteTypeFromUnifiedMediaItem,
+  batchCheckCanCreateSprite
+} from './UnifiedSpriteFactory'

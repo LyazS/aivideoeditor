@@ -44,3 +44,36 @@ export {
   createUnifiedClipOperationsModule,
   type UnifiedClipOperationsModule
 } from './UnifiedClipOperationsModule'
+
+// ==================== 统一配置模块 ====================
+export {
+  createUnifiedConfigModule,
+  type UnifiedConfigModule
+} from './UnifiedConfigModule'
+
+// ==================== 统一历史记录模块 ====================
+export {
+  createUnifiedHistoryModule,
+  BaseBatchCommand,
+  BatchBuilder,
+  GenericBatchCommand,
+  type UnifiedHistoryModule
+} from './UnifiedHistoryModule'
+
+// ==================== 统一通知模块 ====================
+export {
+  createUnifiedNotificationModule,
+  type UnifiedNotificationModule
+} from './UnifiedNotificationModule'
+
+// ==================== 统一播放控制模块 ====================
+export {
+  createUnifiedPlaybackModule,
+  type UnifiedPlaybackModule
+} from './UnifiedPlaybackModule'
+
+// ==================== 统一WebAV模块 ====================
+export {
+  createUnifiedWebavModule,
+  type UnifiedWebavModule
+} from './UnifiedWebavModule'

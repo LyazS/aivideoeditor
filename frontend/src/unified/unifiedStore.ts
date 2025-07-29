@@ -7,11 +7,11 @@ import { createUnifiedProjectModule } from './modules/UnifiedProjectModule'
 import { createUnifiedViewportModule } from './modules/UnifiedViewportModule'
 import { createUnifiedSelectionModule } from './modules/UnifiedSelectionModule'
 import { createUnifiedClipOperationsModule } from './modules/UnifiedClipOperationsModule'
-import { createConfigModule } from '@/stores/modules/configModule'
-import { createPlaybackModule } from '@/stores/modules/playbackModule'
-import { createWebAVModule } from '@/stores/modules/webavModule'
-import { createNotificationModule } from '@/stores/modules/notificationModule'
-import { createHistoryModule } from '@/stores/modules/historyModule'
+import { createUnifiedConfigModule } from './modules/UnifiedConfigModule'
+import { createUnifiedPlaybackModule } from './modules/UnifiedPlaybackModule'
+import { createUnifiedWebavModule } from './modules/UnifiedWebavModule'
+import { createUnifiedNotificationModule } from './modules/UnifiedNotificationModule'
+import { createUnifiedHistoryModule } from './modules/UnifiedHistoryModule'
 import { calculateTotalDurationFrames } from './utils/UnifiedDurationUtils'
 import type { UnifiedMediaItemData, MediaType } from '@/unified'
 import type { UnifiedTrackType } from './track/TrackTypes'
@@ -27,11 +27,15 @@ import type { UnifiedTimelineItemData } from './timelineitem/TimelineItemData'
  * 3. 使用 UnifiedTimelineModule 管理统一时间轴项目
  * 4. 使用 UnifiedProjectModule 管理统一项目配置
  * 5. 使用 UnifiedViewportModule 管理统一视口缩放滚动
- * 6. 集成 NotificationModule 提供通知管理功能
- * 7. 集成 HistoryModule 提供撤销重做功能（待适配新架构命令）
- * 8. 保持模块化设计，各模块职责清晰
- * 9. 兼容现有的配置、播放控制和WebAV集成
- * 10. 提供完整的视频编辑功能支持
+ * 6. 使用 UnifiedSelectionModule 管理时间轴项目和媒体项目的选择状态
+ * 7. 使用 UnifiedClipOperationsModule 提供片段操作功能
+ * 8. 使用 UnifiedConfigModule 管理视频编辑器全局配置
+ * 9. 使用 UnifiedPlaybackModule 管理播放控制功能
+ * 10. 使用 UnifiedWebavModule 管理WebAV集成和画布操作
+ * 11. 集成 UnifiedNotificationModule 提供通知管理功能
+ * 12. 集成 UnifiedHistoryModule 提供撤销重做功能
+ * 13. 保持模块化设计，各模块职责清晰
+ * 14. 提供完整的视频编辑功能支持
  */
 export const useUnifiedStore = defineStore('unified', () => {
   // ==================== 核心模块初始化 ====================
@@ -43,18 +47,18 @@ export const useUnifiedStore = defineStore('unified', () => {
   const unifiedTrackModule = createUnifiedTrackModule()
 
   // 创建配置管理模块
-  const configModule = createConfigModule()
+  const unifiedConfigModule = createUnifiedConfigModule()
 
   // 创建播放控制模块
-  const playbackModule = createPlaybackModule(configModule.frameRate)
+  const unifiedPlaybackModule = createUnifiedPlaybackModule(unifiedConfigModule.frameRate)
 
   // 创建WebAV集成模块
-  const webavModule = createWebAVModule()
+  const unifiedWebavModule = createUnifiedWebavModule()
 
   // 创建统一时间轴管理模块（需要依赖其他模块）
   const unifiedTimelineModule = createUnifiedTimelineModule(
-    configModule,
-    webavModule,
+    unifiedConfigModule,
+    unifiedWebavModule,
     unifiedMediaModule,
     unifiedTrackModule
   )
@@ -70,7 +74,7 @@ export const useUnifiedStore = defineStore('unified', () => {
   const totalDurationFrames = computed(() => {
     return calculateTotalDurationFrames(
       unifiedTimelineModule.timelineItems.value,
-      configModule.timelineDurationFrames.value,
+      unifiedConfigModule.timelineDurationFrames.value,
     )
   })
 
@@ -78,20 +82,20 @@ export const useUnifiedStore = defineStore('unified', () => {
   const unifiedViewportModule = createUnifiedViewportModule(
     unifiedTimelineModule.timelineItems,
     totalDurationFrames,
-    configModule.timelineDurationFrames,
+    unifiedConfigModule.timelineDurationFrames,
   )
 
   // 创建通知管理模块
-  const notificationModule = createNotificationModule()
+  const unifiedNotificationModule = createUnifiedNotificationModule()
 
-  // 创建历史管理模块（需要在notificationModule之后创建）
-  const historyModule = createHistoryModule(notificationModule)
+  // 创建历史管理模块（需要在unifiedNotificationModule之后创建）
+  const unifiedHistoryModule = createUnifiedHistoryModule(unifiedNotificationModule)
 
-  // 创建统一选择管理模块（需要在historyModule之后创建）
+  // 创建统一选择管理模块（需要在unifiedHistoryModule之后创建）
   const unifiedSelectionModule = createUnifiedSelectionModule(
     unifiedTimelineModule.getTimelineItem,
     unifiedMediaModule.getMediaItem,
-    historyModule.executeCommand,
+    unifiedHistoryModule.executeCommand,
   )
 
   // 创建统一片段操作模块（需要在其他模块之后创建）
@@ -141,7 +145,7 @@ export const useUnifiedStore = defineStore('unified', () => {
    * WebAV是否可用（保留，因为是方法调用的计算属性）
    */
   const isWebAVAvailable = computed(() => {
-    return webavModule.isWebAVAvailable()
+    return unifiedWebavModule.isWebAVAvailable()
   })
 
   // ==================== 媒体管理方法 ====================
@@ -188,8 +192,8 @@ export const useUnifiedStore = defineStore('unified', () => {
   function removeTrack(trackId: string) {
     const track = unifiedTrackModule.getTrack(trackId)
     if (track) {
-      // 注意：这里需要传入时间轴项目引用，但目前统一架构中还没有时间轴模块
-      // 暂时传入空的引用，等时间轴模块集成后再完善
+      // 注意：这里应该传入时间轴项目引用，但为了保持代码简洁
+      // 暂时传入空的引用，后续可以直接使用unifiedTimelineModule.timelineItems
       const emptyTimelineItems = ref([])
       unifiedTrackModule.removeTrack(trackId, emptyTimelineItems)
       console.log('🗑️ [UnifiedStore] 移除轨道:', track.name)
@@ -253,17 +257,17 @@ export const useUnifiedStore = defineStore('unified', () => {
    * 重置所有模块到默认状态
    */
   function resetToDefaults() {
-    configModule.resetToDefaults()
-    playbackModule.resetToDefaults()
-    webavModule.resetToDefaults()
+    unifiedConfigModule.resetToDefaults()
+    unifiedPlaybackModule.resetToDefaults()
+    unifiedWebavModule.resetToDefaults()
     unifiedTrackModule.resetTracksToDefaults()
     unifiedProjectModule.resetLoadingState()
     unifiedViewportModule.resetViewport()
-    notificationModule.clearNotifications(true) // 清空所有通知，包括持久化通知
-    historyModule.clear() // 清空历史记录
+    unifiedNotificationModule.clearNotifications(true) // 清空所有通知，包括持久化通知
+    unifiedHistoryModule.clear() // 清空历史记录
     unifiedSelectionModule.resetToDefaults() // 重置选择状态
     // 注意：UnifiedMediaModule、UnifiedTimelineModule和UnifiedClipOperationsModule没有resetToDefaults方法
-    // 它们的状态通过清空数组来重置或者没有需要重置的状态
+    // 这些统一模块的状态通过清空数组或重置内部状态来实现重置功能
     console.log('🔄 [UnifiedStore] 重置所有模块到默认状态')
   }
 
@@ -409,98 +413,98 @@ export const useUnifiedStore = defineStore('unified', () => {
     // ==================== 播放控制模块状态和方法 ====================
 
     // 播放控制状态
-    currentFrame: playbackModule.currentFrame,
-    isPlaying: playbackModule.isPlaying,
-    playbackRate: playbackModule.playbackRate,
+    currentFrame: unifiedPlaybackModule.currentFrame,
+    isPlaying: unifiedPlaybackModule.isPlaying,
+    playbackRate: unifiedPlaybackModule.playbackRate,
 
     // 计算属性
-    formattedCurrentTime: playbackModule.formattedCurrentTime,
-    playbackRateText: playbackModule.playbackRateText,
+    formattedCurrentTime: unifiedPlaybackModule.formattedCurrentTime,
+    playbackRateText: unifiedPlaybackModule.playbackRateText,
 
     // 帧数控制方法
-    setCurrentFrame: playbackModule.setCurrentFrame,
-    seekToFrame: playbackModule.seekToFrame,
-    seekByFrames: playbackModule.seekByFrames,
-    nextFrame: playbackModule.nextFrame,
-    previousFrame: playbackModule.previousFrame,
+    setCurrentFrame: unifiedPlaybackModule.setCurrentFrame,
+    seekToFrame: unifiedPlaybackModule.seekToFrame,
+    seekByFrames: unifiedPlaybackModule.seekByFrames,
+    nextFrame: unifiedPlaybackModule.nextFrame,
+    previousFrame: unifiedPlaybackModule.previousFrame,
 
     // 播放控制方法
-    setPlaying: playbackModule.setPlaying,
-    play: playbackModule.play,
-    pause: playbackModule.pause,
-    togglePlayPause: playbackModule.togglePlayPause,
-    stop: playbackModule.stop,
-    setPlaybackRate: playbackModule.setPlaybackRate,
-    resetPlaybackRate: playbackModule.resetPlaybackRate,
-    getPlaybackSummary: playbackModule.getPlaybackSummary,
-    resetPlaybackToDefaults: playbackModule.resetToDefaults,
+    setPlaying: unifiedPlaybackModule.setPlaying,
+    play: unifiedPlaybackModule.play,
+    pause: unifiedPlaybackModule.pause,
+    togglePlayPause: unifiedPlaybackModule.togglePlayPause,
+    stop: unifiedPlaybackModule.stop,
+    setPlaybackRate: unifiedPlaybackModule.setPlaybackRate,
+    resetPlaybackRate: unifiedPlaybackModule.resetPlaybackRate,
+    getPlaybackSummary: unifiedPlaybackModule.getPlaybackSummary,
+    resetPlaybackToDefaults: unifiedPlaybackModule.resetToDefaults,
 
     // ==================== 配置模块状态和方法 ====================
 
     // 配置状态
-    videoResolution: configModule.videoResolution,
-    frameRate: configModule.frameRate,
-    timelineDurationFrames: configModule.timelineDurationFrames,
-    proportionalScale: configModule.proportionalScale,
+    videoResolution: unifiedConfigModule.videoResolution,
+    frameRate: unifiedConfigModule.frameRate,
+    timelineDurationFrames: unifiedConfigModule.timelineDurationFrames,
+    proportionalScale: unifiedConfigModule.proportionalScale,
 
     // 配置管理方法
-    setVideoResolution: configModule.setVideoResolution,
-    setFrameRate: configModule.setFrameRate,
-    setTimelineDurationFrames: configModule.setTimelineDurationFrames,
-    setProportionalScale: configModule.setProportionalScale,
-    getConfigSummary: configModule.getConfigSummary,
-    resetConfigToDefaults: configModule.resetToDefaults,
-    restoreFromProjectSettings: configModule.restoreFromProjectSettings,
+    setVideoResolution: unifiedConfigModule.setVideoResolution,
+    setFrameRate: unifiedConfigModule.setFrameRate,
+    setTimelineDurationFrames: unifiedConfigModule.setTimelineDurationFrames,
+    setProportionalScale: unifiedConfigModule.setProportionalScale,
+    getConfigSummary: unifiedConfigModule.getConfigSummary,
+    resetConfigToDefaults: unifiedConfigModule.resetToDefaults,
+    restoreFromProjectSettings: unifiedConfigModule.restoreFromProjectSettings,
 
     // ==================== WebAV模块状态和方法 ====================
 
     // WebAV状态
-    avCanvas: webavModule.avCanvas,
-    isWebAVReady: webavModule.isWebAVReady,
-    webAVError: webavModule.webAVError,
+    avCanvas: unifiedWebavModule.avCanvas,
+    isWebAVReady: unifiedWebavModule.isWebAVReady,
+    webAVError: unifiedWebavModule.webAVError,
 
     // WebAV管理方法
-    setAVCanvas: webavModule.setAVCanvas,
-    setWebAVReady: webavModule.setWebAVReady,
-    setWebAVError: webavModule.setWebAVError,
-    clearWebAVState: webavModule.clearWebAVState,
-    getWebAVSummary: webavModule.getWebAVSummary,
-    resetWebAVToDefaults: webavModule.resetToDefaults,
-    addSpriteToCanvas: webavModule.addSprite,
-    removeSpriteFromCanvas: webavModule.removeSprite,
+    setAVCanvas: unifiedWebavModule.setAVCanvas,
+    setWebAVReady: unifiedWebavModule.setWebAVReady,
+    setWebAVError: unifiedWebavModule.setWebAVError,
+    clearWebAVState: unifiedWebavModule.clearWebAVState,
+    getWebAVSummary: unifiedWebavModule.getWebAVSummary,
+    resetWebAVToDefaults: unifiedWebavModule.resetToDefaults,
+    addSpriteToCanvas: unifiedWebavModule.addSprite,
+    removeSpriteFromCanvas: unifiedWebavModule.removeSprite,
 
     // WebAV画布容器管理
-    createCanvasContainer: webavModule.createCanvasContainer,
-    initializeCanvas: webavModule.initializeCanvas,
-    getAVCanvas: webavModule.getAVCanvas,
-    getCanvasContainer: webavModule.getCanvasContainer,
+    createCanvasContainer: unifiedWebavModule.createCanvasContainer,
+    initializeCanvas: unifiedWebavModule.initializeCanvas,
+    getAVCanvas: unifiedWebavModule.getAVCanvas,
+    getCanvasContainer: unifiedWebavModule.getCanvasContainer,
 
     // WebAV播放控制
-    webAVPlay: webavModule.play,
-    webAVPause: webavModule.pause,
-    webAVSeekTo: webavModule.seekTo,
+    webAVPlay: unifiedWebavModule.play,
+    webAVPause: unifiedWebavModule.pause,
+    webAVSeekTo: unifiedWebavModule.seekTo,
 
     // WebAV Clip创建和管理
-    createMP4Clip: webavModule.createMP4Clip,
-    createImgClip: webavModule.createImgClip,
-    createAudioClip: webavModule.createAudioClip,
-    cloneMP4Clip: webavModule.cloneMP4Clip,
-    cloneImgClip: webavModule.cloneImgClip,
-    cloneAudioClip: webavModule.cloneAudioClip,
+    createMP4Clip: unifiedWebavModule.createMP4Clip,
+    createImgClip: unifiedWebavModule.createImgClip,
+    createAudioClip: unifiedWebavModule.createAudioClip,
+    cloneMP4Clip: unifiedWebavModule.cloneMP4Clip,
+    cloneImgClip: unifiedWebavModule.cloneImgClip,
+    cloneAudioClip: unifiedWebavModule.cloneAudioClip,
 
     // WebAV实例管理
-    destroyWebAV: webavModule.destroy,
-    isWebAVReadyGlobal: webavModule.isWebAVReadyGlobal,
-    waitForWebAVReady: webavModule.waitForWebAVReady,
+    destroyWebAV: unifiedWebavModule.destroy,
+    isWebAVReadyGlobal: unifiedWebavModule.isWebAVReadyGlobal,
+    waitForWebAVReady: unifiedWebavModule.waitForWebAVReady,
 
     // WebAV画布销毁和重建
-    destroyCanvas: webavModule.destroyCanvas,
-    recreateCanvas: webavModule.recreateCanvas,
+    destroyCanvas: unifiedWebavModule.destroyCanvas,
+    recreateCanvas: unifiedWebavModule.recreateCanvas,
 
     // ==================== Sprite操作工具 ====================
 
     // 注意：SpriteLifecycleManager已移除，Sprite操作现在通过TimelineItemData直接管理
-    // 相关方法：createSpriteForTimelineData, destroySpriteForTimelineData, updateSpriteForTimelineData
+    // 相关方法已集成到统一时间轴模块中，如：updateTimelineItemSprite, addSpriteToCanvas, removeSpriteFromCanvas等
 
     // ==================== 计算属性 ====================
 
@@ -539,35 +543,35 @@ export const useUnifiedStore = defineStore('unified', () => {
     // ==================== 通知模块状态和方法 ====================
 
     // 通知状态
-    notifications: notificationModule.notifications,
+    notifications: unifiedNotificationModule.notifications,
 
     // 通知管理方法
-    showNotification: notificationModule.showNotification,
-    removeNotification: notificationModule.removeNotification,
-    clearNotifications: notificationModule.clearNotifications,
-    removeNotificationsByType: notificationModule.removeNotificationsByType,
-    getNotificationCountByType: notificationModule.getNotificationCountByType,
+    showNotification: unifiedNotificationModule.showNotification,
+    removeNotification: unifiedNotificationModule.removeNotification,
+    clearNotifications: unifiedNotificationModule.clearNotifications,
+    removeNotificationsByType: unifiedNotificationModule.removeNotificationsByType,
+    getNotificationCountByType: unifiedNotificationModule.getNotificationCountByType,
 
     // 便捷通知方法
-    showSuccess: notificationModule.showSuccess,
-    showError: notificationModule.showError,
-    showWarning: notificationModule.showWarning,
-    showInfo: notificationModule.showInfo,
+    showSuccess: unifiedNotificationModule.showSuccess,
+    showError: unifiedNotificationModule.showError,
+    showWarning: unifiedNotificationModule.showWarning,
+    showInfo: unifiedNotificationModule.showInfo,
 
     // ==================== 历史模块状态和方法 ====================
 
     // 历史状态
-    canUndo: historyModule.canUndo,
-    canRedo: historyModule.canRedo,
+    canUndo: unifiedHistoryModule.canUndo,
+    canRedo: unifiedHistoryModule.canRedo,
 
     // 历史操作方法
-    executeCommand: historyModule.executeCommand,
-    undo: historyModule.undo,
-    redo: historyModule.redo,
-    clearHistory: historyModule.clear,
-    getHistorySummary: historyModule.getHistorySummary,
-    startBatch: historyModule.startBatch,
-    executeBatchCommand: historyModule.executeBatchCommand,
+    executeCommand: unifiedHistoryModule.executeCommand,
+    undo: unifiedHistoryModule.undo,
+    redo: unifiedHistoryModule.redo,
+    clearHistory: unifiedHistoryModule.clear,
+    getHistorySummary: unifiedHistoryModule.getHistorySummary,
+    startBatch: unifiedHistoryModule.startBatch,
+    executeBatchCommand: unifiedHistoryModule.executeBatchCommand,
 
     // ==================== 统一选择模块状态和方法 ====================
 
