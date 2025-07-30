@@ -16,10 +16,27 @@ export {
   type TimelineItemDragData,
   type MediaItemDragData,
   type DragPreviewData,
-  
+
   // 拖拽类型和工具
   type DragDataType,
   type DragOffset,
   type DropPositionResult,
   type DropFramesResult,
 } from './drag'
+
+// ==================== Clip渲染器相关类型 ====================
+export {
+  // 渲染上下文和渲染器接口
+  type ContentRenderContext,
+  type ContentRenderer,
+  type ContentRendererFactory,
+
+  // 渲染器类型定义
+  type StatusRendererType,
+  type MediaTypeRendererType,
+  type RendererType,
+
+  // 组件接口
+  type UnifiedTimelineClipProps,
+  type UnifiedTimelineClipEvents,
+} from './clipRenderer'

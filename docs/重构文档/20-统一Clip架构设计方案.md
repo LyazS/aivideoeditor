@@ -35,15 +35,18 @@
 │  │  │          UnifiedTimelineClip                        │││
 │  │  │  ┌─────────────────────────────────────────────────┐│││
 │  │  │  │         ContentRenderer Strategy                ││││
-│  │  │  │  ┌─────────────────────────────────────────────┐│││
-│  │  │  │  │  VideoContentRenderer                       ││││
-│  │  │  │  │  TextContentRenderer                        ││││
-│  │  │  │  │  AudioContentRenderer                       ││││
-│  │  │  │  │  AsyncProcessingContentRenderer             ││││
-│  │  │  │  └─────────────────────────────────────────────┘│││
-│  │  │  └─────────────────────────────────────────────────┘││
-│  │  └─────────────────────────────────────────────────────┘│
-│  └─────────────────────────────────────────────────────────┘
+│  │  │  │  ┌─────────────────────────────────────────────┐│││|
+│  │  │  │  │  状态优先渲染器:                            ││││|
+│  │  │  │  │  - LoadingContentRenderer                   ││││|
+│  │  │  │  │  - ErrorContentRenderer                     ││││|
+│  │  │  │  │  媒体类型渲染器(ready状态):                  ││││|
+│  │  │  │  │  - VideoContentRenderer                     ││││|
+│  │  │  │  │  - AudioContentRenderer                     ││││|
+│  │  │  │  │  - TextContentRenderer                      ││││|
+│  │  │  │  └─────────────────────────────────────────────┘│││|
+│  │  │  └─────────────────────────────────────────────────┘││|
+│  │  └─────────────────────────────────────────────────────┘│|
+│  └─────────────────────────────────────────────────────────┘|
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -212,18 +215,157 @@ export interface UnifiedTimelineClipEvents {
 
 ### 3.3 具体内容渲染器设计
 
-#### 3.3.1 VideoContentRenderer
+#### 3.3.1 状态优先渲染器
+
+##### LoadingContentRenderer
+```typescript
+/**
+ * 加载状态内容渲染器
+ * 处理所有loading状态的内容渲染，包括异步处理和普通加载
+ */
+export class LoadingContentRenderer implements ContentRenderer<MediaTypeOrUnknown> {
+  readonly type = 'loading' as const
+
+  renderContent(context: ContentRenderContext<MediaTypeOrUnknown>): VNode {
+    const { data, isSelected } = context
+
+    return h('div', {
+      class: ['loading-content', { selected: isSelected }]
+    }, [
+      // 根据媒体类型和具体状态渲染不同内容
+      data.mediaType === 'unknown'
+        ? this.renderAsyncProcessing(context)
+        : this.renderNormalLoading(context)
+    ])
+  }
+
+  renderStatusIndicator(context: ContentRenderContext<MediaTypeOrUnknown>): VNode {
+    return h('div', { class: 'loading-spinner' })
+  }
+
+  renderProgressBar(context: ContentRenderContext<MediaTypeOrUnknown>): VNode | null {
+    const { data } = context
+
+    // 异步处理状态显示进度条
+    if (data.mediaType === 'unknown') {
+      return h('div', { class: 'progress-bar' }, [
+        h('div', {
+          class: 'progress-fill',
+          style: { width: `${this.getAsyncProgress(data)}%` }
+        })
+      ])
+    }
+
+    return null
+  }
+
+  private renderAsyncProcessing(context: ContentRenderContext<'unknown'>): VNode {
+    const { data } = context
+    return h('div', { class: 'async-processing-content' }, [
+      // 处理类型图标
+      this.renderProcessingTypeIcon(data),
+      // 处理状态文本
+      this.renderProcessingStatus(data),
+      // 进度圆环
+      this.renderProgressRing(context)
+    ])
+  }
+
+  private renderNormalLoading(context: ContentRenderContext<MediaTypeOrUnknown>): VNode {
+    return h('div', { class: 'normal-loading-content' }, [
+      h('div', { class: 'loading-spinner' }),
+      h('div', { class: 'loading-text' }, '加载中...')
+    ])
+  }
+
+  private renderProcessingTypeIcon(data: UnifiedTimelineItemData<'unknown'>): VNode {
+    // 实现处理类型图标逻辑
+  }
+
+  private renderProcessingStatus(data: UnifiedTimelineItemData<'unknown'>): VNode {
+    // 实现处理状态显示逻辑
+  }
+
+  private renderProgressRing(context: ContentRenderContext<'unknown'>): VNode {
+    // 实现进度圆环逻辑
+  }
+
+  private getAsyncProgress(data: UnifiedTimelineItemData<'unknown'>): number {
+    // 实现进度计算逻辑
+    return 0
+  }
+}
+```
+
+##### ErrorContentRenderer
+```typescript
+/**
+ * 错误状态内容渲染器
+ * 处理所有error状态的内容渲染
+ */
+export class ErrorContentRenderer implements ContentRenderer<MediaTypeOrUnknown> {
+  readonly type = 'error' as const
+
+  renderContent(context: ContentRenderContext<MediaTypeOrUnknown>): VNode {
+    const { data, isSelected } = context
+
+    return h('div', {
+      class: ['error-content', { selected: isSelected }]
+    }, [
+      // 错误图标
+      this.renderErrorIcon(data),
+      // 错误信息
+      this.renderErrorMessage(data),
+      // 重试按钮（如果支持）
+      this.renderRetryButton(data)
+    ])
+  }
+
+  renderStatusIndicator(context: ContentRenderContext<MediaTypeOrUnknown>): VNode {
+    return h('div', { class: 'error-icon' })
+  }
+
+  getCustomClasses(context: ContentRenderContext<MediaTypeOrUnknown>): string[] {
+    return ['error-state']
+  }
+
+  private renderErrorIcon(data: UnifiedTimelineItemData<MediaTypeOrUnknown>): VNode {
+    return h('div', { class: 'error-icon-large' }, '⚠️')
+  }
+
+  private renderErrorMessage(data: UnifiedTimelineItemData<MediaTypeOrUnknown>): VNode {
+    // 从关联的媒体项目获取错误信息
+    return h('div', { class: 'error-message' }, '加载失败')
+  }
+
+  private renderRetryButton(data: UnifiedTimelineItemData<MediaTypeOrUnknown>): VNode | null {
+    // 根据错误类型决定是否显示重试按钮
+    return h('button', {
+      class: 'retry-button',
+      onClick: () => this.handleRetry(data)
+    }, '重试')
+  }
+
+  private handleRetry(data: UnifiedTimelineItemData<MediaTypeOrUnknown>): void {
+    // 实现重试逻辑
+  }
+}
+```
+
+#### 3.3.2 媒体类型渲染器（仅用于ready状态）
+
+##### VideoContentRenderer
 ```typescript
 /**
  * 视频内容渲染器
- * 处理视频和图片类型的内容渲染
+ * 处理ready状态下视频和图片类型的内容渲染
  */
 export class VideoContentRenderer implements ContentRenderer<'video' | 'image'> {
   readonly type = 'video' as const
-  
+
   renderContent(context: ContentRenderContext<'video' | 'image'>): VNode {
     const { data, isSelected, currentFrame } = context
-    
+
     return h('div', {
       class: ['video-content', { selected: isSelected }]
     }, [
@@ -235,44 +377,33 @@ export class VideoContentRenderer implements ContentRenderer<'video' | 'image'> 
       this.renderClipIndicators(data)
     ])
   }
-  
-  renderStatusIndicator(context: ContentRenderContext<'video' | 'image'>): VNode | null {
-    const { data } = context
-    if (data.timelineStatus === 'loading') {
-      return h('div', { class: 'loading-spinner' })
-    }
-    if (data.timelineStatus === 'error') {
-      return h('div', { class: 'error-icon' })
-    }
-    return null
-  }
-  
+
   private renderThumbnail(data: UnifiedTimelineItemData<'video' | 'image'>, currentFrame: number): VNode {
     // 实现缩略图渲染逻辑
   }
-  
+
   private renderTimeDisplay(data: UnifiedTimelineItemData<'video' | 'image'>): VNode {
     // 实现时间显示逻辑
   }
-  
+
   private renderClipIndicators(data: UnifiedTimelineItemData<'video' | 'image'>): VNode {
     // 实现裁剪指示器逻辑
   }
 }
 ```
 
-#### 3.3.2 AudioContentRenderer
+##### AudioContentRenderer
 ```typescript
 /**
  * 音频内容渲染器
- * 处理音频类型的内容渲染
+ * 处理ready状态下音频类型的内容渲染
  */
 export class AudioContentRenderer implements ContentRenderer<'audio'> {
   readonly type = 'audio' as const
-  
+
   renderContent(context: ContentRenderContext<'audio'>): VNode {
     const { data, isSelected, scale } = context
-    
+
     return h('div', {
       class: ['audio-content', { selected: isSelected }]
     }, [
@@ -284,33 +415,33 @@ export class AudioContentRenderer implements ContentRenderer<'audio'> {
       this.renderMuteIndicator(data)
     ])
   }
-  
+
   private renderWaveform(data: UnifiedTimelineItemData<'audio'>, scale: number): VNode {
     // 实现波形渲染逻辑
   }
-  
+
   private renderVolumeIndicator(data: UnifiedTimelineItemData<'audio'>): VNode {
     // 实现音量指示器逻辑
   }
-  
+
   private renderMuteIndicator(data: UnifiedTimelineItemData<'audio'>): VNode {
     // 实现静音指示器逻辑
   }
 }
 ```
 
-#### 3.3.3 TextContentRenderer
+##### TextContentRenderer
 ```typescript
 /**
  * 文本内容渲染器
- * 处理文本类型的内容渲染
+ * 处理ready状态下文本类型的内容渲染
  */
 export class TextContentRenderer implements ContentRenderer<'text'> {
   readonly type = 'text' as const
-  
+
   renderContent(context: ContentRenderContext<'text'>): VNode {
     const { data, isSelected } = context
-    
+
     return h('div', {
       class: ['text-content', { selected: isSelected }]
     }, [
@@ -320,95 +451,91 @@ export class TextContentRenderer implements ContentRenderer<'text'> {
       this.renderFontInfo(data)
     ])
   }
-  
+
   private renderTextPreview(data: UnifiedTimelineItemData<'text'>): VNode {
     // 实现文本预览逻辑
   }
-  
+
   private renderFontInfo(data: UnifiedTimelineItemData<'text'>): VNode {
     // 实现字体信息显示逻辑
   }
 }
 ```
 
-#### 3.3.4 AsyncProcessingContentRenderer
-```typescript
-/**
- * 异步处理内容渲染器
- * 处理异步处理状态的内容渲染
- */
-export class AsyncProcessingContentRenderer implements ContentRenderer<'unknown'> {
-  readonly type = 'unknown' as const
-  
-  renderContent(context: ContentRenderContext<'unknown'>): VNode {
-    const { data, isSelected } = context
-    
-    return h('div', {
-      class: ['async-processing-content', { selected: isSelected }]
-    }, [
-      // 处理状态显示
-      this.renderProcessingStatus(data),
-      // 进度条
-      this.renderProgressBar(context)
-    ])
-  }
-  
-  renderProgressBar(context: ContentRenderContext<'unknown'>): VNode {
-    const { data } = context
-    // 实现进度条渲染逻辑
-    return h('div', { class: 'progress-bar' }, [
-      h('div', { 
-        class: 'progress-fill',
-        style: { width: `${this.getProgress(data)}%` }
-      })
-    ])
-  }
-  
-  private renderProcessingStatus(data: UnifiedTimelineItemData<'unknown'>): VNode {
-    // 实现处理状态显示逻辑
-  }
-  
-  private getProgress(data: UnifiedTimelineItemData<'unknown'>): number {
-    // 实现进度计算逻辑
-  }
-}
-```
+
 
 ### 3.4 渲染器工厂设计
 
 ```typescript
 /**
  * 内容渲染器工厂
- * 根据媒体类型创建对应的渲染器
+ * 基于状态优先的渲染策略选择合适的渲染器
  */
 export class ContentRendererFactory {
-  private static renderers = new Map<MediaTypeOrUnknown, ContentRenderer>([
+  // 状态优先渲染器
+  private static statusRenderers = new Map<TimelineItemStatus, ContentRenderer>([
+    ['loading', new LoadingContentRenderer()],
+    ['error', new ErrorContentRenderer()]
+  ])
+
+  // 媒体类型渲染器（仅用于ready状态）
+  private static mediaTypeRenderers = new Map<MediaTypeOrUnknown, ContentRenderer>([
     ['video', new VideoContentRenderer()],
     ['image', new VideoContentRenderer()], // 视频和图片使用同一个渲染器
     ['audio', new AudioContentRenderer()],
-    ['text', new TextContentRenderer()],
-    ['unknown', new AsyncProcessingContentRenderer()]
+    ['text', new TextContentRenderer()]
   ])
-  
+
+  // 默认渲染器
+  private static defaultRenderer = new LoadingContentRenderer()
+
   /**
-   * 获取指定类型的内容渲染器
+   * 获取指定数据的内容渲染器
+   * 优先基于状态选择，然后基于媒体类型选择
    */
-  static getRenderer<T extends MediaTypeOrUnknown>(type: T): ContentRenderer<T> {
-    const renderer = this.renderers.get(type)
-    if (!renderer) {
-      throw new Error(`No renderer found for media type: ${type}`)
+  static getRenderer<T extends MediaTypeOrUnknown>(
+    data: UnifiedTimelineItemData<T>
+  ): ContentRenderer<T> {
+    // 优先基于状态选择渲染器
+    if (data.timelineStatus !== 'ready') {
+      const statusRenderer = this.statusRenderers.get(data.timelineStatus)
+      if (statusRenderer) {
+        return statusRenderer as ContentRenderer<T>
+      }
     }
-    return renderer as ContentRenderer<T>
+
+    // ready状态下基于媒体类型选择渲染器
+    if (data.timelineStatus === 'ready') {
+      const mediaTypeRenderer = this.mediaTypeRenderers.get(data.mediaType)
+      if (mediaTypeRenderer) {
+        return mediaTypeRenderer as ContentRenderer<T>
+      }
+    }
+
+    // 兜底渲染器
+    return this.defaultRenderer as ContentRenderer<T>
   }
-  
+
+
+
   /**
-   * 注册自定义渲染器
+   * 注册状态渲染器
    */
-  static registerRenderer<T extends MediaTypeOrUnknown>(
-    type: T, 
+  static registerStatusRenderer(
+    status: TimelineItemStatus,
+    renderer: ContentRenderer
+  ): void {
+    this.statusRenderers.set(status, renderer)
+  }
+
+  /**
+   * 注册媒体类型渲染器
+   */
+  static registerMediaTypeRenderer<T extends MediaTypeOrUnknown>(
+    type: T,
     renderer: ContentRenderer<T>
   ): void {
-    this.renderers.set(type, renderer)
+    this.mediaTypeRenderers.set(type, renderer)
   }
 }
 ```
@@ -423,21 +550,28 @@ export class ContentRendererFactory {
    - [ ] 创建渲染器工厂
 
 2. **第二阶段：内容渲染器实现**
-   - [ ] 实现VideoContentRenderer
-   - [ ] 实现AudioContentRenderer  
-   - [ ] 实现TextContentRenderer
-   - [ ] 实现AsyncProcessingContentRenderer
+   - [ ] 实现状态优先渲染器
+     - [ ] 实现LoadingContentRenderer（处理loading状态）
+     - [ ] 实现ErrorContentRenderer（处理error状态）
+   - [ ] 实现媒体类型渲染器（仅用于ready状态）
+     - [ ] 实现VideoContentRenderer（处理video/image类型）
+     - [ ] 实现AudioContentRenderer（处理audio类型）
+     - [ ] 实现TextContentRenderer（处理text类型）
 
-3. **第三阶段：集成与迁移**
-   - [ ] 修改Timeline.vue中的renderTimelineItem函数
-   - [ ] 更新相关类型定义
-   - [ ] 创建迁移工具函数
+3. **第三阶段：集成到UnifiedTimelineClip**
+   - [ ] 在UnifiedTimelineClip组件中集成渲染器工厂
+   - [ ] 实现渲染器的动态选择和切换逻辑
+   - [ ] 集成渲染上下文的构建和传递
+   - [ ] 处理渲染器的生命周期管理
+   - [ ] 更新Timeline.vue使用UnifiedTimelineClip组件
 
 4. **第四阶段：测试与优化**
-   - [ ] 单元测试
-   - [ ] 集成测试
-   - [ ] 性能优化
-   - [ ] 文档完善
+   - [ ] 单元测试各个渲染器
+   - [ ] 集成测试UnifiedTimelineClip组件
+   - [ ] 性能优化和内存管理
+   - [ ] 文档完善和使用示例
+
+
 
 ### 4.2 文件结构
 
@@ -450,12 +584,15 @@ frontend/src/unified/
 │   └── renderers/                   # 内容渲染器目录
 │       ├── index.ts                 # 渲染器导出
 │       ├── ContentRendererFactory.ts # 渲染器工厂
-│       ├── VideoContentRenderer.ts  # 视频渲染器
-│       ├── AudioContentRenderer.ts  # 音频渲染器
-│       ├── TextContentRenderer.ts   # 文本渲染器
-│       └── AsyncProcessingContentRenderer.ts # 异步处理渲染器
+│       ├── status/                  # 状态优先渲染器
+│       │   ├── LoadingContentRenderer.ts    # 加载状态渲染器
+│       │   └── ErrorContentRenderer.ts     # 错误状态渲染器
+│       └── mediatype/               # 媒体类型渲染器（ready状态）
+│           ├── VideoContentRenderer.ts     # 视频渲染器
+│           ├── AudioContentRenderer.ts     # 音频渲染器
+│           └── TextContentRenderer.ts      # 文本渲染器
 └── utils/
-    └── clipMigration.ts             # 迁移工具函数
+    └── clipUtils.ts                 # Clip相关工具函数
 ```
 
 ## 5. 优势与特点
@@ -464,15 +601,16 @@ frontend/src/unified/
 
 1. **类型安全**：基于TypeScript泛型，编译时确保类型正确性
 2. **策略模式**：内容渲染逻辑完全分离，易于维护和扩展
-3. **组合优于继承**：避免了深层继承带来的复杂性
-4. **单一职责**：每个渲染器只负责特定类型的渲染逻辑
+3. **状态优先**：优先基于状态选择渲染器，确保状态显示的一致性
+4. **组合优于继承**：避免了深层继承带来的复杂性
+5. **单一职责**：每个渲染器只负责特定状态或类型的渲染逻辑
 
 ### 5.2 维护优势
 
 1. **代码复用**：共享逻辑集中在UnifiedTimelineClip中
 2. **易于测试**：每个渲染器可以独立测试
-3. **易于扩展**：新增媒体类型只需实现对应渲染器
-4. **向后兼容**：保持现有API不变
+3. **易于扩展**：新增媒体类型或状态只需实现对应渲染器
+4. **职责清晰**：状态渲染器和媒体类型渲染器职责分离
 
 ### 5.3 性能优势
 
@@ -480,55 +618,116 @@ frontend/src/unified/
 2. **渲染器复用**：渲染器实例可以复用
 3. **虚拟DOM优化**：利用Vue3的虚拟DOM优化
 
-## 6. 迁移指南
+## 6. 使用示例
 
-### 6.1 现有组件迁移
+### 6.1 UnifiedTimelineClip组件内部集成
 
-#### 6.1.1 Timeline.vue迁移
 ```typescript
-// 旧版本
-function renderTimelineItem(item: TimelineItem) {
-  switch (item.mediaType) {
-    case 'video':
-    case 'image':
-      return h(TimelineVideoClip, { data: item, ...props })
-    case 'audio':
-      return h(TimelineAudioClip, { data: item, ...props })
-    case 'text':
-      return h(TimelineTextClip, { data: item, ...props })
-    default:
-      return h(TimelineAsyncProcessingClip, { data: item, ...props })
+// UnifiedTimelineClip.vue 内部实现
+<template>
+  <div class="unified-timeline-clip" :class="clipClasses" :style="clipStyles">
+    <!-- 渲染器动态内容 -->
+    <component :is="renderedContent" />
+  </div>
+</template>
+
+<script setup lang="ts">
+import { computed, h } from 'vue'
+import { ContentRendererFactory } from './renderers/ContentRendererFactory'
+
+const props = defineProps<UnifiedTimelineClipProps>()
+
+// 动态选择渲染器
+const renderer = computed(() => {
+  return ContentRendererFactory.getRenderer(props.data)
+})
+
+// 构建渲染上下文
+const renderContext = computed(() => ({
+  data: props.data,
+  isSelected: props.isSelected || false,
+  isDragging: props.isDragging || false,
+  isResizing: props.isResizing || false,
+  currentFrame: props.currentFrame || 0,
+  scale: props.scale || 1,
+  trackHeight: props.trackHeight || 60,
+  callbacks: {
+    onSelect: (id: string) => emit('select', id),
+    onDoubleClick: (id: string) => emit('doubleClick', id),
+    // ... 其他回调
   }
-}
+}))
 
-// 新版本
+// 渲染内容
+const renderedContent = computed(() => {
+  return renderer.value.renderContent(renderContext.value)
+})
+
+// 动态样式类
+const clipClasses = computed(() => {
+  const baseClasses = ['unified-timeline-clip']
+  const customClasses = renderer.value.getCustomClasses?.(renderContext.value) || []
+  return [...baseClasses, ...customClasses]
+})
+
+// 动态样式
+const clipStyles = computed(() => {
+  return renderer.value.getCustomStyles?.(renderContext.value) || {}
+})
+</script>
+```
+
+### 6.2 Timeline.vue中的使用
+
+```typescript
+// Timeline.vue中简化的使用
 function renderTimelineItem(item: UnifiedTimelineItemData) {
-  return h(UnifiedTimelineClip, { data: item, ...props })
+  return h(UnifiedTimelineClip, {
+    data: item,
+    isSelected: selectedItems.includes(item.id),
+    currentFrame: currentFrame.value,
+    scale: timelineScale.value,
+    trackHeight: TRACK_HEIGHT,
+    onSelect: handleSelectClip,
+    onDoubleClick: handleDoubleClickClip
+  })
 }
 ```
 
-#### 6.1.2 组件属性迁移
-```typescript
-// 旧版本的组件属性会自动映射到新版本
-// 无需修改现有的属性传递代码
-```
-
-### 6.2 自定义扩展迁移
-
-如果有自定义的Clip组件，可以通过实现ContentRenderer接口来迁移：
+### 6.3 自定义渲染器扩展
 
 ```typescript
-// 自定义渲染器
+// 创建自定义渲染器
 class CustomContentRenderer implements ContentRenderer<'custom'> {
   readonly type = 'custom' as const
-  
+
   renderContent(context: ContentRenderContext<'custom'>): VNode {
-    // 自定义渲染逻辑
+    const { data, isSelected } = context
+    return h('div', {
+      class: ['custom-content', { selected: isSelected }]
+    }, [
+      h('span', '自定义内容')
+    ])
   }
 }
 
 // 注册自定义渲染器
-ContentRendererFactory.registerRenderer('custom', new CustomContentRenderer())
+ContentRendererFactory.registerMediaTypeRenderer('custom', new CustomContentRenderer())
+```
+
+### 6.4 状态处理示例
+
+```typescript
+// 渲染器工厂会自动根据状态选择合适的渲染器
+const data: UnifiedTimelineItemData = {
+  id: 'item-1',
+  mediaType: 'video',
+  timelineStatus: 'loading', // 会自动使用LoadingContentRenderer
+  // ... 其他属性
+}
+
+const renderer = ContentRendererFactory.getRenderer(data)
+// 返回 LoadingContentRenderer 实例
 ```
 
 ## 7. 总结
@@ -536,8 +735,16 @@ ContentRendererFactory.registerRenderer('custom', new CustomContentRenderer())
 统一Clip架构设计通过以下核心理念解决了现有架构的问题：
 
 1. **统一数据模型**：基于已有的`UnifiedTimelineItemData`泛型接口
-2. **策略模式分离**：将渲染逻辑分离到独立的渲染器中
-3. **类型安全保障**：利用TypeScript泛型确保编译时类型安全
-4. **组合式设计**：通过组合而非继承实现功能扩展
+2. **状态优先策略**：优先基于状态选择渲染器，确保状态显示的一致性
+3. **策略模式分离**：将渲染逻辑分离到独立的渲染器中
+4. **类型安全保障**：利用TypeScript泛型确保编译时类型安全
+5. **组合式设计**：通过组合而非继承实现功能扩展
 
-这个设计既保持了向后兼容性，又为未来的扩展提供了良好的基础，是一个可持续发展的架构方案。
+### 核心改进点
+
+1. **重命名 AsyncProcessingContentRenderer → LoadingContentRenderer**：使其更通用，处理所有loading状态
+2. **新增 ErrorContentRenderer**：专门处理错误状态，提供统一的错误显示和重试机制
+3. **状态优先选择策略**：渲染器工厂优先基于状态选择，然后基于媒体类型选择
+4. **清晰的职责分离**：状态渲染器处理状态相关显示，媒体类型渲染器专注于ready状态的内容渲染
+
+这个设计为未来的扩展提供了良好的基础，是一个可持续发展的架构方案。通过状态优先的渲染策略，确保了不同状态下的一致性体验，同时保持了代码的可维护性和扩展性。
