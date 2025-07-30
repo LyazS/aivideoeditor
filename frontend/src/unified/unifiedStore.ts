@@ -17,6 +17,8 @@ import type { UnifiedMediaItemData, MediaType } from '@/unified'
 import type { UnifiedTrackType } from './track/TrackTypes'
 import type { UnifiedTimelineItemData } from './timelineitem/TimelineItemData'
 
+import { frameToPixel, pixelToFrame } from './utils/coordinateUtils'
+
 /**
  * 统一视频编辑器存储
  * 基于新的统一类型系统重构的主要状态管理
@@ -610,5 +612,23 @@ export const useUnifiedStore = defineStore('unified', () => {
     // ==================== 系统状态方法 ====================
 
     resetToDefaults,  // 保留封装，因为需要重置所有模块
+
+    // ==================== 坐标转换方法 ====================
+    frameToPixel: (frames: number, timelineWidth: number) =>
+      frameToPixel(
+        frames,
+        timelineWidth,
+        totalDurationFrames.value,
+        unifiedViewportModule.zoomLevel.value,
+        unifiedViewportModule.scrollOffset.value,
+      ),
+    pixelToFrame: (pixel: number, timelineWidth: number) =>
+      pixelToFrame(
+        pixel,
+        timelineWidth,
+        totalDurationFrames.value,
+        unifiedViewportModule.zoomLevel.value,
+        unifiedViewportModule.scrollOffset.value,
+      ),
   }
 })

@@ -8,7 +8,7 @@ import type {
   UnifiedTimelineItemData,
   TimelineItemStatus,
   UnknownTimelineItem,
-  GetExtendedMediaConfig,
+  GetTimelineItemConfig,
   GetTimeRange
 } from './TimelineItemData'
 import { VALID_TIMELINE_TRANSITIONS } from './TimelineItemData'
@@ -272,7 +272,7 @@ async function updateSpriteTimeRange(
 export function convertUnknownToKnown<T extends MediaType>(
   unknownItem: UnknownTimelineItem,
   newMediaType: T,
-  newConfig: GetExtendedMediaConfig<T>,
+  newConfig: GetTimelineItemConfig<T>,
   newTimeRange: GetTimeRange<T>
 ): UnifiedTimelineItemData<T> {
   return {

@@ -27,10 +27,10 @@
 
 <script setup lang="ts">
 import { ref, computed, onUnmounted } from 'vue'
-import { useVideoStore } from '../stores/videoStore'
+import { useUnifiedStore } from '../unifiedStore'
 import { usePlaybackControls } from '../composables/usePlaybackControls'
 import { useSnapManager } from '../composables/useSnapManager'
-import { alignFramesToFrame, framesToMicroseconds } from '../stores/utils/timeUtils'
+import { alignFramesToFrame, framesToMicroseconds } from '../utils/timeUtils'
 
 interface PlayheadProps {
   /** 时间轴容器宽度 */
@@ -55,7 +55,7 @@ const props = withDefaults(defineProps<PlayheadProps>(), {
   enableSnapping: true,
 })
 
-const videoStore = useVideoStore()
+const unifiedStore = useUnifiedStore()
 const { pauseForEditing } = usePlaybackControls()
 const snapManager = useSnapManager()
 
@@ -75,7 +75,7 @@ const clipBoundaryFrames = computed(() => {
   boundaries.push(0)
 
   // 遍历所有时间轴项目，收集开始和结束帧
-  videoStore.timelineItems.forEach((item) => {
+  unifiedStore.timelineItems.forEach((item) => {
     const timeRange = item.timeRange
     boundaries.push(timeRange.timelineStartTime)
     boundaries.push(timeRange.timelineEndTime)
@@ -90,7 +90,7 @@ const clipBoundaryFrames = computed(() => {
     console.log('🔄 更新clip边界点缓存:', {
       边界点数量: result.length,
       边界点: result,
-      时间轴项目数: videoStore.timelineItems.length,
+      时间轴项目数: unifiedStore.timelineItems.length,
     })
     lastBoundariesString = currentBoundariesString
   }
@@ -132,8 +132,8 @@ function applySnapToClips(targetFrames: number): number {
 
 // 播放头手柄位置（相对于时间刻度区域）
 const playheadPosition = computed(() => {
-  const currentFrame = videoStore.currentFrame
-  const pixelPosition = videoStore.frameToPixel(currentFrame, props.timelineWidth)
+  const currentFrame = unifiedStore.currentFrame
+  const pixelPosition = unifiedStore.frameToPixel(currentFrame, props.timelineWidth)
   // 如果是在 TimeScale 中使用（trackControlWidth = 0），直接返回像素位置
   // 如果是在 Timeline 中使用，需要加上偏移
   return props.trackControlWidth + pixelPosition
@@ -181,7 +181,7 @@ function jumpToClickPosition(event: MouseEvent) {
   const timelinePixelX = clickX - props.trackControlWidth
 
   // 转换为帧数
-  const clickFrames = videoStore.pixelToFrame(timelinePixelX, props.timelineWidth)
+  const clickFrames = unifiedStore.pixelToFrame(timelinePixelX, props.timelineWidth)
   const clampedFrames = Math.max(0, clickFrames)
 
   // 应用吸附逻辑
@@ -189,7 +189,7 @@ function jumpToClickPosition(event: MouseEvent) {
   const alignedFrames = alignFramesToFrame(snappedFrames)
 
   // 通过WebAV设置帧数
-  videoStore.webAVSeekTo(alignedFrames)
+  unifiedStore.webAVSeekTo(alignedFrames)
 }
 
 /**
@@ -237,7 +237,7 @@ function handleDragPlayhead(event: MouseEvent) {
   const timelinePixelX = mouseX - props.trackControlWidth
 
   // 转换为帧数
-  const dragFrames = videoStore.pixelToFrame(timelinePixelX, props.timelineWidth)
+  const dragFrames = unifiedStore.pixelToFrame(timelinePixelX, props.timelineWidth)
   const clampedFrames = Math.max(0, dragFrames)
 
   // 应用吸附逻辑
@@ -245,7 +245,7 @@ function handleDragPlayhead(event: MouseEvent) {
   const alignedFrames = alignFramesToFrame(snappedFrames)
 
   // 通过WebAV设置帧数
-  videoStore.webAVSeekTo(alignedFrames)
+  unifiedStore.webAVSeekTo(alignedFrames)
 }
 
 /**
@@ -289,7 +289,7 @@ function handleTimelineClick(event: MouseEvent) {
   const timelinePixelX = clickX - props.trackControlWidth
 
   // 转换为帧数
-  const clickFrames = videoStore.pixelToFrame(timelinePixelX, props.timelineWidth)
+  const clickFrames = unifiedStore.pixelToFrame(timelinePixelX, props.timelineWidth)
   const clampedFrames = Math.max(0, clickFrames)
 
   // 应用吸附逻辑
@@ -297,7 +297,7 @@ function handleTimelineClick(event: MouseEvent) {
   const alignedFrames = alignFramesToFrame(snappedFrames)
 
   // 通过WebAV设置帧数
-  videoStore.webAVSeekTo(alignedFrames)
+  unifiedStore.webAVSeekTo(alignedFrames)
 }
 
 /**

@@ -257,5 +257,35 @@ export {
 
   // WebAV动画管理器
   UnifiedWebAVAnimationManager,
-  globalUnifiedWebAVAnimationManager
+  globalUnifiedWebAVAnimationManager,
+
+  // 吸附计算器
+  UnifiedSnapCalculator
 } from './utils'
+
+// ==================== 统一Composables ====================
+export {
+  // 吸附配置
+  useSnapConfig,
+  
+  // 吸附管理器
+  useSnapManager,
+  
+  // 拖拽预览管理器
+  getDragPreviewManager,
+  
+  // 播放控制
+  usePlaybackControls
+} from './composables'
+
+// ==================== 统一类型定义 ====================
+export {
+  // 拖拽相关类型
+  type TimelineItemDragData,
+  type MediaItemDragData,
+  type DragPreviewData,
+  type DragDataType,
+  type DragOffset,
+  type DropPositionResult,
+  type DropFramesResult,
+} from './types'

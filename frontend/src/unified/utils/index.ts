@@ -64,3 +64,94 @@ export {
   getSpriteTypeFromUnifiedMediaItem,
   batchCheckCanCreateSprite
 } from './UnifiedSpriteFactory'
+
+// ==================== 坐标转换工具 ====================
+export {
+  // 计算可见时间范围
+  calculateVisibleFrameRange,
+  
+  // 坐标转换函数
+  frameToPixel,
+  pixelToFrame
+} from './coordinateUtils'
+
+// ==================== 坐标系转换工具 ====================
+export {
+  // 坐标系转换函数
+  webavToProjectCoords,
+  projectToWebavCoords,
+  
+  // 验证和调试函数
+  validateCoordinateTransform,
+  debugCoordinateTransform,
+  
+  // 中心缩放计算
+  calculateCenterScalePosition,
+  debugCenterScaling
+} from './coordinateTransform'
+
+// ==================== 统一时间工具 ====================
+export {
+  // 时间码系统常量
+  FRAME_RATE,
+  
+  // 时间计算工具
+  calculatePixelsPerFrame,
+  expandTimelineIfNeededFrames,
+  formatFileSize,
+  
+  // 时间码转换函数
+  framesToSeconds,
+  secondsToFrames,
+  framesToMicroseconds,
+  microsecondsToFrames,
+  framesToTimecode,
+  timecodeToFrames,
+  alignFramesToFrame
+} from './timeUtils'
+
+// ==================== 统一时间重叠检测工具 ====================
+export {
+  // 核心重叠检测函数
+  detectTimeRangeOverlap,
+  
+  // TimelineItem 专用函数
+  extractTimeRange,
+  isTimelineItemsOverlapping,
+  detectTimelineItemOverlap,
+  
+  // 轨道级别的重叠检测
+  hasOverlapInTrack,
+  detectTrackConflicts,
+  
+  // 批量重叠检测
+  countOverlappingItems,
+  getAllOverlappingPairs,
+  
+  // 兼容性函数
+  calculateTimeRangeOverlap
+} from './timeOverlapUtils'
+
+// ==================== 统一吸附计算器 ====================
+export {
+  // 吸附计算器类
+  UnifiedSnapCalculator
+} from './snapCalculator'
+
+// ==================== 统一缩略图生成器 ====================
+export {
+  // 视频缩略图生成
+  generateVideoThumbnail,
+  
+  // 图片缩略图生成
+  generateImageThumbnail,
+  
+  // Canvas转Blob URL
+  canvasToBlob,
+  
+  // 统一媒体项目缩略图生成
+  generateThumbnailForUnifiedMediaItem,
+  
+  // 统一时间轴项目缩略图重新生成
+  regenerateThumbnailForUnifiedTimelineItem
+} from './thumbnailGenerator'
