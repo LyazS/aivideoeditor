@@ -38,7 +38,7 @@ function unifiedDebugLog(operation: string, details: any) {
   }
 }
 import { syncTimeRange } from '../utils/UnifiedTimeRangeUtils'
-import { microsecondsToFrames } from '../../stores/utils/timeUtils'
+import { microsecondsToFrames } from '../utils/UnifiedTimeUtils'
 import { globalUnifiedWebAVAnimationManager } from '../utils/UnifiedWebAVAnimationManager'
 
 /**

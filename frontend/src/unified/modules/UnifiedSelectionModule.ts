@@ -128,13 +128,19 @@ export function createUnifiedSelectionModule(
     lastSelectionCommand = { itemIds: [...itemIds], mode, timestamp: now }
 
     // 动态导入命令类以避免循环依赖
-    const { UnifiedSelectTimelineItemsCommand } = await import('./commands/unifiedTimelineCommands')
+    const { SelectTimelineItemsCommand } = await import('./commands/timelineCommands')
 
     // 创建选择命令
-    const command = new UnifiedSelectTimelineItemsCommand(
+    const command = new SelectTimelineItemsCommand(
       itemIds,
-      undefined, // trackId
-      mode === 'toggle' // addToSelection
+      mode,
+      {
+        selectedTimelineItemIds: { value: selectedTimelineItemIds.value },
+        selectTimelineItems,
+        syncAVCanvasSelection
+      },
+      { getTimelineItem },
+      { getMediaItem }
     )
 
     // 执行命令（这会自动添加到历史记录）

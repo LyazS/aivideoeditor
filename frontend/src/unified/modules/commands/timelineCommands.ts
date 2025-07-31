@@ -11,10 +11,11 @@
  */
 
 import { generateCommandId } from '../../../utils/idGenerator'
-import { framesToMicroseconds, framesToTimecode } from '../../../stores/utils/timeUtils'
+import { framesToMicroseconds, framesToTimecode } from '../../utils/UnifiedTimeUtils'
 import { cloneDeep } from 'lodash'
 import { reactive, markRaw, ref, type Raw, type Ref } from 'vue'
 import type { VisibleSprite } from '@webav/av-cliper'
+import type { SimpleCommand } from './types'
 
 // ==================== 新架构类型导入 ====================
 import type {
@@ -87,18 +88,16 @@ import {
   TimelineItemFactory
 } from '../../timelineitem'
 
+import { UnifiedMediaItemQueries } from '../../mediaitem'
+
 // ==================== 旧架构兼容性导入 ====================
 import { VideoVisibleSprite } from '../../../utils/VideoVisibleSprite'
 import { ImageVisibleSprite } from '../../../utils/ImageVisibleSprite'
 import { AudioVisibleSprite } from '../../../utils/AudioVisibleSprite'
-
-// ==================== 命令接口定义 ====================
-export interface SimpleCommand {
-  readonly id: string
-  readonly description: string
-  execute(): Promise<void>
-  undo(): Promise<void>
-}
+import {
+  isVideoVisibleSprite,
+  isAudioVisibleSprite
+} from '../../utils/SpriteTypeGuards'
 
 // ==================== 添加时间轴项目命令 ====================
 /**
@@ -166,7 +165,7 @@ export class AddTimelineItemCommand implements SimpleCommand {
     }
 
     // 确保素材已经解析完成
-    if (mediaItem.mediaStatus !== 'ready') {
+    if (!UnifiedMediaItemQueries.isReady(mediaItem)) {
       throw new Error(`素材尚未解析完成: ${mediaItem.name}`)
     }
 
@@ -447,7 +446,7 @@ export class RemoveTimelineItemCommand implements SimpleCommand {
     }
 
     // 确保素材已经解析完成
-    if (mediaItem.mediaStatus !== 'ready') {
+    if (!UnifiedMediaItemQueries.isReady(mediaItem)) {
       throw new Error(`素材尚未解析完成: ${mediaItem.name}`)
     }
 
@@ -926,22 +925,22 @@ export class UpdateTransformCommand implements SimpleCommand {
             config.isMuted = this.newValues.isMuted
           }
           const sprite = timelineItem.sprite
-          if (sprite && 'setMuted' in sprite) {
-            (sprite as VideoVisibleSprite).setMuted?.(this.newValues.isMuted)
+          if (sprite && isVideoVisibleSprite(sprite)) {
+            sprite.setMuted(this.newValues.isMuted)
           }
         }
       }
 
       // 处理音频增益更新（仅对音频有效）
-      if (timelineItem.mediaType === 'audio' && this.newValues.gain !== undefined) {
+      if (isAudioTimelineItem(timelineItem) && this.newValues.gain !== undefined) {
         // 类型安全的音频配置更新
         const config = timelineItem.config as AudioMediaConfig
         if (config.gain !== undefined) {
           config.gain = this.newValues.gain
         }
         const sprite = timelineItem.sprite
-        if (sprite && 'setGain' in sprite) {
-          (sprite as AudioVisibleSprite).setGain(this.newValues.gain)
+        if (sprite && isAudioVisibleSprite(sprite)) {
+          sprite.setGain(this.newValues.gain)
         }
       }
 
@@ -1011,8 +1010,8 @@ export class UpdateTransformCommand implements SimpleCommand {
             config.volume = this.oldValues.volume
           }
           const sprite = timelineItem.sprite
-          if (sprite && 'setVolume' in sprite) {
-            (sprite as VideoVisibleSprite).setVolume?.(this.oldValues.volume)
+          if (sprite && isVideoVisibleSprite(sprite)) {
+            sprite.setVolume(this.oldValues.volume)
           }
         }
 
@@ -1023,22 +1022,22 @@ export class UpdateTransformCommand implements SimpleCommand {
             config.isMuted = this.oldValues.isMuted
           }
           const sprite = timelineItem.sprite
-          if (sprite && 'setMuted' in sprite) {
-            (sprite as VideoVisibleSprite).setMuted?.(this.oldValues.isMuted)
+          if (sprite && isVideoVisibleSprite(sprite)) {
+            sprite.setMuted(this.oldValues.isMuted)
           }
         }
       }
 
       // 处理音频增益恢复（仅对音频有效）
-      if (timelineItem.mediaType === 'audio' && this.oldValues.gain !== undefined) {
+      if (isAudioTimelineItem(timelineItem) && this.oldValues.gain !== undefined) {
         // 类型安全的音频配置恢复
         const config = timelineItem.config as AudioMediaConfig
         if (config.gain !== undefined) {
           config.gain = this.oldValues.gain
         }
         const sprite = timelineItem.sprite
-        if (sprite && 'setGain' in sprite) {
-          (sprite as AudioVisibleSprite).setGain(this.oldValues.gain)
+        if (sprite && isAudioVisibleSprite(sprite)) {
+          sprite.setGain(this.oldValues.gain)
         }
       }
 
@@ -1161,7 +1160,7 @@ export class UpdateTransformCommand implements SimpleCommand {
     const newTimelineEndFrames = timelineStartFrames + newDurationFrames
     const newTimelineEndTime = framesToMicroseconds(newTimelineEndFrames)
 
-    if (timelineItem.mediaType === 'video') {
+    if (isVideoTimelineItem(timelineItem)) {
       // 更新sprite的时间范围
       sprite.setTimeRange({
         clipStartTime: 'clipStartTime' in timeRange ? timeRange.clipStartTime || 0 : 0,
@@ -1169,7 +1168,7 @@ export class UpdateTransformCommand implements SimpleCommand {
         timelineStartTime: timeRange.timelineStartTime,
         timelineEndTime: newTimelineEndTime,
       })
-    } else if (timelineItem.mediaType === 'audio') {
+    } else if (isAudioTimelineItem(timelineItem)) {
       // 更新sprite的时间范围
       sprite.setTimeRange({
         clipStartTime: 'clipStartTime' in timeRange ? timeRange.clipStartTime || 0 : 0,
@@ -1177,14 +1176,14 @@ export class UpdateTransformCommand implements SimpleCommand {
         timelineStartTime: timeRange.timelineStartTime,
         timelineEndTime: newTimelineEndTime,
       })
-    } else if (timelineItem.mediaType === 'image') {
+    } else if (isImageTimelineItem(timelineItem)) {
       // 对于图片，直接更新显示时长（使用帧数）
       sprite.setTimeRange({
         timelineStartTime: timeRange.timelineStartTime,
         timelineEndTime: newTimelineEndTime,
         displayDuration: newDurationFrames,
       })
-    } else if (timelineItem.mediaType === 'text') {
+    } else if (isTextTimelineItem(timelineItem)) {
       // 对于文本，与图片类似，直接更新显示时长（使用帧数）
       sprite.setTimeRange({
         timelineStartTime: timeRange.timelineStartTime,
@@ -1294,7 +1293,7 @@ export class DuplicateTimelineItemCommand implements SimpleCommand {
       }
   
       // 确保素材已经解析完成
-      if (mediaItem.mediaStatus !== 'ready') {
+      if (!UnifiedMediaItemQueries.isReady(mediaItem)) {
         throw new Error('素材还在解析中，无法复制')
       }
   
@@ -1307,12 +1306,22 @@ export class DuplicateTimelineItemCommand implements SimpleCommand {
       const newTimelineStartTimeFrames = this.newPositionFrames
       const newTimelineEndTimeFrames = newTimelineStartTimeFrames + originalDurationFrames
   
-      newSprite.setTimeRange({
-        clipStartTime: 'clipStartTime' in originalTimeRange ? originalTimeRange.clipStartTime || 0 : 0,
-        clipEndTime: 'clipEndTime' in originalTimeRange ? originalTimeRange.clipEndTime || mediaItem.duration : mediaItem.duration,
-        timelineStartTime: newTimelineStartTimeFrames,
-        timelineEndTime: newTimelineEndTimeFrames,
-      })
+      // 根据媒体类型设置时间范围
+      if (isVideoTimelineItem(this.originalTimelineItemData) || isAudioTimelineItem(this.originalTimelineItemData)) {
+        newSprite.setTimeRange({
+          clipStartTime: 'clipStartTime' in originalTimeRange ? originalTimeRange.clipStartTime || 0 : 0,
+          clipEndTime: 'clipEndTime' in originalTimeRange ? originalTimeRange.clipEndTime || mediaItem.duration : mediaItem.duration,
+          timelineStartTime: newTimelineStartTimeFrames,
+          timelineEndTime: newTimelineEndTimeFrames,
+        })
+      } else {
+        // 图片和文本类型
+        newSprite.setTimeRange({
+          timelineStartTime: newTimelineStartTimeFrames,
+          timelineEndTime: newTimelineEndTimeFrames,
+          displayDuration: newTimelineEndTimeFrames - newTimelineStartTimeFrames,
+        })
+      }
   
       // 4. 应用变换属性
       if (hasVisualProperties(this.originalTimelineItemData)) {
@@ -1571,7 +1580,7 @@ export class SplitTimelineItemCommand implements SimpleCommand {
     }
 
     // 检查素材是否已准备好并且是支持分割的类型
-    if (mediaItem.mediaStatus !== 'ready') {
+    if (!UnifiedMediaItemQueries.isReady(mediaItem)) {
       throw new Error(`素材尚未解析完成: ${mediaItem.name}`)
     }
 
@@ -1592,7 +1601,7 @@ export class SplitTimelineItemCommand implements SimpleCommand {
 
     // 4. 设置时间范围
     if ('clipStartTime' in originalTimeRange) {
-      // 视频和音频类型
+      // 视频和音频类型（使用 clipStartTime 和 clipEndTime）
       const videoTimeRange = originalTimeRange as VideoTimeRange
       const clipStartTimeFrames = videoTimeRange.clipStartTime || 0
       const clipEndTimeFrames = videoTimeRange.clipEndTime || mediaItem.duration || 0
@@ -1613,7 +1622,7 @@ export class SplitTimelineItemCommand implements SimpleCommand {
         timelineEndTime: timelineEndTimeFrames,
       })
     } else {
-      // 图片和文本类型
+      // 图片和文本类型（使用 displayDuration）
       const imageTimeRange = originalTimeRange as ImageTimeRange
       const displayDuration = imageTimeRange.displayDuration || timelineDurationFrames
       const firstDisplayDuration = Math.round(displayDuration * relativeRatio)
@@ -1715,7 +1724,7 @@ export class SplitTimelineItemCommand implements SimpleCommand {
     }
 
     // 确保素材已准备好
-    if (mediaItem.mediaStatus !== 'ready') {
+    if (!UnifiedMediaItemQueries.isReady(mediaItem)) {
       throw new Error(`素材尚未解析完成: ${mediaItem.name}`)
     }
 
@@ -2171,7 +2180,7 @@ export class RemoveTrackCommand implements SimpleCommand {
     }
 
     // 确保素材已经解析完成
-    if (mediaItem.mediaStatus !== 'ready') {
+    if (!UnifiedMediaItemQueries.isReady(mediaItem)) {
       throw new Error('素材还在解析中，无法重建')
     }
 
@@ -2632,7 +2641,7 @@ export class ResizeTimelineItemCommand implements SimpleCommand {
       }
 
       // 根据媒体类型设置时间范围
-      if (timelineItem.mediaType === 'video' || timelineItem.mediaType === 'audio') {
+      if (isVideoTimelineItem(timelineItem) || isAudioTimelineItem(timelineItem)) {
         // 视频和音频类型：保持clipStartTime和clipEndTime，更新timeline时间
         const clipStartTime = 'clipStartTime' in timeRange ?
           (typeof timeRange.clipStartTime === 'number' ? timeRange.clipStartTime : 0) : 0
@@ -2645,7 +2654,7 @@ export class ResizeTimelineItemCommand implements SimpleCommand {
           timelineStartTime: timeRange.timelineStartTime,
           timelineEndTime: timeRange.timelineEndTime,
         })
-      } else if (timelineItem.mediaType === 'image' || timelineItem.mediaType === 'text') {
+      } else if (isImageTimelineItem(timelineItem) || isTextTimelineItem(timelineItem)) {
         // 图片和文本类型：设置displayDuration
         const displayDuration = 'displayDuration' in timeRange ?
           (typeof timeRange.displayDuration === 'number' ? timeRange.displayDuration :
@@ -2658,7 +2667,7 @@ export class ResizeTimelineItemCommand implements SimpleCommand {
           displayDuration,
         })
       } else {
-        throw new Error(`不支持的媒体类型: ${timelineItem.mediaType}`)
+        throw new Error('不支持的媒体类型')
       }
 
       // 同步timeRange到TimelineItem

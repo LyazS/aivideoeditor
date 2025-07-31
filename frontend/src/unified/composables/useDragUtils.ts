@@ -5,7 +5,7 @@ import type {
 } from '../types'
 import type { MediaType, MediaTypeOrUnknown } from '../mediaitem'
 import type { UnifiedTrackType } from '../track/TrackTypes'
-import { alignFramesToFrame } from '../../stores/utils/timeUtils'
+import { alignFramesToFrame } from '../utils/UnifiedTimeUtils'
 import { useSnapManager } from './useSnapManager'
 
 /**

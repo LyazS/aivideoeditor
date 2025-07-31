@@ -75,7 +75,8 @@
           <ClipManagementToolbar />
         </div>
         <!-- 只有WebAV初始化完成后才显示Timeline -->
-        <Timeline v-if="unifiedStore.isWebAVReady" />
+        <!-- <Timeline v-if="unifiedStore.isWebAVReady" /> -->
+        <UnifiedTimeline v-if="unifiedStore.isWebAVReady" />
         <div v-else class="timeline-loading">
           <div class="loading-spinner"></div>
           <p>正在初始化WebAV引擎...</p>
@@ -180,6 +181,7 @@ import ClipManagementToolbar from './ClipManagementToolbar.vue'
 import MediaLibrary from './MediaLibrary.vue'
 import PropertiesPanel from './PropertiesPanel.vue'
 import UnifiedMediaLibrary from '@/unified/components/UnifiedMediaLibrary.vue'
+import UnifiedTimeline from '@/unified/components/UnifiedTimeline.vue'
 import { useUnifiedStore } from '@/unified/unifiedStore'
 import { useKeyboardShortcuts } from '../composables/useKeyboardShortcuts'
 import { logWebAVReadyStateChange, logComponentLifecycle } from '../utils/webavDebug'

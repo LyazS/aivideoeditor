@@ -21,6 +21,7 @@ import type {
   ImageMediaConfig,
   AudioMediaConfig,
   TextMediaConfig,
+  TextStyleConfig,
 } from '../../types'
 
 // ==================== 基础类型定义 ====================
@@ -139,8 +140,6 @@ export interface WebAVAnimationConfig {
     easing?: string
   }
 }
-
-
 
 /**
  * 状态转换规则定义
@@ -278,8 +277,6 @@ export type KnownTimelineItem =
  * 未知媒体类型的时间轴项目（异步处理中）
  */
 export type UnknownTimelineItem = UnifiedTimelineItemData<'unknown'>
-
-
 
 // ==================== 工厂函数选项类型 ====================
 
