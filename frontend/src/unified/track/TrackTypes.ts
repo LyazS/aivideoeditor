@@ -170,17 +170,11 @@ function getDefaultTrackName(type: UnifiedTrackType): string {
 }
 
 /**
- * 获取默认轨道高度
+ * 获取默认轨道高度（统一为60px，与旧架构一致）
  */
 function getDefaultTrackHeight(type: UnifiedTrackType): number {
-  const heights = {
-    video: 80,
-    audio: 60,
-    text: 50,
-    subtitle: 40,
-    effect: 60
-  }
-  return heights[type]
+  // 所有轨道类型统一使用60px高度
+  return 60
 }
 
 

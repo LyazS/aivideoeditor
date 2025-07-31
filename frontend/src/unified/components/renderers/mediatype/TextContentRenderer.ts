@@ -25,14 +25,11 @@ export class TextContentRenderer implements ContentRenderer<'text'> {
     const { data, isSelected } = context
 
     return h('div', {
-      class: ['text-content', { selected: isSelected }]
+      class: ['text-content', { selected: isSelected }],
+      style: this.getTextContentStyles()
     }, [
-      // 文本预览
-      this.renderTextPreview(data),
-      // 文本信息覆盖层
-      this.renderTextOverlay(data),
-      // 字体和样式指示器
-      this.renderStyleIndicators(data)
+      // 文本预览（与旧架构text-preview一致）
+      this.renderTextPreview(data)
     ])
   }
 
@@ -59,12 +56,13 @@ export class TextContentRenderer implements ContentRenderer<'text'> {
   }
 
   getCustomStyles(context: ContentRenderContext<'text'>): Record<string, string | number> {
+    // 不覆盖背景色，让UnifiedTimelineClip的统一样式生效
+    // 但保留文本相关的样式设置
     const { data } = context
     const textConfig = this.getTextConfig(data)
-    
+
     return {
-      background: 'linear-gradient(135deg, #f9f0ff 0%, #d3adf7 100%)',
-      color: textConfig.color || '#333',
+      color: textConfig.color || 'white', // 改为白色以匹配旧架构
       fontFamily: textConfig.fontFamily || 'inherit'
     }
   }
@@ -72,17 +70,34 @@ export class TextContentRenderer implements ContentRenderer<'text'> {
   // ==================== 私有方法 ====================
 
   /**
-   * 渲染文本预览
+   * 获取文本内容样式（与旧架构text-content一致）
+   */
+  private getTextContentStyles(): Record<string, string> {
+    return {
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'center',
+      height: '100%',
+      padding: '4px 8px',
+      overflow: 'hidden'
+    }
+  }
+
+  /**
+   * 渲染文本预览（与旧架构text-preview一致）
    */
   private renderTextPreview(data: UnifiedTimelineItemData<'text'>): VNode {
     const textConfig = this.getTextConfig(data)
     const previewText = this.getPreviewText(textConfig.content)
-    
-    return h('div', { 
+
+    return h('div', {
       class: 'text-preview',
-      style: this.getTextPreviewStyles(textConfig)
+      style: this.getTextPreviewContainerStyles()
     }, [
-      h('div', { class: 'preview-text' }, previewText)
+      h('div', {
+        class: 'text-preview-content',
+        style: this.getTextPreviewContentStyles(textConfig)
+      }, previewText)
     ])
   }
 
@@ -234,37 +249,39 @@ export class TextContentRenderer implements ContentRenderer<'text'> {
   }
 
   /**
-   * 获取文本预览样式
+   * 获取文本预览容器样式
    */
-  private getTextPreviewStyles(textConfig: any): Record<string, string> {
-    const styles: Record<string, string> = {}
-    
-    if (textConfig.fontFamily) {
-      styles.fontFamily = textConfig.fontFamily
+  private getTextPreviewContainerStyles(): Record<string, string> {
+    return {
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      width: '100%',
+      height: '100%'
     }
-    
-    if (textConfig.fontSize) {
-      // 缩放字体大小以适应预览
-      const scaledSize = Math.min(textConfig.fontSize * 0.6, 14)
-      styles.fontSize = `${scaledSize}px`
+  }
+
+  /**
+   * 获取文本预览内容样式（与旧架构text-preview-content一致）
+   */
+  private getTextPreviewContentStyles(textConfig: any): Record<string, string> {
+    const styles: Record<string, string> = {
+      display: 'block',
+      textAlign: 'center',
+      lineHeight: '1.2',
+      wordBreak: 'break-word',
+      overflow: 'hidden',
+      textOverflow: 'ellipsis',
+      whiteSpace: 'nowrap',
+      maxWidth: '100%',
+      // 固定样式用于预览（与旧架构一致）
+      fontSize: '11px',
+      color: '#ffffff',
+      fontWeight: 'normal',
+      fontStyle: 'normal',
+      fontFamily: 'Arial, sans-serif'
     }
-    
-    if (textConfig.color) {
-      styles.color = textConfig.color
-    }
-    
-    if (textConfig.isBold) {
-      styles.fontWeight = 'bold'
-    }
-    
-    if (textConfig.isItalic) {
-      styles.fontStyle = 'italic'
-    }
-    
-    if (textConfig.isUnderline) {
-      styles.textDecoration = 'underline'
-    }
-    
+
     return styles
   }
 

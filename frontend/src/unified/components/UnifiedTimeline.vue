@@ -1265,15 +1265,14 @@ function handleTimelineItemContextMenu(event: MouseEvent, id: string) {
   showContextMenu.value = true
 }
 
-function handleTimelineItemDragStart(event: DragEvent, id: string) {
-  // 处理时间轴项目拖拽开始
-  console.log('Timeline item drag start:', id)
-}
+// 拖拽开始处理现在由UnifiedTimelineClip内部处理
 
 function handleTimelineItemResizeStart(data: any) {
   // 处理时间轴项目调整大小开始
   console.log('Timeline item resize start:', data)
 }
+
+// 拖拽预览现在由UnifiedTimelineClip内部处理
 
 // ==================== 辅助函数 ====================
 
@@ -1411,7 +1410,7 @@ async function handleTimelineItemPositionUpdate(
   } catch (error) {
     console.error('❌ 移动时间轴项目失败:', error)
     // 如果历史记录移动失败，回退到直接移动
-    unifiedStore.updateTimelineItemPosition(timelineItemId, newPositionFrames, newTrackId)
+    await unifiedStore.updateTimelineItemPosition(timelineItemId, newPositionFrames, newTrackId)
   }
 }
 
@@ -1506,6 +1505,11 @@ async function createMediaClipFromMediaItem(
       unifiedStore.videoResolution
     )
 
+    // 如果生成了缩略图，将其添加到配置中
+    if (thumbnailUrl && (mediaItem.mediaType === 'video' || mediaItem.mediaType === 'image')) {
+      (config as any).thumbnailUrl = thumbnailUrl
+    }
+
     // 创建时间轴项目数据
     const timelineItemData: UnifiedTimelineItemData = {
       id: timelineItemId,
@@ -1521,8 +1525,6 @@ async function createMediaClipFromMediaItem(
       config: config as any,
       animation: undefined, // 新创建的项目默认没有动画
       timelineStatus: 'ready', // 添加必需的 timelineStatus 字段
-      // thumbnailUrl 在统一架构中可能不支持，暂时注释
-      // thumbnailUrl, // 添加缩略图URL
       // 如果统一架构支持，添加媒体名称
       ...(mediaItem.name && { mediaName: mediaItem.name }),
     }
@@ -1655,11 +1657,12 @@ function renderTimelineItem(item: UnifiedTimelineItemData | any, track: any) {
     'current-frame': unifiedStore.currentFrame,
     scale: 1,
     'track-height': track.height,
+    'timeline-width': timelineWidth.value, // 传递时间轴宽度用于坐标转换
     // 事件处理
     onSelect: handleSelectClip,
     'onDouble-click': (id: string) => handleTimelineItemDoubleClick(id),
     'onContext-menu': (event: MouseEvent, id: string) => handleTimelineItemContextMenu(event, id),
-    'onDrag-start': (event: DragEvent, id: string) => handleTimelineItemDragStart(event, id),
+    // 拖拽现在由UnifiedTimelineClip内部处理，不需要事件监听器
     'onResize-start': handleTimelineItemResizeStart
   }
 
@@ -2082,145 +2085,258 @@ onUnmounted(() => {
 
 <style scoped>
 .timeline {
+  flex: 1;
+  background-color: var(--color-bg-secondary);
+  border-radius: var(--border-radius-medium);
+  overflow: hidden;
+  position: relative;
   display: flex;
   flex-direction: column;
-  height: 100%;
-  background: var(--color-bg-secondary);
-  position: relative;
 }
 
 .timeline-header {
   display: flex;
-  border-bottom: 1px solid var(--color-border);
-  background: var(--color-bg-primary);
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--color-border-primary);
 }
 
 .track-manager-header {
   width: 150px;
-  padding: 8px 12px;
+  padding: var(--spacing-md);
+  background-color: var(--color-bg-tertiary);
+  border-right: 1px solid var(--color-border-primary);
   display: flex;
-  align-items: center;
   justify-content: space-between;
-  border-right: 1px solid var(--color-border);
+  align-items: center;
+  flex-shrink: 0;
 }
 
 .track-manager-header h3 {
   margin: 0;
-  font-size: 14px;
-  font-weight: 500;
+  font-size: var(--font-size-base);
   color: var(--color-text-primary);
 }
 
+/* 旧的添加轨道按钮样式已移除，现在使用 HoverButton 组件 */
+
 .timeline-scale {
   flex: 1;
+  background-color: var(--color-bg-primary);
 }
 
 .timeline-body {
   flex: 1;
-  overflow: auto;
+  overflow-y: auto;
+  overflow-x: hidden;
   position: relative;
 }
 
 .track-row {
   display: flex;
-  border-bottom: 1px solid var(--color-border);
-  min-height: 60px;
+  border-bottom: 1px solid var(--color-border-primary);
+  /* 移除固定的min-height，让轨道高度由track.height动态控制 */
 }
 
 .track-controls {
   width: 150px;
+  background-color: var(--color-bg-tertiary);
+  border-right: 1px solid var(--color-border-primary);
+  padding: var(--spacing-sm) var(--spacing-md);
   display: flex;
-  align-items: center;
-  padding: 8px 12px;
-  background: var(--color-bg-primary);
-  border-right: 1px solid var(--color-border);
-  gap: 8px;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  justify-content: center;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 10;
 }
 
+/* 轨道颜色标识 */
 .track-color-indicator {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
   width: 4px;
-  height: 100%;
-  border-radius: 2px;
-  flex-shrink: 0;
+  border-radius: 0 2px 2px 0;
 }
 
 .track-color-indicator.track-color-video {
-  background: #3b82f6;
+  background: linear-gradient(135deg, #5a6d90, #4a5d80);
 }
 
 .track-color-indicator.track-color-audio {
-  background: #10b981;
+  background: linear-gradient(135deg, #5d905d, #4d804d);
 }
 
 .track-color-indicator.track-color-text {
-  background: #f59e0b;
-}
-
-.track-name {
-  flex: 1;
-  min-width: 0;
-}
-
-.track-type-info {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  margin-bottom: 2px;
-  font-size: 11px;
-  color: var(--color-text-secondary);
-}
-
-.track-type-icon {
-  display: flex;
-  align-items: center;
-}
-
-.clip-count {
-  font-weight: 500;
-}
-
-.track-name-text {
-  display: block;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--color-text-primary);
-  cursor: pointer;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.track-name-input {
-  width: 100%;
-  padding: 2px 4px;
-  border: 1px solid var(--color-primary);
-  border-radius: 3px;
-  background: var(--color-bg-primary);
-  color: var(--color-text-primary);
-  font-size: 13px;
-  font-weight: 500;
-}
-
-.track-buttons {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.track-status {
-  display: flex;
-  gap: 2px;
+  background: linear-gradient(135deg, #805b90, #704b80);
 }
 
 .track-content {
   flex: 1;
   position: relative;
-  background: var(--color-bg-secondary);
+  background-color: var(--color-bg-secondary);
+  overflow: hidden;
 }
 
-.track-content.track-hidden {
-  opacity: 0.5;
+.track-content:hover {
+  background-color: var(--color-bg-tertiary);
 }
+
+/* 隐藏轨道样式 */
+.track-content.track-hidden {
+  background-color: var(--color-bg-quaternary);
+  opacity: 0.6;
+  position: relative;
+}
+
+.track-content.track-hidden::before {
+  content: '轨道已隐藏';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  pointer-events: none;
+  z-index: 1;
+  background-color: rgba(0, 0, 0, 0.7);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--border-radius-small);
+  white-space: nowrap;
+}
+
+.track-content.track-hidden:hover {
+  background-color: var(--color-bg-quaternary);
+  opacity: 0.8;
+}
+
+/* 轨道类型样式 - 移除边框，颜色标识已移至左侧控制区域 */
+.track-content.track-type-video,
+.track-content.track-type-audio,
+.track-content.track-type-text {
+  /* 统一使用默认背景色 */
+}
+
+.track-name {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.track-type-info {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  flex-shrink: 0;
+  border-radius: var(--border-radius-small);
+  border: 1px solid rgba(156, 163, 175, 0.3);
+  overflow: hidden;
+}
+
+.track-type-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 0;
+  background-color: rgba(156, 163, 175, 0.15);
+  color: #9ca3af;
+  flex-shrink: 0;
+  border: none;
+}
+
+.track-name-text {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  cursor: pointer;
+  display: block;
+  padding: 2px var(--spacing-xs);
+  border-radius: 2px;
+  transition: background-color var(--transition-fast);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.track-name-text:hover {
+  background-color: var(--color-bg-quaternary);
+}
+
+.track-name-input {
+  background: var(--color-bg-quaternary);
+  border: 1px solid var(--color-border-secondary);
+  border-radius: 2px;
+  color: var(--color-text-primary);
+  font-size: var(--font-size-sm);
+  padding: 2px var(--spacing-xs);
+  width: 100%;
+}
+
+.track-buttons {
+  display: flex;
+  gap: var(--spacing-xs);
+  justify-content: flex-start;
+}
+
+.track-status {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.status-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: 1px solid transparent;
+  border-radius: var(--border-radius-small);
+  background-color: transparent;
+  color: #9ca3af; /* 银灰色 */
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.status-btn:hover {
+  background-color: rgba(156, 163, 175, 0.15); /* 悬停时的银色背景 */
+  border-color: rgba(156, 163, 175, 0.3);
+  color: #d1d5db; /* 悬停时更亮的银色 */
+}
+
+.status-btn.active {
+  background-color: rgba(156, 163, 175, 0.25); /* 激活状态的银色背景 */
+  border-color: rgba(156, 163, 175, 0.4);
+  color: #f3f4f6; /* 激活状态的亮银色 */
+}
+
+.status-btn.active:hover {
+  background-color: rgba(156, 163, 175, 0.35); /* 激活状态悬停时更亮 */
+  border-color: rgba(156, 163, 175, 0.5);
+  color: #ffffff; /* 最亮的银色 */
+}
+
+.clip-count {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 0;
+  background-color: rgba(156, 163, 175, 0.15); /* 与图标相同的背景色 */
+  color: #9ca3af; /* 与图标相同的文字颜色 */
+  font-size: 11px;
+  font-weight: 600;
+  border: none;
+}
+
+/* track-btn 相关样式已清理 - 未在组件中使用 */
 
 .timeline-grid {
   position: absolute;
@@ -2229,6 +2345,7 @@ onUnmounted(() => {
   right: 0;
   bottom: 0;
   pointer-events: none;
+  z-index: 0;
 }
 
 .grid-line {
@@ -2236,60 +2353,13 @@ onUnmounted(() => {
   top: 0;
   bottom: 0;
   width: 1px;
-  background: var(--color-border);
-  opacity: 0.3;
+  background-color: var(--color-bg-quaternary);
+  opacity: 0.5;
 }
 
 .grid-line.frame-line {
-  opacity: 0.15;
-}
-
-/* 冲突检测视觉反馈样式 */
-@keyframes conflictPulse {
-  0% {
-    opacity: 0.3;
-    transform: scale(1);
-  }
-  100% {
-    opacity: 0.6;
-    transform: scale(1.02);
-  }
-}
-
-.conflict-indicator {
-  position: absolute;
-  border-radius: 4px;
-  pointer-events: none;
-  z-index: 100;
-  animation: conflictPulse 1s ease-in-out infinite alternate;
-}
-
-.conflict-indicator.conflict-low {
-  background: rgba(255, 193, 7, 0.2);
-  border: 2px solid #ffc107;
-}
-
-.conflict-indicator.conflict-medium {
-  background: rgba(255, 107, 107, 0.3);
-  border: 2px solid #ff6b6b;
-}
-
-.conflict-indicator.conflict-high {
-  background: rgba(220, 53, 69, 0.4);
-  border: 2px solid #dc3545;
-}
-
-.conflict-tooltip {
-  position: absolute;
-  top: -30px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: rgba(0, 0, 0, 0.8);
-  color: white;
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 12px;
-  white-space: nowrap;
-  z-index: 101;
+  background-color: var(--color-border-secondary);
+  opacity: 0.3;
+  width: 1px;
 }
 </style>

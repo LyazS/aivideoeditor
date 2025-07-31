@@ -152,12 +152,14 @@ export const DEFAULT_TRACK_TYPES = {
 } as const
 
 /**
- * 轨道高度（像素）
+ * 轨道高度（像素）- 统一为60px，与旧架构一致
  */
 export const TRACK_HEIGHTS = {
-  video: 80,
+  video: 60,
   audio: 60,
-  subtitle: 40
+  text: 60,
+  subtitle: 60,
+  effect: 60
 } as const
 
 // ==================== 错误相关常量 ====================

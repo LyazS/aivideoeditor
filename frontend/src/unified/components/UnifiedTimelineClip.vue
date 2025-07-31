@@ -53,6 +53,10 @@ import type {
 } from '../types/clipRenderer'
 import type { MediaTypeOrUnknown } from '../mediaitem/types'
 import { ContentRendererFactory } from './renderers/ContentRendererFactory'
+import { useUnifiedStore } from '../unifiedStore'
+import { useDragUtils } from '../composables/useDragUtils'
+import { getSnapIndicatorManager } from '../composables/useSnapIndicator'
+import { usePlaybackControls } from '../composables/usePlaybackControls'
 
 // ==================== 组件定义 ====================
 
@@ -63,8 +67,18 @@ const props = withDefaults(defineProps<UnifiedTimelineClipProps>(), {
   isResizing: false,
   currentFrame: 0,
   scale: 1,
-  trackHeight: 60
+  trackHeight: 60,
+  timelineWidth: 1000
 })
+
+// 获取统一store实例
+const unifiedStore = useUnifiedStore()
+const dragUtils = useDragUtils()
+const snapIndicatorManager = getSnapIndicatorManager()
+const { pauseForEditing } = usePlaybackControls()
+
+// 拖拽状态
+const isDragging = ref(false)
 
 // 定义组件事件
 const emit = defineEmits<{
@@ -156,7 +170,7 @@ const clipClasses = computed(() => {
     `status-${props.data.timelineStatus}`,
     {
       'selected': props.isSelected,
-      'dragging': props.isDragging,
+      'dragging': isDragging.value || props.isDragging,
       'resizing': props.isResizing
     }
   ]
@@ -168,13 +182,26 @@ const clipClasses = computed(() => {
 })
 
 /**
- * 动态样式
+ * 动态样式（包含位置和尺寸计算，与旧架构TimelineBaseClip保持一致）
  */
 const clipStyles = computed(() => {
+  // 计算clip的位置和尺寸
+  const timeRange = props.data.timeRange
+  const positionFrames = timeRange.timelineStartTime
+  const durationFrames = timeRange.timelineEndTime - timeRange.timelineStartTime
+
+  // 使用统一store的坐标转换方法
+  const left = unifiedStore.frameToPixel(positionFrames, props.timelineWidth)
+  const endFrames = positionFrames + durationFrames
+  const right = unifiedStore.frameToPixel(endFrames, props.timelineWidth)
+  const width = Math.max(right - left, 20) // 最小宽度20px
+
   const baseStyles = {
-    // 基础样式将在CSS中定义
+    left: `${left}px`,
+    width: `${width}px`,
+    // 其他样式在CSS中定义
   }
-  
+
   // 添加渲染器提供的自定义样式
   const customStyles = renderer.value.getCustomStyles?.(renderContext.value) || {}
 
@@ -212,14 +239,114 @@ function handleContextMenu(event: MouseEvent) {
  * 处理拖拽开始事件
  */
 function handleDragStart(event: DragEvent) {
+  console.log('🎯 [UnifiedTimelineClip] dragstart事件触发:', props.data.id)
+
+  // 检查是否应该启动拖拽
+  if (event.ctrlKey) {
+    console.log('🚫 [UnifiedTimelineClip] Ctrl+拖拽被禁用')
+    event.preventDefault()
+    return
+  }
+
+  // 暂停播放并处理拖拽
+  pauseForEditing('时间轴项目拖拽')
+  hideTooltip()
+  dragUtils.ensureItemSelected(props.data.id)
+
+  // 设置拖拽数据
+  const dragOffset = { x: event.offsetX, y: event.offsetY }
+  const dragData = dragUtils.setTimelineItemDragData(
+    event,
+    props.data.id,
+    props.data.trackId || '',
+    props.data.timeRange.timelineStartTime,
+    Array.from(unifiedStore.selectedTimelineItemIds),
+    dragOffset,
+  )
+
+  console.log('📦 [UnifiedTimelineClip] 设置拖拽数据:', dragData)
+
+  // 创建简单的拖拽预览图像
+  const dragImage = createSimpleDragPreview()
+  event.dataTransfer!.setDragImage(dragImage, dragOffset.x, dragOffset.y)
+
+  // 设置拖拽状态
+  isDragging.value = true
   emit('dragStart', event, props.data.id)
 }
 
 /**
  * 处理拖拽结束事件
  */
-function handleDragEnd(event: DragEvent) {
-  // 拖拽结束的处理逻辑
+function handleDragEnd(_event: DragEvent) {
+  console.log('🏁 [UnifiedTimelineClip] 拖拽结束:', props.data.id)
+
+  // 清理拖拽状态
+  isDragging.value = false
+  dragUtils.clearDragData()
+  removeSimpleDragPreview()
+
+  // 隐藏吸附指示器
+  snapIndicatorManager.hide(true)
+}
+
+/**
+ * 创建简单的拖拽预览图像
+ */
+function createSimpleDragPreview(): HTMLElement {
+  const selectedCount = unifiedStore.selectedTimelineItemIds.size
+  const preview = document.createElement('div')
+
+  preview.className = 'simple-drag-preview'
+
+  // 获取当前clip的实际尺寸
+  const clipElement = dragUtils.getTimelineItemElement(props.data.id)
+  const { width: clipWidth, height: clipHeight } = dragUtils.getElementDimensions(clipElement)
+
+  // 简单的预览样式
+  preview.style.cssText = `
+    position: fixed;
+    top: -1000px;
+    left: -1000px;
+    width: ${clipWidth}px;
+    height: ${clipHeight}px;
+    background: rgba(255, 107, 53, 0.8);
+    border: 1px solid var(--color-clip-selected);
+    border-radius: 4px;
+    pointer-events: none;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 10px;
+    font-weight: bold;
+  `
+
+  // 简单的文本内容
+  if (selectedCount > 1) {
+    preview.textContent = `${selectedCount} 项目`
+  } else {
+    const mediaItem = unifiedStore.getMediaItem(props.data.mediaItemId)
+    const clipName = mediaItem?.name || 'Clip'
+    preview.textContent = clipName.length > 8 ? clipName.substring(0, 6) + '..' : clipName
+  }
+
+  document.body.appendChild(preview)
+
+  // 设置清理定时器
+  setTimeout(() => {
+    removeSimpleDragPreview()
+  }, 100)
+
+  return preview
+}
+
+function removeSimpleDragPreview() {
+  const preview = document.querySelector('.simple-drag-preview')
+  if (preview && document.body.contains(preview)) {
+    document.body.removeChild(preview)
+  }
 }
 
 /**
@@ -265,54 +392,78 @@ onUnmounted(() => {
 
 <style scoped>
 .unified-timeline-clip {
-  position: relative;
-  height: 100%;
+  position: absolute;
+  /* 固定高度50px，与旧架构保持一致 */
+  height: 50px;
+  /* 垂直居中定位（轨道高度60px，clip高度50px，上下各留5px） */
+  top: 5px;
   border-radius: 4px;
   cursor: pointer;
   user-select: none;
   transition: all 0.2s ease;
-  
-  /* 基础边框和背景 */
-  border: 1px solid #d9d9d9;
+  /* 确保时间轴项目在网格线之上 */
+  z-index: 10;
+
+  /* 基础边框和背景 - 与旧架构保持一致 */
+  border: 2px solid transparent;
   background: #fafafa;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  color: white;
 }
 
-.unified-timeline-clip.selected {
-  border-color: #1890ff;
-  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+/* 悬停状态 */
+.unified-timeline-clip:hover {
+  border-color: var(--color-text-primary);
 }
 
+/* 拖拽和调整大小状态 - 与旧架构保持一致 */
 .unified-timeline-clip.dragging {
   opacity: 0.8;
-  transform: rotate(2deg);
+  transform: scale(0.98);
+  z-index: 1000;
+  transition: none !important;
 }
 
 .unified-timeline-clip.resizing {
   cursor: col-resize;
+  border-color: var(--color-primary);
+  transition: none !important;
 }
 
-/* 媒体类型特定样式 */
-.unified-timeline-clip.media-type-video {
-  background: linear-gradient(135deg, #e6f7ff 0%, #bae7ff 100%);
-}
-
-.unified-timeline-clip.media-type-image {
-  background: linear-gradient(135deg, #f6ffed 0%, #d9f7be 100%);
-}
-
-.unified-timeline-clip.media-type-audio {
-  background: linear-gradient(135deg, #fff7e6 0%, #ffd591 100%);
-}
-
-.unified-timeline-clip.media-type-text {
-  background: linear-gradient(135deg, #f9f0ff 0%, #d3adf7 100%);
-}
-
+/* 媒体类型特定样式 - 与旧架构保持一致 */
+.unified-timeline-clip.media-type-video,
+.unified-timeline-clip.media-type-image,
+.unified-timeline-clip.media-type-audio,
+.unified-timeline-clip.media-type-text,
 .unified-timeline-clip.media-type-unknown {
-  background: linear-gradient(135deg, #f5f5f5 0%, #d9d9d9 100%);
+  /* 统一使用与旧架构相同的灰色背景 */
+  background: linear-gradient(135deg, #666666, #555555);
 }
 
-/* 状态特定样式 */
+/* 状态特定样式 - 与旧架构保持一致 */
+.unified-timeline-clip.selected {
+  background: linear-gradient(135deg, var(--color-clip-selected), var(--color-clip-selected-dark)) !important;
+  border-color: var(--color-clip-selected);
+  box-shadow: 0 0 0 2px rgba(255, 107, 53, 0.3);
+}
+
+.unified-timeline-clip.overlapping {
+  background: linear-gradient(135deg, var(--color-clip-overlapping), var(--color-clip-overlapping-dark)) !important;
+}
+
+.unified-timeline-clip.track-hidden {
+  background: linear-gradient(135deg, var(--color-clip-hidden), var(--color-clip-hidden-dark)) !important;
+}
+
+.unified-timeline-clip.track-hidden.selected {
+  background: linear-gradient(135deg, var(--color-clip-hidden-selected), var(--color-clip-hidden-selected-dark)) !important;
+}
+
+/* 隐藏轨道上的clip内容也要调整透明度 */
+.unified-timeline-clip.track-hidden .clip-content {
+  opacity: 0.8;
+}
+
 .unified-timeline-clip.status-loading {
   border-style: dashed;
   animation: loading-pulse 2s infinite;
@@ -386,5 +537,21 @@ onUnmounted(() => {
   height: 100%;
   font-size: 12px;
   color: #666;
+}
+
+/* 简单拖拽预览样式 */
+:global(.simple-drag-preview) {
+  position: fixed !important;
+  background: rgba(255, 107, 53, 0.8) !important;
+  border: 1px solid var(--color-clip-selected) !important;
+  border-radius: 4px !important;
+  pointer-events: none !important;
+  z-index: 9999 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  color: white !important;
+  font-size: 10px !important;
+  font-weight: bold !important;
 }
 </style>

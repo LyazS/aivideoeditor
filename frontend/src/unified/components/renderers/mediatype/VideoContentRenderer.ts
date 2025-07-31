@@ -22,15 +22,19 @@ export class VideoContentRenderer implements ContentRenderer<'video' | 'image'> 
   readonly type = 'video' as const
 
   renderContent(context: ContentRenderContext<'video' | 'image'>): VNode {
-    const { data, isSelected, currentFrame } = context
+    const { data, isSelected, currentFrame, scale } = context
+
+    // 判断是否应该显示详细信息（与旧架构逻辑一致）
+    const showDetails = this.shouldShowDetails(context)
 
     return h('div', {
-      class: ['video-content', { selected: isSelected }]
+      class: ['video-content', { selected: isSelected }],
+      style: this.getContentStyles()
     }, [
-      // 缩略图显示
-      this.renderThumbnail(data, currentFrame),
+      // 只在showDetails时显示缩略图（与旧架构一致）
+      showDetails ? this.renderThumbnail(data, currentFrame) : null,
       // 内容信息覆盖层
-      this.renderContentOverlay(data),
+      showDetails ? this.renderDetailedInfo(data) : this.renderSimpleInfo(data),
       // 裁剪指示器
       this.renderClipIndicators(data)
     ])
@@ -52,33 +56,54 @@ export class VideoContentRenderer implements ContentRenderer<'video' | 'image'> 
   }
 
   getCustomStyles(context: ContentRenderContext<'video' | 'image'>): Record<string, string | number> {
-    const { data } = context
-    const styles: Record<string, string | number> = {}
-
-    // 根据媒体类型设置不同的背景
-    if (data.mediaType === 'video') {
-      styles.background = 'linear-gradient(135deg, #e6f7ff 0%, #bae7ff 100%)'
-    } else if (data.mediaType === 'image') {
-      styles.background = 'linear-gradient(135deg, #f6ffed 0%, #d9f7be 100%)'
-    }
-
-    return styles
+    // 不覆盖背景色，让UnifiedTimelineClip的统一样式生效
+    return {}
   }
 
   // ==================== 私有方法 ====================
+
+  /**
+   * 判断是否应该显示详细信息（与旧架构逻辑一致）
+   */
+  private shouldShowDetails(context: ContentRenderContext<'video' | 'image'>): boolean {
+    const { data, scale } = context
+
+    // 计算clip的像素宽度
+    const durationFrames = data.timeRange.timelineEndTime - data.timeRange.timelineStartTime
+    const width = durationFrames * scale // 简化计算，实际可能需要更复杂的逻辑
+
+    return width >= 100 // 宽度大于100px时显示详细信息
+  }
+
+  /**
+   * 获取内容样式
+   */
+  private getContentStyles(): Record<string, string> {
+    return {
+      display: 'flex',
+      alignItems: 'center',
+      height: '100%',
+      padding: '4px 8px',
+      overflow: 'hidden'
+    }
+  }
 
   /**
    * 渲染缩略图
    */
   private renderThumbnail(data: UnifiedTimelineItemData<'video' | 'image'>, currentFrame: number): VNode {
     const thumbnailUrl = this.getThumbnailUrl(data, currentFrame)
-    
+
     if (thumbnailUrl) {
-      return h('div', { class: 'thumbnail-container' }, [
+      return h('div', {
+        class: 'clip-thumbnail',
+        style: this.getThumbnailContainerStyles()
+      }, [
         h('img', {
           class: 'thumbnail-image',
           src: thumbnailUrl,
           alt: getTimelineItemDisplayName(data),
+          style: this.getThumbnailImageStyles(),
           onError: () => this.handleThumbnailError(data),
           onLoad: () => this.handleThumbnailLoad(data)
         })
@@ -93,68 +118,63 @@ export class VideoContentRenderer implements ContentRenderer<'video' | 'image'> 
    * 渲染缩略图占位符
    */
   private renderThumbnailPlaceholder(data: UnifiedTimelineItemData<'video' | 'image'>): VNode {
-    const iconMap = {
-      video: '🎬',
-      image: '🖼️'
-    }
-
-    return h('div', { class: 'thumbnail-placeholder' }, [
-      h('div', { class: 'placeholder-icon' }, iconMap[data.mediaType]),
-      h('div', { class: 'placeholder-text' }, data.mediaType === 'video' ? '视频' : '图片')
+    return h('div', {
+      class: 'clip-thumbnail',
+      style: this.getThumbnailContainerStyles()
+    }, [
+      h('div', {
+        class: 'thumbnail-placeholder',
+        style: this.getThumbnailPlaceholderStyles()
+      }, [
+        h('div', { class: 'loading-spinner', style: this.getLoadingSpinnerStyles() })
+      ])
     ])
   }
 
   /**
-   * 渲染内容覆盖层
+   * 渲染详细信息（与旧架构的clip-info一致）
    */
-  private renderContentOverlay(data: UnifiedTimelineItemData<'video' | 'image'>): VNode {
-    return h('div', { class: 'content-overlay' }, [
-      // 媒体类型标识
-      this.renderMediaTypeIndicator(data),
-      // 时间显示
-      this.renderTimeDisplay(data),
-      // 文件名显示
-      this.renderFileName(data)
+  private renderDetailedInfo(data: UnifiedTimelineItemData<'video' | 'image'>): VNode {
+    return h('div', {
+      class: 'clip-info',
+      style: this.getClipInfoStyles()
+    }, [
+      // 文件名
+      h('div', {
+        class: 'clip-name',
+        style: this.getClipNameStyles()
+      }, getTimelineItemDisplayName(data)),
+      // 时长信息
+      h('div', {
+        class: 'clip-duration',
+        style: this.getClipDurationStyles()
+      }, this.formatTime(this.getDuration(data))),
+      // 倍速信息（仅视频）
+      data.mediaType === 'video' && this.hasSpeedAdjustment(data)
+        ? h('div', {
+            class: 'clip-speed',
+            style: this.getClipSpeedStyles()
+          }, this.getSpeedText(data))
+        : null
     ])
   }
 
   /**
-   * 渲染媒体类型指示器
+   * 渲染简化信息（与旧架构的clip-simple一致）
    */
-  private renderMediaTypeIndicator(data: UnifiedTimelineItemData<'video' | 'image'>): VNode {
-    const iconMap = {
-      video: '▶️',
-      image: '🖼️'
-    }
-
-    return h('div', { 
-      class: ['media-type-indicator', `type-${data.mediaType}`] 
-    }, iconMap[data.mediaType])
-  }
-
-  /**
-   * 渲染时间显示
-   */
-  private renderTimeDisplay(data: UnifiedTimelineItemData<'video' | 'image'>): VNode {
-    const duration = this.getDuration(data)
-    const timeText = this.formatTime(duration)
-
-    return h('div', { class: 'time-display' }, [
-      h('span', { class: 'time-text' }, timeText)
+  private renderSimpleInfo(data: UnifiedTimelineItemData<'video' | 'image'>): VNode {
+    return h('div', {
+      class: 'clip-simple',
+      style: this.getClipSimpleStyles()
+    }, [
+      h('div', {
+        class: 'simple-duration',
+        style: this.getSimpleDurationStyles()
+      }, this.formatTime(this.getDuration(data)))
     ])
   }
 
-  /**
-   * 渲染文件名
-   */
-  private renderFileName(data: UnifiedTimelineItemData<'video' | 'image'>): VNode {
-    const name = getTimelineItemDisplayName(data)
-    const displayName = name.length > 12 ? name.substring(0, 12) + '...' : name
 
-    return h('div', { class: 'file-name' }, [
-      h('span', { class: 'name-text' }, displayName)
-    ])
-  }
 
   /**
    * 渲染裁剪指示器
@@ -172,14 +192,159 @@ export class VideoContentRenderer implements ContentRenderer<'video' | 'image'> 
     ])
   }
 
+  // ==================== 样式方法 ====================
+
+  /**
+   * 获取缩略图容器样式（与旧架构.clip-thumbnail一致）
+   */
+  private getThumbnailContainerStyles(): Record<string, string> {
+    return {
+      width: '50px',
+      height: '32px',
+      backgroundColor: 'var(--color-bg-primary)',
+      borderRadius: '2px',
+      overflow: 'hidden',
+      position: 'relative',
+      flexShrink: '0'
+    }
+  }
+
+  /**
+   * 获取缩略图图片样式
+   */
+  private getThumbnailImageStyles(): Record<string, string> {
+    return {
+      width: '100%',
+      height: '100%',
+      objectFit: 'cover'
+    }
+  }
+
+  /**
+   * 获取缩略图占位符样式
+   */
+  private getThumbnailPlaceholderStyles(): Record<string, string> {
+    return {
+      width: '100%',
+      height: '100%',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: 'rgba(0, 0, 0, 0.3)'
+    }
+  }
+
+  /**
+   * 获取加载旋转器样式
+   */
+  private getLoadingSpinnerStyles(): Record<string, string> {
+    return {
+      width: '16px',
+      height: '16px',
+      border: '2px solid rgba(255, 255, 255, 0.3)',
+      borderTop: '2px solid var(--color-text-primary)',
+      borderRadius: '50%',
+      animation: 'spin 1s linear infinite'
+    }
+  }
+
+  /**
+   * 获取clip-info样式
+   */
+  private getClipInfoStyles(): Record<string, string> {
+    return {
+      flex: '1',
+      marginLeft: '6px',
+      minWidth: '0'
+    }
+  }
+
+  /**
+   * 获取clip-name样式
+   */
+  private getClipNameStyles(): Record<string, string> {
+    return {
+      fontSize: '11px',
+      fontWeight: 'bold',
+      color: 'white',
+      whiteSpace: 'nowrap',
+      overflow: 'hidden',
+      textOverflow: 'ellipsis'
+    }
+  }
+
+  /**
+   * 获取clip-duration样式
+   */
+  private getClipDurationStyles(): Record<string, string> {
+    return {
+      fontSize: '9px',
+      color: 'rgba(255, 255, 255, 0.8)',
+      marginTop: '1px'
+    }
+  }
+
+  /**
+   * 获取clip-speed样式
+   */
+  private getClipSpeedStyles(): Record<string, string> {
+    return {
+      fontSize: '9px',
+      color: 'var(--color-speed-indicator)',
+      marginTop: '1px',
+      fontWeight: 'bold'
+    }
+  }
+
+  /**
+   * 获取clip-simple样式
+   */
+  private getClipSimpleStyles(): Record<string, string> {
+    return {
+      width: '100%',
+      height: '100%',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      textAlign: 'center'
+    }
+  }
+
+  /**
+   * 获取simple-duration样式
+   */
+  private getSimpleDurationStyles(): Record<string, string> {
+    return {
+      fontSize: '10px',
+      fontWeight: 'bold',
+      color: 'white',
+      backgroundColor: 'rgba(0, 0, 0, 0.3)',
+      padding: '2px 4px',
+      borderRadius: '2px',
+      whiteSpace: 'nowrap'
+    }
+  }
+
   // ==================== 辅助方法 ====================
 
   /**
    * 获取缩略图URL
    */
   private getThumbnailUrl(data: UnifiedTimelineItemData<'video' | 'image'>, currentFrame: number): string | null {
-    // 这里需要通过mediaItemId获取关联的媒体项目数据来获取缩略图
-    // 暂时返回null，实际实现需要从store或管理器中获取
+    // 在统一架构中，缩略图URL存储在配置中
+    const config = data.config as any
+
+    // 检查配置中是否有thumbnailUrl
+    if (config && config.thumbnailUrl) {
+      return config.thumbnailUrl
+    }
+
+    // 兼容性检查：检查是否有直接的thumbnailUrl属性（与旧架构兼容）
+    if ('thumbnailUrl' in data && (data as any).thumbnailUrl) {
+      return (data as any).thumbnailUrl
+    }
+
+    // 如果没有缩略图URL，返回null显示占位符
     return null
   }
 
@@ -192,19 +357,59 @@ export class VideoContentRenderer implements ContentRenderer<'video' | 'image'> 
   }
 
   /**
-   * 格式化时间显示
+   * 格式化时间显示（使用时间码格式，与旧架构一致）
    */
   private formatTime(frames: number): string {
-    // 假设30fps
-    const seconds = frames / 30
-    
-    if (seconds < 60) {
-      return `${seconds.toFixed(1)}s`
+    // 使用时间码格式：HH:MM:SS:FF
+    const fps = 30 // 假设30fps
+    const totalSeconds = Math.floor(frames / fps)
+    const remainingFrames = frames % fps
+
+    const hours = Math.floor(totalSeconds / 3600)
+    const minutes = Math.floor((totalSeconds % 3600) / 60)
+    const seconds = totalSeconds % 60
+
+    if (hours > 0) {
+      return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}:${remainingFrames.toString().padStart(2, '0')}`
+    } else {
+      return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}:${remainingFrames.toString().padStart(2, '0')}`
     }
-    
-    const minutes = Math.floor(seconds / 60)
-    const remainingSeconds = Math.floor(seconds % 60)
-    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`
+  }
+
+  /**
+   * 检查是否有播放速度调整
+   */
+  private hasSpeedAdjustment(data: UnifiedTimelineItemData<'video' | 'image'>): boolean {
+    if (data.mediaType !== 'video') return false
+
+    const timeRange = data.timeRange
+    if ('playbackRate' in timeRange) {
+      const rate = timeRange.playbackRate || 1
+      return Math.abs(rate - 1) > 0.001
+    }
+
+    return false
+  }
+
+  /**
+   * 获取播放速度文本
+   */
+  private getSpeedText(data: UnifiedTimelineItemData<'video' | 'image'>): string {
+    if (data.mediaType !== 'video') return ''
+
+    const timeRange = data.timeRange
+    if ('playbackRate' in timeRange) {
+      const rate = timeRange.playbackRate || 1
+      const tolerance = 0.001
+
+      if (rate > 1 + tolerance) {
+        return `${rate.toFixed(1)}x 快速`
+      } else if (rate < 1 - tolerance) {
+        return `${rate.toFixed(1)}x 慢速`
+      }
+    }
+
+    return '正常速度'
   }
 
   /**

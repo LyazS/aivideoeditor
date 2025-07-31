@@ -32,7 +32,7 @@
             </div>
             <!-- 中间播放控制 -->
             <div class="center-controls">
-              <PlaybackControls />
+              <UnifiedPlaybackControls />
             </div>
             <!-- 右侧比例按钮 -->
             <div class="right-controls">
@@ -72,7 +72,7 @@
       <div class="timeline-section" :style="{ height: timelineHeight + '%' }">
         <!-- 片段管理工具栏在时间刻度上方 -->
         <div class="clip-management-toolbar">
-          <ClipManagementToolbar />
+          <UnifiedClipManagementToolbar />
         </div>
         <!-- 只有WebAV初始化完成后才显示Timeline -->
         <!-- <Timeline v-if="unifiedStore.isWebAVReady" /> -->
@@ -175,13 +175,10 @@
 <script setup lang="ts">
 import { ref, computed, watch, onUnmounted, onMounted } from 'vue'
 import PreviewWindow from './PreviewWindow.vue'
-import Timeline from './Timeline.vue'
-import PlaybackControls from './PlaybackControls.vue'
-import ClipManagementToolbar from './ClipManagementToolbar.vue'
-import MediaLibrary from './MediaLibrary.vue'
-import PropertiesPanel from './PropertiesPanel.vue'
 import UnifiedMediaLibrary from '@/unified/components/UnifiedMediaLibrary.vue'
 import UnifiedTimeline from '@/unified/components/UnifiedTimeline.vue'
+import UnifiedPlaybackControls from '@/unified/components/UnifiedPlaybackControls.vue'
+import UnifiedClipManagementToolbar from '@/unified/components/UnifiedClipManagementToolbar.vue'
 import { useUnifiedStore } from '@/unified/unifiedStore'
 import { useKeyboardShortcuts } from '../composables/useKeyboardShortcuts'
 import { logWebAVReadyStateChange, logComponentLifecycle } from '../utils/webavDebug'

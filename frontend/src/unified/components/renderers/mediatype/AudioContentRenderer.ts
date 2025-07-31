@@ -25,14 +25,13 @@ export class AudioContentRenderer implements ContentRenderer<'audio'> {
     const { data, isSelected, scale } = context
 
     return h('div', {
-      class: ['audio-content', { selected: isSelected }]
+      class: ['audio-content', { selected: isSelected }],
+      style: this.getAudioContentStyles()
     }, [
-      // 波形显示
-      this.renderWaveform(data, scale),
-      // 音频信息覆盖层
-      this.renderAudioOverlay(data),
-      // 音量和静音指示器
-      this.renderAudioIndicators(data)
+      // 音频信息显示（与旧架构TimelineAudioClip一致）
+      this.renderAudioInfo(data),
+      // 音频控制指示器
+      this.renderAudioControls(data)
     ])
   }
 
@@ -53,12 +52,122 @@ export class AudioContentRenderer implements ContentRenderer<'audio'> {
   }
 
   getCustomStyles(context: ContentRenderContext<'audio'>): Record<string, string | number> {
-    return {
-      background: 'linear-gradient(135deg, #fff7e6 0%, #ffd591 100%)'
-    }
+    // 不覆盖背景色，让UnifiedTimelineClip的统一样式生效
+    return {}
   }
 
   // ==================== 私有方法 ====================
+
+  /**
+   * 获取音频内容样式
+   */
+  private getAudioContentStyles(): Record<string, string> {
+    return {
+      position: 'relative',
+      width: '100%',
+      height: '100%',
+      display: 'flex',
+      flexDirection: 'column',
+      padding: '4px 8px'
+    }
+  }
+
+  /**
+   * 渲染音频信息（与旧架构audio-info一致）
+   */
+  private renderAudioInfo(data: UnifiedTimelineItemData<'audio'>): VNode {
+    return h('div', {
+      class: 'audio-info',
+      style: this.getAudioInfoStyles()
+    }, [
+      // 音频名称
+      h('div', {
+        class: 'audio-name',
+        style: this.getAudioNameStyles()
+      }, getTimelineItemDisplayName(data)),
+      // 音频时长
+      h('div', {
+        class: 'audio-duration',
+        style: this.getAudioDurationStyles()
+      }, this.formatTime(this.getDuration(data)))
+    ])
+  }
+
+  /**
+   * 渲染音频控制指示器（与旧架构audio-controls一致）
+   */
+  private renderAudioControls(data: UnifiedTimelineItemData<'audio'>): VNode {
+    return h('div', {
+      class: 'audio-controls',
+      style: this.getAudioControlsStyles()
+    }, [
+      // 静音指示器
+      this.isMuted(data) ? h('div', {
+        class: 'mute-indicator',
+        style: { color: '#ff6b6b' }
+      }, '🔇') : null,
+      // 音量指示器
+      h('div', {
+        class: 'volume-indicator',
+        style: { opacity: '0.8' }
+      }, `${Math.round(this.getVolume(data) * 100)}%`)
+    ])
+  }
+
+  // ==================== 样式方法 ====================
+
+  /**
+   * 获取音频信息样式
+   */
+  private getAudioInfoStyles(): Record<string, string> {
+    return {
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      fontSize: '11px',
+      marginTop: '2px'
+    }
+  }
+
+  /**
+   * 获取音频名称样式
+   */
+  private getAudioNameStyles(): Record<string, string> {
+    return {
+      fontWeight: '500',
+      whiteSpace: 'nowrap',
+      overflow: 'hidden',
+      textOverflow: 'ellipsis',
+      maxWidth: '60%',
+      color: 'white'
+    }
+  }
+
+  /**
+   * 获取音频时长样式
+   */
+  private getAudioDurationStyles(): Record<string, string> {
+    return {
+      fontSize: '10px',
+      opacity: '0.9',
+      color: 'white'
+    }
+  }
+
+  /**
+   * 获取音频控制样式
+   */
+  private getAudioControlsStyles(): Record<string, string> {
+    return {
+      position: 'absolute',
+      top: '2px',
+      right: '4px',
+      display: 'flex',
+      alignItems: 'center',
+      gap: '4px',
+      fontSize: '10px'
+    }
+  }
 
   /**
    * 渲染波形

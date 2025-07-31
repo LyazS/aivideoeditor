@@ -34,7 +34,7 @@ export const TRACK_STATUS = {
  */
 export const TRACK_TYPE_DEFAULTS = {
   video: {
-    height: 80,
+    height: 60, // 统一轨道高度为60px（与旧架构一致）
     color: '#4CAF50',
     icon: 'video-camera',
     name: '视频轨道',
@@ -45,8 +45,8 @@ export const TRACK_TYPE_DEFAULTS = {
     maxItems: 100
   },
   audio: {
-    height: 60,
-    color: '#2196F3', 
+    height: 60, // 统一轨道高度为60px（与旧架构一致）
+    color: '#2196F3',
     icon: 'volume-up',
     name: '音频轨道',
     hasVisual: false,
@@ -56,7 +56,7 @@ export const TRACK_TYPE_DEFAULTS = {
     maxItems: 50
   },
   text: {
-    height: 50,
+    height: 60, // 统一轨道高度为60px（与旧架构一致）
     color: '#FF9800',
     icon: 'text',
     name: '文本轨道',
@@ -67,7 +67,7 @@ export const TRACK_TYPE_DEFAULTS = {
     maxItems: 200
   },
   subtitle: {
-    height: 40,
+    height: 60, // 统一轨道高度为60px（与旧架构一致）
     color: '#9C27B0',
     icon: 'closed-captioning',
     name: '字幕轨道',
@@ -78,7 +78,7 @@ export const TRACK_TYPE_DEFAULTS = {
     maxItems: 500
   },
   effect: {
-    height: 60,
+    height: 60, // 统一轨道高度为60px（与旧架构一致）
     color: '#F44336',
     icon: 'magic-wand',
     name: '特效轨道',

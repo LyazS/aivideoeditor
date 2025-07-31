@@ -349,6 +349,14 @@ export class AddTimelineItemCommand implements SimpleCommand {
       return
     }
 
+    // 检查是否已经有缩略图，避免重复生成
+    // 缩略图URL存储在config中
+    const config = timelineItem.config as any
+    if (config && config.thumbnailUrl) {
+      console.log('✅ 项目已有缩略图，跳过重新生成')
+      return
+    }
+
     try {
       console.log('🖼️ 开始为添加的项目重新生成缩略图...')
 
@@ -659,7 +667,7 @@ export class MoveTimelineItemCommand implements SimpleCommand {
     private oldTrackId: string, // 旧的轨道ID
     private newTrackId: string, // 新的轨道ID
     private timelineModule: {
-      updateTimelineItemPosition: (id: string, positionFrames: number, trackId?: string) => void
+      updateTimelineItemPosition: (id: string, positionFrames: number, trackId?: string) => Promise<void>
       getTimelineItem: (id: string) => UnifiedTimelineItemData<MediaTypeOrUnknown> | undefined
     },
     private mediaModule: {
@@ -716,7 +724,7 @@ export class MoveTimelineItemCommand implements SimpleCommand {
 
       // 移动到新位置
       const trackIdToSet = this.oldTrackId !== this.newTrackId ? this.newTrackId : undefined
-      this.timelineModule.updateTimelineItemPosition(
+      await this.timelineModule.updateTimelineItemPosition(
         this.timelineItemId,
         this.newPositionFrames,
         trackIdToSet,
@@ -754,7 +762,7 @@ export class MoveTimelineItemCommand implements SimpleCommand {
 
       // 移动回原位置
       const trackIdToSet = this.oldTrackId !== this.newTrackId ? this.oldTrackId : undefined
-      this.timelineModule.updateTimelineItemPosition(
+      await this.timelineModule.updateTimelineItemPosition(
         this.timelineItemId,
         this.oldPositionFrames,
         trackIdToSet,

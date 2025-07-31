@@ -170,7 +170,10 @@ export interface UnifiedTimelineClipProps<T extends MediaTypeOrUnknown = MediaTy
   
   /** 轨道高度 */
   trackHeight?: number
-  
+
+  /** 时间轴宽度（用于坐标转换） */
+  timelineWidth?: number
+
   /** 自定义内容渲染器（可选，用于扩展） */
   customRenderer?: ContentRenderer<T>
 }

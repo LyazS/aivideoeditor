@@ -223,7 +223,7 @@ export function createUnifiedTimelineModule(
    * @param newPositionFrames 新位置（帧数）
    * @param newTrackId 新轨道ID（可选）
    */
-  function updateTimelineItemPosition(
+  async function updateTimelineItemPosition(
     timelineItemId: string,
     newPositionFrames: number,
     newTrackId?: string,
@@ -263,16 +263,16 @@ export function createUnifiedTimelineModule(
           timelineEndTime: clampedNewPositionFrames + durationFrames,
         }
       } else if (item.timelineStatus === 'ready' && isKnownTimelineItem(item)) {
-        // 就绪状态的已知类型时间轴项目：直接更新timeRange
+        // 就绪状态的已知类型时间轴项目：使用syncTimeRange同步更新sprite
         const currentTimeRange = item.timeRange
         const durationFrames = currentTimeRange.timelineEndTime - currentTimeRange.timelineStartTime
 
-        // 直接更新timeRange
-        item.timeRange = {
-          ...item.timeRange,
+        // 使用syncTimeRange同步更新timeRange和sprite
+        const { syncTimeRange } = await import('../utils/UnifiedTimeRangeUtils')
+        syncTimeRange(item, {
           timelineStartTime: clampedNewPositionFrames,
           timelineEndTime: clampedNewPositionFrames + durationFrames,
-        }
+        })
       }
 
       unifiedDebugLog('更新时间轴项目位置', {
