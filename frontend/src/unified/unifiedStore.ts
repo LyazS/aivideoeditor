@@ -16,7 +16,7 @@ import { calculateTotalDurationFrames } from './utils/UnifiedDurationUtils'
 import type { UnifiedMediaItemData, MediaType, MediaTypeOrUnknown } from '@/unified'
 import type { UnifiedTrackType } from './track/TrackTypes'
 import type { UnifiedTimelineItemData, TransformData } from './timelineitem/TimelineItemData'
-import type { TextMediaConfig, PropertyType } from '../types'
+import type { TextMediaConfig, PropertyType, VideoTimeRange, ImageTimeRange } from '../types'
 
 import { frameToPixel, pixelToFrame } from './utils/coordinateUtils'
 import {
@@ -963,39 +963,81 @@ export const useUnifiedStore = defineStore('unified', () => {
 
   /**
    * 带历史记录的调整时间轴项目大小方法
-   * @param timelineItemId 要调整的时间轴项目ID
-   * @param newDurationFrames 新的时长（帧数）
-   * @param resizeFromEnd 是否从末尾调整（默认true）
+   * 支持两种调用方式：
+   * 1. 新架构方式：resizeTimelineItemWithHistory(timelineItemId, newTimeRange)
+   * 2. 兼容旧调用方式：resizeTimelineItemWithHistory(timelineItemId, newDurationFrames, resizeFromEnd)
    */
   async function resizeTimelineItemWithHistory(
     timelineItemId: string,
-    newDurationFrames: number,
-    resizeFromEnd: boolean = true,
-  ) {
-    // 获取要调整的时间轴项目
-    const timelineItem = unifiedTimelineModule.getTimelineItem(timelineItemId)
-    if (!timelineItem) {
-      console.warn(`⚠️ 时间轴项目不存在，无法调整大小: ${timelineItemId}`)
-      return
+    newTimeRangeOrDuration: VideoTimeRange | ImageTimeRange | number,
+    resizeFromEnd?: boolean
+  ): Promise<boolean> {
+    try {
+      console.log('🔧 [UnifiedStore] 调整时间轴项目大小:', { timelineItemId, newTimeRangeOrDuration, resizeFromEnd })
+
+      // 获取当前项目
+      const currentItem = unifiedTimelineModule.getTimelineItem(timelineItemId)
+      if (!currentItem) {
+        console.error('❌ [UnifiedStore] 时间轴项目不存在:', timelineItemId)
+        return false
+      }
+
+      let newTimeRange: VideoTimeRange | ImageTimeRange
+
+      // 判断调用方式
+      if (typeof newTimeRangeOrDuration === 'number') {
+        // 兼容旧调用方式：传入的是 newDurationFrames
+        const newDurationFrames = newTimeRangeOrDuration
+        const currentTimeRange = currentItem.timeRange
+        
+        if (resizeFromEnd === false) {
+          // 从左侧调整：保持结束时间不变，调整开始时间
+          const newStartTime = currentTimeRange.timelineEndTime - newDurationFrames
+          newTimeRange = {
+            timelineStartTime: Math.max(0, newStartTime),
+            timelineEndTime: currentTimeRange.timelineEndTime
+          } as VideoTimeRange | ImageTimeRange
+        } else {
+          // 从右侧调整（默认）：保持开始时间不变，调整结束时间
+          newTimeRange = {
+            timelineStartTime: currentTimeRange.timelineStartTime,
+            timelineEndTime: currentTimeRange.timelineStartTime + newDurationFrames
+          } as VideoTimeRange | ImageTimeRange
+        }
+      } else {
+        // 新架构方式：直接传入 newTimeRange
+        newTimeRange = newTimeRangeOrDuration
+      }
+
+      // 检查时间范围是否有变化
+      const currentTimeRange = currentItem.timeRange
+      if (currentTimeRange.timelineStartTime === newTimeRange.timelineStartTime &&
+          currentTimeRange.timelineEndTime === newTimeRange.timelineEndTime) {
+        console.log('ℹ️ [UnifiedStore] 时间范围无变化，跳过调整')
+        return true
+      }
+
+      // 创建调整大小命令
+      const command = new ResizeTimelineItemCommand(
+        timelineItemId,
+        currentTimeRange,
+        newTimeRange,
+        {
+          getTimelineItem: unifiedTimelineModule.getTimelineItem,
+        },
+        {
+          getMediaItem: unifiedMediaModule.getMediaItem,
+        }
+      )
+
+      // 执行命令
+      await unifiedHistoryModule.executeCommand(command)
+      console.log('✅ [UnifiedStore] 时间轴项目大小调整成功')
+      return true
+    } catch (error) {
+      console.error('❌ [UnifiedStore] 调整时间轴项目大小时发生错误:', error)
+      return false
     }
-
-    const oldDurationFrames = timelineItem.timeRange.timelineEndTime - timelineItem.timeRange.timelineStartTime
-
-    const command = new ResizeTimelineItemCommand(
-      timelineItemId,
-      timelineItem.timeRange,
-      {
-        ...timelineItem.timeRange,
-        timelineEndTime: timelineItem.timeRange.timelineStartTime + newDurationFrames,
-      },
-      {
-        getTimelineItem: unifiedTimelineModule.getTimelineItem,
-      },
-      {
-        getMediaItem: unifiedMediaModule.getMediaItem,
-      },
-    )
-    await unifiedHistoryModule.executeCommand(command)
   }
 
   // ==================== 导出接口 ====================

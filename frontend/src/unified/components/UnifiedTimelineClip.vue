@@ -52,11 +52,14 @@ import type {
   ContentRenderContext
 } from '../types/clipRenderer'
 import type { MediaTypeOrUnknown } from '../mediaitem/types'
+import type { VideoTimeRange, ImageTimeRange } from '../../types/index'
 import { ContentRendererFactory } from './renderers/ContentRendererFactory'
 import { useUnifiedStore } from '../unifiedStore'
 import { useDragUtils } from '../composables/useDragUtils'
 import { getSnapIndicatorManager } from '../composables/useSnapIndicator'
 import { usePlaybackControls } from '../composables/usePlaybackControls'
+import { useSnapManager } from '../composables/useSnapManager'
+import { alignFramesToFrame } from '../../stores/utils/timeUtils'
 
 // ==================== 组件定义 ====================
 
@@ -75,10 +78,20 @@ const props = withDefaults(defineProps<UnifiedTimelineClipProps>(), {
 const unifiedStore = useUnifiedStore()
 const dragUtils = useDragUtils()
 const snapIndicatorManager = getSnapIndicatorManager()
+const snapManager = useSnapManager()
 const { pauseForEditing } = usePlaybackControls()
 
 // 拖拽状态
 const isDragging = ref(false)
+
+// Resize状态管理变量
+const isResizing = ref(false)
+const resizeDirection = ref<'left' | 'right' | null>(null)
+const resizeStartX = ref(0)
+const resizeStartDurationFrames = ref(0)
+const resizeStartPositionFrames = ref(0)
+const tempDurationFrames = ref(0)
+const tempResizePositionFrames = ref(0)
 
 // 定义组件事件
 const emit = defineEmits<{
@@ -171,7 +184,7 @@ const clipClasses = computed(() => {
     {
       'selected': props.isSelected,
       'dragging': isDragging.value || props.isDragging,
-      'resizing': props.isResizing
+      'resizing': isResizing.value || props.isResizing
     }
   ]
   
@@ -187,8 +200,14 @@ const clipClasses = computed(() => {
 const clipStyles = computed(() => {
   // 计算clip的位置和尺寸
   const timeRange = props.data.timeRange
-  const positionFrames = timeRange.timelineStartTime
-  const durationFrames = timeRange.timelineEndTime - timeRange.timelineStartTime
+
+  // 在调整大小时使用临时值，否则使用实际值（帧数）
+  const positionFrames = isResizing.value
+    ? tempResizePositionFrames.value
+    : timeRange.timelineStartTime
+  const durationFrames = isResizing.value
+    ? tempDurationFrames.value
+    : timeRange.timelineEndTime - timeRange.timelineStartTime
 
   // 使用统一store的坐标转换方法
   const left = unifiedStore.frameToPixel(positionFrames, props.timelineWidth)
@@ -353,7 +372,207 @@ function removeSimpleDragPreview() {
  * 处理调整大小开始事件
  */
 function handleResizeStart(direction: 'left' | 'right', event: MouseEvent) {
+  console.log('🔧 [UnifiedTimelineClip] 开始调整大小:', direction, props.data.id)
+  
+  // 暂停播放以便进行编辑
+  pauseForEditing('片段大小调整')
+  hideTooltip()
+
+  isResizing.value = true
+  resizeDirection.value = direction
+  resizeStartX.value = event.clientX
+
+  const timeRange = props.data.timeRange
+
+  // 使用帧数进行精确计算
+  resizeStartDurationFrames.value = timeRange.timelineEndTime - timeRange.timelineStartTime
+  resizeStartPositionFrames.value = timeRange.timelineStartTime
+
+  // 初始化临时值
+  tempDurationFrames.value = resizeStartDurationFrames.value
+  tempResizePositionFrames.value = resizeStartPositionFrames.value
+
+  // 添加全局事件监听器
+  document.addEventListener('mousemove', handleResize)
+  document.addEventListener('mouseup', stopResize)
+
   emit('resizeStart', event, props.data.id, direction)
+  event.preventDefault()
+}
+
+/**
+ * 处理调整大小过程中的鼠标移动事件
+ */
+function handleResize(event: MouseEvent) {
+  if (!isResizing.value || !resizeDirection.value) return
+
+  const deltaX = event.clientX - resizeStartX.value
+
+  // 使用帧数进行精确计算
+  let newDurationFrames = resizeStartDurationFrames.value
+  let newTimelinePositionFrames = resizeStartPositionFrames.value
+
+  if (resizeDirection.value === 'left') {
+    // 拖拽左边把柄：调整开始时间和时长
+    const currentLeftPixel = unifiedStore.frameToPixel(
+      resizeStartPositionFrames.value,
+      props.timelineWidth,
+    )
+    const newLeftPixel = currentLeftPixel + deltaX
+    let newLeftFrames = unifiedStore.pixelToFrame(newLeftPixel, props.timelineWidth)
+    newLeftFrames = Math.max(0, alignFramesToFrame(newLeftFrames))
+
+    // 应用吸附计算（左边界调整）
+    const snapResult = snapManager.calculateClipResizeSnap(
+      newLeftFrames,
+      props.timelineWidth,
+      props.data.id, // 排除当前片段
+    )
+
+    if (snapResult.snapped) {
+      newLeftFrames = snapResult.frame
+      // 显示吸附指示器
+      if (snapResult.snapPoint) {
+        snapIndicatorManager.show(snapResult.snapPoint, props.timelineWidth, {
+          timelineOffset: { x: 150, y: 0 },
+          lineHeight: 400,
+        })
+      }
+    } else {
+      snapIndicatorManager.hide(true) // 立即隐藏，不延迟
+    }
+
+    newTimelinePositionFrames = newLeftFrames
+    newDurationFrames =
+      resizeStartDurationFrames.value +
+      (resizeStartPositionFrames.value - newTimelinePositionFrames)
+  } else if (resizeDirection.value === 'right') {
+    // 拖拽右边把柄：只调整时长
+    const endFrames = resizeStartPositionFrames.value + resizeStartDurationFrames.value
+    const currentRightPixel = unifiedStore.frameToPixel(endFrames, props.timelineWidth)
+    const newRightPixel = currentRightPixel + deltaX
+    let newRightFrames = unifiedStore.pixelToFrame(newRightPixel, props.timelineWidth)
+    newRightFrames = alignFramesToFrame(newRightFrames)
+
+    // 应用吸附计算（右边界调整）
+    const snapResult = snapManager.calculateClipResizeSnap(
+      newRightFrames,
+      props.timelineWidth,
+      props.data.id, // 排除当前片段
+    )
+
+    if (snapResult.snapped) {
+      newRightFrames = snapResult.frame
+      // 显示吸附指示器
+      if (snapResult.snapPoint) {
+        snapIndicatorManager.show(snapResult.snapPoint, props.timelineWidth, {
+          timelineOffset: { x: 150, y: 0 },
+          lineHeight: 400,
+        })
+      }
+    } else {
+      snapIndicatorManager.hide(true) // 立即隐藏，不延迟
+    }
+
+    newDurationFrames = newRightFrames - resizeStartPositionFrames.value
+  }
+
+  // 设置时长限制：最小1帧，用户可以自由调整时长
+  const minDurationFrames = 1
+  newDurationFrames = Math.max(minDurationFrames, newDurationFrames)
+
+  // 更新临时值（帧数）
+  tempDurationFrames.value = newDurationFrames
+  tempResizePositionFrames.value = newTimelinePositionFrames
+}
+
+/**
+ * 处理调整大小结束事件
+ */
+async function stopResize() {
+  if (!isResizing.value) return
+
+  console.log('🛑 [UnifiedTimelineClip] 停止调整大小')
+
+  // 计算最终的时间范围
+  const newTimelineStartTimeFrames = tempResizePositionFrames.value
+  const newTimelineEndTimeFrames = tempResizePositionFrames.value + tempDurationFrames.value
+
+  // 验证时间范围的有效性
+  if (newTimelineStartTimeFrames < 0 || tempDurationFrames.value <= 0) {
+    console.warn('⚠️ [UnifiedTimelineClip] 无效的时间范围，取消调整')
+    cleanupResize()
+    return
+  }
+
+  // 检查是否有实际的变化
+  if (tempDurationFrames.value !== resizeStartDurationFrames.value ||
+      tempResizePositionFrames.value !== resizeStartPositionFrames.value) {
+
+    console.log('🔧 [UnifiedTimelineClip] 调整大小 - 应用新的时间范围:', {
+      itemId: props.data.id,
+      newStartTime: newTimelineStartTimeFrames,
+      newEndTime: newTimelineEndTimeFrames,
+      direction: resizeDirection.value,
+    })
+
+    // 使用统一架构的resize命令来更新时间范围
+    try {
+      // 构建完整的newTimeRange对象，参考旧架构的实现模式
+      const currentTimeRange = props.data.timeRange
+      let newTimeRange: VideoTimeRange | ImageTimeRange
+
+      if (
+        (props.data.mediaType === 'video' || props.data.mediaType === 'image') &&
+        'clipStartTime' in currentTimeRange
+      ) {
+        // 视频和图片都使用 VideoTimeRange 结构
+        newTimeRange = {
+          timelineStartTime: newTimelineStartTimeFrames,
+          timelineEndTime: newTimelineEndTimeFrames,
+          clipStartTime: currentTimeRange.clipStartTime,
+          clipEndTime: currentTimeRange.clipEndTime,
+          effectiveDuration: newTimelineEndTimeFrames - newTimelineStartTimeFrames,
+          playbackRate: currentTimeRange.playbackRate || 1.0,
+        }
+      } else {
+        // 图片类型使用 ImageTimeRange 结构
+        newTimeRange = {
+          timelineStartTime: newTimelineStartTimeFrames,
+          timelineEndTime: newTimelineEndTimeFrames,
+          displayDuration: newTimelineEndTimeFrames - newTimelineStartTimeFrames,
+        }
+      }
+
+      // 调用统一store的resize方法，传入完整的newTimeRange对象
+      const success = await unifiedStore.resizeTimelineItemWithHistory(
+        props.data.id,
+        newTimeRange,
+      )
+    } catch (error) {
+      console.error('❌ [UnifiedTimelineClip] 调整大小失败:', error)
+    }
+  }
+
+  cleanupResize()
+}
+
+/**
+ * 清理resize状态
+ */
+function cleanupResize() {
+  // 清理resize状态
+  isResizing.value = false
+  const direction = resizeDirection.value
+  resizeDirection.value = null
+  document.removeEventListener('mousemove', handleResize)
+  document.removeEventListener('mouseup', stopResize)
+  snapIndicatorManager.hide(true)
+  
+  if (direction) {
+    // 这里可以发出resize-end事件，但新架构可能不需要
+    console.log('🏁 [UnifiedTimelineClip] resize结束:', direction)
+  }
 }
 
 /**

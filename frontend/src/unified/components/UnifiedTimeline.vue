@@ -1267,9 +1267,33 @@ function handleTimelineItemContextMenu(event: MouseEvent, id: string) {
 
 // 拖拽开始处理现在由UnifiedTimelineClip内部处理
 
-function handleTimelineItemResizeStart(data: any) {
+function handleTimelineItemResizeStart(event: MouseEvent, itemId: string, direction: 'left' | 'right') {
   // 处理时间轴项目调整大小开始
-  console.log('Timeline item resize start:', data)
+  console.log('🔧 [UnifiedTimeline] 时间轴项目开始调整大小:', {
+    itemId,
+    direction,
+    clientX: event.clientX,
+    clientY: event.clientY
+  })
+  
+  // 暂停播放以便进行编辑
+  pauseForEditing('片段大小调整')
+  
+  // 确保项目被选中（如果还没有选中的话）
+  if (!unifiedStore.isTimelineItemSelected(itemId)) {
+    unifiedStore.selectTimelineItem(itemId)
+  }
+  
+  // 隐藏任何活动的工具提示
+  // 这里可以添加隐藏工具提示的逻辑，如果需要的话
+  
+  // 可以在这里添加全局resize状态管理，比如：
+  // - 设置全局resize状态标志
+  // - 添加全局鼠标事件监听器（如果需要在timeline级别处理）
+  // - 显示resize指导线或其他UI反馈
+  
+  // 注意：实际的resize逻辑已经在UnifiedTimelineClip组件内部处理
+  // 这个函数主要用于timeline级别的状态管理和UI反馈
 }
 
 // 拖拽预览现在由UnifiedTimelineClip内部处理
