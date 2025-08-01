@@ -22,3 +22,6 @@ export { useDialogs } from './useDialogs'
 
 // 重新导出 useSnapIndicator 函数
 export { useSnapIndicator } from './useSnapIndicator'
+
+// 重新导出 useKeyboardShortcuts 函数
+export { useKeyboardShortcuts } from './useKeyboardShortcuts'

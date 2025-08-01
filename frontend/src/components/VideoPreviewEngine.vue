@@ -27,7 +27,9 @@
             <div class="time-display">
               {{ framesToTimecode(unifiedStore.currentFrame) }} /
               {{
-                framesToTimecode(unifiedStore.contentEndTimeFrames || unifiedStore.totalDurationFrames)
+                framesToTimecode(
+                  unifiedStore.contentEndTimeFrames || unifiedStore.totalDurationFrames,
+                )
               }}
             </div>
             <!-- 中间播放控制 -->
@@ -180,7 +182,7 @@ import UnifiedTimeline from '@/unified/components/UnifiedTimeline.vue'
 import UnifiedPlaybackControls from '@/unified/components/UnifiedPlaybackControls.vue'
 import UnifiedClipManagementToolbar from '@/unified/components/UnifiedClipManagementToolbar.vue'
 import { useUnifiedStore } from '@/unified/unifiedStore'
-import { useKeyboardShortcuts } from '../composables/useKeyboardShortcuts'
+import { useKeyboardShortcuts } from '@/unified/composables/useKeyboardShortcuts'
 import { logWebAVReadyStateChange, logComponentLifecycle } from '../utils/webavDebug'
 import { framesToTimecode } from '../stores/utils/timeUtils'
 
