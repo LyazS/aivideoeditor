@@ -41,7 +41,42 @@ import {
   findOverlappingTimelineItemsOnTrack,
   findOrphanedTimelineItems
 } from './utils/UnifiedTimelineSearchUtils'
+import {
+  isVideoTimelineItem,
+  isImageTimelineItem,
+  isAudioTimelineItem,
+  isTextTimelineItem,
+  isUnknownTimelineItem,
+  isKnownTimelineItem,
+  hasVisualProperties,
+  hasAudioProperties,
+  isReady,
+  isLoading,
+  hasError,
+  getDuration,
+  getStatusText,
+  filterByStatus,
+  filterByTrack,
+  sortByTime
+} from './timelineitem/TimelineItemQueries'
 
+// 从TimelineItemFactory导入工厂函数
+import {
+  createUnknownTimelineItem,
+  createVideoTimelineItem,
+  createAudioTimelineItem,
+  createImageTimelineItem,
+  cloneTimelineItem,
+  duplicateTimelineItem
+} from './timelineitem/TimelineItemFactory'
+
+// 从TimelineItemBehaviors导入行为函数
+import {
+  transitionTimelineStatus,
+  setLoading,
+  setReady,
+  setError
+} from './timelineitem/TimelineItemBehaviors'
 // ==================== 命令类导入 ====================
 import {
   AddTimelineItemCommand,
@@ -484,7 +519,7 @@ export const useUnifiedStore = defineStore('unified', () => {
     const oldTransform: typeof newTransform = {}
 
     // 检查是否具有视觉属性
-    if (unifiedTimelineModule.hasVisualProps(timelineItem)) {
+    if (hasVisualProperties(timelineItem)) {
       const config = timelineItem.config as any
       if (newTransform.x !== undefined) {
         oldTransform.x = config.x
@@ -531,7 +566,7 @@ export const useUnifiedStore = defineStore('unified', () => {
     }
 
     // 检查是否具有音频属性
-    if (unifiedTimelineModule.hasAudioProps(timelineItem)) {
+    if (hasVisualProperties(timelineItem)) {
       const config = timelineItem.config as any
       if (newTransform.volume !== undefined) {
         oldTransform.volume = config.volume ?? 1
@@ -1063,32 +1098,32 @@ export const useUnifiedStore = defineStore('unified', () => {
     updateTimelineItemTransform: unifiedTimelineModule.updateTimelineItemTransform,
 
     // 时间轴项目工厂函数
-    createTimelineItemData: unifiedTimelineModule.createTimelineItemData,
-    createVideoTimelineItem: unifiedTimelineModule.createVideoTimelineItem,
-    createAudioTimelineItem: unifiedTimelineModule.createAudioTimelineItem,
-    createImageTimelineItem: unifiedTimelineModule.createImageTimelineItem,
-    cloneTimelineItemData: unifiedTimelineModule.cloneTimelineItemData,
-    duplicateTimelineItem: unifiedTimelineModule.duplicateTimelineItem,
+    createTimelineItemData: createUnknownTimelineItem,
+    createVideoTimelineItem,
+    createAudioTimelineItem,
+    createImageTimelineItem,
+    cloneTimelineItemData: cloneTimelineItem,
+    duplicateTimelineItem,
 
     // 时间轴项目状态转换函数
-    transitionTimelineStatus: unifiedTimelineModule.transitionTimelineStatus,
-    setTimelineItemLoading: unifiedTimelineModule.setLoading,
-    setTimelineItemReady: unifiedTimelineModule.setReady,
-    setTimelineItemError: unifiedTimelineModule.setError,
+    transitionTimelineStatus,
+    setTimelineItemLoading: setLoading,
+    setTimelineItemReady: setReady,
+    setTimelineItemError: setError,
 
     // 时间轴项目查询函数
-    isTimelineItemReady: unifiedTimelineModule.isReady,
-    isTimelineItemLoading: unifiedTimelineModule.isLoading,
-    hasTimelineItemError: unifiedTimelineModule.hasError,
-    getTimelineItemDuration: unifiedTimelineModule.getDuration,
-    getTimelineItemStatusText: unifiedTimelineModule.getStatusText,
-    filterTimelineItemsByStatus: unifiedTimelineModule.filterByStatus,
-    filterTimelineItemsByTrack: unifiedTimelineModule.filterByTrack,
-    sortTimelineItemsByTime: unifiedTimelineModule.sortByTime,
+    isTimelineItemReady: isReady,
+    isTimelineItemLoading: isLoading,
+    hasTimelineItemError: hasError,
+    getTimelineItemDuration: getDuration,
+    getTimelineItemStatusText: getStatusText,
+    filterTimelineItemsByStatus: filterByStatus,
+    filterTimelineItemsByTrack: filterByTrack,
+    sortTimelineItemsByTime: sortByTime,
 
     // 时间轴项目辅助函数
-    timelineItemHasVisualProps: unifiedTimelineModule.hasVisualProps,
-    timelineItemHasAudioProps: unifiedTimelineModule.hasAudioProps,
+    timelineItemHasVisualProps: hasVisualProperties,
+    timelineItemHasAudioProps: hasAudioProperties,
 
     // ==================== 统一项目模块状态和方法 ====================
 

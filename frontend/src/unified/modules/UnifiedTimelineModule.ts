@@ -12,7 +12,12 @@ import {
   isAudioTimelineItem,
   isTextTimelineItem,
   isUnknownTimelineItem,
-  isKnownTimelineItem
+  isKnownTimelineItem,
+  hasVisualProperties,
+  hasAudioProperties,
+  isReady,
+  isLoading,
+  hasError
 } from '../timelineitem/TimelineItemQueries'
 import { convertUnknownToKnown } from '../timelineitem/TimelineItemBehaviors'
 import { TimelineItemFactory } from '../timelineitem/TimelineItemFactory'
@@ -23,12 +28,16 @@ import type {
   CustomSprite,
   MediaType,
   VideoTimeRange,
-  ImageTimeRange
+  ImageTimeRange,
+  VideoMediaConfig,
+  ImageMediaConfig,
+  TextMediaConfig
 } from '../../types'
 import { VideoVisibleSprite } from '../../utils/VideoVisibleSprite'
 import { ImageVisibleSprite } from '../../utils/ImageVisibleSprite'
 import { AudioVisibleSprite } from '../../utils/AudioVisibleSprite'
 import { webavToProjectCoords, projectToWebavCoords } from '../../utils/coordinateTransform'
+import type { ExtendedPropsChangeEvent } from '../../types'
 // import { printDebugInfo } from '../../stores/utils/debugUtils' // 暂时注释，类型不兼容
 
 // 临时调试函数，适用于统一类型
@@ -87,35 +96,69 @@ export function createUnifiedTimelineModule(
    */
   function setupBidirectionalSync(timelineItem: UnifiedTimelineItemData<MediaTypeOrUnknown>) {
     // 只有已知类型且就绪状态的时间轴项目才需要双向同步
-    if (!isKnownTimelineItem(timelineItem) || timelineItem.timelineStatus !== 'ready') {
+    if (!isKnownTimelineItem(timelineItem) || !isReady(timelineItem)) {
       return
     }
 
-    // 注意：这里需要根据实际的sprite实现来调整
-    // 目前暂时注释掉，因为新的类型系统中sprite的处理方式可能不同
-    console.log('🔄 [UnifiedTimelineModule] 设置双向同步:', timelineItem.id)
-    
-    // TODO: 根据新的类型系统重新实现双向同步逻辑
-    // 这里需要根据具体的sprite实现来调整
+    const sprite = timelineItem.sprite
+    if (!sprite) {
+      return
+    }
+
+    unifiedDebugLog('设置双向同步', { timelineItemId: timelineItem.id })
+
+    // 直接使用WebAV原生的propsChange事件监听器
+    // 设置VisibleSprite → TimelineItem 的同步（仅适用于动画属性）
+    sprite.on('propsChange', (changedProps: ExtendedPropsChangeEvent) => {
+      if (changedProps.rect && hasVisualProperties(timelineItem)) {
+        const rect = changedProps.rect
+
+        // 更新位置（坐标系转换）
+        // 如果rect.x/rect.y为undefined，说明位置没有变化，使用sprite的当前值
+        const currentRect = sprite.rect
+        // hasVisualProps 类型守卫确保了 config 具有视觉属性
+        const config = timelineItem.config as VideoMediaConfig | ImageMediaConfig | TextMediaConfig
+        const projectCoords = webavToProjectCoords(
+          rect.x !== undefined ? rect.x : currentRect.x,
+          rect.y !== undefined ? rect.y : currentRect.y,
+          rect.w !== undefined ? rect.w : config.width,
+          rect.h !== undefined ? rect.h : config.height,
+          configModule.videoResolution.value.width,
+          configModule.videoResolution.value.height,
+        )
+        config.x = Math.round(projectCoords.x)
+        config.y = Math.round(projectCoords.y)
+
+        // 更新尺寸
+        if (rect.w !== undefined) config.width = rect.w
+        if (rect.h !== undefined) config.height = rect.h
+
+        // 更新旋转角度
+        if (rect.angle !== undefined) config.rotation = rect.angle
+
+        // console.log('🔄 VisibleSprite → TimelineItem 同步:', {
+        //   webavCoords: { x: rect.x, y: rect.y },
+        //   projectCoords: { x: config.x, y: config.y },
+        //   size: { w: config.width, h: config.height },
+        //   rotation: config.rotation
+        // })
+      }
+
+      // 同步zIndex属性
+      if (changedProps.zIndex !== undefined) {
+        ;(timelineItem.config as any).zIndex = changedProps.zIndex
+      }
+
+      // 同步opacity属性（使用新的事件系统）
+      // 📝 现在 opacity 变化通过 propsChange 事件统一处理
+      if (changedProps.opacity !== undefined && hasVisualProperties(timelineItem)) {
+        // hasVisualProps 类型守卫确保了 config 具有视觉属性
+        const config = timelineItem.config as VideoMediaConfig | ImageMediaConfig | TextMediaConfig
+        config.opacity = changedProps.opacity
+      }
+    })
   }
 
-  // ==================== 辅助函数 ====================
-
-  /**
-   * 检查时间轴项目是否具有视觉属性
-   */
-  function hasVisualProps(timelineItem: UnifiedTimelineItemData<MediaTypeOrUnknown>): boolean {
-    return isVideoTimelineItem(timelineItem) ||
-           isImageTimelineItem(timelineItem) ||
-           isTextTimelineItem(timelineItem)
-  }
-
-  /**
-   * 检查时间轴项目是否具有音频属性
-   */
-  function hasAudioProps(timelineItem: UnifiedTimelineItemData<MediaTypeOrUnknown>): boolean {
-    return isVideoTimelineItem(timelineItem) || isAudioTimelineItem(timelineItem)
-  }
 
   // ==================== 时间轴管理方法 ====================
 
@@ -133,17 +176,37 @@ export function createUnifiedTimelineModule(
     }
 
     // 检查时间轴项目状态
-    if (timelineItem.timelineStatus === 'loading') {
+    if (isLoading(timelineItem)) {
       // 加载中的时间轴项目不需要sprite相关的设置
-      console.log('🔧 [UnifiedTimelineModule] 添加加载中的时间轴项目:', timelineItem.id)
-    } else if (timelineItem.timelineStatus === 'ready' && isKnownTimelineItem(timelineItem)) {
+      unifiedDebugLog('添加加载中的时间轴项目', { timelineItemId: timelineItem.id })
+    } else if (isReady(timelineItem) && isKnownTimelineItem(timelineItem)) {
       // 就绪的已知类型时间轴项目处理逻辑
-      // TODO: 根据新的类型系统重新实现sprite相关逻辑
       
+      // 根据轨道的可见性和静音状态设置sprite属性
+      if (trackModule && timelineItem.sprite) {
+        const track = trackModule.tracks.value.find((t) => t.id === timelineItem.trackId)
+        if (track) {
+          // 设置可见性
+          timelineItem.sprite.visible = track.isVisible
+
+          // 为视频片段设置轨道静音检查函数
+          if (timelineItem.mediaType === 'video' && 'setTrackMuteChecker' in timelineItem.sprite) {
+            const sprite = timelineItem.sprite as VideoVisibleSprite
+            sprite.setTrackMuteChecker(() => track.isMuted)
+          }
+
+          // 为音频片段设置轨道静音检查函数
+          if (timelineItem.mediaType === 'audio' && 'setTrackMuteChecker' in timelineItem.sprite) {
+            const sprite = timelineItem.sprite as AudioVisibleSprite
+            sprite.setTrackMuteChecker(() => track.isMuted)
+          }
+        }
+      }
+
       // 设置双向数据同步（仅就绪状态的已知类型时间轴项目）
       setupBidirectionalSync(timelineItem)
 
-      // TODO: 初始化动画管理器
+      // TODO: 初始化动画管理器（仅就绪状态的已知类型时间轴项目）
       // globalUnifiedWebAVAnimationManager.addManager(timelineItem)
       
       const mediaItem = mediaModule.getMediaItem(timelineItem.mediaItemId)
@@ -153,11 +216,12 @@ export function createUnifiedTimelineModule(
         mediaItemName: mediaItem?.name || '未知',
         trackId: timelineItem.trackId,
         mediaType: timelineItem.mediaType,
-        position: timelineItem.timeRange.timelineStartTime,
+        position: timelineItem.timeRange.timelineStartTime / 1000000,
+        spriteVisible: timelineItem.sprite?.visible,
       })
     } else {
       // 错误状态的时间轴项目
-      console.log('❌ [UnifiedTimelineModule] 添加错误状态的时间轴项目:', timelineItem.id)
+      unifiedDebugLog('添加错误状态的时间轴项目', { timelineItemId: timelineItem.id })
     }
 
     timelineItems.value.push(timelineItem)
@@ -174,14 +238,33 @@ export function createUnifiedTimelineModule(
       const mediaItem = mediaModule.getMediaItem(item.mediaItemId)
 
       // 检查时间轴项目状态
-      if (item.timelineStatus === 'loading' || item.timelineStatus === 'error') {
+      if (isLoading(item) || hasError(item)) {
         // 加载中或错误状态的时间轴项目不需要清理sprite相关资源
-        console.log('🗑️ [UnifiedTimelineModule] 移除非就绪状态的时间轴项目:', timelineItemId)
-      } else if (item.timelineStatus === 'ready' && isKnownTimelineItem(item)) {
+        unifiedDebugLog('移除非就绪状态的时间轴项目', {
+          timelineItemId,
+          status: item.timelineStatus
+        })
+      } else if (isReady(item) && isKnownTimelineItem(item)) {
         // 就绪状态的已知类型时间轴项目清理逻辑
-        // TODO: 根据新的类型系统重新实现sprite清理逻辑
         
-        // 清理动画管理器
+        // 注意：新的事件系统使用 on 方法返回的取消函数来清理监听器
+        // 这里不需要手动清理，因为 sprite 销毁时会自动清理所有事件监听器
+
+        // 清理sprite资源
+        try {
+          if (item.sprite && typeof item.sprite.destroy === 'function') {
+            item.sprite.destroy()
+          }
+        } catch (error) {
+          console.warn('清理sprite资源时出错:', error)
+        }
+
+        // 从WebAV画布移除
+        if (item.sprite) {
+          webavModule.removeSprite(item.sprite)
+        }
+
+        // TODO: 清理动画管理器（仅就绪状态的已知类型时间轴项目）
         // globalUnifiedWebAVAnimationManager.removeManager(timelineItemId)
       }
 
@@ -193,7 +276,9 @@ export function createUnifiedTimelineModule(
         mediaItemId: item.mediaItemId,
         mediaItemName: mediaItem?.name || '未知',
         trackId: item.trackId,
-        position: item.timeRange.timelineStartTime / 30,
+        position: item.timeRange.timelineStartTime / 30, // timelineStartTime 是帧数，除以30得到秒数
+        status: item.timelineStatus,
+        mediaType: item.mediaType,
       })
     }
   }
@@ -223,14 +308,14 @@ export function createUnifiedTimelineModule(
    * @param newPositionFrames 新位置（帧数）
    * @param newTrackId 新轨道ID（可选）
    */
-  async function updateTimelineItemPosition(
+  function updateTimelineItemPosition(
     timelineItemId: string,
     newPositionFrames: number,
     newTrackId?: string,
   ) {
     const item = getTimelineItem(timelineItemId)
     if (item) {
-      const oldPositionFrames = item.timeRange.timelineStartTime
+      const oldPositionFrames = item.timeRange.timelineStartTime // 帧数
       const oldTrackId = item.trackId
       const mediaItem = mediaModule.getMediaItem(item.mediaItemId)
 
@@ -241,18 +326,17 @@ export function createUnifiedTimelineModule(
       if (newTrackId !== undefined) {
         item.trackId = newTrackId
 
-        // 根据新轨道的可见性设置sprite的visible属性（仅就绪状态的时间轴项目）
-        if (trackModule && item.timelineStatus === 'ready' && isKnownTimelineItem(item)) {
+        // 根据新轨道的可见性设置sprite的visible属性（仅就绪状态的已知类型时间轴项目）
+        if (trackModule && isReady(item) && isKnownTimelineItem(item)) {
           const newTrack = trackModule.tracks.value.find((t) => t.id === newTrackId)
-          if (newTrack) {
-            // TODO: 根据新的类型系统重新实现sprite可见性设置
-            console.log('🔄 [UnifiedTimelineModule] 更新轨道可见性:', newTrack.isVisible)
+          if (newTrack && item.sprite) {
+            item.sprite.visible = newTrack.isVisible
           }
         }
       }
 
       // 更新时间轴位置
-      if (item.timelineStatus === 'loading' || item.timelineStatus === 'error') {
+      if (isLoading(item) || hasError(item)) {
         // 非就绪状态的时间轴项目：直接更新timeRange
         const currentTimeRange = item.timeRange
         const durationFrames = currentTimeRange.timelineEndTime - currentTimeRange.timelineStartTime
@@ -262,17 +346,19 @@ export function createUnifiedTimelineModule(
           timelineStartTime: clampedNewPositionFrames,
           timelineEndTime: clampedNewPositionFrames + durationFrames,
         }
-      } else if (item.timelineStatus === 'ready' && isKnownTimelineItem(item)) {
-        // 就绪状态的已知类型时间轴项目：使用syncTimeRange同步更新sprite
-        const currentTimeRange = item.timeRange
-        const durationFrames = currentTimeRange.timelineEndTime - currentTimeRange.timelineStartTime
+      } else if (isReady(item) && isKnownTimelineItem(item)) {
+        // 就绪状态的已知类型时间轴项目：通过sprite更新
+        const sprite = item.sprite
+        if (sprite) {
+          const currentTimeRange = sprite.getTimeRange()
+          const durationFrames = currentTimeRange.timelineEndTime - currentTimeRange.timelineStartTime // 帧数
 
-        // 使用syncTimeRange同步更新timeRange和sprite
-        const { syncTimeRange } = await import('../utils/UnifiedTimeRangeUtils')
-        syncTimeRange(item, {
-          timelineStartTime: clampedNewPositionFrames,
-          timelineEndTime: clampedNewPositionFrames + durationFrames,
-        })
+          // 使用同步函数更新timeRange（使用帧数）
+          syncTimeRange(item, {
+            timelineStartTime: clampedNewPositionFrames, // 帧数
+            timelineEndTime: clampedNewPositionFrames + durationFrames, // 帧数
+          })
+        }
       }
 
       unifiedDebugLog('更新时间轴项目位置', {
@@ -286,6 +372,8 @@ export function createUnifiedTimelineModule(
         positionChanged: oldPositionFrames !== clampedNewPositionFrames,
         trackChanged: oldTrackId !== item.trackId,
         positionClamped: newPositionFrames !== clampedNewPositionFrames,
+        status: item.timelineStatus,
+        mediaType: item.mediaType,
       })
     }
   }
@@ -345,21 +433,79 @@ export function createUnifiedTimelineModule(
 
     const sprite = item.sprite
 
-    // TODO: 根据新的类型系统重新实现变换属性更新逻辑
-    // 新的类型系统中，配置属性直接存储在config中，而不是通过transform对象
-    console.log('🔄 [UnifiedTimelineModule] 更新变换属性:', transform)
-    
-    // 暂时简化实现，直接更新config属性
-    if (hasVisualProps(item) && isKnownTimelineItem(item)) {
-      const config = item.config as any // 临时类型断言
-      
-      if (transform.x !== undefined) config.x = transform.x
-      if (transform.y !== undefined) config.y = transform.y
-      if (transform.width !== undefined) config.width = transform.width
-      if (transform.height !== undefined) config.height = transform.height
-      if (transform.rotation !== undefined) config.rotation = transform.rotation
-      if (transform.opacity !== undefined) config.opacity = transform.opacity
-      if (transform.zIndex !== undefined) config.zIndex = transform.zIndex
+    try {
+      // 更新尺寸时使用中心缩放 - 仅对视觉媒体有效
+      if (
+        (transform.width !== undefined || transform.height !== undefined) &&
+        hasVisualProperties(item) && isKnownTimelineItem(item)
+      ) {
+        // 获取当前中心位置（项目坐标系）
+        // hasVisualProperties 类型守卫确保了 config 具有视觉属性
+        const config = item.config as VideoMediaConfig | ImageMediaConfig | TextMediaConfig
+        const currentCenterX = config.x
+        const currentCenterY = config.y
+        const newWidth = transform.width !== undefined ? transform.width : config.width
+        const newHeight = transform.height !== undefined ? transform.height : config.height
+
+        // 中心缩放：保持中心位置不变，更新尺寸
+        sprite.rect.w = newWidth
+        sprite.rect.h = newHeight
+
+        // 根据新尺寸重新计算WebAV坐标（保持中心位置不变）
+        const webavCoords = projectToWebavCoords(
+          currentCenterX,
+          currentCenterY,
+          newWidth,
+          newHeight,
+          configModule.videoResolution.value.width,
+          configModule.videoResolution.value.height,
+        )
+        sprite.rect.x = webavCoords.x
+        sprite.rect.y = webavCoords.y
+      }
+
+      // 更新位置（需要坐标系转换）- 仅对视觉媒体有效
+      if ((transform.x !== undefined || transform.y !== undefined) &&
+          hasVisualProperties(item) && isKnownTimelineItem(item)) {
+        // hasVisualProperties 类型守卫确保了 config 具有视觉属性
+        const config = item.config as VideoMediaConfig | ImageMediaConfig | TextMediaConfig
+        const newX = transform.x !== undefined ? transform.x : config.x
+        const newY = transform.y !== undefined ? transform.y : config.y
+
+        // 🔧 使用当前的尺寸（可能已经在上面更新过）
+        const currentWidth = transform.width !== undefined ? transform.width : config.width
+        const currentHeight = transform.height !== undefined ? transform.height : config.height
+
+        const webavCoords = projectToWebavCoords(
+          newX,
+          newY,
+          currentWidth,
+          currentHeight,
+          configModule.videoResolution.value.width,
+          configModule.videoResolution.value.height,
+        )
+        sprite.rect.x = webavCoords.x
+        sprite.rect.y = webavCoords.y
+      }
+
+      // 更新其他属性
+      if (transform.opacity !== undefined && hasVisualProperties(item) && isKnownTimelineItem(item)) {
+        sprite.opacity = transform.opacity
+        // 🔧 手动同步opacity到timelineItem（因为opacity没有propsChange回调）
+        // hasVisualProperties 类型守卫确保了 config 具有视觉属性
+        const config = item.config as VideoMediaConfig | ImageMediaConfig | TextMediaConfig
+        config.opacity = transform.opacity
+      }
+      if (transform.zIndex !== undefined) {
+        sprite.zIndex = transform.zIndex
+        // zIndex有propsChange回调，会自动同步到timelineItem
+      }
+      // 更新旋转角度（WebAV的rect.angle支持旋转）
+      if (transform.rotation !== undefined) {
+        sprite.rect.angle = transform.rotation
+      }
+    } catch (error) {
+      console.error('更新VisibleSprite变换属性失败:', error)
     }
   }
 
@@ -373,60 +519,11 @@ export function createUnifiedTimelineModule(
     addTimelineItem,
     removeTimelineItem,
     getTimelineItem,
-    getReadyTimelineItem,
     setupBidirectionalSync,
+    getReadyTimelineItem,
     updateTimelineItemPosition,
     updateTimelineItemSprite,
     updateTimelineItemTransform,
-
-    // 工厂函数（使用新的工厂）
-    createTimelineItemData: TimelineItemFactory.createKnown,
-    createVideoTimelineItem: TimelineItemFactory.createVideoWithDefaults,
-    createAudioTimelineItem: TimelineItemFactory.createAudioWithDefaults,
-    createImageTimelineItem: TimelineItemFactory.createImageWithDefaults,
-    cloneTimelineItemData: TimelineItemFactory.clone,
-    duplicateTimelineItem: TimelineItemFactory.duplicate,
-
-    // 类型守卫和转换函数
-    isVideoTimelineItem,
-    isImageTimelineItem,
-    isAudioTimelineItem,
-    isTextTimelineItem,
-    isUnknownTimelineItem,
-    isKnownTimelineItem,
-    convertUnknownToKnown,
-
-    // 状态转换函数（简化版本）
-    transitionTimelineStatus: (item: UnifiedTimelineItemData<MediaTypeOrUnknown>, newStatus: 'loading' | 'ready' | 'error') => {
-      item.timelineStatus = newStatus
-    },
-    setLoading: (item: UnifiedTimelineItemData<MediaTypeOrUnknown>) => { item.timelineStatus = 'loading' },
-    setReady: (item: UnifiedTimelineItemData<MediaTypeOrUnknown>) => { item.timelineStatus = 'ready' },
-    setError: (item: UnifiedTimelineItemData<MediaTypeOrUnknown>) => { item.timelineStatus = 'error' },
-
-    // 查询函数（简化版本）
-    isReady: (item: UnifiedTimelineItemData<MediaTypeOrUnknown>) => item.timelineStatus === 'ready',
-    isLoading: (item: UnifiedTimelineItemData<MediaTypeOrUnknown>) => item.timelineStatus === 'loading',
-    hasError: (item: UnifiedTimelineItemData<MediaTypeOrUnknown>) => item.timelineStatus === 'error',
-    getDuration: (item: UnifiedTimelineItemData<MediaTypeOrUnknown>) => item.timeRange.timelineEndTime - item.timeRange.timelineStartTime,
-    getStatusText: (item: UnifiedTimelineItemData<MediaTypeOrUnknown>) => {
-      switch (item.timelineStatus) {
-        case 'loading': return '加载中'
-        case 'ready': return '就绪'
-        case 'error': return '错误'
-        default: return '未知'
-      }
-    },
-    filterByStatus: (items: UnifiedTimelineItemData<MediaTypeOrUnknown>[], status: 'loading' | 'ready' | 'error') =>
-      items.filter(item => item.timelineStatus === status),
-    filterByTrack: (items: UnifiedTimelineItemData<MediaTypeOrUnknown>[], trackId: string) =>
-      items.filter(item => item.trackId === trackId),
-    sortByTime: (items: UnifiedTimelineItemData<MediaTypeOrUnknown>[]) =>
-      [...items].sort((a, b) => a.timeRange.timelineStartTime - b.timeRange.timelineStartTime),
-
-    // 辅助函数
-    hasVisualProps,
-    hasAudioProps,
   }
 }
 

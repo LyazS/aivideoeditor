@@ -120,8 +120,8 @@ export class AddTextItemCommand implements SimpleCommand {
       timelineStatus: 'ready' as TimelineItemStatus,
     }) as TextTimelineItem
 
-    // 5. 保存原始数据用于重建
-    this.originalTimelineItemData = TimelineItemFactory.clone(newTimelineItem)
+    // 5. 保存原始数据用于重建 - 明确传入原始ID以避免重新生成
+    this.originalTimelineItemData = TimelineItemFactory.clone(newTimelineItem, { id: newTimelineItem.id })
 
     console.log('🔄 重建文本时间轴项目完成:', {
       id: newTimelineItem.id,
@@ -326,8 +326,8 @@ export class UpdateTextCommand implements SimpleCommand {
       this.oldText = item.config.text
       this.oldStyle = { ...item.config.style }
 
-      // 保存原始项目数据用于撤销
-      this.originalTimelineItemData = TimelineItemFactory.clone(item)
+      // 保存原始项目数据用于撤销 - 明确传入原始ID以避免重新生成
+      this.originalTimelineItemData = TimelineItemFactory.clone(item, { id: item.id })
 
       // 重新创建文本精灵（遵循"从源头重建"原则）
       await this.rebuildTextSprite(item, this.newText, this.newStyle)
@@ -554,8 +554,8 @@ export class RemoveTextItemCommand implements SimpleCommand {
         throw new Error(`文本项目不存在或类型错误: ${this.timelineItemId}`)
       }
 
-      // 保存项目用于撤销
-      this.originalTimelineItemData = TimelineItemFactory.clone(item)
+      // 保存项目用于撤销 - 明确传入原始ID以避免重新生成
+      this.originalTimelineItemData = TimelineItemFactory.clone(item, { id: item.id })
 
       // 1. 从WebAV画布移除sprite
       if (item.sprite) {

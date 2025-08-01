@@ -1,14 +1,17 @@
 /**
- * 统一架构下的命令类型定义
- */
-
-/**
- * 简单命令接口
- * 所有支持撤销/重做操作的命令都需要实现此接口
+ * 命令模式接口定义
+ * 用于实现撤销/重做功能的统一命令接口
  */
 export interface SimpleCommand {
+  /** 命令的唯一标识符 */
   readonly id: string
+  
+  /** 命令的描述信息，用于显示在历史记录中 */
   readonly description: string
+  
+  /** 执行命令 */
   execute(): Promise<void>
+  
+  /** 撤销命令 */
   undo(): Promise<void>
 }
