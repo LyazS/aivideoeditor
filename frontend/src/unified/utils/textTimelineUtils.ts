@@ -137,10 +137,12 @@ export async function createTextTimelineItem(
       trackId,
       mediaType: 'text',
       timeRange: textSprite.getTimeRange(),
-      sprite: markRaw(textSprite), // 包含 sprite 引用
       config: textConfig,
       animation: undefined, // 新创建的文本项目默认没有动画
       timelineStatus: 'ready', // 文本项目创建后即为就绪状态
+      runtime: {
+        sprite: markRaw(textSprite) // 包含 sprite 引用
+      }
     })
 
     console.log('✅ [UnifiedTextTimelineUtils] 统一文本时间轴项目创建完成:', {
@@ -148,7 +150,7 @@ export async function createTextTimelineItem(
       text: text.substring(0, 20) + '...',
       timeRange: timelineItem.timeRange,
       timelineStatus: timelineItem.timelineStatus,
-      hasSprite: !!timelineItem.sprite,
+      hasSprite: !!timelineItem.runtime.sprite,
       hasAnimation: !!timelineItem.animation,
       config: {
         position: { x: textConfig.x, y: textConfig.y },

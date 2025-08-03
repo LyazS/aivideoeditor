@@ -99,7 +99,7 @@ export function createUnifiedTimelineModule(
       return
     }
 
-    const sprite = timelineItem.sprite
+    const sprite = timelineItem.runtime.sprite
     if (!sprite) {
       return
     }
@@ -182,21 +182,21 @@ export function createUnifiedTimelineModule(
       // 就绪的已知类型时间轴项目处理逻辑
       
       // 根据轨道的可见性和静音状态设置sprite属性
-      if (trackModule && timelineItem.sprite) {
+      if (trackModule && timelineItem.runtime.sprite) {
         const track = trackModule.tracks.value.find((t) => t.id === timelineItem.trackId)
         if (track) {
           // 设置可见性
-          timelineItem.sprite.visible = track.isVisible
+          timelineItem.runtime.sprite.visible = track.isVisible
 
           // 为视频片段设置轨道静音检查函数
-          if (timelineItem.mediaType === 'video' && 'setTrackMuteChecker' in timelineItem.sprite) {
-            const sprite = timelineItem.sprite as VideoVisibleSprite
+          if (timelineItem.mediaType === 'video' && 'setTrackMuteChecker' in timelineItem.runtime.sprite) {
+            const sprite = timelineItem.runtime.sprite as VideoVisibleSprite
             sprite.setTrackMuteChecker(() => track.isMuted)
           }
 
           // 为音频片段设置轨道静音检查函数
-          if (timelineItem.mediaType === 'audio' && 'setTrackMuteChecker' in timelineItem.sprite) {
-            const sprite = timelineItem.sprite as AudioVisibleSprite
+          if (timelineItem.mediaType === 'audio' && 'setTrackMuteChecker' in timelineItem.runtime.sprite) {
+            const sprite = timelineItem.runtime.sprite as AudioVisibleSprite
             sprite.setTrackMuteChecker(() => track.isMuted)
           }
         }
@@ -216,7 +216,7 @@ export function createUnifiedTimelineModule(
         trackId: timelineItem.trackId,
         mediaType: timelineItem.mediaType,
         position: timelineItem.timeRange.timelineStartTime / 1000000,
-        spriteVisible: timelineItem.sprite?.visible,
+        spriteVisible: timelineItem.runtime.sprite?.visible,
       })
     } else {
       // 错误状态的时间轴项目
@@ -250,8 +250,8 @@ export function createUnifiedTimelineModule(
         // 这里不需要手动清理，因为 sprite 销毁时会自动清理所有事件监听器
 
         // 从WebAV画布移除
-        if (item.sprite) {
-          webavModule.removeSprite(item.sprite)
+        if (item.runtime.sprite) {
+          webavModule.removeSprite(item.runtime.sprite)
         }
 
         // TODO: 清理动画管理器（仅就绪状态的已知类型时间轴项目）
@@ -319,8 +319,8 @@ export function createUnifiedTimelineModule(
         // 根据新轨道的可见性设置sprite的visible属性（仅就绪状态的已知类型时间轴项目）
         if (trackModule && isReady(item) && isKnownTimelineItem(item)) {
           const newTrack = trackModule.tracks.value.find((t) => t.id === newTrackId)
-          if (newTrack && item.sprite) {
-            item.sprite.visible = newTrack.isVisible
+          if (newTrack && item.runtime.sprite) {
+            item.runtime.sprite.visible = newTrack.isVisible
           }
         }
       }
@@ -338,7 +338,7 @@ export function createUnifiedTimelineModule(
         }
       } else if (isReady(item) && isKnownTimelineItem(item)) {
         // 就绪状态的已知类型时间轴项目：通过sprite更新
-        const sprite = item.sprite
+        const sprite = item.runtime.sprite
         if (sprite) {
           const currentTimeRange = sprite.getTimeRange()
           const durationFrames = currentTimeRange.timelineEndTime - currentTimeRange.timelineStartTime // 帧数
@@ -383,15 +383,18 @@ export function createUnifiedTimelineModule(
 
       // 清理旧的sprite资源
       try {
-        if (item.sprite && typeof item.sprite.destroy === 'function') {
-          item.sprite.destroy()
+        if (item.runtime.sprite && typeof item.runtime.sprite.destroy === 'function') {
+          item.runtime.sprite.destroy()
         }
       } catch (error) {
         console.warn('清理旧sprite资源时出错:', error)
       }
 
       // 更新sprite引用
-      item.sprite = newSprite
+      if (!item.runtime) {
+        item.runtime = {}
+      }
+      item.runtime.sprite = newSprite
 
       unifiedDebugLog('更新时间轴项目sprite', {
         timelineItemId,
@@ -419,9 +422,9 @@ export function createUnifiedTimelineModule(
     },
   ) {
     const item = getReadyTimelineItem(timelineItemId)
-    if (!item || !item.sprite) return
+    if (!item || !item.runtime.sprite) return
 
-    const sprite = item.sprite
+    const sprite = item.runtime.sprite
 
     try {
       // 更新尺寸时使用中心缩放 - 仅对视觉媒体有效

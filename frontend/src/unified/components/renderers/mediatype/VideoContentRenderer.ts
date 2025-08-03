@@ -381,8 +381,8 @@ export class VideoContentRenderer implements ContentRenderer<'video' | 'image'> 
    */
   private hasSpeedAdjustment(data: UnifiedTimelineItemData<'video'>): boolean {
     // 检查视频是否有播放速度调整
-    if (data.sprite && 'getPlaybackRate' in data.sprite) {
-      const playbackRate = data.sprite.getPlaybackRate()
+    if (data.runtime.sprite && 'getPlaybackRate' in data.runtime.sprite) {
+      const playbackRate = data.runtime.sprite.getPlaybackRate()
       return Math.abs(playbackRate - 1.0) > 0.01 // 允许小的浮点误差
     }
     return false
@@ -392,8 +392,8 @@ export class VideoContentRenderer implements ContentRenderer<'video' | 'image'> 
    * 获取播放速度文本（仅适用于视频）
    */
   private getSpeedText(data: UnifiedTimelineItemData<'video'>): string {
-    if (data.sprite && 'getPlaybackRate' in data.sprite) {
-      const playbackRate = data.sprite.getPlaybackRate()
+    if (data.runtime.sprite && 'getPlaybackRate' in data.runtime.sprite) {
+      const playbackRate = data.runtime.sprite.getPlaybackRate()
       if (Math.abs(playbackRate - 1.0) <= 0.01) {
         return '正常速度'
       } else {

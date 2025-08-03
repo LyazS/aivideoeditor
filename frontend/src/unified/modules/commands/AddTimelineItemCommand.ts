@@ -148,12 +148,14 @@ export class AddTimelineItemCommand implements SimpleCommand {
       trackId: this.originalTimelineItemData.trackId,
       mediaType: this.originalTimelineItemData.mediaType,
       timeRange: newSprite.getTimeRange(),
-      sprite: markRaw(newSprite),
       config: { ...this.originalTimelineItemData.config },
       animation: this.originalTimelineItemData.animation
         ? { ...this.originalTimelineItemData.animation }
         : undefined,
       timelineStatus: 'ready' as TimelineItemStatus,
+      runtime: {
+        sprite: markRaw(newSprite)
+      },
     }) as KnownTimelineItem
 
     // 6. 重新生成缩略图（异步执行，不阻塞重建过程）
@@ -211,8 +213,8 @@ export class AddTimelineItemCommand implements SimpleCommand {
         this.timelineModule.addTimelineItem(newTimelineItem)
 
         // 2. 添加sprite到WebAV画布
-        if (newTimelineItem.sprite) {
-          await this.webavModule.addSprite(newTimelineItem.sprite)
+        if (newTimelineItem.runtime.sprite) {
+          await this.webavModule.addSprite(newTimelineItem.runtime.sprite)
         }
 
         console.log(`✅ 已添加已知时间轴项目: ${this.originalTimelineItemData.mediaItemId}`)

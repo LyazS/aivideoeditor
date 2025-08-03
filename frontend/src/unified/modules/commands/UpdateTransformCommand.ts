@@ -166,7 +166,7 @@ export class UpdateTransformCommand implements SimpleCommand {
           if (config.volume !== undefined) {
             config.volume = this.newValues.volume
           }
-          const sprite = timelineItem.sprite
+          const sprite = timelineItem.runtime.sprite
           if (sprite && hasAudioCapabilities(sprite)) {
             sprite.setVolume?.(this.newValues.volume)
           }
@@ -177,7 +177,7 @@ export class UpdateTransformCommand implements SimpleCommand {
           if (config.isMuted !== undefined) {
             config.isMuted = this.newValues.isMuted
           }
-          const sprite = timelineItem.sprite
+          const sprite = timelineItem.runtime.sprite
           if (sprite && hasAudioCapabilities(sprite)) {
             sprite.setMuted(this.newValues.isMuted)
           }
@@ -191,7 +191,7 @@ export class UpdateTransformCommand implements SimpleCommand {
         if (config.gain !== undefined) {
           config.gain = this.newValues.gain
         }
-        const sprite = timelineItem.sprite
+        const sprite = timelineItem.runtime.sprite
         if (sprite && isUnifiedAudioVisibleSprite(sprite)) {
           sprite.setGain(this.newValues.gain)
         }
@@ -261,7 +261,7 @@ export class UpdateTransformCommand implements SimpleCommand {
           if (config.volume !== undefined) {
             config.volume = this.oldValues.volume
           }
-          const sprite = timelineItem.sprite
+          const sprite = timelineItem.runtime.sprite
           if (sprite && hasAudioCapabilities(sprite)) {
             sprite.setVolume(this.oldValues.volume)
           }
@@ -272,7 +272,7 @@ export class UpdateTransformCommand implements SimpleCommand {
           if (config.isMuted !== undefined) {
             config.isMuted = this.oldValues.isMuted
           }
-          const sprite = timelineItem.sprite
+          const sprite = timelineItem.runtime.sprite
           if (sprite && hasAudioCapabilities(sprite)) {
             sprite.setMuted(this.oldValues.isMuted)
           }
@@ -286,7 +286,7 @@ export class UpdateTransformCommand implements SimpleCommand {
         if (config.gain !== undefined) {
           config.gain = this.oldValues.gain
         }
-        const sprite = timelineItem.sprite
+        const sprite = timelineItem.runtime.sprite
         if (sprite && isUnifiedAudioVisibleSprite(sprite)) {
           sprite.setGain(this.oldValues.gain)
         }
@@ -398,7 +398,7 @@ export class UpdateTransformCommand implements SimpleCommand {
     const timelineItem = this.timelineModule.getTimelineItem(timelineItemId)
     if (!timelineItem) return
 
-    const sprite = timelineItem.sprite
+    const sprite = timelineItem.runtime.sprite
     if (!sprite) return
 
     const timeRange = sprite.getTimeRange()

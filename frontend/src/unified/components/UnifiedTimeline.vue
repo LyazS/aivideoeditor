@@ -1526,6 +1526,7 @@ async function createMediaClipFromMediaItem(
       config: config,
       animation: undefined, // 新创建的项目默认没有动画
       timelineStatus: 'ready', // 添加必需的 timelineStatus 字段
+      runtime: {}, // 添加必需的 runtime 字段
       // 如果统一架构支持，添加媒体名称
       ...(storeMediaItem.name && { mediaName: storeMediaItem.name }),
     }
@@ -1699,8 +1700,8 @@ async function handleTimelineItemRemove(timelineItemId: string) {
       const item = unifiedStore.getTimelineItem(timelineItemId)
       if (item) {
         // 从画布移除sprite
-        if (item.sprite) {
-          unifiedStore.removeSpriteFromCanvas(item.sprite)
+        if (item.runtime.sprite) {
+          unifiedStore.removeSpriteFromCanvas(item.runtime.sprite)
         }
         // 从store中移除TimelineItem
         unifiedStore.removeTimelineItem(timelineItemId)

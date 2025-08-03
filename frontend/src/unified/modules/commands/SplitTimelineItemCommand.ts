@@ -209,12 +209,14 @@ export class SplitTimelineItemCommand implements SimpleCommand {
       trackId: this.originalTimelineItemData.trackId,
       mediaType: this.originalTimelineItemData.mediaType,
       timeRange: firstSprite.getTimeRange(),
-      sprite: markRaw(firstSprite),
       config: { ...this.originalTimelineItemData.config },
       animation: this.originalTimelineItemData.animation
         ? { ...this.originalTimelineItemData.animation }
         : undefined,
       timelineStatus: 'ready' as TimelineItemStatus,
+      runtime: {
+        sprite: markRaw(firstSprite)
+      },
     }) as KnownTimelineItem
 
     const secondItem = reactive({
@@ -223,12 +225,14 @@ export class SplitTimelineItemCommand implements SimpleCommand {
       trackId: this.originalTimelineItemData.trackId,
       mediaType: this.originalTimelineItemData.mediaType,
       timeRange: secondSprite.getTimeRange(),
-      sprite: markRaw(secondSprite),
       config: { ...this.originalTimelineItemData.config },
       animation: this.originalTimelineItemData.animation
         ? { ...this.originalTimelineItemData.animation }
         : undefined,
       timelineStatus: 'ready' as TimelineItemStatus,
+      runtime: {
+        sprite: markRaw(secondSprite)
+      },
     }) as KnownTimelineItem
 
     // 7. 重新生成缩略图（异步执行，不阻塞重建过程）
@@ -294,12 +298,14 @@ export class SplitTimelineItemCommand implements SimpleCommand {
       trackId: this.originalTimelineItemData.trackId,
       mediaType: this.originalTimelineItemData.mediaType,
       timeRange: newSprite.getTimeRange(),
-      sprite: markRaw(newSprite),
       config: { ...this.originalTimelineItemData.config },
       animation: this.originalTimelineItemData.animation
         ? { ...this.originalTimelineItemData.animation }
         : undefined,
       timelineStatus: 'ready' as TimelineItemStatus,
+      runtime: {
+        sprite: markRaw(newSprite)
+      },
     }) as KnownTimelineItem
 
     // 6. 重新生成缩略图（异步执行，不阻塞重建过程）
@@ -337,11 +343,11 @@ export class SplitTimelineItemCommand implements SimpleCommand {
       this.timelineModule.addTimelineItem(secondItem)
 
       // 3. 添加sprite到WebAV画布
-      if (isKnownTimelineItem(firstItem) && firstItem.sprite) {
-        await this.webavModule.addSprite(firstItem.sprite)
+      if (isKnownTimelineItem(firstItem) && firstItem.runtime.sprite) {
+        await this.webavModule.addSprite(firstItem.runtime.sprite)
       }
-      if (isKnownTimelineItem(secondItem) && secondItem.sprite) {
-        await this.webavModule.addSprite(secondItem.sprite)
+      if (isKnownTimelineItem(secondItem) && secondItem.runtime.sprite) {
+        await this.webavModule.addSprite(secondItem.runtime.sprite)
       }
 
       const mediaItem = this.mediaModule.getMediaItem(this.originalTimelineItemData.mediaItemId)
@@ -374,8 +380,8 @@ export class SplitTimelineItemCommand implements SimpleCommand {
       this.timelineModule.addTimelineItem(originalItem)
 
       // 4. 添加sprite到WebAV画布
-      if (isKnownTimelineItem(originalItem) && originalItem.sprite) {
-        await this.webavModule.addSprite(originalItem.sprite)
+      if (isKnownTimelineItem(originalItem) && originalItem.runtime.sprite) {
+        await this.webavModule.addSprite(originalItem.runtime.sprite)
       }
 
       const mediaItem = this.mediaModule.getMediaItem(this.originalTimelineItemData.mediaItemId)

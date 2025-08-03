@@ -20,7 +20,7 @@ export function syncTimeRange(
   newTimeRange?: Partial<UnifiedTimeRange>,
 ): void {
   // 只有就绪状态的时间轴项目才有sprite
-  if (!isReady(timelineItem) || !timelineItem.sprite) {
+  if (!isReady(timelineItem) || !timelineItem.runtime.sprite) {
     // 对于非就绪状态的项目，直接更新timeRange
     if (newTimeRange) {
       const completeTimeRange = {
@@ -50,7 +50,7 @@ export function syncTimeRange(
     return
   }
 
-  const sprite = timelineItem.sprite
+  const sprite = timelineItem.runtime.sprite
 
   if (newTimeRange) {
     // 如果提供了新的时间范围，同时更新sprite和TimelineItem
@@ -130,9 +130,9 @@ export function validateTimelineItemTimeRange(timelineItem: UnifiedTimelineItemD
   }
   
   // 如果是就绪状态且有sprite，验证sprite的时间范围一致性
-  if (isReady(timelineItem) && timelineItem.sprite) {
+  if (isReady(timelineItem) && timelineItem.runtime.sprite) {
     try {
-      const spriteTimeRange = timelineItem.sprite.getTimeRange()
+      const spriteTimeRange = timelineItem.runtime.sprite.getTimeRange()
       
       // 检查时间范围是否同步
       if (Math.abs(spriteTimeRange.timelineStartTime - timelineItem.timeRange.timelineStartTime) > 0.1) {

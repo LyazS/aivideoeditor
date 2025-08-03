@@ -352,7 +352,7 @@ async function applyKeyframeSnapshot<TMediaType extends MediaType = MediaType>(
   }
 
   // 2. 通过WebAV恢复属性值（遵循正确的数据流向）
-  const sprite = item.sprite
+  const sprite = item.runtime.sprite
   if (sprite && snapshot.itemProperties) {
     try {
       // 类型安全的属性恢复 - 只处理视觉属性

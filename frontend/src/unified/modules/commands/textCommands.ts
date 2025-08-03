@@ -86,8 +86,8 @@ export class AddTextItemCommand implements SimpleCommand {
       this.timelineModule.addTimelineItem(this.originalTimelineItemData)
 
       // 2. 添加sprite到WebAV画布
-      if (this.originalTimelineItemData.sprite) {
-        await this.webavModule.addSprite(this.originalTimelineItemData.sprite)
+      if (this.originalTimelineItemData.runtime.sprite) {
+        await this.webavModule.addSprite(this.originalTimelineItemData.runtime.sprite)
       }
 
       console.log(`✅ 文本项目添加成功:`, {
@@ -163,7 +163,7 @@ export class UpdateTextCommand implements SimpleCommand {
     console.log('🔄 开始从源头重建文本时间轴项目...')
 
     // 1. 保存旧精灵的状态
-    const oldSprite = item.sprite as TextVisibleSprite
+    const oldSprite = item.runtime.sprite as TextVisibleSprite
     const oldState = {
       rect: {
         x: oldSprite.rect.x,
@@ -232,7 +232,10 @@ export class UpdateTextCommand implements SimpleCommand {
     item.config.style = completeStyle
 
     // 10. 替换精灵引用
-    item.sprite = markRaw(newSprite)
+    if (!item.runtime) {
+      item.runtime = {}
+    }
+    item.runtime.sprite = markRaw(newSprite)
 
     // 11. 在WebAV画布中替换精灵
     if (oldSprite) {
@@ -290,7 +293,7 @@ export class UpdateTextCommand implements SimpleCommand {
     newStyle: Partial<TextStyleConfig>,
   ): Promise<void> {
     // 保存旧精灵的状态
-    const oldSprite = item.sprite as TextVisibleSprite
+    const oldSprite = item.runtime.sprite as TextVisibleSprite
     const oldState = {
       rect: {
         x: oldSprite.rect.x,
@@ -359,7 +362,10 @@ export class UpdateTextCommand implements SimpleCommand {
     item.config.style = completeStyle
 
     // 替换精灵引用
-    item.sprite = markRaw(newSprite)
+    if (!item.runtime) {
+      item.runtime = {}
+    }
+    item.runtime.sprite = markRaw(newSprite)
 
     // 在WebAV画布中替换精灵
     if (oldSprite) {
@@ -499,8 +505,8 @@ export class RemoveTextItemCommand implements SimpleCommand {
         }
 
         // 如果有sprite，同步更新sprite的属性
-        if (newTimelineItem.sprite) {
-          const sprite = newTimelineItem.sprite as any
+        if (newTimelineItem.runtime.sprite) {
+          const sprite = newTimelineItem.runtime.sprite as any
           sprite.rect.x = originalConfig.x
           sprite.rect.y = originalConfig.y
           sprite.rect.w = originalConfig.width
@@ -517,8 +523,8 @@ export class RemoveTextItemCommand implements SimpleCommand {
         this.timelineModule.addTimelineItem(newTimelineItem)
 
         // 2. 重新添加sprite到WebAV画布
-        if (newTimelineItem.sprite) {
-          await this.webavModule.addSprite(newTimelineItem.sprite)
+        if (newTimelineItem.runtime.sprite) {
+          await this.webavModule.addSprite(newTimelineItem.runtime.sprite)
         }
 
         console.log(`✅ 文本项目恢复成功: ${newTimelineItem.id}`)

@@ -96,7 +96,7 @@ async function createSprite(data: UnifiedTimelineItemData): Promise<void> {
  * 销毁Sprite函数
  */
 async function destroySprite(data: UnifiedTimelineItemData): Promise<void> {
-  if (!data.sprite) {
+  if (!data.runtime.sprite) {
     return
   }
 
@@ -127,7 +127,7 @@ export function canTransitionTo(
  * 检查是否为就绪状态
  */
 export function isReady(data: UnifiedTimelineItemData<MediaTypeOrUnknown>): boolean {
-  return data.timelineStatus === 'ready' && !!data.sprite
+  return data.timelineStatus === 'ready' && !!data.runtime.sprite
 }
 
 /**
@@ -211,7 +211,7 @@ export function updateTimeRange(
   data.timeRange = newRange // ✅ 响应式更新
 
   // 如果有sprite，同步更新sprite的时间范围
-  if (data.sprite) {
+  if (data.runtime.sprite) {
     updateSpriteTimeRange(data, newRange)
   }
 }
@@ -258,11 +258,11 @@ async function updateSpriteTimeRange(
   data: UnifiedTimelineItemData,
   timeRange: UnifiedTimeRange
 ): Promise<void> {
-  if (!data.sprite) return
+  if (!data.runtime.sprite) return
 
   try {
     const { updateSpriteTimeRange } = await import('./TimelineItemSpriteOperations')
-    updateSpriteTimeRange(data.sprite, timeRange)
+    updateSpriteTimeRange(data.runtime.sprite, timeRange)
   } catch (error) {
     console.error('更新Sprite时间范围失败:', error)
   }

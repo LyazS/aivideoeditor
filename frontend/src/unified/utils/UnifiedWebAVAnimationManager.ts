@@ -28,7 +28,7 @@ export class UnifiedWebAVAnimationManager {
     if (this.isDestroyed) return
 
     // 只有就绪状态的时间轴项目才有sprite
-    if (!isReady(this.timelineItem) || !this.timelineItem.sprite) {
+    if (!isReady(this.timelineItem) || !this.timelineItem.runtime.sprite) {
       console.warn('🎬 [Unified WebAV Animation] No sprite found or item not ready:', this.timelineItem.id)
       return
     }
@@ -47,11 +47,11 @@ export class UnifiedWebAVAnimationManager {
   public async clearAnimation(): Promise<void> {
     if (this.isDestroyed) return
 
-    if (!isReady(this.timelineItem) || !this.timelineItem.sprite) {
+    if (!isReady(this.timelineItem) || !this.timelineItem.runtime.sprite) {
       return
     }
 
-    const sprite = this.timelineItem.sprite
+    const sprite = this.timelineItem.runtime.sprite
 
     try {
       // 清除WebAV动画（传入空的关键帧）

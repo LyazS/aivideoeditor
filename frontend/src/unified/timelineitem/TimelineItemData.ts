@@ -338,6 +338,25 @@ type TimelineItemConfigMap = {
  */
 export type GetTimelineItemConfig<T extends MediaTypeOrUnknown> = TimelineItemConfigMap[T]
 
+// ==================== 统一时间轴项目运行时数据接口 ====================
+/**
+ * 设计理念：
+ * - 包含所有运行时生成的、不可持久化的数据
+ * - 支持扩展，未来可以添加更多运行时字段
+ * - 与持久化数据完全分离
+ */
+export interface UnifiedTimelineItemRuntime {
+  /** Sprite引用 - 与时间轴项目生命周期一致 */
+  sprite?: Raw<UnifiedSprite>
+  
+  /** 缩略图URL - 运行时生成的Blob URL */
+  thumbnailUrl?: string
+  
+  /** 预留：未来可能的运行时字段 */
+  // renderCache?: RenderCacheData
+  // animationState?: AnimationRuntimeState
+  // performanceMetrics?: PerformanceData
+}
 // ==================== 核心接口设计 ====================
 
 /**
@@ -371,10 +390,8 @@ export interface UnifiedTimelineItemData<T extends MediaTypeOrUnknown = MediaTyp
   // ==================== 动画配置（类型安全） ====================
   animation?: T extends MediaType ? AnimationConfig<T> : undefined
 
-  // ==================== Sprite引用 缩略图 ====================
-  // 注意一个要点：sprite和thumbnailUrl总是放在command里边管理
-  sprite?: Raw<UnifiedSprite> // 直接持有Sprite引用，与时间轴项目生命周期一致
-  thumbnailUrl?: string
+    // ==================== 运行时数据（不可持久化） ====================
+  runtime: UnifiedTimelineItemRuntime
 }
 
 // ==================== 联合类型定义 ====================

@@ -71,7 +71,7 @@ export function findTimelineItemBySprite(
 ): UnifiedTimelineItemData | null {
   // 只有就绪状态的时间轴项目才会有sprite
   return timelineItems.find((item) => 
-    item.timelineStatus === 'ready' && item.sprite === sprite
+    item.timelineStatus === 'ready' && item.runtime.sprite === sprite
   ) || null
 }
 

@@ -48,7 +48,7 @@ export function createUnifiedClipOperationsModule(
     let oldDurationFrames = 0
     let newDurationFrames = 0
 
-    if ((item.mediaType === 'video' || item.mediaType === 'audio') && item.sprite) {
+    if ((item.mediaType === 'video' || item.mediaType === 'audio') && item.runtime.sprite) {
       const timeRange = item.timeRange
       
       // 计算裁剪时长（对于视频/音频）
@@ -81,11 +81,11 @@ export function createUnifiedClipOperationsModule(
     }
 
     // 更新sprite的播放速度（这会自动更新sprite内部的timeRange）
-    if (item.sprite) {
-      if (item.mediaType === 'video' && item.sprite instanceof VideoVisibleSprite) {
-        item.sprite.setPlaybackRate(clampedRate)
-      } else if (item.mediaType === 'audio' && item.sprite instanceof AudioVisibleSprite) {
-        item.sprite.setPlaybackRate(clampedRate)
+    if (item.runtime.sprite) {
+      if (item.mediaType === 'video' && item.runtime.sprite instanceof VideoVisibleSprite) {
+        item.runtime.sprite.setPlaybackRate(clampedRate)
+      } else if (item.mediaType === 'audio' && item.runtime.sprite instanceof AudioVisibleSprite) {
+        item.runtime.sprite.setPlaybackRate(clampedRate)
       }
 
       // 使用统一的时间范围同步函数更新TimelineItem的timeRange

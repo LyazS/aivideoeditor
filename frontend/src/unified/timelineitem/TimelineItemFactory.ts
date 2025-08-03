@@ -48,7 +48,8 @@ export function createKnownTimelineItem<T extends MediaType>(
     mediaType,
     timeRange: options.timeRange,
     config: options.config,
-    timelineStatus: options.timelineStatus || 'loading'
+    timelineStatus: options.timelineStatus || 'loading',
+    runtime: {}
   }) as UnifiedTimelineItemData<T>
 }
 
@@ -70,7 +71,8 @@ export function createUnknownTimelineItem(options: {
     mediaType: 'unknown' as const,
     timeRange: options.timeRange,
     config: options.config,
-    timelineStatus: options.timelineStatus || 'loading'
+    timelineStatus: options.timelineStatus || 'loading',
+    runtime: {}
   })
 }
 

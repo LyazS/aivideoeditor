@@ -174,10 +174,12 @@ export class RemoveTrackCommand implements SimpleCommand {
       trackId: itemData.trackId,
       mediaType: itemData.mediaType,
       timeRange: newSprite.getTimeRange(),
-      sprite: markRaw(newSprite),
       config: { ...itemData.config },
       animation: itemData.animation ? { ...itemData.animation } : undefined,
       timelineStatus: 'ready' as TimelineItemStatus,
+      runtime: {
+        sprite: markRaw(newSprite)
+      },
     }) as KnownTimelineItem
 
     return newTimelineItem
@@ -230,10 +232,12 @@ export class RemoveTrackCommand implements SimpleCommand {
       trackId: itemData.trackId,
       mediaType: 'text',
       timeRange: { ...itemData.timeRange },
-      sprite: markRaw(newSprite),
       config: { ...itemData.config },
       animation: itemData.animation ? { ...itemData.animation } : undefined,
       timelineStatus: 'ready' as TimelineItemStatus,
+      runtime: {
+        sprite: markRaw(newSprite)
+      },
     }) as KnownTimelineItem
 
     console.log('✅ [RemoveTrackCommand] 文本时间轴项目重建完成')
@@ -306,8 +310,8 @@ export class RemoveTrackCommand implements SimpleCommand {
         this.timelineModule.addTimelineItem(newTimelineItem)
 
         // 添加sprite到WebAV画布
-        if (newTimelineItem.sprite) {
-          await this.webavModule.addSprite(newTimelineItem.sprite)
+        if (newTimelineItem.runtime.sprite) {
+          await this.webavModule.addSprite(newTimelineItem.runtime.sprite)
         }
       }
 

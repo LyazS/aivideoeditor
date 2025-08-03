@@ -238,7 +238,7 @@ export async function createSpriteForTimelineData(
   avCanvas: Raw<AVCanvas>
 ): Promise<void> {
   // 如果已有Sprite，先清理
-  if (timelineData.sprite) {
+  if (timelineData.runtime.sprite) {
     await destroySpriteForTimelineData(timelineData, avCanvas)
   }
   
@@ -249,7 +249,10 @@ export async function createSpriteForTimelineData(
   await addSpriteToCanvas(sprite, avCanvas)
   
   // 设置引用
-  timelineData.sprite = sprite
+  if (!timelineData.runtime) {
+    timelineData.runtime = {}
+  }
+  timelineData.runtime.sprite = sprite
   
   console.log(`✅ 为时间轴项目 ${timelineData.id} 创建了Sprite`)
 }
@@ -263,13 +266,13 @@ export async function destroySpriteForTimelineData(
   timelineData: UnifiedTimelineItemData,
   avCanvas: Raw<AVCanvas>
 ): Promise<void> {
-  if (!timelineData.sprite) return
-  
+  if (!timelineData.runtime.sprite) return
+
   // 从AVCanvas移除
-  removeSpriteFromCanvas(timelineData.sprite, avCanvas)
-  
+  removeSpriteFromCanvas(timelineData.runtime.sprite, avCanvas)
+
   // 清除引用
-  timelineData.sprite = undefined
+  timelineData.runtime.sprite = undefined
   
   console.log(`🗑️ 销毁了时间轴项目 ${timelineData.id} 的Sprite`)
 }
@@ -287,10 +290,10 @@ export async function updateSpriteForTimelineData(
     opacity: number
   }>
 ): Promise<void> {
-  if (!timelineData.sprite) return
-  
+  if (!timelineData.runtime.sprite) return
+
   // 更新属性
-  updateSpriteProperties(timelineData.sprite, updates)
+  updateSpriteProperties(timelineData.runtime.sprite, updates)
   
   console.log(`✅ 更新了时间轴项目 ${timelineData.id} 的Sprite属性`)
 }
@@ -301,7 +304,7 @@ export async function updateSpriteForTimelineData(
  * @returns 是否有Sprite
  */
 export function hasSprite(timelineData: UnifiedTimelineItemData): boolean {
-  return !!timelineData.sprite
+  return !!timelineData.runtime.sprite
 }
 
 /**
@@ -310,7 +313,7 @@ export function hasSprite(timelineData: UnifiedTimelineItemData): boolean {
  * @returns Sprite实例或undefined
  */
 export function getSprite(timelineData: UnifiedTimelineItemData) {
-  return timelineData.sprite
+  return timelineData.runtime.sprite
 }
 
 /**
@@ -361,7 +364,7 @@ export async function destroySpritesForTimelineItems(
 export async function syncConfigToSprite(
   timelineData: UnifiedTimelineItemData
 ): Promise<void> {
-  if (!timelineData.sprite) return
+  if (!timelineData.runtime.sprite) return
   
   const updates: Parameters<typeof updateSpriteForTimelineData>[1] = {}
   

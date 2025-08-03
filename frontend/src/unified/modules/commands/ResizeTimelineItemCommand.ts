@@ -92,7 +92,7 @@ export class ResizeTimelineItemCommand implements SimpleCommand {
 
     if (isKnownTimelineItem(timelineItem)) {
       // 已知项目处理逻辑
-      const sprite = timelineItem.sprite
+      const sprite = timelineItem.runtime.sprite
       if (!sprite) {
         throw new Error(`时间轴项目没有sprite: ${this.timelineItemId}`)
       }

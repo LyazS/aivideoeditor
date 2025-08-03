@@ -173,12 +173,14 @@ export class RemoveTimelineItemCommand implements SimpleCommand {
       trackId: this.originalTimelineItemData.trackId,
       mediaType: this.originalTimelineItemData.mediaType,
       timeRange: newSprite.getTimeRange(),
-      sprite: markRaw(newSprite),
       config: { ...this.originalTimelineItemData.config },
       animation: this.originalTimelineItemData.animation
         ? { ...this.originalTimelineItemData.animation }
         : undefined,
       timelineStatus: 'ready' as TimelineItemStatus,
+      runtime: {
+        sprite: markRaw(newSprite)
+      },
     }) as KnownTimelineItem
 
     // 6. 重新生成缩略图（异步执行，不阻塞重建过程）
@@ -272,8 +274,8 @@ export class RemoveTimelineItemCommand implements SimpleCommand {
     }
 
     // 同步更新sprite的属性以匹配配置
-    if (newTimelineItem.sprite) {
-      const sprite = newTimelineItem.sprite as any
+    if (newTimelineItem.runtime.sprite) {
+      const sprite = newTimelineItem.runtime.sprite as any
       sprite.rect.x = originalConfig.x
       sprite.rect.y = originalConfig.y
       sprite.rect.w = originalConfig.width
@@ -350,8 +352,8 @@ export class RemoveTimelineItemCommand implements SimpleCommand {
           this.timelineModule.addTimelineItem(newTimelineItem)
 
           // 2. 添加sprite到WebAV画布
-          if (newTimelineItem.sprite) {
-            await this.webavModule.addSprite(newTimelineItem.sprite)
+          if (newTimelineItem.runtime.sprite) {
+            await this.webavModule.addSprite(newTimelineItem.runtime.sprite)
           }
 
           const textConfig = this.originalTimelineItemData.config as TextMediaConfig
@@ -367,8 +369,8 @@ export class RemoveTimelineItemCommand implements SimpleCommand {
           this.timelineModule.addTimelineItem(newTimelineItem)
 
           // 2. 添加sprite到WebAV画布
-          if (newTimelineItem.sprite) {
-            await this.webavModule.addSprite(newTimelineItem.sprite)
+          if (newTimelineItem.runtime.sprite) {
+            await this.webavModule.addSprite(newTimelineItem.runtime.sprite)
           }
 
           const mediaItem = this.mediaModule.getMediaItem(this.originalTimelineItemData.mediaItemId)
