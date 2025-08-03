@@ -21,16 +21,17 @@ import type {
   KnownTimelineItem,
   TimelineItemStatus,
 } from '../../timelineitem/TimelineItemData'
-type TextTimelineItem = UnifiedTimelineItemData<'text'>
 
-import type { ImageTimeRange } from '../../../types'
+import type { UnifiedTimeRange } from '../../types/timeRange'
 
 // ==================== 新架构工具导入 ====================
 import { isTextTimelineItem, isReady, TimelineItemFactory } from '../../timelineitem'
+import { createTextTimelineItem } from '../../utils/textTimelineUtils'
 
 // ==================== 旧架构兼容性导入 ====================
-import { TextVisibleSprite } from '../../../utils/TextVisibleSprite'
-import type { TextMediaConfig, TextStyleConfig } from '../../../types'
+import { TextVisibleSprite } from '../../visiblesprite/TextVisibleSprite'
+import type { TextStyleConfig } from '../../../types'
+import type { TextMediaConfig } from '../../timelineitem/TimelineItemData'
 
 // ==================== 添加文本项目命令 ====================
 /**
@@ -41,7 +42,7 @@ import type { TextMediaConfig, TextStyleConfig } from '../../../types'
 export class AddTextItemCommand implements SimpleCommand {
   public readonly id: string
   public readonly description: string
-  private originalTimelineItemData: TextTimelineItem | null = null // 保存原始项目的重建数据
+  private originalTimelineItemData: UnifiedTimelineItemData<'text'> | null = null // 保存原始项目的重建数据
 
   constructor(
     private text: string,
@@ -51,7 +52,7 @@ export class AddTextItemCommand implements SimpleCommand {
     private duration: number,
     private videoResolution: { width: number; height: number },
     private timelineModule: {
-      addTimelineItem: (item: TextTimelineItem) => void
+      addTimelineItem: (item: UnifiedTimelineItemData<'text'>) => void
       removeTimelineItem: (id: string) => void
     },
     private webavModule: {
@@ -64,77 +65,6 @@ export class AddTextItemCommand implements SimpleCommand {
   }
 
   /**
-   * 从原始配置重建文本时间轴项目
-   * 统一重建逻辑：每次都从原始配置完全重新创建
-   */
-  private async rebuildTextTimelineItem(): Promise<TextTimelineItem> {
-    console.log('🔄 开始从源头重建文本时间轴项目...')
-
-    // 1. 创建文本精灵
-    const newSprite = await TextVisibleSprite.create(this.text, this.style)
-
-    // 2. 设置时间范围
-    const timeRange: ImageTimeRange = {
-      timelineStartTime: this.startTimeFrames,
-      timelineEndTime: this.startTimeFrames + this.duration,
-      displayDuration: this.duration,
-    }
-    newSprite.setTimeRange(timeRange)
-
-    // 3. 设置位置和尺寸（使用视频分辨率进行坐标转换）
-    // 这里暂时使用默认位置，实际应用中可能需要根据视频分辨率进行调整
-    const defaultX = this.videoResolution.width / 2 - 100
-    const defaultY = this.videoResolution.height / 2 - 50
-    const defaultWidth = 200
-    const defaultHeight = 100
-
-    newSprite.rect.x = defaultX
-    newSprite.rect.y = defaultY
-    newSprite.rect.w = defaultWidth
-    newSprite.rect.h = defaultHeight
-    newSprite.rect.angle = 0
-    newSprite.opacity = 1
-    newSprite.zIndex = 1
-
-    // 4. 创建新的TimelineItem
-    const newTimelineItem = reactive({
-      id: `text_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
-      mediaItemId: '', // 文本项目不需要媒体库项目
-      trackId: this.trackId,
-      mediaType: 'text' as const,
-      timeRange: newSprite.getTimeRange(),
-      sprite: markRaw(newSprite),
-      config: {
-        text: this.text,
-        style: { ...this.style },
-        x: defaultX,
-        y: defaultY,
-        width: defaultWidth,
-        height: defaultHeight,
-        rotation: 0,
-        opacity: 1,
-        zIndex: 1,
-        originalWidth: defaultWidth,
-        originalHeight: defaultHeight,
-      } as TextMediaConfig,
-      timelineStatus: 'ready' as TimelineItemStatus,
-    }) as TextTimelineItem
-
-    // 5. 保存原始数据用于重建 - 明确传入原始ID以避免重新生成
-    this.originalTimelineItemData = TimelineItemFactory.clone(newTimelineItem, { id: newTimelineItem.id })
-
-    console.log('🔄 重建文本时间轴项目完成:', {
-      id: newTimelineItem.id,
-      text: this.text.substring(0, 20) + '...',
-      timeRange,
-      position: { x: defaultX, y: defaultY },
-      size: { w: defaultWidth, h: defaultHeight },
-    })
-
-    return newTimelineItem
-  }
-
-  /**
    * 执行命令：添加文本时间轴项目
    * 统一重建逻辑：每次执行都从原始配置重新创建
    */
@@ -143,18 +73,25 @@ export class AddTextItemCommand implements SimpleCommand {
       console.log(`🔄 执行添加文本操作...`)
 
       // 从原始配置重新创建TimelineItem和sprite
-      const newTimelineItem = await this.rebuildTextTimelineItem()
+      this.originalTimelineItemData = await createTextTimelineItem(
+        this.text,
+        this.style,
+        this.startTimeFrames,
+        this.trackId,
+        this.duration,
+        this.videoResolution,
+      )
 
       // 1. 添加到时间轴
-      this.timelineModule.addTimelineItem(newTimelineItem)
+      this.timelineModule.addTimelineItem(this.originalTimelineItemData)
 
       // 2. 添加sprite到WebAV画布
-      if (newTimelineItem.sprite) {
-        await this.webavModule.addSprite(newTimelineItem.sprite)
+      if (this.originalTimelineItemData.sprite) {
+        await this.webavModule.addSprite(this.originalTimelineItemData.sprite)
       }
 
       console.log(`✅ 文本项目添加成功:`, {
-        id: newTimelineItem.id,
+        id: this.originalTimelineItemData.id,
         text: this.text.substring(0, 20) + '...',
         startTime: framesToTimecode(this.startTimeFrames),
         duration: framesToTimecode(this.duration),
@@ -194,7 +131,7 @@ export class AddTextItemCommand implements SimpleCommand {
 export class UpdateTextCommand implements SimpleCommand {
   public readonly id: string
   public readonly description: string
-  private originalTimelineItemData: TextTimelineItem | null = null // 保存原始项目的重建数据
+  private originalTimelineItemData: UnifiedTimelineItemData<'text'> | null = null // 保存原始项目的重建数据
   private oldText: string = ''
   private oldStyle: TextStyleConfig | null = null
 
@@ -203,7 +140,7 @@ export class UpdateTextCommand implements SimpleCommand {
     private newText: string,
     private newStyle: Partial<TextStyleConfig>,
     private timelineModule: {
-      getTimelineItem: (id: string) => TextTimelineItem | undefined
+      getTimelineItem: (id: string) => UnifiedTimelineItemData<'text'> | undefined
     },
     private webavModule: {
       addSprite: (sprite: VisibleSprite) => Promise<boolean>
@@ -219,10 +156,10 @@ export class UpdateTextCommand implements SimpleCommand {
    * 遵循"从源头重建"原则，每次都完全重新创建
    */
   private async rebuildTextTimelineItem(
-    item: TextTimelineItem,
+    item: UnifiedTimelineItemData<'text'>,
     text: string,
     style: Partial<TextStyleConfig>,
-  ): Promise<TextTimelineItem> {
+  ): Promise<UnifiedTimelineItemData<'text'>> {
     console.log('🔄 开始从源头重建文本时间轴项目...')
 
     // 1. 保存旧精灵的状态
@@ -348,7 +285,7 @@ export class UpdateTextCommand implements SimpleCommand {
    * 遵循"从源头重建"原则，完全重新创建sprite实例
    */
   private async rebuildTextSprite(
-    item: TextTimelineItem,
+    item: UnifiedTimelineItemData<'text'>,
     newText: string,
     newStyle: Partial<TextStyleConfig>,
   ): Promise<void> {
@@ -470,14 +407,14 @@ export class UpdateTextCommand implements SimpleCommand {
 export class RemoveTextItemCommand implements SimpleCommand {
   public readonly id: string
   public readonly description: string
-  private originalTimelineItemData: TextTimelineItem | null = null // 保存原始项目的重建数据
+  private originalTimelineItemData: UnifiedTimelineItemData<'text'> | null = null // 保存原始项目的重建数据
 
   constructor(
     private timelineItemId: string,
     private timelineModule: {
-      addTimelineItem: (item: TextTimelineItem) => void
+      addTimelineItem: (item: UnifiedTimelineItemData<'text'>) => void
       removeTimelineItem: (id: string) => void
-      getTimelineItem: (id: string) => TextTimelineItem | undefined
+      getTimelineItem: (id: string) => UnifiedTimelineItemData<'text'> | undefined
     },
     private webavModule: {
       addSprite: (sprite: VisibleSprite) => Promise<boolean>
@@ -486,60 +423,6 @@ export class RemoveTextItemCommand implements SimpleCommand {
   ) {
     this.id = generateCommandId()
     this.description = `删除文本项目`
-  }
-
-  /**
-   * 从原始配置重建文本时间轴项目
-   * 遵循"从源头重建"原则，每次都完全重新创建
-   */
-  private async rebuildTextTimelineItem(): Promise<TextTimelineItem> {
-    if (!this.originalTimelineItemData) {
-      throw new Error('文本时间轴项目数据不存在')
-    }
-
-    console.log('🔄 开始从源头重建文本时间轴项目...')
-
-    // 1. 获取原始配置
-    const text = this.originalTimelineItemData.config.text
-    const style = { ...this.originalTimelineItemData.config.style }
-
-    // 2. 创建新的文本精灵
-    const newSprite = await TextVisibleSprite.create(text, style)
-
-    // 3. 设置时间范围
-    newSprite.setTimeRange(this.originalTimelineItemData.timeRange)
-
-    // 4. 设置位置和尺寸
-    const config = this.originalTimelineItemData.config
-    newSprite.rect.x = config.x
-    newSprite.rect.y = config.y
-    newSprite.rect.w = config.width
-    newSprite.rect.h = config.height
-    newSprite.rect.angle = config.rotation
-    newSprite.opacity = config.opacity
-    newSprite.zIndex = config.zIndex
-
-    // 5. 创建新的TimelineItem
-    const newTimelineItem = reactive({
-      id: this.originalTimelineItemData.id,
-      mediaItemId: '', // 文本项目不需要媒体库项目
-      trackId: this.originalTimelineItemData.trackId,
-      mediaType: 'text' as const,
-      timeRange: newSprite.getTimeRange(),
-      sprite: markRaw(newSprite),
-      config: { ...config },
-      timelineStatus: 'ready' as TimelineItemStatus,
-    }) as TextTimelineItem
-
-    console.log('🔄 重建文本时间轴项目完成:', {
-      id: newTimelineItem.id,
-      text: text.substring(0, 20) + '...',
-      timeRange: this.originalTimelineItemData.timeRange,
-      position: { x: config.x, y: config.y },
-      size: { w: config.width, h: config.height },
-    })
-
-    return newTimelineItem
   }
 
   /**
@@ -557,12 +440,7 @@ export class RemoveTextItemCommand implements SimpleCommand {
       // 保存项目用于撤销 - 明确传入原始ID以避免重新生成
       this.originalTimelineItemData = TimelineItemFactory.clone(item, { id: item.id })
 
-      // 1. 从WebAV画布移除sprite
-      if (item.sprite) {
-        this.webavModule.removeSprite(item.sprite)
-      }
-
-      // 2. 从时间轴移除项目
+      // 从时间轴移除项目
       this.timelineModule.removeTimelineItem(this.timelineItemId)
 
       console.log(`✅ 文本项目删除成功: ${this.timelineItemId}`)
@@ -582,7 +460,58 @@ export class RemoveTextItemCommand implements SimpleCommand {
         console.log(`🔄 撤销删除文本操作...`)
 
         // 从原始配置重新创建TimelineItem和sprite
-        const newTimelineItem = await this.rebuildTextTimelineItem()
+        // 遵循"从源头重建"原则，使用createTextTimelineItem重新创建
+        const originalConfig = this.originalTimelineItemData.config
+        const originalTimeRange = this.originalTimelineItemData.timeRange
+        
+        // 计算视频分辨率（从sprite或使用默认值）
+        const videoResolution = { width: 1920, height: 1080 } // 默认分辨率，实际应该从项目配置获取
+
+        // 计算duration（显示时长）
+        const duration = originalTimeRange.timelineEndTime - originalTimeRange.timelineStartTime
+
+        // 使用customId参数直接设置原始ID
+        const newTimelineItem = await createTextTimelineItem(
+          originalConfig.text,
+          originalConfig.style,
+          originalTimeRange.timelineStartTime,
+          this.originalTimelineItemData.trackId || '',
+          duration,
+          videoResolution,
+          this.originalTimelineItemData.id // 传入原始ID
+        )
+
+        // 恢复原始的位置、尺寸和其他属性
+        newTimelineItem.config.x = originalConfig.x
+        newTimelineItem.config.y = originalConfig.y
+        newTimelineItem.config.width = originalConfig.width
+        newTimelineItem.config.height = originalConfig.height
+        newTimelineItem.config.rotation = originalConfig.rotation
+        newTimelineItem.config.opacity = originalConfig.opacity
+        newTimelineItem.config.zIndex = originalConfig.zIndex
+        newTimelineItem.config.originalWidth = originalConfig.originalWidth
+        newTimelineItem.config.originalHeight = originalConfig.originalHeight
+        newTimelineItem.config.proportionalScale = originalConfig.proportionalScale
+
+        // 恢复动画配置（如果存在）
+        if (this.originalTimelineItemData.animation) {
+          newTimelineItem.animation = this.originalTimelineItemData.animation
+        }
+
+        // 如果有sprite，同步更新sprite的属性
+        if (newTimelineItem.sprite) {
+          const sprite = newTimelineItem.sprite as any
+          sprite.rect.x = originalConfig.x
+          sprite.rect.y = originalConfig.y
+          sprite.rect.w = originalConfig.width
+          sprite.rect.h = originalConfig.height
+          sprite.rect.angle = originalConfig.rotation
+          sprite.opacity = originalConfig.opacity
+          sprite.zIndex = originalConfig.zIndex
+          
+          // 恢复时间范围
+          sprite.setTimeRange(originalTimeRange)
+        }
 
         // 1. 重新添加到时间轴
         this.timelineModule.addTimelineItem(newTimelineItem)

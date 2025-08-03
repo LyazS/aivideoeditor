@@ -160,22 +160,42 @@ export {
 export {
   // 根据时间查找时间轴项目
   getTimelineItemAtFrames,
-  
+
   // 根据轨道查找时间轴项目
   getTimelineItemsByTrack,
-  
+
   // 查找孤立的时间轴项目
   findOrphanedTimelineItems,
-  
+
   // 根据sprite查找时间轴项目
   findTimelineItemBySprite,
-  
+
   // 根据时间查找所有重叠的时间轴项目
   getTimelineItemsAtFrames,
-  
+
   // 根据轨道和时间查找时间轴项目
   getTimelineItemAtTrackAndFrames,
-  
+
   // 检测播放头是否在时间轴项目的时间范围内
   isPlayheadInTimelineItem
 } from './UnifiedTimelineSearchUtils'
+
+// ==================== 统一文本时间轴工具 ====================
+export {
+  // ID生成
+  generateTimelineItemId,
+
+  // 文本时间轴项目创建
+  createTextTimelineItem,
+
+  // 轨道兼容性检查
+  isTextTrackCompatible,
+
+  // 样式工具
+  createDefaultTextStyle,
+
+  // 显示和验证工具
+  getTextItemDisplayName,
+  isValidTextContent,
+  createTextItemPreview
+} from './textTimelineUtils'

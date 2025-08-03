@@ -13,8 +13,8 @@ import type {
 } from '../../mediaitem/types'
 
 import type {
-  BaseTimeRange,
-} from '../../../types'
+  UnifiedTimeRange,
+} from '../../types/timeRange'
 
 import {
   isKnownTimelineItem,
@@ -33,13 +33,13 @@ import {
 export class ResizeTimelineItemCommand implements SimpleCommand {
   public readonly id: string
   public readonly description: string
-  private originalTimeRange: BaseTimeRange
-  private newTimeRange: BaseTimeRange
+  private originalTimeRange: UnifiedTimeRange
+  private newTimeRange: UnifiedTimeRange
 
   constructor(
     private timelineItemId: string,
-    originalTimeRange: BaseTimeRange, // 原始时间范围
-    newTimeRange: BaseTimeRange, // 新的时间范围
+    originalTimeRange: UnifiedTimeRange, // 原始时间范围
+    newTimeRange: UnifiedTimeRange, // 新的时间范围
     private timelineModule: {
       getTimelineItem: (id: string) => UnifiedTimelineItemData<MediaTypeOrUnknown> | undefined
     },
@@ -84,7 +84,7 @@ export class ResizeTimelineItemCommand implements SimpleCommand {
   /**
    * 应用时间范围到sprite和timelineItem
    */
-  private applyTimeRange(timeRange: BaseTimeRange): void {
+  private applyTimeRange(timeRange: UnifiedTimeRange): void {
     const timelineItem = this.timelineModule.getTimelineItem(this.timelineItemId)
     if (!timelineItem) {
       throw new Error(`找不到时间轴项目: ${this.timelineItemId}`)
@@ -100,18 +100,8 @@ export class ResizeTimelineItemCommand implements SimpleCommand {
       // 根据媒体类型设置时间范围
       if (isVideoTimelineItem(timelineItem) || isAudioTimelineItem(timelineItem)) {
         // 视频和音频类型：保持clipStartTime和clipEndTime，更新timeline时间
-        const clipStartTime =
-          'clipStartTime' in timeRange
-            ? typeof timeRange.clipStartTime === 'number'
-              ? timeRange.clipStartTime
-              : 0
-            : 0
-        const clipEndTime =
-          'clipEndTime' in timeRange
-            ? typeof timeRange.clipEndTime === 'number'
-              ? timeRange.clipEndTime
-              : 0
-            : 0
+        const clipStartTime = timeRange.clipStartTime
+        const clipEndTime = timeRange.clipEndTime
 
         sprite.setTimeRange({
           clipStartTime,
@@ -120,18 +110,12 @@ export class ResizeTimelineItemCommand implements SimpleCommand {
           timelineEndTime: timeRange.timelineEndTime,
         })
       } else if (isImageTimelineItem(timelineItem) || isTextTimelineItem(timelineItem)) {
-        // 图片和文本类型：设置displayDuration
-        const displayDuration =
-          'displayDuration' in timeRange
-            ? typeof timeRange.displayDuration === 'number'
-              ? timeRange.displayDuration
-              : timeRange.timelineEndTime - timeRange.timelineStartTime
-            : timeRange.timelineEndTime - timeRange.timelineStartTime
-
+        // 图片和文本类型：只设置时间轴时间，clipStartTime和clipEndTime保持为-1
         sprite.setTimeRange({
           timelineStartTime: timeRange.timelineStartTime,
           timelineEndTime: timeRange.timelineEndTime,
-          displayDuration,
+          clipStartTime: -1,
+          clipEndTime: -1,
         })
       } else {
         throw new Error('不支持的媒体类型')
@@ -141,10 +125,7 @@ export class ResizeTimelineItemCommand implements SimpleCommand {
       timelineItem.timeRange = sprite.getTimeRange()
     } else if (isUnknownTimelineItem(timelineItem)) {
       // 未知项目处理逻辑：直接更新timeRange（未知项目没有sprite）
-      timelineItem.timeRange = {
-        timelineStartTime: timeRange.timelineStartTime,
-        timelineEndTime: timeRange.timelineEndTime,
-      }
+      timelineItem.timeRange = timeRange
     }
   }
 

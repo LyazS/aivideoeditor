@@ -316,21 +316,18 @@ export function getVideoClip(data: UnifiedTimelineItemData<MediaTypeOrUnknown>):
 
   // 检查时间范围是否包含裁剪信息
   const timeRange = data.timeRange
-  if ('clipStartTime' in timeRange && 'clipEndTime' in timeRange) {
-    const clipStartTime = (timeRange as any).clipStartTime
-    const clipEndTime = (timeRange as any).clipEndTime
 
-    if (clipStartTime !== undefined || clipEndTime !== undefined) {
-      const startTime = clipStartTime ?? 0
-      const endTime = clipEndTime
-      const duration = endTime ? endTime - startTime : undefined
+  // 对于视频和音频，clipStartTime和clipEndTime不为-1表示有裁剪
+  if (data.mediaType === 'video' || data.mediaType === 'audio') {
+    const startTime = timeRange.clipStartTime
+    const endTime = timeRange.clipEndTime
+    const duration = endTime - startTime
 
-      return {
-        hasClip: true,
-        startTime,
-        endTime,
-        duration
-      }
+    return {
+      hasClip: true,
+      startTime,
+      endTime,
+      duration
     }
   }
 

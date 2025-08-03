@@ -11,18 +11,147 @@
 
 import type { Raw } from 'vue'
 import type { MediaType, MediaTypeOrUnknown } from '../mediaitem'
-import type {
-  BaseTimeRange,
-  VideoTimeRange,
-  ImageTimeRange,
-  CustomSprite,
-  GetMediaConfig,
-  VideoMediaConfig,
-  ImageMediaConfig,
-  AudioMediaConfig,
-  TextMediaConfig,
-  TextStyleConfig,
-} from '../../types'
+import type { UnifiedTimeRange } from '../types/timeRange'
+// ==================== 从 types/index.ts 复制的类型定义 ====================
+
+/**
+ * 文本样式配置接口
+ */
+export interface TextStyleConfig {
+  // 基础字体属性
+  fontSize: number // 字体大小 (px)
+  fontFamily: string // 字体族
+  fontWeight: string | number // 字重
+  fontStyle: 'normal' | 'italic' // 字体样式
+
+  // 颜色属性
+  color: string // 文字颜色
+  backgroundColor?: string // 背景颜色
+
+  // 文本效果
+  textShadow?: string // 文字阴影
+  textStroke?: {
+    // 文字描边
+    width: number
+    color: string
+  }
+  textGlow?: {
+    // 文字发光
+    color: string
+    blur: number
+    spread?: number
+  }
+
+  // 布局属性
+  textAlign: 'left' | 'center' | 'right' // 文本对齐
+  lineHeight?: number // 行高
+  maxWidth?: number // 最大宽度
+
+  // 自定义字体
+  customFont?: {
+    name: string
+    url: string
+  }
+}
+
+/**
+ * 基础媒体属性（所有媒体类型共享）
+ */
+interface BaseMediaProps<T extends MediaType = MediaType> {
+  /** 层级控制 */
+  zIndex: number
+  /** 动画配置（可选） */
+  animation?: AnimationConfig<T>
+}
+
+/**
+ * 视觉媒体属性（video 和 image 共享）
+ */
+interface VisualMediaProps<T extends MediaType = MediaType> extends BaseMediaProps<T> {
+  /** 水平位置 */
+  x: number
+  /** 垂直位置 */
+  y: number
+  /** 宽度 */
+  width: number
+  /** 高度 */
+  height: number
+  /** 旋转角度（弧度） */
+  rotation: number
+  /** 透明度（0-1） */
+  opacity: number
+  /** 原始宽度（用于计算缩放系数） */
+  originalWidth: number
+  /** 原始高度（用于计算缩放系数） */
+  originalHeight: number
+  /** 等比缩放状态（每个clip独立） */
+  proportionalScale: boolean
+}
+
+/**
+ * 音频媒体属性（video 和 audio 共享）
+ */
+interface AudioMediaProps {
+  /** 音量（0-1） */
+  volume: number
+  /** 静音状态 */
+  isMuted: boolean
+}
+
+/**
+ * 视频媒体配置：同时具有视觉和音频属性
+ */
+export interface VideoMediaConfig extends VisualMediaProps<'video'>, AudioMediaProps {
+  // 视频特有属性（预留）
+  // playbackRate?: number // 倍速可能在 timeRange 中更合适
+}
+
+/**
+ * 图片媒体配置：只有视觉属性
+ */
+export interface ImageMediaConfig extends VisualMediaProps<'image'> {
+  // 图片特有属性（预留）
+  // filters?: ImageFilterConfig[]
+}
+
+/**
+ * 音频媒体配置：只有音频属性
+ */
+export interface AudioMediaConfig extends BaseMediaProps<'audio'>, AudioMediaProps {
+  /** 增益（dB） */
+  gain: number
+  // 音频特有属性（预留）
+  // waveformColor?: string
+  // showWaveform?: boolean
+}
+
+/**
+ * 文本媒体配置：继承视觉媒体属性，添加文本特有属性
+ */
+export interface TextMediaConfig extends VisualMediaProps<'text'> {
+  /** 文本内容 */
+  text: string
+  /** 文本样式配置 */
+  style: TextStyleConfig
+}
+
+/**
+ * 媒体配置映射
+ */
+type MediaConfigMap = {
+  video: VideoMediaConfig
+  image: ImageMediaConfig
+  audio: AudioMediaConfig
+  text: TextMediaConfig
+}
+
+/**
+ * 根据媒体类型获取对应配置的工具类型
+ */
+export type GetMediaConfig<T extends MediaType> = MediaConfigMap[T]
+
+// 导入我们的自定义 Sprite 类
+import type { UnifiedSprite } from '../visiblesprite'
 
 // ==================== 基础类型定义 ====================
 
@@ -163,23 +292,6 @@ export const MEDIA_TO_TIMELINE_STATUS_MAP = {
   missing: 'error', // 文件缺失 → 错误
 } as const
 
-// ==================== 时间范围类型映射 ====================
-
-/**
- * 根据媒体类型获取对应的时间范围类型
- */
-export type GetTimeRange<T extends MediaTypeOrUnknown> = T extends 'video'
-  ? VideoTimeRange
-  : T extends 'audio'
-    ? VideoTimeRange
-    : T extends 'image'
-      ? ImageTimeRange
-      : T extends 'text'
-        ? ImageTimeRange
-        : T extends 'unknown'
-          ? BaseTimeRange
-          : BaseTimeRange
-
 // ==================== 配置类型映射 ====================
 
 /**
@@ -236,6 +348,7 @@ export type GetTimelineItemConfig<T extends MediaTypeOrUnknown> = TimelineItemCo
  * 2. 支持媒体类型动态变化
  * 3. 保持与旧架构相同的精确性
  * 4. 纯数据对象，使用 reactive() 包装
+ * 5. 除sprite之外都可以持久化保存
  */
 export interface UnifiedTimelineItemData<T extends MediaTypeOrUnknown = MediaTypeOrUnknown> {
   // ==================== 核心属性 ====================
@@ -249,8 +362,8 @@ export interface UnifiedTimelineItemData<T extends MediaTypeOrUnknown = MediaTyp
   // ==================== 媒体信息 ====================
   mediaType: T
 
-  // ==================== 时间范围（类型安全） ====================
-  timeRange: GetTimeRange<T>
+  // ==================== 时间范围 ====================
+  timeRange: UnifiedTimeRange
 
   // ==================== 配置（类型安全） ====================
   config: GetTimelineItemConfig<T>
@@ -258,8 +371,10 @@ export interface UnifiedTimelineItemData<T extends MediaTypeOrUnknown = MediaTyp
   // ==================== 动画配置（类型安全） ====================
   animation?: T extends MediaType ? AnimationConfig<T> : undefined
 
-  // ==================== Sprite引用 ====================
-  sprite?: Raw<CustomSprite> // 直接持有Sprite引用，与时间轴项目生命周期一致
+  // ==================== Sprite引用 缩略图 ====================
+  // 注意一个要点：sprite和thumbnailUrl总是放在command里边管理
+  sprite?: Raw<UnifiedSprite> // 直接持有Sprite引用，与时间轴项目生命周期一致
+  thumbnailUrl?: string
 }
 
 // ==================== 联合类型定义 ====================
@@ -287,7 +402,7 @@ export interface CreateKnownTimelineItemOptions<T extends MediaType> {
   mediaItemId: string
   trackId?: string
   mediaType: T
-  timeRange: GetTimeRange<T>
+  timeRange: UnifiedTimeRange
   config: GetTimelineItemConfig<T>
   initialStatus?: TimelineItemStatus
 }
@@ -298,7 +413,7 @@ export interface CreateKnownTimelineItemOptions<T extends MediaType> {
 export interface CreateUnknownTimelineItemOptions {
   mediaItemId: string
   trackId?: string
-  timeRange: BaseTimeRange
+  timeRange: UnifiedTimeRange
   config: UnknownMediaConfig
   initialStatus?: TimelineItemStatus
 }
@@ -309,7 +424,7 @@ export interface CreateUnknownTimelineItemOptions {
 export interface CreateTimelineItemOptions {
   mediaItemId: string
   trackId?: string
-  timeRange: BaseTimeRange
+  timeRange: UnifiedTimeRange
   config: UnknownMediaConfig
   mediaType?: MediaTypeOrUnknown
   initialStatus?: TimelineItemStatus

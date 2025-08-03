@@ -106,12 +106,28 @@ export {
 
 // ==================== 统一媒体项目 ====================
 export {
-  // 类型定义
+  // 基础类型定义
   type UnifiedMediaItemData,
   type MediaStatus,
   type MediaType,
   type MediaTypeOrUnknown,
   type WebAVObjects,
+
+  // 状态专门类型定义
+  type ReadyMediaItem,
+  type ProcessingMediaItem,
+  type ErrorMediaItem,
+  type PendingMediaItem,
+
+  // 媒体类型专门状态定义
+  type VideoMediaItem,
+  type ImageMediaItem,
+  type AudioMediaItem,
+  type TextMediaItem,
+  type UnknownMediaItem,
+  type KnownMediaItem,
+  type VisualMediaItem,
+  type AudioCapableMediaItem,
 
   // 工厂函数
   createUnifiedMediaItemData,

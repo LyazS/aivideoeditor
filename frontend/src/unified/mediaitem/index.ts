@@ -9,7 +9,19 @@ export type {
   MediaType,
   MediaTypeOrUnknown,
   WebAVObjects,
-  UnifiedMediaItemData
+  UnifiedMediaItemData,
+  ReadyMediaItem,
+  ProcessingMediaItem,
+  ErrorMediaItem,
+  PendingMediaItem,
+  VideoMediaItem,
+  ImageMediaItem,
+  AudioMediaItem,
+  TextMediaItem,
+  UnknownMediaItem,
+  KnownMediaItem,
+  VisualMediaItem,
+  AudioCapableMediaItem
 } from './types'
 
 export {

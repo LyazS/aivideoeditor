@@ -112,10 +112,17 @@ export class TimelineMediaSyncManager {
     }
 
     // 创建响应式TimelineItem数据
+    const unifiedTimeRange = {
+      timelineStartTime: timeRange.timelineStartTime,
+      timelineEndTime: timeRange.timelineEndTime,
+      clipStartTime: 0,
+      clipEndTime: timeRange.timelineEndTime - timeRange.timelineStartTime
+    }
+
     const timelineData = createUnknownTimelineItem({
       mediaItemId,
       trackId,
-      timeRange,
+      timeRange: unifiedTimeRange,
       config
     })
 

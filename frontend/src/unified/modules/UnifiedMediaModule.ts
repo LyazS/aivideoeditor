@@ -196,7 +196,7 @@ export function createUnifiedMediaModule() {
       }
     }
     // 默认分辨率
-    return { width: 1920, height: 1080 }
+    return { width: -1, height: -1 }
   }
 
   /**
@@ -213,7 +213,7 @@ export function createUnifiedMediaModule() {
       }
     }
     // 默认分辨率
-    return { width: 1920, height: 1080 }
+    return { width: -1, height: -1 }
   }
 
   // ==================== 异步等待方法 ====================

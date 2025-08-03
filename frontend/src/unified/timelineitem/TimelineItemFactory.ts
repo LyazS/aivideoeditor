@@ -4,22 +4,25 @@
  */
 
 import { reactive } from 'vue'
+import { cloneDeep } from 'lodash'
 import { generateUUID4 } from '@/utils/idGenerator'
 import type { MediaType, MediaTypeOrUnknown } from '../mediaitem'
 import type {
-  VideoTimeRange,
-  ImageTimeRange,
-  BaseTimeRange,
   VideoMediaConfig,
   ImageMediaConfig,
   AudioMediaConfig,
   TextMediaConfig,
   GetMediaConfig
-} from '../../types'
+} from './TimelineItemData'
+import type {
+  UnifiedTimeRange
+} from '../types/timeRange'
 import type {
   UnifiedTimelineItemData,
   KnownTimelineItem,
-  UnknownMediaConfig
+  UnknownMediaConfig,
+  AnimationConfig,
+  Keyframe
 } from './TimelineItemData'
 
 // ==================== 基础工厂函数 ====================
@@ -33,7 +36,7 @@ export function createKnownTimelineItem<T extends MediaType>(
     id?: string
     mediaItemId: string
     trackId: string
-    timeRange: T extends 'video' | 'audio' ? VideoTimeRange : ImageTimeRange
+    timeRange: UnifiedTimeRange
     config: GetMediaConfig<T>
     timelineStatus?: 'loading' | 'ready' | 'error'
   }
@@ -56,7 +59,7 @@ export function createUnknownTimelineItem(options: {
   id?: string
   mediaItemId: string
   trackId: string
-  timeRange: BaseTimeRange
+  timeRange: UnifiedTimeRange
   config: UnknownMediaConfig
   timelineStatus?: 'loading' | 'ready' | 'error'
 }): UnifiedTimelineItemData<'unknown'> {
@@ -80,7 +83,7 @@ export function createVideoTimelineItem(options: {
   id?: string
   mediaItemId: string
   trackId: string
-  timeRange: VideoTimeRange
+  timeRange: UnifiedTimeRange
   config: VideoMediaConfig
 }): UnifiedTimelineItemData<'video'> {
   return createKnownTimelineItem('video', options)
@@ -93,7 +96,7 @@ export function createImageTimelineItem(options: {
   id?: string
   mediaItemId: string
   trackId: string
-  timeRange: ImageTimeRange
+  timeRange: UnifiedTimeRange
   config: ImageMediaConfig
 }): UnifiedTimelineItemData<'image'> {
   return createKnownTimelineItem('image', options)
@@ -106,7 +109,7 @@ export function createAudioTimelineItem(options: {
   id?: string
   mediaItemId: string
   trackId: string
-  timeRange: VideoTimeRange
+  timeRange: UnifiedTimeRange
   config: AudioMediaConfig
 }): UnifiedTimelineItemData<'audio'> {
   return createKnownTimelineItem('audio', options)
@@ -119,7 +122,7 @@ export function createTextTimelineItem(options: {
   id?: string
   mediaItemId: string
   trackId: string
-  timeRange: ImageTimeRange
+  timeRange: UnifiedTimeRange
   config: TextMediaConfig
 }): UnifiedTimelineItemData<'text'> {
   return createKnownTimelineItem('text', options)
@@ -236,15 +239,13 @@ export function createVideoTimeRange(
   clipStartTime: number = 0,
   clipEndTime?: number,
   playbackRate: number = 1
-): VideoTimeRange {
+): UnifiedTimeRange {
   const effectiveDuration = timelineEndTime - timelineStartTime
   return {
     timelineStartTime,
     timelineEndTime,
     clipStartTime,
-    clipEndTime: clipEndTime || clipStartTime + effectiveDuration,
-    effectiveDuration,
-    playbackRate
+    clipEndTime: clipEndTime || clipStartTime + effectiveDuration
   }
 }
 
@@ -254,11 +255,12 @@ export function createVideoTimeRange(
 export function createImageTimeRange(
   timelineStartTime: number,
   timelineEndTime: number
-): ImageTimeRange {
+): UnifiedTimeRange {
   return {
     timelineStartTime,
     timelineEndTime,
-    displayDuration: timelineEndTime - timelineStartTime
+    clipStartTime: -1,
+    clipEndTime: -1
   }
 }
 
@@ -268,10 +270,12 @@ export function createImageTimeRange(
 export function createBaseTimeRange(
   timelineStartTime: number,
   timelineEndTime: number
-): BaseTimeRange {
+): UnifiedTimeRange {
   return {
     timelineStartTime,
-    timelineEndTime
+    timelineEndTime,
+    clipStartTime: -1,
+    clipEndTime: -1
   }
 }
 
@@ -427,6 +431,7 @@ export function createUnknownTimelineItemWithDefaults(options: {
 
 /**
  * 克隆时间轴项目（深拷贝）
+ * 使用 lodash.cloneDeep 确保完整的深拷贝
  */
 export function cloneTimelineItem<T extends MediaTypeOrUnknown>(
   original: UnifiedTimelineItemData<T>,
@@ -434,20 +439,31 @@ export function cloneTimelineItem<T extends MediaTypeOrUnknown>(
     id?: string
     mediaItemId?: string
     trackId?: string
-    timeRange?: T extends 'unknown' ? BaseTimeRange : (T extends 'video' | 'audio' ? VideoTimeRange : ImageTimeRange)
+    timeRange?: UnifiedTimeRange
     config?: T extends 'unknown' ? UnknownMediaConfig : GetMediaConfig<T & MediaType>
     timelineStatus?: 'loading' | 'ready' | 'error'
+    animation?: T extends MediaType ? AnimationConfig<T> : undefined
   }
 ): UnifiedTimelineItemData<T> {
-  return reactive({
-    id: overrides?.id || generateUUID4(),
-    mediaItemId: overrides?.mediaItemId || original.mediaItemId,
-    trackId: overrides?.trackId || original.trackId,
-    mediaType: original.mediaType,
-    timeRange: overrides?.timeRange ? { ...overrides.timeRange } : { ...original.timeRange },
-    config: overrides?.config ? { ...overrides.config } : { ...original.config },
-    timelineStatus: overrides?.timelineStatus || original.timelineStatus
-  }) as UnifiedTimelineItemData<T>
+  // 深拷贝原始对象，排除不需要克隆的 sprite 属性
+  const cloned = cloneDeep({
+    ...original,
+    sprite: undefined // 明确排除 sprite，它需要重新创建
+  })
+
+  // 应用覆盖值
+  const result = {
+    ...cloned,
+    id: overrides?.id || generateUUID4(), // 总是生成新ID
+    mediaItemId: overrides?.mediaItemId || cloned.mediaItemId,
+    trackId: overrides?.trackId || cloned.trackId,
+    timelineStatus: overrides?.timelineStatus || cloned.timelineStatus,
+    timeRange: overrides?.timeRange ? cloneDeep(overrides.timeRange) : cloned.timeRange,
+    config: overrides?.config ? cloneDeep(overrides.config) : cloned.config,
+    animation: overrides?.animation ? cloneDeep(overrides.animation) : cloned.animation
+  }
+
+  return reactive(result) as UnifiedTimelineItemData<T>
 }
 
 /**
@@ -518,15 +534,12 @@ export function validateTimelineItem<T extends MediaTypeOrUnknown>(
     const knownItem = item as KnownTimelineItem
     
     if (knownItem.mediaType === 'video' || knownItem.mediaType === 'audio') {
-      const videoTimeRange = knownItem.timeRange as VideoTimeRange
-      if (videoTimeRange.clipStartTime < 0) {
+      const timeRange = knownItem.timeRange
+      if (timeRange.clipStartTime < 0) {
         errors.push('素材开始时间不能为负数')
       }
-      if (videoTimeRange.clipEndTime <= videoTimeRange.clipStartTime) {
+      if (timeRange.clipEndTime <= timeRange.clipStartTime) {
         errors.push('素材结束时间必须大于开始时间')
-      }
-      if (videoTimeRange.playbackRate <= 0) {
-        errors.push('播放速度必须大于0')
       }
     }
   }

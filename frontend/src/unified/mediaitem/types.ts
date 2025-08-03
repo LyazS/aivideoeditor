@@ -68,6 +68,107 @@ export interface UnifiedMediaItemData {
   duration?: number // 媒体时长（帧数），可能在不同阶段获得：服务器提供、用户输入、WebAV解析等
 }
 
+// ==================== 专门的状态类型定义 ====================
+
+/**
+ * 就绪状态的媒体项目类型
+ * 当媒体项目处于 ready 状态时，保证 mediaStatus 为 'ready' 且 duration 不为空
+ */
+export type ReadyMediaItem = UnifiedMediaItemData & {
+  mediaStatus: 'ready'
+  duration: number
+}
+
+/**
+ * 处理中状态的媒体项目类型
+ * 当媒体项目处于处理中状态时，保证 mediaStatus 为处理中的状态之一
+ */
+export type ProcessingMediaItem = UnifiedMediaItemData & {
+  mediaStatus: 'asyncprocessing' | 'webavdecoding'
+}
+
+/**
+ * 错误状态的媒体项目类型
+ * 当媒体项目处于错误状态时，保证 mediaStatus 为错误状态之一
+ */
+export type ErrorMediaItem = UnifiedMediaItemData & {
+  mediaStatus: 'error' | 'cancelled' | 'missing'
+}
+
+/**
+ * 等待状态的媒体项目类型
+ * 当媒体项目处于等待状态时，保证 mediaStatus 为 'pending'
+ */
+export type PendingMediaItem = UnifiedMediaItemData & {
+  mediaStatus: 'pending'
+}
+
+// ==================== 媒体类型专门状态定义 ====================
+
+/**
+ * 视频媒体项目类型
+ * 当媒体项目为视频类型时，保证 mediaType 为 'video'
+ */
+export type VideoMediaItem = UnifiedMediaItemData & {
+  mediaType: 'video'
+}
+
+/**
+ * 图片媒体项目类型
+ * 当媒体项目为图片类型时，保证 mediaType 为 'image'
+ */
+export type ImageMediaItem = UnifiedMediaItemData & {
+  mediaType: 'image'
+}
+
+/**
+ * 音频媒体项目类型
+ * 当媒体项目为音频类型时，保证 mediaType 为 'audio'
+ */
+export type AudioMediaItem = UnifiedMediaItemData & {
+  mediaType: 'audio'
+}
+
+/**
+ * 文本媒体项目类型
+ * 当媒体项目为文本类型时，保证 mediaType 为 'text'
+ */
+export type TextMediaItem = UnifiedMediaItemData & {
+  mediaType: 'text'
+}
+
+/**
+ * 未知类型媒体项目类型
+ * 当媒体项目类型未确定时，保证 mediaType 为 'unknown'
+ */
+export type UnknownMediaItem = UnifiedMediaItemData & {
+  mediaType: 'unknown'
+}
+
+/**
+ * 已知类型媒体项目类型
+ * 当媒体项目类型已确定时，保证 mediaType 为具体的媒体类型
+ */
+export type KnownMediaItem = UnifiedMediaItemData & {
+  mediaType: MediaType
+}
+
+/**
+ * 视觉媒体项目类型（视频或图片）
+ * 当媒体项目为视觉类型时，保证 mediaType 为 'video' 或 'image'
+ */
+export type VisualMediaItem = UnifiedMediaItemData & {
+  mediaType: 'video' | 'image'
+}
+
+/**
+ * 音频媒体项目类型（音频或视频）
+ * 当媒体项目包含音频时，保证 mediaType 为 'audio' 或 'video'
+ */
+export type AudioCapableMediaItem = UnifiedMediaItemData & {
+  mediaType: 'audio' | 'video'
+}
+
 // ==================== 工厂函数 ====================
 
 /**
@@ -89,3 +190,4 @@ export function createUnifiedMediaItemData(
     ...options
   })
 }
+

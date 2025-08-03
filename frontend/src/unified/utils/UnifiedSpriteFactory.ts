@@ -16,12 +16,12 @@
 
 import type { Raw } from 'vue'
 import type { UnifiedMediaItemData } from '../mediaitem/types'
-import type { CustomSprite } from '../../types'
+import type { UnifiedSprite } from '../visiblesprite'
 
-// 导入现有的 Sprite 类
-import { VideoVisibleSprite } from '../../utils/VideoVisibleSprite'
-import { ImageVisibleSprite } from '../../utils/ImageVisibleSprite'
-import { AudioVisibleSprite } from '../../utils/AudioVisibleSprite'
+// 导入统一架构的 Sprite 类
+import { VideoVisibleSprite } from '../visiblesprite/VideoVisibleSprite'
+import { ImageVisibleSprite } from '../visiblesprite/ImageVisibleSprite'
+import { AudioVisibleSprite } from '../visiblesprite/AudioVisibleSprite'
 
 /**
  * 从统一媒体项目数据创建对应的 Sprite 实例
@@ -49,7 +49,7 @@ import { AudioVisibleSprite } from '../../utils/AudioVisibleSprite'
  */
 export async function createSpriteFromUnifiedMediaItem(
   mediaData: UnifiedMediaItemData,
-): Promise<Raw<CustomSprite>> {
+): Promise<UnifiedSprite> {
   // 1. 验证媒体项目状态
   if (mediaData.mediaStatus !== 'ready') {
     throw new Error(`媒体项目尚未就绪，当前状态: ${mediaData.mediaStatus}，素材名称: ${mediaData.name}`)
@@ -79,7 +79,7 @@ export async function createSpriteFromUnifiedMediaItem(
         
         // 克隆 MP4Clip 以避免多个 Sprite 共享同一个 Clip
         const clonedMP4Clip = await unifiedStore.cloneMP4Clip(mediaData.webav.mp4Clip)
-        return new VideoVisibleSprite(clonedMP4Clip) as Raw<CustomSprite>
+        return new VideoVisibleSprite(clonedMP4Clip)
       }
 
       case 'image': {
@@ -89,7 +89,7 @@ export async function createSpriteFromUnifiedMediaItem(
         
         // 克隆 ImgClip 以避免多个 Sprite 共享同一个 Clip
         const clonedImgClip = await unifiedStore.cloneImgClip(mediaData.webav.imgClip)
-        return new ImageVisibleSprite(clonedImgClip) as Raw<CustomSprite>
+        return new ImageVisibleSprite(clonedImgClip)
       }
 
       case 'audio': {
@@ -99,7 +99,7 @@ export async function createSpriteFromUnifiedMediaItem(
         
         // 克隆 AudioClip 以避免多个 Sprite 共享同一个 Clip
         const clonedAudioClip = await unifiedStore.cloneAudioClip(mediaData.webav.audioClip)
-        return new AudioVisibleSprite(clonedAudioClip) as Raw<CustomSprite>
+        return new AudioVisibleSprite(clonedAudioClip)
       }
 
       case 'text': {

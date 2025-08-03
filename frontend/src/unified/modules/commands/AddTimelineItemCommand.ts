@@ -4,13 +4,12 @@
  * 采用统一重建逻辑：每次执行都从原始素材重新创建sprite（已知项目）或重建占位符（未知项目）
  */
 
-import { generateCommandId } from '../../../utils/idGenerator'
 import { cloneDeep } from 'lodash'
 import { reactive, markRaw } from 'vue'
 import type { VisibleSprite } from '@webav/av-cliper'
-import type { SimpleCommand } from './types'
 
 // ==================== 新架构类型导入 ====================
+import type { SimpleCommand } from './types'
 import type {
   UnifiedTimelineItemData,
   KnownTimelineItem,
@@ -18,24 +17,10 @@ import type {
   TimelineItemStatus,
 } from '../../timelineitem/TimelineItemData'
 
-import type {
-  UnifiedMediaItemData,
-  MediaType,
-  MediaTypeOrUnknown,
-} from '../../mediaitem/types'
-
-import type {
-  VideoMediaConfig,
-  ImageMediaConfig,
-  AudioMediaConfig,
-  TextMediaConfig,
-  BaseMediaProps,
-} from '../../../types'
+import type { UnifiedMediaItemData, MediaType, MediaTypeOrUnknown } from '../../mediaitem/types'
 
 // ==================== 新架构工具导入 ====================
-import {
-  createSpriteFromUnifiedMediaItem,
-} from '../../utils/UnifiedSpriteFactory'
+import { createSpriteFromUnifiedMediaItem } from '../../utils/UnifiedSpriteFactory'
 
 import { regenerateThumbnailForUnifiedTimelineItem } from '../../utils/thumbnailGenerator'
 
@@ -50,6 +35,16 @@ import {
 } from '../../timelineitem'
 
 import { UnifiedMediaItemQueries } from '../../mediaitem'
+
+// ==================== 旧架构类型工具导入 ====================
+import type {
+  VideoMediaConfig,
+  ImageMediaConfig,
+  AudioMediaConfig,
+  TextMediaConfig,
+  BaseMediaProps,
+} from '../../../types'
+import { generateCommandId } from '../../../utils/idGenerator'
 
 /**
  * 添加时间轴项目命令
@@ -85,7 +80,9 @@ export class AddTimelineItemCommand implements SimpleCommand {
       this.description = `添加时间轴项目: ${mediaItem?.name || '未知素材'}`
 
       // 保存原始数据用于重建sprite - 明确传入原始ID以避免重新生成
-      this.originalTimelineItemData = TimelineItemFactory.clone(timelineItem, { id: timelineItem.id })
+      this.originalTimelineItemData = TimelineItemFactory.clone(timelineItem, {
+        id: timelineItem.id,
+      })
     } else if (isUnknownTimelineItem(timelineItem)) {
       // 未知项目处理逻辑
       const mediaItem = this.mediaModule.getMediaItem(timelineItem.mediaItemId)
@@ -160,7 +157,7 @@ export class AddTimelineItemCommand implements SimpleCommand {
     }) as KnownTimelineItem
 
     // 6. 重新生成缩略图（异步执行，不阻塞重建过程）
-    this.regenerateThumbnailForAddedItem(newTimelineItem, mediaItem)
+    await this.regenerateThumbnailForAddedItem(newTimelineItem, mediaItem)
 
     console.log('🔄 重建已知时间轴项目完成:', {
       id: newTimelineItem.id,

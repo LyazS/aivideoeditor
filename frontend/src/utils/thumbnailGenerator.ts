@@ -333,8 +333,8 @@ export async function regenerateThumbnailForTimelineItem(
       // 对于视频，使用clip的起始时间作为缩略图时间位置
       const timeRange = timelineItem.timeRange
 
+      // 检查是否有clipStartTime（只有VideoTimeRange有这个属性）
       if ('clipStartTime' in timeRange) {
-        // 使用clip内部的起始时间（微秒）
         thumbnailTime = timeRange.clipStartTime
         console.log(
           '📍 [ThumbnailGenerator] 使用视频clip起始时间:',

@@ -31,6 +31,7 @@ import type {
   TextMediaConfig,
   BaseMediaProps,
 } from '../../../types'
+import type { UnifiedTimeRange } from '../../types/timeRange'
 
 // ==================== 新架构工具导入 ====================
 import {
@@ -47,6 +48,8 @@ import {
 } from '../../timelineitem'
 
 import { UnifiedMediaItemQueries } from '../../mediaitem'
+
+import { createTextTimelineItem } from '../../utils/textTimelineUtils'
 
 /**
  * 移除时间轴项目命令
@@ -79,8 +82,15 @@ export class RemoveTimelineItemCommand implements SimpleCommand {
     // 使用类型守卫来区分已知和未知项目
     if (isKnownTimelineItem(timelineItem)) {
       // 已知项目处理逻辑
-      const mediaItem = this.mediaModule.getMediaItem(timelineItem.mediaItemId)
-      this.description = `移除时间轴项目: ${mediaItem?.name || '未知素材'}`
+      if (timelineItem.mediaType === 'text') {
+        // 文本项目特殊处理 - 不需要媒体项目
+        const textConfig = timelineItem.config as TextMediaConfig
+        this.description = `移除文本项目: ${textConfig.text.substring(0, 20)}${textConfig.text.length > 20 ? '...' : ''}`
+      } else {
+        // 常规媒体项目处理
+        const mediaItem = this.mediaModule.getMediaItem(timelineItem.mediaItemId)
+        this.description = `移除时间轴项目: ${mediaItem?.name || '未知素材'}`
+      }
 
       // 保存重建所需的完整元数据 - 明确传入原始ID以避免重新生成
       this.originalTimelineItemData = TimelineItemFactory.clone(timelineItem, { id: timelineItem.id })
@@ -210,6 +220,84 @@ export class RemoveTimelineItemCommand implements SimpleCommand {
   }
 
   /**
+   * 重建文本时间轴项目
+   * 使用 createTextTimelineItem 直接重建，避免重复代码
+   */
+  private async rebuildTextTimelineItem(): Promise<KnownTimelineItem> {
+    if (!this.originalTimelineItemData || !isKnownTimelineItem(this.originalTimelineItemData)) {
+      throw new Error('文本时间轴项目数据不存在')
+    }
+
+    if (this.originalTimelineItemData.mediaType !== 'text') {
+      throw new Error('不是文本项目，无法使用文本重建方法')
+    }
+
+    console.log('🔄 开始重建文本时间轴项目...')
+
+    const originalConfig = this.originalTimelineItemData.config as TextMediaConfig
+    const originalTimeRange = this.originalTimelineItemData.timeRange
+
+    // 计算视频分辨率（从项目配置获取，这里使用默认值）
+    const videoResolution = { width: 1920, height: 1080 } // 实际应该从项目配置获取
+
+    // 计算duration（显示时长）
+    const duration = originalTimeRange.timelineEndTime - originalTimeRange.timelineStartTime
+
+    // 直接使用 createTextTimelineItem 重建，传入原始ID以保持一致性
+    const newTimelineItem = await createTextTimelineItem(
+      originalConfig.text,
+      originalConfig.style,
+      originalTimeRange.timelineStartTime,
+      this.originalTimelineItemData.trackId || '',
+      duration,
+      videoResolution,
+      this.originalTimelineItemData.id // 传入原始ID
+    )
+
+    // 恢复原始的位置、尺寸和其他属性（createTextTimelineItem 创建的是默认位置）
+    newTimelineItem.config.x = originalConfig.x
+    newTimelineItem.config.y = originalConfig.y
+    newTimelineItem.config.width = originalConfig.width
+    newTimelineItem.config.height = originalConfig.height
+    newTimelineItem.config.rotation = originalConfig.rotation
+    newTimelineItem.config.opacity = originalConfig.opacity
+    newTimelineItem.config.zIndex = originalConfig.zIndex
+    newTimelineItem.config.originalWidth = originalConfig.originalWidth
+    newTimelineItem.config.originalHeight = originalConfig.originalHeight
+    newTimelineItem.config.proportionalScale = originalConfig.proportionalScale
+
+    // 恢复动画配置（如果存在）
+    if (this.originalTimelineItemData.animation) {
+      newTimelineItem.animation = this.originalTimelineItemData.animation
+    }
+
+    // 同步更新sprite的属性以匹配配置
+    if (newTimelineItem.sprite) {
+      const sprite = newTimelineItem.sprite as any
+      sprite.rect.x = originalConfig.x
+      sprite.rect.y = originalConfig.y
+      sprite.rect.w = originalConfig.width
+      sprite.rect.h = originalConfig.height
+      sprite.rect.angle = originalConfig.rotation
+      sprite.opacity = originalConfig.opacity
+      sprite.zIndex = originalConfig.zIndex
+      
+      // 恢复时间范围
+      sprite.setTimeRange(originalTimeRange)
+    }
+
+    console.log('🔄 重建文本时间轴项目完成:', {
+      id: newTimelineItem.id,
+      text: originalConfig.text.substring(0, 20) + '...',
+      timeRange: originalTimeRange,
+      position: { x: originalConfig.x, y: originalConfig.y },
+      size: { w: originalConfig.width, h: originalConfig.height },
+    })
+
+    return newTimelineItem
+  }
+
+  /**
    * 执行命令：删除时间轴项目
    */
   async execute(): Promise<void> {
@@ -250,22 +338,42 @@ export class RemoveTimelineItemCommand implements SimpleCommand {
   async undo(): Promise<void> {
     try {
       if (this.originalTimelineItemData && isKnownTimelineItem(this.originalTimelineItemData)) {
-        // 已知项目撤销逻辑
-        console.log(`🔄 撤销删除操作：重建已知时间轴项目...`)
+        // 检查是否为文本项目
+        if (this.originalTimelineItemData.mediaType === 'text') {
+          // 文本项目特殊处理 - 不需要媒体项目
+          console.log(`🔄 撤销删除操作：重建文本时间轴项目...`)
 
-        // 从原始素材重新创建TimelineItem和sprite
-        const newTimelineItem = await this.rebuildKnownTimelineItem()
+          // 从原始配置重新创建文本TimelineItem和sprite
+          const newTimelineItem = await this.rebuildTextTimelineItem()
 
-        // 1. 添加到时间轴
-        this.timelineModule.addTimelineItem(newTimelineItem)
+          // 1. 添加到时间轴
+          this.timelineModule.addTimelineItem(newTimelineItem)
 
-        // 2. 添加sprite到WebAV画布
-        if (newTimelineItem.sprite) {
-          await this.webavModule.addSprite(newTimelineItem.sprite)
+          // 2. 添加sprite到WebAV画布
+          if (newTimelineItem.sprite) {
+            await this.webavModule.addSprite(newTimelineItem.sprite)
+          }
+
+          const textConfig = this.originalTimelineItemData.config as TextMediaConfig
+          console.log(`↩️ 已撤销删除文本时间轴项目: ${textConfig.text.substring(0, 20)}...`)
+        } else {
+          // 常规媒体项目撤销逻辑
+          console.log(`🔄 撤销删除操作：重建已知时间轴项目...`)
+
+          // 从原始素材重新创建TimelineItem和sprite
+          const newTimelineItem = await this.rebuildKnownTimelineItem()
+
+          // 1. 添加到时间轴
+          this.timelineModule.addTimelineItem(newTimelineItem)
+
+          // 2. 添加sprite到WebAV画布
+          if (newTimelineItem.sprite) {
+            await this.webavModule.addSprite(newTimelineItem.sprite)
+          }
+
+          const mediaItem = this.mediaModule.getMediaItem(this.originalTimelineItemData.mediaItemId)
+          console.log(`↩️ 已撤销删除已知时间轴项目: ${mediaItem?.name || '未知素材'}`)
         }
-
-        const mediaItem = this.mediaModule.getMediaItem(this.originalTimelineItemData.mediaItemId)
-        console.log(`↩️ 已撤销删除已知时间轴项目: ${mediaItem?.name || '未知素材'}`)
       } else if (
         this.originalTimelineItemData &&
         isUnknownTimelineItem(this.originalTimelineItemData)

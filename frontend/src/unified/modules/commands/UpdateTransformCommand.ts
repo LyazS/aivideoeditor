@@ -35,7 +35,7 @@ import {
 // ==================== 旧架构兼容性导入 ====================
 import { VideoVisibleSprite } from '../../../utils/VideoVisibleSprite'
 import { AudioVisibleSprite } from '../../../utils/AudioVisibleSprite'
-import { isVideoVisibleSprite, isAudioVisibleSprite } from '../../utils/SpriteTypeGuards'
+import { isUnifiedVideoVisibleSprite, isUnifiedAudioVisibleSprite, hasAudioCapabilities } from '../../utils/UnifiedSpriteTypeGuards'
 
 /**
  * 更新变换属性命令
@@ -167,8 +167,8 @@ export class UpdateTransformCommand implements SimpleCommand {
             config.volume = this.newValues.volume
           }
           const sprite = timelineItem.sprite
-          if (sprite && 'setVolume' in sprite) {
-            ;(sprite as VideoVisibleSprite | AudioVisibleSprite).setVolume?.(this.newValues.volume)
+          if (sprite && hasAudioCapabilities(sprite)) {
+            sprite.setVolume?.(this.newValues.volume)
           }
         }
 
@@ -178,7 +178,7 @@ export class UpdateTransformCommand implements SimpleCommand {
             config.isMuted = this.newValues.isMuted
           }
           const sprite = timelineItem.sprite
-          if (sprite && (isVideoVisibleSprite(sprite) || isAudioVisibleSprite(sprite))) {
+          if (sprite && hasAudioCapabilities(sprite)) {
             sprite.setMuted(this.newValues.isMuted)
           }
         }
@@ -192,7 +192,7 @@ export class UpdateTransformCommand implements SimpleCommand {
           config.gain = this.newValues.gain
         }
         const sprite = timelineItem.sprite
-        if (sprite && isAudioVisibleSprite(sprite)) {
+        if (sprite && isUnifiedAudioVisibleSprite(sprite)) {
           sprite.setGain(this.newValues.gain)
         }
       }
@@ -262,7 +262,7 @@ export class UpdateTransformCommand implements SimpleCommand {
             config.volume = this.oldValues.volume
           }
           const sprite = timelineItem.sprite
-          if (sprite && (isVideoVisibleSprite(sprite) || isAudioVisibleSprite(sprite))) {
+          if (sprite && hasAudioCapabilities(sprite)) {
             sprite.setVolume(this.oldValues.volume)
           }
         }
@@ -273,7 +273,7 @@ export class UpdateTransformCommand implements SimpleCommand {
             config.isMuted = this.oldValues.isMuted
           }
           const sprite = timelineItem.sprite
-          if (sprite && (isVideoVisibleSprite(sprite) || isAudioVisibleSprite(sprite))) {
+          if (sprite && hasAudioCapabilities(sprite)) {
             sprite.setMuted(this.oldValues.isMuted)
           }
         }
@@ -287,7 +287,7 @@ export class UpdateTransformCommand implements SimpleCommand {
           config.gain = this.oldValues.gain
         }
         const sprite = timelineItem.sprite
-        if (sprite && isAudioVisibleSprite(sprite)) {
+        if (sprite && isUnifiedAudioVisibleSprite(sprite)) {
           sprite.setGain(this.oldValues.gain)
         }
       }
@@ -414,38 +414,30 @@ export class UpdateTransformCommand implements SimpleCommand {
     if (isVideoTimelineItem(timelineItem)) {
       // 更新sprite的时间范围
       sprite.setTimeRange({
-        clipStartTime: 'clipStartTime' in timeRange ? timeRange.clipStartTime || 0 : 0,
-        clipEndTime:
-          'clipEndTime' in timeRange
-            ? timeRange.clipEndTime || mediaItem.duration
-            : mediaItem.duration,
-        timelineStartTime: timeRange.timelineStartTime,
+        ...timeRange,
         timelineEndTime: newTimelineEndTime,
       })
     } else if (isAudioTimelineItem(timelineItem)) {
       // 更新sprite的时间范围
       sprite.setTimeRange({
-        clipStartTime: 'clipStartTime' in timeRange ? timeRange.clipStartTime || 0 : 0,
-        clipEndTime:
-          'clipEndTime' in timeRange
-            ? timeRange.clipEndTime || mediaItem.duration
-            : mediaItem.duration,
-        timelineStartTime: timeRange.timelineStartTime,
+        ...timeRange,
         timelineEndTime: newTimelineEndTime,
       })
     } else if (isImageTimelineItem(timelineItem)) {
-      // 对于图片，直接更新显示时长（使用帧数）
+      // 对于图片，直接更新显示时长（使用帧数），clipStartTime和clipEndTime设置为-1
       sprite.setTimeRange({
         timelineStartTime: timeRange.timelineStartTime,
         timelineEndTime: newTimelineEndTime,
-        displayDuration: newDurationFrames,
+        clipStartTime: -1,
+        clipEndTime: -1,
       })
     } else if (isTextTimelineItem(timelineItem)) {
-      // 对于文本，与图片类似，直接更新显示时长（使用帧数）
+      // 对于文本，与图片类似，直接更新显示时长（使用帧数），clipStartTime和clipEndTime设置为-1
       sprite.setTimeRange({
         timelineStartTime: timeRange.timelineStartTime,
         timelineEndTime: newTimelineEndTime,
-        displayDuration: newDurationFrames,
+        clipStartTime: -1,
+        clipEndTime: -1,
       })
       console.log('📝 [UpdateTimelineItemDuration] 文本时长已更新:', {
         startTime: timeRange.timelineStartTime,

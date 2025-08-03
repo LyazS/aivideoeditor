@@ -4,7 +4,7 @@
  */
 
 import type { UnifiedTimelineItemData } from '../timelineitem/TimelineItemData'
-import type { BaseTimeRange } from '../../types'
+import type { UnifiedTimeRange } from '../types/timeRange'
 import { isReady } from '../timelineitem/TimelineItemQueries'
 
 // ==================== 时间范围同步工具 ====================
@@ -17,7 +17,7 @@ import { isReady } from '../timelineitem/TimelineItemQueries'
  */
 export function syncTimeRange(
   timelineItem: UnifiedTimelineItemData,
-  newTimeRange?: Partial<BaseTimeRange>,
+  newTimeRange?: Partial<UnifiedTimeRange>,
 ): void {
   // 只有就绪状态的时间轴项目才有sprite
   if (!isReady(timelineItem) || !timelineItem.sprite) {
@@ -100,7 +100,7 @@ export function syncTimeRange(
  * @param timeRange 基础时间范围
  * @returns 是否有效
  */
-export function validateBaseTimeRange(timeRange: BaseTimeRange): boolean {
+export function validateBaseTimeRange(timeRange: UnifiedTimeRange): boolean {
   // 基础验证：时间轴时间范围
   return (
     timeRange.timelineStartTime >= 0 && 
@@ -224,9 +224,11 @@ export function moveTimelineItem(
   }
   
   const duration = calculateDuration(timelineItem)
-  const newTimeRange: BaseTimeRange = {
+  const newTimeRange: UnifiedTimeRange = {
     timelineStartTime: newStartTime,
-    timelineEndTime: newStartTime + duration
+    timelineEndTime: newStartTime + duration,
+    clipStartTime: timelineItem.timeRange.clipStartTime,
+    clipEndTime: timelineItem.timeRange.clipEndTime
   }
   
   syncTimeRange(timelineItem, newTimeRange)
@@ -248,9 +250,11 @@ export function resizeTimelineItem(
     return false
   }
   
-  const newTimeRange: BaseTimeRange = {
+  const newTimeRange: UnifiedTimeRange = {
     timelineStartTime: timelineItem.timeRange.timelineStartTime,
-    timelineEndTime: timelineItem.timeRange.timelineStartTime + newDuration
+    timelineEndTime: timelineItem.timeRange.timelineStartTime + newDuration,
+    clipStartTime: timelineItem.timeRange.clipStartTime,
+    clipEndTime: timelineItem.timeRange.clipEndTime
   }
   
   syncTimeRange(timelineItem, newTimeRange)
@@ -274,9 +278,11 @@ export function trimTimelineItem(
     return false
   }
   
-  const newTimeRange: BaseTimeRange = {
+  const newTimeRange: UnifiedTimeRange = {
     timelineStartTime: startTime,
-    timelineEndTime: endTime
+    timelineEndTime: endTime,
+    clipStartTime: timelineItem.timeRange.clipStartTime,
+    clipEndTime: timelineItem.timeRange.clipEndTime
   }
   
   syncTimeRange(timelineItem, newTimeRange)

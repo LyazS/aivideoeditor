@@ -35,9 +35,9 @@ import type {
 } from '../../mediaitem/types'
 
 import type {
-  BaseTimeRange,
   BaseMediaProps
 } from '../../../types'
+import type { UnifiedTimeRange } from '../../types/timeRange'
 
 // ==================== 关键帧数据快照接口 ====================
 
@@ -115,7 +115,7 @@ export enum KeyframeEasing {
 /**
  * 将绝对帧数转换为相对于clip开始的帧数
  */
-function absoluteFrameToRelativeFrame(absoluteFrame: number, timeRange: BaseTimeRange): number {
+function absoluteFrameToRelativeFrame(absoluteFrame: number, timeRange: UnifiedTimeRange): number {
   const clipStartFrame = timeRange.timelineStartTime
   const relativeFrame = absoluteFrame - clipStartFrame
   return Math.max(0, relativeFrame)
@@ -124,7 +124,7 @@ function absoluteFrameToRelativeFrame(absoluteFrame: number, timeRange: BaseTime
 /**
  * 将相对于clip开始的帧数转换为绝对帧数
  */
-function relativeFrameToAbsoluteFrame(relativeFrame: number, timeRange: BaseTimeRange): number {
+function relativeFrameToAbsoluteFrame(relativeFrame: number, timeRange: UnifiedTimeRange): number {
   const clipStartFrame = timeRange.timelineStartTime
   return clipStartFrame + relativeFrame
 }

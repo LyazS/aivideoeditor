@@ -3,11 +3,24 @@
  * 基于"核心数据与行为分离"的响应式重构方案
  */
 
-import type { 
-  UnifiedMediaItemData, 
-  MediaStatus, 
-  MediaType, 
-  WebAVObjects 
+import type {
+  UnifiedMediaItemData,
+  MediaStatus,
+  MediaType,
+  MediaTypeOrUnknown,
+  WebAVObjects,
+  ReadyMediaItem,
+  ProcessingMediaItem,
+  ErrorMediaItem,
+  PendingMediaItem,
+  VideoMediaItem,
+  ImageMediaItem,
+  AudioMediaItem,
+  TextMediaItem,
+  UnknownMediaItem,
+  KnownMediaItem,
+  VisualMediaItem,
+  AudioCapableMediaItem
 } from './types'
 
 // ==================== 查询函数模块 ====================
@@ -17,24 +30,24 @@ import type {
  */
 export const UnifiedMediaItemQueries = {
   // 状态检查
-  isPending(item: UnifiedMediaItemData): boolean {
+  isPending(item: UnifiedMediaItemData): item is PendingMediaItem {
     return item.mediaStatus === 'pending'
   },
 
-  isReady(item: UnifiedMediaItemData): boolean {
-    return item.mediaStatus === 'ready'
+  isReady(item: UnifiedMediaItemData): item is ReadyMediaItem {
+    return item.mediaStatus === 'ready' && !!item.duration
   },
 
-  isProcessing(item: UnifiedMediaItemData): boolean {
+  isProcessing(item: UnifiedMediaItemData): item is ProcessingMediaItem {
     return item.mediaStatus === 'asyncprocessing' ||
            item.mediaStatus === 'webavdecoding'
   },
 
-  hasError(item: UnifiedMediaItemData): boolean {
+  hasError(item: UnifiedMediaItemData): item is ErrorMediaItem & { mediaStatus: 'error' } {
     return item.mediaStatus === 'error'
   },
 
-  hasAnyError(item: UnifiedMediaItemData): boolean {
+  hasAnyError(item: UnifiedMediaItemData): item is ErrorMediaItem {
     return item.mediaStatus === 'error' ||
            item.mediaStatus === 'cancelled' ||
            item.mediaStatus === 'missing'
@@ -95,6 +108,40 @@ export const UnifiedMediaItemQueries = {
       }
     }
     return undefined
+  },
+
+  // 媒体类型判断 - 类型守卫函数
+  isVideo(item: UnifiedMediaItemData): item is VideoMediaItem {
+    return item.mediaType === 'video'
+  },
+
+  isImage(item: UnifiedMediaItemData): item is ImageMediaItem {
+    return item.mediaType === 'image'
+  },
+
+  isAudio(item: UnifiedMediaItemData): item is AudioMediaItem {
+    return item.mediaType === 'audio'
+  },
+
+  isText(item: UnifiedMediaItemData): item is TextMediaItem {
+    return item.mediaType === 'text'
+  },
+
+  isUnknownType(item: UnifiedMediaItemData): item is UnknownMediaItem {
+    return item.mediaType === 'unknown'
+  },
+
+  // 媒体类型分组判断
+  isVisualMedia(item: UnifiedMediaItemData): item is VisualMediaItem {
+    return item.mediaType === 'video' || item.mediaType === 'image'
+  },
+
+  isAudioCapableMedia(item: UnifiedMediaItemData): item is AudioCapableMediaItem {
+    return item.mediaType === 'audio' || item.mediaType === 'video'
+  },
+
+  hasKnownType(item: UnifiedMediaItemData): item is KnownMediaItem {
+    return item.mediaType !== 'unknown'
   }
 }
 

@@ -24,18 +24,17 @@ import { TimelineItemFactory } from '../timelineitem/TimelineItemFactory'
 import type { UnifiedMediaItemData } from '../mediaitem/types'
 import type { UnifiedTrackData } from '../track/TrackTypes'
 import type {
-  BaseTimeRange,
-  CustomSprite,
-  MediaType,
-  VideoTimeRange,
-  ImageTimeRange,
+  MediaType
+} from '../../types'
+import type { UnifiedSprite } from '../visiblesprite'
+import type {
   VideoMediaConfig,
   ImageMediaConfig,
   TextMediaConfig
-} from '../../types'
-import { VideoVisibleSprite } from '../../utils/VideoVisibleSprite'
-import { ImageVisibleSprite } from '../../utils/ImageVisibleSprite'
-import { AudioVisibleSprite } from '../../utils/AudioVisibleSprite'
+} from '../timelineitem/TimelineItemData'
+import { VideoVisibleSprite } from '../visiblesprite/VideoVisibleSprite'
+import { ImageVisibleSprite } from '../visiblesprite/ImageVisibleSprite'
+import { AudioVisibleSprite } from '../visiblesprite/AudioVisibleSprite'
 import { webavToProjectCoords, projectToWebavCoords } from '../../utils/coordinateTransform'
 import type { ExtendedPropsChangeEvent } from '../../types'
 // import { printDebugInfo } from '../../stores/utils/debugUtils' // 暂时注释，类型不兼容
@@ -249,15 +248,6 @@ export function createUnifiedTimelineModule(
         
         // 注意：新的事件系统使用 on 方法返回的取消函数来清理监听器
         // 这里不需要手动清理，因为 sprite 销毁时会自动清理所有事件监听器
-
-        // 清理sprite资源
-        try {
-          if (item.sprite && typeof item.sprite.destroy === 'function') {
-            item.sprite.destroy()
-          }
-        } catch (error) {
-          console.warn('清理sprite资源时出错:', error)
-        }
 
         // 从WebAV画布移除
         if (item.sprite) {

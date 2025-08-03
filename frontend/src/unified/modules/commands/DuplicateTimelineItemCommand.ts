@@ -155,22 +155,19 @@ export class DuplicateTimelineItemCommand implements SimpleCommand {
       isVideoTimelineItem(this.originalTimelineItemData) ||
       isAudioTimelineItem(this.originalTimelineItemData)
     ) {
+      // 视频和音频类型：保持原有的clip时间范围
       newSprite.setTimeRange({
-        clipStartTime:
-          'clipStartTime' in originalTimeRange ? originalTimeRange.clipStartTime || 0 : 0,
-        clipEndTime:
-          'clipEndTime' in originalTimeRange
-            ? originalTimeRange.clipEndTime || mediaItem.duration
-            : mediaItem.duration,
+        ...originalTimeRange,
         timelineStartTime: newTimelineStartTimeFrames,
         timelineEndTime: newTimelineEndTimeFrames,
       })
     } else {
-      // 图片和文本类型
+      // 图片和文本类型：clipStartTime和clipEndTime设置为-1
       newSprite.setTimeRange({
         timelineStartTime: newTimelineStartTimeFrames,
         timelineEndTime: newTimelineEndTimeFrames,
-        displayDuration: newTimelineEndTimeFrames - newTimelineStartTimeFrames,
+        clipStartTime: -1,
+        clipEndTime: -1,
       })
     }
 

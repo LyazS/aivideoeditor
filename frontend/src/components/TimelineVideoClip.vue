@@ -134,9 +134,8 @@ const playbackSpeed = computed(() => {
   if (mediaItem.value?.mediaType === 'image') {
     return 1
   }
-  // 直接从timelineItem.timeRange获取
-  const timeRange = props.timelineItem.timeRange
-  return 'playbackRate' in timeRange ? timeRange.playbackRate || 1 : 1
+  // 对于视频和音频，直接从UnifiedTimeRange获取（注意：这里可能需要从sprite获取实际播放速度）
+  return 1 // 暂时返回1，实际播放速度应该从sprite获取
 })
 
 // 判断是否应该显示详细信息（当片段足够宽时）
@@ -250,30 +249,12 @@ async function handleResizeUpdate(
     mediaType: props.timelineItem.mediaType,
   })
 
-  // 构建新的时间范围对象
+  // 构建新的时间范围对象（使用统一的UnifiedTimeRange）
   const currentTimeRange = props.timelineItem.timeRange
-  let newTimeRange: VideoTimeRange | ImageTimeRange
-
-  if (
-    (props.timelineItem.mediaType === 'video' || props.timelineItem.mediaType === 'image') &&
-    'clipStartTime' in currentTimeRange
-  ) {
-    // 视频和图片都使用 VideoTimeRange 结构
-    newTimeRange = {
-      timelineStartTime: newStartTime,
-      timelineEndTime: newEndTime,
-      clipStartTime: currentTimeRange.clipStartTime,
-      clipEndTime: currentTimeRange.clipEndTime,
-      effectiveDuration: newEndTime - newStartTime,
-      playbackRate: currentTimeRange.playbackRate || 1.0,
-    }
-  } else {
-    // 图片类型使用 ImageTimeRange 结构
-    newTimeRange = {
-      timelineStartTime: newStartTime,
-      timelineEndTime: newEndTime,
-      displayDuration: newEndTime - newStartTime,
-    }
+  const newTimeRange = {
+    ...currentTimeRange,
+    timelineStartTime: newStartTime,
+    timelineEndTime: newEndTime,
   }
 
   try {

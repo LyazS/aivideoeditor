@@ -8,11 +8,12 @@ import type {
   UnifiedTimelineItemData,
   TimelineItemStatus,
   UnknownTimelineItem,
-  GetTimelineItemConfig,
-  GetTimeRange
+  GetTimelineItemConfig
 } from './TimelineItemData'
+import type { UnifiedTimeRange } from '../types/timeRange'
 import { VALID_TIMELINE_TRANSITIONS } from './TimelineItemData'
-import type { BaseTimeRange, MediaType } from '../../types'
+import type { MediaType } from '../../types'
+
 
 
 // ==================== 状态转换行为函数 ====================
@@ -197,7 +198,7 @@ export function resetToLoading(data: UnifiedTimelineItemData): Promise<void> {
  */
 export function updateTimeRange(
   data: UnifiedTimelineItemData,
-  newRange: BaseTimeRange // 使用旧架构的BaseTimeRange
+  newRange: UnifiedTimeRange
 ): void {
   if (newRange.timelineEndTime <= newRange.timelineStartTime) {
     throw new Error('结束时间必须大于开始时间')
@@ -225,7 +226,9 @@ export function moveTimelineItem(
   const duration = getDuration(data)
   updateTimeRange(data, {
     timelineStartTime: newStartTime,
-    timelineEndTime: newStartTime + duration
+    timelineEndTime: newStartTime + duration,
+    clipStartTime: data.timeRange.clipStartTime,
+    clipEndTime: data.timeRange.clipEndTime
   })
 }
 
@@ -242,7 +245,9 @@ export function resizeTimelineItem(
 
   updateTimeRange(data, {
     timelineStartTime: data.timeRange.timelineStartTime,
-    timelineEndTime: data.timeRange.timelineStartTime + newDuration
+    timelineEndTime: data.timeRange.timelineStartTime + newDuration,
+    clipStartTime: data.timeRange.clipStartTime,
+    clipEndTime: data.timeRange.clipEndTime
   })
 }
 
@@ -251,7 +256,7 @@ export function resizeTimelineItem(
  */
 async function updateSpriteTimeRange(
   data: UnifiedTimelineItemData,
-  timeRange: BaseTimeRange // 使用旧架构的BaseTimeRange
+  timeRange: UnifiedTimeRange
 ): Promise<void> {
   if (!data.sprite) return
 
@@ -273,7 +278,7 @@ export function convertUnknownToKnown<T extends MediaType>(
   unknownItem: UnknownTimelineItem,
   newMediaType: T,
   newConfig: GetTimelineItemConfig<T>,
-  newTimeRange: GetTimeRange<T>
+  newTimeRange: UnifiedTimeRange
 ): UnifiedTimelineItemData<T> {
   return {
     ...unknownItem,

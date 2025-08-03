@@ -26,13 +26,14 @@ import type {
 } from '../../mediaitem/types'
 
 import type {
-  VideoTimeRange,
-  ImageTimeRange,
   VideoMediaConfig,
   ImageMediaConfig,
   TextMediaConfig,
   BaseMediaProps,
 } from '../../../types'
+import type {
+  UnifiedTimeRange,
+} from '../../types/timeRange'
 
 // ==================== 新架构工具导入 ====================
 import {
@@ -151,47 +152,26 @@ export class SplitTimelineItemCommand implements SimpleCommand {
     const secondSprite = await createSpriteFromUnifiedMediaItem(mediaItem)
 
     // 4. 设置时间范围
-    if ('clipStartTime' in originalTimeRange) {
-      // 视频和音频类型（使用 clipStartTime 和 clipEndTime）
-      const videoTimeRange = originalTimeRange as VideoTimeRange
-      const clipStartTimeFrames = videoTimeRange.clipStartTime || 0
-      const clipEndTimeFrames = videoTimeRange.clipEndTime || mediaItem.duration || 0
-      const clipDurationFrames = clipEndTimeFrames - clipStartTimeFrames
-      const splitClipTimeFrames =
-        clipStartTimeFrames + Math.round(clipDurationFrames * relativeRatio)
+    // 统一使用UnifiedTimeRange，所有类型都有clipStartTime和clipEndTime
+    const clipStartTimeFrames = originalTimeRange.clipStartTime || 0
+    const clipEndTimeFrames = originalTimeRange.clipEndTime || mediaItem.duration || 0
+    const clipDurationFrames = clipEndTimeFrames - clipStartTimeFrames
+    const splitClipTimeFrames =
+      clipStartTimeFrames + Math.round(clipDurationFrames * relativeRatio)
 
-      firstSprite.setTimeRange({
-        clipStartTime: clipStartTimeFrames,
-        clipEndTime: splitClipTimeFrames,
-        timelineStartTime: timelineStartTimeFrames,
-        timelineEndTime: splitTimeFrames,
-      })
+    firstSprite.setTimeRange({
+      clipStartTime: clipStartTimeFrames,
+      clipEndTime: splitClipTimeFrames,
+      timelineStartTime: timelineStartTimeFrames,
+      timelineEndTime: splitTimeFrames,
+    })
 
-      secondSprite.setTimeRange({
-        clipStartTime: splitClipTimeFrames,
-        clipEndTime: clipEndTimeFrames,
-        timelineStartTime: splitTimeFrames,
-        timelineEndTime: timelineEndTimeFrames,
-      })
-    } else {
-      // 图片和文本类型（使用 displayDuration）
-      const imageTimeRange = originalTimeRange as ImageTimeRange
-      const displayDuration = imageTimeRange.displayDuration || timelineDurationFrames
-      const firstDisplayDuration = Math.round(displayDuration * relativeRatio)
-      const secondDisplayDuration = displayDuration - firstDisplayDuration
-
-      firstSprite.setTimeRange({
-        timelineStartTime: timelineStartTimeFrames,
-        timelineEndTime: splitTimeFrames,
-        displayDuration: firstDisplayDuration,
-      })
-
-      secondSprite.setTimeRange({
-        timelineStartTime: splitTimeFrames,
-        timelineEndTime: timelineEndTimeFrames,
-        displayDuration: secondDisplayDuration,
-      })
-    }
+    secondSprite.setTimeRange({
+      clipStartTime: splitClipTimeFrames,
+      clipEndTime: clipEndTimeFrames,
+      timelineStartTime: splitTimeFrames,
+      timelineEndTime: timelineEndTimeFrames,
+    })
 
     // 5. 应用变换属性
     if (hasVisualProperties(this.originalTimelineItemData)) {

@@ -332,20 +332,13 @@ export async function regenerateThumbnailForUnifiedTimelineItem(
       // 对于视频，使用clip的起始时间作为缩略图时间位置
       const timeRange = timelineItem.timeRange
 
-      if ('clipStartTime' in timeRange) {
-        // 使用clip内部的起始时间（微秒）
-        thumbnailTime = timeRange.clipStartTime
-        console.log(
-          '📍 [ThumbnailGenerator] 使用视频clip起始时间:',
-          (thumbnailTime ?? 0) / 1000000,
-          's',
-        )
-      } else {
-        // 如果没有clipStartTime，使用视频中间位置
-        const meta = await mediaItem.webav.mp4Clip.ready
-        thumbnailTime = meta.duration / 2
-        console.log('📍 [ThumbnailGenerator] 使用视频中间位置:', thumbnailTime / 1000000, 's')
-      }
+      // 直接使用clipStartTime（UnifiedTimeRange中总是存在）
+      thumbnailTime = timeRange.clipStartTime
+      console.log(
+        '📍 [ThumbnailGenerator] 使用视频clip起始时间:',
+        (thumbnailTime ?? 0) / 1000000,
+        's',
+      )
     }
 
     // 使用统一的缩略图生成函数

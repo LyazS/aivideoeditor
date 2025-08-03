@@ -16,7 +16,9 @@ import { calculateTotalDurationFrames } from './utils/UnifiedDurationUtils'
 import type { UnifiedMediaItemData, MediaType, MediaTypeOrUnknown } from '@/unified'
 import type { UnifiedTrackType } from './track/TrackTypes'
 import type { UnifiedTimelineItemData, TransformData } from './timelineitem/TimelineItemData'
-import type { TextMediaConfig, PropertyType, VideoTimeRange, ImageTimeRange } from '../types'
+import type { PropertyType } from '../types'
+import type { TextMediaConfig } from './timelineitem/TimelineItemData'
+import type { UnifiedTimeRange } from './types/timeRange'
 
 import { frameToPixel, pixelToFrame } from './utils/coordinateUtils'
 import {
@@ -969,7 +971,7 @@ export const useUnifiedStore = defineStore('unified', () => {
    */
   async function resizeTimelineItemWithHistory(
     timelineItemId: string,
-    newTimeRangeOrDuration: VideoTimeRange | ImageTimeRange | number,
+    newTimeRangeOrDuration: UnifiedTimeRange | number,
     resizeFromEnd?: boolean
   ): Promise<boolean> {
     try {
@@ -982,7 +984,7 @@ export const useUnifiedStore = defineStore('unified', () => {
         return false
       }
 
-      let newTimeRange: VideoTimeRange | ImageTimeRange
+      let newTimeRange: UnifiedTimeRange
 
       // 判断调用方式
       if (typeof newTimeRangeOrDuration === 'number') {
@@ -995,14 +997,18 @@ export const useUnifiedStore = defineStore('unified', () => {
           const newStartTime = currentTimeRange.timelineEndTime - newDurationFrames
           newTimeRange = {
             timelineStartTime: Math.max(0, newStartTime),
-            timelineEndTime: currentTimeRange.timelineEndTime
-          } as VideoTimeRange | ImageTimeRange
+            timelineEndTime: currentTimeRange.timelineEndTime,
+            clipStartTime: currentTimeRange.clipStartTime,
+            clipEndTime: currentTimeRange.clipEndTime
+          }
         } else {
           // 从右侧调整（默认）：保持开始时间不变，调整结束时间
           newTimeRange = {
             timelineStartTime: currentTimeRange.timelineStartTime,
-            timelineEndTime: currentTimeRange.timelineStartTime + newDurationFrames
-          } as VideoTimeRange | ImageTimeRange
+            timelineEndTime: currentTimeRange.timelineStartTime + newDurationFrames,
+            clipStartTime: currentTimeRange.clipStartTime,
+            clipEndTime: currentTimeRange.clipEndTime
+          }
         }
       } else {
         // 新架构方式：直接传入 newTimeRange

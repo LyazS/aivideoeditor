@@ -53,6 +53,7 @@ import type {
 } from '../types/clipRenderer'
 import type { MediaTypeOrUnknown } from '../mediaitem/types'
 import type { VideoTimeRange, ImageTimeRange } from '../../types/index'
+import type { UnifiedTimeRange } from '../types/timeRange'
 import { ContentRendererFactory } from './renderers/ContentRendererFactory'
 import { useUnifiedStore } from '../unifiedStore'
 import { useDragUtils } from '../composables/useDragUtils'
@@ -520,28 +521,14 @@ async function stopResize() {
     try {
       // 构建完整的newTimeRange对象，参考旧架构的实现模式
       const currentTimeRange = props.data.timeRange
-      let newTimeRange: VideoTimeRange | ImageTimeRange
+      let newTimeRange: UnifiedTimeRange
 
-      if (
-        (props.data.mediaType === 'video' || props.data.mediaType === 'image') &&
-        'clipStartTime' in currentTimeRange
-      ) {
-        // 视频和图片都使用 VideoTimeRange 结构
-        newTimeRange = {
-          timelineStartTime: newTimelineStartTimeFrames,
-          timelineEndTime: newTimelineEndTimeFrames,
-          clipStartTime: currentTimeRange.clipStartTime,
-          clipEndTime: currentTimeRange.clipEndTime,
-          effectiveDuration: newTimelineEndTimeFrames - newTimelineStartTimeFrames,
-          playbackRate: currentTimeRange.playbackRate || 1.0,
-        }
-      } else {
-        // 图片类型使用 ImageTimeRange 结构
-        newTimeRange = {
-          timelineStartTime: newTimelineStartTimeFrames,
-          timelineEndTime: newTimelineEndTimeFrames,
-          displayDuration: newTimelineEndTimeFrames - newTimelineStartTimeFrames,
-        }
+      // 统一使用UnifiedTimeRange结构
+      newTimeRange = {
+        timelineStartTime: newTimelineStartTimeFrames,
+        timelineEndTime: newTimelineEndTimeFrames,
+        clipStartTime: currentTimeRange.clipStartTime,
+        clipEndTime: currentTimeRange.clipEndTime,
       }
 
       // 调用统一store的resize方法，传入完整的newTimeRange对象

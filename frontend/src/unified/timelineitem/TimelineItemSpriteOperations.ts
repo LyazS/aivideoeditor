@@ -12,13 +12,15 @@ import type { Raw } from 'vue'
 import type { AVCanvas } from '@webav/av-canvas'
 import type { UnifiedMediaItemData } from '../mediaitem'
 import type { UnifiedTimelineItemData, TransformData } from './TimelineItemData'
-import type { BaseTimeRange, CustomSprite } from '../../types'
+import type { UnifiedSprite } from '../visiblesprite'
+import type { UnifiedTimeRange } from '../types/timeRange'
 import { hasVisualProperties } from './TimelineItemQueries'
 
-// 从旧架构导入Sprite类
-import { VideoVisibleSprite } from '../../utils/VideoVisibleSprite'
-import { ImageVisibleSprite } from '../../utils/ImageVisibleSprite'
-import { AudioVisibleSprite } from '../../utils/AudioVisibleSprite'
+// 从统一架构导入Sprite类
+import { VideoVisibleSprite } from '../visiblesprite/VideoVisibleSprite'
+import { ImageVisibleSprite } from '../visiblesprite/ImageVisibleSprite'
+import { AudioVisibleSprite } from '../visiblesprite/AudioVisibleSprite'
+import { TextVisibleSprite } from '../visiblesprite/TextVisibleSprite'
 
 // ==================== 底层工具函数 ====================
 
@@ -31,30 +33,30 @@ import { AudioVisibleSprite } from '../../utils/AudioVisibleSprite'
 export function createSpriteForTimelineItem(
   mediaData: UnifiedMediaItemData,
   timelineData: UnifiedTimelineItemData
-): Raw<CustomSprite> {
+): Raw<UnifiedSprite> {
   const { mediaType, webav } = mediaData
 
   if (!webav) {
     throw new Error('媒体项目WebAV对象未就绪')
   }
 
-  let sprite: Raw<CustomSprite>
+  let sprite: Raw<UnifiedSprite>
 
   // 根据媒体类型创建对应的Sprite
   switch (mediaType) {
     case 'video':
       if (!webav.mp4Clip) throw new Error('视频WebAV对象缺失')
-      sprite = new VideoVisibleSprite(webav.mp4Clip) as Raw<CustomSprite>
+      sprite = new VideoVisibleSprite(webav.mp4Clip) as Raw<UnifiedSprite>
       break
 
     case 'image':
       if (!webav.imgClip) throw new Error('图片WebAV对象缺失')
-      sprite = new ImageVisibleSprite(webav.imgClip) as Raw<CustomSprite>
+      sprite = new ImageVisibleSprite(webav.imgClip) as Raw<UnifiedSprite>
       break
 
     case 'audio':
       if (!webav.audioClip) throw new Error('音频WebAV对象缺失')
-      sprite = new AudioVisibleSprite(webav.audioClip) as Raw<CustomSprite>
+      sprite = new AudioVisibleSprite(webav.audioClip) as Raw<UnifiedSprite>
       break
 
     default:
@@ -73,14 +75,11 @@ export function createSpriteForTimelineItem(
  * @param timelineData 时间轴项目数据
  */
 function setupSpriteProperties(
-  sprite: Raw<CustomSprite>,
+  sprite: Raw<UnifiedSprite>,
   timelineData: UnifiedTimelineItemData
 ): void {
   // 设置时间范围
-  updateSpriteTimeRange(sprite, {
-    timelineStartTime: timelineData.timeRange.timelineStartTime,
-    timelineEndTime: timelineData.timeRange.timelineEndTime
-  })
+  updateSpriteTimeRange(sprite, timelineData.timeRange)
 
   // 设置基础变换属性（使用类型守卫）
   if (hasVisualProperties(timelineData)) {
@@ -105,21 +104,32 @@ function setupSpriteProperties(
  * @param timeRange 时间范围数据
  */
 export function updateSpriteTimeRange(
-  sprite: Raw<CustomSprite>,
-  timeRange: BaseTimeRange
+  sprite: Raw<UnifiedSprite>,
+  timeRange: UnifiedTimeRange
 ): void {
   // 根据Sprite类型调用相应的时间设置方法
   if (sprite instanceof VideoVisibleSprite) {
     sprite.setTimelineStartTime(timeRange.timelineStartTime)
     sprite.setTimelineEndTime(timeRange.timelineEndTime)
   } else if (sprite instanceof ImageVisibleSprite) {
-    sprite.setTimelineStartTime(timeRange.timelineStartTime)
-    // 图片需要计算显示时长
-    const duration = timeRange.timelineEndTime - timeRange.timelineStartTime
-    sprite.setDisplayDuration(duration)
+    // 图片使用setTimeRange方法，但clipStartTime和clipEndTime必须为-1
+    sprite.setTimeRange({
+      timelineStartTime: timeRange.timelineStartTime,
+      timelineEndTime: timeRange.timelineEndTime,
+      clipStartTime: -1,
+      clipEndTime: -1,
+    })
   } else if (sprite instanceof AudioVisibleSprite) {
     sprite.setTimelineStartTime(timeRange.timelineStartTime)
     sprite.setTimelineEndTime(timeRange.timelineEndTime)
+  } else if (sprite instanceof TextVisibleSprite) {
+    // 文本使用setTimeRange方法，但clipStartTime和clipEndTime必须为-1
+    sprite.setTimeRange({
+      timelineStartTime: timeRange.timelineStartTime,
+      timelineEndTime: timeRange.timelineEndTime,
+      clipStartTime: -1,
+      clipEndTime: -1,
+    })
   }
 }
 
@@ -129,7 +139,7 @@ export function updateSpriteTimeRange(
  * @param transform 变换数据
  */
 export function updateSpriteTransform(
-  sprite: Raw<CustomSprite>,
+  sprite: Raw<UnifiedSprite>,
   transform: TransformData
 ): void {
   // 直接设置rect属性
@@ -146,7 +156,7 @@ export function updateSpriteTransform(
  * @param opacity 透明度值 (0-1)
  */
 export function updateSpriteOpacity(
-  sprite: Raw<CustomSprite>,
+  sprite: Raw<UnifiedSprite>,
   opacity: number
 ): void {
   sprite.opacity = opacity
@@ -158,9 +168,9 @@ export function updateSpriteOpacity(
  * @param updates 要更新的属性
  */
 export function updateSpriteProperties(
-  sprite: Raw<CustomSprite>,
+  sprite: Raw<UnifiedSprite>,
   updates: Partial<{
-    timeRange: BaseTimeRange
+    timeRange: UnifiedTimeRange
     transform: TransformData
     opacity: number
   }>
@@ -194,7 +204,7 @@ export function updateSpriteProperties(
  * @param avCanvas AVCanvas实例
  */
 export async function addSpriteToCanvas(
-  sprite: Raw<CustomSprite>,
+  sprite: Raw<UnifiedSprite>,
   avCanvas: Raw<AVCanvas>
 ): Promise<void> {
   await avCanvas.addSprite(sprite)
@@ -207,7 +217,7 @@ export async function addSpriteToCanvas(
  * @param avCanvas AVCanvas实例
  */
 export function removeSpriteFromCanvas(
-  sprite: Raw<CustomSprite>,
+  sprite: Raw<UnifiedSprite>,
   avCanvas: Raw<AVCanvas>
 ): void {
   avCanvas.removeSprite(sprite)
@@ -272,7 +282,7 @@ export async function destroySpriteForTimelineData(
 export async function updateSpriteForTimelineData(
   timelineData: UnifiedTimelineItemData,
   updates: Partial<{
-    timeRange: BaseTimeRange
+    timeRange: UnifiedTimeRange
     transform: TransformData
     opacity: number
   }>

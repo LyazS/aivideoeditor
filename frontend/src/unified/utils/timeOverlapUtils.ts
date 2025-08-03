@@ -10,10 +10,8 @@ import type {
 } from '../timelineitem'
 
 import type {
-  BaseTimeRange,
-  VideoTimeRange,
-  ImageTimeRange,
-} from '../../types'
+  UnifiedTimeRange,
+} from '../types/timeRange'
 
 import type {
   OverlapTimeRange,
@@ -291,8 +289,8 @@ export function getAllOverlappingPairs(
  * @returns 重叠时长（帧数）
  */
 export function calculateTimeRangeOverlap(
-  range1: VideoTimeRange | ImageTimeRange | BaseTimeRange,
-  range2: VideoTimeRange | ImageTimeRange | BaseTimeRange,
+  range1: UnifiedTimeRange,
+  range2: UnifiedTimeRange,
 ): number {
   const timeRange1: OverlapTimeRange = {
     start: range1.timelineStartTime,

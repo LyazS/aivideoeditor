@@ -23,9 +23,6 @@ import type {
 import type { UnifiedTrackData, UnifiedTrackType } from '../../track/TrackTypes'
 
 import type {
-  BaseTimeRange,
-  VideoTimeRange,
-  ImageTimeRange,
   VideoMediaConfig,
   ImageMediaConfig,
   AudioMediaConfig,
@@ -206,7 +203,7 @@ export class RemoveTrackCommand implements SimpleCommand {
     })
 
     // 动态导入TextVisibleSprite
-    const { TextVisibleSprite } = await import('../../../utils/TextVisibleSprite')
+    const { TextVisibleSprite } = await import('../../visiblesprite/TextVisibleSprite')
 
     // 重新创建文本精灵
     const newSprite = await TextVisibleSprite.create(text, style)

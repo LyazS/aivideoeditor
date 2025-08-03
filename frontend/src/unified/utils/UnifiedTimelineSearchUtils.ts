@@ -7,7 +7,7 @@ import type { UnifiedTimelineItemData } from '../timelineitem/TimelineItemData'
 import type { UnifiedMediaItemData } from '@/unified'
 import type { MediaTypeOrUnknown } from '../mediaitem'
 import type { Raw } from 'vue'
-import type { CustomSprite } from '../../types'
+import type { UnifiedSprite } from '../visiblesprite'
 
 // ==================== 查找工具 ====================
 
@@ -66,7 +66,7 @@ export function findOrphanedTimelineItems(
  * @returns 对应的时间轴项目或null
  */
 export function findTimelineItemBySprite(
-  sprite: Raw<CustomSprite>,
+  sprite: Raw<UnifiedSprite>,
   timelineItems: UnifiedTimelineItemData[],
 ): UnifiedTimelineItemData | null {
   // 只有就绪状态的时间轴项目才会有sprite

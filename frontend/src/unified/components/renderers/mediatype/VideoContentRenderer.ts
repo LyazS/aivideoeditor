@@ -150,11 +150,11 @@ export class VideoContentRenderer implements ContentRenderer<'video' | 'image'> 
         style: this.getClipDurationStyles()
       }, this.formatTime(this.getDuration(data))),
       // 倍速信息（仅视频）
-      data.mediaType === 'video' && this.hasSpeedAdjustment(data)
+      data.mediaType === 'video' && this.hasSpeedAdjustment(data as UnifiedTimelineItemData<'video'>)
         ? h('div', {
             class: 'clip-speed',
             style: this.getClipSpeedStyles()
-          }, this.getSpeedText(data))
+          }, this.getSpeedText(data as UnifiedTimelineItemData<'video'>))
         : null
     ])
   }
@@ -377,38 +377,29 @@ export class VideoContentRenderer implements ContentRenderer<'video' | 'image'> 
   }
 
   /**
-   * 检查是否有播放速度调整
+   * 检查是否有播放速度调整（仅适用于视频）
    */
-  private hasSpeedAdjustment(data: UnifiedTimelineItemData<'video' | 'image'>): boolean {
-    if (data.mediaType !== 'video') return false
-
-    const timeRange = data.timeRange
-    if ('playbackRate' in timeRange) {
-      const rate = timeRange.playbackRate || 1
-      return Math.abs(rate - 1) > 0.001
+  private hasSpeedAdjustment(data: UnifiedTimelineItemData<'video'>): boolean {
+    // 检查视频是否有播放速度调整
+    if (data.sprite && 'getPlaybackRate' in data.sprite) {
+      const playbackRate = data.sprite.getPlaybackRate()
+      return Math.abs(playbackRate - 1.0) > 0.01 // 允许小的浮点误差
     }
-
     return false
   }
 
   /**
-   * 获取播放速度文本
+   * 获取播放速度文本（仅适用于视频）
    */
-  private getSpeedText(data: UnifiedTimelineItemData<'video' | 'image'>): string {
-    if (data.mediaType !== 'video') return ''
-
-    const timeRange = data.timeRange
-    if ('playbackRate' in timeRange) {
-      const rate = timeRange.playbackRate || 1
-      const tolerance = 0.001
-
-      if (rate > 1 + tolerance) {
-        return `${rate.toFixed(1)}x 快速`
-      } else if (rate < 1 - tolerance) {
-        return `${rate.toFixed(1)}x 慢速`
+  private getSpeedText(data: UnifiedTimelineItemData<'video'>): string {
+    if (data.sprite && 'getPlaybackRate' in data.sprite) {
+      const playbackRate = data.sprite.getPlaybackRate()
+      if (Math.abs(playbackRate - 1.0) <= 0.01) {
+        return '正常速度'
+      } else {
+        return `${playbackRate.toFixed(1)}x`
       }
     }
-
     return '正常速度'
   }
 
