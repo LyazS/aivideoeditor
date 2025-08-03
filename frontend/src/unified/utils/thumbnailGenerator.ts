@@ -1,6 +1,7 @@
 import { MP4Clip, ImgClip } from '@webav/av-cliper'
 import type { UnifiedMediaItemData } from '../mediaitem/types'
 import type { UnifiedTimelineItemData } from '../timelineitem/TimelineItemData'
+import { UnifiedMediaItemQueries } from '../mediaitem/actions'
 
 /**
  * 统一架构下的缩略图生成器
@@ -279,15 +280,15 @@ export async function generateThumbnailForUnifiedMediaItem(
   try {
     let canvas: HTMLCanvasElement
 
-    if (mediaItem.mediaType === 'video' && mediaItem.webav?.mp4Clip) {
+    if (UnifiedMediaItemQueries.isVideo(mediaItem) && mediaItem.webav?.mp4Clip) {
       console.log('🎬 生成视频缩略图...')
       canvas = await generateVideoThumbnail(mediaItem.webav.mp4Clip, timePosition)
       console.log('✅ 视频缩略图生成成功')
-    } else if (mediaItem.mediaType === 'image' && mediaItem.webav?.imgClip) {
+    } else if (UnifiedMediaItemQueries.isImage(mediaItem) && mediaItem.webav?.imgClip) {
       console.log('🖼️ 生成图片缩略图...')
       canvas = await generateImageThumbnail(mediaItem.webav.imgClip)
       console.log('✅ 图片缩略图生成成功')
-    } else if (mediaItem.mediaType === 'audio') {
+    } else if (UnifiedMediaItemQueries.isAudio(mediaItem)) {
       console.log('🎵 音频不需要缩略图，跳过生成')
       return undefined
     } else {
@@ -321,14 +322,14 @@ export async function regenerateThumbnailForUnifiedTimelineItem(
     })
 
     // 音频不需要缩略图，直接返回
-    if (mediaItem.mediaType === 'audio') {
+    if (UnifiedMediaItemQueries.isAudio(mediaItem)) {
       console.log('🎵 音频不需要缩略图，跳过生成')
       return undefined
     }
 
     let thumbnailTime: number | undefined
 
-    if (mediaItem.mediaType === 'video' && mediaItem.webav?.mp4Clip) {
+    if (UnifiedMediaItemQueries.isVideo(mediaItem) && mediaItem.webav?.mp4Clip) {
       // 对于视频，使用clip的起始时间作为缩略图时间位置
       const timeRange = timelineItem.timeRange
 

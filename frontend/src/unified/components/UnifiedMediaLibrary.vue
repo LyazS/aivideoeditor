@@ -228,6 +228,7 @@ import { useDragUtils } from '@/composables/useDragUtils'
 import { framesToTimecode, secondsToFrames } from '@/stores/utils/timeUtils'
 import type { UnifiedMediaItemData, MediaType } from '@/unified'
 import { DataSourceFactory } from '@/unified'
+import { UnifiedMediaItemQueries } from '@/unified/mediaitem/actions'
 
 import HoverButton from '@/components/HoverButton.vue'
 import RemoteDownloadDialog from '@/components/RemoteDownloadDialog.vue'
@@ -326,10 +327,10 @@ const filteredMediaItems = computed(() => {
 
   return allMediaItems.filter(item => {
     if (activeTab.value === 'video') {
-      return item.mediaType === 'video' || item.mediaType === 'image' || item.mediaType === 'unknown'
+      return UnifiedMediaItemQueries.isVideo(item) || UnifiedMediaItemQueries.isImage(item) || UnifiedMediaItemQueries.isUnknownType(item)
     }
     if (activeTab.value === 'audio') {
-      return item.mediaType === 'audio' || item.mediaType === 'unknown'
+      return UnifiedMediaItemQueries.isAudio(item) || UnifiedMediaItemQueries.isUnknownType(item)
     }
     if (activeTab.value === 'processing') {
       // 显示正在处理的项目

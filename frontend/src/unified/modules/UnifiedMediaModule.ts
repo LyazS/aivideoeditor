@@ -275,14 +275,14 @@ export function createUnifiedMediaModule() {
       let clip: any
       let thumbnailUrl: string | undefined
 
-      if (mediaItem.mediaType === 'video') {
+      if (UnifiedMediaItemQueries.isVideo(mediaItem)) {
         clip = await webavModule.createMP4Clip(mediaItem.source.file)
         // 生成缩略图
         thumbnailUrl = await generateVideoThumbnail(mediaItem.source.file)
-      } else if (mediaItem.mediaType === 'image') {
+      } else if (UnifiedMediaItemQueries.isImage(mediaItem)) {
         clip = await webavModule.createImgClip(mediaItem.source.file)
         thumbnailUrl = mediaItem.source.url
-      } else if (mediaItem.mediaType === 'audio') {
+      } else if (UnifiedMediaItemQueries.isAudio(mediaItem)) {
         clip = await webavModule.createAudioClip(mediaItem.source.file)
         // 音频使用全局默认图标
         const { AUDIO_DEFAULT_THUMBNAIL_URL } = await import('../constants/audioIcon')
@@ -302,11 +302,11 @@ export function createUnifiedMediaModule() {
       }
 
       // 根据媒体类型设置对应的clip
-      if (mediaItem.mediaType === 'video') {
+      if (UnifiedMediaItemQueries.isVideo(mediaItem)) {
         webavObjects.mp4Clip = clip
-      } else if (mediaItem.mediaType === 'image') {
+      } else if (UnifiedMediaItemQueries.isImage(mediaItem)) {
         webavObjects.imgClip = clip
-      } else if (mediaItem.mediaType === 'audio') {
+      } else if (UnifiedMediaItemQueries.isAudio(mediaItem)) {
         webavObjects.audioClip = clip
       }
 
@@ -314,11 +314,11 @@ export function createUnifiedMediaModule() {
       UnifiedMediaItemActions.setWebAVObjects(mediaItem, webavObjects)
 
       // 设置时长（帧数）
-      if (mediaItem.mediaType === 'video' || mediaItem.mediaType === 'audio') {
+      if (UnifiedMediaItemQueries.isAudioCapableMedia(mediaItem)) {
         // 视频和音频：从clip元数据获取时长并转换为帧数
         const durationFrames = microsecondsToFrames(meta.duration)
         UnifiedMediaItemActions.setDuration(mediaItem, durationFrames)
-      } else if (mediaItem.mediaType === 'image') {
+      } else if (UnifiedMediaItemQueries.isImage(mediaItem)) {
         // 图片：固定5秒
         UnifiedMediaItemActions.setDuration(mediaItem, secondsToFrames(5))
       }

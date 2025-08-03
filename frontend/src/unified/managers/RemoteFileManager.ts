@@ -483,6 +483,7 @@ export class RemoteFileManager extends DataSourceManager<RemoteFileSourceData> {
       const unifiedStore = useUnifiedStore()
       const mediaItem = unifiedStore.getMediaItemBySourceId(source.id)
 
+      // 这里就不需要类型守卫了
       if (mediaItem && mediaItem.mediaType === 'unknown') {
         mediaItem.mediaType = detectedType
         console.log(`🔍 [RemoteFileManager] 媒体类型检测并设置完成: ${source.file.name} -> ${detectedType}`)
