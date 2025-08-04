@@ -25,7 +25,7 @@ import type {
 import type { UnifiedTimeRange } from '../../types/timeRange'
 
 // ==================== 新架构工具导入 ====================
-import { isTextTimelineItem, isReady, TimelineItemFactory, cloneTimelineItem } from '../../timelineitem'
+import { isTextTimelineItem, isReady, TimelineItemFactory } from '../../timelineitem'
 import { createTextTimelineItem, createSpriteForTextTimelineItem } from '../../utils/textTimelineUtils'
 
 // ==================== 旧架构兼容性导入 ====================
@@ -77,8 +77,8 @@ export class AddTextItemCommand implements SimpleCommand {
 
       console.log('🔄 开始从原始数据重建文本时间轴项目...')
 
-      // 1. 使用 cloneTimelineItem 创建新的 TimelineItem（确保独立性和正确的 runtime 处理）
-      const newTimelineItem = cloneTimelineItem(this.originalTimelineItemData)
+      // 1. 使用 TimelineItemFactory.clone 创建新的 TimelineItem（确保独立性和正确的 runtime 处理）
+      const newTimelineItem = TimelineItemFactory.clone(this.originalTimelineItemData)
 
       // 2. 使用 textTimelineUtils 中的工具函数创建精灵
       const newSprite = await createSpriteForTextTimelineItem(newTimelineItem)
@@ -377,8 +377,8 @@ export class RemoveTextItemCommand implements SimpleCommand {
       if (this.originalTimelineItemData) {
         console.log(`🔄 撤销删除文本操作...`)
 
-        // 1. 使用 cloneTimelineItem 创建新的 TimelineItem（确保独立性和正确的 runtime 处理）
-        const newTimelineItem = cloneTimelineItem(this.originalTimelineItemData)
+        // 1. 使用 TimelineItemFactory.clone 创建新的 TimelineItem（确保独立性和正确的 runtime 处理）
+        const newTimelineItem = TimelineItemFactory.clone(this.originalTimelineItemData)
 
         // 2. 使用 textTimelineUtils 中的工具函数创建精灵
         const newSprite = await createSpriteForTextTimelineItem(newTimelineItem)

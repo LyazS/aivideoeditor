@@ -26,22 +26,6 @@ export {
 
 // ==================== 工厂函数导出 ====================
 export {
-  // 主要工厂函数
-  createUnknownTimelineItem,
-  createDefaultUnknownConfig,
-
-  // 便捷工厂函数
-  createVideoTimelineItem,
-  createAudioTimelineItem,
-  createImageTimelineItem,
-
-  // 克隆和复制函数
-  cloneTimelineItem,
-  duplicateTimelineItem,
-
-  // 验证函数
-  validateTimelineItem,
-
   // 工厂函数集合
   TimelineItemFactory
 } from './TimelineItemFactory'
@@ -217,16 +201,8 @@ export {
 
 // ==================== 默认导出 ====================
 
-// 导入所有需要的函数用于默认导出
-import {
-  createUnknownTimelineItem,
-  createVideoTimelineItem,
-  createAudioTimelineItem,
-  createImageTimelineItem,
-  cloneTimelineItem,
-  duplicateTimelineItem,
-  validateTimelineItem
-} from './TimelineItemFactory'
+// 导入所有需要的函数和对象用于默认导出
+import { TimelineItemFactory } from './TimelineItemFactory'
 
 import {
   transitionTimelineStatus,
@@ -274,13 +250,13 @@ import type { MediaTypeOrUnknown } from '../mediaitem'
 export default {
   // 工厂函数
   Factory: {
-    create: createUnknownTimelineItem,
-    createVideo: createVideoTimelineItem,
-    createAudio: createAudioTimelineItem,
-    createImage: createImageTimelineItem,
-    clone: cloneTimelineItem,
-    duplicate: duplicateTimelineItem,
-    validate: validateTimelineItem
+    create: TimelineItemFactory.createUnknown,
+    createVideo: TimelineItemFactory.createVideo,
+    createAudio: TimelineItemFactory.createAudio,
+    createImage: TimelineItemFactory.createImage,
+    clone: TimelineItemFactory.clone,
+    duplicate: TimelineItemFactory.duplicate,
+    validate: TimelineItemFactory.validate
   },
 
   // 行为函数

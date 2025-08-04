@@ -181,13 +181,8 @@ export {
   type TransformData,
   type CreateTimelineItemOptions,
 
-  // 工厂函数
-  createUnknownTimelineItem,
-  createVideoTimelineItem,
-  createAudioTimelineItem,
-  createImageTimelineItem,
-  cloneTimelineItem,
-  duplicateTimelineItem,
+  // 工厂函数集合
+  TimelineItemFactory,
 
   // 状态转换函数
   transitionTimelineStatus,
