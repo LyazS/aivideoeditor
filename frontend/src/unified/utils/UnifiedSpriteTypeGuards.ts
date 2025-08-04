@@ -50,7 +50,9 @@ export function isUnifiedTextVisibleSprite(sprite: UnifiedSprite): sprite is Tex
  * @param sprite 要检查的 sprite 对象
  * @returns 如果有音频功能则返回 true
  */
-export function hasAudioCapabilities(sprite: UnifiedSprite): sprite is VideoVisibleSprite | AudioVisibleSprite {
+export function hasAudioCapabilities(
+  sprite: UnifiedSprite,
+): sprite is VideoVisibleSprite | AudioVisibleSprite {
   return isUnifiedVideoVisibleSprite(sprite) || isUnifiedAudioVisibleSprite(sprite)
 }
 
@@ -59,6 +61,12 @@ export function hasAudioCapabilities(sprite: UnifiedSprite): sprite is VideoVisi
  * @param sprite 要检查的 sprite 对象
  * @returns 如果有视觉功能则返回 true
  */
-export function hasVisualCapabilities(sprite: UnifiedSprite): sprite is VideoVisibleSprite | ImageVisibleSprite | TextVisibleSprite {
-  return isUnifiedVideoVisibleSprite(sprite) || isUnifiedImageVisibleSprite(sprite) || isUnifiedTextVisibleSprite(sprite)
+export function hasVisualCapabilities(
+  sprite: UnifiedSprite,
+): sprite is VideoVisibleSprite | ImageVisibleSprite | TextVisibleSprite {
+  return (
+    isUnifiedVideoVisibleSprite(sprite) ||
+    isUnifiedImageVisibleSprite(sprite) ||
+    isUnifiedTextVisibleSprite(sprite)
+  )
 }

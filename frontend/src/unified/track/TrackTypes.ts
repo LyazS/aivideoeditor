@@ -17,46 +17,47 @@ export type UnifiedTrackType = 'video' | 'audio' | 'text' | 'subtitle' | 'effect
 /**
  * 轨道状态枚举
  */
-export type TrackStatus = 
-  | 'active'    // 活跃状态，正常使用
-  | 'locked'    // 锁定状态，不可编辑
-  | 'disabled'  // 禁用状态，不参与渲染
+export type TrackStatus =
+  | 'active' // 活跃状态，正常使用
+  | 'locked' // 锁定状态，不可编辑
+  | 'disabled' // 禁用状态，不参与渲染
 
 /**
  * 轨道可见性状态
  */
 export interface TrackVisibility {
-  isVisible: boolean      // 是否在时间轴中可见
-  isRendered: boolean     // 是否参与最终渲染
-  opacity: number         // 透明度 (0-1)
+  isVisible: boolean // 是否在时间轴中可见
+  isRendered: boolean // 是否参与最终渲染
+  opacity: number // 透明度 (0-1)
 }
 
 /**
  * 轨道音频状态
  */
 export interface TrackAudio {
-  isMuted: boolean        // 是否静音
-  volume: number          // 音量 (0-1)
-  solo: boolean           // 是否独奏
+  isMuted: boolean // 是否静音
+  volume: number // 音量 (0-1)
+  solo: boolean // 是否独奏
 }
 
 /**
  * 轨道布局属性
  */
 export interface TrackLayout {
-  height: number          // 轨道高度（像素）
-  order: number           // 轨道顺序（用于排序）
-  isCollapsed: boolean    // 是否折叠
-  isExpanded: boolean     // 是否展开（显示详细信息）
+  height: number // 轨道高度（像素）
+  order: number // 轨道顺序（用于排序）
+  isCollapsed: boolean // 是否折叠
+  isExpanded: boolean // 是否展开（显示详细信息）
 }
 
 /**
  * 轨道渲染配置
  */
 export interface TrackRenderConfig {
-  blendMode?: string      // 混合模式
-  filters?: string[]      // 应用的滤镜列表
-  transform?: {           // 变换属性
+  blendMode?: string // 混合模式
+  filters?: string[] // 应用的滤镜列表
+  transform?: {
+    // 变换属性
     x: number
     y: number
     scaleX: number
@@ -83,8 +84,6 @@ export interface UnifiedTrackData {
   isMuted: boolean
   height: number
 }
-
-
 
 // ==================== 类型守卫函数 ====================
 
@@ -131,7 +130,7 @@ export function isEffectTrack(track: UnifiedTrackData): boolean {
 export function createUnifiedTrackData(
   type: UnifiedTrackType,
   name?: string,
-  options?: Partial<UnifiedTrackData>
+  options?: Partial<UnifiedTrackData>,
 ): UnifiedTrackData {
   const baseData: UnifiedTrackData = {
     id: generateTrackId(),
@@ -140,7 +139,7 @@ export function createUnifiedTrackData(
     isVisible: true,
     isMuted: false,
     height: getDefaultTrackHeight(type),
-    ...options
+    ...options,
   }
 
   return reactive(baseData)
@@ -161,10 +160,10 @@ export function generateTrackId(): string {
 function getDefaultTrackName(type: UnifiedTrackType): string {
   const names = {
     video: '视频轨道',
-    audio: '音频轨道', 
+    audio: '音频轨道',
     text: '文本轨道',
     subtitle: '字幕轨道',
-    effect: '特效轨道'
+    effect: '特效轨道',
   }
   return names[type]
 }
@@ -176,5 +175,3 @@ function getDefaultTrackHeight(type: UnifiedTrackType): number {
   // 所有轨道类型统一使用60px高度
   return 60
 }
-
-

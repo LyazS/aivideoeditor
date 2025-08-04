@@ -1,7 +1,7 @@
 /**
  * 视频内容渲染器
  * 处理ready状态下视频和图片类型的内容渲染
- * 
+ *
  * 设计理念：
  * - 统一处理视频和图片类型的显示
  * - 提供缩略图预览和时间信息
@@ -27,17 +27,21 @@ export class VideoContentRenderer implements ContentRenderer<'video' | 'image'> 
     // 判断是否应该显示详细信息（与旧架构逻辑一致）
     const showDetails = this.shouldShowDetails(context)
 
-    return h('div', {
-      class: ['video-content', { selected: isSelected }],
-      style: this.getContentStyles()
-    }, [
-      // 只在showDetails时显示缩略图（与旧架构一致）
-      showDetails ? this.renderThumbnail(data, currentFrame) : null,
-      // 内容信息覆盖层
-      showDetails ? this.renderDetailedInfo(data) : this.renderSimpleInfo(data),
-      // 裁剪指示器
-      this.renderClipIndicators(data)
-    ])
+    return h(
+      'div',
+      {
+        class: ['video-content', { selected: isSelected }],
+        style: this.getContentStyles(),
+      },
+      [
+        // 只在showDetails时显示缩略图（与旧架构一致）
+        showDetails ? this.renderThumbnail(data, currentFrame) : null,
+        // 内容信息覆盖层
+        showDetails ? this.renderDetailedInfo(data) : this.renderSimpleInfo(data),
+        // 裁剪指示器
+        this.renderClipIndicators(data),
+      ],
+    )
   }
 
   getCustomClasses(context: ContentRenderContext<'video' | 'image'>): string[] {
@@ -55,7 +59,9 @@ export class VideoContentRenderer implements ContentRenderer<'video' | 'image'> 
     return classes
   }
 
-  getCustomStyles(context: ContentRenderContext<'video' | 'image'>): Record<string, string | number> {
+  getCustomStyles(
+    context: ContentRenderContext<'video' | 'image'>,
+  ): Record<string, string | number> {
     // 不覆盖背景色，让UnifiedTimelineClip的统一样式生效
     return {}
   }
@@ -84,30 +90,37 @@ export class VideoContentRenderer implements ContentRenderer<'video' | 'image'> 
       alignItems: 'center',
       height: '100%',
       padding: '4px 8px',
-      overflow: 'hidden'
+      overflow: 'hidden',
     }
   }
 
   /**
    * 渲染缩略图
    */
-  private renderThumbnail(data: UnifiedTimelineItemData<'video' | 'image'>, currentFrame: number): VNode {
+  private renderThumbnail(
+    data: UnifiedTimelineItemData<'video' | 'image'>,
+    currentFrame: number,
+  ): VNode {
     const thumbnailUrl = this.getThumbnailUrl(data, currentFrame)
 
     if (thumbnailUrl) {
-      return h('div', {
-        class: 'clip-thumbnail',
-        style: this.getThumbnailContainerStyles()
-      }, [
-        h('img', {
-          class: 'thumbnail-image',
-          src: thumbnailUrl,
-          alt: getTimelineItemDisplayName(data),
-          style: this.getThumbnailImageStyles(),
-          onError: () => this.handleThumbnailError(data),
-          onLoad: () => this.handleThumbnailLoad(data)
-        })
-      ])
+      return h(
+        'div',
+        {
+          class: 'clip-thumbnail',
+          style: this.getThumbnailContainerStyles(),
+        },
+        [
+          h('img', {
+            class: 'thumbnail-image',
+            src: thumbnailUrl,
+            alt: getTimelineItemDisplayName(data),
+            style: this.getThumbnailImageStyles(),
+            onError: () => this.handleThumbnailError(data),
+            onLoad: () => this.handleThumbnailLoad(data),
+          }),
+        ],
+      )
     }
 
     // 如果没有缩略图，显示占位符
@@ -118,63 +131,92 @@ export class VideoContentRenderer implements ContentRenderer<'video' | 'image'> 
    * 渲染缩略图占位符
    */
   private renderThumbnailPlaceholder(data: UnifiedTimelineItemData<'video' | 'image'>): VNode {
-    return h('div', {
-      class: 'clip-thumbnail',
-      style: this.getThumbnailContainerStyles()
-    }, [
-      h('div', {
-        class: 'thumbnail-placeholder',
-        style: this.getThumbnailPlaceholderStyles()
-      }, [
-        h('div', { class: 'loading-spinner', style: this.getLoadingSpinnerStyles() })
-      ])
-    ])
+    return h(
+      'div',
+      {
+        class: 'clip-thumbnail',
+        style: this.getThumbnailContainerStyles(),
+      },
+      [
+        h(
+          'div',
+          {
+            class: 'thumbnail-placeholder',
+            style: this.getThumbnailPlaceholderStyles(),
+          },
+          [h('div', { class: 'loading-spinner', style: this.getLoadingSpinnerStyles() })],
+        ),
+      ],
+    )
   }
 
   /**
    * 渲染详细信息（与旧架构的clip-info一致）
    */
   private renderDetailedInfo(data: UnifiedTimelineItemData<'video' | 'image'>): VNode {
-    return h('div', {
-      class: 'clip-info',
-      style: this.getClipInfoStyles()
-    }, [
-      // 文件名
-      h('div', {
-        class: 'clip-name',
-        style: this.getClipNameStyles()
-      }, getTimelineItemDisplayName(data)),
-      // 时长信息
-      h('div', {
-        class: 'clip-duration',
-        style: this.getClipDurationStyles()
-      }, this.formatTime(this.getDuration(data))),
-      // 倍速信息（仅视频）
-      data.mediaType === 'video' && this.hasSpeedAdjustment(data as UnifiedTimelineItemData<'video'>)
-        ? h('div', {
-            class: 'clip-speed',
-            style: this.getClipSpeedStyles()
-          }, this.getSpeedText(data as UnifiedTimelineItemData<'video'>))
-        : null
-    ])
+    return h(
+      'div',
+      {
+        class: 'clip-info',
+        style: this.getClipInfoStyles(),
+      },
+      [
+        // 文件名
+        h(
+          'div',
+          {
+            class: 'clip-name',
+            style: this.getClipNameStyles(),
+          },
+          getTimelineItemDisplayName(data),
+        ),
+        // 时长信息
+        h(
+          'div',
+          {
+            class: 'clip-duration',
+            style: this.getClipDurationStyles(),
+          },
+          this.formatTime(this.getDuration(data)),
+        ),
+        // 倍速信息（仅视频）
+        data.mediaType === 'video' &&
+        this.hasSpeedAdjustment(data as UnifiedTimelineItemData<'video'>)
+          ? h(
+              'div',
+              {
+                class: 'clip-speed',
+                style: this.getClipSpeedStyles(),
+              },
+              this.getSpeedText(data as UnifiedTimelineItemData<'video'>),
+            )
+          : null,
+      ],
+    )
   }
 
   /**
    * 渲染简化信息（与旧架构的clip-simple一致）
    */
   private renderSimpleInfo(data: UnifiedTimelineItemData<'video' | 'image'>): VNode {
-    return h('div', {
-      class: 'clip-simple',
-      style: this.getClipSimpleStyles()
-    }, [
-      h('div', {
-        class: 'simple-duration',
-        style: this.getSimpleDurationStyles()
-      }, this.formatTime(this.getDuration(data)))
-    ])
+    return h(
+      'div',
+      {
+        class: 'clip-simple',
+        style: this.getClipSimpleStyles(),
+      },
+      [
+        h(
+          'div',
+          {
+            class: 'simple-duration',
+            style: this.getSimpleDurationStyles(),
+          },
+          this.formatTime(this.getDuration(data)),
+        ),
+      ],
+    )
   }
-
-
 
   /**
    * 渲染裁剪指示器
@@ -188,7 +230,7 @@ export class VideoContentRenderer implements ContentRenderer<'video' | 'image'> 
       // 左侧裁剪指示器
       this.hasLeftClipping(data) && h('div', { class: 'clip-indicator clip-left' }, '◀'),
       // 右侧裁剪指示器
-      this.hasRightClipping(data) && h('div', { class: 'clip-indicator clip-right' }, '▶')
+      this.hasRightClipping(data) && h('div', { class: 'clip-indicator clip-right' }, '▶'),
     ])
   }
 
@@ -205,7 +247,7 @@ export class VideoContentRenderer implements ContentRenderer<'video' | 'image'> 
       borderRadius: '2px',
       overflow: 'hidden',
       position: 'relative',
-      flexShrink: '0'
+      flexShrink: '0',
     }
   }
 
@@ -216,7 +258,7 @@ export class VideoContentRenderer implements ContentRenderer<'video' | 'image'> 
     return {
       width: '100%',
       height: '100%',
-      objectFit: 'cover'
+      objectFit: 'cover',
     }
   }
 
@@ -230,7 +272,7 @@ export class VideoContentRenderer implements ContentRenderer<'video' | 'image'> 
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: 'rgba(0, 0, 0, 0.3)'
+      backgroundColor: 'rgba(0, 0, 0, 0.3)',
     }
   }
 
@@ -244,7 +286,7 @@ export class VideoContentRenderer implements ContentRenderer<'video' | 'image'> 
       border: '2px solid rgba(255, 255, 255, 0.3)',
       borderTop: '2px solid var(--color-text-primary)',
       borderRadius: '50%',
-      animation: 'spin 1s linear infinite'
+      animation: 'spin 1s linear infinite',
     }
   }
 
@@ -255,7 +297,7 @@ export class VideoContentRenderer implements ContentRenderer<'video' | 'image'> 
     return {
       flex: '1',
       marginLeft: '6px',
-      minWidth: '0'
+      minWidth: '0',
     }
   }
 
@@ -269,7 +311,7 @@ export class VideoContentRenderer implements ContentRenderer<'video' | 'image'> 
       color: 'white',
       whiteSpace: 'nowrap',
       overflow: 'hidden',
-      textOverflow: 'ellipsis'
+      textOverflow: 'ellipsis',
     }
   }
 
@@ -280,7 +322,7 @@ export class VideoContentRenderer implements ContentRenderer<'video' | 'image'> 
     return {
       fontSize: '9px',
       color: 'rgba(255, 255, 255, 0.8)',
-      marginTop: '1px'
+      marginTop: '1px',
     }
   }
 
@@ -292,7 +334,7 @@ export class VideoContentRenderer implements ContentRenderer<'video' | 'image'> 
       fontSize: '9px',
       color: 'var(--color-speed-indicator)',
       marginTop: '1px',
-      fontWeight: 'bold'
+      fontWeight: 'bold',
     }
   }
 
@@ -306,7 +348,7 @@ export class VideoContentRenderer implements ContentRenderer<'video' | 'image'> 
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      textAlign: 'center'
+      textAlign: 'center',
     }
   }
 
@@ -321,7 +363,7 @@ export class VideoContentRenderer implements ContentRenderer<'video' | 'image'> 
       backgroundColor: 'rgba(0, 0, 0, 0.3)',
       padding: '2px 4px',
       borderRadius: '2px',
-      whiteSpace: 'nowrap'
+      whiteSpace: 'nowrap',
     }
   }
 
@@ -330,7 +372,10 @@ export class VideoContentRenderer implements ContentRenderer<'video' | 'image'> 
   /**
    * 获取缩略图URL
    */
-  private getThumbnailUrl(data: UnifiedTimelineItemData<'video' | 'image'>, currentFrame: number): string | null {
+  private getThumbnailUrl(
+    data: UnifiedTimelineItemData<'video' | 'image'>,
+    currentFrame: number,
+  ): string | null {
     // 优先从runtime中获取缩略图URL
     if (data.runtime.thumbnailUrl) {
       return data.runtime.thumbnailUrl

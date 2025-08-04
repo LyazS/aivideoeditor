@@ -12,10 +12,10 @@ import type { UnifiedTrackType, TrackStatus } from './TrackTypes'
  */
 export const UNIFIED_TRACK_TYPES = {
   VIDEO: 'video',
-  AUDIO: 'audio', 
+  AUDIO: 'audio',
   TEXT: 'text',
   SUBTITLE: 'subtitle',
-  EFFECT: 'effect'
+  EFFECT: 'effect',
 } as const
 
 /**
@@ -24,7 +24,7 @@ export const UNIFIED_TRACK_TYPES = {
 export const TRACK_STATUS = {
   ACTIVE: 'active',
   LOCKED: 'locked',
-  DISABLED: 'disabled'
+  DISABLED: 'disabled',
 } as const
 
 // ==================== 默认配置 ====================
@@ -42,7 +42,7 @@ export const TRACK_TYPE_DEFAULTS = {
     hasAudio: true,
     supportsEffects: true,
     supportsTransform: true,
-    maxItems: 100
+    maxItems: 100,
   },
   audio: {
     height: 60, // 统一轨道高度为60px（与旧架构一致）
@@ -53,7 +53,7 @@ export const TRACK_TYPE_DEFAULTS = {
     hasAudio: true,
     supportsEffects: true,
     supportsTransform: false,
-    maxItems: 50
+    maxItems: 50,
   },
   text: {
     height: 60, // 统一轨道高度为60px（与旧架构一致）
@@ -64,7 +64,7 @@ export const TRACK_TYPE_DEFAULTS = {
     hasAudio: false,
     supportsEffects: true,
     supportsTransform: true,
-    maxItems: 200
+    maxItems: 200,
   },
   subtitle: {
     height: 60, // 统一轨道高度为60px（与旧架构一致）
@@ -75,7 +75,7 @@ export const TRACK_TYPE_DEFAULTS = {
     hasAudio: false,
     supportsEffects: false,
     supportsTransform: false,
-    maxItems: 500
+    maxItems: 500,
   },
   effect: {
     height: 60, // 统一轨道高度为60px（与旧架构一致）
@@ -86,8 +86,8 @@ export const TRACK_TYPE_DEFAULTS = {
     hasAudio: true,
     supportsEffects: false,
     supportsTransform: true,
-    maxItems: 20
-  }
+    maxItems: 20,
+  },
 } as const
 
 /**
@@ -100,7 +100,7 @@ export const TRACK_LAYOUT_DEFAULTS = {
   COLLAPSED_HEIGHT: 30,
   EXPANDED_HEIGHT_MULTIPLIER: 1.5,
   HEADER_HEIGHT: 40,
-  CONTENT_PADDING: 8
+  CONTENT_PADDING: 8,
 } as const
 
 /**
@@ -114,7 +114,7 @@ export const TRACK_AUDIO_DEFAULTS = {
   DEFAULT_PAN: 0.0,
   MIN_PAN: -1.0,
   MAX_PAN: 1.0,
-  PAN_STEP: 0.1
+  PAN_STEP: 0.1,
 } as const
 
 /**
@@ -125,7 +125,7 @@ export const TRACK_VISIBILITY_DEFAULTS = {
   MIN_OPACITY: 0.0,
   MAX_OPACITY: 1.0,
   OPACITY_STEP: 0.1,
-  FADE_DURATION: 300
+  FADE_DURATION: 300,
 } as const
 
 // ==================== UI 常量 ====================
@@ -137,24 +137,24 @@ export const TRACK_COLOR_THEMES = {
   default: {
     video: '#4CAF50',
     audio: '#2196F3',
-    text: '#FF9800', 
+    text: '#FF9800',
     subtitle: '#9C27B0',
-    effect: '#F44336'
+    effect: '#F44336',
   },
   dark: {
     video: '#2E7D32',
     audio: '#1565C0',
     text: '#E65100',
     subtitle: '#6A1B9A',
-    effect: '#C62828'
+    effect: '#C62828',
   },
   light: {
     video: '#81C784',
     audio: '#64B5F6',
     text: '#FFB74D',
     subtitle: '#BA68C8',
-    effect: '#E57373'
-  }
+    effect: '#E57373',
+  },
 } as const
 
 /**
@@ -165,32 +165,32 @@ export const TRACK_ICONS = {
     default: 'video-camera',
     active: 'video-camera-outline',
     locked: 'video-camera-off',
-    disabled: 'video-camera-off-outline'
+    disabled: 'video-camera-off-outline',
   },
   audio: {
     default: 'volume-up',
     active: 'volume-high',
     locked: 'volume-off',
-    disabled: 'volume-mute'
+    disabled: 'volume-mute',
   },
   text: {
     default: 'text',
     active: 'text-box',
     locked: 'text-box-outline',
-    disabled: 'text-box-remove'
+    disabled: 'text-box-remove',
   },
   subtitle: {
     default: 'closed-captioning',
     active: 'closed-captioning-outline',
     locked: 'closed-captioning-off',
-    disabled: 'closed-captioning-off-outline'
+    disabled: 'closed-captioning-off-outline',
   },
   effect: {
     default: 'magic-wand',
     active: 'magic-wand-outline',
     locked: 'magic-wand-off',
-    disabled: 'magic-wand-off-outline'
-  }
+    disabled: 'magic-wand-off-outline',
+  },
 } as const
 
 /**
@@ -201,32 +201,32 @@ export const TRACK_CONTROLS = {
     icon: 'eye',
     iconOff: 'eye-off',
     tooltip: '切换可见性',
-    shortcut: 'V'
+    shortcut: 'V',
   },
   mute: {
     icon: 'volume-up',
     iconOff: 'volume-off',
     tooltip: '切换静音',
-    shortcut: 'M'
+    shortcut: 'M',
   },
   solo: {
     icon: 'headphones',
     iconOff: 'headphones-off',
     tooltip: '独奏模式',
-    shortcut: 'S'
+    shortcut: 'S',
   },
   lock: {
     icon: 'lock-open',
     iconOff: 'lock',
     tooltip: '锁定轨道',
-    shortcut: 'L'
+    shortcut: 'L',
   },
   collapse: {
     icon: 'chevron-up',
     iconOff: 'chevron-down',
     tooltip: '折叠/展开',
-    shortcut: 'C'
-  }
+    shortcut: 'C',
+  },
 } as const
 
 // ==================== 轨道限制 ====================
@@ -241,15 +241,15 @@ export const TRACK_LIMITS = {
     audio: 30,
     text: 50,
     subtitle: 10,
-    effect: 10
+    effect: 10,
   },
   MIN_TRACKS_REQUIRED: {
     video: 1,
     audio: 0,
     text: 0,
     subtitle: 0,
-    effect: 0
-  }
+    effect: 0,
+  },
 } as const
 
 /**
@@ -261,11 +261,11 @@ export const TRACK_PERFORMANCE = {
     audio: 200,
     text: 500,
     subtitle: 1000,
-    effect: 50
+    effect: 50,
   },
   RENDER_BATCH_SIZE: 10,
   UPDATE_THROTTLE_MS: 16, // 60fps
-  DEBOUNCE_MS: 300
+  DEBOUNCE_MS: 300,
 } as const
 
 // ==================== 轨道验证规则 ====================
@@ -277,7 +277,7 @@ export const TRACK_NAME_VALIDATION = {
   MIN_LENGTH: 1,
   MAX_LENGTH: 50,
   ALLOWED_CHARS: /^[a-zA-Z0-9\u4e00-\u9fa5\s\-_()（）]+$/,
-  RESERVED_NAMES: ['default', 'master', 'main', 'output'] as readonly string[]
+  RESERVED_NAMES: ['default', 'master', 'main', 'output'] as readonly string[],
 } as const
 
 /**
@@ -286,20 +286,20 @@ export const TRACK_NAME_VALIDATION = {
 export const TRACK_PROPERTY_VALIDATION = {
   height: {
     min: TRACK_LAYOUT_DEFAULTS.MIN_HEIGHT,
-    max: TRACK_LAYOUT_DEFAULTS.MAX_HEIGHT
+    max: TRACK_LAYOUT_DEFAULTS.MAX_HEIGHT,
   },
   volume: {
     min: TRACK_AUDIO_DEFAULTS.MIN_VOLUME,
-    max: TRACK_AUDIO_DEFAULTS.MAX_VOLUME
+    max: TRACK_AUDIO_DEFAULTS.MAX_VOLUME,
   },
   opacity: {
     min: TRACK_VISIBILITY_DEFAULTS.MIN_OPACITY,
-    max: TRACK_VISIBILITY_DEFAULTS.MAX_OPACITY
+    max: TRACK_VISIBILITY_DEFAULTS.MAX_OPACITY,
   },
   order: {
     min: 0,
-    max: 999
-  }
+    max: 999,
+  },
 } as const
 
 // ==================== 轨道事件类型 ====================
@@ -312,27 +312,27 @@ export const TRACK_EVENTS = {
   CREATED: 'track:created',
   DELETED: 'track:deleted',
   UPDATED: 'track:updated',
-  
+
   // 轨道状态变化
   STATUS_CHANGED: 'track:status-changed',
   VISIBILITY_CHANGED: 'track:visibility-changed',
   AUDIO_CHANGED: 'track:audio-changed',
-  
+
   // 轨道布局变化
   HEIGHT_CHANGED: 'track:height-changed',
   ORDER_CHANGED: 'track:order-changed',
   COLLAPSED: 'track:collapsed',
   EXPANDED: 'track:expanded',
-  
+
   // 轨道选择
   SELECTED: 'track:selected',
   DESELECTED: 'track:deselected',
   ACTIVATED: 'track:activated',
-  
+
   // 批量操作
   BATCH_UPDATED: 'track:batch-updated',
   REORDERED: 'track:reordered',
-  RESET: 'track:reset'
+  RESET: 'track:reset',
 } as const
 
 // ==================== 轨道快捷键 ====================
@@ -345,23 +345,23 @@ export const TRACK_SHORTCUTS = {
   CREATE_VIDEO_TRACK: 'Ctrl+Shift+V',
   CREATE_AUDIO_TRACK: 'Ctrl+Shift+A',
   CREATE_TEXT_TRACK: 'Ctrl+Shift+T',
-  
+
   // 轨道操作
   TOGGLE_VISIBILITY: 'V',
   TOGGLE_MUTE: 'M',
   TOGGLE_SOLO: 'S',
   TOGGLE_LOCK: 'L',
   TOGGLE_COLLAPSE: 'C',
-  
+
   // 轨道选择
   SELECT_ALL_TRACKS: 'Ctrl+A',
   DESELECT_ALL_TRACKS: 'Ctrl+D',
   SELECT_NEXT_TRACK: 'ArrowDown',
   SELECT_PREV_TRACK: 'ArrowUp',
-  
+
   // 轨道删除
   DELETE_SELECTED_TRACKS: 'Delete',
-  DELETE_EMPTY_TRACKS: 'Ctrl+Delete'
+  DELETE_EMPTY_TRACKS: 'Ctrl+Delete',
 } as const
 
 // ==================== 导出所有常量 ====================
@@ -380,8 +380,8 @@ export const TRACK_CONSTANTS = {
   PERFORMANCE: TRACK_PERFORMANCE,
   VALIDATION: {
     NAME: TRACK_NAME_VALIDATION,
-    PROPERTY: TRACK_PROPERTY_VALIDATION
+    PROPERTY: TRACK_PROPERTY_VALIDATION,
   },
   EVENTS: TRACK_EVENTS,
-  SHORTCUTS: TRACK_SHORTCUTS
+  SHORTCUTS: TRACK_SHORTCUTS,
 } as const

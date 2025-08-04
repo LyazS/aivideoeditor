@@ -3,18 +3,11 @@ import { framesToTimecode } from '../../utils/UnifiedTimeUtils'
 import type { SimpleCommand } from './types'
 
 // 类型导入
-import type {
-  UnifiedTimelineItemData,
-} from '../../timelineitem/TimelineItemData'
+import type { UnifiedTimelineItemData } from '../../timelineitem/TimelineItemData'
 
-import type {
-  UnifiedMediaItemData,
-  MediaTypeOrUnknown,
-} from '../../mediaitem/types'
+import type { UnifiedMediaItemData, MediaTypeOrUnknown } from '../../mediaitem/types'
 
-import type {
-  UnifiedTimeRange,
-} from '../../types/timeRange'
+import type { UnifiedTimeRange } from '../../types/timeRange'
 
 import {
   isKnownTimelineItem,

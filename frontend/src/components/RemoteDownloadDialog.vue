@@ -5,7 +5,9 @@
         <h3>远程下载</h3>
         <button class="close-btn" @click="closeDialog">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z" />
+            <path
+              d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z"
+            />
           </svg>
         </button>
       </div>
@@ -85,7 +87,12 @@
 
           <!-- 按钮组 -->
           <div class="dialog-actions">
-            <button type="button" class="btn btn-secondary" @click="closeDialog" :disabled="isProcessing">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              @click="closeDialog"
+              :disabled="isProcessing"
+            >
               取消
             </button>
             <button type="submit" class="btn btn-primary" :disabled="!isFormValid || isProcessing">
@@ -115,7 +122,7 @@ interface Emits {
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  isProcessing: false
+  isProcessing: false,
 })
 
 const emit = defineEmits<Emits>()
@@ -125,7 +132,7 @@ const form = ref({
   url: '',
   duration: 5.0,
   name: '',
-  timeout: 30
+  timeout: 30,
 })
 
 // URL验证错误
@@ -133,32 +140,36 @@ const urlError = ref('')
 
 // 表单验证
 const isFormValid = computed(() => {
-  return form.value.url.trim() !== '' && 
-         form.value.duration > 0 && 
-         !urlError.value
+  return form.value.url.trim() !== '' && form.value.duration > 0 && !urlError.value
 })
 
 // 监听URL变化进行验证
-watch(() => form.value.url, (newUrl) => {
-  urlError.value = ''
-  if (newUrl.trim()) {
-    try {
-      const url = new URL(newUrl)
-      if (!['http:', 'https:'].includes(url.protocol)) {
-        urlError.value = '只支持 HTTP 和 HTTPS 协议'
+watch(
+  () => form.value.url,
+  (newUrl) => {
+    urlError.value = ''
+    if (newUrl.trim()) {
+      try {
+        const url = new URL(newUrl)
+        if (!['http:', 'https:'].includes(url.protocol)) {
+          urlError.value = '只支持 HTTP 和 HTTPS 协议'
+        }
+      } catch {
+        urlError.value = '请输入有效的URL地址'
       }
-    } catch {
-      urlError.value = '请输入有效的URL地址'
     }
-  }
-})
+  },
+)
 
 // 监听显示状态，重置表单
-watch(() => props.show, (newShow) => {
-  if (newShow) {
-    resetForm()
-  }
-})
+watch(
+  () => props.show,
+  (newShow) => {
+    if (newShow) {
+      resetForm()
+    }
+  },
+)
 
 // 重置表单
 function resetForm() {
@@ -166,7 +177,7 @@ function resetForm() {
     url: '',
     duration: 5.0,
     name: '',
-    timeout: 30
+    timeout: 30,
   }
   urlError.value = ''
 }
@@ -193,7 +204,7 @@ function handleSubmit() {
   const config: RemoteDownloadConfig = {
     type: 'remote-download',
     url: form.value.url.trim(),
-    timeout: form.value.timeout * 1000 // 转换为毫秒
+    timeout: form.value.timeout * 1000, // 转换为毫秒
   }
 
   const expectedDurationFrames = Math.round(form.value.duration * 30) // 假设30fps

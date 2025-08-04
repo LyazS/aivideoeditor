@@ -1,7 +1,7 @@
 /**
  * 内容渲染器工厂
  * 基于状态优先的渲染策略选择合适的渲染器
- * 
+ *
  * 设计理念：
  * - 状态优先：优先基于状态选择渲染器，确保状态显示的一致性
  * - 媒体类型次之：ready状态下基于媒体类型选择渲染器
@@ -15,7 +15,7 @@ import type {
   ContentRenderer,
   ContentRenderContext,
   StatusRendererType,
-  MediaTypeRendererType
+  MediaTypeRendererType,
 } from '../../types/clipRenderer'
 import type { UnifiedTimelineItemData } from '../../timelineitem/TimelineItemData'
 import type { MediaTypeOrUnknown } from '../../mediaitem/types'
@@ -37,25 +37,33 @@ class DefaultContentRenderer implements ContentRenderer<MediaTypeOrUnknown> {
   renderContent(context: ContentRenderContext<MediaTypeOrUnknown>): VNode {
     const { data, isSelected } = context
 
-    return h('div', {
-      class: ['default-renderer-content', { selected: isSelected }]
-    }, [
-      h('div', { class: 'media-type-indicator' }, data.mediaType),
-      h('div', { class: 'status-indicator' }, data.timelineStatus),
-      h('div', { class: 'item-name' }, getTimelineItemDisplayName(data))
-    ])
+    return h(
+      'div',
+      {
+        class: ['default-renderer-content', { selected: isSelected }],
+      },
+      [
+        h('div', { class: 'media-type-indicator' }, data.mediaType),
+        h('div', { class: 'status-indicator' }, data.timelineStatus),
+        h('div', { class: 'item-name' }, getTimelineItemDisplayName(data)),
+      ],
+    )
   }
 
   renderStatusIndicator(context: ContentRenderContext<MediaTypeOrUnknown>): VNode | null {
     const { data } = context
-    
+
     if (data.timelineStatus === 'ready') {
       return null
     }
 
-    return h('div', { 
-      class: ['default-status-indicator', `status-${data.timelineStatus}`] 
-    }, this.getStatusIcon(data.timelineStatus))
+    return h(
+      'div',
+      {
+        class: ['default-status-indicator', `status-${data.timelineStatus}`],
+      },
+      this.getStatusIcon(data.timelineStatus),
+    )
   }
 
   getCustomClasses(context: ContentRenderContext<MediaTypeOrUnknown>): string[] {
@@ -101,7 +109,7 @@ export class ContentRendererFactory {
    * 优先基于状态选择，然后基于媒体类型选择
    */
   static getRenderer<T extends MediaTypeOrUnknown>(
-    data: UnifiedTimelineItemData<T>
+    data: UnifiedTimelineItemData<T>,
   ): ContentRenderer<T> {
     // 确保渲染器已初始化
     this.ensureInitialized()
@@ -133,10 +141,7 @@ export class ContentRendererFactory {
    * @param status 状态类型
    * @param renderer 渲染器实例
    */
-  static registerStatusRenderer(
-    status: TimelineItemStatus,
-    renderer: ContentRenderer
-  ): void {
+  static registerStatusRenderer(status: TimelineItemStatus, renderer: ContentRenderer): void {
     this.statusRenderers.set(status, renderer)
   }
 
@@ -147,7 +152,7 @@ export class ContentRendererFactory {
    */
   static registerMediaTypeRenderer<T extends MediaTypeOrUnknown>(
     type: T,
-    renderer: ContentRenderer<T>
+    renderer: ContentRenderer<T>,
   ): void {
     this.mediaTypeRenderers.set(type, renderer)
   }
@@ -220,7 +225,7 @@ export class ContentRendererFactory {
    * 获取渲染器选择的调试信息
    */
   static getDebugInfo<T extends MediaTypeOrUnknown>(
-    data: UnifiedTimelineItemData<T>
+    data: UnifiedTimelineItemData<T>,
   ): {
     selectedRenderer: string
     availableStatusRenderers: string[]
@@ -247,7 +252,7 @@ export class ContentRendererFactory {
       selectedRenderer,
       availableStatusRenderers: Array.from(this.statusRenderers.keys()),
       availableMediaTypeRenderers: Array.from(this.mediaTypeRenderers.keys()),
-      selectionReason
+      selectionReason,
     }
   }
 

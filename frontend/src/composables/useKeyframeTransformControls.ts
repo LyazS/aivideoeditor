@@ -161,8 +161,12 @@ export function useKeyframeTransformControls(options: KeyframeTransformControlsO
     const finalTransform = transform || {
       x: transformX.value,
       y: transformY.value,
-      width: hasVisualProps(selectedTimelineItem.value) ? selectedTimelineItem.value.config.width : 0,
-      height: hasVisualProps(selectedTimelineItem.value) ? selectedTimelineItem.value.config.height : 0,
+      width: hasVisualProps(selectedTimelineItem.value)
+        ? selectedTimelineItem.value.config.width
+        : 0,
+      height: hasVisualProps(selectedTimelineItem.value)
+        ? selectedTimelineItem.value.config.height
+        : 0,
       rotation: rotation.value,
       opacity: opacity.value,
       zIndex: zIndex.value,
@@ -256,7 +260,11 @@ export function useKeyframeTransformControls(options: KeyframeTransformControlsO
     proportionalScale.value = !proportionalScale.value
 
     // 如果刚刚开启等比缩放，使用当前X缩放值作为统一缩放值，同时更新Y缩放
-    if (proportionalScale.value && selectedTimelineItem.value && hasVisualProps(selectedTimelineItem.value)) {
+    if (
+      proportionalScale.value &&
+      selectedTimelineItem.value &&
+      hasVisualProps(selectedTimelineItem.value)
+    ) {
       // hasVisualProps 类型守卫确保了 config 具有视觉属性
       const config = selectedTimelineItem.value.config
       const newSize = {
@@ -271,7 +279,11 @@ export function useKeyframeTransformControls(options: KeyframeTransformControlsO
    * 更新统一缩放
    */
   const updateUniformScale = (newScale: number) => {
-    if (proportionalScale.value && selectedTimelineItem.value && hasVisualProps(selectedTimelineItem.value)) {
+    if (
+      proportionalScale.value &&
+      selectedTimelineItem.value &&
+      hasVisualProps(selectedTimelineItem.value)
+    ) {
       // hasVisualProps 类型守卫确保了 config 具有视觉属性
       const config = selectedTimelineItem.value.config
       const newSize = {

@@ -5,9 +5,17 @@
  */
 
 import { DataSourceManager, type AcquisitionTask } from './BaseDataSourceManager'
-import type { RemoteFileSourceData, RemoteFileConfig, DownloadProgress } from '../sources/RemoteFileSource'
+import type {
+  RemoteFileSourceData,
+  RemoteFileConfig,
+  DownloadProgress,
+} from '../sources/RemoteFileSource'
 import { RemoteFileQueries, DEFAULT_REMOTE_CONFIG } from '../sources/RemoteFileSource'
-import { DataSourceBusinessActions, DataSourceDataActions, DataSourceQueries } from '../sources/BaseDataSource'
+import {
+  DataSourceBusinessActions,
+  DataSourceDataActions,
+  DataSourceQueries,
+} from '../sources/BaseDataSource'
 
 // ==================== 下载管理器配置 ====================
 
@@ -26,11 +34,11 @@ export interface RemoteFileManagerConfig {
  * 默认配置
  */
 export const DEFAULT_MANAGER_CONFIG: RemoteFileManagerConfig = {
-  maxConcurrentDownloads: 3,    // 限制并发下载数
-  defaultTimeout: 30000,        // 30秒超时
-  defaultRetryCount: 3,         // 重试3次
-  defaultRetryDelay: 1000,      // 重试延迟1秒
-  maxRetryDelay: 30000          // 最大重试延迟30秒
+  maxConcurrentDownloads: 3, // 限制并发下载数
+  defaultTimeout: 30000, // 30秒超时
+  defaultRetryCount: 3, // 重试3次
+  defaultRetryDelay: 1000, // 重试延迟1秒
+  maxRetryDelay: 30000, // 最大重试延迟30秒
 }
 
 // ==================== 远程文件管理器 ====================
@@ -115,7 +123,6 @@ export class RemoteFileManager extends DataSourceManager<RemoteFileSourceData> {
 
       // 开始下载
       await this.downloadFile(source, config)
-
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : '下载失败'
       DataSourceBusinessActions.setError(source, errorMessage)
@@ -125,7 +132,10 @@ export class RemoteFileManager extends DataSourceManager<RemoteFileSourceData> {
   /**
    * 下载文件
    */
-  private async downloadFile(source: RemoteFileSourceData, config: Required<RemoteFileConfig>): Promise<void> {
+  private async downloadFile(
+    source: RemoteFileSourceData,
+    config: Required<RemoteFileConfig>,
+  ): Promise<void> {
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), config.timeout)
 
@@ -136,7 +146,7 @@ export class RemoteFileManager extends DataSourceManager<RemoteFileSourceData> {
       // 发起请求
       const response = await fetch(source.remoteUrl, {
         headers: config.headers,
-        signal: controller.signal
+        signal: controller.signal,
       })
 
       clearTimeout(timeoutId)
@@ -185,12 +195,11 @@ export class RemoteFileManager extends DataSourceManager<RemoteFileSourceData> {
         source,
         file,
         url,
-        async (src) => await this.detectAndSetMediaType(src as RemoteFileSourceData)
+        async (src) => await this.detectAndSetMediaType(src as RemoteFileSourceData),
       )
 
       // 更新媒体项目名称为实际的文件名
       await this.updateMediaItemNameWithFileName(source, fileName)
-
     } catch (error) {
       clearTimeout(timeoutId)
 
@@ -207,7 +216,11 @@ export class RemoteFileManager extends DataSourceManager<RemoteFileSourceData> {
   /**
    * 更新下载进度
    */
-  private updateDownloadProgress(source: RemoteFileSourceData, downloadedBytes: number, totalBytes: number): void {
+  private updateDownloadProgress(
+    source: RemoteFileSourceData,
+    downloadedBytes: number,
+    totalBytes: number,
+  ): void {
     source.downloadedBytes = downloadedBytes
 
     // 计算进度百分比
@@ -351,7 +364,7 @@ export class RemoteFileManager extends DataSourceManager<RemoteFileSourceData> {
       'text/plain': '.txt',
       'application/json': '.json',
       'application/xml': '.xml',
-      'text/html': '.html'
+      'text/html': '.html',
     }
 
     return mimeToExtension[mimeType] || '.bin'
@@ -448,7 +461,7 @@ export class RemoteFileManager extends DataSourceManager<RemoteFileSourceData> {
    */
   updateConfig(newConfig: Partial<RemoteFileManagerConfig>): void {
     this.config = { ...this.config, ...newConfig }
-    
+
     // 更新并发数
     if (newConfig.maxConcurrentDownloads) {
       this.setMaxConcurrentTasks(newConfig.maxConcurrentDownloads)
@@ -486,7 +499,9 @@ export class RemoteFileManager extends DataSourceManager<RemoteFileSourceData> {
       // 这里就不需要类型守卫了
       if (mediaItem && mediaItem.mediaType === 'unknown') {
         mediaItem.mediaType = detectedType
-        console.log(`🔍 [RemoteFileManager] 媒体类型检测并设置完成: ${source.file.name} -> ${detectedType}`)
+        console.log(
+          `🔍 [RemoteFileManager] 媒体类型检测并设置完成: ${source.file.name} -> ${detectedType}`,
+        )
       } else if (!mediaItem) {
         console.warn(`找不到数据源ID为 ${source.id} 的媒体项目`)
       } else {
@@ -500,7 +515,10 @@ export class RemoteFileManager extends DataSourceManager<RemoteFileSourceData> {
   /**
    * 更新媒体项目名称为实际的文件名（从HTTP响应头获取的更准确的文件名）
    */
-  private async updateMediaItemNameWithFileName(source: RemoteFileSourceData, fileName: string): Promise<void> {
+  private async updateMediaItemNameWithFileName(
+    source: RemoteFileSourceData,
+    fileName: string,
+  ): Promise<void> {
     try {
       // 使用媒体模块方法查找对应的媒体项目
       const { useUnifiedStore } = await import('../unifiedStore')
@@ -512,10 +530,16 @@ export class RemoteFileManager extends DataSourceManager<RemoteFileSourceData> {
         const urlFileName = RemoteFileManager.extractFileNameFromUrl(source.remoteUrl)
 
         // 如果当前名称是从URL提取的文件名，或者是默认的"远程文件"，则更新为更准确的文件名
-        if (mediaItem.name === urlFileName || mediaItem.name === '远程文件' || mediaItem.name.startsWith('remote_file_')) {
+        if (
+          mediaItem.name === urlFileName ||
+          mediaItem.name === '远程文件' ||
+          mediaItem.name.startsWith('remote_file_')
+        ) {
           const { UnifiedMediaItemActions } = await import('../mediaitem')
           UnifiedMediaItemActions.updateName(mediaItem, fileName)
-          console.log(`📝 [RemoteFileManager] 媒体项目名称已更新为更准确的文件名: ${mediaItem.name} -> ${fileName}`)
+          console.log(
+            `📝 [RemoteFileManager] 媒体项目名称已更新为更准确的文件名: ${mediaItem.name} -> ${fileName}`,
+          )
         } else {
           console.log(`📝 [RemoteFileManager] 媒体项目已有自定义名称，跳过更新: ${mediaItem.name}`)
         }
@@ -527,34 +551,32 @@ export class RemoteFileManager extends DataSourceManager<RemoteFileSourceData> {
     }
   }
 
-
-
   /**
    * 批量下载远程文件
    */
   async downloadBatchFiles(urls: string[]): Promise<{
     successful: RemoteFileSourceData[]
-    failed: { url: string, error: string }[]
+    failed: { url: string; error: string }[]
   }> {
     const results = {
       successful: [] as RemoteFileSourceData[],
-      failed: [] as { url: string, error: string }[]
+      failed: [] as { url: string; error: string }[],
     }
 
     // 为每个URL创建数据源
     const { DataSourceFactory } = await import('../sources/DataSourceTypes')
-    const sources = urls.map(url => {
+    const sources = urls.map((url) => {
       return DataSourceFactory.createRemoteSource(url, {
         timeout: this.config.defaultTimeout,
         retryCount: this.config.defaultRetryCount,
-        retryDelay: this.config.defaultRetryDelay
+        retryDelay: this.config.defaultRetryDelay,
       })
     })
 
     // 并发处理所有下载
     const promises = sources.map(async (source, index) => {
       const taskId = `batch_${Date.now()}_${index}`
-      
+
       return new Promise<void>((resolve) => {
         // 监听状态变化
         const checkStatus = () => {
@@ -564,7 +586,7 @@ export class RemoteFileManager extends DataSourceManager<RemoteFileSourceData> {
           } else if (source.status === 'error' || source.status === 'cancelled') {
             results.failed.push({
               url: urls[index],
-              error: source.errorMessage || '下载失败'
+              error: source.errorMessage || '下载失败',
             })
             resolve()
           } else {
@@ -598,9 +620,9 @@ export class RemoteFileManager extends DataSourceManager<RemoteFileSourceData> {
     averageDownloadTime: number
   } {
     const tasks = this.getAllTasks()
-    const completedTasks = tasks.filter(task => task.status === 'completed')
-    const activeTasks = tasks.filter(task => task.status === 'running')
-    const failedTasks = tasks.filter(task => task.status === 'failed')
+    const completedTasks = tasks.filter((task) => task.status === 'completed')
+    const activeTasks = tasks.filter((task) => task.status === 'running')
+    const failedTasks = tasks.filter((task) => task.status === 'failed')
 
     let totalBytesDownloaded = 0
     let totalDownloadTime = 0
@@ -622,13 +644,13 @@ export class RemoteFileManager extends DataSourceManager<RemoteFileSourceData> {
       }
     }
 
-    const averageDownloadSpeed = speedSamples.length > 0 
-      ? speedSamples.reduce((sum, speed) => sum + speed, 0) / speedSamples.length
-      : 0
+    const averageDownloadSpeed =
+      speedSamples.length > 0
+        ? speedSamples.reduce((sum, speed) => sum + speed, 0) / speedSamples.length
+        : 0
 
-    const averageDownloadTime = completedTasks.length > 0
-      ? totalDownloadTime / completedTasks.length
-      : 0
+    const averageDownloadTime =
+      completedTasks.length > 0 ? totalDownloadTime / completedTasks.length : 0
 
     return {
       totalDownloads: tasks.length,
@@ -637,7 +659,7 @@ export class RemoteFileManager extends DataSourceManager<RemoteFileSourceData> {
       failedDownloads: failedTasks.length,
       totalBytesDownloaded,
       averageDownloadSpeed,
-      averageDownloadTime
+      averageDownloadTime,
     }
   }
 
@@ -653,12 +675,12 @@ export class RemoteFileManager extends DataSourceManager<RemoteFileSourceData> {
     speed?: string
     timeRemaining?: string
   }> {
-    const activeTasks = this.getAllTasks().filter(task => task.status === 'running')
-    
-    return activeTasks.map(task => {
+    const activeTasks = this.getAllTasks().filter((task) => task.status === 'running')
+
+    return activeTasks.map((task) => {
       const source = task.source
       const progressInfo = RemoteFileQueries.getFormattedProgress(source)
-      
+
       return {
         taskId: task.id,
         url: source.remoteUrl,
@@ -666,7 +688,7 @@ export class RemoteFileManager extends DataSourceManager<RemoteFileSourceData> {
         downloadedBytes: progressInfo.loaded,
         totalBytes: progressInfo.total,
         speed: progressInfo.speed,
-        timeRemaining: progressInfo.timeRemaining
+        timeRemaining: progressInfo.timeRemaining,
       }
     })
   }
@@ -675,8 +697,8 @@ export class RemoteFileManager extends DataSourceManager<RemoteFileSourceData> {
    * 暂停所有下载
    */
   pauseAllDownloads(): void {
-    const activeTasks = this.getAllTasks().filter(task => task.status === 'running')
-    
+    const activeTasks = this.getAllTasks().filter((task) => task.status === 'running')
+
     for (const task of activeTasks) {
       this.cancelTask(task.id)
     }
@@ -709,15 +731,15 @@ export class RemoteFileManager extends DataSourceManager<RemoteFileSourceData> {
     error?: string
   }> {
     try {
-      const response = await fetch(url, { 
+      const response = await fetch(url, {
         method: 'HEAD',
-        signal: AbortSignal.timeout(5000) // 5秒超时
+        signal: AbortSignal.timeout(5000), // 5秒超时
       })
 
       if (!response.ok) {
         return {
           accessible: false,
-          error: `HTTP ${response.status}: ${response.statusText}`
+          error: `HTTP ${response.status}: ${response.statusText}`,
         }
       }
 
@@ -727,12 +749,12 @@ export class RemoteFileManager extends DataSourceManager<RemoteFileSourceData> {
       return {
         accessible: true,
         contentLength: contentLength ? parseInt(contentLength, 10) : undefined,
-        contentType: contentType || undefined
+        contentType: contentType || undefined,
       }
     } catch (error) {
       return {
         accessible: false,
-        error: error instanceof Error ? error.message : '检查失败'
+        error: error instanceof Error ? error.message : '检查失败',
       }
     }
   }

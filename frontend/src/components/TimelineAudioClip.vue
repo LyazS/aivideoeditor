@@ -7,7 +7,10 @@
     :total-duration-frames="totalDurationFrames"
     class="audio-clip"
     @select="$emit('select', $event)"
-    @update-position="(timelineItemId, newPosition, newTrackId) => $emit('update-position', timelineItemId, newPosition, newTrackId)"
+    @update-position="
+      (timelineItemId, newPosition, newTrackId) =>
+        $emit('update-position', timelineItemId, newPosition, newTrackId)
+    "
     @remove="$emit('remove', $event)"
     @resize-update="handleResizeUpdate"
   >
@@ -16,35 +19,31 @@
       <div class="audio-content">
         <!-- 音频波形显示 -->
         <div v-if="showWaveform" class="audio-waveform">
-          <svg 
-            :width="clipWidth" 
-            :height="clipHeight - 20"
-            class="waveform-svg"
-          >
+          <svg :width="clipWidth" :height="clipHeight - 20" class="waveform-svg">
             <!-- 波形路径 -->
-            <path 
-              :d="waveformPath" 
-              fill="none" 
-              stroke="currentColor" 
+            <path
+              :d="waveformPath"
+              fill="none"
+              stroke="currentColor"
               stroke-width="1"
               opacity="0.7"
             />
           </svg>
         </div>
-        
+
         <!-- 音频信息显示 -->
         <div class="audio-info">
           <div class="audio-name">{{ audioDisplayName }}</div>
           <div class="audio-duration">{{ formatDurationFromFrames(audioDurationFrames) }}</div>
         </div>
-        
+
         <!-- 音频控制指示器 -->
         <div class="audio-controls">
           <div v-if="audioConfig.isMuted" class="mute-indicator">🔇</div>
           <div class="volume-indicator">{{ Math.round(audioConfig.volume * 100) }}%</div>
         </div>
       </div>
-      
+
       <!-- 工具提示 -->
       <ClipTooltip
         v-if="showTooltip"
@@ -127,22 +126,22 @@ const showWaveform = computed(() => {
 // 简化的波形路径（实际应该从音频数据生成）
 const waveformPath = computed(() => {
   if (!showWaveform.value) return ''
-  
+
   // 生成简单的示例波形
   const width = clipWidth.value
   const height = clipHeight.value - 20
   const centerY = height / 2
-  
+
   let path = `M 0 ${centerY}`
   const samples = Math.min(width / 2, 200) // 控制采样点数量
-  
+
   for (let i = 1; i < samples; i++) {
     const x = (i / samples) * width
     const amplitude = Math.sin(i * 0.1) * Math.random() * 0.3 + 0.1
     const y = centerY + amplitude * centerY * (Math.random() > 0.5 ? 1 : -1)
     path += ` L ${x} ${y}`
   }
-  
+
   return path
 })
 
@@ -161,7 +160,7 @@ async function handleResizeUpdate(
   itemId: string,
   newStartTime: number,
   newEndTime: number,
-  direction: 'left' | 'right'
+  direction: 'left' | 'right',
 ) {
   console.log('🔧 [AudioClip] 处理resize-update事件:', {
     itemId,
@@ -290,21 +289,37 @@ onMounted(() => {
 
 /* 选中状态的特殊样式 */
 .audio-clip.selected {
-  background: linear-gradient(135deg, var(--color-clip-selected), var(--color-clip-selected-dark)) !important;
+  background: linear-gradient(
+    135deg,
+    var(--color-clip-selected),
+    var(--color-clip-selected-dark)
+  ) !important;
 }
 
 /* 重叠状态的特殊样式 */
 .audio-clip.overlapping {
-  background: linear-gradient(135deg, var(--color-clip-overlapping), var(--color-clip-overlapping-dark)) !important;
+  background: linear-gradient(
+    135deg,
+    var(--color-clip-overlapping),
+    var(--color-clip-overlapping-dark)
+  ) !important;
 }
 
 /* 隐藏轨道上的clip样式 */
 .audio-clip.track-hidden {
-  background: linear-gradient(135deg, var(--color-clip-hidden), var(--color-clip-hidden-dark)) !important;
+  background: linear-gradient(
+    135deg,
+    var(--color-clip-hidden),
+    var(--color-clip-hidden-dark)
+  ) !important;
 }
 
 .audio-clip.track-hidden.selected {
-  background: linear-gradient(135deg, var(--color-clip-hidden-selected), var(--color-clip-hidden-selected-dark)) !important;
+  background: linear-gradient(
+    135deg,
+    var(--color-clip-hidden-selected),
+    var(--color-clip-hidden-selected-dark)
+  ) !important;
 }
 
 /* 隐藏轨道上的clip内容也要调整透明度 */

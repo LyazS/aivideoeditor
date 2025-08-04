@@ -21,7 +21,7 @@ export class RemoteDownloadProcessor implements AsyncProcessor {
    */
   async process(
     config: AsyncProcessingConfig,
-    onProgress: (progress: number) => void
+    onProgress: (progress: number) => void,
   ): Promise<File> {
     if (config.type !== 'remote-download') {
       throw new Error('Invalid config type for RemoteDownloadProcessor')
@@ -30,7 +30,7 @@ export class RemoteDownloadProcessor implements AsyncProcessor {
     const downloadConfig = config as RemoteDownloadConfig
     console.log('🌐 [RemoteDownloadProcessor] 开始下载:', {
       url: downloadConfig.url,
-      timeout: downloadConfig.timeout
+      timeout: downloadConfig.timeout,
     })
 
     // 创建新的取消控制器
@@ -49,8 +49,8 @@ export class RemoteDownloadProcessor implements AsyncProcessor {
         signal: this.abortController.signal,
         method: 'GET',
         headers: {
-          'User-Agent': 'AI Video Editor/1.0'
-        }
+          'User-Agent': 'AI Video Editor/1.0',
+        },
       })
 
       // 清除超时定时器
@@ -69,12 +69,12 @@ export class RemoteDownloadProcessor implements AsyncProcessor {
         status: response.status,
         contentType: response.headers.get('Content-Type'),
         contentLength: totalSize,
-        hasContentLength: !!contentLength
+        hasContentLength: !!contentLength,
       })
 
       // 获取文件名
       const filename = this.extractFilename(downloadConfig.url, response)
-      
+
       // 读取响应流
       const reader = response.body?.getReader()
       if (!reader) {
@@ -87,20 +87,23 @@ export class RemoteDownloadProcessor implements AsyncProcessor {
       try {
         while (true) {
           const { done, value } = await reader.read()
-          
+
           if (done) break
-          
+
           if (value) {
             chunks.push(value)
             receivedSize += value.length
-            
+
             // 计算并报告进度
             if (totalSize > 0) {
               const progress = Math.round((receivedSize / totalSize) * 100)
               onProgress(Math.min(progress, 99)) // 保留1%给文件创建
             } else {
               // 没有总大小信息时，使用模拟进度
-              const simulatedProgress = Math.min(Math.round(receivedSize / (1024 * 1024) * 10), 90)
+              const simulatedProgress = Math.min(
+                Math.round((receivedSize / (1024 * 1024)) * 10),
+                90,
+              )
               onProgress(simulatedProgress)
             }
           }
@@ -112,21 +115,20 @@ export class RemoteDownloadProcessor implements AsyncProcessor {
       // 创建文件对象
       const blob = new Blob(chunks)
       const file = new File([blob], filename, {
-        type: response.headers.get('Content-Type') || 'application/octet-stream'
+        type: response.headers.get('Content-Type') || 'application/octet-stream',
       })
 
       console.log('✅ [RemoteDownloadProcessor] 下载完成:', {
         filename: file.name,
         size: file.size,
         type: file.type,
-        receivedSize
+        receivedSize,
       })
 
       // 最终进度100%
       onProgress(100)
 
       return file
-
     } catch (error) {
       if (error instanceof Error) {
         if (error.name === 'AbortError') {
@@ -159,7 +161,7 @@ export class RemoteDownloadProcessor implements AsyncProcessor {
    */
   cancel(): void {
     console.log('🌐 [RemoteDownloadProcessor] 取消下载')
-    
+
     if (this.abortController) {
       this.abortController.abort()
       this.abortController = undefined
@@ -177,7 +179,7 @@ export class RemoteDownloadProcessor implements AsyncProcessor {
     }
 
     const downloadConfig = config as RemoteDownloadConfig
-    
+
     // 验证URL
     if (!downloadConfig.url || typeof downloadConfig.url !== 'string') {
       return false
@@ -234,7 +236,7 @@ export class RemoteDownloadProcessor implements AsyncProcessor {
       const pathname = urlObj.pathname
       const segments = pathname.split('/')
       const lastSegment = segments[segments.length - 1]
-      
+
       if (lastSegment && lastSegment.includes('.')) {
         // 解码URL编码的文件名
         try {
@@ -251,7 +253,7 @@ export class RemoteDownloadProcessor implements AsyncProcessor {
     const contentType = response.headers.get('Content-Type')
     const extension = this.getExtensionFromContentType(contentType)
     const timestamp = Date.now()
-    
+
     return `download_${timestamp}${extension}`
   }
 
@@ -266,7 +268,7 @@ export class RemoteDownloadProcessor implements AsyncProcessor {
     }
 
     const mimeType = contentType.toLowerCase().split(';')[0].trim()
-    
+
     const mimeToExtension: Record<string, string> = {
       // 视频格式
       'video/mp4': '.mp4',
@@ -277,7 +279,7 @@ export class RemoteDownloadProcessor implements AsyncProcessor {
       'video/x-flv': '.flv',
       'video/webm': '.webm',
       'video/3gpp': '.3gp',
-      
+
       // 音频格式
       'audio/mpeg': '.mp3',
       'audio/wav': '.wav',
@@ -286,7 +288,7 @@ export class RemoteDownloadProcessor implements AsyncProcessor {
       'audio/ogg': '.ogg',
       'audio/mp4': '.m4a',
       'audio/x-ms-wma': '.wma',
-      
+
       // 图片格式
       'image/jpeg': '.jpg',
       'image/png': '.png',
@@ -295,13 +297,13 @@ export class RemoteDownloadProcessor implements AsyncProcessor {
       'image/webp': '.webp',
       'image/svg+xml': '.svg',
       'image/tiff': '.tiff',
-      
+
       // 其他常见格式
       'application/octet-stream': '.bin',
       'text/plain': '.txt',
       'application/json': '.json',
       'application/xml': '.xml',
-      'text/html': '.html'
+      'text/html': '.html',
     }
 
     return mimeToExtension[mimeType] || '.bin'

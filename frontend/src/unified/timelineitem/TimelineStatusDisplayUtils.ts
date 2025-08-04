@@ -32,7 +32,7 @@ export class TimelineStatusDisplayUtils {
         text: '未知状态',
         hasProgress: false,
         percent: 0,
-        hasError: false
+        hasError: false,
       }
     }
 
@@ -46,7 +46,7 @@ export class TimelineStatusDisplayUtils {
       speed: progressInfo.speed,
       hasError: errorInfo.hasError,
       errorMessage: errorInfo.message,
-      recoverable: errorInfo.recoverable
+      recoverable: errorInfo.recoverable,
     }
   }
 
@@ -61,9 +61,10 @@ export class TimelineStatusDisplayUtils {
         if (mediaData.source?.status === 'acquiring') {
           const progress = mediaData.source.progress || 0
           // 只有远程文件源才有 downloadSpeed 属性
-          const speed = (mediaData.source.type === 'remote' && 'downloadSpeed' in mediaData.source)
-            ? mediaData.source.downloadSpeed
-            : undefined
+          const speed =
+            mediaData.source.type === 'remote' && 'downloadSpeed' in mediaData.source
+              ? mediaData.source.downloadSpeed
+              : undefined
           return speed ? `获取中... ${progress}% (${speed})` : `获取中... ${progress}%`
         }
         return '解析中...'
@@ -94,13 +95,14 @@ export class TimelineStatusDisplayUtils {
       case 'asyncprocessing':
         if (mediaData.source?.status === 'acquiring') {
           // 只有远程文件源才有 downloadSpeed 属性
-          const speed = (mediaData.source.type === 'remote' && 'downloadSpeed' in mediaData.source)
-            ? mediaData.source.downloadSpeed
-            : undefined
+          const speed =
+            mediaData.source.type === 'remote' && 'downloadSpeed' in mediaData.source
+              ? mediaData.source.downloadSpeed
+              : undefined
           return {
             hasProgress: true,
             percent: mediaData.source.progress || 0,
-            speed
+            speed,
           }
         }
         return { hasProgress: true, percent: 50 } // 解析阶段显示50%
@@ -114,19 +116,19 @@ export class TimelineStatusDisplayUtils {
   /**
    * 获取错误信息
    */
-  static getErrorInfo(mediaData: UnifiedMediaItemData): { 
+  static getErrorInfo(mediaData: UnifiedMediaItemData): {
     hasError: boolean
     message?: string
-    recoverable?: boolean 
+    recoverable?: boolean
   } {
     if (mediaData.mediaStatus !== 'error') {
       return { hasError: false }
     }
-    
+
     return {
       hasError: true,
       message: mediaData.source?.errorMessage || '处理失败',
-      recoverable: true // 大部分错误都可以重试
+      recoverable: true, // 大部分错误都可以重试
     }
   }
 
@@ -156,7 +158,7 @@ export class TimelineStatusDisplayUtils {
    */
   static getErrorMessage(mediaData: UnifiedMediaItemData): string | null {
     const errorInfo = this.getErrorInfo(mediaData)
-    return errorInfo.hasError ? (errorInfo.message || null) : null
+    return errorInfo.hasError ? errorInfo.message || null : null
   }
 
   /**
@@ -164,7 +166,7 @@ export class TimelineStatusDisplayUtils {
    */
   static isRecoverable(mediaData: UnifiedMediaItemData): boolean {
     const errorInfo = this.getErrorInfo(mediaData)
-    return errorInfo.hasError ? (errorInfo.recoverable || false) : false
+    return errorInfo.hasError ? errorInfo.recoverable || false : false
   }
 }
 
@@ -178,42 +180,42 @@ export const createStatusDisplayComputeds = (getMediaData: () => UnifiedMediaIte
       const mediaData = getMediaData()
       return mediaData ? TimelineStatusDisplayUtils.getStatusText(mediaData) : '未知状态'
     },
-    
+
     hasProgress: () => {
       const mediaData = getMediaData()
       return mediaData ? TimelineStatusDisplayUtils.hasProgress(mediaData) : false
     },
-    
+
     progressPercent: () => {
       const mediaData = getMediaData()
       return mediaData ? TimelineStatusDisplayUtils.getProgressPercent(mediaData) : 0
     },
-    
+
     progressText: () => {
       const mediaData = getMediaData()
       if (!mediaData) return ''
-      
+
       const progressInfo = TimelineStatusDisplayUtils.getProgressInfo(mediaData)
       if (!progressInfo.hasProgress) return ''
-      
-      return progressInfo.speed 
+
+      return progressInfo.speed
         ? `${progressInfo.percent}% (${progressInfo.speed})`
         : `${progressInfo.percent}%`
     },
-    
+
     hasError: () => {
       const mediaData = getMediaData()
       return mediaData ? TimelineStatusDisplayUtils.hasError(mediaData) : false
     },
-    
+
     errorMessage: () => {
       const mediaData = getMediaData()
       return mediaData ? TimelineStatusDisplayUtils.getErrorMessage(mediaData) : null
     },
-    
+
     canRetry: () => {
       const mediaData = getMediaData()
       return mediaData ? TimelineStatusDisplayUtils.isRecoverable(mediaData) : false
-    }
+    },
   }
 }

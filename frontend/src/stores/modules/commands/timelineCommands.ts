@@ -2519,7 +2519,10 @@ export class RemoveTrackCommand implements SimpleCommand {
     }
 
     // 检查素材是否已经解析完成
-    if (mediaItem.status !== 'ready' || (!mediaItem.mp4Clip && !mediaItem.imgClip && !mediaItem.audioClip)) {
+    if (
+      mediaItem.status !== 'ready' ||
+      (!mediaItem.mp4Clip && !mediaItem.imgClip && !mediaItem.audioClip)
+    ) {
       throw new Error('素材还在解析中，无法重建')
     }
 

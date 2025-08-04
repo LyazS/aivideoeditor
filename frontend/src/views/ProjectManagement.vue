@@ -8,9 +8,16 @@
           <span class="app-subtitle">AI视频编辑器</span>
         </div>
         <div class="header-actions">
-          <button v-if="workspaceInfo" class="workspace-info" @click="changeWorkspace" title="点击更改工作目录">
+          <button
+            v-if="workspaceInfo"
+            class="workspace-info"
+            @click="changeWorkspace"
+            title="点击更改工作目录"
+          >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M10,4H4C2.89,4 2,4.89 2,6V18A2,2 0 0,0 4,20H20A2,2 0 0,0 22,18V8C22,6.89 21.1,6 20,6H12L10,4Z" />
+              <path
+                d="M10,4H4C2.89,4 2,4.89 2,6V18A2,2 0 0,0 4,20H20A2,2 0 0,0 22,18V8C22,6.89 21.1,6 20,6H12L10,4Z"
+              />
             </svg>
             <span>{{ workspaceInfo.name }}</span>
           </button>
@@ -36,17 +43,26 @@
           <div class="setup-card">
             <div class="setup-icon">
               <svg width="64" height="64" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M10,4H4C2.89,4 2,4.89 2,6V18A2,2 0 0,0 4,20H20A2,2 0 0,0 22,18V8C22,6.89 21.1,6 20,6H12L10,4Z" />
+                <path
+                  d="M10,4H4C2.89,4 2,4.89 2,6V18A2,2 0 0,0 4,20H20A2,2 0 0,0 22,18V8C22,6.89 21.1,6 20,6H12L10,4Z"
+                />
               </svg>
             </div>
             <h2>设置项目工作目录</h2>
-            <p>为了管理您的视频编辑项目，请选择一个本地文件夹作为项目工作目录。所有项目文件将保存在此文件夹中。</p>
+            <p>
+              为了管理您的视频编辑项目，请选择一个本地文件夹作为项目工作目录。所有项目文件将保存在此文件夹中。
+            </p>
 
             <div v-if="!isApiSupported" class="error-message">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M13,13H11V7H13M13,17H11V15H13M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z" />
+                <path
+                  d="M13,13H11V7H13M13,17H11V15H13M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z"
+                />
               </svg>
-              <span>当前浏览器不支持本地文件访问功能，请使用Chrome、Edge或其他支持File System Access API的现代浏览器。</span>
+              <span
+                >当前浏览器不支持本地文件访问功能，请使用Chrome、Edge或其他支持File System Access
+                API的现代浏览器。</span
+              >
             </div>
 
             <button
@@ -56,9 +72,18 @@
               :disabled="isLoading"
             >
               <svg v-if="!isLoading" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M10,4H4C2.89,4 2,4.89 2,6V18A2,2 0 0,0 4,20H20A2,2 0 0,0 22,18V8C22,6.89 21.1,6 20,6H12L10,4Z" />
+                <path
+                  d="M10,4H4C2.89,4 2,4.89 2,6V18A2,2 0 0,0 4,20H20A2,2 0 0,0 22,18V8C22,6.89 21.1,6 20,6H12L10,4Z"
+                />
               </svg>
-              <svg v-else width="20" height="20" viewBox="0 0 24 24" fill="currentColor" class="spinning">
+              <svg
+                v-else
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+                class="spinning"
+              >
                 <path d="M12,4V2A10,10 0 0,0 2,12H4A8,8 0 0,1 12,4Z" />
               </svg>
               {{ isLoading ? '设置中...' : '选择工作目录' }}
@@ -71,9 +96,22 @@
           <div class="section-header">
             <h2>我的项目</h2>
             <div class="header-actions">
-              <button class="refresh-btn" @click="loadProjects" :disabled="isLoading" title="刷新项目列表">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" :class="{ spinning: isLoading }">
-                  <path d="M17.65,6.35C16.2,4.9 14.21,4 12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20C15.73,20 18.84,17.45 19.73,14H17.65C16.83,16.33 14.61,18 12,18A6,6 0 0,1 6,12A6,6 0 0,1 12,6C13.66,6 15.14,6.69 16.22,7.78L13,11H20V4L17.65,6.35Z" />
+              <button
+                class="refresh-btn"
+                @click="loadProjects"
+                :disabled="isLoading"
+                title="刷新项目列表"
+              >
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                  :class="{ spinning: isLoading }"
+                >
+                  <path
+                    d="M17.65,6.35C16.2,4.9 14.21,4 12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20C15.73,20 18.84,17.45 19.73,14H17.65C16.83,16.33 14.61,18 12,18A6,6 0 0,1 6,12A6,6 0 0,1 12,6C13.66,6 15.14,6.69 16.22,7.78L13,11H20V4L17.65,6.35Z"
+                  />
                 </svg>
               </button>
               <div class="view-options">
@@ -109,14 +147,14 @@
           <div v-else-if="projects.length === 0" class="empty-state">
             <div class="empty-icon">
               <svg width="64" height="64" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z" />
+                <path
+                  d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"
+                />
               </svg>
             </div>
             <h3>还没有项目</h3>
             <p>创建您的第一个视频编辑项目开始吧！</p>
-            <button class="btn btn-primary" @click="createNewProject">
-              创建新项目
-            </button>
+            <button class="btn btn-primary" @click="createNewProject">创建新项目</button>
           </div>
 
           <div v-else class="projects-grid" :class="{ 'list-view': viewMode === 'list' }">
@@ -131,7 +169,9 @@
                 <img v-if="project.thumbnail" :src="project.thumbnail" :alt="project.name" />
                 <div v-else class="thumbnail-placeholder">
                   <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M17,10.5V7A1,1 0 0,0 16,6H4A1,1 0 0,0 3,7V17A1,1 0 0,0 4,18H16A1,1 0 0,0 17,17V13.5L21,17.5V6.5L17,10.5Z" />
+                    <path
+                      d="M17,10.5V7A1,1 0 0,0 16,6H4A1,1 0 0,0 3,7V17A1,1 0 0,0 4,18H16A1,1 0 0,0 17,17V13.5L21,17.5V6.5L17,10.5Z"
+                    />
                   </svg>
                 </div>
                 <!-- 设置按钮移到缩略图右上角 -->
@@ -141,7 +181,9 @@
                   title="项目设置"
                 >
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M16,12A2,2 0 0,1 18,10A2,2 0 0,1 20,12A2,2 0 0,1 18,14A2,2 0 0,1 16,12M10,12A2,2 0 0,1 12,10A2,2 0 0,1 14,12A2,2 0 0,1 12,14A2,2 0 0,1 10,12M4,12A2,2 0 0,1 6,10A2,2 0 0,1 8,12A2,2 0 0,1 6,14A2,2 0 0,1 4,12Z" />
+                    <path
+                      d="M16,12A2,2 0 0,1 18,10A2,2 0 0,1 20,12A2,2 0 0,1 18,14A2,2 0 0,1 16,12M10,12A2,2 0 0,1 12,10A2,2 0 0,1 14,12A2,2 0 0,1 12,14A2,2 0 0,1 10,12M4,12A2,2 0 0,1 6,10A2,2 0 0,1 8,12A2,2 0 0,1 6,14A2,2 0 0,1 4,12Z"
+                    />
                   </svg>
                 </button>
               </div>
@@ -162,24 +204,22 @@
 
   <!-- 项目设置菜单 -->
   <ContextMenu v-model:show="showContextMenu" :options="contextMenuOptions">
-    <ContextMenuItem
-      label="编辑项目"
-      @click="showEditDialog(selectedProject!)"
-    >
+    <ContextMenuItem label="编辑项目" @click="showEditDialog(selectedProject!)">
       <template #icon>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M20.71,7.04C21.1,6.65 21.1,6 20.71,5.63L18.37,3.29C18,2.9 17.35,2.9 16.96,3.29L15.12,5.12L18.87,8.87M3,17.25V21H6.75L17.81,9.93L14.06,6.18L3,17.25Z" />
+          <path
+            d="M20.71,7.04C21.1,6.65 21.1,6 20.71,5.63L18.37,3.29C18,2.9 17.35,2.9 16.96,3.29L15.12,5.12L18.87,8.87M3,17.25V21H6.75L17.81,9.93L14.06,6.18L3,17.25Z"
+          />
         </svg>
       </template>
     </ContextMenuItem>
 
-    <ContextMenuItem
-      label="删除项目"
-      @click="confirmDeleteProject(selectedProject!)"
-    >
+    <ContextMenuItem label="删除项目" @click="confirmDeleteProject(selectedProject!)">
       <template #icon>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="#ff6b6b">
-          <path d="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z" />
+          <path
+            d="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z"
+          />
         </svg>
       </template>
     </ContextMenuItem>
@@ -292,8 +332,6 @@ async function changeWorkspace() {
   }
 }
 
-
-
 // 项目管理
 async function loadProjects() {
   if (!hasWorkspaceAccess.value) return
@@ -331,8 +369,6 @@ function openProjectById(projectId: string) {
   console.log(`🚀 使用页面重载方式打开项目: ${projectId}`)
   window.location.href = `/editor/${projectId}`
 }
-
-
 
 function confirmDeleteProject(project: ProjectConfig) {
   if (confirm(`确定要删除项目"${project.name}"吗？此操作无法撤销。`)) {
@@ -380,7 +416,7 @@ async function handleSaveProjectEdit(data: { name: string; description: string }
       ...selectedProject.value,
       name: data.name,
       description: data.description,
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     }
 
     // 保存项目
@@ -404,7 +440,7 @@ function formatDate(dateString: string) {
   return date.toLocaleDateString('zh-CN', {
     year: 'numeric',
     month: 'short',
-    day: 'numeric'
+    day: 'numeric',
   })
 }
 
@@ -805,8 +841,6 @@ onMounted(async () => {
   color: var(--color-text-secondary);
 }
 
-
-
 /* 右上角设置按钮样式 */
 .settings-btn-overlay {
   position: absolute;
@@ -859,8 +893,6 @@ onMounted(async () => {
 .btn-primary:hover {
   background-color: var(--color-primary-hover);
 }
-
-
 
 .spinning {
   animation: spin 1s linear infinite;

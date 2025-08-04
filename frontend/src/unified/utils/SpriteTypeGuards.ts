@@ -7,7 +7,7 @@ import type { CustomSprite } from '../../types'
 /**
  * 类型守卫：检查 sprite 是否是 VideoVisibleSprite 类型
  * 替代 'setVolume' in sprite 或 'setMuted' in sprite 的属性检查
- * 
+ *
  * @param sprite 要检查的 sprite 对象
  * @returns 如果是 VideoVisibleSprite 类型则返回 true
  */
@@ -18,7 +18,7 @@ export function isVideoVisibleSprite(sprite: CustomSprite): sprite is VideoVisib
 /**
  * 类型守卫：检查 sprite 是否是 AudioVisibleSprite 类型
  * 替代 'setGain' in sprite 的属性检查
- * 
+ *
  * @param sprite 要检查的 sprite 对象
  * @returns 如果是 AudioVisibleSprite 类型则返回 true
  */
@@ -28,7 +28,7 @@ export function isAudioVisibleSprite(sprite: CustomSprite): sprite is AudioVisib
 
 /**
  * 类型守卫：检查 sprite 是否是 ImageVisibleSprite 类型
- * 
+ *
  * @param sprite 要检查的 sprite 对象
  * @returns 如果是 ImageVisibleSprite 类型则返回 true
  */
@@ -38,7 +38,7 @@ export function isImageVisibleSprite(sprite: CustomSprite): sprite is ImageVisib
 
 /**
  * 类型守卫：检查 sprite 是否是 TextVisibleSprite 类型
- * 
+ *
  * @param sprite 要检查的 sprite 对象
  * @returns 如果是 TextVisibleSprite 类型则返回 true
  */

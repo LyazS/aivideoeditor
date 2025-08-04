@@ -1,16 +1,11 @@
 <template>
-  <button
-    :class="buttonClasses"
-    :disabled="disabled"
-    :title="title"
-    @click="handleClick"
-  >
+  <button :class="buttonClasses" :disabled="disabled" :title="title" @click="handleClick">
     <!-- 图标插槽 -->
     <slot name="icon" v-if="$slots.icon" />
-    
+
     <!-- 默认内容插槽 -->
     <slot />
-    
+
     <!-- 文本内容 -->
     <span v-if="text && !$slots.default" class="button-text">{{ text }}</span>
   </button>
@@ -50,7 +45,7 @@ const buttonClasses = computed(() => [
   props.class,
   {
     'hover-btn--disabled': props.disabled,
-  }
+  },
 ])
 
 // 处理点击事件

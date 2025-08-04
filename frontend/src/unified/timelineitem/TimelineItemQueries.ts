@@ -8,7 +8,7 @@ import type {
   UnifiedTimelineItemData,
   TimelineItemStatus,
   KnownTimelineItem,
-  UnknownTimelineItem
+  UnknownTimelineItem,
 } from './TimelineItemData'
 import { TimelineStatusDisplayUtils } from './TimelineStatusDisplayUtils'
 import { useUnifiedStore } from '../unifiedStore'
@@ -19,7 +19,7 @@ import { useUnifiedStore } from '../unifiedStore'
  * 检查是否为已知媒体类型的时间轴项目
  */
 export function isKnownTimelineItem(
-  item: UnifiedTimelineItemData<MediaTypeOrUnknown>
+  item: UnifiedTimelineItemData<MediaTypeOrUnknown>,
 ): item is KnownTimelineItem {
   return item.mediaType !== 'unknown'
 }
@@ -28,7 +28,7 @@ export function isKnownTimelineItem(
  * 检查是否为未知媒体类型的时间轴项目
  */
 export function isUnknownTimelineItem(
-  item: UnifiedTimelineItemData<MediaTypeOrUnknown>
+  item: UnifiedTimelineItemData<MediaTypeOrUnknown>,
 ): item is UnknownTimelineItem {
   return item.mediaType === 'unknown'
 }
@@ -37,25 +37,25 @@ export function isUnknownTimelineItem(
  * 媒体类型特定的类型守卫
  */
 export function isVideoTimelineItem(
-  item: UnifiedTimelineItemData<MediaTypeOrUnknown>
+  item: UnifiedTimelineItemData<MediaTypeOrUnknown>,
 ): item is UnifiedTimelineItemData<'video'> {
   return item.mediaType === 'video'
 }
 
 export function isImageTimelineItem(
-  item: UnifiedTimelineItemData<MediaTypeOrUnknown>
+  item: UnifiedTimelineItemData<MediaTypeOrUnknown>,
 ): item is UnifiedTimelineItemData<'image'> {
   return item.mediaType === 'image'
 }
 
 export function isAudioTimelineItem(
-  item: UnifiedTimelineItemData<MediaTypeOrUnknown>
+  item: UnifiedTimelineItemData<MediaTypeOrUnknown>,
 ): item is UnifiedTimelineItemData<'audio'> {
   return item.mediaType === 'audio'
 }
 
 export function isTextTimelineItem(
-  item: UnifiedTimelineItemData<MediaTypeOrUnknown>
+  item: UnifiedTimelineItemData<MediaTypeOrUnknown>,
 ): item is UnifiedTimelineItemData<'text'> {
   return item.mediaType === 'text'
 }
@@ -64,8 +64,11 @@ export function isTextTimelineItem(
  * 检查是否为具有视觉属性的时间轴项目（video, image, text）
  */
 export function hasVisualProperties(
-  item: UnifiedTimelineItemData<MediaTypeOrUnknown>
-): item is UnifiedTimelineItemData<'video'> | UnifiedTimelineItemData<'image'> | UnifiedTimelineItemData<'text'> {
+  item: UnifiedTimelineItemData<MediaTypeOrUnknown>,
+): item is
+  | UnifiedTimelineItemData<'video'>
+  | UnifiedTimelineItemData<'image'>
+  | UnifiedTimelineItemData<'text'> {
   return isVideoTimelineItem(item) || isImageTimelineItem(item) || isTextTimelineItem(item)
 }
 
@@ -73,7 +76,7 @@ export function hasVisualProperties(
  * 检查是否为具有音频属性的时间轴项目（video, audio）
  */
 export function hasAudioProperties(
-  item: UnifiedTimelineItemData<MediaTypeOrUnknown>
+  item: UnifiedTimelineItemData<MediaTypeOrUnknown>,
 ): item is UnifiedTimelineItemData<'video'> | UnifiedTimelineItemData<'audio'> {
   return isVideoTimelineItem(item) || isAudioTimelineItem(item)
 }
@@ -150,7 +153,7 @@ export function getProgressInfo(data: UnifiedTimelineItemData<MediaTypeOrUnknown
   return {
     hasProgress: true,
     percent: progressInfo.percent,
-    text
+    text,
   }
 }
 
@@ -172,7 +175,7 @@ export function getErrorInfo(data: UnifiedTimelineItemData<MediaTypeOrUnknown>):
   return {
     hasError: errorInfo.hasError,
     message: errorInfo.message || '',
-    recoverable: errorInfo.recoverable || false
+    recoverable: errorInfo.recoverable || false,
   }
 }
 
@@ -188,7 +191,10 @@ export function getDuration(data: UnifiedTimelineItemData<MediaTypeOrUnknown>): 
 /**
  * 获取项目持续时间（秒）
  */
-export function getDurationInSeconds(data: UnifiedTimelineItemData<MediaTypeOrUnknown>, frameRate: number = 30): number {
+export function getDurationInSeconds(
+  data: UnifiedTimelineItemData<MediaTypeOrUnknown>,
+  frameRate: number = 30,
+): number {
   return getDuration(data) / frameRate
 }
 
@@ -196,8 +202,10 @@ export function getDurationInSeconds(data: UnifiedTimelineItemData<MediaTypeOrUn
  * 检查时间范围是否有效
  */
 export function hasValidTimeRange(data: UnifiedTimelineItemData<MediaTypeOrUnknown>): boolean {
-  return data.timeRange.timelineEndTime > data.timeRange.timelineStartTime &&
-         data.timeRange.timelineStartTime >= 0
+  return (
+    data.timeRange.timelineEndTime > data.timeRange.timelineStartTime &&
+    data.timeRange.timelineStartTime >= 0
+  )
 }
 
 /**
@@ -205,7 +213,7 @@ export function hasValidTimeRange(data: UnifiedTimelineItemData<MediaTypeOrUnkno
  */
 export function isOverlapping(
   data1: UnifiedTimelineItemData<MediaTypeOrUnknown>,
-  data2: UnifiedTimelineItemData<MediaTypeOrUnknown>
+  data2: UnifiedTimelineItemData<MediaTypeOrUnknown>,
 ): boolean {
   // 不同轨道不算重叠
   if (data1.trackId !== data2.trackId) {
@@ -223,7 +231,10 @@ export function isOverlapping(
 /**
  * 检查指定时间点是否在项目范围内
  */
-export function containsTime(data: UnifiedTimelineItemData<MediaTypeOrUnknown>, time: number): boolean {
+export function containsTime(
+  data: UnifiedTimelineItemData<MediaTypeOrUnknown>,
+  time: number,
+): boolean {
   return time >= data.timeRange.timelineStartTime && time < data.timeRange.timelineEndTime
 }
 
@@ -260,7 +271,7 @@ export function getTransform(data: UnifiedTimelineItemData<MediaTypeOrUnknown>) 
       height: config.height ?? 1080,
       rotation: config.rotation ?? 0,
       opacity: config.opacity ?? 1,
-      zIndex: config.zIndex ?? 0
+      zIndex: config.zIndex ?? 0,
     }
   }
   return {}
@@ -327,7 +338,7 @@ export function getVideoClip(data: UnifiedTimelineItemData<MediaTypeOrUnknown>):
       hasClip: true,
       startTime,
       endTime,
-      duration
+      duration,
     }
   }
 
@@ -341,9 +352,9 @@ export function getVideoClip(data: UnifiedTimelineItemData<MediaTypeOrUnknown>):
  */
 export function filterByStatus(
   items: UnifiedTimelineItemData<MediaTypeOrUnknown>[],
-  status: TimelineItemStatus
+  status: TimelineItemStatus,
 ): UnifiedTimelineItemData<MediaTypeOrUnknown>[] {
-  return items.filter(item => item.timelineStatus === status)
+  return items.filter((item) => item.timelineStatus === status)
 }
 
 /**
@@ -351,9 +362,9 @@ export function filterByStatus(
  */
 export function filterByTrack(
   items: UnifiedTimelineItemData<MediaTypeOrUnknown>[],
-  trackId: string
+  trackId: string,
 ): UnifiedTimelineItemData<MediaTypeOrUnknown>[] {
-  return items.filter(item => item.trackId === trackId)
+  return items.filter((item) => item.trackId === trackId)
 }
 
 /**
@@ -361,15 +372,17 @@ export function filterByTrack(
  */
 export function filterByMediaType(
   items: UnifiedTimelineItemData<MediaTypeOrUnknown>[],
-  mediaType: string
+  mediaType: string,
 ): UnifiedTimelineItemData<MediaTypeOrUnknown>[] {
-  return items.filter(item => item.mediaType === mediaType)
+  return items.filter((item) => item.mediaType === mediaType)
 }
 
 /**
  * 按时间排序项目
  */
-export function sortByTime(items: UnifiedTimelineItemData<MediaTypeOrUnknown>[]): UnifiedTimelineItemData<MediaTypeOrUnknown>[] {
+export function sortByTime(
+  items: UnifiedTimelineItemData<MediaTypeOrUnknown>[],
+): UnifiedTimelineItemData<MediaTypeOrUnknown>[] {
   return [...items].sort((a, b) => a.timeRange.timelineStartTime - b.timeRange.timelineStartTime)
 }
 
@@ -378,9 +391,9 @@ export function sortByTime(items: UnifiedTimelineItemData<MediaTypeOrUnknown>[])
  */
 export function findItemsAtTime(
   items: UnifiedTimelineItemData<MediaTypeOrUnknown>[],
-  time: number
+  time: number,
 ): UnifiedTimelineItemData<MediaTypeOrUnknown>[] {
-  return items.filter(item => containsTime(item, time))
+  return items.filter((item) => containsTime(item, time))
 }
 
 /**
@@ -388,11 +401,9 @@ export function findItemsAtTime(
  */
 export function findOverlappingItems(
   items: UnifiedTimelineItemData<MediaTypeOrUnknown>[],
-  targetItem: UnifiedTimelineItemData<MediaTypeOrUnknown>
+  targetItem: UnifiedTimelineItemData<MediaTypeOrUnknown>,
 ): UnifiedTimelineItemData<MediaTypeOrUnknown>[] {
-  return items.filter(item =>
-    item.id !== targetItem.id && isOverlapping(item, targetItem)
-  )
+  return items.filter((item) => item.id !== targetItem.id && isOverlapping(item, targetItem))
 }
 
 /**
@@ -400,7 +411,7 @@ export function findOverlappingItems(
  */
 export function getTrackTimeStats(
   items: UnifiedTimelineItemData<MediaTypeOrUnknown>[],
-  trackId: string
+  trackId: string,
 ): {
   itemCount: number
   totalDuration: number
@@ -409,14 +420,14 @@ export function getTrackTimeStats(
   gaps: Array<{ start: number; end: number; duration: number }>
 } {
   const trackItems = filterByTrack(items, trackId)
-  
+
   if (trackItems.length === 0) {
     return {
       itemCount: 0,
       totalDuration: 0,
       earliestStart: 0,
       latestEnd: 0,
-      gaps: []
+      gaps: [],
     }
   }
 
@@ -430,12 +441,12 @@ export function getTrackTimeStats(
   for (let i = 0; i < sortedItems.length - 1; i++) {
     const currentEnd = sortedItems[i].timeRange.timelineEndTime
     const nextStart = sortedItems[i + 1].timeRange.timelineStartTime
-    
+
     if (nextStart > currentEnd) {
       gaps.push({
         start: currentEnd,
         end: nextStart,
-        duration: nextStart - currentEnd
+        duration: nextStart - currentEnd,
       })
     }
   }
@@ -445,7 +456,7 @@ export function getTrackTimeStats(
     totalDuration,
     earliestStart,
     latestEnd,
-    gaps
+    gaps,
   }
 }
 
@@ -494,5 +505,5 @@ export const TimelineItemQueries = {
   sortByTime,
   findItemsAtTime,
   findOverlappingItems,
-  getTrackTimeStats
+  getTrackTimeStats,
 }

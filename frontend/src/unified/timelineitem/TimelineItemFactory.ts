@@ -12,17 +12,15 @@ import type {
   ImageMediaConfig,
   AudioMediaConfig,
   TextMediaConfig,
-  GetMediaConfig
+  GetMediaConfig,
 } from './TimelineItemData'
-import type {
-  UnifiedTimeRange
-} from '../types/timeRange'
+import type { UnifiedTimeRange } from '../types/timeRange'
 import type {
   UnifiedTimelineItemData,
   KnownTimelineItem,
   UnknownMediaConfig,
   AnimationConfig,
-  Keyframe
+  Keyframe,
 } from './TimelineItemData'
 
 // ==================== 基础工厂函数 ====================
@@ -39,7 +37,7 @@ export function createKnownTimelineItem<T extends MediaType>(
     timeRange: UnifiedTimeRange
     config: GetMediaConfig<T>
     timelineStatus?: 'loading' | 'ready' | 'error'
-  }
+  },
 ): UnifiedTimelineItemData<T> {
   return reactive({
     id: options.id || generateUUID4(),
@@ -49,7 +47,7 @@ export function createKnownTimelineItem<T extends MediaType>(
     timeRange: options.timeRange,
     config: options.config,
     timelineStatus: options.timelineStatus || 'loading',
-    runtime: {}
+    runtime: {},
   }) as UnifiedTimelineItemData<T>
 }
 
@@ -72,7 +70,7 @@ export function createUnknownTimelineItem(options: {
     timeRange: options.timeRange,
     config: options.config,
     timelineStatus: options.timelineStatus || 'loading',
-    runtime: {}
+    runtime: {},
   })
 }
 
@@ -151,7 +149,7 @@ export function createDefaultVideoConfig(): VideoMediaConfig {
     volume: 1,
     isMuted: false,
     // 基础属性
-    zIndex: 0
+    zIndex: 0,
   }
 }
 
@@ -171,7 +169,7 @@ export function createDefaultImageConfig(): ImageMediaConfig {
     originalHeight: 1080,
     proportionalScale: true,
     // 基础属性
-    zIndex: 0
+    zIndex: 0,
   }
 }
 
@@ -185,7 +183,7 @@ export function createDefaultAudioConfig(): AudioMediaConfig {
     isMuted: false,
     gain: 0,
     // 基础属性
-    zIndex: 0
+    zIndex: 0,
   }
 }
 
@@ -213,20 +211,23 @@ export function createDefaultTextConfig(text: string = '新文本'): TextMediaCo
       fontStyle: 'normal',
       color: '#ffffff',
       textAlign: 'center',
-      lineHeight: 1.2
+      lineHeight: 1.2,
     },
     // 基础属性
-    zIndex: 0
+    zIndex: 0,
   }
 }
 
 /**
  * 创建默认未知媒体配置（用于未知类型）
  */
-export function createDefaultUnknownConfig(name: string, expectedDuration: number): UnknownMediaConfig {
+export function createDefaultUnknownConfig(
+  name: string,
+  expectedDuration: number,
+): UnknownMediaConfig {
   return {
     name,
-    expectedDuration
+    expectedDuration,
   }
 }
 
@@ -240,14 +241,14 @@ export function createVideoTimeRange(
   timelineEndTime: number,
   clipStartTime: number = 0,
   clipEndTime?: number,
-  playbackRate: number = 1
+  playbackRate: number = 1,
 ): UnifiedTimeRange {
   const effectiveDuration = timelineEndTime - timelineStartTime
   return {
     timelineStartTime,
     timelineEndTime,
     clipStartTime,
-    clipEndTime: clipEndTime || clipStartTime + effectiveDuration
+    clipEndTime: clipEndTime || clipStartTime + effectiveDuration,
   }
 }
 
@@ -256,13 +257,13 @@ export function createVideoTimeRange(
  */
 export function createImageTimeRange(
   timelineStartTime: number,
-  timelineEndTime: number
+  timelineEndTime: number,
 ): UnifiedTimeRange {
   return {
     timelineStartTime,
     timelineEndTime,
     clipStartTime: -1,
-    clipEndTime: -1
+    clipEndTime: -1,
   }
 }
 
@@ -271,13 +272,13 @@ export function createImageTimeRange(
  */
 export function createBaseTimeRange(
   timelineStartTime: number,
-  timelineEndTime: number
+  timelineEndTime: number,
 ): UnifiedTimeRange {
   return {
     timelineStartTime,
     timelineEndTime,
     clipStartTime: -1,
-    clipEndTime: -1
+    clipEndTime: -1,
   }
 }
 
@@ -302,19 +303,19 @@ export function createVideoTimelineItemWithDefaults(options: {
     options.timelineEndTime,
     options.clipStartTime,
     options.clipEndTime,
-    options.playbackRate
+    options.playbackRate,
   )
-  
+
   const config = {
     ...createDefaultVideoConfig(),
-    ...options.configOverrides
+    ...options.configOverrides,
   }
 
   return createVideoTimelineItem({
     mediaItemId: options.mediaItemId,
     trackId: options.trackId,
     timeRange,
-    config
+    config,
   })
 }
 
@@ -330,17 +331,17 @@ export function createImageTimelineItemWithDefaults(options: {
   configOverrides?: Partial<ImageMediaConfig>
 }): UnifiedTimelineItemData<'image'> {
   const timeRange = createImageTimeRange(options.timelineStartTime, options.timelineEndTime)
-  
+
   const config = {
     ...createDefaultImageConfig(),
-    ...options.configOverrides
+    ...options.configOverrides,
   }
 
   return createImageTimelineItem({
     mediaItemId: options.mediaItemId,
     trackId: options.trackId,
     timeRange,
-    config
+    config,
   })
 }
 
@@ -363,19 +364,19 @@ export function createAudioTimelineItemWithDefaults(options: {
     options.timelineEndTime,
     options.clipStartTime,
     options.clipEndTime,
-    options.playbackRate
+    options.playbackRate,
   )
-  
+
   const config = {
     ...createDefaultAudioConfig(),
-    ...options.configOverrides
+    ...options.configOverrides,
   }
 
   return createAudioTimelineItem({
     mediaItemId: options.mediaItemId,
     trackId: options.trackId,
     timeRange,
-    config
+    config,
   })
 }
 
@@ -392,17 +393,17 @@ export function createTextTimelineItemWithDefaults(options: {
   configOverrides?: Partial<TextMediaConfig>
 }): UnifiedTimelineItemData<'text'> {
   const timeRange = createImageTimeRange(options.timelineStartTime, options.timelineEndTime)
-  
+
   const config = {
     ...createDefaultTextConfig(options.text),
-    ...options.configOverrides
+    ...options.configOverrides,
   }
 
   return createTextTimelineItem({
     mediaItemId: options.mediaItemId,
     trackId: options.trackId,
     timeRange,
-    config
+    config,
   })
 }
 
@@ -418,14 +419,15 @@ export function createUnknownTimelineItemWithDefaults(options: {
   expectedDuration?: number
 }): UnifiedTimelineItemData<'unknown'> {
   const timeRange = createBaseTimeRange(options.timelineStartTime, options.timelineEndTime)
-  const expectedDuration = options.expectedDuration || (options.timelineEndTime - options.timelineStartTime)
+  const expectedDuration =
+    options.expectedDuration || options.timelineEndTime - options.timelineStartTime
   const config = createDefaultUnknownConfig(options.name, expectedDuration)
 
   return createUnknownTimelineItem({
     mediaItemId: options.mediaItemId,
     trackId: options.trackId,
     timeRange,
-    config
+    config,
   })
 }
 
@@ -445,12 +447,12 @@ export function cloneTimelineItem<T extends MediaTypeOrUnknown>(
     config?: T extends 'unknown' ? UnknownMediaConfig : GetMediaConfig<T & MediaType>
     timelineStatus?: 'loading' | 'ready' | 'error'
     animation?: T extends MediaType ? AnimationConfig<T> : undefined
-  }
+  },
 ): UnifiedTimelineItemData<T> {
   // 深拷贝原始对象，排除不需要克隆的 runtime 属性
   const cloned = cloneDeep({
     ...original,
-    runtime: {} // 明确排除 runtime，它需要重新创建
+    runtime: {}, // 明确排除 runtime，它需要重新创建
   })
 
   // 应用覆盖值
@@ -462,7 +464,7 @@ export function cloneTimelineItem<T extends MediaTypeOrUnknown>(
     timelineStatus: overrides?.timelineStatus || cloned.timelineStatus,
     timeRange: overrides?.timeRange ? cloneDeep(overrides.timeRange) : cloned.timeRange,
     config: overrides?.config ? cloneDeep(overrides.config) : cloned.config,
-    animation: overrides?.animation ? cloneDeep(overrides.animation) : cloned.animation
+    animation: overrides?.animation ? cloneDeep(overrides.animation) : cloned.animation,
   }
 
   return reactive(result) as UnifiedTimelineItemData<T>
@@ -474,23 +476,23 @@ export function cloneTimelineItem<T extends MediaTypeOrUnknown>(
 export function duplicateTimelineItem<T extends MediaTypeOrUnknown>(
   original: UnifiedTimelineItemData<T>,
   newTrackId: string,
-  timeOffset: number = 0
+  timeOffset: number = 0,
 ): UnifiedTimelineItemData<T> {
   const newTimeRange = {
     ...original.timeRange,
     timelineStartTime: original.timeRange.timelineStartTime + timeOffset,
-    timelineEndTime: original.timeRange.timelineEndTime + timeOffset
+    timelineEndTime: original.timeRange.timelineEndTime + timeOffset,
   }
 
   const newConfig = {
-    ...original.config
+    ...original.config,
   }
 
   return cloneTimelineItem(original, {
     id: generateUUID4(),
     trackId: newTrackId,
     timeRange: newTimeRange as any,
-    config: newConfig as any
+    config: newConfig as any,
   })
 }
 
@@ -500,7 +502,7 @@ export function duplicateTimelineItem<T extends MediaTypeOrUnknown>(
  * 验证时间轴项目数据的有效性
  */
 export function validateTimelineItem<T extends MediaTypeOrUnknown>(
-  item: UnifiedTimelineItemData<T>
+  item: UnifiedTimelineItemData<T>,
 ): { isValid: boolean; errors: string[] } {
   const errors: string[] = []
 
@@ -535,7 +537,7 @@ export function validateTimelineItem<T extends MediaTypeOrUnknown>(
   if (item.mediaType !== 'unknown') {
     // 已知媒体类型的额外验证
     const knownItem = item as KnownTimelineItem
-    
+
     if (knownItem.mediaType === 'video' || knownItem.mediaType === 'audio') {
       const timeRange = knownItem.timeRange
       if (timeRange.clipStartTime < 0) {
@@ -549,7 +551,7 @@ export function validateTimelineItem<T extends MediaTypeOrUnknown>(
 
   return {
     isValid: errors.length === 0,
-    errors
+    errors,
   }
 }
 
@@ -559,34 +561,34 @@ export const TimelineItemFactory = {
   // 基础创建函数
   createKnown: createKnownTimelineItem,
   createUnknown: createUnknownTimelineItem,
-  
+
   // 具体类型创建函数
   createVideo: createVideoTimelineItem,
   createImage: createImageTimelineItem,
   createAudio: createAudioTimelineItem,
   createText: createTextTimelineItem,
-  
+
   // 便捷创建函数
   createVideoWithDefaults: createVideoTimelineItemWithDefaults,
   createImageWithDefaults: createImageTimelineItemWithDefaults,
   createAudioWithDefaults: createAudioTimelineItemWithDefaults,
   createTextWithDefaults: createTextTimelineItemWithDefaults,
   createUnknownWithDefaults: createUnknownTimelineItemWithDefaults,
-  
+
   // 配置创建函数
   createDefaultVideoConfig,
   createDefaultImageConfig,
   createDefaultAudioConfig,
   createDefaultTextConfig,
   createDefaultUnknownConfig,
-  
+
   // 时间范围创建函数
   createVideoTimeRange,
   createImageTimeRange,
   createBaseTimeRange,
-  
+
   // 工具函数
   clone: cloneTimelineItem,
   duplicate: duplicateTimelineItem,
-  validate: validateTimelineItem
+  validate: validateTimelineItem,
 }

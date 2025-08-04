@@ -8,13 +8,11 @@ import type {
   UnifiedTimelineItemData,
   TimelineItemStatus,
   UnknownTimelineItem,
-  GetTimelineItemConfig
+  GetTimelineItemConfig,
 } from './TimelineItemData'
 import type { UnifiedTimeRange } from '../types/timeRange'
 import { VALID_TIMELINE_TRANSITIONS } from './TimelineItemData'
 import type { MediaType } from '../../types'
-
-
 
 // ==================== 状态转换行为函数 ====================
 
@@ -24,7 +22,7 @@ import type { MediaType } from '../../types'
  */
 export async function transitionTimelineStatus(
   data: UnifiedTimelineItemData,
-  newStatus: TimelineItemStatus
+  newStatus: TimelineItemStatus,
 ): Promise<void> {
   if (!canTransitionTo(data, newStatus)) {
     throw new Error(`Invalid timeline transition: ${data.timelineStatus} → ${newStatus}`)
@@ -45,9 +43,8 @@ export async function transitionTimelineStatus(
 async function handleSpriteLifecycle(
   data: UnifiedTimelineItemData,
   oldStatus: TimelineItemStatus,
-  newStatus: TimelineItemStatus
+  newStatus: TimelineItemStatus,
 ): Promise<void> {
-  
   switch (newStatus) {
     case 'ready':
       // 只在ready时创建sprite，所有准备工作已完成
@@ -56,8 +53,8 @@ async function handleSpriteLifecycle(
       }
       break
 
-    case 'loading':           // 保持现状不变
-    case 'error':            // 清理资源
+    case 'loading': // 保持现状不变
+    case 'error': // 清理资源
     default:
       if (oldStatus === 'ready') {
         await destroySprite(data)
@@ -116,7 +113,7 @@ async function destroySprite(data: UnifiedTimelineItemData): Promise<void> {
  */
 export function canTransitionTo(
   data: UnifiedTimelineItemData,
-  newStatus: TimelineItemStatus
+  newStatus: TimelineItemStatus,
 ): boolean {
   // 3状态间的简单规则
   const allowed = VALID_TIMELINE_TRANSITIONS[data.timelineStatus]
@@ -155,8 +152,10 @@ export function getDuration(data: UnifiedTimelineItemData<MediaTypeOrUnknown>): 
  * 检查时间范围是否有效
  */
 export function hasValidTimeRange(data: UnifiedTimelineItemData): boolean {
-  return data.timeRange.timelineEndTime > data.timeRange.timelineStartTime &&
-         data.timeRange.timelineStartTime >= 0
+  return (
+    data.timeRange.timelineEndTime > data.timeRange.timelineStartTime &&
+    data.timeRange.timelineStartTime >= 0
+  )
 }
 
 // ==================== 简化的状态转换函数 ====================
@@ -189,17 +188,12 @@ export function resetToLoading(data: UnifiedTimelineItemData): Promise<void> {
   return transitionTimelineStatus(data, 'loading')
 }
 
-
-
 // ==================== 时间范围操作函数 ====================
 
 /**
  * 更新时间范围
  */
-export function updateTimeRange(
-  data: UnifiedTimelineItemData,
-  newRange: UnifiedTimeRange
-): void {
+export function updateTimeRange(data: UnifiedTimelineItemData, newRange: UnifiedTimeRange): void {
   if (newRange.timelineEndTime <= newRange.timelineStartTime) {
     throw new Error('结束时间必须大于开始时间')
   }
@@ -219,26 +213,20 @@ export function updateTimeRange(
 /**
  * 移动时间轴项目位置
  */
-export function moveTimelineItem(
-  data: UnifiedTimelineItemData,
-  newStartTime: number
-): void {
+export function moveTimelineItem(data: UnifiedTimelineItemData, newStartTime: number): void {
   const duration = getDuration(data)
   updateTimeRange(data, {
     timelineStartTime: newStartTime,
     timelineEndTime: newStartTime + duration,
     clipStartTime: data.timeRange.clipStartTime,
-    clipEndTime: data.timeRange.clipEndTime
+    clipEndTime: data.timeRange.clipEndTime,
   })
 }
 
 /**
  * 调整项目持续时间
  */
-export function resizeTimelineItem(
-  data: UnifiedTimelineItemData,
-  newDuration: number
-): void {
+export function resizeTimelineItem(data: UnifiedTimelineItemData, newDuration: number): void {
   if (newDuration <= 0) {
     throw new Error('持续时间必须大于0')
   }
@@ -247,7 +235,7 @@ export function resizeTimelineItem(
     timelineStartTime: data.timeRange.timelineStartTime,
     timelineEndTime: data.timeRange.timelineStartTime + newDuration,
     clipStartTime: data.timeRange.clipStartTime,
-    clipEndTime: data.timeRange.clipEndTime
+    clipEndTime: data.timeRange.clipEndTime,
   })
 }
 
@@ -256,7 +244,7 @@ export function resizeTimelineItem(
  */
 async function updateSpriteTimeRange(
   data: UnifiedTimelineItemData,
-  timeRange: UnifiedTimeRange
+  timeRange: UnifiedTimeRange,
 ): Promise<void> {
   if (!data.runtime.sprite) return
 
@@ -278,7 +266,7 @@ export function convertUnknownToKnown<T extends MediaType>(
   unknownItem: UnknownTimelineItem,
   newMediaType: T,
   newConfig: GetTimelineItemConfig<T>,
-  newTimeRange: UnifiedTimeRange
+  newTimeRange: UnifiedTimeRange,
 ): UnifiedTimelineItemData<T> {
   return {
     ...unknownItem,

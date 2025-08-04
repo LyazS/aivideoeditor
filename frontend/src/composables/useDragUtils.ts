@@ -200,7 +200,10 @@ export function useDragUtils() {
   /**
    * 根据媒体类型寻找最近的兼容轨道
    */
-  function findNearestCompatibleTrack(mouseY: number, mediaType: MediaTypeOrUnknown): string | null {
+  function findNearestCompatibleTrack(
+    mouseY: number,
+    mediaType: MediaTypeOrUnknown,
+  ): string | null {
     const tracks = videoStore.tracks
     if (tracks.length === 0) return null
 

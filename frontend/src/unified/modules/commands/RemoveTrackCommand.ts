@@ -153,10 +153,7 @@ export class RemoveTrackCommand implements SimpleCommand {
 
     // 应用变换属性
     if (hasVisualProperties(itemData)) {
-      const config = itemData.config as
-        | VideoMediaConfig
-        | ImageMediaConfig
-        | TextMediaConfig
+      const config = itemData.config as VideoMediaConfig | ImageMediaConfig | TextMediaConfig
       if (config.x !== undefined) newSprite.rect.x = config.x
       if (config.y !== undefined) newSprite.rect.y = config.y
       if (config.width !== undefined) newSprite.rect.w = config.width
@@ -180,7 +177,7 @@ export class RemoveTrackCommand implements SimpleCommand {
       animation: itemData.animation ? { ...itemData.animation } : undefined,
       timelineStatus: 'ready' as TimelineItemStatus,
       runtime: {
-        sprite: markRaw(newSprite)
+        sprite: markRaw(newSprite),
       },
     }) as KnownTimelineItem
 
@@ -238,7 +235,7 @@ export class RemoveTrackCommand implements SimpleCommand {
       animation: itemData.animation ? { ...itemData.animation } : undefined,
       timelineStatus: 'ready' as TimelineItemStatus,
       runtime: {
-        sprite: markRaw(newSprite)
+        sprite: markRaw(newSprite),
       },
     }) as KnownTimelineItem
 

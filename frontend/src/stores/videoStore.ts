@@ -987,7 +987,7 @@ export const useVideoStore = defineStore('video', () => {
     mediaModule.removeAsyncProcessingItem(
       itemId,
       timelineModule.timelineItems,
-      timelineModule.removeTimelineItem
+      timelineModule.removeTimelineItem,
     )
   }
 

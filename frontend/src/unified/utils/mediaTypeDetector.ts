@@ -23,20 +23,20 @@ export const SUPPORTED_MEDIA_TYPES = {
     'video/wmv',
     'video/flv',
     'video/mkv',
-    'video/quicktime',      // .mov 的标准MIME类型
-    'video/x-matroska',     // .mkv 的标准MIME类型
-    'video/x-ms-wmv',       // .wmv 的标准MIME类型
-    'video/x-flv',          // .flv 的标准MIME类型
-    'video/3gpp'            // .3gp 的标准MIME类型
+    'video/quicktime', // .mov 的标准MIME类型
+    'video/x-matroska', // .mkv 的标准MIME类型
+    'video/x-ms-wmv', // .wmv 的标准MIME类型
+    'video/x-flv', // .flv 的标准MIME类型
+    'video/3gpp', // .3gp 的标准MIME类型
   ],
   audio: [
-    'audio/mpeg',           // .mp3
-    'audio/wav',            // .wav
-    'audio/ogg',            // .ogg
-    'audio/aac',            // .aac
-    'audio/flac',           // .flac
-    'audio/mp4',            // .m4a
-    'audio/x-ms-wma'        // .wma
+    'audio/mpeg', // .mp3
+    'audio/wav', // .wav
+    'audio/ogg', // .ogg
+    'audio/aac', // .aac
+    'audio/flac', // .flac
+    'audio/mp4', // .m4a
+    'audio/x-ms-wma', // .wma
   ],
   image: [
     'image/jpeg',
@@ -46,17 +46,17 @@ export const SUPPORTED_MEDIA_TYPES = {
     'image/webp',
     'image/bmp',
     'image/svg+xml',
-    'image/tiff'
-  ]
+    'image/tiff',
+  ],
 } as const
 
 /**
  * 文件大小限制（字节）
  */
 export const FILE_SIZE_LIMITS = {
-  video: 500 * 1024 * 1024,    // 500MB
-  audio: 100 * 1024 * 1024,    // 100MB
-  image: 50 * 1024 * 1024      // 50MB
+  video: 500 * 1024 * 1024, // 500MB
+  audio: 100 * 1024 * 1024, // 100MB
+  image: 50 * 1024 * 1024, // 50MB
 } as const
 
 /**
@@ -115,9 +115,11 @@ export function isSupportedMediaType(file: File): boolean {
 export function isSupportedMimeType(mimeType: string): boolean {
   const normalizedMimeType = mimeType.toLowerCase()
 
-  return SUPPORTED_MEDIA_TYPES.video.includes(normalizedMimeType as any) ||
-         SUPPORTED_MEDIA_TYPES.audio.includes(normalizedMimeType as any) ||
-         SUPPORTED_MEDIA_TYPES.image.includes(normalizedMimeType as any)
+  return (
+    SUPPORTED_MEDIA_TYPES.video.includes(normalizedMimeType as any) ||
+    SUPPORTED_MEDIA_TYPES.audio.includes(normalizedMimeType as any) ||
+    SUPPORTED_MEDIA_TYPES.image.includes(normalizedMimeType as any)
+  )
 }
 
 /**
@@ -149,9 +151,9 @@ export function getMediaTypeDisplayName(mediaType: DetectedMediaType): string {
     video: '视频',
     audio: '音频',
     image: '图片',
-    unknown: '未知'
+    unknown: '未知',
   }
-  
+
   return displayNames[mediaType]
 }
 
@@ -165,8 +167,8 @@ export function getMediaTypeIcon(mediaType: DetectedMediaType): string {
     video: '🎬',
     audio: '🎵',
     image: '🖼️',
-    unknown: '📄'
+    unknown: '📄',
   }
-  
+
   return icons[mediaType]
 }

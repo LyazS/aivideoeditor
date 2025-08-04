@@ -1,7 +1,7 @@
 /**
  * 文本内容渲染器
  * 处理ready状态下文本类型的内容渲染
- * 
+ *
  * 设计理念：
  * - 专门处理文本类型的显示
  * - 提供文本预览和字体信息
@@ -24,13 +24,17 @@ export class TextContentRenderer implements ContentRenderer<'text'> {
   renderContent(context: ContentRenderContext<'text'>): VNode {
     const { data, isSelected } = context
 
-    return h('div', {
-      class: ['text-content', { selected: isSelected }],
-      style: this.getTextContentStyles()
-    }, [
-      // 文本预览（与旧架构text-preview一致）
-      this.renderTextPreview(data)
-    ])
+    return h(
+      'div',
+      {
+        class: ['text-content', { selected: isSelected }],
+        style: this.getTextContentStyles(),
+      },
+      [
+        // 文本预览（与旧架构text-preview一致）
+        this.renderTextPreview(data),
+      ],
+    )
   }
 
   getCustomClasses(context: ContentRenderContext<'text'>): string[] {
@@ -39,15 +43,15 @@ export class TextContentRenderer implements ContentRenderer<'text'> {
 
     // 添加文本样式相关的类
     const textConfig = this.getTextConfig(data)
-    
+
     if (textConfig.isBold) {
       classes.push('has-bold')
     }
-    
+
     if (textConfig.isItalic) {
       classes.push('has-italic')
     }
-    
+
     if (textConfig.hasAnimation) {
       classes.push('has-animation')
     }
@@ -63,7 +67,7 @@ export class TextContentRenderer implements ContentRenderer<'text'> {
 
     return {
       color: textConfig.color || 'white', // 改为白色以匹配旧架构
-      fontFamily: textConfig.fontFamily || 'inherit'
+      fontFamily: textConfig.fontFamily || 'inherit',
     }
   }
 
@@ -79,7 +83,7 @@ export class TextContentRenderer implements ContentRenderer<'text'> {
       alignItems: 'center',
       height: '100%',
       padding: '4px 8px',
-      overflow: 'hidden'
+      overflow: 'hidden',
     }
   }
 
@@ -90,15 +94,23 @@ export class TextContentRenderer implements ContentRenderer<'text'> {
     const textConfig = this.getTextConfig(data)
     const previewText = this.getPreviewText(textConfig.content)
 
-    return h('div', {
-      class: 'text-preview',
-      style: this.getTextPreviewContainerStyles()
-    }, [
-      h('div', {
-        class: 'text-preview-content',
-        style: this.getTextPreviewContentStyles(textConfig)
-      }, previewText)
-    ])
+    return h(
+      'div',
+      {
+        class: 'text-preview',
+        style: this.getTextPreviewContainerStyles(),
+      },
+      [
+        h(
+          'div',
+          {
+            class: 'text-preview-content',
+            style: this.getTextPreviewContentStyles(textConfig),
+          },
+          previewText,
+        ),
+      ],
+    )
   }
 
   /**
@@ -111,7 +123,7 @@ export class TextContentRenderer implements ContentRenderer<'text'> {
       // 时间显示
       this.renderTimeDisplay(data),
       // 文本标题
-      this.renderTextTitle(data)
+      this.renderTextTitle(data),
     ])
   }
 
@@ -129,9 +141,7 @@ export class TextContentRenderer implements ContentRenderer<'text'> {
     const duration = this.getDuration(data)
     const timeText = this.formatTime(duration)
 
-    return h('div', { class: 'time-display' }, [
-      h('span', { class: 'time-text' }, timeText)
-    ])
+    return h('div', { class: 'time-display' }, [h('span', { class: 'time-text' }, timeText)])
   }
 
   /**
@@ -141,9 +151,7 @@ export class TextContentRenderer implements ContentRenderer<'text'> {
     const name = getTimelineItemDisplayName(data)
     const displayName = name.length > 10 ? name.substring(0, 10) + '...' : name
 
-    return h('div', { class: 'text-title' }, [
-      h('span', { class: 'title-text' }, displayName)
-    ])
+    return h('div', { class: 'text-title' }, [h('span', { class: 'title-text' }, displayName)])
   }
 
   /**
@@ -156,20 +164,28 @@ export class TextContentRenderer implements ContentRenderer<'text'> {
     // 字体信息
     if (textConfig.fontFamily && textConfig.fontFamily !== 'inherit') {
       indicators.push(
-        h('div', { 
-          key: 'font',
-          class: 'style-indicator font-indicator' 
-        }, this.getFontDisplayName(textConfig.fontFamily))
+        h(
+          'div',
+          {
+            key: 'font',
+            class: 'style-indicator font-indicator',
+          },
+          this.getFontDisplayName(textConfig.fontFamily),
+        ),
       )
     }
 
     // 字体大小
     if (textConfig.fontSize) {
       indicators.push(
-        h('div', { 
-          key: 'size',
-          class: 'style-indicator size-indicator' 
-        }, `${textConfig.fontSize}px`)
+        h(
+          'div',
+          {
+            key: 'size',
+            class: 'style-indicator size-indicator',
+          },
+          `${textConfig.fontSize}px`,
+        ),
       )
     }
 
@@ -178,23 +194,31 @@ export class TextContentRenderer implements ContentRenderer<'text'> {
     if (textConfig.isBold) styleMarks.push('B')
     if (textConfig.isItalic) styleMarks.push('I')
     if (textConfig.isUnderline) styleMarks.push('U')
-    
+
     if (styleMarks.length > 0) {
       indicators.push(
-        h('div', { 
-          key: 'styles',
-          class: 'style-indicator style-marks' 
-        }, styleMarks.join(''))
+        h(
+          'div',
+          {
+            key: 'styles',
+            class: 'style-indicator style-marks',
+          },
+          styleMarks.join(''),
+        ),
       )
     }
 
     // 动画指示器
     if (textConfig.hasAnimation) {
       indicators.push(
-        h('div', { 
-          key: 'animation',
-          class: 'style-indicator animation-indicator' 
-        }, '✨')
+        h(
+          'div',
+          {
+            key: 'animation',
+            class: 'style-indicator animation-indicator',
+          },
+          '✨',
+        ),
       )
     }
 
@@ -218,7 +242,7 @@ export class TextContentRenderer implements ContentRenderer<'text'> {
   } {
     // 从配置中获取文本相关设置
     const config = data.config as any
-    
+
     return {
       content: config?.text || config?.content || '文本内容',
       fontFamily: config?.fontFamily,
@@ -227,7 +251,7 @@ export class TextContentRenderer implements ContentRenderer<'text'> {
       isBold: config?.isBold || false,
       isItalic: config?.isItalic || false,
       isUnderline: config?.isUnderline || false,
-      hasAnimation: config?.animation || config?.hasAnimation || false
+      hasAnimation: config?.animation || config?.hasAnimation || false,
     }
   }
 
@@ -238,13 +262,13 @@ export class TextContentRenderer implements ContentRenderer<'text'> {
     if (!content || content.trim() === '') {
       return '文本内容'
     }
-    
+
     // 限制预览文本长度
     const maxLength = 20
     if (content.length > maxLength) {
       return content.substring(0, maxLength) + '...'
     }
-    
+
     return content
   }
 
@@ -257,7 +281,7 @@ export class TextContentRenderer implements ContentRenderer<'text'> {
       alignItems: 'center',
       justifyContent: 'center',
       width: '100%',
-      height: '100%'
+      height: '100%',
     }
   }
 
@@ -279,7 +303,7 @@ export class TextContentRenderer implements ContentRenderer<'text'> {
       color: '#ffffff',
       fontWeight: 'normal',
       fontStyle: 'normal',
-      fontFamily: 'Arial, sans-serif'
+      fontFamily: 'Arial, sans-serif',
     }
 
     return styles
@@ -299,11 +323,11 @@ export class TextContentRenderer implements ContentRenderer<'text'> {
   private formatTime(frames: number): string {
     // 假设30fps
     const seconds = frames / 30
-    
+
     if (seconds < 60) {
       return `${seconds.toFixed(1)}s`
     }
-    
+
     const minutes = Math.floor(seconds / 60)
     const remainingSeconds = Math.floor(seconds % 60)
     return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`
@@ -315,15 +339,15 @@ export class TextContentRenderer implements ContentRenderer<'text'> {
   private getFontDisplayName(fontFamily: string): string {
     // 简化字体名称显示
     const fontMap: Record<string, string> = {
-      'Arial': 'Arial',
-      'Helvetica': 'Helvetica',
+      Arial: 'Arial',
+      Helvetica: 'Helvetica',
       'Times New Roman': 'Times',
       'Courier New': 'Courier',
       'Microsoft YaHei': '微软雅黑',
-      'SimSun': '宋体',
-      'SimHei': '黑体'
+      SimSun: '宋体',
+      SimHei: '黑体',
     }
-    
+
     return fontMap[fontFamily] || fontFamily.split(',')[0] || 'Default'
   }
 }

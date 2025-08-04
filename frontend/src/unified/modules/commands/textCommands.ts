@@ -26,7 +26,10 @@ import type { UnifiedTimeRange } from '../../types/timeRange'
 
 // ==================== 新架构工具导入 ====================
 import { isTextTimelineItem, isReady, TimelineItemFactory } from '../../timelineitem'
-import { createTextTimelineItem, createSpriteForTextTimelineItem } from '../../utils/textTimelineUtils'
+import {
+  createTextTimelineItem,
+  createSpriteForTextTimelineItem,
+} from '../../utils/textTimelineUtils'
 
 // ==================== 旧架构兼容性导入 ====================
 import { TextVisibleSprite } from '../../visiblesprite/TextVisibleSprite'
@@ -58,7 +61,7 @@ export class AddTextItemCommand implements SimpleCommand {
     this.id = generateCommandId()
     const textConfig = textItem.config as TextMediaConfig
     this.description = `添加文本: ${textConfig.text.substring(0, 10)}${textConfig.text.length > 10 ? '...' : ''}`
-    
+
     // 保存原始项目数据用于重建
     this.originalTimelineItemData = TimelineItemFactory.clone(textItem)
   }
@@ -107,7 +110,9 @@ export class AddTextItemCommand implements SimpleCommand {
         id: newTimelineItem.id,
         text: originalConfig.text.substring(0, 20) + '...',
         startTime: framesToTimecode(newTimelineItem.timeRange.timelineStartTime),
-        duration: framesToTimecode(newTimelineItem.timeRange.timelineEndTime - newTimelineItem.timeRange.timelineStartTime),
+        duration: framesToTimecode(
+          newTimelineItem.timeRange.timelineEndTime - newTimelineItem.timeRange.timelineStartTime,
+        ),
       })
     } catch (error) {
       console.error(`❌ 添加文本项目失败:`, error)
@@ -417,11 +422,7 @@ export const TextCommandFactory = {
     timelineModule: any,
     webavModule: any,
   ): AddTextItemCommand {
-    return new AddTextItemCommand(
-      textItem,
-      timelineModule,
-      webavModule,
-    )
+    return new AddTextItemCommand(textItem, timelineModule, webavModule)
   },
 
   /**

@@ -7,7 +7,7 @@ import type {
   AsyncProcessingType,
   AsyncProcessingConfig,
   AsyncProcessingMediaItem,
-  RemoteDownloadConfig
+  RemoteDownloadConfig,
 } from '../types'
 import { RemoteDownloadProcessor } from './RemoteDownloadProcessor'
 
@@ -23,10 +23,7 @@ export interface AsyncProcessor {
    * @param onProgress 进度回调
    * @returns 处理结果
    */
-  process(
-    config: AsyncProcessingConfig,
-    onProgress: (progress: number) => void
-  ): Promise<File>
+  process(config: AsyncProcessingConfig, onProgress: (progress: number) => void): Promise<File>
 
   /**
    * 取消处理
@@ -98,13 +95,13 @@ export class AsyncProcessingManager {
     processingType: AsyncProcessingType,
     config: AsyncProcessingConfig,
     expectedDuration: number,
-    name?: string
+    name?: string,
   ): AsyncProcessingMediaItem {
     const id = `async_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`
-    
+
     // 根据配置生成默认名称
     const defaultName = this.generateDefaultName(processingType, config)
-    
+
     const mediaItem: AsyncProcessingMediaItem = {
       id,
       name: name || defaultName,
@@ -118,16 +115,16 @@ export class AsyncProcessingManager {
       startedAt: new Date().toISOString(),
       thumbnailUrl: this.getDefaultThumbnail(processingType),
       createdAt: new Date().toISOString(),
-      isConverting: false // 初始状态不在转换中
+      isConverting: false, // 初始状态不在转换中
     }
 
     this.asyncProcessingMediaItems.set(id, mediaItem)
-    
+
     console.log('🔧 [AsyncProcessingManager] 创建异步处理素材:', {
       id,
       type: processingType,
       name: mediaItem.name,
-      expectedDuration
+      expectedDuration,
     })
 
     return mediaItem
@@ -141,14 +138,14 @@ export class AsyncProcessingManager {
    */
   async startProcessing(
     asyncProcessingMediaItem: AsyncProcessingMediaItem,
-    onStatusUpdate?: (updatedItem: AsyncProcessingMediaItem) => void
+    onStatusUpdate?: (updatedItem: AsyncProcessingMediaItem) => void,
   ): Promise<void> {
     const { id, processingType, processingConfig } = asyncProcessingMediaItem
-    
+
     console.log('🔧 [AsyncProcessingManager] 开始异步处理:', {
       id,
       type: processingType,
-      config: processingConfig
+      config: processingConfig,
     })
 
     // 获取对应的处理器
@@ -173,23 +170,19 @@ export class AsyncProcessingManager {
       this.updateProcessingStatus(id, 'processing', 0, undefined, onStatusUpdate)
 
       // 开始处理
-      const processedFile = await processor.process(
-        processingConfig,
-        (progress: number) => {
-          this.updateProcessingStatus(id, 'processing', progress, undefined, onStatusUpdate)
-        }
-      )
+      const processedFile = await processor.process(processingConfig, (progress: number) => {
+        this.updateProcessingStatus(id, 'processing', progress, undefined, onStatusUpdate)
+      })
 
       // 处理完成
       this.updateProcessingStatus(id, 'completed', 100, undefined, onStatusUpdate)
       this.setProcessedFile(id, processedFile)
-      
+
       console.log('✅ [AsyncProcessingManager] 处理完成:', {
         id,
         fileName: processedFile.name,
-        fileSize: processedFile.size
+        fileSize: processedFile.size,
       })
-
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : '未知错误'
 
@@ -213,7 +206,7 @@ export class AsyncProcessingManager {
    */
   cancelProcessing(mediaItemId: string): void {
     console.log('🔧 [AsyncProcessingManager] 取消处理:', mediaItemId)
-    
+
     const abortController = this.processingTasks.get(mediaItemId)
     if (abortController) {
       abortController.abort()
@@ -227,7 +220,7 @@ export class AsyncProcessingManager {
       if (processor) {
         processor.cancel()
       }
-      
+
       this.updateProcessingStatus(mediaItemId, 'cancelled', 0)
     }
   }
@@ -245,7 +238,7 @@ export class AsyncProcessingManager {
     status: AsyncProcessingMediaItem['processingStatus'],
     progress: number,
     errorMessage?: string,
-    onStatusUpdate?: (updatedItem: AsyncProcessingMediaItem) => void
+    onStatusUpdate?: (updatedItem: AsyncProcessingMediaItem) => void,
   ): void {
     const mediaItem = this.asyncProcessingMediaItems.get(mediaItemId)
     if (!mediaItem) return
@@ -285,7 +278,7 @@ export class AsyncProcessingManager {
     if (!mediaItem) return
 
     mediaItem.processedFile = file
-    
+
     // 根据文件类型更新媒体类型
     const detectedType = this.detectMediaType(file)
     mediaItem.mediaType = detectedType
@@ -297,7 +290,10 @@ export class AsyncProcessingManager {
    * @param config 处理配置
    * @returns 默认名称
    */
-  private generateDefaultName(processingType: AsyncProcessingType, config: AsyncProcessingConfig): string {
+  private generateDefaultName(
+    processingType: AsyncProcessingType,
+    config: AsyncProcessingConfig,
+  ): string {
     switch (processingType) {
       case 'remote-download':
         const downloadConfig = config as RemoteDownloadConfig
@@ -398,10 +394,10 @@ export class AsyncProcessingManager {
    */
   removeAsyncProcessingMediaItem(mediaItemId: string): void {
     console.log('🔧 [AsyncProcessingManager] 删除异步处理素材:', mediaItemId)
-    
+
     // 先取消处理（如果正在进行）
     this.cancelProcessing(mediaItemId)
-    
+
     // 删除记录
     this.asyncProcessingMediaItems.delete(mediaItemId)
   }

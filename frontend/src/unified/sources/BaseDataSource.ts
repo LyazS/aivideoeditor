@@ -12,23 +12,23 @@ import { generateUUID4 } from '@/utils/idGenerator'
  * 数据源状态类型
  */
 export type DataSourceStatus =
-  | 'pending'     // 等待开始
-  | 'acquiring'   // 获取中
-  | 'acquired'    // 已获取
-  | 'error'       // 错误
-  | 'cancelled'   // 已取消
-  | 'missing'     // 缺失（适用于所有数据源类型）
+  | 'pending' // 等待开始
+  | 'acquiring' // 获取中
+  | 'acquired' // 已获取
+  | 'error' // 错误
+  | 'cancelled' // 已取消
+  | 'missing' // 缺失（适用于所有数据源类型）
 
 /**
  * 数据源状态到媒体状态的映射表
  */
 export const DATA_SOURCE_TO_MEDIA_STATUS_MAP = {
-  'pending': 'pending',
-  'acquiring': 'asyncprocessing',
-  'acquired': 'webavdecoding',
-  'error': 'error',
-  'cancelled': 'cancelled',
-  'missing': 'missing'
+  pending: 'pending',
+  acquiring: 'asyncprocessing',
+  acquired: 'webavdecoding',
+  error: 'error',
+  cancelled: 'cancelled',
+  missing: 'missing',
 } as const
 
 // ==================== 核心数据结构 ====================
@@ -63,9 +63,9 @@ export const BaseDataSourceFactory = {
       status: 'pending' as DataSourceStatus,
       progress: 0,
       file: null,
-      url: null
+      url: null,
     })
-  }
+  },
 }
 
 // ==================== 基础类型守卫 ====================
@@ -75,13 +75,15 @@ export const BaseDataSourceFactory = {
  */
 export const BaseDataSourceTypeGuards = {
   isBaseDataSource(source: unknown): source is BaseDataSourceData {
-    return typeof source === 'object' &&
-           source !== null &&
-           typeof (source as Record<string, unknown>).id === 'string' &&
-           typeof (source as Record<string, unknown>).type === 'string' &&
-           typeof (source as Record<string, unknown>).status === 'string' &&
-           typeof (source as Record<string, unknown>).progress === 'number'
-  }
+    return (
+      typeof source === 'object' &&
+      source !== null &&
+      typeof (source as Record<string, unknown>).id === 'string' &&
+      typeof (source as Record<string, unknown>).type === 'string' &&
+      typeof (source as Record<string, unknown>).status === 'string' &&
+      typeof (source as Record<string, unknown>).progress === 'number'
+    )
+  },
 }
 
 // ==================== 通用行为函数 ====================
@@ -137,7 +139,7 @@ export const DataSourceDataActions = {
 
   clearTaskId(source: BaseDataSourceData): void {
     source.taskId = undefined
-  }
+  },
 }
 
 // ==================== 第二层：状态管理层（管理状态转换） ====================
@@ -183,7 +185,7 @@ export const DataSourceStateActions = {
 
   setMissing(source: BaseDataSourceData): boolean {
     return this.transitionTo(source, 'missing')
-  }
+  },
 }
 
 // ==================== 第三层：业务协调层（协调完整的业务操作） ====================
@@ -215,7 +217,7 @@ export const DataSourceBusinessActions = {
     source: BaseDataSourceData,
     file: File,
     url: string,
-    typeDetector?: (source: BaseDataSourceData) => Promise<void>
+    typeDetector?: (source: BaseDataSourceData) => Promise<void>,
   ): Promise<void> {
     // 设置基础数据（但不改变状态）
     DataSourceDataActions.setFile(source, file)
@@ -258,7 +260,7 @@ export const DataSourceBusinessActions = {
     DataSourceDataActions.clearUrl(source)
     DataSourceDataActions.clearFile(source)
     DataSourceDataActions.clearTaskId(source)
-  }
+  },
 }
 
 // ==================== 兼容性层：保持向后兼容 ====================
@@ -309,7 +311,7 @@ export const UnifiedDataSourceActions = {
   // 资源清理
   cleanup(source: BaseDataSourceData): void {
     DataSourceBusinessActions.cleanup(source)
-  }
+  },
 }
 
 // ==================== 通用查询函数 ====================
@@ -360,5 +362,5 @@ export const DataSourceQueries = {
   // 获取媒体状态映射
   getMediaStatus(source: BaseDataSourceData): string {
     return DATA_SOURCE_TO_MEDIA_STATUS_MAP[source.status]
-  }
+  },
 }

@@ -30,5 +30,8 @@ export type ExtendedSpriteEvents = {
  * 扩展的文本精灵事件类型
  */
 export type TextSpriteEvents = {
-  textUpdated: (text: string, style: import('../timelineitem/TimelineItemData').TextStyleConfig) => void
+  textUpdated: (
+    text: string,
+    style: import('../timelineitem/TimelineItemData').TextStyleConfig,
+  ) => void
 }

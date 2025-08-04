@@ -27,7 +27,9 @@ export class DirectoryManager {
 
       // 检查权限API支持
       const testHandle = {} as FileSystemDirectoryHandle
-      const hasPermissionAPI = 'queryPermission' in FileSystemDirectoryHandle.prototype && 'requestPermission' in FileSystemDirectoryHandle.prototype
+      const hasPermissionAPI =
+        'queryPermission' in FileSystemDirectoryHandle.prototype &&
+        'requestPermission' in FileSystemDirectoryHandle.prototype
 
       if (hasPermissionAPI) {
         console.log('✅ 权限API支持检测通过')
@@ -85,13 +87,16 @@ export class DirectoryManager {
       console.log('📂 打开目录选择对话框...')
       const directoryHandle = await window.showDirectoryPicker({
         mode: 'readwrite',
-        startIn: 'documents'
+        startIn: 'documents',
       })
 
       console.log('📁 用户选择了目录:', directoryHandle.name)
 
       // 验证权限
-      if (typeof directoryHandle.queryPermission === 'function' && typeof directoryHandle.requestPermission === 'function') {
+      if (
+        typeof directoryHandle.queryPermission === 'function' &&
+        typeof directoryHandle.requestPermission === 'function'
+      ) {
         const permission = await directoryHandle.queryPermission({ mode: 'readwrite' })
         if (permission !== 'granted') {
           const requestedPermission = await directoryHandle.requestPermission({ mode: 'readwrite' })
@@ -145,7 +150,10 @@ export class DirectoryManager {
 
     try {
       // 检查queryPermission和requestPermission方法是否存在
-      if (typeof handle.queryPermission === 'function' && typeof handle.requestPermission === 'function') {
+      if (
+        typeof handle.queryPermission === 'function' &&
+        typeof handle.requestPermission === 'function'
+      ) {
         const permission = await handle.queryPermission({ mode: 'readwrite' })
         if (permission === 'granted') {
           return true
@@ -213,7 +221,7 @@ export class DirectoryManager {
     return {
       name: handle.name,
       // 注意：File System Access API 不提供完整路径信息
-      path: undefined
+      path: undefined,
     }
   }
 
@@ -240,11 +248,13 @@ export class DirectoryManager {
       console.log('🔍 IndexedDB中的所有键:', allKeys)
 
       if (allKeys.includes(this.STORAGE_KEY)) {
-        const handle = await new Promise<FileSystemDirectoryHandle | undefined>((resolve, reject) => {
-          const request = store.get(this.STORAGE_KEY)
-          request.onsuccess = () => resolve(request.result)
-          request.onerror = () => reject(request.error)
-        })
+        const handle = await new Promise<FileSystemDirectoryHandle | undefined>(
+          (resolve, reject) => {
+            const request = store.get(this.STORAGE_KEY)
+            request.onsuccess = () => resolve(request.result)
+            request.onerror = () => reject(request.error)
+          },
+        )
 
         if (handle) {
           console.log('📁 找到保存的目录句柄:', handle.name, handle)
@@ -348,10 +358,10 @@ export class DirectoryManager {
   private openDB(): Promise<IDBDatabase> {
     return new Promise((resolve, reject) => {
       const request = indexedDB.open('VideoEditorDB', 1)
-      
+
       request.onerror = () => reject(request.error)
       request.onsuccess = () => resolve(request.result)
-      
+
       request.onupgradeneeded = (event) => {
         const db = (event.target as IDBOpenDBRequest).result
         if (!db.objectStoreNames.contains('handles')) {

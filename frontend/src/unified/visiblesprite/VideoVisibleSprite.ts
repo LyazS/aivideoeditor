@@ -259,24 +259,24 @@ export class VideoVisibleSprite extends BaseVisibleSprite {
    */
   public getPlaybackRate(): number {
     const { clipStartTime, clipEndTime, timelineStartTime, timelineEndTime } = this.#timeRange
-    
+
     const clipDurationFrames = clipEndTime - clipStartTime // 素材内部要播放的帧数
     const timelineDurationFrames = timelineEndTime - timelineStartTime // 在时间轴上占用的帧数
-    
+
     if (clipDurationFrames > 0 && timelineDurationFrames > 0) {
       // playbackRate = 素材内部时长 / 时间轴时长
       let playbackRate = clipDurationFrames / timelineDurationFrames
-      
+
       // 修正浮点数精度问题，避免出现1.00000001这样的值
       // 如果非常接近整数，则四舍五入到最近的0.1
       const rounded = Math.round(playbackRate * 10) / 10
       if (Math.abs(playbackRate - rounded) < 0.001) {
         playbackRate = rounded
       }
-      
+
       return playbackRate
     }
-    
+
     return 1 // 默认正常速度
   }
 

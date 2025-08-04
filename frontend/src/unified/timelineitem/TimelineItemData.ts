@@ -348,10 +348,10 @@ export type GetTimelineItemConfig<T extends MediaTypeOrUnknown> = TimelineItemCo
 export interface UnifiedTimelineItemRuntime {
   /** Sprite引用 - 与时间轴项目生命周期一致 */
   sprite?: Raw<UnifiedSprite>
-  
+
   /** 缩略图URL - 运行时生成的Blob URL */
   thumbnailUrl?: string
-  
+
   /** 预留：未来可能的运行时字段 */
   // renderCache?: RenderCacheData
   // animationState?: AnimationRuntimeState
@@ -390,7 +390,7 @@ export interface UnifiedTimelineItemData<T extends MediaTypeOrUnknown = MediaTyp
   // ==================== 动画配置（类型安全） ====================
   animation?: T extends MediaType ? AnimationConfig<T> : undefined
 
-    // ==================== 运行时数据（不可持久化） ====================
+  // ==================== 运行时数据（不可持久化） ====================
   runtime: UnifiedTimelineItemRuntime
 }
 

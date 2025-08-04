@@ -11,27 +11,27 @@ const routes: RouteRecordRaw[] = [
     name: 'ProjectManagement',
     component: ProjectManagement,
     meta: {
-      title: '项目管理 - 光影绘梦'
-    }
+      title: '项目管理 - 光影绘梦',
+    },
   },
   {
     path: '/editor/:projectId?',
     name: 'VideoEditor',
     component: VideoEditor,
     meta: {
-      title: '视频编辑器 - 光影绘梦'
-    }
+      title: '视频编辑器 - 光影绘梦',
+    },
   },
   {
     // 重定向所有未匹配的路由到首页
     path: '/:pathMatch(.*)*',
-    redirect: '/'
-  }
+    redirect: '/',
+  },
 ]
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
-  routes
+  routes,
 })
 
 // 路由守卫 - 更新页面标题

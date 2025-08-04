@@ -1,8 +1,5 @@
 import { useUnifiedStore } from '../unifiedStore'
-import type {
-  TimelineItemDragData,
-  MediaItemDragData,
-} from '../types'
+import type { TimelineItemDragData, MediaItemDragData } from '../types'
 import type { MediaType, MediaTypeOrUnknown } from '../mediaitem'
 import type { UnifiedTrackType } from '../track/TrackTypes'
 import { alignFramesToFrame } from '../utils/UnifiedTimeUtils'
@@ -199,7 +196,10 @@ export function useDragUtils() {
   /**
    * 根据媒体类型寻找最近的兼容轨道
    */
-  function findNearestCompatibleTrack(mouseY: number, mediaType: MediaTypeOrUnknown): string | null {
+  function findNearestCompatibleTrack(
+    mouseY: number,
+    mediaType: MediaTypeOrUnknown,
+  ): string | null {
     const tracks = unifiedStore.tracks
     if (tracks.length === 0) return null
 
@@ -253,7 +253,7 @@ export function useDragUtils() {
           let closestTrack: HTMLElement | null = null
           let minDistance = Infinity
 
-          allTrackContents.forEach(track => {
+          allTrackContents.forEach((track) => {
             const rect = track.getBoundingClientRect()
             const trackCenterY = rect.top + rect.height / 2
             const distance = Math.abs(mouseY - trackCenterY)
@@ -275,7 +275,8 @@ export function useDragUtils() {
 
     const rect = trackContent.getBoundingClientRect()
     const mouseX = event.clientX - rect.left
-    let targetTrackId = trackContent.getAttribute('data-track-id') || unifiedStore.tracks[0]?.id || ''
+    let targetTrackId =
+      trackContent.getAttribute('data-track-id') || unifiedStore.tracks[0]?.id || ''
 
     // 获取拖拽的媒体类型和排除的片段ID
     let draggedMediaType: MediaTypeOrUnknown | null = null

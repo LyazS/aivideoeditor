@@ -8,11 +8,7 @@
       :style="indicatorStyle"
     >
       <!-- 吸附信息提示 -->
-      <div
-        v-if="showTooltip && snapInfo"
-        class="snap-tooltip"
-        :style="tooltipStyle"
-      >
+      <div v-if="showTooltip && snapInfo" class="snap-tooltip" :style="tooltipStyle">
         <div class="snap-tooltip-content">
           <div class="snap-type">{{ snapInfo.typeLabel }}</div>
           <div class="snap-position">{{ snapInfo.positionLabel }}</div>
@@ -48,7 +44,7 @@ const props = withDefaults(defineProps<Props>(), {
   show: false,
   timelineOffset: () => ({ x: 0, y: 0 }),
   showTooltip: true,
-  lineHeight: 400
+  lineHeight: 400,
 })
 
 const unifiedStore = useUnifiedStore()
@@ -59,7 +55,7 @@ const indicatorPosition = ref<number | null>(null)
 // 计算属性
 const indicatorClass = computed(() => {
   if (!props.snapPoint) return ''
-  
+
   switch (props.snapPoint.type) {
     case 'clip-start':
     case 'clip-end':
@@ -77,35 +73,35 @@ const indicatorClass = computed(() => {
 
 const indicatorStyle = computed(() => {
   if (indicatorPosition.value === null) return {}
-  
+
   return {
     left: `${indicatorPosition.value + props.timelineOffset.x}px`,
     top: `${props.timelineOffset.y}px`,
-    height: `${props.lineHeight}px`
+    height: `${props.lineHeight}px`,
   }
 })
 
 const tooltipStyle = computed(() => {
   if (indicatorPosition.value === null) return {}
-  
+
   // 工具提示位置在指示线上方
   return {
     left: '50%',
     transform: 'translateX(-50%)',
     bottom: '100%',
-    marginBottom: '8px'
+    marginBottom: '8px',
   }
 })
 
 const snapInfo = computed(() => {
   if (!props.snapPoint) return null
-  
+
   const frame = props.snapPoint.frame
   const timecode = framesToTimecode(frame)
-  
+
   let typeLabel = ''
   let positionLabel = `帧: ${frame}`
-  
+
   switch (props.snapPoint.type) {
     case 'clip-start':
       typeLabel = '片段开始'
@@ -134,11 +130,11 @@ const snapInfo = computed(() => {
       positionLabel = '起始位置'
       break
   }
-  
+
   return {
     typeLabel,
     positionLabel,
-    timecode
+    timecode,
   }
 })
 
@@ -146,7 +142,14 @@ const snapInfo = computed(() => {
 watch(
   () => [props.show, props.snapPoint, props.timelineWidth],
   ([show, snapPoint, timelineWidth]) => {
-    if (show && snapPoint && typeof snapPoint === 'object' && 'frame' in snapPoint && typeof timelineWidth === 'number' && timelineWidth > 0) {
+    if (
+      show &&
+      snapPoint &&
+      typeof snapPoint === 'object' &&
+      'frame' in snapPoint &&
+      typeof timelineWidth === 'number' &&
+      timelineWidth > 0
+    ) {
       // 计算指示线的像素位置
       const pixelPosition = unifiedStore.frameToPixel(snapPoint.frame, timelineWidth)
       indicatorPosition.value = pixelPosition
@@ -154,7 +157,7 @@ watch(
       indicatorPosition.value = null
     }
   },
-  { immediate: true }
+  { immediate: true },
 )
 
 // 暴露方法给父组件
@@ -164,7 +167,7 @@ defineExpose({
       const pixelPosition = unifiedStore.frameToPixel(frame, props.timelineWidth)
       indicatorPosition.value = pixelPosition
     }
-  }
+  },
 })
 </script>
 
@@ -190,22 +193,22 @@ defineExpose({
 
 /* 不同类型的吸附指示线颜色 */
 .snap-indicator-clip {
-  background: #2196F3; /* 蓝色：片段边界吸附 */
+  background: #2196f3; /* 蓝色：片段边界吸附 */
   box-shadow: 0 0 6px rgba(33, 150, 243, 0.6);
 }
 
 .snap-indicator-keyframe {
-  background: #4CAF50; /* 绿色：关键帧吸附 */
+  background: #4caf50; /* 绿色：关键帧吸附 */
   box-shadow: 0 0 6px rgba(76, 175, 80, 0.6);
 }
 
 .snap-indicator-playhead {
-  background: #F44336; /* 红色：播放头吸附 */
+  background: #f44336; /* 红色：播放头吸附 */
   box-shadow: 0 0 6px rgba(244, 67, 54, 0.6);
 }
 
 .snap-indicator-timeline {
-  background: #9E9E9E; /* 灰色：时间轴起始位置吸附 */
+  background: #9e9e9e; /* 灰色：时间轴起始位置吸附 */
   box-shadow: 0 0 6px rgba(158, 158, 158, 0.6);
 }
 

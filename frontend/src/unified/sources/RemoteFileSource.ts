@@ -4,9 +4,7 @@
  * 行为函数已移动到 RemoteFileManager 中
  */
 
-import type {
-  BaseDataSourceData
-} from './BaseDataSource'
+import type { BaseDataSourceData } from './BaseDataSource'
 import { reactive } from 'vue'
 import { generateUUID4 } from '@/utils/idGenerator'
 
@@ -51,10 +49,7 @@ export interface DownloadStats {
  * 远程文件数据源工厂函数
  */
 export const RemoteFileSourceFactory = {
-  createRemoteSource(
-    remoteUrl: string,
-    config: RemoteFileConfig = {}
-  ): RemoteFileSourceData {
+  createRemoteSource(remoteUrl: string, config: RemoteFileConfig = {}): RemoteFileSourceData {
     return reactive({
       id: generateUUID4(),
       type: 'remote',
@@ -65,9 +60,9 @@ export const RemoteFileSourceFactory = {
       remoteUrl,
       config,
       downloadedBytes: 0,
-      totalBytes: 0
+      totalBytes: 0,
     }) as RemoteFileSourceData
-  }
+  },
 }
 
 // ==================== 类型守卫 ====================
@@ -78,7 +73,7 @@ export const RemoteFileSourceFactory = {
 export const RemoteFileTypeGuards = {
   isRemoteSource(source: BaseDataSourceData): source is RemoteFileSourceData {
     return source.type === 'remote'
-  }
+  },
 }
 
 // ==================== 下载配置 ====================
@@ -88,9 +83,9 @@ export const RemoteFileTypeGuards = {
  */
 export const DEFAULT_REMOTE_CONFIG: Required<RemoteFileConfig> = {
   headers: {},
-  timeout: 30000,      // 30秒超时
-  retryCount: 3,       // 重试3次
-  retryDelay: 1000     // 重试延迟1秒
+  timeout: 30000, // 30秒超时
+  retryCount: 3, // 重试3次
+  retryDelay: 1000, // 重试延迟1秒
 }
 
 /**
@@ -103,8 +98,6 @@ export interface DownloadProgress {
   speed?: string
   timeRemaining?: string
 }
-
-
 
 // ==================== 远程文件特定查询函数 ====================
 
@@ -129,7 +122,7 @@ export const RemoteFileQueries = {
       downloadedBytes: source.downloadedBytes,
       totalBytes: source.totalBytes,
       downloadSpeed: source.downloadSpeed,
-      startTime: source.startTime
+      startTime: source.startTime,
     }
   },
 
@@ -154,7 +147,7 @@ export const RemoteFileQueries = {
       total,
       percentage,
       speed: source.downloadSpeed,
-      timeRemaining: this.calculateTimeRemaining(source)
+      timeRemaining: this.calculateTimeRemaining(source),
     }
   },
 
@@ -179,13 +172,19 @@ export const RemoteFileQueries = {
     // 转换为字节/秒
     let bytesPerSecond = speedValue
     switch (speedUnit) {
-      case 'KB': bytesPerSecond *= 1024; break
-      case 'MB': bytesPerSecond *= 1024 * 1024; break
-      case 'GB': bytesPerSecond *= 1024 * 1024 * 1024; break
+      case 'KB':
+        bytesPerSecond *= 1024
+        break
+      case 'MB':
+        bytesPerSecond *= 1024 * 1024
+        break
+      case 'GB':
+        bytesPerSecond *= 1024 * 1024 * 1024
+        break
     }
 
     const remainingSeconds = Math.ceil(remainingBytes / bytesPerSecond)
-    
+
     if (remainingSeconds < 60) {
       return `${remainingSeconds}s`
     } else if (remainingSeconds < 3600) {
@@ -224,5 +223,5 @@ export const RemoteFileQueries = {
     // 这里可以根据服务器响应头判断是否支持断点续传
     // 目前简单返回false，后续可以扩展
     return false
-  }
+  },
 }

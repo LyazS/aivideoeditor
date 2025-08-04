@@ -4,15 +4,12 @@
  * 适配简化的轨道数据结构
  */
 
-import type {
-  UnifiedTrackData,
-  UnifiedTrackType
-} from './TrackTypes'
+import type { UnifiedTrackData, UnifiedTrackType } from './TrackTypes'
 import {
   TRACK_TYPE_DEFAULTS,
   TRACK_NAME_VALIDATION,
   TRACK_PROPERTY_VALIDATION,
-  TRACK_COLOR_THEMES
+  TRACK_COLOR_THEMES,
 } from './TrackConstants'
 
 // ==================== 轨道验证工具 ====================
@@ -85,7 +82,7 @@ export function validateTrackData(track: UnifiedTrackData): { valid: boolean; er
 
   return {
     valid: errors.length === 0,
-    errors
+    errors,
   }
 }
 
@@ -184,10 +181,13 @@ export function getTrackDisplayName(track: UnifiedTrackData): string {
 /**
  * 获取轨道颜色
  */
-export function getTrackColor(track: UnifiedTrackData, theme: keyof typeof TRACK_COLOR_THEMES = 'default'): string {
-  return TRACK_COLOR_THEMES[theme][track.type] ||
-         TRACK_COLOR_THEMES.default[track.type] ||
-         '#666666'
+export function getTrackColor(
+  track: UnifiedTrackData,
+  theme: keyof typeof TRACK_COLOR_THEMES = 'default',
+): string {
+  return (
+    TRACK_COLOR_THEMES[theme][track.type] || TRACK_COLOR_THEMES.default[track.type] || '#666666'
+  )
 }
 
 /**
@@ -206,7 +206,7 @@ export function getTrackTypeDescription(track: UnifiedTrackData): string {
     audio: '音频轨道',
     text: '文本轨道',
     subtitle: '字幕轨道',
-    effect: '特效轨道'
+    effect: '特效轨道',
   }
   return typeMap[track.type] || '未知类型'
 }
@@ -244,10 +244,10 @@ export function calculateTrackGroupStats(tracks: UnifiedTrackData[]) {
     visible: 0,
     muted: 0,
     totalHeight: 0,
-    averageHeight: 0
+    averageHeight: 0,
   }
 
-  tracks.forEach(track => {
+  tracks.forEach((track) => {
     // 按类型统计
     stats.byType[track.type] = (stats.byType[track.type] || 0) + 1
 
@@ -304,10 +304,10 @@ export function cloneTrackData(track: UnifiedTrackData): UnifiedTrackData {
  */
 export function mergeTrackData(
   target: UnifiedTrackData,
-  source: Partial<UnifiedTrackData>
+  source: Partial<UnifiedTrackData>,
 ): UnifiedTrackData {
   return {
     ...target,
-    ...source
+    ...source,
   }
 }

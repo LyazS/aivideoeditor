@@ -5,9 +5,20 @@
  */
 
 import { DataSourceManager, type AcquisitionTask } from './BaseDataSourceManager'
-import type { UserSelectedFileSourceData, FileValidationResult } from '../sources/UserSelectedFileSource'
-import { SUPPORTED_MEDIA_TYPES, FILE_SIZE_LIMITS, getMediaTypeFromMimeType } from '../utils/mediaTypeDetector'
-import { DataSourceBusinessActions, DataSourceDataActions, DataSourceQueries } from '../sources/BaseDataSource'
+import type {
+  UserSelectedFileSourceData,
+  FileValidationResult,
+} from '../sources/UserSelectedFileSource'
+import {
+  SUPPORTED_MEDIA_TYPES,
+  FILE_SIZE_LIMITS,
+  getMediaTypeFromMimeType,
+} from '../utils/mediaTypeDetector'
+import {
+  DataSourceBusinessActions,
+  DataSourceDataActions,
+  DataSourceQueries,
+} from '../sources/BaseDataSource'
 import { nextTick } from 'vue'
 
 // ==================== 用户选择文件管理器 ====================
@@ -76,7 +87,9 @@ export class UserSelectedFileManager extends DataSourceManager<UserSelectedFileS
       // 验证文件有效性
       const validationResult = this.validateFile(source.selectedFile)
       if (!validationResult.isValid) {
-        console.error(`❌ [UserSelectedFile] 文件验证失败: ${source.selectedFile.name} - ${validationResult.errorMessage}`)
+        console.error(
+          `❌ [UserSelectedFile] 文件验证失败: ${source.selectedFile.name} - ${validationResult.errorMessage}`,
+        )
         DataSourceBusinessActions.setError(source, validationResult.errorMessage || '文件验证失败')
         return
       }
@@ -89,11 +102,13 @@ export class UserSelectedFileManager extends DataSourceManager<UserSelectedFileS
         source,
         source.selectedFile,
         url,
-        async (src) => await this.detectAndSetMediaType(src as UserSelectedFileSourceData)
+        async (src) => await this.detectAndSetMediaType(src as UserSelectedFileSourceData),
       )
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : '文件处理失败'
-      console.error(`❌ [UserSelectedFile] 文件获取失败: ${source.selectedFile.name} - ${errorMessage}`)
+      console.error(
+        `❌ [UserSelectedFile] 文件获取失败: ${source.selectedFile.name} - ${errorMessage}`,
+      )
       DataSourceBusinessActions.setError(source, errorMessage)
     }
   }
@@ -106,7 +121,7 @@ export class UserSelectedFileManager extends DataSourceManager<UserSelectedFileS
     if (!file) {
       return {
         isValid: false,
-        errorMessage: '文件不存在'
+        errorMessage: '文件不存在',
       }
     }
 
@@ -114,7 +129,7 @@ export class UserSelectedFileManager extends DataSourceManager<UserSelectedFileS
     if (file.size === 0) {
       return {
         isValid: false,
-        errorMessage: '文件为空'
+        errorMessage: '文件为空',
       }
     }
 
@@ -124,7 +139,7 @@ export class UserSelectedFileManager extends DataSourceManager<UserSelectedFileS
       console.error(`❌ [UserSelectedFile] 不支持的文件类型: ${file.type || '未知'} (${file.name})`)
       return {
         isValid: false,
-        errorMessage: this.getUnsupportedFileTypeMessage(file.type, file.name)
+        errorMessage: this.getUnsupportedFileTypeMessage(file.type, file.name),
       }
     }
 
@@ -135,7 +150,7 @@ export class UserSelectedFileManager extends DataSourceManager<UserSelectedFileS
       const limitMB = Math.round(sizeLimit / (1024 * 1024))
       return {
         isValid: false,
-        errorMessage: this.getFileSizeExceededMessage(sizeMB, limitMB, mediaType)
+        errorMessage: this.getFileSizeExceededMessage(sizeMB, limitMB, mediaType),
       }
     }
 
@@ -143,14 +158,14 @@ export class UserSelectedFileManager extends DataSourceManager<UserSelectedFileS
     if (!this.isValidFileName(file.name)) {
       return {
         isValid: false,
-        errorMessage: this.getInvalidFileNameMessage(file.name)
+        errorMessage: this.getInvalidFileNameMessage(file.name),
       }
     }
 
     return {
       isValid: true,
       mediaType,
-      fileSize: file.size
+      fileSize: file.size,
     }
   }
 
@@ -202,11 +217,15 @@ export class UserSelectedFileManager extends DataSourceManager<UserSelectedFileS
   /**
    * 生成文件大小超限的详细错误信息
    */
-  private getFileSizeExceededMessage(actualSizeMB: number, limitMB: number, mediaType: 'video' | 'audio' | 'image'): string {
+  private getFileSizeExceededMessage(
+    actualSizeMB: number,
+    limitMB: number,
+    mediaType: 'video' | 'audio' | 'image',
+  ): string {
     const typeNames = {
       video: '视频',
       audio: '音频',
-      image: '图片'
+      image: '图片',
     }
 
     return `${typeNames[mediaType]}文件过大: ${actualSizeMB}MB，最大支持 ${limitMB}MB。请选择较小的文件或使用压缩工具减小文件大小。`
@@ -244,33 +263,33 @@ export class UserSelectedFileManager extends DataSourceManager<UserSelectedFileS
     // 常见的不支持格式及其建议
     const suggestions: Record<string, string> = {
       // 视频格式建议
-      'rmvb': '建议转换为 MP4、WebM 或 MOV 格式',
-      'rm': '建议转换为 MP4、WebM 或 MOV 格式',
-      'asf': '建议转换为 MP4、WebM 或 MOV 格式',
-      'vob': '建议转换为 MP4、WebM 或 MOV 格式',
-      'ts': '建议转换为 MP4、WebM 或 MOV 格式',
+      rmvb: '建议转换为 MP4、WebM 或 MOV 格式',
+      rm: '建议转换为 MP4、WebM 或 MOV 格式',
+      asf: '建议转换为 MP4、WebM 或 MOV 格式',
+      vob: '建议转换为 MP4、WebM 或 MOV 格式',
+      ts: '建议转换为 MP4、WebM 或 MOV 格式',
 
       // 音频格式建议
-      'wma': '建议转换为 MP3、WAV 或 AAC 格式',
-      'ra': '建议转换为 MP3、WAV 或 AAC 格式',
-      'amr': '建议转换为 MP3、WAV 或 AAC 格式',
+      wma: '建议转换为 MP3、WAV 或 AAC 格式',
+      ra: '建议转换为 MP3、WAV 或 AAC 格式',
+      amr: '建议转换为 MP3、WAV 或 AAC 格式',
 
       // 图片格式建议
-      'tiff': '建议转换为 JPG、PNG 或 WebP 格式',
-      'tif': '建议转换为 JPG、PNG 或 WebP 格式',
-      'psd': '建议导出为 JPG、PNG 或 WebP 格式',
-      'ai': '建议导出为 JPG、PNG 或 WebP 格式',
+      tiff: '建议转换为 JPG、PNG 或 WebP 格式',
+      tif: '建议转换为 JPG、PNG 或 WebP 格式',
+      psd: '建议导出为 JPG、PNG 或 WebP 格式',
+      ai: '建议导出为 JPG、PNG 或 WebP 格式',
 
       // 文档格式
-      'pdf': '这是文档格式，请选择媒体文件',
-      'doc': '这是文档格式，请选择媒体文件',
-      'docx': '这是文档格式，请选择媒体文件',
-      'txt': '这是文本格式，请选择媒体文件',
+      pdf: '这是文档格式，请选择媒体文件',
+      doc: '这是文档格式，请选择媒体文件',
+      docx: '这是文档格式，请选择媒体文件',
+      txt: '这是文本格式，请选择媒体文件',
 
       // 压缩格式
-      'zip': '这是压缩文件，请解压后选择媒体文件',
-      'rar': '这是压缩文件，请解压后选择媒体文件',
-      '7z': '这是压缩文件，请解压后选择媒体文件'
+      zip: '这是压缩文件，请解压后选择媒体文件',
+      rar: '这是压缩文件，请解压后选择媒体文件',
+      '7z': '这是压缩文件，请解压后选择媒体文件',
     }
 
     if (suggestions[fileExtension]) {
@@ -349,7 +368,9 @@ export class UserSelectedFileManager extends DataSourceManager<UserSelectedFileS
 
       if (mediaItem && mediaItem.mediaType === 'unknown') {
         mediaItem.mediaType = detectedType
-        console.log(`🔍 [UserSelectedFileManager] 媒体类型检测并设置完成: ${source.file.name} -> ${detectedType}`)
+        console.log(
+          `🔍 [UserSelectedFileManager] 媒体类型检测并设置完成: ${source.file.name} -> ${detectedType}`,
+        )
       } else if (!mediaItem) {
         console.warn(`找不到数据源ID为 ${source.id} 的媒体项目`)
       } else {
@@ -360,30 +381,28 @@ export class UserSelectedFileManager extends DataSourceManager<UserSelectedFileS
     }
   }
 
-
-
   /**
    * 批量处理用户选择的文件
    */
   async processBatchFiles(files: File[]): Promise<{
     successful: UserSelectedFileSourceData[]
-    failed: { file: File, error: string }[]
+    failed: { file: File; error: string }[]
   }> {
     const results = {
       successful: [] as UserSelectedFileSourceData[],
-      failed: [] as { file: File, error: string }[]
+      failed: [] as { file: File; error: string }[],
     }
 
     // 为每个文件创建数据源
     const { DataSourceFactory } = await import('../sources/DataSourceTypes')
-    const sources = files.map(file => {
+    const sources = files.map((file) => {
       return DataSourceFactory.createUserSelectedSource(file)
     })
 
     // 并发处理所有文件
     const promises = sources.map(async (source, index) => {
       const taskId = `batch_${Date.now()}_${index}`
-      
+
       return new Promise<void>((resolve) => {
         // 监听状态变化
         const checkStatus = () => {
@@ -393,7 +412,7 @@ export class UserSelectedFileManager extends DataSourceManager<UserSelectedFileS
           } else if (source.status === 'error') {
             results.failed.push({
               file: files[index],
-              error: source.errorMessage || '处理失败'
+              error: source.errorMessage || '处理失败',
             })
             resolve()
           } else {
@@ -419,11 +438,11 @@ export class UserSelectedFileManager extends DataSourceManager<UserSelectedFileS
    */
   validateFiles(files: File[]): {
     valid: File[]
-    invalid: { file: File, error: string }[]
+    invalid: { file: File; error: string }[]
   } {
     const results = {
       valid: [] as File[],
-      invalid: [] as { file: File, error: string }[]
+      invalid: [] as { file: File; error: string }[],
     }
 
     for (const file of files) {
@@ -433,7 +452,7 @@ export class UserSelectedFileManager extends DataSourceManager<UserSelectedFileS
       } else {
         results.invalid.push({
           file,
-          error: validationResult.errorMessage || '验证失败'
+          error: validationResult.errorMessage || '验证失败',
         })
       }
     }
@@ -452,7 +471,7 @@ export class UserSelectedFileManager extends DataSourceManager<UserSelectedFileS
     return {
       video: [...SUPPORTED_MEDIA_TYPES.video],
       audio: [...SUPPORTED_MEDIA_TYPES.audio],
-      image: [...SUPPORTED_MEDIA_TYPES.image]
+      image: [...SUPPORTED_MEDIA_TYPES.image],
     }
   }
 
@@ -467,7 +486,7 @@ export class UserSelectedFileManager extends DataSourceManager<UserSelectedFileS
     return {
       video: FILE_SIZE_LIMITS.video,
       audio: FILE_SIZE_LIMITS.audio,
-      image: FILE_SIZE_LIMITS.image
+      image: FILE_SIZE_LIMITS.image,
     }
   }
 
@@ -486,7 +505,7 @@ export class UserSelectedFileManager extends DataSourceManager<UserSelectedFileS
       return {
         isValid: false,
         currentSize: file.size,
-        errorMessage: '不支持的文件类型'
+        errorMessage: '不支持的文件类型',
       }
     }
 
@@ -498,7 +517,9 @@ export class UserSelectedFileManager extends DataSourceManager<UserSelectedFileS
       mediaType,
       currentSize: file.size,
       maxSize,
-      errorMessage: isValid ? undefined : `文件过大，最大支持 ${Math.round(maxSize / (1024 * 1024))}MB`
+      errorMessage: isValid
+        ? undefined
+        : `文件过大，最大支持 ${Math.round(maxSize / (1024 * 1024))}MB`,
     }
   }
 
@@ -516,26 +537,26 @@ export class UserSelectedFileManager extends DataSourceManager<UserSelectedFileS
     averageFileSize: number
     totalFileSize: number
   } {
-    const tasks = this.getAllTasks().filter(task => task.status === 'completed')
-    
+    const tasks = this.getAllTasks().filter((task) => task.status === 'completed')
+
     const stats = {
       totalProcessed: tasks.length,
       byMediaType: {
         video: 0,
         audio: 0,
         image: 0,
-        unknown: 0
+        unknown: 0,
       },
       averageFileSize: 0,
-      totalFileSize: 0
+      totalFileSize: 0,
     }
 
     let totalSize = 0
-    
+
     for (const task of tasks) {
       const file = task.source.selectedFile
       totalSize += file.size
-      
+
       const mediaType = this.getMediaType(file.type)
       if (mediaType) {
         stats.byMediaType[mediaType]++
@@ -555,7 +576,7 @@ export class UserSelectedFileManager extends DataSourceManager<UserSelectedFileS
    */
   cleanupAllResources(): void {
     const tasks = this.getAllTasks()
-    
+
     for (const task of tasks) {
       if (task.status === 'completed' || task.status === 'cancelled') {
         // 清理URL资源

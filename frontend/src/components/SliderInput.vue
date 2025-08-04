@@ -82,9 +82,9 @@ const emit = defineEmits<Emits>()
 const handleInput = (event: Event) => {
   const input = event.target as HTMLInputElement
   const value = parseFloat(input.value)
-  
+
   emit('input', value)
-  
+
   if (props.realtime) {
     emit('update:modelValue', value)
   }
@@ -94,9 +94,9 @@ const handleInput = (event: Event) => {
 const handleChange = (event: Event) => {
   const input = event.target as HTMLInputElement
   const value = parseFloat(input.value)
-  
+
   emit('change', value)
-  
+
   if (!props.realtime) {
     emit('update:modelValue', value)
   }
@@ -227,11 +227,7 @@ const handleChange = (event: Event) => {
 }
 
 .slider.opacity-slider {
-  background: linear-gradient(
-    to right,
-    transparent 0%,
-    var(--color-text-primary) 100%
-  );
+  background: linear-gradient(to right, transparent 0%, var(--color-text-primary) 100%);
   border: 1px solid var(--color-border-secondary);
 }
 

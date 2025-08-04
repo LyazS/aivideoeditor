@@ -11,11 +11,11 @@ export function createProjectModule() {
 
   // 当前项目配置
   const currentProject = ref<ProjectConfig | null>(null)
-  
+
   // 项目保存状态
   const isSaving = ref(false)
   const lastSaved = ref<Date | null>(null)
-  
+
   // 项目加载状态
   const isLoading = ref(false)
 
@@ -60,7 +60,7 @@ export function createProjectModule() {
         hour12: false,
         hour: '2-digit',
         minute: '2-digit',
-        second: '2-digit'
+        second: '2-digit',
       })
       return `${timeString} 已保存`
     }
@@ -123,7 +123,10 @@ export function createProjectModule() {
    * @param name 项目名称
    * @param template 项目模板（可选）
    */
-  async function createProject(name: string, template?: Partial<ProjectConfig>): Promise<ProjectConfig> {
+  async function createProject(
+    name: string,
+    template?: Partial<ProjectConfig>,
+  ): Promise<ProjectConfig> {
     try {
       isLoading.value = true
       updateLoadingProgress('创建项目...', 10)
@@ -145,8 +148,6 @@ export function createProjectModule() {
     }
   }
 
-
-
   /**
    * 保存当前项目
    * @param projectData 项目数据（可选，如果不提供则使用当前项目）
@@ -159,20 +160,20 @@ export function createProjectModule() {
     try {
       isSaving.value = true
       console.log(`💾 保存项目: ${currentProject.value.name}`)
-      
+
       // 合并项目数据
       const updatedProject: ProjectConfig = {
         ...currentProject.value,
         ...projectData,
         localMediaReferences: mediaReferences.value,
         asyncProcessingMediaReferences: {},
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
       }
-      
+
       await projectManager.saveProject(updatedProject)
       currentProject.value = updatedProject
       lastSaved.value = new Date()
-      
+
       console.log(`✅ 项目保存成功: ${updatedProject.name}`)
     } catch (error) {
       console.error('保存项目失败:', error)
@@ -215,10 +216,12 @@ export function createProjectModule() {
    * @param loadedMediaItems 成功加载的媒体项目列表
    */
   async function cleanupInvalidMediaReferences(loadedMediaItems: LocalMediaItem[]): Promise<void> {
-    const loadedMediaIds = new Set(loadedMediaItems.map(item => item.id))
+    const loadedMediaIds = new Set(loadedMediaItems.map((item) => item.id))
     const originalReferencesCount = Object.keys(mediaReferences.value).length
 
-    console.log(`🧹 [MEDIA-CLEANUP] 检查媒体引用一致性: ${originalReferencesCount} 个引用, ${loadedMediaItems.length} 个成功加载`)
+    console.log(
+      `🧹 [MEDIA-CLEANUP] 检查媒体引用一致性: ${originalReferencesCount} 个引用, ${loadedMediaItems.length} 个成功加载`,
+    )
 
     // 找出无效的媒体引用（在引用中存在但未成功加载的）
     const invalidMediaIds: string[] = []
@@ -234,7 +237,9 @@ export function createProjectModule() {
       // 移除无效的媒体引用
       for (const mediaId of invalidMediaIds) {
         const reference = mediaReferences.value[mediaId]
-        console.log(`🧹 [MEDIA-CLEANUP] 清理无效媒体引用: ${mediaId} (${reference?.originalFileName || 'Unknown'})`)
+        console.log(
+          `🧹 [MEDIA-CLEANUP] 清理无效媒体引用: ${mediaId} (${reference?.originalFileName || 'Unknown'})`,
+        )
         delete mediaReferences.value[mediaId]
       }
 
@@ -244,13 +249,17 @@ export function createProjectModule() {
           // 更新当前项目的 localMediaReferences
           currentProject.value.localMediaReferences = { ...mediaReferences.value }
           await projectManager.saveProject(currentProject.value)
-          console.log(`🧹 [MEDIA-CLEANUP] ✅ 媒体引用清理完成: 移除 ${invalidMediaIds.length} 个无效引用 (${originalReferencesCount} -> ${Object.keys(mediaReferences.value).length})`)
+          console.log(
+            `🧹 [MEDIA-CLEANUP] ✅ 媒体引用清理完成: 移除 ${invalidMediaIds.length} 个无效引用 (${originalReferencesCount} -> ${Object.keys(mediaReferences.value).length})`,
+          )
         }
       } catch (error) {
         console.error('🧹 [MEDIA-CLEANUP] ❌ 保存清理后的项目配置失败:', error)
       }
     } else {
-      console.log(`🧹 [MEDIA-CLEANUP] ✅ 媒体引用检查完成: 所有 ${originalReferencesCount} 个引用都有效`)
+      console.log(
+        `🧹 [MEDIA-CLEANUP] ✅ 媒体引用检查完成: 所有 ${originalReferencesCount} 个引用都有效`,
+      )
     }
   }
 
@@ -293,7 +302,9 @@ export function createProjectModule() {
       console.error('❌ [Settings Preload] 预加载项目设置失败:', error)
       // 对于现有项目，设置加载失败是严重错误，不应该继续
       isProjectSettingsReady.value = false
-      throw new Error(`项目设置加载失败，无法继续: ${error instanceof Error ? error.message : String(error)}`)
+      throw new Error(
+        `项目设置加载失败，无法继续: ${error instanceof Error ? error.message : String(error)}`,
+      )
     }
   }
 
@@ -322,7 +333,7 @@ export function createProjectModule() {
       const preloadedSettings = {
         videoResolution: videoStore.videoResolution,
         frameRate: videoStore.frameRate,
-        timelineDurationFrames: videoStore.timelineDurationFrames
+        timelineDurationFrames: videoStore.timelineDurationFrames,
       }
 
       // 使用新的分阶段加载方法
@@ -331,7 +342,7 @@ export function createProjectModule() {
         loadTimeline: true,
         onProgress: (stage, progress) => {
           updateLoadingProgress(stage, progress)
-        }
+        },
       })
 
       if (result?.projectConfig) {
@@ -381,8 +392,6 @@ export function createProjectModule() {
     }
   }
 
-
-
   /**
    * 清除当前项目
    */
@@ -406,7 +415,7 @@ export function createProjectModule() {
       mediaReferencesCount: Object.keys(mediaReferences.value).length,
       isSaving: isSaving.value,
       isLoading: isLoading.value,
-      lastSaved: lastSaved.value
+      lastSaved: lastSaved.value,
     }
   }
 
@@ -446,7 +455,7 @@ export function createProjectModule() {
 
     // 加载进度方法
     updateLoadingProgress,
-    resetLoadingState
+    resetLoadingState,
   }
 }
 

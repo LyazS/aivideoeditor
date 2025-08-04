@@ -9,15 +9,9 @@ import type {
   UnknownTimelineItem,
 } from '../timelineitem'
 
-import type {
-  UnifiedTimeRange,
-} from '../types/timeRange'
+import type { UnifiedTimeRange } from '../types/timeRange'
 
-import type {
-  OverlapTimeRange,
-  OverlapResult,
-  ConflictInfo,
-} from '../types'
+import type { OverlapTimeRange, OverlapResult, ConflictInfo } from '../types'
 
 // ==================== 核心重叠检测函数 ====================
 
@@ -78,9 +72,7 @@ export function calculateOverlapDuration(
  * @param item 时间轴项目
  * @returns 时间范围
  */
-export function extractTimeRange(
-  item: UnifiedTimelineItemData,
-): OverlapTimeRange {
+export function extractTimeRange(item: UnifiedTimelineItemData): OverlapTimeRange {
   return {
     start: item.timeRange.timelineStartTime,
     end: item.timeRange.timelineEndTime,
@@ -191,16 +183,14 @@ export function detectTrackConflicts(
  * @param timelineItems 所有时间轴项目
  * @returns 重叠项目的数量
  */
-export function countOverlappingItems(
-  timelineItems: UnifiedTimelineItemData[],
-): number {
+export function countOverlappingItems(timelineItems: UnifiedTimelineItemData[]): number {
   let count = 0
   const tracks = new Map<string, UnifiedTimelineItemData[]>()
 
   // 按轨道分组
   timelineItems.forEach((item) => {
     if (!item.trackId) return // 跳过没有轨道ID的项目
-    
+
     if (!tracks.has(item.trackId)) {
       tracks.set(item.trackId, [])
     }
@@ -248,7 +238,7 @@ export function getAllOverlappingPairs(
   // 按轨道分组
   timelineItems.forEach((item) => {
     if (!item.trackId) return // 跳过没有轨道ID的项目
-    
+
     if (!tracks.has(item.trackId)) {
       tracks.set(item.trackId, [])
     }

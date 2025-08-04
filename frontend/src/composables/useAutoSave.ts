@@ -15,7 +15,7 @@ export function useAutoSave(config: Partial<AutoSaveConfig> = {}) {
     debounceTime: 2000, // 2秒防抖
     throttleTime: 30000, // 30秒强制保存
     maxRetries: 3,
-    enabled: true
+    enabled: true,
   }
 
   const finalConfig = { ...defaultConfig, ...config }
@@ -26,7 +26,7 @@ export function useAutoSave(config: Partial<AutoSaveConfig> = {}) {
     lastSaveTime: null,
     saveCount: 0,
     errorCount: 0,
-    isDirty: false
+    isDirty: false,
   })
 
   // 定时器引用
@@ -66,7 +66,7 @@ export function useAutoSave(config: Partial<AutoSaveConfig> = {}) {
       console.log('💾 [AutoSave] 开始自动保存...')
 
       // 清理媒体引用：只保留当前存在的媒体项目的引用
-      const currentMediaIds = new Set(videoStore.mediaItems.map(item => item.id))
+      const currentMediaIds = new Set(videoStore.mediaItems.map((item) => item.id))
       const cleanedMediaReferences: Record<string, any> = {}
 
       // 获取当前的媒体引用
@@ -83,7 +83,7 @@ export function useAutoSave(config: Partial<AutoSaveConfig> = {}) {
       const projectData = {
         timeline: {
           tracks: videoStore.tracks,
-          timelineItems: videoStore.timelineItems.map(item => {
+          timelineItems: videoStore.timelineItems.map((item) => {
             // 根据项目类型获取媒体名称和动画配置
             let mediaName = 'Unknown'
             let animation = undefined
@@ -92,13 +92,18 @@ export function useAutoSave(config: Partial<AutoSaveConfig> = {}) {
               // 本地时间轴项目：获取完整信息
               animation = item.animation // 保存动画配置
               if (item.mediaType === 'text') {
-                mediaName = item.mediaName || `文本: ${('text' in item.config) ? item.config.text?.substring(0, 10) || '未知' : '未知'}...`
+                mediaName =
+                  item.mediaName ||
+                  `文本: ${'text' in item.config ? item.config.text?.substring(0, 10) || '未知' : '未知'}...`
               } else {
                 mediaName = videoStore.getLocalMediaItem(item.mediaItemId)?.name || 'Unknown'
               }
             } else if (isAsyncProcessingTimelineItem(item)) {
               // 异步处理时间轴项目：从异步处理媒体项目或配置获取名称
-              mediaName = videoStore.getAsyncProcessingItem(item.mediaItemId)?.name || item.config.name || 'Unknown'
+              mediaName =
+                videoStore.getAsyncProcessingItem(item.mediaItemId)?.name ||
+                item.config.name ||
+                'Unknown'
               // 异步处理项目没有动画配置
             }
 
@@ -111,30 +116,30 @@ export function useAutoSave(config: Partial<AutoSaveConfig> = {}) {
               config: item.config,
               animation, // 保存动画配置（异步项目为undefined）
               // 注意：不保存 thumbnailUrl，这是运行时生成的blob URL
-              mediaName
+              mediaName,
             }
           }),
-          mediaItems: videoStore.mediaItems.map(item => ({
+          mediaItems: videoStore.mediaItems.map((item) => ({
             id: item.id,
             name: item.name,
             type: item.type,
             mediaType: item.mediaType,
-            duration: item.duration
+            duration: item.duration,
             // 注意：不保存 isReady, status, thumbnailUrl 等运行时状态
             // 这些状态在重新加载时会重新生成
-          }))
+          })),
         },
         settings: {
           videoResolution: videoStore.videoResolution,
           frameRate: videoStore.frameRate,
-          timelineDurationFrames: videoStore.timelineDurationFrames
+          timelineDurationFrames: videoStore.timelineDurationFrames,
         },
         // 使用清理后的媒体引用
-        mediaReferences: cleanedMediaReferences
+        mediaReferences: cleanedMediaReferences,
       }
 
       await videoStore.saveCurrentProject(projectData)
-      
+
       // 更新状态
       autoSaveState.value.lastSaveTime = new Date()
       autoSaveState.value.saveCount++
@@ -146,12 +151,12 @@ export function useAutoSave(config: Partial<AutoSaveConfig> = {}) {
     } catch (error) {
       console.error('❌ [AutoSave] 自动保存失败:', error)
       autoSaveState.value.errorCount++
-      
+
       // 重试机制
       if (retryCount < finalConfig.maxRetries) {
         retryCount++
         console.log(`🔄 [AutoSave] 准备重试 (${retryCount}/${finalConfig.maxRetries})`)
-        
+
         // 延迟重试
         setTimeout(() => {
           performSave()
@@ -160,7 +165,7 @@ export function useAutoSave(config: Partial<AutoSaveConfig> = {}) {
         console.error('❌ [AutoSave] 达到最大重试次数，停止自动保存')
         retryCount = 0
       }
-      
+
       return false
     }
   }
@@ -233,7 +238,7 @@ export function useAutoSave(config: Partial<AutoSaveConfig> = {}) {
       lastSaveTime: null,
       saveCount: 0,
       errorCount: 0,
-      isDirty: false
+      isDirty: false,
     }
     retryCount = 0
     clearTimers()
@@ -248,7 +253,7 @@ export function useAutoSave(config: Partial<AutoSaveConfig> = {}) {
         console.log('🔄 [AutoSave] 检测到时间轴项目变化')
         triggerAutoSave()
       },
-      { deep: true }
+      { deep: true },
     )
 
     // 监听轨道变化
@@ -258,7 +263,7 @@ export function useAutoSave(config: Partial<AutoSaveConfig> = {}) {
         console.log('🔄 [AutoSave] 检测到轨道变化')
         triggerAutoSave()
       },
-      { deep: true }
+      { deep: true },
     )
 
     // 监听媒体项目变化
@@ -268,7 +273,7 @@ export function useAutoSave(config: Partial<AutoSaveConfig> = {}) {
         console.log('🔄 [AutoSave] 检测到媒体项目变化')
         triggerAutoSave()
       },
-      { deep: true }
+      { deep: true },
     )
 
     // 监听项目配置变化
@@ -276,13 +281,13 @@ export function useAutoSave(config: Partial<AutoSaveConfig> = {}) {
       () => ({
         videoResolution: videoStore.videoResolution,
         frameRate: videoStore.frameRate,
-        timelineDurationFrames: videoStore.timelineDurationFrames
+        timelineDurationFrames: videoStore.timelineDurationFrames,
       }),
       () => {
         console.log('🔄 [AutoSave] 检测到项目配置变化')
         triggerAutoSave()
       },
-      { deep: true }
+      { deep: true },
     )
   }
 
@@ -294,15 +299,15 @@ export function useAutoSave(config: Partial<AutoSaveConfig> = {}) {
   return {
     // 状态
     autoSaveState,
-    
+
     // 方法
     enableAutoSave,
     disableAutoSave,
     manualSave,
     triggerAutoSave,
     resetAutoSaveState,
-    
+
     // 配置
-    config: finalConfig
+    config: finalConfig,
   }
 }

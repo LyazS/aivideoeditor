@@ -155,7 +155,7 @@ class DragPreviewManager {
       const trackRect = trackElement.getBoundingClientRect()
 
       // 获取轨道信息以计算垂直居中位置
-      const track = this.videoStore.tracks.find(t => t.id === data.trackId)
+      const track = this.videoStore.tracks.find((t) => t.id === data.trackId)
       const trackHeight = track?.height || 80 // 默认轨道高度80px
       const previewHeight = data.height || 60 // 预览高度
 

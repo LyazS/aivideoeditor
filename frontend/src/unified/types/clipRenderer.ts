@@ -1,6 +1,6 @@
 /**
  * 统一Clip架构 - 内容渲染策略接口定义
- * 
+ *
  * 设计理念：
  * - 基于策略模式分离不同类型和状态的渲染逻辑
  * - 状态优先：优先基于状态选择渲染器，然后基于媒体类型选择
@@ -21,25 +21,25 @@ import type { MediaTypeOrUnknown } from '../mediaitem/types'
 export interface ContentRenderContext<T extends MediaTypeOrUnknown = MediaTypeOrUnknown> {
   /** 时间轴项目数据 */
   data: UnifiedTimelineItemData<T>
-  
+
   /** 是否被选中 */
   isSelected: boolean
-  
+
   /** 是否正在拖拽 */
   isDragging: boolean
-  
+
   /** 是否正在调整大小 */
   isResizing: boolean
-  
+
   /** 当前播放时间（帧数） */
   currentFrame: number
-  
+
   /** 缩放比例 */
   scale: number
-  
+
   /** 轨道高度 */
   trackHeight: number
-  
+
   /** 事件回调 */
   callbacks: {
     onSelect: (id: string) => void
@@ -59,36 +59,36 @@ export interface ContentRenderContext<T extends MediaTypeOrUnknown = MediaTypeOr
 export interface ContentRenderer<T extends MediaTypeOrUnknown = MediaTypeOrUnknown> {
   /** 渲染器类型标识 */
   readonly type: T | string
-  
-  /** 
+
+  /**
    * 渲染内容区域
    * @param context 渲染上下文
    * @returns Vue虚拟节点
    */
   renderContent(context: ContentRenderContext<T>): VNode | VNode[]
-  
-  /** 
+
+  /**
    * 渲染状态指示器（可选）
    * @param context 渲染上下文
    * @returns Vue虚拟节点或null
    */
   renderStatusIndicator?(context: ContentRenderContext<T>): VNode | null
-  
-  /** 
+
+  /**
    * 渲染进度条（可选）
    * @param context 渲染上下文
    * @returns Vue虚拟节点或null
    */
   renderProgressBar?(context: ContentRenderContext<T>): VNode | null
-  
-  /** 
+
+  /**
    * 获取自定义样式类（可选）
    * @param context 渲染上下文
    * @returns CSS类名数组
    */
   getCustomClasses?(context: ContentRenderContext<T>): string[]
-  
-  /** 
+
+  /**
    * 获取自定义样式（可选）
    * @param context 渲染上下文
    * @returns CSS样式对象
@@ -123,24 +123,19 @@ export interface ContentRendererFactory {
    * 获取指定数据的内容渲染器
    * 优先基于状态选择，然后基于媒体类型选择
    */
-  getRenderer<T extends MediaTypeOrUnknown>(
-    data: UnifiedTimelineItemData<T>
-  ): ContentRenderer<T>
-  
+  getRenderer<T extends MediaTypeOrUnknown>(data: UnifiedTimelineItemData<T>): ContentRenderer<T>
+
   /**
    * 注册状态渲染器
    */
-  registerStatusRenderer(
-    status: StatusRendererType,
-    renderer: ContentRenderer
-  ): void
-  
+  registerStatusRenderer(status: StatusRendererType, renderer: ContentRenderer): void
+
   /**
    * 注册媒体类型渲染器
    */
   registerMediaTypeRenderer<T extends MediaTypeOrUnknown>(
     type: T,
-    renderer: ContentRenderer<T>
+    renderer: ContentRenderer<T>,
   ): void
 }
 
@@ -152,22 +147,22 @@ export interface ContentRendererFactory {
 export interface UnifiedTimelineClipProps<T extends MediaTypeOrUnknown = MediaTypeOrUnknown> {
   /** 时间轴项目数据 */
   data: UnifiedTimelineItemData<T>
-  
+
   /** 是否被选中 */
   isSelected?: boolean
-  
+
   /** 是否正在拖拽 */
   isDragging?: boolean
-  
+
   /** 是否正在调整大小 */
   isResizing?: boolean
-  
+
   /** 当前播放时间（帧数） */
   currentFrame?: number
-  
+
   /** 缩放比例 */
   scale?: number
-  
+
   /** 轨道高度 */
   trackHeight?: number
 
@@ -186,16 +181,16 @@ export interface UnifiedTimelineClipProps<T extends MediaTypeOrUnknown = MediaTy
 export interface UnifiedTimelineClipEvents {
   /** 选中事件 */
   select: (id: string) => void
-  
+
   /** 双击事件 */
   doubleClick: (id: string) => void
-  
+
   /** 右键菜单事件 */
   contextMenu: (event: MouseEvent, id: string) => void
-  
+
   /** 拖拽开始事件 */
   dragStart: (event: DragEvent, id: string) => void
-  
+
   /** 调整大小开始事件 */
   resizeStart: (event: MouseEvent, id: string, direction: 'left' | 'right') => void
 }

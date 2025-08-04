@@ -143,9 +143,10 @@ class DragPreviewManager {
     // 计算预览位置和尺寸（data.startTime 和 data.duration 已经是帧数）
     const startFrames = data.startTime
     const endFrames = data.startTime + data.duration
-    
+
     // 使用unifiedStore的zoomLevel和frameRate计算像素位置
-    const pixelsPerFrame = (timelineWidth * this.unifiedStore.zoomLevel) / this.unifiedStore.totalDurationFrames
+    const pixelsPerFrame =
+      (timelineWidth * this.unifiedStore.zoomLevel) / this.unifiedStore.totalDurationFrames
     const left = startFrames * pixelsPerFrame
     const right = endFrames * pixelsPerFrame
     const width = Math.max(right - left, 60) // 最小宽度60px

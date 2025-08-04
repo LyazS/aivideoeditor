@@ -26,7 +26,7 @@ import {
   smartExpandTimelineIfNeeded,
   batchExpandTimelineIfNeeded,
   predictiveExpandTimeline,
-  getTimelineExpansionSuggestion
+  getTimelineExpansionSuggestion,
 } from './utils/UnifiedTimeUtils'
 import {
   getTimelineItemAtFrames,
@@ -41,7 +41,7 @@ import {
   sortTimelineItemsByTime,
   findOverlappingTimelineItems,
   findOverlappingTimelineItemsOnTrack,
-  findOrphanedTimelineItems
+  findOrphanedTimelineItems,
 } from './utils/UnifiedTimelineSearchUtils'
 import {
   isVideoTimelineItem,
@@ -59,7 +59,7 @@ import {
   getStatusText,
   filterByStatus,
   filterByTrack,
-  sortByTime
+  sortByTime,
 } from './timelineitem/TimelineItemQueries'
 
 // 从TimelineItemFactory导入工厂函数
@@ -69,7 +69,7 @@ import {
   createAudioTimelineItem,
   createImageTimelineItem,
   cloneTimelineItem,
-  duplicateTimelineItem
+  duplicateTimelineItem,
 } from './timelineitem/TimelineItemFactory'
 
 // 从TimelineItemBehaviors导入行为函数
@@ -77,7 +77,7 @@ import {
   transitionTimelineStatus,
   setLoading,
   setReady,
-  setError
+  setError,
 } from './timelineitem/TimelineItemBehaviors'
 // ==================== 命令类导入 ====================
 import {
@@ -92,18 +92,12 @@ import {
   RenameTrackCommand,
   ToggleTrackVisibilityCommand,
   ToggleTrackMuteCommand,
-  ResizeTimelineItemCommand
+  ResizeTimelineItemCommand,
 } from './modules/commands/timelineCommands'
 
-import {
-  BatchDeleteCommand,
-  BatchAutoArrangeTrackCommand
-} from './modules/commands/batchCommands'
+import { BatchDeleteCommand, BatchAutoArrangeTrackCommand } from './modules/commands/batchCommands'
 
-import {
-  AddTextItemCommand,
-  RemoveTextItemCommand
-} from './modules/commands/textCommands'
+import { AddTextItemCommand, RemoveTextItemCommand } from './modules/commands/textCommands'
 
 /**
  * 统一视频编辑器存储
@@ -148,7 +142,7 @@ export const useUnifiedStore = defineStore('unified', () => {
     unifiedConfigModule,
     unifiedWebavModule,
     unifiedMediaModule,
-    unifiedTrackModule
+    unifiedTrackModule,
   )
 
   // 创建统一项目管理模块
@@ -196,7 +190,7 @@ export const useUnifiedStore = defineStore('unified', () => {
         if (item) {
           Object.assign(item, updates)
         }
-      }
+      },
     },
     unifiedMediaModule,
   )
@@ -302,7 +296,6 @@ export const useUnifiedStore = defineStore('unified', () => {
     }
   }
 
-
   // ==================== 批量操作方法（带日志） ====================
 
   /**
@@ -357,7 +350,9 @@ export const useUnifiedStore = defineStore('unified', () => {
    * 带历史记录的添加时间轴项目方法
    * @param timelineItem 要添加的时间轴项目
    */
-  async function addTimelineItemWithHistory(timelineItem: UnifiedTimelineItemData<MediaTypeOrUnknown>) {
+  async function addTimelineItemWithHistory(
+    timelineItem: UnifiedTimelineItemData<MediaTypeOrUnknown>,
+  ) {
     // 检查是否是文本项目，使用专门的文本命令
     if (timelineItem.mediaType === 'text') {
       // 类型检查确保这是文本项目
@@ -452,7 +447,9 @@ export const useUnifiedStore = defineStore('unified', () => {
         removeTimelineItem: unifiedTimelineModule.removeTimelineItem,
         getTimelineItem: (id: string) => {
           const item = unifiedTimelineModule.getTimelineItem(id)
-          return item && item.mediaType === 'text' ? item as UnifiedTimelineItemData<'text'> : undefined
+          return item && item.mediaType === 'text'
+            ? (item as UnifiedTimelineItemData<'text'>)
+            : undefined
         },
       },
       {
@@ -640,10 +637,7 @@ export const useUnifiedStore = defineStore('unified', () => {
   /**
    * 检查变换属性是否有实际变化
    */
-  function checkTransformChanges(
-    oldTransform: any,
-    newTransform: any,
-  ): boolean {
+  function checkTransformChanges(oldTransform: any, newTransform: any): boolean {
     // 检查位置变化
     if (
       (newTransform.x !== undefined && oldTransform.x !== undefined) ||
@@ -811,7 +805,7 @@ export const useUnifiedStore = defineStore('unified', () => {
     const command = new DuplicateTimelineItemCommand(
       timelineItemId,
       timelineItem,
-      newPositionFrames || (timelineItem.timeRange.timelineStartTime + 100), // 提供默认位置
+      newPositionFrames || timelineItem.timeRange.timelineStartTime + 100, // 提供默认位置
       {
         addTimelineItem: unifiedTimelineModule.addTimelineItem,
         removeTimelineItem: unifiedTimelineModule.removeTimelineItem,
@@ -839,16 +833,12 @@ export const useUnifiedStore = defineStore('unified', () => {
     name?: string,
     position?: number,
   ) {
-    const command = new AddTrackCommand(
-      type,
-      name,
-      position,
-      {
-        addTrack: unifiedTrackModule.addTrack,
-        removeTrack: (trackId: string) => unifiedTrackModule.removeTrack(trackId, unifiedTimelineModule.timelineItems),
-        getTrack: unifiedTrackModule.getTrack,
-      },
-    )
+    const command = new AddTrackCommand(type, name, position, {
+      addTrack: unifiedTrackModule.addTrack,
+      removeTrack: (trackId: string) =>
+        unifiedTrackModule.removeTrack(trackId, unifiedTimelineModule.timelineItems),
+      getTrack: unifiedTrackModule.getTrack,
+    })
     await unifiedHistoryModule.executeCommand(command)
   }
 
@@ -868,7 +858,8 @@ export const useUnifiedStore = defineStore('unified', () => {
       trackId,
       {
         addTrack: unifiedTrackModule.addTrack,
-        removeTrack: (trackId: string) => unifiedTrackModule.removeTrack(trackId, unifiedTimelineModule.timelineItems),
+        removeTrack: (trackId: string) =>
+          unifiedTrackModule.removeTrack(trackId, unifiedTimelineModule.timelineItems),
         getTrack: unifiedTrackModule.getTrack,
         tracks: unifiedTrackModule.tracks,
       },
@@ -904,14 +895,10 @@ export const useUnifiedStore = defineStore('unified', () => {
 
     const oldName = track.name
 
-    const command = new RenameTrackCommand(
-      trackId,
-      newName,
-      {
-        renameTrack: unifiedTrackModule.renameTrack,
-        getTrack: unifiedTrackModule.getTrack,
-      },
-    )
+    const command = new RenameTrackCommand(trackId, newName, {
+      renameTrack: unifiedTrackModule.renameTrack,
+      getTrack: unifiedTrackModule.getTrack,
+    })
     await unifiedHistoryModule.executeCommand(command)
   }
 
@@ -922,7 +909,7 @@ export const useUnifiedStore = defineStore('unified', () => {
   async function autoArrangeTrackWithHistory(trackId: string) {
     const command = new BatchAutoArrangeTrackCommand(
       trackId,
-      unifiedTimelineModule.timelineItems.value.filter(item => item.trackId === trackId),
+      unifiedTimelineModule.timelineItems.value.filter((item) => item.trackId === trackId),
       {
         getTimelineItem: unifiedTimelineModule.getTimelineItem,
         updateTimelineItemPosition: unifiedTimelineModule.updateTimelineItemPosition,
@@ -996,10 +983,14 @@ export const useUnifiedStore = defineStore('unified', () => {
   async function resizeTimelineItemWithHistory(
     timelineItemId: string,
     newTimeRangeOrDuration: UnifiedTimeRange | number,
-    resizeFromEnd?: boolean
+    resizeFromEnd?: boolean,
   ): Promise<boolean> {
     try {
-      console.log('🔧 [UnifiedStore] 调整时间轴项目大小:', { timelineItemId, newTimeRangeOrDuration, resizeFromEnd })
+      console.log('🔧 [UnifiedStore] 调整时间轴项目大小:', {
+        timelineItemId,
+        newTimeRangeOrDuration,
+        resizeFromEnd,
+      })
 
       // 获取当前项目
       const currentItem = unifiedTimelineModule.getTimelineItem(timelineItemId)
@@ -1015,7 +1006,7 @@ export const useUnifiedStore = defineStore('unified', () => {
         // 兼容旧调用方式：传入的是 newDurationFrames
         const newDurationFrames = newTimeRangeOrDuration
         const currentTimeRange = currentItem.timeRange
-        
+
         if (resizeFromEnd === false) {
           // 从左侧调整：保持结束时间不变，调整开始时间
           const newStartTime = currentTimeRange.timelineEndTime - newDurationFrames
@@ -1023,7 +1014,7 @@ export const useUnifiedStore = defineStore('unified', () => {
             timelineStartTime: Math.max(0, newStartTime),
             timelineEndTime: currentTimeRange.timelineEndTime,
             clipStartTime: currentTimeRange.clipStartTime,
-            clipEndTime: currentTimeRange.clipEndTime
+            clipEndTime: currentTimeRange.clipEndTime,
           }
         } else {
           // 从右侧调整（默认）：保持开始时间不变，调整结束时间
@@ -1031,7 +1022,7 @@ export const useUnifiedStore = defineStore('unified', () => {
             timelineStartTime: currentTimeRange.timelineStartTime,
             timelineEndTime: currentTimeRange.timelineStartTime + newDurationFrames,
             clipStartTime: currentTimeRange.clipStartTime,
-            clipEndTime: currentTimeRange.clipEndTime
+            clipEndTime: currentTimeRange.clipEndTime,
           }
         }
       } else {
@@ -1041,8 +1032,10 @@ export const useUnifiedStore = defineStore('unified', () => {
 
       // 检查时间范围是否有变化
       const currentTimeRange = currentItem.timeRange
-      if (currentTimeRange.timelineStartTime === newTimeRange.timelineStartTime &&
-          currentTimeRange.timelineEndTime === newTimeRange.timelineEndTime) {
+      if (
+        currentTimeRange.timelineStartTime === newTimeRange.timelineStartTime &&
+        currentTimeRange.timelineEndTime === newTimeRange.timelineEndTime
+      ) {
         console.log('ℹ️ [UnifiedStore] 时间范围无变化，跳过调整')
         return true
       }
@@ -1057,7 +1050,7 @@ export const useUnifiedStore = defineStore('unified', () => {
         },
         {
           getMediaItem: unifiedMediaModule.getMediaItem,
-        }
+        },
       )
 
       // 执行命令
@@ -1429,7 +1422,7 @@ export const useUnifiedStore = defineStore('unified', () => {
 
     // ==================== 系统状态方法 ====================
 
-    resetToDefaults,  // 保留封装，因为需要重置所有模块
+    resetToDefaults, // 保留封装，因为需要重置所有模块
 
     // ==================== 坐标转换方法 ====================
     frameToPixel: (frames: number, timelineWidth: number) =>
@@ -1453,13 +1446,34 @@ export const useUnifiedStore = defineStore('unified', () => {
     expandTimelineIfNeededFrames: (targetFrames: number) =>
       expandTimelineIfNeededFrames(targetFrames, unifiedConfigModule.timelineDurationFrames),
     smartExpandTimelineIfNeeded: (targetFrames: number, minRatio?: number, maxRatio?: number) =>
-      smartExpandTimelineIfNeeded(targetFrames, unifiedConfigModule.timelineDurationFrames, minRatio, maxRatio),
+      smartExpandTimelineIfNeeded(
+        targetFrames,
+        unifiedConfigModule.timelineDurationFrames,
+        minRatio,
+        maxRatio,
+      ),
     batchExpandTimelineIfNeeded: (targetFramesList: number[], expansionRatio?: number) =>
-      batchExpandTimelineIfNeeded(targetFramesList, unifiedConfigModule.timelineDurationFrames, expansionRatio),
-    predictiveExpandTimeline: (currentUsedFrames: number, usageThreshold?: number, expansionRatio?: number) =>
-      predictiveExpandTimeline(currentUsedFrames, unifiedConfigModule.timelineDurationFrames, usageThreshold, expansionRatio),
-    getTimelineExpansionSuggestion: (currentDuration: number, targetFrames: number, currentUsedFrames: number) =>
-      getTimelineExpansionSuggestion(currentDuration, targetFrames, currentUsedFrames),
+      batchExpandTimelineIfNeeded(
+        targetFramesList,
+        unifiedConfigModule.timelineDurationFrames,
+        expansionRatio,
+      ),
+    predictiveExpandTimeline: (
+      currentUsedFrames: number,
+      usageThreshold?: number,
+      expansionRatio?: number,
+    ) =>
+      predictiveExpandTimeline(
+        currentUsedFrames,
+        unifiedConfigModule.timelineDurationFrames,
+        usageThreshold,
+        expansionRatio,
+      ),
+    getTimelineExpansionSuggestion: (
+      currentDuration: number,
+      targetFrames: number,
+      currentUsedFrames: number,
+    ) => getTimelineExpansionSuggestion(currentDuration, targetFrames, currentUsedFrames),
 
     // ==================== 时间轴搜索工具函数 ====================
     getTimelineItemAtFrames: (frames: number) =>
@@ -1479,10 +1493,29 @@ export const useUnifiedStore = defineStore('unified', () => {
     getTimelineItemsByStatus: (status: 'ready' | 'loading' | 'error') =>
       getTimelineItemsByStatus(status, unifiedTimelineModule.timelineItems.value),
     findOverlappingTimelineItems: (startTime: number, endTime: number, excludeItemId?: string) =>
-      findOverlappingTimelineItems(startTime, endTime, unifiedTimelineModule.timelineItems.value, excludeItemId),
-    findOverlappingTimelineItemsOnTrack: (trackId: string, startTime: number, endTime: number, excludeItemId?: string) =>
-      findOverlappingTimelineItemsOnTrack(trackId, startTime, endTime, unifiedTimelineModule.timelineItems.value, excludeItemId),
+      findOverlappingTimelineItems(
+        startTime,
+        endTime,
+        unifiedTimelineModule.timelineItems.value,
+        excludeItemId,
+      ),
+    findOverlappingTimelineItemsOnTrack: (
+      trackId: string,
+      startTime: number,
+      endTime: number,
+      excludeItemId?: string,
+    ) =>
+      findOverlappingTimelineItemsOnTrack(
+        trackId,
+        startTime,
+        endTime,
+        unifiedTimelineModule.timelineItems.value,
+        excludeItemId,
+      ),
     findOrphanedTimelineItems: () =>
-      findOrphanedTimelineItems(unifiedTimelineModule.timelineItems.value, unifiedMediaModule.mediaItems.value),
+      findOrphanedTimelineItems(
+        unifiedTimelineModule.timelineItems.value,
+        unifiedMediaModule.mediaItems.value,
+      ),
   }
 })

@@ -5,14 +5,10 @@
 
 import { watch, type WatchStopHandle } from 'vue'
 import type { UnifiedMediaItemData } from '../mediaitem'
-import type {
-  UnifiedTimelineItemData,
-  UnknownMediaConfig,
-} from './TimelineItemData'
+import type { UnifiedTimelineItemData, UnknownMediaConfig } from './TimelineItemData'
 import { MEDIA_TO_TIMELINE_STATUS_MAP } from './TimelineItemData'
 import { createUnknownTimelineItem } from './TimelineItemFactory'
 import { transitionTimelineStatus } from './TimelineItemBehaviors'
-
 
 /**
  * 响应式时间轴项目与媒体项目的状态同步管理器
@@ -59,7 +55,9 @@ export class TimelineMediaSyncManager {
       }
       this.setupMediaStatusSync(timelineData, mediaData)
     } else {
-      console.error(`❌ TimelineItem ${timelineData.id} 找不到关联的MediaItem ${timelineData.mediaItemId}`)
+      console.error(
+        `❌ TimelineItem ${timelineData.id} 找不到关联的MediaItem ${timelineData.mediaItemId}`,
+      )
     }
 
     console.log(`📝 注册时间轴项目: ${timelineData.id}`)
@@ -70,7 +68,7 @@ export class TimelineMediaSyncManager {
    */
   private setupMediaStatusSync(
     timelineData: UnifiedTimelineItemData,
-    mediaData: UnifiedMediaItemData
+    mediaData: UnifiedMediaItemData,
   ): void {
     // 使用Vue3的watch建立响应式同步
     const stopHandle = watch(
@@ -82,17 +80,17 @@ export class TimelineMediaSyncManager {
           // 直接进行状态转换，不再使用复杂的上下文模板
           await transitionTimelineStatus(timelineData, targetTimelineStatus)
 
-          console.log(`🔄 状态同步: MediaItem(${newStatus}) → TimelineItem(${targetTimelineStatus})`)
+          console.log(
+            `🔄 状态同步: MediaItem(${newStatus}) → TimelineItem(${targetTimelineStatus})`,
+          )
         }
       },
-      { immediate: true } // 立即执行一次同步当前状态
+      { immediate: true }, // 立即执行一次同步当前状态
     )
 
     // 保存停止句柄，用于清理
     this.watchStopHandles.set(timelineData.id, stopHandle)
   }
-
-
 
   /**
    * 响应式时间轴项目工厂方法
@@ -102,7 +100,7 @@ export class TimelineMediaSyncManager {
     mediaItemId: string,
     trackId: string,
     timeRange: { timelineStartTime: number; timelineEndTime: number },
-    config: UnknownMediaConfig
+    config: UnknownMediaConfig,
   ): UnifiedTimelineItemData | null {
     const mediaData = this.mediaItems.get(mediaItemId)
 
@@ -116,14 +114,14 @@ export class TimelineMediaSyncManager {
       timelineStartTime: timeRange.timelineStartTime,
       timelineEndTime: timeRange.timelineEndTime,
       clipStartTime: 0,
-      clipEndTime: timeRange.timelineEndTime - timeRange.timelineStartTime
+      clipEndTime: timeRange.timelineEndTime - timeRange.timelineStartTime,
     }
 
     const timelineData = createUnknownTimelineItem({
       mediaItemId,
       trackId,
       timeRange: unifiedTimeRange,
-      config
+      config,
     })
 
     // 根据MediaItem状态设置初始状态
@@ -144,12 +142,14 @@ export class TimelineMediaSyncManager {
   /**
    * 批量创建时间轴项目
    */
-  createMultipleTimelineItems(requests: Array<{
-    mediaItemId: string
-    trackId: string
-    timeRange: { timelineStartTime: number; timelineEndTime: number }
-    config: UnknownMediaConfig
-  }>): UnifiedTimelineItemData[] {
+  createMultipleTimelineItems(
+    requests: Array<{
+      mediaItemId: string
+      trackId: string
+      timeRange: { timelineStartTime: number; timelineEndTime: number }
+      config: UnknownMediaConfig
+    }>,
+  ): UnifiedTimelineItemData[] {
     const results: UnifiedTimelineItemData[] = []
 
     for (const request of requests) {
@@ -157,9 +157,9 @@ export class TimelineMediaSyncManager {
         request.mediaItemId,
         request.trackId,
         request.timeRange,
-        request.config
+        request.config,
       )
-      
+
       if (item) {
         results.push(item)
       }
@@ -182,7 +182,7 @@ export class TimelineMediaSyncManager {
 
     // 从注册表移除
     this.timelineItems.delete(timelineId)
-    
+
     console.log(`🗑️ 清理时间轴项目: ${timelineId}`)
   }
 
@@ -213,7 +213,7 @@ export class TimelineMediaSyncManager {
    */
   getTimelineItemsByTrack(trackId: string): UnifiedTimelineItemData[] {
     return Array.from(this.timelineItems.values())
-      .filter(item => item.trackId === trackId)
+      .filter((item) => item.trackId === trackId)
       .sort((a, b) => a.timeRange.timelineStartTime - b.timeRange.timelineStartTime)
   }
 
@@ -221,8 +221,7 @@ export class TimelineMediaSyncManager {
    * 获取关联到指定媒体项目的所有时间轴项目
    */
   getTimelineItemsByMedia(mediaId: string): UnifiedTimelineItemData[] {
-    return Array.from(this.timelineItems.values())
-      .filter(item => item.mediaItemId === mediaId)
+    return Array.from(this.timelineItems.values()).filter((item) => item.mediaItemId === mediaId)
   }
 
   /**
@@ -253,7 +252,7 @@ export class TimelineMediaSyncManager {
     return {
       timelineItemCount: this.timelineItems.size,
       mediaItemCount: this.mediaItems.size,
-      activeWatchCount: this.watchStopHandles.size
+      activeWatchCount: this.watchStopHandles.size,
     }
   }
 
@@ -262,7 +261,7 @@ export class TimelineMediaSyncManager {
    */
   async forceSyncAll(): Promise<void> {
     console.log('🔄 强制同步所有时间轴项目状态...')
-    
+
     for (const timelineData of this.timelineItems.values()) {
       const mediaData = this.mediaItems.get(timelineData.mediaItemId)
       if (mediaData) {

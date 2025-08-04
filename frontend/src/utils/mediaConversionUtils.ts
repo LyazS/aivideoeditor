@@ -3,7 +3,13 @@
  * 用于异步处理素材转换为本地素材的相关工具
  */
 
-import type { LocalMediaItem, AsyncProcessingMediaItem, AsyncProcessingTimelineItem, LocalTimelineItem, MediaType } from '../types'
+import type {
+  LocalMediaItem,
+  AsyncProcessingMediaItem,
+  AsyncProcessingTimelineItem,
+  LocalTimelineItem,
+  MediaType,
+} from '../types'
 import { useVideoStore } from '../stores/videoStore'
 import { markRaw } from 'vue'
 
@@ -16,23 +22,26 @@ import { markRaw } from 'vue'
  */
 export function saveTimelineClipInfo(asyncProcessingMediaItemId: string) {
   const videoStore = useVideoStore()
-  
+
   // 查找所有相关的异步处理时间轴项目
-  const relatedTimelineItems = videoStore.timelineItems.filter(item => 
-    'isAsyncProcessingPlaceholder' in item && 
-    item.isAsyncProcessingPlaceholder === true &&
-    item.mediaItemId === asyncProcessingMediaItemId
+  const relatedTimelineItems = videoStore.timelineItems.filter(
+    (item) =>
+      'isAsyncProcessingPlaceholder' in item &&
+      item.isAsyncProcessingPlaceholder === true &&
+      item.mediaItemId === asyncProcessingMediaItemId,
   ) as AsyncProcessingTimelineItem[]
 
-  console.log(`💾 [MediaConversion] 保存时间轴clip信息，找到 ${relatedTimelineItems.length} 个相关clip`)
+  console.log(
+    `💾 [MediaConversion] 保存时间轴clip信息，找到 ${relatedTimelineItems.length} 个相关clip`,
+  )
 
-  return relatedTimelineItems.map(item => ({
+  return relatedTimelineItems.map((item) => ({
     id: item.id,
     trackId: item.trackId,
     timelineStartTime: item.timeRange.timelineStartTime,
     originalDuration: item.timeRange.timelineEndTime - item.timeRange.timelineStartTime,
     config: item.config,
-    mediaType: item.mediaType
+    mediaType: item.mediaType,
   }))
 }
 
@@ -42,10 +51,13 @@ export function saveTimelineClipInfo(asyncProcessingMediaItemId: string) {
  * @param actualMediaType 实际媒体类型
  * @returns 目标轨道ID
  */
-export function checkTrackCompatibility(originalTrackId: string, actualMediaType: MediaType): string {
+export function checkTrackCompatibility(
+  originalTrackId: string,
+  actualMediaType: MediaType,
+): string {
   const videoStore = useVideoStore()
   const originalTrack = videoStore.getTrack(originalTrackId)
-  
+
   if (!originalTrack) {
     console.warn(`⚠️ [MediaConversion] 原始轨道不存在: ${originalTrackId}`)
     return findCompatibleTrack(actualMediaType)
@@ -53,12 +65,14 @@ export function checkTrackCompatibility(originalTrackId: string, actualMediaType
 
   // 检查轨道类型兼容性
   const isCompatible = checkTrackTypeCompatibility(originalTrack.type, actualMediaType)
-  
+
   if (isCompatible) {
     console.log(`✅ [MediaConversion] 轨道兼容，保持原轨道: ${originalTrackId}`)
     return originalTrackId
   } else {
-    console.log(`🔄 [MediaConversion] 轨道不兼容，重新分配: ${originalTrack.type} -> ${actualMediaType}`)
+    console.log(
+      `🔄 [MediaConversion] 轨道不兼容，重新分配: ${originalTrack.type} -> ${actualMediaType}`,
+    )
     return findCompatibleTrack(actualMediaType)
   }
 }
@@ -91,7 +105,7 @@ function checkTrackTypeCompatibility(trackType: string, mediaType: MediaType): b
 function findCompatibleTrack(mediaType: MediaType): string {
   const videoStore = useVideoStore()
   const tracks = videoStore.tracks
-  
+
   // 确定需要的轨道类型
   let requiredTrackType: string
   switch (mediaType) {
@@ -108,8 +122,8 @@ function findCompatibleTrack(mediaType: MediaType): string {
   }
 
   // 查找第一个匹配的轨道
-  const compatibleTrack = tracks.find(track => track.type === requiredTrackType)
-  
+  const compatibleTrack = tracks.find((track) => track.type === requiredTrackType)
+
   if (compatibleTrack) {
     console.log(`✅ [MediaConversion] 找到兼容轨道: ${compatibleTrack.id} (${requiredTrackType})`)
     return compatibleTrack.id
@@ -133,10 +147,12 @@ export function adjustTimelineDuration(
   originalDuration: number,
   actualDuration: number,
   startTime: number,
-  actualMediaType: MediaType
+  actualMediaType: MediaType,
 ) {
   if (actualDuration !== originalDuration) {
-    console.log(`⏱️ [MediaConversion] 时长调整: 预估${originalDuration}帧 → 实际${actualDuration}帧`)
+    console.log(
+      `⏱️ [MediaConversion] 时长调整: 预估${originalDuration}帧 → 实际${actualDuration}帧`,
+    )
   }
 
   // 根据实际媒体类型创建对应的时间范围
@@ -147,14 +163,14 @@ export function adjustTimelineDuration(
       timelineStartTime: startTime,
       timelineEndTime: startTime + actualDuration,
       effectiveDuration: actualDuration,
-      playbackRate: 1.0
+      playbackRate: 1.0,
     }
   } else {
     // 图片类型
     return {
       timelineStartTime: startTime,
       timelineEndTime: startTime + actualDuration,
-      displayDuration: actualDuration
+      displayDuration: actualDuration,
     }
   }
 }
@@ -231,7 +247,7 @@ export async function createTimelineItemFromLocalMedia(
   localMediaItem: LocalMediaItem,
   trackId: string,
   _startTimeFrames: number,
-  timeRange: any
+  timeRange: any,
 ): Promise<void> {
   console.log(`🎯 [MediaConversion] 创建时间轴项目: ${localMediaItem.name} -> 轨道${trackId}`)
 
@@ -258,7 +274,7 @@ export async function createTimelineItemFromLocalMedia(
       timeRange: timeRange,
       sprite: markRaw(sprite),
       config: createDefaultConfig(localMediaItem.mediaType, sprite),
-      mediaName: localMediaItem.name
+      mediaName: localMediaItem.name,
     } as LocalTimelineItem
 
     // 4. 添加到时间轴（使用带历史记录的方法）
@@ -278,7 +294,10 @@ export async function createTimelineItemFromLocalMedia(
  * @param newLocalMediaItem 新的本地媒体项目
  * @returns Promise<void>
  */
-export async function rebuildTimelineClips(timelineClipInfos: any[], newLocalMediaItem: LocalMediaItem): Promise<void> {
+export async function rebuildTimelineClips(
+  timelineClipInfos: any[],
+  newLocalMediaItem: LocalMediaItem,
+): Promise<void> {
   console.log(`🔄 [MediaConversion] 开始重建 ${timelineClipInfos.length} 个时间轴clip`)
 
   const videoStore = useVideoStore()
@@ -295,7 +314,7 @@ export async function rebuildTimelineClips(timelineClipInfos: any[], newLocalMed
         clipInfo.originalDuration,
         newLocalMediaItem.duration,
         clipInfo.timelineStartTime,
-        newLocalMediaItem.mediaType
+        newLocalMediaItem.mediaType,
       )
 
       // 3. 等待WebAV初始化完成
@@ -306,7 +325,7 @@ export async function rebuildTimelineClips(timelineClipInfos: any[], newLocalMed
         newLocalMediaItem,
         targetTrackId,
         clipInfo.timelineStartTime,
-        adjustedTimeRange
+        adjustedTimeRange,
       )
 
       // 5. 只有在新clip创建成功后才删除原有的异步处理时间轴项目
@@ -336,7 +355,7 @@ export async function rebuildTimelineClips(timelineClipInfos: any[], newLocalMed
  */
 export async function convertAsyncProcessingToLocalMedia(
   asyncProcessingItem: AsyncProcessingMediaItem,
-  processFiles: (files: File[]) => Promise<void>
+  processFiles: (files: File[]) => Promise<void>,
 ): Promise<void> {
   if (!asyncProcessingItem.processedFile) {
     throw new Error('没有处理完成的文件')
@@ -374,9 +393,10 @@ export async function convertAsyncProcessingToLocalMedia(
 
     // 5. 等待本地素材解析完成
     // 通过文件名查找新创建的本地素材
-    const newLocalMediaItem = videoStore.mediaItems.find(item =>
-      item.file.name === asyncProcessingItem.processedFile!.name &&
-      item.file.size === asyncProcessingItem.processedFile!.size
+    const newLocalMediaItem = videoStore.mediaItems.find(
+      (item) =>
+        item.file.name === asyncProcessingItem.processedFile!.name &&
+        item.file.size === asyncProcessingItem.processedFile!.size,
     )
 
     if (!newLocalMediaItem) {
@@ -405,8 +425,12 @@ export async function convertAsyncProcessingToLocalMedia(
     videoStore.updateAsyncProcessingItem(asyncProcessingItem)
 
     // 强制触发响应式更新（确保时间轴clip能看到状态变化）
-    console.log(`🔄 [MediaConversion] 转换失败，异步素材状态已更新为error: ${asyncProcessingItem.name}`)
-    console.log(`🔄 [MediaConversion] 时间轴clip应该显示错误状态，状态: ${asyncProcessingItem.processingStatus}`)
+    console.log(
+      `🔄 [MediaConversion] 转换失败，异步素材状态已更新为error: ${asyncProcessingItem.name}`,
+    )
+    console.log(
+      `🔄 [MediaConversion] 时间轴clip应该显示错误状态，状态: ${asyncProcessingItem.processingStatus}`,
+    )
 
     throw error
   }

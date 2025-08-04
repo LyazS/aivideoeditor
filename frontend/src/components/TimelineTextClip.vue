@@ -7,7 +7,10 @@
     :total-duration-frames="totalDurationFrames"
     class="text-clip"
     @select="$emit('select', $event)"
-    @update-position="(timelineItemId, newPosition, newTrackId) => $emit('update-position', timelineItemId, newPosition, newTrackId)"
+    @update-position="
+      (timelineItemId, newPosition, newTrackId) =>
+        $emit('update-position', timelineItemId, newPosition, newTrackId)
+    "
     @remove="$emit('remove', $event)"
     @resize-update="handleResizeUpdate"
   >
@@ -188,7 +191,7 @@ async function handleResizeUpdate(
   itemId: string,
   newStartTime: number,
   newEndTime: number,
-  direction: 'left' | 'right'
+  direction: 'left' | 'right',
 ) {
   console.log('🔧 [TextClip] 处理resize-update事件:', {
     itemId,
@@ -261,7 +264,11 @@ function formatDurationFromFrames(frames: number): string {
 
 .text-clip.selected {
   /* 选中状态：使用与视频clip相同的橙色 */
-  background: linear-gradient(135deg, var(--color-clip-selected), var(--color-clip-selected-dark)) !important;
+  background: linear-gradient(
+    135deg,
+    var(--color-clip-selected),
+    var(--color-clip-selected-dark)
+  ) !important;
   border-color: var(--color-clip-selected);
   box-shadow: 0 0 0 2px rgba(255, 107, 53, 0.3);
 }
@@ -296,20 +303,30 @@ function formatDurationFromFrames(frames: number): string {
   max-width: 100%;
 }
 
-
-
 /* 重叠时的样式 */
 .text-clip.overlapping {
-  background: linear-gradient(135deg, var(--color-clip-overlapping), var(--color-clip-overlapping-dark)) !important;
+  background: linear-gradient(
+    135deg,
+    var(--color-clip-overlapping),
+    var(--color-clip-overlapping-dark)
+  ) !important;
 }
 
 /* 轨道隐藏时的样式 */
 .text-clip.track-hidden {
-  background: linear-gradient(135deg, var(--color-clip-hidden), var(--color-clip-hidden-dark)) !important;
+  background: linear-gradient(
+    135deg,
+    var(--color-clip-hidden),
+    var(--color-clip-hidden-dark)
+  ) !important;
 }
 
 .text-clip.track-hidden.selected {
-  background: linear-gradient(135deg, var(--color-clip-hidden-selected), var(--color-clip-hidden-selected-dark)) !important;
+  background: linear-gradient(
+    135deg,
+    var(--color-clip-hidden-selected),
+    var(--color-clip-hidden-selected-dark)
+  ) !important;
 }
 
 /* 隐藏轨道上的文本内容也要调整透明度 */

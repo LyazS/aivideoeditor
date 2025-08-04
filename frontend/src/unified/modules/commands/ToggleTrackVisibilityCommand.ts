@@ -3,13 +3,9 @@ import { ref, type Ref } from 'vue'
 import type { SimpleCommand } from './types'
 
 // 类型导入
-import type {
-  UnifiedTimelineItemData,
-} from '../../timelineitem/TimelineItemData'
+import type { UnifiedTimelineItemData } from '../../timelineitem/TimelineItemData'
 
-import type {
-  MediaTypeOrUnknown,
-} from '../../mediaitem/types'
+import type { MediaTypeOrUnknown } from '../../mediaitem/types'
 
 import type { UnifiedTrackData } from '../../track/TrackTypes'
 

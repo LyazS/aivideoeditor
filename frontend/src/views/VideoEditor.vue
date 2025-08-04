@@ -1,7 +1,10 @@
 <template>
   <div class="video-editor-view">
     <!-- 状态栏 -->
-    <div class="status-bar-container" :class="{ 'loading-hidden': unifiedStore.showProjectLoadingProgress }">
+    <div
+      class="status-bar-container"
+      :class="{ 'loading-hidden': unifiedStore.showProjectLoadingProgress }"
+    >
       <div class="status-bar">
         <div class="status-content">
           <!-- 左侧：返回按钮和保存状态 -->
@@ -9,7 +12,9 @@
             <HoverButton @click="goBack" title="返回项目管理">
               <template #icon>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z" />
+                  <path
+                    d="M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z"
+                  />
                 </svg>
               </template>
               返回
@@ -19,10 +24,16 @@
 
           <!-- 中间：项目名称 -->
           <div class="status-center">
-            <button class="project-title-btn" @click="showEditProjectDialog" title="点击编辑项目信息">
+            <button
+              class="project-title-btn"
+              @click="showEditProjectDialog"
+              title="点击编辑项目信息"
+            >
               <span class="project-title">{{ projectTitle }}</span>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" class="edit-icon">
-                <path d="M20.71,7.04C21.1,6.65 21.1,6 20.71,5.63L18.37,3.29C18,2.9 17.35,2.9 16.96,3.29L15.12,5.12L18.87,8.87M3,17.25V21H6.75L17.81,9.93L14.06,6.18L3,17.25Z" />
+                <path
+                  d="M20.71,7.04C21.1,6.65 21.1,6 20.71,5.63L18.37,3.29C18,2.9 17.35,2.9 16.96,3.29L15.12,5.12L18.87,8.87M3,17.25V21H6.75L17.81,9.93L14.06,6.18L3,17.25Z"
+                />
               </svg>
             </button>
           </div>
@@ -31,10 +42,25 @@
           <div class="status-right">
             <HoverButton @click="saveProject" :disabled="isSaving" title="保存项目">
               <template #icon>
-                <svg v-if="!isSaving" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M15,9H5V5H15M12,19A3,3 0 0,1 9,16A3,3 0 0,1 12,13A3,3 0 0,1 15,16A3,3 0 0,1 12,19M17,3H5C3.89,3 3,3.9 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V7L17,3Z" />
+                <svg
+                  v-if="!isSaving"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                >
+                  <path
+                    d="M15,9H5V5H15M12,19A3,3 0 0,1 9,16A3,3 0 0,1 12,13A3,3 0 0,1 15,16A3,3 0 0,1 12,19M17,3H5C3.89,3 3,3.9 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V7L17,3Z"
+                  />
                 </svg>
-                <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="currentColor" class="spinning">
+                <svg
+                  v-else
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                  class="spinning"
+                >
                   <path d="M12,4V2A10,10 0 0,0 2,12H4A8,8 0 0,1 12,4Z" />
                 </svg>
               </template>
@@ -44,7 +70,9 @@
             <HoverButton @click="exportProject" title="导出项目">
               <template #icon>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z" />
+                  <path
+                    d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"
+                  />
                 </svg>
               </template>
               导出
@@ -53,7 +81,9 @@
             <HoverButton @click="debugProject" title="调试：打印项目JSON">
               <template #icon>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M20,19V7H4V19H20M20,3A2,2 0 0,1 22,5V19A2,2 0 0,1 20,21H4A2,2 0 0,1 2,19V5A2,2 0 0,1 4,3H20M13,17V15H18V17H13M9.58,13L5.57,9H8.4L11.7,12.3C12.09,12.69 12.09,13.33 11.7,13.72L8.42,17H5.59L9.58,13Z" />
+                  <path
+                    d="M20,19V7H4V19H20M20,3A2,2 0 0,1 22,5V19A2,2 0 0,1 20,21H4A2,2 0 0,1 2,19V5A2,2 0 0,1 4,3H20M13,17V15H18V17H13M9.58,13L5.57,9H8.4L11.7,12.3C12.09,12.69 12.09,13.33 11.7,13.72L8.42,17H5.59L9.58,13Z"
+                  />
                 </svg>
               </template>
               调试
@@ -64,7 +94,10 @@
     </div>
 
     <!-- 视频编辑器主体 -->
-    <div class="editor-content" :class="{ 'loading-hidden': unifiedStore.showProjectLoadingProgress }">
+    <div
+      class="editor-content"
+      :class="{ 'loading-hidden': unifiedStore.showProjectLoadingProgress }"
+    >
       <VideoPreviewEngine />
     </div>
 
@@ -104,7 +137,7 @@ const unifiedStore = useUnifiedStore()
 const autoSave = useAutoSave({
   debounceTime: 2000, // 2秒防抖
   throttleTime: 30000, // 30秒强制保存
-  enabled: true
+  enabled: true,
 })
 
 // 响应式数据
@@ -164,7 +197,7 @@ async function handleSaveProject(data: { name: string; description: string }) {
     // 更新项目信息
     await unifiedStore.saveCurrentProject({
       name: data.name,
-      description: data.description
+      description: data.description,
     })
 
     // 更新标题显示
@@ -194,21 +227,21 @@ function debugProject() {
         projectStatus: unifiedStore.projectStatus,
         hasCurrentProject: unifiedStore.hasCurrentProject,
         isSaving: unifiedStore.isProjectSaving, // 新API：isSaving → isProjectSaving
-        lastSaved: unifiedStore.lastProjectSaved // 新API：lastSaved → lastProjectSaved
+        lastSaved: unifiedStore.lastProjectSaved, // 新API：lastSaved → lastProjectSaved
       },
 
       // 项目设置
       settings: {
         videoResolution: unifiedStore.videoResolution,
         frameRate: unifiedStore.frameRate,
-        timelineDurationFrames: unifiedStore.timelineDurationFrames
+        timelineDurationFrames: unifiedStore.timelineDurationFrames,
       },
 
       // 轨道数据
       tracks: unifiedStore.tracks,
 
       // 统一媒体项目数据（适配 UnifiedMediaItemData 结构）
-      mediaItems: unifiedStore.mediaItems.map(item => ({
+      mediaItems: unifiedStore.mediaItems.map((item) => ({
         id: item.id,
         name: item.name,
         createdAt: item.createdAt,
@@ -221,24 +254,28 @@ function debugProject() {
           type: item.source.type,
           status: item.source.status,
           progress: item.source.progress,
-          file: item.source.file ? {
-            name: item.source.file.name,
-            size: item.source.file.size,
-            type: item.source.file.type,
-            lastModified: item.source.file.lastModified
-          } : null,
-          url: item.source.url || null
+          file: item.source.file
+            ? {
+                name: item.source.file.name,
+                size: item.source.file.size,
+                type: item.source.file.type,
+                lastModified: item.source.file.lastModified,
+              }
+            : null,
+          url: item.source.url || null,
         },
 
         // WebAV对象信息（新结构）
-        webav: item.webav ? {
-          hasMP4Clip: !!item.webav.mp4Clip,
-          hasImgClip: !!item.webav.imgClip,
-          hasAudioClip: !!item.webav.audioClip,
-          thumbnailUrl: item.webav.thumbnailUrl ? 'blob URL存在' : null,
-          originalWidth: item.webav.originalWidth,
-          originalHeight: item.webav.originalHeight
-        } : null
+        webav: item.webav
+          ? {
+              hasMP4Clip: !!item.webav.mp4Clip,
+              hasImgClip: !!item.webav.imgClip,
+              hasAudioClip: !!item.webav.audioClip,
+              thumbnailUrl: item.webav.thumbnailUrl ? 'blob URL存在' : null,
+              originalWidth: item.webav.originalWidth,
+              originalHeight: item.webav.originalHeight,
+            }
+          : null,
       })),
 
       // 统一时间轴项目数据（适配 UnifiedTimelineItemData 结构）
@@ -256,7 +293,7 @@ function debugProject() {
           timeRange: item.timeRange,
           config: item.config,
           hasSprite: !!item.sprite,
-          mediaName
+          mediaName,
         }
       }),
 
@@ -268,8 +305,8 @@ function debugProject() {
         readyMediaItems: unifiedStore.getReadyMediaItems().length, // 使用新的查询方法
         processingMediaItems: unifiedStore.getProcessingMediaItems().length,
         errorMediaItems: unifiedStore.getErrorMediaItems().length,
-        mediaStats: unifiedStore.getMediaItemsStats() // 新的统计方法
-      }
+        mediaStats: unifiedStore.getMediaItemsStats(), // 新的统计方法
+      },
     }
 
     // 打印到控制台
@@ -296,23 +333,23 @@ function debugProject() {
             timelineStatus: item.timelineStatus,
             timeRange: item.timeRange,
             config: item.config,
-            mediaName
+            mediaName,
           }
         }),
-        mediaItems: unifiedStore.mediaItems.map(item => ({
+        mediaItems: unifiedStore.mediaItems.map((item) => ({
           id: item.id,
           name: item.name,
           createdAt: item.createdAt,
           mediaType: item.mediaType,
           duration: item.duration,
-          sourceType: item.source.type
-        }))
+          sourceType: item.source.type,
+        })),
       },
       settings: {
         videoResolution: unifiedStore.videoResolution,
         frameRate: unifiedStore.frameRate,
-        timelineDurationFrames: unifiedStore.timelineDurationFrames
-      }
+        timelineDurationFrames: unifiedStore.timelineDurationFrames,
+      },
     }
 
     console.log('💾 [调试] 持久化数据 (将保存到project.json):')
@@ -323,7 +360,6 @@ function debugProject() {
 
     // 将unifiedStore暴露到全局，方便调试
     ;(window as any).unifiedStore = unifiedStore
-
   } catch (error) {
     console.error('❌ [调试] 打印项目数据失败:', error)
   }
@@ -414,8 +450,6 @@ onMounted(async () => {
 
   console.log('🔄 [LIFECYCLE] VideoEditor.onMounted 完成')
 })
-
-
 
 onUnmounted(() => {
   // 禁用自动保存
@@ -549,5 +583,3 @@ onUnmounted(() => {
   }
 }
 </style>
-
-

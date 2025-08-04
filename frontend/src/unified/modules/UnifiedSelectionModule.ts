@@ -5,7 +5,7 @@ import type { UnifiedMediaItemData } from '../mediaitem/types'
 /**
  * 统一选择管理模块
  * 基于新架构的统一类型系统重构的选择管理功能
- * 
+ *
  * 主要变化：
  * 1. 使用 UnifiedTimelineItemData 替代原有的 LocalTimelineItem | AsyncProcessingTimelineItem
  * 2. 使用 UnifiedMediaItemData 替代原有的 LocalMediaItem
@@ -137,10 +137,10 @@ export function createUnifiedSelectionModule(
       {
         selectedTimelineItemIds: { value: selectedTimelineItemIds.value },
         selectTimelineItems,
-        syncAVCanvasSelection
+        syncAVCanvasSelection,
       },
       { getTimelineItem },
-      { getMediaItem }
+      { getMediaItem },
     )
 
     // 执行命令（这会自动添加到历史记录）

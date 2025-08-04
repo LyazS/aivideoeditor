@@ -57,10 +57,10 @@
       </button>
 
       <!-- 调试按钮 - 开发时使用 -->
-      <button 
+      <button
         v-if="showDebugButton"
-        @click="$emit('debug-keyframes')" 
-        class="debug-btn" 
+        @click="$emit('debug-keyframes')"
+        class="debug-btn"
         title="输出统一关键帧调试信息"
       >
         <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">

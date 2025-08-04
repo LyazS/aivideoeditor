@@ -9,7 +9,7 @@ export type {
   UnifiedTrackType,
 
   // 核心接口
-  UnifiedTrackData
+  UnifiedTrackData,
 } from './TrackTypes'
 
 // ==================== 类型守卫函数导出 ====================
@@ -20,7 +20,5 @@ export {
   isSubtitleTrack,
   isEffectTrack,
   createUnifiedTrackData,
-  generateTrackId
+  generateTrackId,
 } from './TrackTypes'
-
-

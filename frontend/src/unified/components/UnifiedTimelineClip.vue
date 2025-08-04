@@ -63,7 +63,7 @@ import { computed, ref, onUnmounted, h } from 'vue'
 import type {
   UnifiedTimelineClipProps,
   UnifiedTimelineClipEvents,
-  ContentRenderContext
+  ContentRenderContext,
 } from '../types/clipRenderer'
 import type { MediaTypeOrUnknown } from '../mediaitem/types'
 import type { VideoTimeRange, ImageTimeRange } from '../../types/index'
@@ -87,7 +87,7 @@ const props = withDefaults(defineProps<UnifiedTimelineClipProps>(), {
   currentFrame: 0,
   scale: 1,
   trackHeight: 60,
-  timelineWidth: 1000
+  timelineWidth: 1000,
 })
 
 // 获取统一store实例
@@ -142,9 +142,9 @@ const renderContext = computed<ContentRenderContext>(() => ({
     onDoubleClick: (id: string) => emit('doubleClick', id),
     onContextMenu: (event: MouseEvent, id: string) => emit('contextMenu', event, id),
     onDragStart: (event: DragEvent, id: string) => emit('dragStart', event, id),
-    onResizeStart: (event: MouseEvent, id: string, direction: 'left' | 'right') => 
-      emit('resizeStart', event, id, direction)
-  }
+    onResizeStart: (event: MouseEvent, id: string, direction: 'left' | 'right') =>
+      emit('resizeStart', event, id, direction),
+  },
 }))
 
 /**
@@ -198,12 +198,12 @@ const clipClasses = computed(() => {
     `media-type-${props.data.mediaType}`,
     `status-${props.data.timelineStatus}`,
     {
-      'selected': props.isSelected,
-      'dragging': isDragging.value || props.isDragging,
-      'resizing': isResizing.value || props.isResizing
-    }
+      selected: props.isSelected,
+      dragging: isDragging.value || props.isDragging,
+      resizing: isResizing.value || props.isResizing,
+    },
   ]
-  
+
   // 添加渲染器提供的自定义类
   const customClasses = renderer.value.getCustomClasses?.(renderContext.value) || []
 
@@ -257,7 +257,8 @@ const clipName = computed(() => {
  * 格式化时长
  */
 const formattedDuration = computed(() => {
-  const durationFrames = props.data.timeRange.timelineEndTime - props.data.timeRange.timelineStartTime
+  const durationFrames =
+    props.data.timeRange.timelineEndTime - props.data.timeRange.timelineStartTime
   const seconds = durationFrames / unifiedStore.frameRate
   return `${seconds.toFixed(2)}秒`
 })
@@ -422,7 +423,7 @@ function removeSimpleDragPreview() {
  */
 function handleResizeStart(direction: 'left' | 'right', event: MouseEvent) {
   console.log('🔧 [UnifiedTimelineClip] 开始调整大小:', direction, props.data.id)
-  
+
   // 暂停播放以便进行编辑
   pauseForEditing('片段大小调整')
   hideTooltip()
@@ -555,9 +556,10 @@ async function stopResize() {
   }
 
   // 检查是否有实际的变化
-  if (tempDurationFrames.value !== resizeStartDurationFrames.value ||
-      tempResizePositionFrames.value !== resizeStartPositionFrames.value) {
-
+  if (
+    tempDurationFrames.value !== resizeStartDurationFrames.value ||
+    tempResizePositionFrames.value !== resizeStartPositionFrames.value
+  ) {
     console.log('🔧 [UnifiedTimelineClip] 调整大小 - 应用新的时间范围:', {
       itemId: props.data.id,
       newStartTime: newTimelineStartTimeFrames,
@@ -580,10 +582,7 @@ async function stopResize() {
       }
 
       // 调用统一store的resize方法，传入完整的newTimeRange对象
-      const success = await unifiedStore.resizeTimelineItemWithHistory(
-        props.data.id,
-        newTimeRange,
-      )
+      const success = await unifiedStore.resizeTimelineItemWithHistory(props.data.id, newTimeRange)
     } catch (error) {
       console.error('❌ [UnifiedTimelineClip] 调整大小失败:', error)
     }
@@ -603,7 +602,7 @@ function cleanupResize() {
   document.removeEventListener('mousemove', handleResize)
   document.removeEventListener('mouseup', stopResize)
   snapIndicatorManager.hide(true)
-  
+
   if (direction) {
     // 这里可以发出resize-end事件，但新架构可能不需要
     console.log('🏁 [UnifiedTimelineClip] resize结束:', direction)
@@ -626,7 +625,7 @@ function showTooltip(event: MouseEvent) {
   // 更新tooltip位置数据
   tooltipPosition.value = {
     x: event.clientX,
-    y: event.clientY
+    y: event.clientY,
   }
   clipTopPosition.value = clipRect.top
 }
@@ -647,7 +646,7 @@ function updateTooltipPosition(event: MouseEvent) {
   // 更新tooltip位置数据
   tooltipPosition.value = {
     x: event.clientX,
-    y: event.clientY
+    y: event.clientY,
   }
   clipTopPosition.value = clipRect.top
 }
@@ -664,8 +663,6 @@ function hideTooltip() {
 onUnmounted(() => {
   // 清理工作
 })
-
-
 </script>
 
 <style scoped>
@@ -727,21 +724,37 @@ onUnmounted(() => {
 
 /* 状态特定样式 - 与旧架构保持一致 */
 .unified-timeline-clip.selected {
-  background: linear-gradient(135deg, var(--color-clip-selected), var(--color-clip-selected-dark)) !important;
+  background: linear-gradient(
+    135deg,
+    var(--color-clip-selected),
+    var(--color-clip-selected-dark)
+  ) !important;
   border-color: var(--color-clip-selected);
   box-shadow: 0 0 0 2px rgba(255, 107, 53, 0.3);
 }
 
 .unified-timeline-clip.overlapping {
-  background: linear-gradient(135deg, var(--color-clip-overlapping), var(--color-clip-overlapping-dark)) !important;
+  background: linear-gradient(
+    135deg,
+    var(--color-clip-overlapping),
+    var(--color-clip-overlapping-dark)
+  ) !important;
 }
 
 .unified-timeline-clip.track-hidden {
-  background: linear-gradient(135deg, var(--color-clip-hidden), var(--color-clip-hidden-dark)) !important;
+  background: linear-gradient(
+    135deg,
+    var(--color-clip-hidden),
+    var(--color-clip-hidden-dark)
+  ) !important;
 }
 
 .unified-timeline-clip.track-hidden.selected {
-  background: linear-gradient(135deg, var(--color-clip-hidden-selected), var(--color-clip-hidden-selected-dark)) !important;
+  background: linear-gradient(
+    135deg,
+    var(--color-clip-hidden-selected),
+    var(--color-clip-hidden-selected-dark)
+  ) !important;
 }
 
 /* 隐藏轨道上的clip内容也要调整透明度 */
@@ -760,8 +773,13 @@ onUnmounted(() => {
 }
 
 @keyframes loading-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.7; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
 }
 
 /* 内容区域 */

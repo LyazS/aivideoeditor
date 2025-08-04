@@ -110,7 +110,7 @@ export class TextHelper {
       const imageBitmap = await renderTxt2ImgBitmap(text, cssText, renderOptions)
       console.log('✅ [TextHelper] 文本渲染完成，ImageBitmap尺寸:', {
         width: imageBitmap.width,
-        height: imageBitmap.height
+        height: imageBitmap.height,
       })
 
       // 创建 ImgClip
@@ -150,7 +150,7 @@ export class TextHelper {
       textAlign: style.textAlign ?? DEFAULT_TEXT_STYLE.textAlign,
       lineHeight: style.lineHeight ?? DEFAULT_TEXT_STYLE.lineHeight,
       maxWidth: style.maxWidth,
-      customFont: style.customFont
+      customFont: style.customFont,
     }
   }
 
@@ -176,7 +176,7 @@ export class TextHelper {
     let hash = 0
     for (let i = 0; i < str.length; i++) {
       const char = str.charCodeAt(i)
-      hash = ((hash << 5) - hash) + char
+      hash = (hash << 5) - hash + char
       hash = hash & hash // 转换为32位整数
     }
     return Math.abs(hash).toString(36)
@@ -243,7 +243,7 @@ export class TextHelper {
   static getCacheStats(): { size: number; maxSize: number } {
     return {
       size: this.styleCache.size,
-      maxSize: this.CACHE_SIZE
+      maxSize: this.CACHE_SIZE,
     }
   }
 }

@@ -4,7 +4,7 @@ import { useUnifiedStore } from '../unifiedStore'
 /**
  * 键盘快捷键处理组合式函数
  * 提供全局快捷键支持，包括撤销/重做等操作
- * 
+ *
  * 适配统一架构：
  * - 使用 useUnifiedStore 替代 useVideoStore
  * - 使用统一历史记录模块的 undo/redo 方法

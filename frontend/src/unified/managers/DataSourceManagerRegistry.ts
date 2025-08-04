@@ -15,7 +15,7 @@ import { RemoteFileManager } from './RemoteFileManager'
  */
 type ManagerTypeMap = {
   'user-selected': UserSelectedFileManager
-  'remote': RemoteFileManager
+  remote: RemoteFileManager
 }
 
 /**
@@ -46,10 +46,7 @@ export class DataSourceManagerRegistry {
   /**
    * 注册管理器
    */
-  register(
-    type: string,
-    manager: DataSourceManager<UnifiedDataSourceData>
-  ): void {
+  register(type: string, manager: DataSourceManager<UnifiedDataSourceData>): void {
     if (this.managers.has(type)) {
       console.warn(`管理器类型 "${type}" 已存在，将被覆盖`)
     }
@@ -120,7 +117,7 @@ export class DataSourceManagerRegistry {
   private initializeDefaultManagers(): void {
     // 注册用户选择文件管理器
     this.register('user-selected', UserSelectedFileManager.getInstance())
-    
+
     // 注册远程文件管理器
     this.register('remote', RemoteFileManager.getInstance())
   }
@@ -130,7 +127,9 @@ export class DataSourceManagerRegistry {
   /**
    * 根据数据源类型获取对应的管理器
    */
-  getManagerForSource(source: UnifiedDataSourceData): DataSourceManager<UnifiedDataSourceData> | undefined {
+  getManagerForSource(
+    source: UnifiedDataSourceData,
+  ): DataSourceManager<UnifiedDataSourceData> | undefined {
     return this.getManager(source.type)
   }
 
@@ -191,7 +190,10 @@ export class DataSourceManagerRegistry {
    * 获取所有管理器的统计信息
    */
   getAllStats(): Record<string, ReturnType<DataSourceManager<UnifiedDataSourceData>['getStats']>> {
-    const stats: Record<string, ReturnType<DataSourceManager<UnifiedDataSourceData>['getStats']>> = {}
+    const stats: Record<
+      string,
+      ReturnType<DataSourceManager<UnifiedDataSourceData>['getStats']>
+    > = {}
 
     for (const [type, manager] of this.managers) {
       stats[type] = manager.getStats()
@@ -213,7 +215,7 @@ export class DataSourceManagerRegistry {
     totalCancelledTasks: number
   } {
     const allStats = this.getAllStats()
-    
+
     const systemStats = {
       totalManagers: this.managers.size,
       totalTasks: 0,
@@ -221,7 +223,7 @@ export class DataSourceManagerRegistry {
       totalRunningTasks: 0,
       totalCompletedTasks: 0,
       totalFailedTasks: 0,
-      totalCancelledTasks: 0
+      totalCancelledTasks: 0,
     }
 
     for (const stats of Object.values(allStats)) {
@@ -261,22 +263,28 @@ export class DataSourceManagerRegistry {
   /**
    * 获取所有管理器的配置信息
    */
-  getAllManagerConfigs(): Record<string, {
-    type: string
-    maxConcurrentTasks: number
-    stats: ReturnType<DataSourceManager<UnifiedDataSourceData>['getStats']>
-  }> {
-    const configs: Record<string, {
+  getAllManagerConfigs(): Record<
+    string,
+    {
       type: string
       maxConcurrentTasks: number
       stats: ReturnType<DataSourceManager<UnifiedDataSourceData>['getStats']>
-    }> = {}
+    }
+  > {
+    const configs: Record<
+      string,
+      {
+        type: string
+        maxConcurrentTasks: number
+        stats: ReturnType<DataSourceManager<UnifiedDataSourceData>['getStats']>
+      }
+    > = {}
 
     for (const [type, manager] of this.managers) {
       configs[type] = {
         type: manager.getManagerType(),
         maxConcurrentTasks: manager.getMaxConcurrentTasks(),
-        stats: manager.getStats()
+        stats: manager.getStats(),
       }
     }
 
@@ -290,15 +298,15 @@ export class DataSourceManagerRegistry {
    */
   printManagerStatus(): void {
     console.group('数据源管理器状态')
-    
+
     for (const [type, manager] of this.managers) {
       const stats = manager.getStats()
       console.log(`${type}:`, {
         maxConcurrent: manager.getMaxConcurrentTasks(),
-        ...stats
+        ...stats,
       })
     }
-    
+
     console.groupEnd()
   }
 
@@ -310,12 +318,12 @@ export class DataSourceManagerRegistry {
     issues: string[]
   } {
     const issues: string[] = []
-    
+
     // 检查是否有管理器注册
     if (this.managers.size === 0) {
       issues.push('没有注册任何管理器')
     }
-    
+
     // 检查默认管理器是否存在
     const requiredTypes = ['user-selected', 'remote']
     for (const type of requiredTypes) {
@@ -323,7 +331,7 @@ export class DataSourceManagerRegistry {
         issues.push(`缺少必需的管理器: ${type}`)
       }
     }
-    
+
     // 检查管理器状态
     for (const [type, manager] of this.managers) {
       try {
@@ -335,10 +343,10 @@ export class DataSourceManagerRegistry {
         issues.push(`管理器 ${type} 状态检查失败: ${error}`)
       }
     }
-    
+
     return {
       healthy: issues.length === 0,
-      issues
+      issues,
     }
   }
 }
@@ -356,8 +364,8 @@ export function getManagerRegistry(): DataSourceManagerRegistry {
  * 快速开始数据源获取
  */
 export function startDataSourceAcquisition(
-  source: UnifiedDataSourceData, 
-  taskId?: string
+  source: UnifiedDataSourceData,
+  taskId?: string,
 ): boolean {
   return getManagerRegistry().startAcquisition(source, taskId)
 }

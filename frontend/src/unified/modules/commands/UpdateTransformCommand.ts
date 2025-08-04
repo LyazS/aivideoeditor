@@ -8,20 +8,11 @@ import { framesToMicroseconds, framesToTimecode } from '../../utils/UnifiedTimeU
 import type { SimpleCommand } from './types'
 
 // ==================== 新架构类型导入 ====================
-import type {
-  UnifiedTimelineItemData,
-  TransformData,
-} from '../../timelineitem/TimelineItemData'
+import type { UnifiedTimelineItemData, TransformData } from '../../timelineitem/TimelineItemData'
 
-import type {
-  UnifiedMediaItemData,
-  MediaTypeOrUnknown,
-} from '../../mediaitem/types'
+import type { UnifiedMediaItemData, MediaTypeOrUnknown } from '../../mediaitem/types'
 
-import type {
-  VideoMediaConfig,
-  AudioMediaConfig,
-} from '../../../types'
+import type { VideoMediaConfig, AudioMediaConfig } from '../../../types'
 
 // ==================== 新架构工具导入 ====================
 import {
@@ -35,7 +26,11 @@ import {
 // ==================== 旧架构兼容性导入 ====================
 import { VideoVisibleSprite } from '../../../utils/VideoVisibleSprite'
 import { AudioVisibleSprite } from '../../../utils/AudioVisibleSprite'
-import { isUnifiedVideoVisibleSprite, isUnifiedAudioVisibleSprite, hasAudioCapabilities } from '../../utils/UnifiedSpriteTypeGuards'
+import {
+  isUnifiedVideoVisibleSprite,
+  isUnifiedAudioVisibleSprite,
+  hasAudioCapabilities,
+} from '../../utils/UnifiedSpriteTypeGuards'
 
 /**
  * 更新变换属性命令

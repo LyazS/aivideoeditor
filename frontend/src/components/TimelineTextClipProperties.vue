@@ -631,7 +631,10 @@ const updateTextContent = async () => {
   }
 
   try {
-    console.log('🔄 [TimelineTextClipProperties] 更新文本内容:', localText.value.substring(0, 20) + '...')
+    console.log(
+      '🔄 [TimelineTextClipProperties] 更新文本内容:',
+      localText.value.substring(0, 20) + '...',
+    )
 
     // 导入文本命令
     const { UpdateTextCommand } = await import('../stores/modules/commands/textCommands')

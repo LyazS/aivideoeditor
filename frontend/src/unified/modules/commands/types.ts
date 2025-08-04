@@ -5,13 +5,13 @@
 export interface SimpleCommand {
   /** 命令的唯一标识符 */
   readonly id: string
-  
+
   /** 命令的描述信息，用于显示在历史记录中 */
   readonly description: string
-  
+
   /** 执行命令 */
   execute(): Promise<void>
-  
+
   /** 撤销命令 */
   undo(): Promise<void>
 }

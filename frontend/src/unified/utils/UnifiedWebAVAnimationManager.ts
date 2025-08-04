@@ -29,7 +29,10 @@ export class UnifiedWebAVAnimationManager {
 
     // 只有就绪状态的时间轴项目才有sprite
     if (!isReady(this.timelineItem) || !this.timelineItem.runtime.sprite) {
-      console.warn('🎬 [Unified WebAV Animation] No sprite found or item not ready:', this.timelineItem.id)
+      console.warn(
+        '🎬 [Unified WebAV Animation] No sprite found or item not ready:',
+        this.timelineItem.id,
+      )
       return
     }
 

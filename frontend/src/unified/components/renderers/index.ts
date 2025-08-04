@@ -17,5 +17,5 @@ export type {
   ContentRenderContext,
   StatusRendererType,
   MediaTypeRendererType,
-  RendererType
+  RendererType,
 } from '../../types/clipRenderer'

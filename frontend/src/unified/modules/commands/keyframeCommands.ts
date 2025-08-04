@@ -1,7 +1,7 @@
 /**
  * 统一架构下的关键帧命令实现
  * 基于"核心数据与行为分离"的响应式重构版本
- * 
+ *
  * 主要变化：
  * 1. 使用 UnifiedTimelineItemData 替代原有的 LocalTimelineItem
  * 2. 使用新架构的关键帧类型系统和工具
@@ -26,17 +26,12 @@ import type {
   VisualAnimatableProps,
   AudioAnimatableProps,
   GetKeyframeProperties,
-  GetTimelineItemConfig
+  GetTimelineItemConfig,
 } from '../../timelineitem/TimelineItemData'
 
-import type {
-  MediaType,
-  MediaTypeOrUnknown
-} from '../../mediaitem/types'
+import type { MediaType, MediaTypeOrUnknown } from '../../mediaitem/types'
 
-import type {
-  BaseMediaProps
-} from '../../../types'
+import type { BaseMediaProps } from '../../../types'
 import type { UnifiedTimeRange } from '../../types/timeRange'
 
 // ==================== 关键帧数据快照接口 ====================
@@ -62,17 +57,14 @@ import {
   isTextTimelineItem,
   hasVisualProperties,
   hasAudioProperties,
-  TimelineItemFactory
+  TimelineItemFactory,
 } from '../../timelineitem'
 
 // ==================== 旧架构兼容性导入 ====================
 import { VideoVisibleSprite } from '../../../utils/VideoVisibleSprite'
 import { ImageVisibleSprite } from '../../../utils/ImageVisibleSprite'
 import { AudioVisibleSprite } from '../../../utils/AudioVisibleSprite'
-import {
-  isVideoVisibleSprite,
-  isAudioVisibleSprite
-} from '../../utils/SpriteTypeGuards'
+import { isVideoVisibleSprite, isAudioVisibleSprite } from '../../utils/SpriteTypeGuards'
 
 // ==================== 关键帧属性枚举 ====================
 /**
@@ -86,7 +78,7 @@ export enum KeyframeProperty {
   ROTATION = 'rotation',
   OPACITY = 'opacity',
   VOLUME = 'volume',
-  Z_INDEX = 'zIndex'
+  Z_INDEX = 'zIndex',
 }
 
 // ==================== 关键帧插值方式枚举 ====================
@@ -96,7 +88,7 @@ export enum KeyframeProperty {
 export enum KeyframeInterpolation {
   LINEAR = 'linear',
   STEP = 'step',
-  CUBIC_BEZIER = 'cubic-bezier'
+  CUBIC_BEZIER = 'cubic-bezier',
 }
 
 // ==================== 关键帧缓动函数枚举 ====================
@@ -108,7 +100,7 @@ export enum KeyframeEasing {
   EASE_IN = 'ease-in',
   EASE_OUT = 'ease-out',
   EASE_IN_OUT = 'ease-in-out',
-  LINEAR = 'linear'
+  LINEAR = 'linear',
 }
 
 // ==================== 工具函数 ====================
@@ -150,7 +142,7 @@ function initializeAnimation<T extends MediaType>(item: UnifiedTimelineItemData<
  */
 function createKeyframe<T extends MediaType>(
   item: UnifiedTimelineItemData<T>,
-  absoluteFrame: number
+  absoluteFrame: number,
 ): Keyframe<T> {
   const relativeFrame = absoluteFrameToRelativeFrame(absoluteFrame, item.timeRange)
 
@@ -225,7 +217,7 @@ function hasAnimation<T extends MediaType>(item: UnifiedTimelineItemData<T>): bo
  */
 function isCurrentFrameOnKeyframe<T extends MediaType>(
   item: UnifiedTimelineItemData<T>,
-  absoluteFrame: number
+  absoluteFrame: number,
 ): boolean {
   if (!item.animation) return false
 
@@ -242,7 +234,7 @@ function isCurrentFrameOnKeyframe<T extends MediaType>(
  */
 function findKeyframeAtFrame<T extends MediaType>(
   item: UnifiedTimelineItemData<T>,
-  absoluteFrame: number
+  absoluteFrame: number,
 ): Keyframe<T> | undefined {
   if (!item.animation) return undefined
 
@@ -277,18 +269,18 @@ function disableAnimation<T extends MediaType>(item: UnifiedTimelineItemData<T>)
  */
 function removeKeyframeAtFrame<T extends MediaType>(
   item: UnifiedTimelineItemData<T>,
-  absoluteFrame: number
+  absoluteFrame: number,
 ): boolean {
   if (!item.animation) return false
 
   const relativeFrame = absoluteFrameToRelativeFrame(absoluteFrame, item.timeRange)
   const tolerance = 0 // 精确匹配
-  
+
   // 使用类型守卫确保动画配置的类型安全
   const animationConfig = item.animation as AnimationConfig<T>
   const initialLength = animationConfig.keyframes.length
 
-    animationConfig.keyframes = item.animation.keyframes.filter(
+  animationConfig.keyframes = item.animation.keyframes.filter(
     (kf) => Math.abs(kf.framePosition - relativeFrame) > tolerance,
   ) as Keyframe<T>[]
 
@@ -332,7 +324,9 @@ function clearAllKeyframes<T extends MediaType>(item: UnifiedTimelineItemData<T>
 async function applyKeyframeSnapshot<TMediaType extends MediaType = MediaType>(
   item: UnifiedTimelineItemData<TMediaType>,
   snapshot: KeyframeSnapshot<TMediaType>,
-  webavAnimationManager: { updateWebAVAnimation: (item: UnifiedTimelineItemData<TMediaType>) => Promise<void> },
+  webavAnimationManager: {
+    updateWebAVAnimation: (item: UnifiedTimelineItemData<TMediaType>) => Promise<void>
+  },
 ): Promise<void> {
   // 1. 恢复动画配置（关键帧数据）
   if (snapshot.animationConfig) {
@@ -346,7 +340,9 @@ async function applyKeyframeSnapshot<TMediaType extends MediaType = MediaType>(
       easing: snapshot.animationConfig.easing,
     }
     // 使用类型断言来处理条件类型
-    item.animation = animationConfig as TMediaType extends MediaType ? AnimationConfig<TMediaType> : undefined
+    item.animation = animationConfig as TMediaType extends MediaType
+      ? AnimationConfig<TMediaType>
+      : undefined
   } else {
     item.animation = undefined
   }
@@ -370,10 +366,22 @@ async function applyKeyframeSnapshot<TMediaType extends MediaType = MediaType>(
           // hasVisualProperties 类型守卫确保了 config 具有视觉属性
           const config = item.config as GetTimelineItemConfig<TMediaType> & VisualAnimatableProps
           const webavCoords = projectToWebavCoords(
-            Number(('x' in visualProps ? visualProps.x : undefined) ?? ('x' in config ? (config as VisualAnimatableProps).x : 0)),
-            Number(('y' in visualProps ? visualProps.y : undefined) ?? ('y' in config ? (config as VisualAnimatableProps).y : 0)),
-            Number(('width' in visualProps ? visualProps.width : undefined) ?? ('width' in config ? (config as VisualAnimatableProps).width : 100)),
-            Number(('height' in visualProps ? visualProps.height : undefined) ?? ('height' in config ? (config as VisualAnimatableProps).height : 100)),
+            Number(
+              ('x' in visualProps ? visualProps.x : undefined) ??
+                ('x' in config ? (config as VisualAnimatableProps).x : 0),
+            ),
+            Number(
+              ('y' in visualProps ? visualProps.y : undefined) ??
+                ('y' in config ? (config as VisualAnimatableProps).y : 0),
+            ),
+            Number(
+              ('width' in visualProps ? visualProps.width : undefined) ??
+                ('width' in config ? (config as VisualAnimatableProps).width : 100),
+            ),
+            Number(
+              ('height' in visualProps ? visualProps.height : undefined) ??
+                ('height' in config ? (config as VisualAnimatableProps).height : 100),
+            ),
             unifiedStore.videoResolution.width,
             unifiedStore.videoResolution.height,
           )
@@ -473,7 +481,10 @@ export class CreateKeyframeCommand implements SimpleCommand {
   /**
    * 应用状态快照
    */
-  private async applySnapshot(item: KnownTimelineItem, snapshot: KeyframeSnapshot<MediaType>): Promise<void> {
+  private async applySnapshot(
+    item: KnownTimelineItem,
+    snapshot: KeyframeSnapshot<MediaType>,
+  ): Promise<void> {
     await applyKeyframeSnapshot(item, snapshot, this.webavAnimationManager)
   }
 
@@ -631,7 +642,10 @@ export class DeleteKeyframeCommand implements SimpleCommand {
   /**
    * 应用状态快照
    */
-  private async applySnapshot(item: KnownTimelineItem, snapshot: KeyframeSnapshot<MediaType>): Promise<void> {
+  private async applySnapshot(
+    item: KnownTimelineItem,
+    snapshot: KeyframeSnapshot<MediaType>,
+  ): Promise<void> {
     await applyKeyframeSnapshot(item, snapshot, this.webavAnimationManager)
   }
 
@@ -788,7 +802,10 @@ export class UpdatePropertyCommand implements SimpleCommand {
   /**
    * 应用状态快照
    */
-  private async applySnapshot(item: KnownTimelineItem, snapshot: KeyframeSnapshot<MediaType>): Promise<void> {
+  private async applySnapshot(
+    item: KnownTimelineItem,
+    snapshot: KeyframeSnapshot<MediaType>,
+  ): Promise<void> {
     await applyKeyframeSnapshot(item, snapshot, this.webavAnimationManager)
   }
 
@@ -829,7 +846,12 @@ export class UpdatePropertyCommand implements SimpleCommand {
     try {
       // 使用统一的属性修改处理逻辑（遵循正确的数据流向）
       // 注意：handlePropertyChange 内部已经包含了 updateWebAVAnimation 调用，无需重复调用
-      const actionType = await this.handlePropertyChange(item, this.frame, this.property, this.newValue)
+      const actionType = await this.handlePropertyChange(
+        item,
+        this.frame,
+        this.property,
+        this.newValue,
+      )
 
       // 保存执行后的状态快照
       this.afterSnapshot = this.createSnapshot(item)
@@ -866,7 +888,7 @@ export class UpdatePropertyCommand implements SimpleCommand {
     item: KnownTimelineItem,
     frame: number,
     property: string,
-    value: KeyframeProperties[keyof KeyframeProperties] | number
+    value: KeyframeProperties[keyof KeyframeProperties] | number,
   ): Promise<string> {
     // 1. 无动画状态：直接更新属性
     if (!hasAnimation(item)) {
@@ -876,7 +898,7 @@ export class UpdatePropertyCommand implements SimpleCommand {
         // 使用类型断言来处理类型不匹配的问题
         config[property as keyof GetTimelineItemConfig<MediaType>] = value as any
       }
-      
+
       // 更新WebAV动画
       await this.webavAnimationManager.updateWebAVAnimation(item)
       return 'no-animation'
@@ -884,7 +906,7 @@ export class UpdatePropertyCommand implements SimpleCommand {
 
     // 2. 有动画状态：检查当前帧是否在关键帧上
     const isOnKeyframe = isCurrentFrameOnKeyframe(item, frame)
-    
+
     if (isOnKeyframe) {
       // 3. 在关键帧上：更新现有关键帧属性
       const keyframe = findKeyframeAtFrame(item, frame)
@@ -892,24 +914,24 @@ export class UpdatePropertyCommand implements SimpleCommand {
         const properties = keyframe.properties as GetKeyframeProperties<MediaType>
         properties[property as keyof GetKeyframeProperties<MediaType>] = value
       }
-      
+
       // 更新WebAV动画
       await this.webavAnimationManager.updateWebAVAnimation(item)
       return 'updated-keyframe'
     } else {
       // 4. 在关键帧之间：创建新关键帧
       const newKeyframe = createKeyframe(item, frame)
-      
+
       // 更新新关键帧的指定属性
       if (property in newKeyframe.properties) {
         const properties = newKeyframe.properties as GetKeyframeProperties<MediaType>
         properties[property as keyof GetKeyframeProperties<MediaType>] = value
       }
-      
+
       // 添加新关键帧到动画配置
       item.animation!.keyframes.push(newKeyframe as any)
       sortKeyframes(item)
-      
+
       // 更新WebAV动画
       await this.webavAnimationManager.updateWebAVAnimation(item)
       return 'created-keyframe'
@@ -963,7 +985,10 @@ export class ToggleKeyframeCommand implements SimpleCommand {
     private properties: KeyframeProperty[], // 要操作的关键帧属性
     private timelineModule: {
       getTimelineItem: (id: string) => UnifiedTimelineItemData<MediaTypeOrUnknown> | undefined
-      updateTimelineItemAnimation: (id: string, animation: AnimationConfig<MediaType> | undefined) => void
+      updateTimelineItemAnimation: (
+        id: string,
+        animation: AnimationConfig<MediaType> | undefined,
+      ) => void
     },
     private mediaModule: {
       getMediaItem: (id: string) => { name: string } | undefined
@@ -990,7 +1015,7 @@ export class ToggleKeyframeCommand implements SimpleCommand {
       timelineItemId,
       timeFrames,
       properties,
-      wasKeyframeAdded: this.wasKeyframeAdded
+      wasKeyframeAdded: this.wasKeyframeAdded,
     })
   }
 
@@ -1000,7 +1025,7 @@ export class ToggleKeyframeCommand implements SimpleCommand {
   private checkHasKeyframeAtTime(
     timelineItem: UnifiedTimelineItemData<MediaTypeOrUnknown> | undefined,
     timeFrames: number,
-    properties: KeyframeProperty[]
+    properties: KeyframeProperty[],
   ): boolean {
     if (!timelineItem || !isKnownTimelineItem(timelineItem) || !timelineItem.animation) {
       return false
@@ -1014,7 +1039,9 @@ export class ToggleKeyframeCommand implements SimpleCommand {
    */
   async execute(): Promise<void> {
     try {
-      console.log(`🔄 执行${this.wasKeyframeAdded ? '添加' : '删除'}关键帧操作: ${this.timelineItemId}...`)
+      console.log(
+        `🔄 执行${this.wasKeyframeAdded ? '添加' : '删除'}关键帧操作: ${this.timelineItemId}...`,
+      )
 
       const timelineItem = this.timelineModule.getTimelineItem(this.timelineItemId)
       if (!timelineItem || !isKnownTimelineItem(timelineItem)) {
@@ -1022,7 +1049,9 @@ export class ToggleKeyframeCommand implements SimpleCommand {
       }
 
       // 保存原始关键帧状态
-      this.originalKeyframes = timelineItem.animation ? cloneDeep(timelineItem.animation.keyframes) : null
+      this.originalKeyframes = timelineItem.animation
+        ? cloneDeep(timelineItem.animation.keyframes)
+        : null
 
       // 执行添加或删除关键帧操作
       if (this.wasKeyframeAdded) {
@@ -1032,11 +1061,16 @@ export class ToggleKeyframeCommand implements SimpleCommand {
       }
 
       // 保存新关键帧状态
-      this.newKeyframes = timelineItem.animation ? cloneDeep(timelineItem.animation.keyframes) : null
+      this.newKeyframes = timelineItem.animation
+        ? cloneDeep(timelineItem.animation.keyframes)
+        : null
 
       console.log(`✅ 关键帧${this.wasKeyframeAdded ? '添加' : '删除'}成功: ${this.timelineItemId}`)
     } catch (error) {
-      console.error(`❌ 关键帧${this.wasKeyframeAdded ? '添加' : '删除'}失败: ${this.timelineItemId}`, error)
+      console.error(
+        `❌ 关键帧${this.wasKeyframeAdded ? '添加' : '删除'}失败: ${this.timelineItemId}`,
+        error,
+      )
       throw error
     }
   }
@@ -1088,7 +1122,9 @@ export class ToggleKeyframeCommand implements SimpleCommand {
    */
   async undo(): Promise<void> {
     try {
-      console.log(`🔄 撤销${this.wasKeyframeAdded ? '添加' : '删除'}关键帧操作: ${this.timelineItemId}...`)
+      console.log(
+        `🔄 撤销${this.wasKeyframeAdded ? '添加' : '删除'}关键帧操作: ${this.timelineItemId}...`,
+      )
 
       const timelineItem = this.timelineModule.getTimelineItem(this.timelineItemId)
       if (!timelineItem || !isKnownTimelineItem(timelineItem)) {
@@ -1111,9 +1147,14 @@ export class ToggleKeyframeCommand implements SimpleCommand {
       // 更新时间轴项目的动画配置
       this.timelineModule.updateTimelineItemAnimation(this.timelineItemId, timelineItem.animation)
 
-      console.log(`↩️ 已撤销关键帧${this.wasKeyframeAdded ? '添加' : '删除'}: ${this.timelineItemId}`)
+      console.log(
+        `↩️ 已撤销关键帧${this.wasKeyframeAdded ? '添加' : '删除'}: ${this.timelineItemId}`,
+      )
     } catch (error) {
-      console.error(`❌ 撤销关键帧${this.wasKeyframeAdded ? '添加' : '删除'}失败: ${this.timelineItemId}`, error)
+      console.error(
+        `❌ 撤销关键帧${this.wasKeyframeAdded ? '添加' : '删除'}失败: ${this.timelineItemId}`,
+        error,
+      )
       throw error
     }
   }
@@ -1143,7 +1184,10 @@ export class UpdateKeyframeCommand implements SimpleCommand {
     private newEasing: KeyframeEasing, // 新缓动函数
     private timelineModule: {
       getTimelineItem: (id: string) => UnifiedTimelineItemData<MediaTypeOrUnknown> | undefined
-      updateTimelineItemAnimation: (id: string, animation: AnimationConfig<MediaType> | undefined) => void
+      updateTimelineItemAnimation: (
+        id: string,
+        animation: AnimationConfig<MediaType> | undefined,
+      ) => void
     },
     private mediaModule: {
       getMediaItem: (id: string) => { name: string } | undefined
@@ -1172,7 +1216,7 @@ export class UpdateKeyframeCommand implements SimpleCommand {
       oldInterpolation,
       newInterpolation,
       oldEasing,
-      newEasing
+      newEasing,
     })
   }
 
@@ -1202,8 +1246,11 @@ export class UpdateKeyframeCommand implements SimpleCommand {
 
       // 创建新关键帧
       const newKeyframe = { ...originalKeyframe }
-      newKeyframe.framePosition = absoluteFrameToRelativeFrame(this.newTimeFrames, timelineItem.timeRange)
-      
+      newKeyframe.framePosition = absoluteFrameToRelativeFrame(
+        this.newTimeFrames,
+        timelineItem.timeRange,
+      )
+
       // 更新属性值
       if (this.property in newKeyframe.properties) {
         const properties = newKeyframe.properties as GetKeyframeProperties<MediaType>
@@ -1274,7 +1321,10 @@ export class ToggleAnimationCommand implements SimpleCommand {
     private enable: boolean, // true表示启用，false表示禁用
     private timelineModule: {
       getTimelineItem: (id: string) => UnifiedTimelineItemData<MediaTypeOrUnknown> | undefined
-      updateTimelineItemAnimation: (id: string, animation: AnimationConfig<MediaType> | undefined) => void
+      updateTimelineItemAnimation: (
+        id: string,
+        animation: AnimationConfig<MediaType> | undefined,
+      ) => void
     },
     private mediaModule: {
       getMediaItem: (id: string) => { name: string } | undefined
@@ -1289,7 +1339,7 @@ export class ToggleAnimationCommand implements SimpleCommand {
     if (timelineItem) {
       const mediaItem = this.mediaModule.getMediaItem(timelineItem.mediaItemId)
       itemName = mediaItem?.name || '未知素材'
-      
+
       // 保存原始动画状态
       if (timelineItem.animation) {
         this.originalAnimationState = timelineItem.animation.isEnabled
@@ -1301,7 +1351,7 @@ export class ToggleAnimationCommand implements SimpleCommand {
     console.log('💾 保存切换动画状态操作数据:', {
       timelineItemId,
       enable,
-      originalAnimationState: this.originalAnimationState
+      originalAnimationState: this.originalAnimationState,
     })
   }
 
@@ -1364,7 +1414,10 @@ export class ToggleAnimationCommand implements SimpleCommand {
 
       console.log(`↩️ 已撤销动画${this.enable ? '启用' : '禁用'}: ${this.timelineItemId}`)
     } catch (error) {
-      console.error(`❌ 撤销动画${this.enable ? '启用' : '禁用'}失败: ${this.timelineItemId}`, error)
+      console.error(
+        `❌ 撤销动画${this.enable ? '启用' : '禁用'}失败: ${this.timelineItemId}`,
+        error,
+      )
       throw error
     }
   }
@@ -1385,7 +1438,10 @@ export class ClearAllKeyframesCommand implements SimpleCommand {
     private timelineItemId: string,
     private timelineModule: {
       getTimelineItem: (id: string) => UnifiedTimelineItemData<MediaTypeOrUnknown> | undefined
-      updateTimelineItemAnimation: (id: string, animation: AnimationConfig<MediaType> | undefined) => void
+      updateTimelineItemAnimation: (
+        id: string,
+        animation: AnimationConfig<MediaType> | undefined,
+      ) => void
     },
     private mediaModule: {
       getMediaItem: (id: string) => { name: string } | undefined
@@ -1400,7 +1456,7 @@ export class ClearAllKeyframesCommand implements SimpleCommand {
     if (timelineItem) {
       const mediaItem = this.mediaModule.getMediaItem(timelineItem.mediaItemId)
       itemName = mediaItem?.name || '未知素材'
-      
+
       // 保存原始关键帧状态和动画状态
       if (timelineItem.animation) {
         this.originalKeyframes = cloneDeep(timelineItem.animation.keyframes)
@@ -1413,7 +1469,7 @@ export class ClearAllKeyframesCommand implements SimpleCommand {
     console.log('💾 保存清除所有关键帧操作数据:', {
       timelineItemId,
       originalKeyframes: this.originalKeyframes,
-      originalAnimationState: this.originalAnimationState
+      originalAnimationState: this.originalAnimationState,
     })
   }
 
@@ -1497,7 +1553,10 @@ export const KeyframeCommandFactory = {
     properties: KeyframeProperty[],
     timelineModule: {
       getTimelineItem: (id: string) => UnifiedTimelineItemData<MediaTypeOrUnknown> | undefined
-      updateTimelineItemAnimation: (id: string, animation: AnimationConfig<MediaType> | undefined) => void
+      updateTimelineItemAnimation: (
+        id: string,
+        animation: AnimationConfig<MediaType> | undefined,
+      ) => void
     },
     mediaModule: {
       getMediaItem: (id: string) => { name: string } | undefined
@@ -1528,7 +1587,10 @@ export const KeyframeCommandFactory = {
     newEasing: KeyframeEasing,
     timelineModule: {
       getTimelineItem: (id: string) => UnifiedTimelineItemData<MediaTypeOrUnknown> | undefined
-      updateTimelineItemAnimation: (id: string, animation: AnimationConfig<MediaType> | undefined) => void
+      updateTimelineItemAnimation: (
+        id: string,
+        animation: AnimationConfig<MediaType> | undefined,
+      ) => void
     },
     mediaModule: {
       getMediaItem: (id: string) => { name: string } | undefined
@@ -1558,18 +1620,16 @@ export const KeyframeCommandFactory = {
     enable: boolean,
     timelineModule: {
       getTimelineItem: (id: string) => UnifiedTimelineItemData<MediaTypeOrUnknown> | undefined
-      updateTimelineItemAnimation: (id: string, animation: AnimationConfig<MediaType> | undefined) => void
+      updateTimelineItemAnimation: (
+        id: string,
+        animation: AnimationConfig<MediaType> | undefined,
+      ) => void
     },
     mediaModule: {
       getMediaItem: (id: string) => { name: string } | undefined
     },
   ): ToggleAnimationCommand {
-    return new ToggleAnimationCommand(
-      timelineItemId,
-      enable,
-      timelineModule,
-      mediaModule,
-    )
+    return new ToggleAnimationCommand(timelineItemId, enable, timelineModule, mediaModule)
   },
 
   /**
@@ -1579,16 +1639,15 @@ export const KeyframeCommandFactory = {
     timelineItemId: string,
     timelineModule: {
       getTimelineItem: (id: string) => UnifiedTimelineItemData<MediaTypeOrUnknown> | undefined
-      updateTimelineItemAnimation: (id: string, animation: AnimationConfig<MediaType> | undefined) => void
+      updateTimelineItemAnimation: (
+        id: string,
+        animation: AnimationConfig<MediaType> | undefined,
+      ) => void
     },
     mediaModule: {
       getMediaItem: (id: string) => { name: string } | undefined
     },
   ): ClearAllKeyframesCommand {
-    return new ClearAllKeyframesCommand(
-      timelineItemId,
-      timelineModule,
-      mediaModule,
-    )
+    return new ClearAllKeyframesCommand(timelineItemId, timelineModule, mediaModule)
   },
 }

@@ -4,52 +4,31 @@
  */
 
 // ==================== 统一轨道模块 ====================
-export {
-  createUnifiedTrackModule,
-  type UnifiedTrackModule
-} from './UnifiedTrackModule'
+export { createUnifiedTrackModule, type UnifiedTrackModule } from './UnifiedTrackModule'
 
 // ==================== 统一媒体模块 ====================
-export {
-  createUnifiedMediaModule,
-  type UnifiedMediaModule
-} from './UnifiedMediaModule'
+export { createUnifiedMediaModule, type UnifiedMediaModule } from './UnifiedMediaModule'
 
 // ==================== 统一时间轴模块 ====================
-export {
-  createUnifiedTimelineModule,
-  type UnifiedTimelineModule
-} from './UnifiedTimelineModule'
+export { createUnifiedTimelineModule, type UnifiedTimelineModule } from './UnifiedTimelineModule'
 
 // ==================== 统一项目模块 ====================
-export {
-  createUnifiedProjectModule,
-  type UnifiedProjectModule
-} from './UnifiedProjectModule'
+export { createUnifiedProjectModule, type UnifiedProjectModule } from './UnifiedProjectModule'
 
 // ==================== 统一视口模块 ====================
-export {
-  createUnifiedViewportModule,
-  type UnifiedViewportModule
-} from './UnifiedViewportModule'
+export { createUnifiedViewportModule, type UnifiedViewportModule } from './UnifiedViewportModule'
 
 // ==================== 统一选择模块 ====================
-export {
-  createUnifiedSelectionModule,
-  type UnifiedSelectionModule
-} from './UnifiedSelectionModule'
+export { createUnifiedSelectionModule, type UnifiedSelectionModule } from './UnifiedSelectionModule'
 
 // ==================== 统一片段操作模块 ====================
 export {
   createUnifiedClipOperationsModule,
-  type UnifiedClipOperationsModule
+  type UnifiedClipOperationsModule,
 } from './UnifiedClipOperationsModule'
 
 // ==================== 统一配置模块 ====================
-export {
-  createUnifiedConfigModule,
-  type UnifiedConfigModule
-} from './UnifiedConfigModule'
+export { createUnifiedConfigModule, type UnifiedConfigModule } from './UnifiedConfigModule'
 
 // ==================== 统一历史记录模块 ====================
 export {
@@ -57,23 +36,17 @@ export {
   BaseBatchCommand,
   BatchBuilder,
   GenericBatchCommand,
-  type UnifiedHistoryModule
+  type UnifiedHistoryModule,
 } from './UnifiedHistoryModule'
 
 // ==================== 统一通知模块 ====================
 export {
   createUnifiedNotificationModule,
-  type UnifiedNotificationModule
+  type UnifiedNotificationModule,
 } from './UnifiedNotificationModule'
 
 // ==================== 统一播放控制模块 ====================
-export {
-  createUnifiedPlaybackModule,
-  type UnifiedPlaybackModule
-} from './UnifiedPlaybackModule'
+export { createUnifiedPlaybackModule, type UnifiedPlaybackModule } from './UnifiedPlaybackModule'
 
 // ==================== 统一WebAV模块 ====================
-export {
-  createUnifiedWebavModule,
-  type UnifiedWebavModule
-} from './UnifiedWebavModule'
+export { createUnifiedWebavModule, type UnifiedWebavModule } from './UnifiedWebavModule'

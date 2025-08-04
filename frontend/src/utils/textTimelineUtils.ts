@@ -35,21 +35,21 @@ export async function createTextTimelineItem(
   startTimeFrames: number,
   trackId: string,
   duration: number = TextVisibleSprite.DEFAULT_DURATION,
-  videoResolution: { width: number; height: number }
+  videoResolution: { width: number; height: number },
 ): Promise<LocalTimelineItem<'text'>> {
   console.log('🔄 [TextTimelineUtils] 开始创建文本时间轴项目:', {
     text: text.substring(0, 20) + '...',
     startTimeFrames,
     trackId,
     duration,
-    videoResolution
+    videoResolution,
   })
 
   try {
     // 1. 验证和补全文本样式
     const completeStyle = {
       ...DEFAULT_TEXT_STYLE,
-      ...style
+      ...style,
     }
 
     // 2. 创建文本精灵（复用现有TextVisibleSprite）
@@ -62,7 +62,7 @@ export async function createTextTimelineItem(
     console.log('✅ [TextTimelineUtils] 时间范围设置完成:', {
       startTime: startTimeFrames,
       duration: duration,
-      endTime: startTimeFrames + duration
+      endTime: startTimeFrames + duration,
     })
 
     // 4. 设置默认位置（画布中心）
@@ -74,7 +74,7 @@ export async function createTextTimelineItem(
       webavX: textSprite.rect.x,
       webavY: textSprite.rect.y,
       width: textSprite.rect.w,
-      height: textSprite.rect.h
+      height: textSprite.rect.h,
     })
 
     // 5. 坐标系转换（WebAV -> 项目坐标系）
@@ -84,11 +84,11 @@ export async function createTextTimelineItem(
       textSprite.rect.w,
       textSprite.rect.h,
       canvasWidth,
-      canvasHeight
+      canvasHeight,
     )
     console.log('✅ [TextTimelineUtils] 坐标转换完成:', {
       webav: { x: textSprite.rect.x, y: textSprite.rect.y },
-      project: projectCoords
+      project: projectCoords,
     })
 
     // 6. 创建文本媒体配置
@@ -124,7 +124,7 @@ export async function createTextTimelineItem(
       thumbnailUrl: undefined, // 文本项目不需要缩略图
       config: textConfig,
       animation: undefined, // 新创建的文本项目默认没有动画
-      mediaName: `文本: ${text.substring(0, 10)}${text.length > 10 ? '...' : ''}` // 使用文本内容作为名称
+      mediaName: `文本: ${text.substring(0, 10)}${text.length > 10 ? '...' : ''}`, // 使用文本内容作为名称
     })
 
     console.log('✅ [TextTimelineUtils] 文本时间轴项目创建完成:', {
@@ -134,8 +134,8 @@ export async function createTextTimelineItem(
       config: {
         position: { x: textConfig.x, y: textConfig.y },
         size: { width: textConfig.width, height: textConfig.height },
-        style: textConfig.style
-      }
+        style: textConfig.style,
+      },
     })
 
     return timelineItem
@@ -162,7 +162,7 @@ export function isTextTrackCompatible(trackType: string): boolean {
 export function createDefaultTextStyle(overrides: Partial<TextStyleConfig> = {}): TextStyleConfig {
   return {
     ...DEFAULT_TEXT_STYLE,
-    ...overrides
+    ...overrides,
   }
 }
 
@@ -172,7 +172,10 @@ export function createDefaultTextStyle(overrides: Partial<TextStyleConfig> = {})
  * @param maxLength 最大显示长度
  * @returns 显示名称
  */
-export function getTextItemDisplayName(textItem: LocalTimelineItem<'text'>, maxLength: number = 20): string {
+export function getTextItemDisplayName(
+  textItem: LocalTimelineItem<'text'>,
+  maxLength: number = 20,
+): string {
   const text = textItem.config.text || '文本'
   return text.length > maxLength ? text.substring(0, maxLength) + '...' : text
 }
@@ -198,12 +201,12 @@ export function createTextItemPreview(textItem: LocalTimelineItem<'text'>) {
     style: {
       fontSize: textItem.config.style.fontSize,
       fontFamily: textItem.config.style.fontFamily,
-      color: textItem.config.style.color
+      color: textItem.config.style.color,
     },
     duration: textItem.timeRange.displayDuration,
     position: {
       x: textItem.config.x,
-      y: textItem.config.y
-    }
+      y: textItem.config.y,
+    },
   }
 }

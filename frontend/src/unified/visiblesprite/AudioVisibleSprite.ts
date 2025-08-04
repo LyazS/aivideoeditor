@@ -4,7 +4,6 @@ import { framesToMicroseconds } from '../utils/UnifiedTimeUtils'
 import { BaseVisibleSprite } from './BaseVisibleSprite'
 import type { AudioState } from './types'
 
-
 /**
  * 自定义的音频VisibleSprite类，继承自BaseVisibleSprite
  * 专门用于处理音频素材，采用直接属性更新模式
@@ -85,8 +84,6 @@ export class AudioVisibleSprite extends BaseVisibleSprite {
     const adjustedTime = time + startOffsetMicroseconds
     return super.render(ctx, adjustedTime)
   }
-
-
 
   // ==================== 时间轴接口 ====================
 

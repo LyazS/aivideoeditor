@@ -10,11 +10,11 @@ export function createUnifiedProjectModule() {
 
   // 当前项目配置
   const currentProject = ref<UnifiedProjectConfig | null>(null)
-  
+
   // 项目保存状态
   const isSaving = ref(false)
   const lastSaved = ref<Date | null>(null)
-  
+
   // 项目加载状态
   const isLoading = ref(false)
 
@@ -56,7 +56,7 @@ export function createUnifiedProjectModule() {
         hour12: false,
         hour: '2-digit',
         minute: '2-digit',
-        second: '2-digit'
+        second: '2-digit',
       })
       return `${timeString} 已保存`
     }
@@ -119,7 +119,10 @@ export function createUnifiedProjectModule() {
    * @param name 项目名称
    * @param template 项目模板（可选）
    */
-  async function createProject(name: string, template?: Partial<UnifiedProjectConfig>): Promise<UnifiedProjectConfig> {
+  async function createProject(
+    name: string,
+    template?: Partial<UnifiedProjectConfig>,
+  ): Promise<UnifiedProjectConfig> {
     try {
       isLoading.value = true
       updateLoadingProgress('创建项目...', 10)
@@ -140,17 +143,17 @@ export function createUnifiedProjectModule() {
             name: '1920x1080',
             width: 1920,
             height: 1080,
-            aspectRatio: '16:9'
+            aspectRatio: '16:9',
           },
           frameRate: 30,
-          timelineDurationFrames: 3000
+          timelineDurationFrames: 3000,
         },
         timeline: template?.timeline || {
           tracks: [],
           timelineItems: [],
-          mediaItems: []
+          mediaItems: [],
         },
-        exports: []
+        exports: [],
       }
 
       currentProject.value = projectConfig
@@ -179,20 +182,20 @@ export function createUnifiedProjectModule() {
     try {
       isSaving.value = true
       console.log(`💾 保存项目: ${currentProject.value.name}`)
-      
+
       // 合并项目数据
       const updatedProject: UnifiedProjectConfig = {
         ...currentProject.value,
         ...projectData,
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
       }
-      
+
       // 这里应该调用实际的保存逻辑
       // await projectManager.saveProject(updatedProject)
-      
+
       currentProject.value = updatedProject
       lastSaved.value = new Date()
-      
+
       console.log(`✅ 项目保存成功: ${updatedProject.name}`)
     } catch (error) {
       console.error('保存项目失败:', error)
@@ -221,7 +224,7 @@ export function createUnifiedProjectModule() {
       // const settings = await projectManager.loadProjectSettings(projectId)
 
       // 模拟加载
-      await new Promise(resolve => setTimeout(resolve, 100))
+      await new Promise((resolve) => setTimeout(resolve, 100))
 
       console.log('🔄 [LIFECYCLE] UnifiedProjectModule 项目设置预加载成功')
       isProjectSettingsReady.value = true
@@ -229,7 +232,9 @@ export function createUnifiedProjectModule() {
     } catch (error) {
       console.error('❌ [Settings Preload] 预加载项目设置失败:', error)
       isProjectSettingsReady.value = false
-      throw new Error(`项目设置加载失败，无法继续: ${error instanceof Error ? error.message : String(error)}`)
+      throw new Error(
+        `项目设置加载失败，无法继续: ${error instanceof Error ? error.message : String(error)}`,
+      )
     }
   }
 
@@ -256,13 +261,13 @@ export function createUnifiedProjectModule() {
 
       // 模拟加载过程
       updateLoadingProgress('加载项目配置...', 20)
-      await new Promise(resolve => setTimeout(resolve, 100))
-      
+      await new Promise((resolve) => setTimeout(resolve, 100))
+
       updateLoadingProgress('加载媒体文件...', 50)
-      await new Promise(resolve => setTimeout(resolve, 100))
-      
+      await new Promise((resolve) => setTimeout(resolve, 100))
+
       updateLoadingProgress('加载时间轴数据...', 80)
-      await new Promise(resolve => setTimeout(resolve, 100))
+      await new Promise((resolve) => setTimeout(resolve, 100))
 
       updateLoadingProgress('项目内容加载完成', 100)
       console.log(`✅ [Content Load] 项目内容加载成功`)
@@ -297,7 +302,7 @@ export function createUnifiedProjectModule() {
       hasCurrentProject: hasCurrentProject.value,
       isSaving: isSaving.value,
       isLoading: isLoading.value,
-      lastSaved: lastSaved.value
+      lastSaved: lastSaved.value,
     }
   }
 
@@ -332,7 +337,7 @@ export function createUnifiedProjectModule() {
 
     // 加载进度方法
     updateLoadingProgress,
-    resetLoadingState
+    resetLoadingState,
   }
 }
 

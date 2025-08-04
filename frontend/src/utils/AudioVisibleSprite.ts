@@ -86,8 +86,6 @@ export class AudioVisibleSprite extends BaseVisibleSprite {
     return super.render(ctx, adjustedTime)
   }
 
-
-
   // ==================== 时间轴接口 ====================
 
   /**
@@ -170,7 +168,8 @@ export class AudioVisibleSprite extends BaseVisibleSprite {
 
     // 自动计算effectiveDuration（如果没有明确设置）
     if (timeRange.effectiveDuration === undefined) {
-      this.#timeRange.effectiveDuration = this.#timeRange.timelineEndTime - this.#timeRange.timelineStartTime
+      this.#timeRange.effectiveDuration =
+        this.#timeRange.timelineEndTime - this.#timeRange.timelineStartTime
     }
 
     // 更新VisibleSprite的时间
@@ -342,7 +341,6 @@ export class AudioVisibleSprite extends BaseVisibleSprite {
    * 内部使用帧数计算，设置WebAV时转换为微秒
    */
   #updateVisibleSpriteTime(): void {
-
     const { clipStartTime, clipEndTime, timelineStartTime, timelineEndTime } = this.#timeRange
 
     // 计算播放速度和相关参数（使用帧数）
@@ -383,7 +381,5 @@ export class AudioVisibleSprite extends BaseVisibleSprite {
       duration: framesToMicroseconds(durationFrames),
       playbackRate: playbackRate,
     }
-
-
   }
 }

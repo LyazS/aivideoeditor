@@ -30,8 +30,4 @@ export type UnifiedSprite =
 // ==================== 共享类型定义 ====================
 
 // 导出所有类型接口（统一从 types.ts 导出）
-export type {
-  AudioState,
-  ExtendedSpriteEvents,
-  TextSpriteEvents
-} from './types'
+export type { AudioState, ExtendedSpriteEvents, TextSpriteEvents } from './types'

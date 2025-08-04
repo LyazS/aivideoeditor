@@ -108,13 +108,9 @@ function applySnapToClips(targetFrames: number): number {
   }
 
   // 使用新的吸附管理器计算吸附结果
-  const snapResult = snapManager.calculatePlayheadSnap(
-    targetFrames,
-    props.timelineWidth,
-    {
-      temporaryDisabled: !props.enableSnapping
-    }
-  )
+  const snapResult = snapManager.calculatePlayheadSnap(targetFrames, props.timelineWidth, {
+    temporaryDisabled: !props.enableSnapping,
+  })
 
   // 调试信息：如果发生了吸附，输出日志
   // if (snapResult.snapped && snapResult.snapPoint) {

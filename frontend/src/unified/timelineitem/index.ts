@@ -12,29 +12,26 @@ export type {
   CreateTimelineItemOptions,
   UnknownMediaConfig,
   KnownTimelineItem,
-  UnknownTimelineItem
+  UnknownTimelineItem,
 } from './TimelineItemData'
 
 // 从mediaitem模块导入MediaTypeOrUnknown
 export type { MediaTypeOrUnknown } from '../mediaitem'
 
 // ==================== 常量导出 ====================
-export {
-  VALID_TIMELINE_TRANSITIONS,
-  MEDIA_TO_TIMELINE_STATUS_MAP
-} from './TimelineItemData'
+export { VALID_TIMELINE_TRANSITIONS, MEDIA_TO_TIMELINE_STATUS_MAP } from './TimelineItemData'
 
 // ==================== 工厂函数导出 ====================
 export {
   // 工厂函数集合
-  TimelineItemFactory
+  TimelineItemFactory,
 } from './TimelineItemFactory'
 
 // ==================== 状态显示工具导出 ====================
 export {
   // 状态显示工具类
   TimelineStatusDisplayUtils,
-  createStatusDisplayComputeds
+  createStatusDisplayComputeds,
 } from './TimelineStatusDisplayUtils'
 
 // 状态显示类型导出
@@ -60,7 +57,7 @@ export {
   resizeTimelineItem,
 
   // 类型转换函数
-  convertUnknownToKnown
+  convertUnknownToKnown,
 } from './TimelineItemBehaviors'
 
 // 从 TimelineItemBehaviors 导出的状态查询函数（避免与 TimelineItemQueries 冲突）
@@ -69,7 +66,7 @@ export {
   isLoading as isLoadingBehavior,
   hasError as hasErrorBehavior,
   getDuration as getDurationBehavior,
-  hasValidTimeRange as hasValidTimeRangeBehavior
+  hasValidTimeRange as hasValidTimeRangeBehavior,
 } from './TimelineItemBehaviors'
 
 // ==================== 查询工具导出 ====================
@@ -116,22 +113,20 @@ export {
   getTrackTimeStats,
 
   // 查询工具集合
-  TimelineItemQueries
+  TimelineItemQueries,
 } from './TimelineItemQueries'
 
 // ==================== 管理器导出 ====================
-export {
-  TimelineMediaSyncManager
-} from './TimelineMediaSyncManager'
+export { TimelineMediaSyncManager } from './TimelineMediaSyncManager'
 
 // ==================== 便捷使用示例 ====================
 
 /**
  * 使用示例：创建视频时间轴项目
- * 
+ *
  * ```typescript
  * import { createVideoTimelineItem, transitionTimelineStatus, setReady } from '@/unified/timelineitem'
- * 
+ *
  * // 创建视频时间轴项目
  * const videoItem = createVideoTimelineItem({
  *   mediaItemId: 'media-123',
@@ -141,10 +136,10 @@ export {
  *   clipStartTime: 30,
  *   clipEndTime: 330
  * })
- * 
+ *
  * // 状态转换
  * await setReady(videoItem, { duration: 300, format: 'mp4' })
- * 
+ *
  * // 查询状态
  * console.log(isReady(videoItem)) // true
  * console.log(getDuration(videoItem)) // 300
@@ -153,15 +148,15 @@ export {
 
 /**
  * 使用示例：状态同步管理
- * 
+ *
  * ```typescript
  * import { TimelineMediaSyncManager } from '@/unified/timelineitem'
- * 
+ *
  * const syncManager = TimelineMediaSyncManager.getInstance()
- * 
+ *
  * // 注册媒体项目
  * syncManager.registerMediaItem(mediaData)
- * 
+ *
  * // 创建时间轴项目（自动建立状态同步）
  * const timelineItem = syncManager.createTimelineItem(
  *   'media-123',
@@ -174,7 +169,7 @@ export {
 
 /**
  * 使用示例：Vue组件中的响应式使用
- * 
+ *
  * ```vue
  * <template>
  *   <div class="timeline-item" :class="statusClass">
@@ -184,13 +179,13 @@ export {
  *     </div>
  *   </div>
  * </template>
- * 
+ *
  * <script setup lang="ts">
  * import { computed } from 'vue'
  * import { getStatusText, getProgressInfo, type UnifiedTimelineItemData } from '@/unified/timelineitem'
- * 
+ *
  * const props = defineProps<{ data: UnifiedTimelineItemData }>()
- * 
+ *
  * // 计算属性自动响应数据变化
  * const statusClass = computed(() => `status-${props.data.timelineStatus}`)
  * const statusText = computed(() => getStatusText(props.data))
@@ -214,7 +209,7 @@ import {
   updateTimeRange,
   moveTimelineItem,
   resizeTimelineItem,
-  convertUnknownToKnown
+  convertUnknownToKnown,
 } from './TimelineItemBehaviors'
 
 import {
@@ -236,10 +231,13 @@ import {
   getErrorInfo,
   filterByStatus,
   filterByTrack,
-  sortByTime
+  sortByTime,
 } from './TimelineItemQueries'
 
-import { TimelineStatusDisplayUtils, createStatusDisplayComputeds } from './TimelineStatusDisplayUtils'
+import {
+  TimelineStatusDisplayUtils,
+  createStatusDisplayComputeds,
+} from './TimelineStatusDisplayUtils'
 import { TimelineMediaSyncManager } from './TimelineMediaSyncManager'
 import type { UnifiedTimelineItemData } from './TimelineItemData'
 import type { MediaTypeOrUnknown } from '../mediaitem'
@@ -256,7 +254,7 @@ export default {
     createImage: TimelineItemFactory.createImage,
     clone: TimelineItemFactory.clone,
     duplicate: TimelineItemFactory.duplicate,
-    validate: TimelineItemFactory.validate
+    validate: TimelineItemFactory.validate,
   },
 
   // 行为函数
@@ -276,7 +274,7 @@ export default {
     resizeItem: resizeTimelineItem,
 
     // 类型转换函数
-    convertUnknownToKnown
+    convertUnknownToKnown,
   },
 
   // 查询函数
@@ -295,24 +293,25 @@ export default {
     isReady,
     isLoading,
     hasError,
-    canPlay: (data: UnifiedTimelineItemData<MediaTypeOrUnknown>) => isReady(data) && hasValidTimeRange(data),
+    canPlay: (data: UnifiedTimelineItemData<MediaTypeOrUnknown>) =>
+      isReady(data) && hasValidTimeRange(data),
     getDuration,
     getStatusText,
     getProgressInfo,
     getErrorInfo,
     filterByStatus,
     filterByTrack,
-    sortByTime
+    sortByTime,
   },
 
   // 工具类
   Utils: {
     Display: TimelineStatusDisplayUtils, // 状态显示工具
-    createStatusComputeds: createStatusDisplayComputeds
+    createStatusComputeds: createStatusDisplayComputeds,
   },
 
   // 管理器
   Managers: {
-    MediaSync: TimelineMediaSyncManager
-  }
+    MediaSync: TimelineMediaSyncManager,
+  },
 }

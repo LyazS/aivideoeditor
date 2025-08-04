@@ -750,7 +750,10 @@ export async function handlePropertyChange(
 /**
  * 获取上一个关键帧的帧数
  */
-export function getPreviousKeyframeFrame(item: LocalTimelineItem, currentFrame: number): number | null {
+export function getPreviousKeyframeFrame(
+  item: LocalTimelineItem,
+  currentFrame: number,
+): number | null {
   if (!item.animation || item.animation.keyframes.length === 0) return null
 
   const currentRelativeFrame = absoluteFrameToRelativeFrame(currentFrame, item.timeRange)

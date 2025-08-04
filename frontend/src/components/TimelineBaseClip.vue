@@ -54,7 +54,13 @@ interface Emits {
   (e: 'drag-end', itemId: string, event: DragEvent): void
   (e: 'resize-start', itemId: string, direction: 'left' | 'right'): void
   (e: 'resize-end', itemId: string, direction: 'left' | 'right'): void
-  (e: 'resize-update', itemId: string, newStartTime: number, newEndTime: number, direction: 'left' | 'right'): void
+  (
+    e: 'resize-update',
+    itemId: string,
+    newStartTime: number,
+    newEndTime: number,
+    direction: 'left' | 'right',
+  ): void
   (e: 'update-position', timelineItemId: string, newPosition: number, newTrackId?: string): void
   (e: 'remove', timelineItemId: string): void
 }
@@ -432,9 +438,10 @@ function stopResize() {
   }
 
   // 检查是否有实际的变化
-  if (tempDurationFrames.value !== resizeStartDurationFrames.value ||
-      tempResizePositionFrames.value !== resizeStartPositionFrames.value) {
-
+  if (
+    tempDurationFrames.value !== resizeStartDurationFrames.value ||
+    tempResizePositionFrames.value !== resizeStartPositionFrames.value
+  ) {
     console.log('🔧 [TimelineBaseClip] 调整大小 - 发送resize-update事件:', {
       itemId: props.timelineItem.id,
       newStartTime: newTimelineStartTimeFrames,
@@ -443,11 +450,12 @@ function stopResize() {
     })
 
     // 发送resize-update事件，让具体的clip组件处理时间范围更新
-    emit('resize-update',
+    emit(
+      'resize-update',
       props.timelineItem.id,
       newTimelineStartTimeFrames,
       newTimelineEndTimeFrames,
-      resizeDirection.value || 'left'
+      resizeDirection.value || 'left',
     )
   }
 

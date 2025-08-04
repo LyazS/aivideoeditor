@@ -21,15 +21,10 @@ export type {
   UnknownMediaItem,
   KnownMediaItem,
   VisualMediaItem,
-  AudioCapableMediaItem
+  AudioCapableMediaItem,
 } from './types'
 
-export {
-  createUnifiedMediaItemData
-} from './types'
+export { createUnifiedMediaItemData } from './types'
 
 // 导出行为函数
-export {
-  UnifiedMediaItemQueries,
-  UnifiedMediaItemActions
-} from './actions'
+export { UnifiedMediaItemQueries, UnifiedMediaItemActions } from './actions'

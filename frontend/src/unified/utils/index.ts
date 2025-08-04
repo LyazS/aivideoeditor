@@ -18,31 +18,31 @@ export {
   isSupportedMimeType,
   getMediaTypeFromMimeType,
   getMediaTypeDisplayName,
-  getMediaTypeIcon
+  getMediaTypeIcon,
 } from './mediaTypeDetector'
 
 // ==================== 统一时间范围工具 ====================
 export {
   // 同步工具
   syncTimeRange,
-  
+
   // 验证工具
   validateBaseTimeRange,
   validateTimelineItemTimeRange,
-  
+
   // 计算工具
   calculateDuration,
   containsFrame,
   isTimeRangeOverlapping,
   calculateOverlapDuration,
-  
+
   // 操作工具
   moveTimelineItem,
   resizeTimelineItem,
   trimTimelineItem,
-  
+
   // 工具集合
-  UnifiedTimeRangeUtils
+  UnifiedTimeRangeUtils,
 } from './UnifiedTimeRangeUtils'
 
 // ==================== 统一WebAV动画管理器 ====================
@@ -51,28 +51,28 @@ export {
   UnifiedWebAVAnimationManager,
 
   // 全局管理器
-  globalUnifiedWebAVAnimationManager
+  globalUnifiedWebAVAnimationManager,
 } from './UnifiedWebAVAnimationManager'
 
 // ==================== 统一Sprite工厂 ====================
 export {
   // 主要工厂函数
   createSpriteFromUnifiedMediaItem,
-  
+
   // 辅助函数
   canCreateSpriteFromUnifiedMediaItem,
   getSpriteTypeFromUnifiedMediaItem,
-  batchCheckCanCreateSprite
+  batchCheckCanCreateSprite,
 } from './UnifiedSpriteFactory'
 
 // ==================== 坐标转换工具 ====================
 export {
   // 计算可见时间范围
   calculateVisibleFrameRange,
-  
+
   // 坐标转换函数
   frameToPixel,
-  pixelToFrame
+  pixelToFrame,
 } from './coordinateUtils'
 
 // ==================== 坐标系转换工具 ====================
@@ -80,26 +80,26 @@ export {
   // 坐标系转换函数
   webavToProjectCoords,
   projectToWebavCoords,
-  
+
   // 验证和调试函数
   validateCoordinateTransform,
   debugCoordinateTransform,
-  
+
   // 中心缩放计算
   calculateCenterScalePosition,
-  debugCenterScaling
+  debugCenterScaling,
 } from './coordinateTransform'
 
 // ==================== 统一时间工具 ====================
 export {
   // 时间码系统常量
   FRAME_RATE,
-  
+
   // 时间计算工具
   calculatePixelsPerFrame,
   expandTimelineIfNeededFrames,
   formatFileSize,
-  
+
   // 时间码转换函数
   framesToSeconds,
   secondsToFrames,
@@ -107,53 +107,53 @@ export {
   microsecondsToFrames,
   framesToTimecode,
   timecodeToFrames,
-  alignFramesToFrame
+  alignFramesToFrame,
 } from './UnifiedTimeUtils'
 
 // ==================== 统一时间重叠检测工具 ====================
 export {
   // 核心重叠检测函数
   detectTimeRangeOverlap,
-  
+
   // TimelineItem 专用函数
   extractTimeRange,
   isTimelineItemsOverlapping,
   detectTimelineItemOverlap,
-  
+
   // 轨道级别的重叠检测
   hasOverlapInTrack,
   detectTrackConflicts,
-  
+
   // 批量重叠检测
   countOverlappingItems,
   getAllOverlappingPairs,
-  
+
   // 兼容性函数
-  calculateTimeRangeOverlap
+  calculateTimeRangeOverlap,
 } from './timeOverlapUtils'
 
 // ==================== 统一吸附计算器 ====================
 export {
   // 吸附计算器类
-  UnifiedSnapCalculator
+  UnifiedSnapCalculator,
 } from './snapCalculator'
 
 // ==================== 统一缩略图生成器 ====================
 export {
   // 视频缩略图生成
   generateVideoThumbnail,
-  
+
   // 图片缩略图生成
   generateImageThumbnail,
-  
+
   // Canvas转Blob URL
   canvasToBlob,
-  
+
   // 统一媒体项目缩略图生成
   generateThumbnailForUnifiedMediaItem,
-  
+
   // 统一时间轴项目缩略图重新生成
-  regenerateThumbnailForUnifiedTimelineItem
+  regenerateThumbnailForUnifiedTimelineItem,
 } from './thumbnailGenerator'
 
 // ==================== 统一时间轴搜索工具 ====================
@@ -177,7 +177,7 @@ export {
   getTimelineItemAtTrackAndFrames,
 
   // 检测播放头是否在时间轴项目的时间范围内
-  isPlayheadInTimelineItem
+  isPlayheadInTimelineItem,
 } from './UnifiedTimelineSearchUtils'
 
 // ==================== 统一文本时间轴工具 ====================
@@ -197,5 +197,5 @@ export {
   // 显示和验证工具
   getTextItemDisplayName,
   isValidTextContent,
-  createTextItemPreview
+  createTextItemPreview,
 } from './textTimelineUtils'

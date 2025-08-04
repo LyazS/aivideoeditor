@@ -1,5 +1,11 @@
 import { directoryManager } from './DirectoryManager'
-import type { LocalMediaItem, LocalTimelineItemData, Track, LocalMediaReference, ProjectConfig } from '../types'
+import type {
+  LocalMediaItem,
+  LocalTimelineItemData,
+  Track,
+  LocalMediaReference,
+  ProjectConfig,
+} from '../types'
 import { mediaManager } from './MediaManager'
 
 /**
@@ -29,8 +35,6 @@ export interface ProjectLoadResult {
   /** 已完成的加载阶段 */
   loadedStages: string[]
 }
-
-
 
 /**
  * 项目管理器
@@ -79,7 +83,7 @@ export class ProjectManager {
 
       // 按更新时间排序
       projects.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
-      
+
       return projects
     } catch (error) {
       console.error('扫描项目列表失败:', error)
@@ -106,29 +110,29 @@ export class ProjectManager {
       createdAt: now,
       updatedAt: now,
       version: '1.0.0',
-      
+
       settings: {
         videoResolution: {
           name: '1080p',
           width: 1920,
           height: 1080,
-          aspectRatio: '16:9'
+          aspectRatio: '16:9',
         },
         frameRate: 30,
-        timelineDurationFrames: 1800
+        timelineDurationFrames: 1800,
       },
-      
+
       timeline: {
         tracks: [],
         timelineItems: [],
-        mediaItems: []
+        mediaItems: [],
       },
-      
+
       localMediaReferences: {},
       asyncProcessingMediaReferences: {},
       exports: [],
-      
-      ...template
+
+      ...template,
     }
 
     try {
@@ -139,7 +143,7 @@ export class ProjectManager {
       // 创建子文件夹结构
       await projectHandle.getDirectoryHandle('media', { create: true })
       await projectHandle.getDirectoryHandle('exports', { create: true })
-      
+
       const mediaHandle = await projectHandle.getDirectoryHandle('media')
       await mediaHandle.getDirectoryHandle('videos', { create: true })
       await mediaHandle.getDirectoryHandle('images', { create: true })
@@ -156,8 +160,6 @@ export class ProjectManager {
       throw error
     }
   }
-
-
 
   /**
    * 轻量级设置预加载 - 只读取 project.json 中的 settings 部分
@@ -194,7 +196,7 @@ export class ProjectManager {
       console.log(`✅ [Settings Preload] 项目设置预加载成功:`, {
         videoResolution: projectConfig.settings.videoResolution,
         frameRate: projectConfig.settings.frameRate,
-        timelineDurationFrames: projectConfig.settings.timelineDurationFrames
+        timelineDurationFrames: projectConfig.settings.timelineDurationFrames,
       })
 
       return projectConfig.settings
@@ -219,13 +221,9 @@ export class ProjectManager {
    */
   async loadProjectWithOptions(
     projectId: string,
-    options: LoadProjectOptions = {}
+    options: LoadProjectOptions = {},
   ): Promise<ProjectLoadResult | null> {
-    const {
-      loadMedia = true,
-      loadTimeline = true,
-      onProgress
-    } = options
+    const { loadMedia = true, loadTimeline = true, onProgress } = options
 
     const workspaceHandle = await directoryManager.getWorkspaceHandle()
     if (!workspaceHandle) {
@@ -251,7 +249,11 @@ export class ProjectManager {
 
       let mediaItems: LocalMediaItem[] | undefined
 
-      if (loadMedia && projectConfig.localMediaReferences && Object.keys(projectConfig.localMediaReferences).length > 0) {
+      if (
+        loadMedia &&
+        projectConfig.localMediaReferences &&
+        Object.keys(projectConfig.localMediaReferences).length > 0
+      ) {
         // 阶段2: 加载媒体文件 (20% -> 80%)
         onProgress?.('加载媒体文件...', 40)
 
@@ -265,8 +267,8 @@ export class ProjectManager {
                 // 将媒体加载进度映射到40%-80%范围
                 const mediaProgress = 40 + (loaded / total) * 40
                 onProgress?.(`加载媒体文件 ${loaded}/${total}...`, mediaProgress)
-              }
-            }
+              },
+            },
           )
 
           loadedStages.push('media')
@@ -307,12 +309,12 @@ export class ProjectManager {
         mediaItems,
         timelineItems,
         tracks,
-        loadedStages
+        loadedStages,
       }
 
       console.log(`✅ 项目加载完成: ${projectConfig.name}`, {
         stages: loadedStages,
-        mediaCount: mediaItems?.length || 0
+        mediaCount: mediaItems?.length || 0,
       })
 
       return result
@@ -332,13 +334,9 @@ export class ProjectManager {
   async loadProjectContent(
     projectId: string,
     preloadedSettings?: ProjectConfig['settings'],
-    options: LoadProjectOptions = {}
+    options: LoadProjectOptions = {},
   ): Promise<ProjectLoadResult | null> {
-    const {
-      loadMedia = true,
-      loadTimeline = true,
-      onProgress
-    } = options
+    const { loadMedia = true, loadTimeline = true, onProgress } = options
 
     const workspaceHandle = await directoryManager.getWorkspaceHandle()
     if (!workspaceHandle) {
@@ -368,7 +366,7 @@ export class ProjectManager {
         // 使用预加载的设置覆盖文件中的设置
         projectConfig = {
           ...fullConfig,
-          settings: preloadedSettings
+          settings: preloadedSettings,
         }
       } else {
         console.log(`📂 [Content Load] 加载完整项目配置...`)
@@ -391,10 +389,16 @@ export class ProjectManager {
       // 阶段2: 加载媒体文件 (20% -> 80%)
       let mediaItems: LocalMediaItem[] | undefined
 
-      if (loadMedia && projectConfig.localMediaReferences && Object.keys(projectConfig.localMediaReferences).length > 0) {
+      if (
+        loadMedia &&
+        projectConfig.localMediaReferences &&
+        Object.keys(projectConfig.localMediaReferences).length > 0
+      ) {
         onProgress?.('加载媒体文件...', 30)
 
-        console.log(`📁 [Content Load] 开始加载媒体文件: ${Object.keys(projectConfig.localMediaReferences).length}个文件`)
+        console.log(
+          `📁 [Content Load] 开始加载媒体文件: ${Object.keys(projectConfig.localMediaReferences).length}个文件`,
+        )
 
         try {
           mediaItems = await mediaManager.loadAllMediaForProject(
@@ -406,8 +410,8 @@ export class ProjectManager {
                 // 将媒体加载进度映射到30%-80%范围
                 const mediaProgress = 30 + (loaded / total) * 50
                 onProgress?.(`加载媒体文件 ${loaded}/${total}...`, mediaProgress)
-              }
-            }
+              },
+            },
           )
 
           loadedStages.push('media-loaded')
@@ -434,7 +438,9 @@ export class ProjectManager {
 
         onProgress?.('时间轴数据加载完成...', 95)
         loadedStages.push('timeline-loaded')
-        console.log(`✅ [Content Load] 时间轴数据加载完成: ${tracks.length}个轨道, ${timelineItems.length}个项目`)
+        console.log(
+          `✅ [Content Load] 时间轴数据加载完成: ${tracks.length}个轨道, ${timelineItems.length}个项目`,
+        )
       }
 
       // 阶段4: 完成加载 (95% -> 100%)
@@ -446,14 +452,14 @@ export class ProjectManager {
         mediaItems,
         timelineItems,
         tracks,
-        loadedStages
+        loadedStages,
       }
 
       console.log(`✅ [Content Load] 项目内容加载完成: ${projectConfig.name}`, {
         loadedStages,
         mediaItemsCount: mediaItems?.length || 0,
         timelineItemsCount: timelineItems?.length || 0,
-        tracksCount: tracks?.length || 0
+        tracksCount: tracks?.length || 0,
       })
 
       return result
@@ -475,10 +481,10 @@ export class ProjectManager {
     try {
       const projectsHandle = await workspaceHandle.getDirectoryHandle(this.PROJECTS_FOLDER)
       const projectHandle = await projectsHandle.getDirectoryHandle(projectConfig.id)
-      
+
       // 更新时间戳
       projectConfig.updatedAt = new Date().toISOString()
-      
+
       await this.saveProjectConfig(projectHandle, projectConfig)
       console.log('项目保存成功:', projectConfig.name)
     } catch (error) {
@@ -509,7 +515,9 @@ export class ProjectManager {
   /**
    * 获取或创建projects文件夹
    */
-  private async getOrCreateProjectsFolder(workspaceHandle: FileSystemDirectoryHandle): Promise<FileSystemDirectoryHandle> {
+  private async getOrCreateProjectsFolder(
+    workspaceHandle: FileSystemDirectoryHandle,
+  ): Promise<FileSystemDirectoryHandle> {
     try {
       return await workspaceHandle.getDirectoryHandle(this.PROJECTS_FOLDER)
     } catch (error) {
@@ -521,12 +529,14 @@ export class ProjectManager {
   /**
    * 从项目文件夹加载配置
    */
-  private async loadProjectConfig(projectHandle: FileSystemDirectoryHandle): Promise<ProjectConfig | null> {
+  private async loadProjectConfig(
+    projectHandle: FileSystemDirectoryHandle,
+  ): Promise<ProjectConfig | null> {
     try {
       const configFileHandle = await projectHandle.getFileHandle('project.json')
       const configFile = await configFileHandle.getFile()
       const configText = await configFile.text()
-      
+
       return JSON.parse(configText) as ProjectConfig
     } catch (error) {
       console.warn('加载项目配置失败:', error)
@@ -537,10 +547,13 @@ export class ProjectManager {
   /**
    * 保存项目配置到文件
    */
-  private async saveProjectConfig(projectHandle: FileSystemDirectoryHandle, config: ProjectConfig): Promise<void> {
+  private async saveProjectConfig(
+    projectHandle: FileSystemDirectoryHandle,
+    config: ProjectConfig,
+  ): Promise<void> {
     const configFileHandle = await projectHandle.getFileHandle('project.json', { create: true })
     const writable = await configFileHandle.createWritable()
-    
+
     await writable.write(JSON.stringify(config, null, 2))
     await writable.close()
   }

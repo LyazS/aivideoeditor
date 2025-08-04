@@ -23,7 +23,9 @@
         <HoverButton @click="debugMediaItems" title="调试统一媒体">
           <template #icon>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M20,8H17.19C16.74,7.22 16.12,6.55 15.37,6.04L17,4.41L15.59,3L13.42,5.17C12.96,5.06 12.49,5 12,5C11.51,5 11.04,5.06 10.59,5.17L8.41,3L7,4.41L8.62,6.04C7.88,6.55 7.26,7.22 6.81,8H4V10H6.09C6.04,10.33 6,10.66 6,11V12H4V14H6V15C6,15.34 6.04,15.67 6.09,16H4V18H6.81C7.85,19.79 9.78,21 12,21C14.22,21 16.15,19.79 17.19,18H20V16H17.91C17.96,15.67 18,15.34 18,15V14H20V12H18V11C18,10.66 17.96,10.33 17.91,10H20V8M16,15A4,4 0 0,1 12,19A4,4 0 0,1 8,15V11A4,4 0 0,1 12,7A4,4 0 0,1 16,11V15Z" />
+              <path
+                d="M20,8H17.19C16.74,7.22 16.12,6.55 15.37,6.04L17,4.41L15.59,3L13.42,5.17C12.96,5.06 12.49,5 12,5C11.51,5 11.04,5.06 10.59,5.17L8.41,3L7,4.41L8.62,6.04C7.88,6.55 7.26,7.22 6.81,8H4V10H6.09C6.04,10.33 6,10.66 6,11V12H4V14H6V15C6,15.34 6.04,15.67 6.09,16H4V18H6.81C7.85,19.79 9.78,21 12,21C14.22,21 16.15,19.79 17.19,18H20V16H17.91C17.96,15.67 18,15.34 18,15V14H20V12H18V11C18,10.66 17.96,10.33 17.91,10H20V8M16,15A4,4 0 0,1 12,19A4,4 0 0,1 8,15V11A4,4 0 0,1 12,7A4,4 0 0,1 16,11V15Z"
+              />
             </svg>
           </template>
         </HoverButton>
@@ -46,7 +48,11 @@
       @drop="handleDrop"
       @contextmenu="handleContextMenu"
     >
-      <div v-if="filteredMediaItems.length === 0" class="empty-state" @contextmenu="handleEmptyAreaContextMenu">
+      <div
+        v-if="filteredMediaItems.length === 0"
+        class="empty-state"
+        @contextmenu="handleEmptyAreaContextMenu"
+      >
         <svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor">
           <path
             d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"
@@ -54,7 +60,9 @@
         </svg>
         <p v-if="unifiedStore.getAllMediaItems().length === 0">拖拽文件到此处导入</p>
         <p v-else>当前分类暂无素材</p>
-        <p class="hint">支持 MP4, WebM, AVI 等视频格式、JPG, PNG, GIF 等图片格式和 MP3, WAV, M4A 等音频格式</p>
+        <p class="hint">
+          支持 MP4, WebM, AVI 等视频格式、JPG, PNG, GIF 等图片格式和 MP3, WAV, M4A 等音频格式
+        </p>
       </div>
 
       <!-- 素材列表 -->
@@ -65,8 +73,10 @@
           class="media-item"
           :class="{
             parsing: item.mediaStatus === 'webavdecoding',
-            'async-processing': ['pending', 'asyncprocessing', 'webavdecoding'].includes(item.mediaStatus),
-            [`status-${item.mediaStatus}`]: true
+            'async-processing': ['pending', 'asyncprocessing', 'webavdecoding'].includes(
+              item.mediaStatus,
+            ),
+            [`status-${item.mediaStatus}`]: true,
           }"
           :data-media-item-id="item.id"
           :draggable="item.mediaStatus === 'ready'"
@@ -82,13 +92,18 @@
                 <div class="processing-status pending">
                   <div class="status-icon" title="等待中">
                     <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4Z" />
+                      <path
+                        d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4Z"
+                      />
                     </svg>
                   </div>
                 </div>
               </div>
               <!-- 时长标签 -->
-              <div v-if="item.mediaType === 'video' || item.mediaType === 'audio'" class="duration-badge">
+              <div
+                v-if="item.mediaType === 'video' || item.mediaType === 'audio'"
+                class="duration-badge"
+              >
                 等待中
               </div>
             </template>
@@ -107,7 +122,10 @@
                 </div>
               </div>
               <!-- 时长标签 -->
-              <div v-if="item.mediaType === 'video' || item.mediaType === 'audio'" class="duration-badge">
+              <div
+                v-if="item.mediaType === 'video' || item.mediaType === 'audio'"
+                class="duration-badge"
+              >
                 分析中
               </div>
             </template>
@@ -118,7 +136,10 @@
                 <div class="loading-spinner"></div>
               </div>
               <!-- 时长标签 -->
-              <div v-if="item.mediaType === 'video' || item.mediaType === 'audio'" class="duration-badge">
+              <div
+                v-if="item.mediaType === 'video' || item.mediaType === 'audio'"
+                class="duration-badge"
+              >
                 分析中
               </div>
             </template>
@@ -128,12 +149,17 @@
               <div class="local-error-display">
                 <div class="status-icon" :title="item.source.errorMessage || '转换失败'">
                   <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M12,2C17.53,2 22,6.47 22,12C22,17.53 17.53,22 12,22C6.47,22 2,17.53 2,12C2,6.47 6.47,2 12,2M15.59,7L12,10.59L8.41,7L7,8.41L10.59,12L7,15.59L8.41,17L12,13.41L15.59,17L17,15.59L13.41,12L17,8.41L15.59,7Z" />
+                    <path
+                      d="M12,2C17.53,2 22,6.47 22,12C22,17.53 17.53,22 12,22C6.47,22 2,17.53 2,12C2,6.47 6.47,2 12,2M15.59,7L12,10.59L8.41,7L7,8.41L10.59,12L7,15.59L8.41,17L12,13.41L15.59,17L17,15.59L13.41,12L17,8.41L15.59,7Z"
+                    />
                   </svg>
                 </div>
               </div>
               <!-- 时长标签 -->
-              <div v-if="item.mediaType === 'video' || item.mediaType === 'audio'" class="duration-badge">
+              <div
+                v-if="item.mediaType === 'video' || item.mediaType === 'audio'"
+                class="duration-badge"
+              >
                 转换失败
               </div>
             </template>
@@ -153,8 +179,15 @@
               </div>
 
               <!-- 右上角时长标签（视频和音频显示） -->
-              <div v-if="item.mediaType === 'video' || item.mediaType === 'audio'" class="duration-badge">
-                {{ item.mediaStatus === 'ready' && item.duration ? formatDuration(item.duration) : '分析中' }}
+              <div
+                v-if="item.mediaType === 'video' || item.mediaType === 'audio'"
+                class="duration-badge"
+              >
+                {{
+                  item.mediaStatus === 'ready' && item.duration
+                    ? formatDuration(item.duration)
+                    : '分析中'
+                }}
               </div>
             </template>
           </div>
@@ -264,23 +297,23 @@ const tabs = [
   {
     type: 'all' as TabType,
     label: '全部',
-    icon: 'M4,6H20V8H4V6M4,11H20V13H4V11M4,16H20V18H4V16Z'
+    icon: 'M4,6H20V8H4V6M4,11H20V13H4V11M4,16H20V18H4V16Z',
   },
   {
     type: 'video' as TabType,
     label: '视频',
-    icon: 'M17,10.5V7A1,1 0 0,0 16,6H4A1,1 0 0,0 3,7V17A1,1 0 0,0 4,18H16A1,1 0 0,0 17,17V13.5L21,17.5V6.5L17,10.5Z'
+    icon: 'M17,10.5V7A1,1 0 0,0 16,6H4A1,1 0 0,0 3,7V17A1,1 0 0,0 4,18H16A1,1 0 0,0 17,17V13.5L21,17.5V6.5L17,10.5Z',
   },
   {
     type: 'audio' as TabType,
     label: '音频',
-    icon: 'M14,3.23V5.29C16.89,6.15 19,8.83 19,12C19,15.17 16.89,17.85 14,18.71V20.77C18,19.86 21,16.28 21,12C21,7.72 18,4.14 14,3.23M16.5,12C16.5,10.23 15.5,8.71 14,7.97V16C15.5,15.29 16.5,13.76 16.5,12M3,9V15H7L12,20V4L7,9H3Z'
+    icon: 'M14,3.23V5.29C16.89,6.15 19,8.83 19,12C19,15.17 16.89,17.85 14,18.71V20.77C18,19.86 21,16.28 21,12C21,7.72 18,4.14 14,3.23M16.5,12C16.5,10.23 15.5,8.71 14,7.97V16C15.5,15.29 16.5,13.76 16.5,12M3,9V15H7L12,20V4L7,9H3Z',
   },
   {
     type: 'processing' as TabType,
     label: '处理中',
-    icon: 'M12,4V2A10,10 0 0,0 2,12H4A8,8 0 0,1 12,4Z' // 加载图标
-  }
+    icon: 'M12,4V2A10,10 0 0,0 2,12H4A8,8 0 0,1 12,4Z', // 加载图标
+  },
 ]
 
 // 菜单项类型定义
@@ -298,7 +331,7 @@ const currentMenuItems = computed((): MenuItem[] => {
         label: '删除素材',
         icon: 'M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z',
         onClick: () => handleDeleteMediaItem(),
-      }
+      },
     ]
   } else {
     // 空白区域菜单
@@ -312,7 +345,7 @@ const currentMenuItems = computed((): MenuItem[] => {
         label: '远程下载',
         icon: 'M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M11,19.93C7.05,19.44 4,16.08 4,12C4,11.38 4.08,10.78 4.21,10.21L9,15V16A1,1 0 0,0 10,17H11V19.93M17.9,17.39C17.64,16.58 16.9,16 16,16H15V13A1,1 0 0,0 14,12H8V10H10A1,1 0 0,0 11,9V7H13A2,2 0 0,0 15,5V4.59C17.93,5.77 20,8.64 20,12C20,14.08 19.2,15.97 17.9,17.39Z',
         onClick: () => handleRemoteDownload(),
-      }
+      },
     ]
   }
 })
@@ -325,16 +358,24 @@ const filteredMediaItems = computed(() => {
     return allMediaItems
   }
 
-  return allMediaItems.filter(item => {
+  return allMediaItems.filter((item) => {
     if (activeTab.value === 'video') {
-      return UnifiedMediaItemQueries.isVideo(item) || UnifiedMediaItemQueries.isImage(item) || UnifiedMediaItemQueries.isUnknownType(item)
+      return (
+        UnifiedMediaItemQueries.isVideo(item) ||
+        UnifiedMediaItemQueries.isImage(item) ||
+        UnifiedMediaItemQueries.isUnknownType(item)
+      )
     }
     if (activeTab.value === 'audio') {
       return UnifiedMediaItemQueries.isAudio(item) || UnifiedMediaItemQueries.isUnknownType(item)
     }
     if (activeTab.value === 'processing') {
       // 显示正在处理的项目
-      return item.mediaStatus === 'asyncprocessing' || item.mediaStatus === 'webavdecoding' || item.mediaStatus === 'pending'
+      return (
+        item.mediaStatus === 'asyncprocessing' ||
+        item.mediaStatus === 'webavdecoding' ||
+        item.mediaStatus === 'pending'
+      )
     }
     return true
   })
@@ -354,20 +395,24 @@ const getTabCount = (tabType: TabType) => {
   }
 
   if (tabType === 'video') {
-    return allMediaItems.filter(item =>
-      item.mediaType === 'video' || item.mediaType === 'image' || item.mediaType === 'unknown'
+    return allMediaItems.filter(
+      (item) =>
+        item.mediaType === 'video' || item.mediaType === 'image' || item.mediaType === 'unknown',
     ).length
   }
 
   if (tabType === 'audio') {
-    return allMediaItems.filter(item =>
-      item.mediaType === 'audio' || item.mediaType === 'unknown'
+    return allMediaItems.filter(
+      (item) => item.mediaType === 'audio' || item.mediaType === 'unknown',
     ).length
   }
 
   if (tabType === 'processing') {
-    return allMediaItems.filter(item =>
-      item.mediaStatus === 'asyncprocessing' || item.mediaStatus === 'webavdecoding' || item.mediaStatus === 'pending'
+    return allMediaItems.filter(
+      (item) =>
+        item.mediaStatus === 'asyncprocessing' ||
+        item.mediaStatus === 'webavdecoding' ||
+        item.mediaStatus === 'pending',
     ).length
   }
 
@@ -482,8 +527,8 @@ const handleRemoteDownloadSubmit = async (config: any, expectedDuration: number,
       remoteSource,
       {
         duration: expectedDuration ? secondsToFrames(expectedDuration) : undefined,
-        mediaType: 'unknown'
-      }
+        mediaType: 'unknown',
+      },
     )
 
     // 添加到媒体库
@@ -552,7 +597,10 @@ const handleDrop = (event: DragEvent) => {
   if (dragType === 'files') {
     const files = Array.from(event.dataTransfer?.files || [])
     if (files.length > 0) {
-      console.log('📁 [UnifiedMediaLibrary] 处理外部文件拖拽:', files.map(f => f.name))
+      console.log(
+        '📁 [UnifiedMediaLibrary] 处理外部文件拖拽:',
+        files.map((f) => f.name),
+      )
       processFiles(files)
     }
   } else if (dragType === 'media-item') {
@@ -569,11 +617,11 @@ const processFiles = async (files: File[]) => {
 
   // 直接处理所有文件，让 UserSelectedFileSource 进行详细验证
   // 管理器内部会处理并发控制和错误处理
-  const results = await Promise.allSettled(files.map(file => addMediaItem(file)))
+  const results = await Promise.allSettled(files.map((file) => addMediaItem(file)))
 
   // 统计处理结果
-  const successful = results.filter(result => result.status === 'fulfilled').length
-  const failed = results.filter(result => result.status === 'rejected').length
+  const successful = results.filter((result) => result.status === 'fulfilled').length
+  const failed = results.filter((result) => result.status === 'rejected').length
 
   if (successful === 0 && failed > 0) {
     // 所有文件都处理失败，显示提示
@@ -587,10 +635,10 @@ const processFiles = async (files: File[]) => {
 
   const fileTypeCounts = {
     video: 0,
-    audio: 0
+    audio: 0,
   }
 
-  recentItems.forEach(item => {
+  recentItems.forEach((item) => {
     if (item.mediaType === 'video' || item.mediaType === 'image') {
       fileTypeCounts.video++
     } else if (item.mediaType === 'audio') {
@@ -602,7 +650,9 @@ const processFiles = async (files: File[]) => {
   if (fileTypeCounts.video > 0 && fileTypeCounts.audio > 0) {
     // 多种类型的素材，跳转到all tab
     setActiveTab('all')
-    console.log(`📂 自动切换到全部tab (多种类型: 视频/图片: ${fileTypeCounts.video}, 音频: ${fileTypeCounts.audio})`)
+    console.log(
+      `📂 自动切换到全部tab (多种类型: 视频/图片: ${fileTypeCounts.video}, 音频: ${fileTypeCounts.audio})`,
+    )
   } else if (fileTypeCounts.video > 0 && fileTypeCounts.audio === 0) {
     // 只有视频/图片，跳转到视频tab
     setActiveTab('video')
@@ -615,8 +665,6 @@ const processFiles = async (files: File[]) => {
 
   console.log(`✅ 文件处理完成 - 成功: ${successful}, 失败: ${failed}`)
 }
-
-
 
 // 添加素材项
 const addMediaItem = async (file: File): Promise<void> => {
@@ -632,8 +680,8 @@ const addMediaItem = async (file: File): Promise<void> => {
       file.name,
       userSelectedSource,
       {
-        mediaType: getMediaTypeFromFile(file)
-      }
+        mediaType: getMediaTypeFromFile(file),
+      },
     )
 
     // 添加到媒体库
@@ -712,8 +760,6 @@ const handleItemDragEnd = () => {
   dragUtils.clearDragData()
 }
 
-
-
 // 调试统一媒体项目
 const debugMediaItems = () => {
   const allItems = unifiedStore.getAllMediaItems()
@@ -728,79 +774,100 @@ const debugMediaItems = () => {
     处理中: stats.processing,
     错误: stats.error,
     等待中: stats.pending,
-    就绪率: stats.readyPercentage + '%'
+    就绪率: stats.readyPercentage + '%',
   })
 
   // 按类型分组
-  const byType = allItems.reduce((acc, item) => {
-    const type = item.mediaType
-    if (!acc[type]) acc[type] = []
-    acc[type].push(item)
-    return acc
-  }, {} as Record<string, UnifiedMediaItemData[]>)
+  const byType = allItems.reduce(
+    (acc, item) => {
+      const type = item.mediaType
+      if (!acc[type]) acc[type] = []
+      acc[type].push(item)
+      return acc
+    },
+    {} as Record<string, UnifiedMediaItemData[]>,
+  )
 
-  console.log('📂 按类型分组:', Object.keys(byType).map(type => ({
-    类型: type,
-    数量: byType[type].length,
-    项目: byType[type].map(item => ({ 名称: item.name, 状态: item.mediaStatus }))
-  })))
+  console.log(
+    '📂 按类型分组:',
+    Object.keys(byType).map((type) => ({
+      类型: type,
+      数量: byType[type].length,
+      项目: byType[type].map((item) => ({ 名称: item.name, 状态: item.mediaStatus })),
+    })),
+  )
 
   // 按状态分组
-  const byStatus = allItems.reduce((acc, item) => {
-    const status = item.mediaStatus
-    if (!acc[status]) acc[status] = []
-    acc[status].push(item)
-    return acc
-  }, {} as Record<string, UnifiedMediaItemData[]>)
+  const byStatus = allItems.reduce(
+    (acc, item) => {
+      const status = item.mediaStatus
+      if (!acc[status]) acc[status] = []
+      acc[status].push(item)
+      return acc
+    },
+    {} as Record<string, UnifiedMediaItemData[]>,
+  )
 
-  console.log('🔄 按状态分组:', Object.keys(byStatus).map(status => ({
-    状态: status,
-    数量: byStatus[status].length,
-    项目: byStatus[status].map(item => ({ 名称: item.name, 类型: item.mediaType }))
-  })))
+  console.log(
+    '🔄 按状态分组:',
+    Object.keys(byStatus).map((status) => ({
+      状态: status,
+      数量: byStatus[status].length,
+      项目: byStatus[status].map((item) => ({ 名称: item.name, 类型: item.mediaType })),
+    })),
+  )
 
   // 数据源信息
-  console.log('💾 数据源信息:', allItems.map(item => ({
-    名称: item.name,
-    数据源类型: item.source.type,
-    数据源状态: item.source.status,
-    进度: item.source.progress.toFixed(2) + '%',
-    错误信息: item.source.errorMessage || '无',
-    任务ID: item.source.taskId || '无'
-  })))
+  console.log(
+    '💾 数据源信息:',
+    allItems.map((item) => ({
+      名称: item.name,
+      数据源类型: item.source.type,
+      数据源状态: item.source.status,
+      进度: item.source.progress.toFixed(2) + '%',
+      错误信息: item.source.errorMessage || '无',
+      任务ID: item.source.taskId || '无',
+    })),
+  )
 
   // WebAV对象信息
-  const webavInfo = allItems.filter(item => item.webav).map(item => ({
-    名称: item.name,
-    有缩略图: !!item.webav?.thumbnailUrl,
-    有MP4Clip: !!item.webav?.mp4Clip,
-    有ImgClip: !!item.webav?.imgClip,
-    有AudioClip: !!item.webav?.audioClip,
-    原始尺寸: item.webav?.originalWidth && item.webav?.originalHeight
-      ? `${item.webav.originalWidth}x${item.webav.originalHeight}`
-      : '未知'
-  }))
+  const webavInfo = allItems
+    .filter((item) => item.webav)
+    .map((item) => ({
+      名称: item.name,
+      有缩略图: !!item.webav?.thumbnailUrl,
+      有MP4Clip: !!item.webav?.mp4Clip,
+      有ImgClip: !!item.webav?.imgClip,
+      有AudioClip: !!item.webav?.audioClip,
+      原始尺寸:
+        item.webav?.originalWidth && item.webav?.originalHeight
+          ? `${item.webav.originalWidth}x${item.webav.originalHeight}`
+          : '未知',
+    }))
 
   if (webavInfo.length > 0) {
     console.log('🎬 WebAV对象信息:', webavInfo)
   }
 
   // 详细项目信息
-  console.log('📋 详细项目列表:', allItems.map(item => ({
-    ID: item.id,
-    名称: item.name,
-    创建时间: new Date(item.createdAt).toLocaleString(),
-    媒体状态: item.mediaStatus,
-    媒体类型: item.mediaType,
-    时长: item.duration ? `${item.duration}帧 (${framesToTimecode(item.duration)})` : '未知',
-    数据源: {
-      类型: item.source.type,
-      状态: item.source.status,
-      进度: item.source.progress.toFixed(2) + '%',
-      文件: item.source.file?.name || '无',
-      URL: item.source.url || '无'
-    }
-  })))
+  console.log(
+    '📋 详细项目列表:',
+    allItems.map((item) => ({
+      ID: item.id,
+      名称: item.name,
+      创建时间: new Date(item.createdAt).toLocaleString(),
+      媒体状态: item.mediaStatus,
+      媒体类型: item.mediaType,
+      时长: item.duration ? `${item.duration}帧 (${framesToTimecode(item.duration)})` : '未知',
+      数据源: {
+        类型: item.source.type,
+        状态: item.source.status,
+        进度: item.source.progress.toFixed(2) + '%',
+        文件: item.source.file?.name || '无',
+        URL: item.source.url || '无',
+      },
+    })),
+  )
 
   console.groupEnd()
 
@@ -1213,8 +1280,6 @@ const debugMediaItems = () => {
   line-height: 1;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
 }
-
-
 
 .processing-indicator {
   position: absolute;

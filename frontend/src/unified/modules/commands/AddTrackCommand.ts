@@ -10,12 +10,8 @@ import type { SimpleCommand } from './types'
 
 // ==================== 新架构类型导入 ====================
 import type { UnifiedTrackData, UnifiedTrackType } from '../../track/TrackTypes'
-import type {
-  UnifiedTimelineItemData,
-} from '../../timelineitem/TimelineItemData'
-import type {
-  MediaTypeOrUnknown,
-} from '../../mediaitem/types'
+import type { UnifiedTimelineItemData } from '../../timelineitem/TimelineItemData'
+import type { MediaTypeOrUnknown } from '../../mediaitem/types'
 
 /**
  * 添加轨道命令

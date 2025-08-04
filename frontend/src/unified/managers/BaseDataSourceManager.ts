@@ -3,7 +3,12 @@
  * 基于"核心数据与行为分离"的重构方案
  */
 
-import { DataSourceDataActions, DataSourceBusinessActions, DataSourceStateActions, DataSourceQueries } from '../sources/BaseDataSource'
+import {
+  DataSourceDataActions,
+  DataSourceBusinessActions,
+  DataSourceStateActions,
+  DataSourceQueries,
+} from '../sources/BaseDataSource'
 import type { UnifiedDataSourceData } from '../sources/DataSourceTypes'
 
 // ==================== 任务相关接口 ====================
@@ -63,15 +68,15 @@ export abstract class DataSourceManager<T extends UnifiedDataSourceData> {
       source,
       status: 'pending',
       createdAt: Date.now(),
-      retryCount: 0
+      retryCount: 0,
     }
 
     this.tasks.set(taskId, task)
     this.taskQueue.push(taskId)
-    
+
     // 设置数据源的任务ID
     DataSourceDataActions.setTaskId(source, taskId)
-    
+
     this.processQueue()
   }
 
@@ -128,10 +133,10 @@ export abstract class DataSourceManager<T extends UnifiedDataSourceData> {
 
     // 重新加入队列
     this.taskQueue.push(taskId)
-    
+
     // 重置数据源状态
     DataSourceStateActions.setPending(task.source)
-    
+
     this.processQueue()
 
     return true
@@ -156,7 +161,7 @@ export abstract class DataSourceManager<T extends UnifiedDataSourceData> {
    */
   cleanupCompletedTasks(): void {
     const completedTasks = Array.from(this.tasks.entries()).filter(
-      ([_, task]) => task.status === 'completed' || task.status === 'cancelled'
+      ([_, task]) => task.status === 'completed' || task.status === 'cancelled',
     )
 
     for (const [taskId, task] of completedTasks) {
@@ -164,7 +169,7 @@ export abstract class DataSourceManager<T extends UnifiedDataSourceData> {
       if (task.status === 'cancelled') {
         DataSourceBusinessActions.cleanup(task.source)
       }
-      
+
       this.tasks.delete(taskId)
     }
   }
@@ -174,15 +179,15 @@ export abstract class DataSourceManager<T extends UnifiedDataSourceData> {
    */
   getStats(): ManagerStats {
     const tasks = Array.from(this.tasks.values())
-    
+
     const stats: ManagerStats = {
       totalTasks: tasks.length,
-      pendingTasks: tasks.filter(t => t.status === 'pending').length,
-      runningTasks: tasks.filter(t => t.status === 'running').length,
-      completedTasks: tasks.filter(t => t.status === 'completed').length,
-      failedTasks: tasks.filter(t => t.status === 'failed').length,
-      cancelledTasks: tasks.filter(t => t.status === 'cancelled').length,
-      averageProcessingTime: this.calculateAverageProcessingTime()
+      pendingTasks: tasks.filter((t) => t.status === 'pending').length,
+      runningTasks: tasks.filter((t) => t.status === 'running').length,
+      completedTasks: tasks.filter((t) => t.status === 'completed').length,
+      failedTasks: tasks.filter((t) => t.status === 'failed').length,
+      cancelledTasks: tasks.filter((t) => t.status === 'cancelled').length,
+      averageProcessingTime: this.calculateAverageProcessingTime(),
     }
 
     return stats
@@ -209,13 +214,10 @@ export abstract class DataSourceManager<T extends UnifiedDataSourceData> {
    * 处理任务队列
    */
   protected processQueue(): void {
-    while (
-      this.taskQueue.length > 0 && 
-      this.currentRunningTasks < this.maxConcurrentTasks
-    ) {
+    while (this.taskQueue.length > 0 && this.currentRunningTasks < this.maxConcurrentTasks) {
       const taskId = this.taskQueue.shift()!
       const task = this.tasks.get(taskId)
-      
+
       if (!task || task.status !== 'pending') continue
 
       this.executeTaskWithRetry(task)
@@ -232,16 +234,16 @@ export abstract class DataSourceManager<T extends UnifiedDataSourceData> {
 
     try {
       await this.executeTask(task)
-      
+
       // 任务成功完成
       task.status = 'completed'
       task.completedAt = Date.now()
-      
+
       // 记录处理时间
       if (task.startedAt) {
         const processingTime = task.completedAt - task.startedAt
         this.processingTimes.push(processingTime)
-        
+
         // 保持最近100次的处理时间记录
         if (this.processingTimes.length > 100) {
           this.processingTimes.shift()
@@ -250,7 +252,6 @@ export abstract class DataSourceManager<T extends UnifiedDataSourceData> {
 
       // 清理任务ID
       DataSourceDataActions.clearTaskId(task.source)
-
     } catch (error) {
       // 任务执行失败
       const errorMessage = error instanceof Error ? error.message : '未知错误'
@@ -282,7 +283,7 @@ export abstract class DataSourceManager<T extends UnifiedDataSourceData> {
    */
   protected calculateAverageProcessingTime(): number {
     if (this.processingTimes.length === 0) return 0
-    
+
     const total = this.processingTimes.reduce((sum, time) => sum + time, 0)
     return Math.round(total / this.processingTimes.length)
   }

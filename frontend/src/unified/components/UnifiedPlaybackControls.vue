@@ -2,11 +2,7 @@
   <div class="playback-controls">
     <!-- 播放控制按钮 -->
     <div class="control-buttons">
-      <HoverButton
-        variant="primary"
-        @click="togglePlayPause"
-        :title="isPlaying ? '暂停' : '播放'"
-      >
+      <HoverButton variant="primary" @click="togglePlayPause" :title="isPlaying ? '暂停' : '播放'">
         <template #icon>
           <svg v-if="!isPlaying" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
             <path d="M8,5.14V19.14L19,12.14L8,5.14Z" />
@@ -143,11 +139,11 @@ function handleSpeedChange(event: Event) {
     gap: var(--spacing-sm);
     padding: 0 var(--spacing-sm);
   }
-  
+
   .speed-control {
     margin-left: var(--spacing-sm);
   }
-  
+
   .speed-control select {
     font-size: var(--font-size-xs);
     padding: var(--spacing-xs);

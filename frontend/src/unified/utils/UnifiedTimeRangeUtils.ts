@@ -27,20 +27,20 @@ export function syncTimeRange(
         ...timelineItem.timeRange,
         ...newTimeRange,
       }
-      
+
       // 验证时间范围有效性
       if (completeTimeRange.timelineEndTime <= completeTimeRange.timelineStartTime) {
         console.warn('⚠️ 无效的时间范围：结束时间必须大于开始时间', completeTimeRange)
         return
       }
-      
+
       if (completeTimeRange.timelineStartTime < 0) {
         console.warn('⚠️ 无效的时间范围：开始时间不能为负数', completeTimeRange)
         return
       }
-      
+
       timelineItem.timeRange = completeTimeRange
-      
+
       console.log('🔄 同步timeRange (非就绪状态):', {
         timelineItemId: timelineItem.id,
         status: timelineItem.timelineStatus,
@@ -64,7 +64,7 @@ export function syncTimeRange(
       console.warn('⚠️ 无效的时间范围：结束时间必须大于开始时间', completeTimeRange)
       return
     }
-    
+
     if (completeTimeRange.timelineStartTime < 0) {
       console.warn('⚠️ 无效的时间范围：开始时间不能为负数', completeTimeRange)
       return
@@ -102,10 +102,7 @@ export function syncTimeRange(
  */
 export function validateBaseTimeRange(timeRange: UnifiedTimeRange): boolean {
   // 基础验证：时间轴时间范围
-  return (
-    timeRange.timelineStartTime >= 0 && 
-    timeRange.timelineEndTime > timeRange.timelineStartTime
-  )
+  return timeRange.timelineStartTime >= 0 && timeRange.timelineEndTime > timeRange.timelineStartTime
 }
 
 /**
@@ -118,7 +115,7 @@ export function validateTimelineItemTimeRange(timelineItem: UnifiedTimelineItemD
   errors: string[]
 } {
   const errors: string[] = []
-  
+
   // 基础时间范围验证
   if (!validateBaseTimeRange(timelineItem.timeRange)) {
     if (timelineItem.timeRange.timelineStartTime < 0) {
@@ -128,28 +125,32 @@ export function validateTimelineItemTimeRange(timelineItem: UnifiedTimelineItemD
       errors.push('时间轴结束时间必须大于开始时间')
     }
   }
-  
+
   // 如果是就绪状态且有sprite，验证sprite的时间范围一致性
   if (isReady(timelineItem) && timelineItem.runtime.sprite) {
     try {
       const spriteTimeRange = timelineItem.runtime.sprite.getTimeRange()
-      
+
       // 检查时间范围是否同步
-      if (Math.abs(spriteTimeRange.timelineStartTime - timelineItem.timeRange.timelineStartTime) > 0.1) {
+      if (
+        Math.abs(spriteTimeRange.timelineStartTime - timelineItem.timeRange.timelineStartTime) > 0.1
+      ) {
         errors.push('时间轴项目与sprite的开始时间不同步')
       }
-      
-      if (Math.abs(spriteTimeRange.timelineEndTime - timelineItem.timeRange.timelineEndTime) > 0.1) {
+
+      if (
+        Math.abs(spriteTimeRange.timelineEndTime - timelineItem.timeRange.timelineEndTime) > 0.1
+      ) {
         errors.push('时间轴项目与sprite的结束时间不同步')
       }
     } catch (error) {
       errors.push(`无法获取sprite时间范围: ${error}`)
     }
   }
-  
+
   return {
     isValid: errors.length === 0,
-    errors
+    errors,
   }
 }
 
@@ -171,8 +172,10 @@ export function calculateDuration(timelineItem: UnifiedTimelineItemData): number
  * @returns 是否包含该时间点
  */
 export function containsFrame(timelineItem: UnifiedTimelineItemData, frame: number): boolean {
-  return frame >= timelineItem.timeRange.timelineStartTime && 
-         frame < timelineItem.timeRange.timelineEndTime
+  return (
+    frame >= timelineItem.timeRange.timelineStartTime &&
+    frame < timelineItem.timeRange.timelineEndTime
+  )
 }
 
 /**
@@ -182,8 +185,8 @@ export function containsFrame(timelineItem: UnifiedTimelineItemData, frame: numb
  * @returns 是否重叠
  */
 export function isTimeRangeOverlapping(
-  item1: UnifiedTimelineItemData, 
-  item2: UnifiedTimelineItemData
+  item1: UnifiedTimelineItemData,
+  item2: UnifiedTimelineItemData,
 ): boolean {
   return !(
     item1.timeRange.timelineEndTime <= item2.timeRange.timelineStartTime ||
@@ -198,10 +201,13 @@ export function isTimeRangeOverlapping(
  * @returns 重叠时长（帧数），无重叠返回0
  */
 export function calculateOverlapDuration(
-  item1: UnifiedTimelineItemData, 
-  item2: UnifiedTimelineItemData
+  item1: UnifiedTimelineItemData,
+  item2: UnifiedTimelineItemData,
 ): number {
-  const overlapStart = Math.max(item1.timeRange.timelineStartTime, item2.timeRange.timelineStartTime)
+  const overlapStart = Math.max(
+    item1.timeRange.timelineStartTime,
+    item2.timeRange.timelineStartTime,
+  )
   const overlapEnd = Math.min(item1.timeRange.timelineEndTime, item2.timeRange.timelineEndTime)
   return Math.max(0, overlapEnd - overlapStart)
 }
@@ -215,22 +221,22 @@ export function calculateOverlapDuration(
  * @returns 是否成功移动
  */
 export function moveTimelineItem(
-  timelineItem: UnifiedTimelineItemData, 
-  newStartTime: number
+  timelineItem: UnifiedTimelineItemData,
+  newStartTime: number,
 ): boolean {
   if (newStartTime < 0) {
     console.warn('⚠️ 无法移动到负数位置:', newStartTime)
     return false
   }
-  
+
   const duration = calculateDuration(timelineItem)
   const newTimeRange: UnifiedTimeRange = {
     timelineStartTime: newStartTime,
     timelineEndTime: newStartTime + duration,
     clipStartTime: timelineItem.timeRange.clipStartTime,
-    clipEndTime: timelineItem.timeRange.clipEndTime
+    clipEndTime: timelineItem.timeRange.clipEndTime,
   }
-  
+
   syncTimeRange(timelineItem, newTimeRange)
   return true
 }
@@ -242,21 +248,21 @@ export function moveTimelineItem(
  * @returns 是否成功调整
  */
 export function resizeTimelineItem(
-  timelineItem: UnifiedTimelineItemData, 
-  newDuration: number
+  timelineItem: UnifiedTimelineItemData,
+  newDuration: number,
 ): boolean {
   if (newDuration <= 0) {
     console.warn('⚠️ 时长必须大于0:', newDuration)
     return false
   }
-  
+
   const newTimeRange: UnifiedTimeRange = {
     timelineStartTime: timelineItem.timeRange.timelineStartTime,
     timelineEndTime: timelineItem.timeRange.timelineStartTime + newDuration,
     clipStartTime: timelineItem.timeRange.clipStartTime,
-    clipEndTime: timelineItem.timeRange.clipEndTime
+    clipEndTime: timelineItem.timeRange.clipEndTime,
   }
-  
+
   syncTimeRange(timelineItem, newTimeRange)
   return true
 }
@@ -271,20 +277,20 @@ export function resizeTimelineItem(
 export function trimTimelineItem(
   timelineItem: UnifiedTimelineItemData,
   startTime: number,
-  endTime: number
+  endTime: number,
 ): boolean {
   if (startTime < 0 || endTime <= startTime) {
     console.warn('⚠️ 无效的裁剪范围:', { startTime, endTime })
     return false
   }
-  
+
   const newTimeRange: UnifiedTimeRange = {
     timelineStartTime: startTime,
     timelineEndTime: endTime,
     clipStartTime: timelineItem.timeRange.clipStartTime,
-    clipEndTime: timelineItem.timeRange.clipEndTime
+    clipEndTime: timelineItem.timeRange.clipEndTime,
   }
-  
+
   syncTimeRange(timelineItem, newTimeRange)
   return true
 }
@@ -294,19 +300,19 @@ export function trimTimelineItem(
 export const UnifiedTimeRangeUtils = {
   // 同步工具
   syncTimeRange,
-  
+
   // 验证工具
   validateBaseTimeRange,
   validateTimelineItemTimeRange,
-  
+
   // 计算工具
   calculateDuration,
   containsFrame,
   isTimeRangeOverlapping,
   calculateOverlapDuration,
-  
+
   // 操作工具
   moveTimelineItem,
   resizeTimelineItem,
-  trimTimelineItem
+  trimTimelineItem,
 }

@@ -1,7 +1,7 @@
 /**
  * 统一架构下的批量命令实现
  * 基于"核心数据与行为分离"的响应式重构版本
- * 
+ *
  * 主要变化：
  * 1. 使用 UnifiedTimelineItemData 替代原有的 LocalTimelineItem 和 AsyncProcessingTimelineItem
  * 2. 使用 UnifiedMediaItemData 替代原有的 LocalMediaItem
@@ -20,23 +20,15 @@ import type { VisibleSprite } from '@webav/av-cliper'
 import type {
   UnifiedTimelineItemData,
   KnownTimelineItem,
-  UnknownTimelineItem
+  UnknownTimelineItem,
 } from '../../timelineitem/TimelineItemData'
 
-import type {
-  UnifiedMediaItemData,
-  MediaTypeOrUnknown
-} from '../../mediaitem/types'
+import type { UnifiedMediaItemData, MediaTypeOrUnknown } from '../../mediaitem/types'
 
-import type {
-  UnifiedTrackData
-} from '../../track/TrackTypes'
+import type { UnifiedTrackData } from '../../track/TrackTypes'
 
 // ==================== 新架构工具导入 ====================
-import {
-  isKnownTimelineItem,
-  isUnknownTimelineItem
-} from '../../timelineitem'
+import { isKnownTimelineItem, isUnknownTimelineItem } from '../../timelineitem'
 
 /**
  * 批量删除时间轴项目命令
@@ -91,7 +83,7 @@ export class BatchDeleteCommand extends BaseBatchCommand {
 export class BatchAutoArrangeTrackCommand extends BaseBatchCommand {
   constructor(
     private trackId: string,
-    private timelineItems: (UnifiedTimelineItemData<MediaTypeOrUnknown>)[],
+    private timelineItems: UnifiedTimelineItemData<MediaTypeOrUnknown>[],
     private timelineModule: {
       getTimelineItem: (id: string) => UnifiedTimelineItemData<MediaTypeOrUnknown> | undefined
       updateTimelineItemPosition: (id: string, positionFrames: number, trackId?: string) => void

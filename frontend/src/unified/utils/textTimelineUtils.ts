@@ -40,7 +40,7 @@ export async function createTextSprite(
   style: Partial<TextStyleConfig>,
   startTimeFrames: number,
   duration: number,
-  videoResolution: { width: number; height: number }
+  videoResolution: { width: number; height: number },
 ): Promise<TextVisibleSprite> {
   console.log('🔄 [UnifiedTextTimelineUtils] 开始创建文本精灵:', {
     text: text.substring(0, 20) + '...',
@@ -130,7 +130,7 @@ export async function createTextTimelineItem(
   })
 
   let tempSprite: TextVisibleSprite | null = null
-  
+
   try {
     // 1. 验证和补全文本样式
     const completeStyle = {
@@ -140,7 +140,7 @@ export async function createTextTimelineItem(
 
     // 2. 创建临时精灵用于获取尺寸信息（仅用于配置生成）
     tempSprite = await TextVisibleSprite.create(text, completeStyle)
-    
+
     // 3. 计算默认位置（画布中心）
     const canvasWidth = videoResolution.width
     const canvasHeight = videoResolution.height
@@ -163,7 +163,7 @@ export async function createTextTimelineItem(
       height: tempSprite.rect.h,
       opacity: tempSprite.opacity,
       zIndex: tempSprite.zIndex,
-      textStyle: tempSprite.getTextStyle()
+      textStyle: tempSprite.getTextStyle(),
     }
 
     // 6. 销毁临时精灵，释放资源
@@ -211,7 +211,7 @@ export async function createTextTimelineItem(
       config: textConfig,
       animation: undefined, // 新创建的文本项目默认没有动画
       timelineStatus: 'ready', // 文本项目创建后即为就绪状态
-      runtime: {} // 不包含 sprite，需要单独创建
+      runtime: {}, // 不包含 sprite，需要单独创建
     })
 
     console.log('✅ [UnifiedTextTimelineUtils] 统一文本时间轴项目创建完成（可持久化部分）:', {
@@ -249,7 +249,7 @@ export async function createTextTimelineItem(
  * @returns Promise<TextVisibleSprite> 配置完成的文本精灵
  */
 export async function createSpriteForTextTimelineItem(
-  timelineItem: UnifiedTimelineItemData<'text'>
+  timelineItem: UnifiedTimelineItemData<'text'>,
 ): Promise<TextVisibleSprite> {
   console.log('🔄 [UnifiedTextTimelineUtils] 为时间轴项目创建精灵:', {
     id: timelineItem.id,
@@ -260,7 +260,7 @@ export async function createSpriteForTextTimelineItem(
     // 1. 创建文本精灵
     const textSprite = await TextVisibleSprite.create(
       timelineItem.config.text,
-      timelineItem.config.style
+      timelineItem.config.style,
     )
 
     // 2. 设置时间范围

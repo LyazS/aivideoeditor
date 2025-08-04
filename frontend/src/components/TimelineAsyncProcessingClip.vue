@@ -8,80 +8,83 @@
     class="async-processing-clip"
     :class="asyncClipClasses"
     @select="$emit('select', $event)"
-    @update-position="(timelineItemId, newPosition, newTrackId) => $emit('update-position', timelineItemId, newPosition, newTrackId)"
+    @update-position="
+      (timelineItemId, newPosition, newTrackId) =>
+        $emit('update-position', timelineItemId, newPosition, newTrackId)
+    "
     @remove="$emit('remove', $event)"
     @resize-update="handleResizeUpdate"
   >
     <template #content>
       <!-- 异步处理clip内容区域 -->
       <div class="async-processing-content">
-      <!-- 状态指示器 -->
-      <div class="status-indicator" :class="`status-${currentProcessingStatus}`">
-        <!-- 处理类型图标 -->
-        <div class="processing-icon" :class="`type-${currentProcessingType}`">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-            <path :d="getProcessingTypeIcon(currentProcessingType)" />
-          </svg>
-        </div>
-
-        <!-- 状态内容 -->
-        <div class="status-content">
-          <!-- 等待状态 -->
-          <div v-if="currentProcessingStatus === 'pending'" class="status-pending">
-            <span class="status-text">等待中</span>
+        <!-- 状态指示器 -->
+        <div class="status-indicator" :class="`status-${currentProcessingStatus}`">
+          <!-- 处理类型图标 -->
+          <div class="processing-icon" :class="`type-${currentProcessingType}`">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+              <path :d="getProcessingTypeIcon(currentProcessingType)" />
+            </svg>
           </div>
 
-          <!-- 处理中状态 -->
-          <div v-else-if="currentProcessingStatus === 'processing'" class="status-processing">
-            <!-- 进度圆环 -->
-            <div class="progress-ring">
-              <svg width="32" height="32" class="progress-svg">
-                <circle
-                  cx="16"
-                  cy="16"
-                  r="12"
-                  fill="none"
-                  stroke="rgba(255, 255, 255, 0.3)"
-                  stroke-width="2"
-                />
-                <circle
-                  cx="16"
-                  cy="16"
-                  r="12"
-                  fill="none"
-                  stroke="white"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  :stroke-dasharray="progressCircumference"
-                  :stroke-dashoffset="progressOffset"
-                  transform="rotate(-90 16 16)"
-                />
-              </svg>
-              <span class="progress-text">{{ Math.round(currentProcessingProgress) }}%</span>
+          <!-- 状态内容 -->
+          <div class="status-content">
+            <!-- 等待状态 -->
+            <div v-if="currentProcessingStatus === 'pending'" class="status-pending">
+              <span class="status-text">等待中</span>
+            </div>
+
+            <!-- 处理中状态 -->
+            <div v-else-if="currentProcessingStatus === 'processing'" class="status-processing">
+              <!-- 进度圆环 -->
+              <div class="progress-ring">
+                <svg width="32" height="32" class="progress-svg">
+                  <circle
+                    cx="16"
+                    cy="16"
+                    r="12"
+                    fill="none"
+                    stroke="rgba(255, 255, 255, 0.3)"
+                    stroke-width="2"
+                  />
+                  <circle
+                    cx="16"
+                    cy="16"
+                    r="12"
+                    fill="none"
+                    stroke="white"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    :stroke-dasharray="progressCircumference"
+                    :stroke-dashoffset="progressOffset"
+                    transform="rotate(-90 16 16)"
+                  />
+                </svg>
+                <span class="progress-text">{{ Math.round(currentProcessingProgress) }}%</span>
+              </div>
+            </div>
+
+            <!-- 完成状态 -->
+            <div v-else-if="currentProcessingStatus === 'completed'" class="status-completed">
+              <span class="status-text">已完成</span>
+            </div>
+
+            <!-- 错误状态 -->
+            <div v-else-if="currentProcessingStatus === 'error'" class="status-error">
+              <span class="status-text">错误</span>
+            </div>
+
+            <!-- 不支持状态 -->
+            <div v-else-if="currentProcessingStatus === 'unsupported'" class="status-unsupported">
+              <span class="status-text">不支持</span>
+            </div>
+
+            <!-- 取消状态 -->
+            <div v-else-if="currentProcessingStatus === 'cancelled'" class="status-cancelled">
+              <span class="status-text">已取消</span>
             </div>
           </div>
-
-          <!-- 完成状态 -->
-          <div v-else-if="currentProcessingStatus === 'completed'" class="status-completed">
-            <span class="status-text">已完成</span>
-          </div>
-
-          <!-- 错误状态 -->
-          <div v-else-if="currentProcessingStatus === 'error'" class="status-error">
-            <span class="status-text">错误</span>
-          </div>
-
-          <!-- 不支持状态 -->
-          <div v-else-if="currentProcessingStatus === 'unsupported'" class="status-unsupported">
-            <span class="status-text">不支持</span>
-          </div>
-
-          <!-- 取消状态 -->
-          <div v-else-if="currentProcessingStatus === 'cancelled'" class="status-cancelled">
-            <span class="status-text">已取消</span>
-          </div>
         </div>
-      </div>
 
         <!-- 素材名称 -->
         <div class="clip-name">
@@ -94,8 +97,15 @@
         v-if="baseClipRef?.showTooltipFlag"
         :visible="baseClipRef?.showTooltipFlag || false"
         :title="props.timelineItem.config.name"
-        :media-type="props.timelineItem.mediaType === 'unknown' ? 'video' : props.timelineItem.mediaType"
-        :duration="formatDurationFromFrames(props.timelineItem.timeRange.timelineEndTime - props.timelineItem.timeRange.timelineStartTime)"
+        :media-type="
+          props.timelineItem.mediaType === 'unknown' ? 'video' : props.timelineItem.mediaType
+        "
+        :duration="
+          formatDurationFromFrames(
+            props.timelineItem.timeRange.timelineEndTime -
+              props.timelineItem.timeRange.timelineStartTime,
+          )
+        "
         :position="formatDurationFromFrames(props.timelineItem.timeRange.timelineStartTime)"
         :mouse-x="baseClipRef?.tooltipMouseX || 0"
         :mouse-y="baseClipRef?.tooltipMouseY || 0"
@@ -111,7 +121,12 @@ import { useVideoStore } from '../stores/videoStore'
 import { framesToTimecode } from '../stores/utils/timeUtils'
 import TimelineBaseClip from './TimelineBaseClip.vue'
 import ClipTooltip from './ClipTooltip.vue'
-import type { AsyncProcessingTimelineItem, Track, AsyncProcessingType, ImageTimeRange } from '../types'
+import type {
+  AsyncProcessingTimelineItem,
+  Track,
+  AsyncProcessingType,
+  ImageTimeRange,
+} from '../types'
 
 interface Props {
   timelineItem: AsyncProcessingTimelineItem
@@ -161,8 +176,8 @@ const asyncClipClasses = computed(() => [
   `status-${currentProcessingStatus.value}`,
   `type-${currentProcessingType.value}`,
   {
-    'disabled': ['error', 'unsupported', 'cancelled'].includes(currentProcessingStatus.value),
-  }
+    disabled: ['error', 'unsupported', 'cancelled'].includes(currentProcessingStatus.value),
+  },
 ])
 
 // 进度圆环计算 - 使用实时进度
@@ -171,8 +186,6 @@ const progressOffset = computed(() => {
   const progress = currentProcessingProgress.value / 100
   return progressCircumference.value * (1 - progress)
 })
-
-
 
 // 获取处理类型图标
 function getProcessingTypeIcon(type: AsyncProcessingType): string {
@@ -214,8 +227,6 @@ function getStatusLabel(status: string): string {
   }
 }
 
-
-
 /**
  * 处理来自BaseClip的resize-update事件
  */
@@ -223,7 +234,7 @@ async function handleResizeUpdate(
   itemId: string,
   newStartTime: number,
   newEndTime: number,
-  direction: 'left' | 'right'
+  direction: 'left' | 'right',
 ) {
   console.log('🔧 [AsyncProcessingClip] 处理resize-update事件:', {
     itemId,
@@ -260,8 +271,6 @@ async function handleResizeUpdate(
 function formatDurationFromFrames(frames: number): string {
   return framesToTimecode(frames)
 }
-
-
 </script>
 
 <style scoped>

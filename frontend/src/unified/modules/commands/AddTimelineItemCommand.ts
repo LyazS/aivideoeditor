@@ -152,7 +152,7 @@ export class AddTimelineItemCommand implements SimpleCommand {
         : undefined,
       timelineStatus: 'ready' as TimelineItemStatus,
       runtime: {
-        sprite: markRaw(newSprite)
+        sprite: markRaw(newSprite),
       },
     }) as KnownTimelineItem
 
@@ -182,7 +182,9 @@ export class AddTimelineItemCommand implements SimpleCommand {
     console.log('🔄 开始重建未知处理时间轴项目占位符...')
 
     // 使用统一的 cloneTimelineItem 函数
-    const newUnknownTimelineItem: UnknownTimelineItem = cloneTimelineItem(this.originalTimelineItemData)
+    const newUnknownTimelineItem: UnknownTimelineItem = cloneTimelineItem(
+      this.originalTimelineItemData,
+    )
 
     console.log('🔄 重建未知处理时间轴项目完成:', {
       id: newUnknownTimelineItem.id,

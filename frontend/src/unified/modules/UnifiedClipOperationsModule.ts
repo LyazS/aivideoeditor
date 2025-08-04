@@ -11,7 +11,7 @@ import { isVideoTimeRange } from '../../types'
 /**
  * 统一片段操作模块
  * 基于新架构的统一类型系统重构的片段编辑功能
- * 
+ *
  * 主要变化：
  * 1. 使用 UnifiedTimelineItemData 替代原有的 LocalTimelineItem
  * 2. 使用 UnifiedMediaItemData 替代原有的 LocalMediaItem
@@ -50,7 +50,7 @@ export function createUnifiedClipOperationsModule(
 
     if ((item.mediaType === 'video' || item.mediaType === 'audio') && item.runtime.sprite) {
       const timeRange = item.timeRange
-      
+
       // 计算裁剪时长（对于视频/音频）
       let clipDurationFrames = 0
       if (isVideoTimeRange(timeRange)) {
@@ -102,7 +102,9 @@ export function createUnifiedClipOperationsModule(
       // 异步更新动画，不阻塞播放速度调整
       updateWebAVAnimation(item)
         .then(() => {
-          console.log('🎬 [UnifiedClipOperations] Animation duration updated after playback rate change')
+          console.log(
+            '🎬 [UnifiedClipOperations] Animation duration updated after playback rate change',
+          )
         })
         .catch((error) => {
           console.error('🎬 [UnifiedClipOperations] Failed to update animation duration:', error)
@@ -163,12 +165,12 @@ export function createUnifiedClipOperationsModule(
   async function adjustKeyframesForDurationChange(
     item: UnifiedTimelineItemData,
     oldDurationFrames: number,
-    newDurationFrames: number
+    newDurationFrames: number,
   ): Promise<void> {
     try {
       // 动态导入关键帧工具函数
       const { adjustKeyframesForDurationChange } = await import('../../utils/unifiedKeyframeUtils')
-      
+
       // 注意：这里需要适配新架构的关键帧系统
       // 暂时保留接口，待关键帧系统实现后更新
       console.log('🎬 [UnifiedClipOperations] Keyframe adjustment placeholder:', {
@@ -188,7 +190,7 @@ export function createUnifiedClipOperationsModule(
     try {
       // 动态导入WebAV动画管理器
       const { updateWebAVAnimation } = await import('../../utils/webavAnimationManager')
-      
+
       // 注意：这里需要适配新架构的动画系统
       // 暂时保留接口，待动画系统实现后更新
       console.log('🎬 [UnifiedClipOperations] WebAV animation update placeholder:', {

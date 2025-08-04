@@ -70,9 +70,11 @@ export function findTimelineItemBySprite(
   timelineItems: UnifiedTimelineItemData[],
 ): UnifiedTimelineItemData | null {
   // 只有就绪状态的时间轴项目才会有sprite
-  return timelineItems.find((item) => 
-    item.timelineStatus === 'ready' && item.runtime.sprite === sprite
-  ) || null
+  return (
+    timelineItems.find(
+      (item) => item.timelineStatus === 'ready' && item.runtime.sprite === sprite,
+    ) || null
+  )
 }
 
 /**
@@ -122,7 +124,10 @@ export function getTimelineItemAtTrackAndFrames(
  * @param currentFrame 当前播放帧数
  * @returns 是否在时间范围内
  */
-export function isPlayheadInTimelineItem(item: UnifiedTimelineItemData, currentFrame: number): boolean {
+export function isPlayheadInTimelineItem(
+  item: UnifiedTimelineItemData,
+  currentFrame: number,
+): boolean {
   // 允许播放头在clip结束位置进行关键帧操作，这样用户可以在第4帧位置操作3帧的视频
   // 这主要是为了配合播放头吸附功能，用户习惯在clip结束后的位置进行操作
   return (
@@ -200,10 +205,10 @@ export function findOverlappingTimelineItems(
     if (excludeItemId && item.id === excludeItemId) {
       return false
     }
-    
+
     const itemStart = item.timeRange.timelineStartTime
     const itemEnd = item.timeRange.timelineEndTime
-    
+
     // 检查是否有重叠：两个时间范围重叠的条件是开始时间小于对方的结束时间，且结束时间大于对方的开始时间
     return startTime < itemEnd && endTime > itemStart
   })

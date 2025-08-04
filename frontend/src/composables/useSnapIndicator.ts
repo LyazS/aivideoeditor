@@ -12,7 +12,7 @@ class SnapIndicatorManager {
     timelineWidth: 0,
     timelineOffset: { x: 0, y: 0 },
     showTooltip: true,
-    lineHeight: 400
+    lineHeight: 400,
   })
 
   private isVisible = ref(false)
@@ -47,7 +47,7 @@ class SnapIndicatorManager {
       show: true,
       snapPoint,
       timelineWidth,
-      ...options
+      ...options,
     })
 
     this.isVisible.value = true
@@ -64,7 +64,7 @@ class SnapIndicatorManager {
       if (this.hideTimeout) {
         clearTimeout(this.hideTimeout)
       }
-      
+
       this.hideTimeout = window.setTimeout(() => {
         this._hideImmediate()
         this.hideTimeout = null
@@ -156,8 +156,6 @@ export function useSnapIndicator() {
     updateTimelineOffset: manager.updateTimelineOffset.bind(manager),
     updateLineHeight: manager.updateLineHeight.bind(manager),
     setTooltipVisible: manager.setTooltipVisible.bind(manager),
-    dispose: manager.dispose.bind(manager)
+    dispose: manager.dispose.bind(manager),
   }
 }
-
-

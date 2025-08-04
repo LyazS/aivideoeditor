@@ -33,7 +33,7 @@ export class AddTextItemCommand implements SimpleCommand {
     private webavModule: {
       addSprite: (sprite: any) => Promise<boolean>
       removeSprite: (sprite: any) => boolean
-    }
+    },
   ) {
     this.id = generateCommandId()
     this.description = `添加文本: ${text.substring(0, 10)}${text.length > 10 ? '...' : ''}`
@@ -50,7 +50,7 @@ export class AddTextItemCommand implements SimpleCommand {
         this.startTimeFrames,
         this.trackId,
         this.duration,
-        this.videoResolution
+        this.videoResolution,
       )
 
       // 1. 添加到时间轴
@@ -63,7 +63,7 @@ export class AddTextItemCommand implements SimpleCommand {
         id: this.textItem.id,
         text: this.text.substring(0, 20) + '...',
         startTime: framesToTimecode(this.startTimeFrames),
-        duration: framesToTimecode(this.duration)
+        duration: framesToTimecode(this.duration),
       })
     } catch (error) {
       console.error(`❌ [AddTextItemCommand] 添加文本项目失败:`, error)
@@ -107,7 +107,7 @@ export class UpdateTextCommand implements SimpleCommand {
     private newStyle: Partial<TextStyleConfig>,
     private timelineModule: {
       getTimelineItem: (id: string) => LocalTimelineItem | undefined
-    }
+    },
   ) {
     this.id = generateCommandId()
     this.description = `更新文本: ${newText.substring(0, 10)}${newText.length > 10 ? '...' : ''}`
@@ -117,7 +117,9 @@ export class UpdateTextCommand implements SimpleCommand {
     try {
       console.log(`🔄 [UpdateTextCommand] 执行更新文本操作...`)
 
-      const item = this.timelineModule.getTimelineItem(this.timelineItemId) as LocalTimelineItem<'text'>
+      const item = this.timelineModule.getTimelineItem(
+        this.timelineItemId,
+      ) as LocalTimelineItem<'text'>
       if (!item || item.mediaType !== 'text') {
         throw new Error(`文本项目不存在或类型错误: ${this.timelineItemId}`)
       }
@@ -132,7 +134,7 @@ export class UpdateTextCommand implements SimpleCommand {
       console.log(`✅ [UpdateTextCommand] 文本更新成功:`, {
         id: this.timelineItemId,
         oldText: this.oldText.substring(0, 20) + '...',
-        newText: this.newText.substring(0, 20) + '...'
+        newText: this.newText.substring(0, 20) + '...',
       })
     } catch (error) {
       console.error(`❌ [UpdateTextCommand] 更新文本失败:`, error)
@@ -147,7 +149,7 @@ export class UpdateTextCommand implements SimpleCommand {
   private async recreateTextSprite(
     item: LocalTimelineItem<'text'>,
     newText: string,
-    newStyle: Partial<TextStyleConfig>
+    newStyle: Partial<TextStyleConfig>,
   ): Promise<void> {
     // 保存旧精灵的状态
     const oldSprite = item.sprite as TextVisibleSprite
@@ -157,11 +159,11 @@ export class UpdateTextCommand implements SimpleCommand {
         y: oldSprite.rect.y,
         w: oldSprite.rect.w,
         h: oldSprite.rect.h,
-        angle: oldSprite.rect.angle
+        angle: oldSprite.rect.angle,
       },
       opacity: oldSprite.opacity,
       zIndex: oldSprite.zIndex,
-      timeRange: oldSprite.getTimeRange()
+      timeRange: oldSprite.getTimeRange(),
     }
 
     // 🎯 先保存TimelineItem的宽高和原始宽高，计算缩放系数
@@ -177,7 +179,7 @@ export class UpdateTextCommand implements SimpleCommand {
     console.log('🔄 [TextCommands] 保存缩放系数:', {
       current: { width: currentWidth, height: currentHeight },
       original: { width: originalWidth, height: originalHeight },
-      scale: { x: scaleX, y: scaleY }
+      scale: { x: scaleX, y: scaleY },
     })
 
     // 合并新样式
@@ -200,7 +202,7 @@ export class UpdateTextCommand implements SimpleCommand {
     console.log('🔄 [TextCommands] 应用缩放系数:', {
       newOriginal: { width: item.config.originalWidth, height: item.config.originalHeight },
       newSize: { width: newWidth, height: newHeight },
-      appliedScale: { x: scaleX, y: scaleY }
+      appliedScale: { x: scaleX, y: scaleY },
     })
 
     // 🎯 通过TimelineItem的xywh转换为sprite的rect坐标
@@ -214,7 +216,7 @@ export class UpdateTextCommand implements SimpleCommand {
       newWidth,
       newHeight,
       videoStore.videoResolution.width,
-      videoStore.videoResolution.height
+      videoStore.videoResolution.height,
     )
 
     // 设置新sprite的位置和尺寸
@@ -251,7 +253,9 @@ export class UpdateTextCommand implements SimpleCommand {
       if (this.oldText && this.oldStyle) {
         console.log(`🔄 [UpdateTextCommand] 撤销更新文本操作...`)
 
-        const item = this.timelineModule.getTimelineItem(this.timelineItemId) as LocalTimelineItem<'text'>
+        const item = this.timelineModule.getTimelineItem(
+          this.timelineItemId,
+        ) as LocalTimelineItem<'text'>
         if (!item || item.mediaType !== 'text') {
           throw new Error(`文本项目不存在或类型错误: ${this.timelineItemId}`)
         }
@@ -287,7 +291,7 @@ export class RemoveTextItemCommand implements SimpleCommand {
     private webavModule: {
       addSprite: (sprite: any) => Promise<boolean>
       removeSprite: (sprite: any) => boolean
-    }
+    },
   ) {
     this.id = generateCommandId()
     this.description = `删除文本项目`
@@ -297,7 +301,9 @@ export class RemoveTextItemCommand implements SimpleCommand {
     try {
       console.log(`🔄 [RemoveTextItemCommand] 执行删除文本操作...`)
 
-      const item = this.timelineModule.getTimelineItem(this.timelineItemId) as LocalTimelineItem<'text'>
+      const item = this.timelineModule.getTimelineItem(
+        this.timelineItemId,
+      ) as LocalTimelineItem<'text'>
       if (!item || item.mediaType !== 'text') {
         throw new Error(`文本项目不存在或类型错误: ${this.timelineItemId}`)
       }
@@ -354,7 +360,7 @@ export const TextCommandFactory = {
     duration: number,
     videoResolution: { width: number; height: number },
     timelineModule: any,
-    webavModule: any
+    webavModule: any,
   ): AddTextItemCommand {
     return new AddTextItemCommand(
       text,
@@ -364,7 +370,7 @@ export const TextCommandFactory = {
       duration,
       videoResolution,
       timelineModule,
-      webavModule
+      webavModule,
     )
   },
 
@@ -375,7 +381,7 @@ export const TextCommandFactory = {
     timelineItemId: string,
     newText: string,
     newStyle: Partial<TextStyleConfig>,
-    timelineModule: any
+    timelineModule: any,
   ): UpdateTextCommand {
     return new UpdateTextCommand(timelineItemId, newText, newStyle, timelineModule)
   },
@@ -386,8 +392,8 @@ export const TextCommandFactory = {
   createRemoveTextCommand(
     timelineItemId: string,
     timelineModule: any,
-    webavModule: any
+    webavModule: any,
   ): RemoveTextItemCommand {
     return new RemoveTextItemCommand(timelineItemId, timelineModule, webavModule)
-  }
+  },
 }

@@ -39,7 +39,11 @@
       @drop="handleDrop"
       @contextmenu="handleContextMenu"
     >
-      <div v-if="filteredMediaItems.length === 0" class="empty-state" @contextmenu="handleEmptyAreaContextMenu">
+      <div
+        v-if="filteredMediaItems.length === 0"
+        class="empty-state"
+        @contextmenu="handleEmptyAreaContextMenu"
+      >
         <svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor">
           <path
             d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"
@@ -47,7 +51,9 @@
         </svg>
         <p v-if="videoStore.mediaItems.length === 0">拖拽文件到此处导入</p>
         <p v-else>当前分类暂无素材</p>
-        <p class="hint">支持 MP4, WebM, AVI 等视频格式、JPG, PNG, GIF 等图片格式和 MP3, WAV, M4A 等音频格式</p>
+        <p class="hint">
+          支持 MP4, WebM, AVI 等视频格式、JPG, PNG, GIF 等图片格式和 MP3, WAV, M4A 等音频格式
+        </p>
       </div>
 
       <!-- 素材列表 -->
@@ -59,13 +65,29 @@
           :class="{
             parsing: isLocalMediaItem(item) && item.status === 'parsing',
             'async-processing': isAsyncProcessingMediaItem(item),
-            [`status-${isAsyncProcessingMediaItem(item) ? item.processingStatus : (isLocalMediaItem(item) ? item.status : 'ready')}`]: true
+            [`status-${isAsyncProcessingMediaItem(item) ? item.processingStatus : isLocalMediaItem(item) ? item.status : 'ready'}`]: true,
           }"
           :data-media-item-id="item.id"
-          :draggable="isLocalMediaItem(item) ? item.status === 'ready' : (isAsyncProcessingMediaItem(item) ? true : false)"
-          @dragstart="isLocalMediaItem(item) ? handleItemDragStart($event, item) : (isAsyncProcessingMediaItem(item) ? handleAsyncProcessingItemDragStart($event, item) : null)"
+          :draggable="
+            isLocalMediaItem(item)
+              ? item.status === 'ready'
+              : isAsyncProcessingMediaItem(item)
+                ? true
+                : false
+          "
+          @dragstart="
+            isLocalMediaItem(item)
+              ? handleItemDragStart($event, item)
+              : isAsyncProcessingMediaItem(item)
+                ? handleAsyncProcessingItemDragStart($event, item)
+                : null
+          "
           @dragend="handleItemDragEnd"
-          @contextmenu="isLocalMediaItem(item) ? handleMediaItemContextMenu($event, item) : handleAsyncProcessingItemContextMenu($event, item)"
+          @contextmenu="
+            isLocalMediaItem(item)
+              ? handleMediaItemContextMenu($event, item)
+              : handleAsyncProcessingItemContextMenu($event, item)
+          "
         >
           <div class="media-thumbnail">
             <!-- 异步处理项目：显示进度 -->
@@ -75,13 +97,18 @@
                 <div v-if="item.processingStatus === 'pending'" class="processing-status pending">
                   <div class="status-icon" title="等待中">
                     <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4Z" />
+                      <path
+                        d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4Z"
+                      />
                     </svg>
                   </div>
                 </div>
 
                 <!-- 处理中状态：显示大的进度百分比 -->
-                <div v-else-if="item.processingStatus === 'processing'" class="processing-status processing">
+                <div
+                  v-else-if="item.processingStatus === 'processing'"
+                  class="processing-status processing"
+                >
                   <div
                     class="progress-circle"
                     :style="{ '--progress': item.processingProgress }"
@@ -92,19 +119,31 @@
                 </div>
 
                 <!-- 错误状态 -->
-                <div v-else-if="item.processingStatus === 'error' || item.processingStatus === 'unsupported'" class="processing-status error">
+                <div
+                  v-else-if="
+                    item.processingStatus === 'error' || item.processingStatus === 'unsupported'
+                  "
+                  class="processing-status error"
+                >
                   <div class="status-icon" title="下载失败">
                     <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M12,2C17.53,2 22,6.47 22,12C22,17.53 17.53,22 12,22C6.47,22 2,17.53 2,12C2,6.47 6.47,2 12,2M15.59,7L12,10.59L8.41,7L7,8.41L10.59,12L7,15.59L8.41,17L12,13.41L15.59,17L17,15.59L13.41,12L17,8.41L15.59,7Z" />
+                      <path
+                        d="M12,2C17.53,2 22,6.47 22,12C22,17.53 17.53,22 12,22C6.47,22 2,17.53 2,12C2,6.47 6.47,2 12,2M15.59,7L12,10.59L8.41,7L7,8.41L10.59,12L7,15.59L8.41,17L12,13.41L15.59,17L17,15.59L13.41,12L17,8.41L15.59,7Z"
+                      />
                     </svg>
                   </div>
                 </div>
 
                 <!-- 完成状态 -->
-                <div v-else-if="item.processingStatus === 'completed'" class="processing-status completed">
+                <div
+                  v-else-if="item.processingStatus === 'completed'"
+                  class="processing-status completed"
+                >
                   <div class="status-icon" title="下载完成">
                     <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M11,16.5L6.5,12L7.91,10.59L11,13.67L16.59,8.09L18,9.5L11,16.5Z" />
+                      <path
+                        d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M11,16.5L6.5,12L7.91,10.59L11,13.67L16.59,8.09L18,9.5L11,16.5Z"
+                      />
                     </svg>
                   </div>
                 </div>
@@ -117,7 +156,9 @@
               <div v-if="item.status === 'error'" class="local-error-display">
                 <div class="status-icon" title="转换失败">
                   <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M12,2C17.53,2 22,6.47 22,12C22,17.53 17.53,22 12,22C6.47,22 2,17.53 2,12C2,6.47 6.47,2 12,2M15.59,7L12,10.59L8.41,7L7,8.41L10.59,12L7,15.59L8.41,17L12,13.41L15.59,17L17,15.59L13.41,12L17,8.41L15.59,7Z" />
+                    <path
+                      d="M12,2C17.53,2 22,6.47 22,12C22,17.53 17.53,22 12,22C6.47,22 2,17.53 2,12C2,6.47 6.47,2 12,2M15.59,7L12,10.59L8.41,7L7,8.41L10.59,12L7,15.59L8.41,17L12,13.41L15.59,17L17,15.59L13.41,12L17,8.41L15.59,7Z"
+                    />
                   </svg>
                 </div>
               </div>
@@ -134,8 +175,17 @@
               </div>
 
               <!-- 右上角时长标签（视频和音频显示） -->
-              <div v-if="item.mediaType === 'video' || item.mediaType === 'audio'" class="duration-badge">
-                {{ item.status === 'error' ? '转换失败' : (item.status === 'ready' ? formatDuration(item.duration) : '分析中') }}
+              <div
+                v-if="item.mediaType === 'video' || item.mediaType === 'audio'"
+                class="duration-badge"
+              >
+                {{
+                  item.status === 'error'
+                    ? '转换失败'
+                    : item.status === 'ready'
+                      ? formatDuration(item.duration)
+                      : '分析中'
+                }}
               </div>
             </template>
           </div>
@@ -146,7 +196,11 @@
           <!-- 移除按钮 -->
           <button
             class="remove-btn"
-            @click.stop="isLocalMediaItem(item) ? removeLocalMediaItem(item.id) : removeAsyncProcessingMediaItem(item.id)"
+            @click.stop="
+              isLocalMediaItem(item)
+                ? removeLocalMediaItem(item.id)
+                : removeAsyncProcessingMediaItem(item.id)
+            "
             @mousedown.stop
             title="移除素材"
           >
@@ -208,8 +262,14 @@ import { useVideoStore } from '../stores/videoStore'
 import { useDialogs } from '../composables/useDialogs'
 import { useDragUtils } from '../composables/useDragUtils'
 import { framesToTimecode, secondsToFrames } from '../stores/utils/timeUtils'
-import type { LocalMediaItem, AsyncProcessingMediaItem, RemoteDownloadConfig, MediaType, MediaErrorType } from '../types'
-import {isLocalMediaItem, isAsyncProcessingMediaItem} from '../types'
+import type {
+  LocalMediaItem,
+  AsyncProcessingMediaItem,
+  RemoteDownloadConfig,
+  MediaType,
+  MediaErrorType,
+} from '../types'
+import { isLocalMediaItem, isAsyncProcessingMediaItem } from '../types'
 import { generateThumbnailForMediaItem } from '../utils/thumbnailGenerator'
 import { mediaManager } from '../utils/MediaManager'
 import { asyncProcessingManager } from '../utils/AsyncProcessingManager'
@@ -248,23 +308,23 @@ const tabs = [
   {
     type: 'all' as TabType,
     label: '全部',
-    icon: 'M4,6H20V8H4V6M4,11H20V13H4V11M4,16H20V18H4V16Z'
+    icon: 'M4,6H20V8H4V6M4,11H20V13H4V11M4,16H20V18H4V16Z',
   },
   {
     type: 'video' as TabType,
     label: '视频',
-    icon: 'M17,10.5V7A1,1 0 0,0 16,6H4A1,1 0 0,0 3,7V17A1,1 0 0,0 4,18H16A1,1 0 0,0 17,17V13.5L21,17.5V6.5L17,10.5Z'
+    icon: 'M17,10.5V7A1,1 0 0,0 16,6H4A1,1 0 0,0 3,7V17A1,1 0 0,0 4,18H16A1,1 0 0,0 17,17V13.5L21,17.5V6.5L17,10.5Z',
   },
   {
     type: 'audio' as TabType,
     label: '音频',
-    icon: 'M14,3.23V5.29C16.89,6.15 19,8.83 19,12C19,15.17 16.89,17.85 14,18.71V20.77C18,19.86 21,16.28 21,12C21,7.72 18,4.14 14,3.23M16.5,12C16.5,10.23 15.5,8.71 14,7.97V16C15.5,15.29 16.5,13.76 16.5,12M3,9V15H7L12,20V4L7,9H3Z'
+    icon: 'M14,3.23V5.29C16.89,6.15 19,8.83 19,12C19,15.17 16.89,17.85 14,18.71V20.77C18,19.86 21,16.28 21,12C21,7.72 18,4.14 14,3.23M16.5,12C16.5,10.23 15.5,8.71 14,7.97V16C15.5,15.29 16.5,13.76 16.5,12M3,9V15H7L12,20V4L7,9H3Z',
   },
   {
     type: 'processing' as TabType,
     label: '处理中',
-    icon: 'M12,4V2A10,10 0 0,0 2,12H4A8,8 0 0,1 12,4Z' // 加载图标
-  }
+    icon: 'M12,4V2A10,10 0 0,0 2,12H4A8,8 0 0,1 12,4Z', // 加载图标
+  },
 ]
 
 // 菜单项类型定义
@@ -282,7 +342,7 @@ const currentMenuItems = computed((): MenuItem[] => {
         label: '删除素材',
         icon: 'M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z',
         onClick: () => handleDeleteMediaItem(),
-      }
+      },
     ]
   }
 
@@ -292,7 +352,7 @@ const currentMenuItems = computed((): MenuItem[] => {
         label: '删除异步处理素材',
         icon: 'M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z',
         onClick: () => handleDeleteAsyncProcessingItem(),
-      }
+      },
     ]
   } else {
     // 空白区域菜单
@@ -306,7 +366,7 @@ const currentMenuItems = computed((): MenuItem[] => {
         label: '远程下载',
         icon: 'M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M11,19.93C7.05,19.44 4,16.08 4,12C4,11.38 4.08,10.78 4.21,10.21L9,15V16A1,1 0 0,0 10,17H11V19.93M17.9,17.39C17.64,16.58 16.9,16 16,16H15V13A1,1 0 0,0 14,12H8V10H10A1,1 0 0,0 11,9V7H13A2,2 0 0,0 15,5V4.59C17.93,5.77 20,8.64 20,12C20,14.08 19.2,15.97 17.9,17.39Z',
         onClick: () => handleRemoteDownload(),
-      }
+      },
     ]
   }
 })
@@ -316,11 +376,11 @@ const filteredMediaItems = computed(() => {
   // 合并本地素材和异步处理素材
   const allMediaItems: (LocalMediaItem | AsyncProcessingMediaItem)[] = [
     ...videoStore.mediaItems,
-    ...videoStore.asyncProcessingItems
+    ...videoStore.asyncProcessingItems,
   ]
 
   // 过滤掉转换中的异步处理素材（isConverting: true）
-  const visibleItems = allMediaItems.filter(item => {
+  const visibleItems = allMediaItems.filter((item) => {
     if (isAsyncProcessingMediaItem(item)) {
       // 隐藏转换中的异步处理素材
       return !item.isConverting
@@ -332,7 +392,7 @@ const filteredMediaItems = computed(() => {
     return visibleItems
   }
 
-  return visibleItems.filter(item => {
+  return visibleItems.filter((item) => {
     if (activeTab.value === 'video') {
       // 本地素材：视频和图片
       if (isLocalMediaItem(item)) {
@@ -340,7 +400,9 @@ const filteredMediaItems = computed(() => {
       }
       // 异步处理素材：处理后可能是视频或图片的
       if (isAsyncProcessingMediaItem(item)) {
-        return item.mediaType === 'video' || item.mediaType === 'image' || item.mediaType === 'unknown'
+        return (
+          item.mediaType === 'video' || item.mediaType === 'image' || item.mediaType === 'unknown'
+        )
       }
       return false
     }
@@ -373,7 +435,7 @@ const getTabCount = (tabType: TabType) => {
   // 合并本地素材和异步处理素材
   const allMediaItems: (LocalMediaItem | AsyncProcessingMediaItem)[] = [
     ...videoStore.mediaItems,
-    ...videoStore.asyncProcessingItems
+    ...videoStore.asyncProcessingItems,
   ]
 
   if (tabType === 'all') {
@@ -381,21 +443,23 @@ const getTabCount = (tabType: TabType) => {
   }
 
   if (tabType === 'video') {
-    return allMediaItems.filter(item => {
+    return allMediaItems.filter((item) => {
       // 本地素材：视频和图片
       if (isLocalMediaItem(item)) {
         return item.mediaType === 'video' || item.mediaType === 'image'
       }
       // 异步处理素材：处理后可能是视频或图片的
       if (isAsyncProcessingMediaItem(item)) {
-        return item.mediaType === 'video' || item.mediaType === 'image' || item.mediaType === 'unknown'
+        return (
+          item.mediaType === 'video' || item.mediaType === 'image' || item.mediaType === 'unknown'
+        )
       }
       return false
     }).length
   }
 
   if (tabType === 'audio') {
-    return allMediaItems.filter(item => {
+    return allMediaItems.filter((item) => {
       // 本地素材：音频
       if (isLocalMediaItem(item)) {
         return item.mediaType === 'audio'
@@ -410,7 +474,7 @@ const getTabCount = (tabType: TabType) => {
 
   if (tabType === 'processing') {
     // 只计算异步处理素材
-    return allMediaItems.filter(item => isAsyncProcessingMediaItem(item)).length
+    return allMediaItems.filter((item) => isAsyncProcessingMediaItem(item)).length
   }
 
   return 0
@@ -474,7 +538,10 @@ const handleMediaItemContextMenu = (event: MouseEvent, item: LocalMediaItem) => 
   showContextMenu.value = true
 }
 
-const handleAsyncProcessingItemContextMenu = (event: MouseEvent, item: AsyncProcessingMediaItem) => {
+const handleAsyncProcessingItemContextMenu = (
+  event: MouseEvent,
+  item: AsyncProcessingMediaItem,
+) => {
   event.preventDefault()
   event.stopPropagation()
 
@@ -518,8 +585,6 @@ const handleDeleteAsyncProcessingItem = () => {
   showContextMenu.value = false
 }
 
-
-
 const handleImportFromMenu = () => {
   triggerFileInput()
   showContextMenu.value = false
@@ -531,12 +596,20 @@ const handleRemoteDownload = () => {
 }
 
 // 将异步处理素材转换为普通素材（使用工具函数）
-const convertAsyncProcessingToLocalMedia = async (asyncProcessingItem: AsyncProcessingMediaItem) => {
-  const { convertAsyncProcessingToLocalMedia: convertFunction } = await import('../utils/mediaConversionUtils')
+const convertAsyncProcessingToLocalMedia = async (
+  asyncProcessingItem: AsyncProcessingMediaItem,
+) => {
+  const { convertAsyncProcessingToLocalMedia: convertFunction } = await import(
+    '../utils/mediaConversionUtils'
+  )
   return convertFunction(asyncProcessingItem, processFiles)
 }
 
-const handleRemoteDownloadSubmit = async (config: RemoteDownloadConfig, expectedDuration: number, name?: string) => {
+const handleRemoteDownloadSubmit = async (
+  config: RemoteDownloadConfig,
+  expectedDuration: number,
+  name?: string,
+) => {
   console.log('🌐 [MediaLibrary] 开始远程下载:', { config, expectedDuration, name })
 
   try {
@@ -545,7 +618,7 @@ const handleRemoteDownloadSubmit = async (config: RemoteDownloadConfig, expected
       'remote-download',
       config,
       expectedDuration,
-      name
+      name,
     )
 
     // 添加到媒体库的异步处理列表
@@ -555,9 +628,8 @@ const handleRemoteDownloadSubmit = async (config: RemoteDownloadConfig, expected
     showRemoteDownloadDialog.value = false
 
     // 异步开始处理，不阻塞UI，并传入状态更新回调
-    asyncProcessingManager.startProcessing(
-      asyncProcessingItem,
-      (updatedItem: AsyncProcessingMediaItem) => {
+    asyncProcessingManager
+      .startProcessing(asyncProcessingItem, (updatedItem: AsyncProcessingMediaItem) => {
         // 实时同步状态到 videoStore
         videoStore.updateAsyncProcessingItem(updatedItem)
         // console.log('🔄 [MediaLibrary] 异步处理状态更新:', {
@@ -565,26 +637,28 @@ const handleRemoteDownloadSubmit = async (config: RemoteDownloadConfig, expected
         //   status: updatedItem.processingStatus,
         //   progress: updatedItem.processingProgress
         // })
-      }
-    ).then(() => {
-      // 处理完成后，检查是否成功
-      const updatedItem = asyncProcessingManager.getAsyncProcessingMediaItem(asyncProcessingItem.id)
-      if (updatedItem) {
-        if (updatedItem.processingStatus === 'completed' && updatedItem.processedFile) {
-          // 转换为普通素材
-          convertAsyncProcessingToLocalMedia(updatedItem).catch(error => {
-            console.error('❌ [MediaLibrary] 转换异步处理素材失败:', error)
-            dialogs.showError('转换失败', error instanceof Error ? error.message : '未知错误')
-          })
-        } else if (updatedItem.processingStatus === 'error') {
-          dialogs.showError('下载失败', updatedItem.errorMessage || '未知错误')
+      })
+      .then(() => {
+        // 处理完成后，检查是否成功
+        const updatedItem = asyncProcessingManager.getAsyncProcessingMediaItem(
+          asyncProcessingItem.id,
+        )
+        if (updatedItem) {
+          if (updatedItem.processingStatus === 'completed' && updatedItem.processedFile) {
+            // 转换为普通素材
+            convertAsyncProcessingToLocalMedia(updatedItem).catch((error) => {
+              console.error('❌ [MediaLibrary] 转换异步处理素材失败:', error)
+              dialogs.showError('转换失败', error instanceof Error ? error.message : '未知错误')
+            })
+          } else if (updatedItem.processingStatus === 'error') {
+            dialogs.showError('下载失败', updatedItem.errorMessage || '未知错误')
+          }
         }
-      }
-    }).catch(error => {
-      console.error('❌ [MediaLibrary] 远程下载失败:', error)
-      dialogs.showError('下载失败', error instanceof Error ? error.message : '未知错误')
-    })
-
+      })
+      .catch((error) => {
+        console.error('❌ [MediaLibrary] 远程下载失败:', error)
+        dialogs.showError('下载失败', error instanceof Error ? error.message : '未知错误')
+      })
   } catch (error) {
     console.error('❌ [MediaLibrary] 远程下载失败:', error)
     dialogs.showError('下载失败', error instanceof Error ? error.message : '未知错误')
@@ -631,7 +705,7 @@ const saveErrorMediaReference = async (
   file: File,
   mediaType: MediaType,
   errorType: MediaErrorType,
-  errorMessage: string
+  errorMessage: string,
 ) => {
   if (!videoStore.currentProjectId) {
     console.warn('没有当前项目，跳过错误媒体引用保存')
@@ -648,7 +722,7 @@ const saveErrorMediaReference = async (
       videoStore.currentProjectId,
       mediaType,
       errorType,
-      errorMessage
+      errorMessage,
     )
 
     videoStore.addMediaReference(mediaItemId, errorReference)
@@ -661,20 +735,21 @@ const saveErrorMediaReference = async (
 
 // 支持的音频文件类型
 const SUPPORTED_AUDIO_TYPES = [
-  'audio/mpeg',     // .mp3
-  'audio/wav',      // .wav
-  'audio/mp4',      // .m4a
-  'audio/aac',      // .aac
-  'audio/ogg',      // .ogg
-  'audio/webm',     // .webm
+  'audio/mpeg', // .mp3
+  'audio/wav', // .wav
+  'audio/mp4', // .m4a
+  'audio/aac', // .aac
+  'audio/ogg', // .ogg
+  'audio/webm', // .webm
 ]
 
 // 处理文件 - 并行处理，限制最大并发数为5
 const processFiles = async (files: File[]) => {
   const mediaFiles = files.filter(
-    (file) => file.type.startsWith('video/') ||
-              file.type.startsWith('image/') ||
-              SUPPORTED_AUDIO_TYPES.includes(file.type),
+    (file) =>
+      file.type.startsWith('video/') ||
+      file.type.startsWith('image/') ||
+      SUPPORTED_AUDIO_TYPES.includes(file.type),
   )
 
   if (mediaFiles.length === 0) {
@@ -687,10 +762,10 @@ const processFiles = async (files: File[]) => {
   // 分析文件类型，确定tab跳转逻辑
   const fileTypeCounts = {
     video: 0,
-    audio: 0
+    audio: 0,
   }
 
-  mediaFiles.forEach(file => {
+  mediaFiles.forEach((file) => {
     if (file.type.startsWith('video/') || file.type.startsWith('image/')) {
       fileTypeCounts.video++
     } else if (SUPPORTED_AUDIO_TYPES.includes(file.type)) {
@@ -705,7 +780,9 @@ const processFiles = async (files: File[]) => {
   if (fileTypeCounts.video > 0 && fileTypeCounts.audio > 0) {
     // 多种类型的素材，跳转到all tab
     setActiveTab('all')
-    console.log(`📂 自动切换到全部tab (多种类型: 视频/图片: ${fileTypeCounts.video}, 音频: ${fileTypeCounts.audio})`)
+    console.log(
+      `📂 自动切换到全部tab (多种类型: 视频/图片: ${fileTypeCounts.video}, 音频: ${fileTypeCounts.audio})`,
+    )
   } else if (fileTypeCounts.video > 0 && fileTypeCounts.audio === 0) {
     // 只有视频/图片，跳转到视频tab
     setActiveTab('video')
@@ -796,7 +873,6 @@ const addVideoItem = async (
   }
 
   try {
-
     console.log(`📋 创建解析中的MediaItem: ${parsingMediaItem.name} (ID: ${mediaItemId})`)
 
     // 先添加解析中状态的素材到store
@@ -829,7 +905,12 @@ const addVideoItem = async (
     if (videoStore.currentProjectId) {
       try {
         console.log(`💾 保存视频文件到本地: ${file.name}`)
-        mediaReference = await mediaManager.importMediaFiles(file, mp4Clip, videoStore.currentProjectId, 'video')
+        mediaReference = await mediaManager.importMediaFiles(
+          file,
+          mp4Clip,
+          videoStore.currentProjectId,
+          'video',
+        )
         videoStore.addMediaReference(mediaItemId, mediaReference)
         console.log(`✅ 视频文件已保存到本地: ${mediaReference.storedPath}`)
       } catch (error) {
@@ -868,14 +949,20 @@ const addVideoItem = async (
       status: 'error',
       mp4Clip: null,
       duration: 0,
-      thumbnailUrl: undefined
+      thumbnailUrl: undefined,
     }
 
     console.log(`🔴 [并发处理] 视频文件转换失败，设置为错误状态: ${file.name}`)
     videoStore.updateLocalMediaItem(errorMediaItem)
 
     // 新增：保存错误状态的媒体引用到项目
-    await saveErrorMediaReference(mediaItemId, file, 'video', 'webav_parse_error', error instanceof Error ? error.message : String(error))
+    await saveErrorMediaReference(
+      mediaItemId,
+      file,
+      'video',
+      'webav_parse_error',
+      error instanceof Error ? error.message : String(error),
+    )
 
     resolve()
   }
@@ -914,7 +1001,6 @@ const addImageItem = async (
 
   img.onload = async () => {
     try {
-
       // 异步创建ImgClip
       console.log(`🖼️ Creating ImgClip for: ${file.name}`)
       const imgClip = await videoStore.createImgClip(file)
@@ -932,7 +1018,12 @@ const addImageItem = async (
       if (videoStore.currentProjectId) {
         try {
           console.log(`💾 保存图片文件到本地: ${file.name}`)
-          mediaReference = await mediaManager.importMediaFiles(file, imgClip, videoStore.currentProjectId, 'image')
+          mediaReference = await mediaManager.importMediaFiles(
+            file,
+            imgClip,
+            videoStore.currentProjectId,
+            'image',
+          )
           videoStore.addMediaReference(mediaItemId, mediaReference)
           console.log(`✅ 图片文件已保存到本地: ${mediaReference.storedPath}`)
         } catch (error) {
@@ -973,14 +1064,20 @@ const addImageItem = async (
         status: 'error',
         imgClip: null,
         duration: 0,
-        thumbnailUrl: undefined
+        thumbnailUrl: undefined,
       }
 
       console.log(`🔴 [并发处理] 图片文件转换失败，设置为错误状态: ${file.name}`)
       videoStore.updateLocalMediaItem(errorMediaItem)
 
       // 新增：保存错误状态的媒体引用到项目
-      await saveErrorMediaReference(mediaItemId, file, 'image', 'webav_parse_error', error instanceof Error ? error.message : String(error))
+      await saveErrorMediaReference(
+        mediaItemId,
+        file,
+        'image',
+        'webav_parse_error',
+        error instanceof Error ? error.message : String(error),
+      )
 
       resolve()
     }
@@ -996,7 +1093,7 @@ const addImageItem = async (
       status: 'error',
       imgClip: null,
       duration: 0,
-      thumbnailUrl: undefined
+      thumbnailUrl: undefined,
     }
 
     console.log(`🔴 [并发处理] 图片文件加载失败，设置为错误状态: ${file.name}`)
@@ -1036,7 +1133,6 @@ const addAudioItem = async (
   }
 
   try {
-
     console.log(`📋 创建解析中的音频MediaItem: ${parsingMediaItem.name} (ID: ${mediaItemId})`)
 
     // 先添加解析中状态的素材到store
@@ -1067,7 +1163,12 @@ const addAudioItem = async (
     if (videoStore.currentProjectId) {
       try {
         console.log(`💾 保存音频文件到本地: ${file.name}`)
-        mediaReference = await mediaManager.importMediaFiles(file, audioClip, videoStore.currentProjectId, 'audio')
+        mediaReference = await mediaManager.importMediaFiles(
+          file,
+          audioClip,
+          videoStore.currentProjectId,
+          'audio',
+        )
         videoStore.addMediaReference(mediaItemId, mediaReference)
         console.log(`✅ 音频文件已保存到本地: ${mediaReference.storedPath}`)
       } catch (error) {
@@ -1104,14 +1205,20 @@ const addAudioItem = async (
       status: 'error',
       audioClip: null,
       duration: 0,
-      thumbnailUrl: undefined
+      thumbnailUrl: undefined,
     }
 
     console.log(`🔴 [并发处理] 音频文件转换失败，设置为错误状态: ${file.name}`)
     videoStore.updateLocalMediaItem(errorMediaItem)
 
     // 新增：保存错误状态的媒体引用到项目
-    await saveErrorMediaReference(mediaItemId, file, 'audio', 'webav_parse_error', error instanceof Error ? error.message : String(error))
+    await saveErrorMediaReference(
+      mediaItemId,
+      file,
+      'audio',
+      'webav_parse_error',
+      error instanceof Error ? error.message : String(error),
+    )
 
     resolve()
   }
@@ -1222,7 +1329,12 @@ const handleItemDragStart = (event: DragEvent, item: LocalMediaItem) => {
 
 // 异步处理素材拖拽开始
 const handleAsyncProcessingItemDragStart = (event: DragEvent, item: AsyncProcessingMediaItem) => {
-  console.log('🎯 [MediaLibrary] 开始拖拽异步处理素材:', item.name, 'status:', item.processingStatus)
+  console.log(
+    '🎯 [MediaLibrary] 开始拖拽异步处理素材:',
+    item.name,
+    'status:',
+    item.processingStatus,
+  )
 
   // 只有等待中和处理中的异步处理素材可以拖拽
   if (!['pending', 'processing'].includes(item.processingStatus)) {
@@ -1233,13 +1345,13 @@ const handleAsyncProcessingItemDragStart = (event: DragEvent, item: AsyncProcess
 
   // 使用统一的拖拽工具设置异步处理素材的拖拽数据
   // 对于 'unknown' 类型，使用 'video' 作为默认类型（异步处理占位符可以拖拽到任何轨道）
-  const mediaType = item.mediaType === 'unknown' ? 'video' : item.mediaType as MediaType
+  const mediaType = item.mediaType === 'unknown' ? 'video' : (item.mediaType as MediaType)
   const dragData = dragUtils.setMediaItemDragData(
     event,
     item.id,
     item.name,
     item.expectedDuration, // 使用预计时长
-    mediaType
+    mediaType,
   )
 
   console.log('📦 [MediaLibrary] 异步处理素材拖拽数据已设置:', dragData)
@@ -1251,7 +1363,6 @@ const handleItemDragEnd = () => {
   // 使用统一的拖拽工具清理状态
   dragUtils.clearDragData()
 }
-
 </script>
 
 <style scoped>
@@ -1656,8 +1767,6 @@ const handleItemDragEnd = () => {
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
 }
 
-
-
 .processing-indicator {
   position: absolute;
   top: 4px;
@@ -1719,8 +1828,12 @@ const handleItemDragEnd = () => {
 }
 
 @keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* 自定义滚动条样式 */

@@ -14,12 +14,10 @@ import { isVideoTimeRange, createLocalTimelineItemData } from '../../types'
  * 视频片段操作模块
  * 负责复杂的视频片段编辑操作，包括复制、分割、播放速度调整等
  */
-export function createClipOperationsModule(
-  timelineModule: {
-    getLocalTimelineItem: (id: string) => LocalTimelineItem | undefined
-    setupBidirectionalSync: (item: LocalTimelineItem) => void
-  },
-) {
+export function createClipOperationsModule(timelineModule: {
+  getLocalTimelineItem: (id: string) => LocalTimelineItem | undefined
+  setupBidirectionalSync: (item: LocalTimelineItem) => void
+}) {
   // ==================== 视频片段操作方法 ====================
 
   /**

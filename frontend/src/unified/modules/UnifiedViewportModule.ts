@@ -13,7 +13,7 @@ import type { UnifiedTimelineItemData } from '../timelineitem/TimelineItemData'
 /**
  * 统一缩放滚动管理模块
  * 基于新架构的统一类型系统重构的视口管理功能
- * 
+ *
  * 主要变化：
  * 1. 使用 UnifiedTimelineItemData 替代原有的 LocalTimelineItem 和 AsyncProcessingTimelineItem
  * 2. 使用统一的时间轴项目类型和状态管理系统

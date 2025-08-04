@@ -3,7 +3,7 @@ import { useUnifiedStore } from '../unifiedStore'
 /**
  * 统一的播放控制工具函数
  * 提供可复用的播放控制逻辑，避免代码重复
- * 
+ *
  * 新架构特点：
  * 1. 使用 unifiedStore 替代旧的 videoStore
  * 2. 使用 UnifiedPlaybackModule 和 UnifiedWebavModule
@@ -178,7 +178,7 @@ export function usePlaybackControls() {
     ensureWebAVReady,
     safePlaybackOperation,
     restartPlayback,
-    
+
     // 新增的安全操作方法
     safeSeekToFrame,
     safeSetPlaying,

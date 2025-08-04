@@ -1,7 +1,7 @@
 /**
  * 音频内容渲染器
  * 处理ready状态下音频类型的内容渲染
- * 
+ *
  * 设计理念：
  * - 专门处理音频类型的显示
  * - 提供波形预览和音量信息
@@ -24,15 +24,19 @@ export class AudioContentRenderer implements ContentRenderer<'audio'> {
   renderContent(context: ContentRenderContext<'audio'>): VNode {
     const { data, isSelected, scale } = context
 
-    return h('div', {
-      class: ['audio-content', { selected: isSelected }],
-      style: this.getAudioContentStyles()
-    }, [
-      // 音频信息显示（与旧架构TimelineAudioClip一致）
-      this.renderAudioInfo(data),
-      // 音频控制指示器
-      this.renderAudioControls(data)
-    ])
+    return h(
+      'div',
+      {
+        class: ['audio-content', { selected: isSelected }],
+        style: this.getAudioContentStyles(),
+      },
+      [
+        // 音频信息显示（与旧架构TimelineAudioClip一致）
+        this.renderAudioInfo(data),
+        // 音频控制指示器
+        this.renderAudioControls(data),
+      ],
+    )
   }
 
   getCustomClasses(context: ContentRenderContext<'audio'>): string[] {
@@ -68,7 +72,7 @@ export class AudioContentRenderer implements ContentRenderer<'audio'> {
       height: '100%',
       display: 'flex',
       flexDirection: 'column',
-      padding: '4px 8px'
+      padding: '4px 8px',
     }
   }
 
@@ -76,42 +80,68 @@ export class AudioContentRenderer implements ContentRenderer<'audio'> {
    * 渲染音频信息（与旧架构audio-info一致）
    */
   private renderAudioInfo(data: UnifiedTimelineItemData<'audio'>): VNode {
-    return h('div', {
-      class: 'audio-info',
-      style: this.getAudioInfoStyles()
-    }, [
-      // 音频名称
-      h('div', {
-        class: 'audio-name',
-        style: this.getAudioNameStyles()
-      }, getTimelineItemDisplayName(data)),
-      // 音频时长
-      h('div', {
-        class: 'audio-duration',
-        style: this.getAudioDurationStyles()
-      }, this.formatTime(this.getDuration(data)))
-    ])
+    return h(
+      'div',
+      {
+        class: 'audio-info',
+        style: this.getAudioInfoStyles(),
+      },
+      [
+        // 音频名称
+        h(
+          'div',
+          {
+            class: 'audio-name',
+            style: this.getAudioNameStyles(),
+          },
+          getTimelineItemDisplayName(data),
+        ),
+        // 音频时长
+        h(
+          'div',
+          {
+            class: 'audio-duration',
+            style: this.getAudioDurationStyles(),
+          },
+          this.formatTime(this.getDuration(data)),
+        ),
+      ],
+    )
   }
 
   /**
    * 渲染音频控制指示器（与旧架构audio-controls一致）
    */
   private renderAudioControls(data: UnifiedTimelineItemData<'audio'>): VNode {
-    return h('div', {
-      class: 'audio-controls',
-      style: this.getAudioControlsStyles()
-    }, [
-      // 静音指示器
-      this.isMuted(data) ? h('div', {
-        class: 'mute-indicator',
-        style: { color: '#ff6b6b' }
-      }, '🔇') : null,
-      // 音量指示器
-      h('div', {
-        class: 'volume-indicator',
-        style: { opacity: '0.8' }
-      }, `${Math.round(this.getVolume(data) * 100)}%`)
-    ])
+    return h(
+      'div',
+      {
+        class: 'audio-controls',
+        style: this.getAudioControlsStyles(),
+      },
+      [
+        // 静音指示器
+        this.isMuted(data)
+          ? h(
+              'div',
+              {
+                class: 'mute-indicator',
+                style: { color: '#ff6b6b' },
+              },
+              '🔇',
+            )
+          : null,
+        // 音量指示器
+        h(
+          'div',
+          {
+            class: 'volume-indicator',
+            style: { opacity: '0.8' },
+          },
+          `${Math.round(this.getVolume(data) * 100)}%`,
+        ),
+      ],
+    )
   }
 
   // ==================== 样式方法 ====================
@@ -125,7 +155,7 @@ export class AudioContentRenderer implements ContentRenderer<'audio'> {
       justifyContent: 'space-between',
       alignItems: 'center',
       fontSize: '11px',
-      marginTop: '2px'
+      marginTop: '2px',
     }
   }
 
@@ -139,7 +169,7 @@ export class AudioContentRenderer implements ContentRenderer<'audio'> {
       overflow: 'hidden',
       textOverflow: 'ellipsis',
       maxWidth: '60%',
-      color: 'white'
+      color: 'white',
     }
   }
 
@@ -150,7 +180,7 @@ export class AudioContentRenderer implements ContentRenderer<'audio'> {
     return {
       fontSize: '10px',
       opacity: '0.9',
-      color: 'white'
+      color: 'white',
     }
   }
 
@@ -165,7 +195,7 @@ export class AudioContentRenderer implements ContentRenderer<'audio'> {
       display: 'flex',
       alignItems: 'center',
       gap: '4px',
-      fontSize: '10px'
+      fontSize: '10px',
     }
   }
 
@@ -174,7 +204,7 @@ export class AudioContentRenderer implements ContentRenderer<'audio'> {
    */
   private renderWaveform(data: UnifiedTimelineItemData<'audio'>, scale: number): VNode {
     const waveformData = this.getWaveformData(data)
-    
+
     if (waveformData && waveformData.length > 0) {
       return this.renderWaveformBars(waveformData, scale)
     }
@@ -189,22 +219,22 @@ export class AudioContentRenderer implements ContentRenderer<'audio'> {
   private renderWaveformBars(waveformData: number[], scale: number): VNode {
     const barCount = Math.min(waveformData.length, Math.floor(200 * scale))
     const step = Math.max(1, Math.floor(waveformData.length / barCount))
-    
+
     const bars = []
     for (let i = 0; i < barCount; i++) {
       const dataIndex = i * step
       const amplitude = waveformData[dataIndex] || 0
       const height = Math.max(2, amplitude * 100) // 最小高度2px，最大100px
-      
+
       bars.push(
         h('div', {
           key: i,
           class: 'waveform-bar',
           style: {
             height: `${height}%`,
-            width: `${100 / barCount}%`
-          }
-        })
+            width: `${100 / barCount}%`,
+          },
+        }),
       )
     }
 
@@ -218,20 +248,20 @@ export class AudioContentRenderer implements ContentRenderer<'audio'> {
     // 生成模拟波形
     const barCount = 50
     const bars = []
-    
+
     for (let i = 0; i < barCount; i++) {
       // 生成随机高度，模拟音频波形
       const height = Math.random() * 80 + 10 // 10-90%的高度
-      
+
       bars.push(
         h('div', {
           key: i,
           class: 'waveform-bar placeholder',
           style: {
             height: `${height}%`,
-            width: `${100 / barCount}%`
-          }
-        })
+            width: `${100 / barCount}%`,
+          },
+        }),
       )
     }
 
@@ -248,7 +278,7 @@ export class AudioContentRenderer implements ContentRenderer<'audio'> {
       // 时间显示
       this.renderTimeDisplay(data),
       // 文件名显示
-      this.renderFileName(data)
+      this.renderFileName(data),
     ])
   }
 
@@ -266,9 +296,7 @@ export class AudioContentRenderer implements ContentRenderer<'audio'> {
     const duration = this.getDuration(data)
     const timeText = this.formatTime(duration)
 
-    return h('div', { class: 'time-display' }, [
-      h('span', { class: 'time-text' }, timeText)
-    ])
+    return h('div', { class: 'time-display' }, [h('span', { class: 'time-text' }, timeText)])
   }
 
   /**
@@ -278,9 +306,7 @@ export class AudioContentRenderer implements ContentRenderer<'audio'> {
     const name = getTimelineItemDisplayName(data)
     const displayName = name.length > 15 ? name.substring(0, 15) + '...' : name
 
-    return h('div', { class: 'file-name' }, [
-      h('span', { class: 'name-text' }, displayName)
-    ])
+    return h('div', { class: 'file-name' }, [h('span', { class: 'name-text' }, displayName)])
   }
 
   /**
@@ -291,7 +317,7 @@ export class AudioContentRenderer implements ContentRenderer<'audio'> {
       // 音量指示器
       this.renderVolumeIndicator(data),
       // 静音指示器
-      this.renderMuteIndicator(data)
+      this.renderMuteIndicator(data),
     ])
   }
 
@@ -300,7 +326,7 @@ export class AudioContentRenderer implements ContentRenderer<'audio'> {
    */
   private renderVolumeIndicator(data: UnifiedTimelineItemData<'audio'>): VNode | null {
     const volume = this.getVolume(data)
-    
+
     if (volume === 1.0) {
       // 默认音量不显示指示器
       return null
@@ -311,7 +337,7 @@ export class AudioContentRenderer implements ContentRenderer<'audio'> {
 
     return h('div', { class: 'volume-indicator' }, [
       h('span', { class: 'volume-icon' }, volumeIcon),
-      h('span', { class: 'volume-text' }, `${volumePercent}%`)
+      h('span', { class: 'volume-text' }, `${volumePercent}%`),
     ])
   }
 
@@ -325,7 +351,7 @@ export class AudioContentRenderer implements ContentRenderer<'audio'> {
 
     return h('div', { class: 'mute-indicator' }, [
       h('span', { class: 'mute-icon' }, '🔇'),
-      h('span', { class: 'mute-text' }, '静音')
+      h('span', { class: 'mute-text' }, '静音'),
     ])
   }
 
@@ -354,11 +380,11 @@ export class AudioContentRenderer implements ContentRenderer<'audio'> {
   private formatTime(frames: number): string {
     // 假设30fps
     const seconds = frames / 30
-    
+
     if (seconds < 60) {
       return `${seconds.toFixed(1)}s`
     }
-    
+
     const minutes = Math.floor(seconds / 60)
     const remainingSeconds = Math.floor(seconds % 60)
     return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`

@@ -5,7 +5,7 @@ import {
   type MediaType,
   createUnifiedMediaItemData,
   UnifiedMediaItemQueries,
-  UnifiedMediaItemActions
+  UnifiedMediaItemActions,
 } from '@/unified'
 import { microsecondsToFrames, secondsToFrames } from '@/stores/utils/timeUtils'
 
@@ -20,7 +20,7 @@ import { microsecondsToFrames, secondsToFrames } from '@/stores/utils/timeUtils'
 function printUnifiedDebugInfo(
   operation: string,
   details: unknown,
-  mediaItems: UnifiedMediaItemData[]
+  mediaItems: UnifiedMediaItemData[],
 ) {
   const timestamp = new Date().toLocaleTimeString()
   console.group(`🎬 [${timestamp}] ${operation}`)
@@ -41,15 +41,18 @@ function printUnifiedDebugInfo(
       sourceStatus: item.source.status,
       sourceProgress: `${item.source.progress}%`,
       hasWebAV: !!item.webav,
-      createdAt: new Date(item.createdAt).toLocaleTimeString()
-    }))
+      createdAt: new Date(item.createdAt).toLocaleTimeString(),
+    })),
   )
 
   console.log('📊 统计信息:')
-  const statusCounts = mediaItems.reduce((acc, item) => {
-    acc[item.mediaStatus] = (acc[item.mediaStatus] || 0) + 1
-    return acc
-  }, {} as Record<string, number>)
+  const statusCounts = mediaItems.reduce(
+    (acc, item) => {
+      acc[item.mediaStatus] = (acc[item.mediaStatus] || 0) + 1
+      return acc
+    },
+    {} as Record<string, number>,
+  )
 
   console.log(`- 总项目数: ${mediaItems.length}`)
   console.log(`- 状态分布:`, statusCounts)
@@ -58,10 +61,6 @@ function printUnifiedDebugInfo(
 }
 
 // ==================== 统一媒体项目管理模块 ====================
-
-
-
-
 
 /**
  * 统一媒体管理模块
@@ -90,9 +89,9 @@ export function createUnifiedMediaModule() {
         mediaType: mediaItem.mediaType,
         mediaStatus: mediaItem.mediaStatus,
         sourceType: mediaItem.source.type,
-        sourceStatus: mediaItem.source.status
+        sourceStatus: mediaItem.source.status,
       },
-      getAllMediaItems()
+      getAllMediaItems(),
     )
   }
 
@@ -103,9 +102,11 @@ export function createUnifiedMediaModule() {
    */
   function removeMediaItem(
     mediaItemId: string,
-    cleanupCallback?: (mediaItem: UnifiedMediaItemData) => void
+    cleanupCallback?: (mediaItem: UnifiedMediaItemData) => void,
   ) {
-    const index = mediaItems.value.findIndex((item: UnifiedMediaItemData) => item.id === mediaItemId)
+    const index = mediaItems.value.findIndex(
+      (item: UnifiedMediaItemData) => item.id === mediaItemId,
+    )
     if (index > -1) {
       const mediaItem = mediaItems.value[index]
 
@@ -123,7 +124,7 @@ export function createUnifiedMediaModule() {
           mediaItemId,
           mediaItemName: mediaItem.name,
         },
-        getAllMediaItems()
+        getAllMediaItems(),
       )
     }
   }
@@ -172,7 +173,7 @@ export function createUnifiedMediaModule() {
    */
   function updateMediaItem(updatedMediaItem: UnifiedMediaItemData) {
     const index = mediaItems.value.findIndex(
-      (item: UnifiedMediaItemData) => item.id === updatedMediaItem.id
+      (item: UnifiedMediaItemData) => item.id === updatedMediaItem.id,
     )
     if (index !== -1) {
       mediaItems.value[index] = updatedMediaItem
@@ -241,13 +242,17 @@ export function createUnifiedMediaModule() {
           if (newStatus === 'ready') {
             unwatch?.()
             resolve(true)
-          } else if (newStatus === 'error' || newStatus === 'cancelled' || newStatus === 'missing') {
+          } else if (
+            newStatus === 'error' ||
+            newStatus === 'cancelled' ||
+            newStatus === 'missing'
+          ) {
             unwatch?.()
             reject(new Error(`媒体项目解析失败: ${mediaItem.name}, 状态: ${newStatus}`))
           }
           // 如果是其他状态，继续等待
         },
-        { immediate: true } // 立即执行一次，检查当前状态
+        { immediate: true }, // 立即执行一次，检查当前状态
       )
     })
   }
@@ -263,7 +268,11 @@ export function createUnifiedMediaModule() {
 
     try {
       // 确保数据源已获取
-      if (mediaItem.source.status !== 'acquired' || !mediaItem.source.file || !mediaItem.source.url) {
+      if (
+        mediaItem.source.status !== 'acquired' ||
+        !mediaItem.source.file ||
+        !mediaItem.source.url
+      ) {
         throw new Error('数据源未准备好')
       }
 
@@ -298,7 +307,7 @@ export function createUnifiedMediaModule() {
       const webavObjects: any = {
         thumbnailUrl,
         originalWidth: meta.width,
-        originalHeight: meta.height
+        originalHeight: meta.height,
       }
 
       // 根据媒体类型设置对应的clip
@@ -327,13 +336,12 @@ export function createUnifiedMediaModule() {
       UnifiedMediaItemActions.transitionTo(mediaItem, 'ready')
 
       console.log(`✅ [UnifiedMediaModule] WebAV解析完成: ${mediaItem.name}`)
-
     } catch (error) {
       console.error(`❌ [UnifiedMediaModule] WebAV解析失败: ${mediaItem.name}`, {
         mediaType: mediaItem.mediaType,
         sourceType: mediaItem.source.type,
         sourceStatus: mediaItem.source.status,
-        errorMessage: error instanceof Error ? error.message : String(error)
+        errorMessage: error instanceof Error ? error.message : String(error),
       })
 
       UnifiedMediaItemActions.transitionTo(mediaItem, 'error')
@@ -361,13 +369,17 @@ export function createUnifiedMediaModule() {
       video.onseeked = () => {
         if (ctx) {
           ctx.drawImage(video, 0, 0)
-          canvas.toBlob((blob) => {
-            if (blob) {
-              resolve(URL.createObjectURL(blob))
-            } else {
-              reject(new Error('生成缩略图失败'))
-            }
-          }, 'image/jpeg', 0.8)
+          canvas.toBlob(
+            (blob) => {
+              if (blob) {
+                resolve(URL.createObjectURL(blob))
+              } else {
+                reject(new Error('生成缩略图失败'))
+              }
+            },
+            'image/jpeg',
+            0.8,
+          )
         }
       }
 
@@ -384,24 +396,32 @@ export function createUnifiedMediaModule() {
    * @param newSourceStatus 新的数据源状态
    * @param oldSourceStatus 旧的数据源状态
    */
-  function handleSourceStatusChange(mediaItem: UnifiedMediaItemData, newSourceStatus: string, oldSourceStatus?: string) {
+  function handleSourceStatusChange(
+    mediaItem: UnifiedMediaItemData,
+    newSourceStatus: string,
+    oldSourceStatus?: string,
+  ) {
     const currentMediaStatus = mediaItem.mediaStatus
 
-    console.log(`🔄 [UnifiedMediaModule] 数据源状态变化: ${mediaItem.name} - 数据源: ${oldSourceStatus || 'unknown'} → ${newSourceStatus}, 媒体: ${currentMediaStatus}`)
+    console.log(
+      `🔄 [UnifiedMediaModule] 数据源状态变化: ${mediaItem.name} - 数据源: ${oldSourceStatus || 'unknown'} → ${newSourceStatus}, 媒体: ${currentMediaStatus}`,
+    )
 
     // 数据源状态到媒体状态的映射
     const statusMap: Record<string, MediaStatus> = {
-      'pending': 'pending',
-      'acquiring': 'asyncprocessing',
-      'acquired': 'webavdecoding',
-      'error': 'error',
-      'cancelled': 'cancelled',
-      'missing': 'missing'
+      pending: 'pending',
+      acquiring: 'asyncprocessing',
+      acquired: 'webavdecoding',
+      error: 'error',
+      cancelled: 'cancelled',
+      missing: 'missing',
     }
 
     const targetMediaStatus = statusMap[newSourceStatus]
     if (!targetMediaStatus) {
-      console.warn(`🚨 [UnifiedMediaModule] 未知的数据源状态: ${newSourceStatus} (${mediaItem.name})`)
+      console.warn(
+        `🚨 [UnifiedMediaModule] 未知的数据源状态: ${newSourceStatus} (${mediaItem.name})`,
+      )
       return
     }
 
@@ -413,14 +433,18 @@ export function createUnifiedMediaModule() {
     // 执行状态转换
     const success = UnifiedMediaItemActions.transitionTo(mediaItem, targetMediaStatus)
     if (success) {
-      console.log(`✅ [UnifiedMediaModule] 媒体状态转换成功: ${currentMediaStatus} → ${targetMediaStatus}`)
+      console.log(
+        `✅ [UnifiedMediaModule] 媒体状态转换成功: ${currentMediaStatus} → ${targetMediaStatus}`,
+      )
 
       // 如果转换到webavdecoding状态，启动WebAV解析
       if (targetMediaStatus === 'webavdecoding') {
         startWebAVProcessing(mediaItem)
       }
     } else {
-      console.error(`❌ [UnifiedMediaModule] 媒体状态转换失败: ${currentMediaStatus} → ${targetMediaStatus} (${mediaItem.name})`)
+      console.error(
+        `❌ [UnifiedMediaModule] 媒体状态转换失败: ${currentMediaStatus} → ${targetMediaStatus} (${mediaItem.name})`,
+      )
     }
   }
 
@@ -438,29 +462,33 @@ export function createUnifiedMediaModule() {
         // 当状态变为终态时，自动清理watcher
         if (['acquired', 'error', 'cancelled', 'missing'].includes(newStatus)) {
           unwatch()
-          console.log(`🧹 [UnifiedMediaModule] 已清理数据源状态watcher: ${mediaItem.name} (${newStatus})`)
+          console.log(
+            `🧹 [UnifiedMediaModule] 已清理数据源状态watcher: ${mediaItem.name} (${newStatus})`,
+          )
         }
       },
-      { immediate: true }
+      { immediate: true },
     )
 
     // 开始数据源获取
     console.log(`🚀 [UnifiedMediaModule] 开始处理媒体项目: ${mediaItem.name}`)
 
     // 导入并使用数据源管理器注册中心
-    import('../../unified/managers/DataSourceManagerRegistry').then(({ startDataSourceAcquisition }) => {
-      const success = startDataSourceAcquisition(mediaItem.source)
-      if (success) {
-        console.log(`✅ [UnifiedMediaModule] 数据源获取任务已启动: ${mediaItem.name}`)
-      } else {
-        console.error(`❌ [UnifiedMediaModule] 数据源获取任务启动失败: ${mediaItem.name}`)
-        // 设置媒体项目为错误状态
+    import('../../unified/managers/DataSourceManagerRegistry')
+      .then(({ startDataSourceAcquisition }) => {
+        const success = startDataSourceAcquisition(mediaItem.source)
+        if (success) {
+          console.log(`✅ [UnifiedMediaModule] 数据源获取任务已启动: ${mediaItem.name}`)
+        } else {
+          console.error(`❌ [UnifiedMediaModule] 数据源获取任务启动失败: ${mediaItem.name}`)
+          // 设置媒体项目为错误状态
+          UnifiedMediaItemActions.transitionTo(mediaItem, 'error')
+        }
+      })
+      .catch((error) => {
+        console.error(`❌ [UnifiedMediaModule] 导入数据源管理器失败: ${mediaItem.name}`, error)
         UnifiedMediaItemActions.transitionTo(mediaItem, 'error')
-      }
-    }).catch(error => {
-      console.error(`❌ [UnifiedMediaModule] 导入数据源管理器失败: ${mediaItem.name}`, error)
-      UnifiedMediaItemActions.transitionTo(mediaItem, 'error')
-    })
+      })
   }
 
   // ==================== 便捷查询方法 ====================
@@ -490,14 +518,14 @@ export function createUnifiedMediaModule() {
    * 根据媒体类型筛选项目
    */
   function getMediaItemsByType(mediaType: MediaType | 'unknown'): UnifiedMediaItemData[] {
-    return mediaItems.value.filter(item => item.mediaType === mediaType)
+    return mediaItems.value.filter((item) => item.mediaType === mediaType)
   }
 
   /**
    * 根据数据源类型筛选项目
    */
   function getMediaItemsBySourceType(sourceType: string): UnifiedMediaItemData[] {
-    return mediaItems.value.filter(item => item.source.type === sourceType)
+    return mediaItems.value.filter((item) => item.source.type === sourceType)
   }
 
   /**
@@ -516,7 +544,7 @@ export function createUnifiedMediaModule() {
       processing,
       error,
       pending,
-      readyPercentage: total > 0 ? Math.round((ready / total) * 100) : 0
+      readyPercentage: total > 0 ? Math.round((ready / total) * 100) : 0,
     }
   }
 
@@ -525,7 +553,7 @@ export function createUnifiedMediaModule() {
    */
   function retryAllErrorItems(): void {
     const errorItems = getErrorMediaItems()
-    errorItems.forEach(item => {
+    errorItems.forEach((item) => {
       UnifiedMediaItemActions.retry(item)
     })
     console.log(`批量重试 ${errorItems.length} 个错误项目`)
@@ -535,8 +563,8 @@ export function createUnifiedMediaModule() {
    * 清理所有已取消的媒体项目
    */
   function clearCancelledItems(): void {
-    const cancelledItems = mediaItems.value.filter(item => item.mediaStatus === 'cancelled')
-    cancelledItems.forEach(item => {
+    const cancelledItems = mediaItems.value.filter((item) => item.mediaStatus === 'cancelled')
+    cancelledItems.forEach((item) => {
       removeMediaItem(item.id)
     })
     console.log(`清理了 ${cancelledItems.length} 个已取消的项目`)
@@ -581,7 +609,7 @@ export function createUnifiedMediaModule() {
     // 工厂函数和查询函数
     createUnifiedMediaItemData,
     UnifiedMediaItemQueries,
-    UnifiedMediaItemActions
+    UnifiedMediaItemActions,
   }
 }
 

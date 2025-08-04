@@ -292,8 +292,6 @@ type MediaConfigMap = {
  */
 export type GetMediaConfig<T extends MediaType> = MediaConfigMap[T]
 
-
-
 /**
  * 视觉媒体配置联合类型
  */

@@ -86,9 +86,9 @@ export function isVisualMediaType(mediaType: MediaTypeOrUnknown): boolean {
  * 状态优先级映射
  */
 const STATUS_PRIORITY: Record<TimelineItemStatus, number> = {
-  'error': 0,    // 最高优先级，需要用户关注
-  'loading': 1,  // 中等优先级，正在处理
-  'ready': 2     // 最低优先级，正常状态
+  error: 0, // 最高优先级，需要用户关注
+  loading: 1, // 中等优先级，正在处理
+  ready: 2, // 最低优先级，正常状态
 }
 
 /**
@@ -98,8 +98,8 @@ const STATUS_PRIORITY: Record<TimelineItemStatus, number> = {
  * @returns 负数表示status1优先级更高，正数表示status2优先级更高，0表示相等
  */
 export function compareStatusPriority(
-  status1: TimelineItemStatus, 
-  status2: TimelineItemStatus
+  status1: TimelineItemStatus,
+  status2: TimelineItemStatus,
 ): number {
   return STATUS_PRIORITY[status1] - STATUS_PRIORITY[status2]
 }
@@ -139,22 +139,22 @@ export function getRendererSelectionInfo(data: UnifiedTimelineItemData): {
     return {
       type: 'status',
       value: data.timelineStatus,
-      reason: `Non-ready status: ${data.timelineStatus}`
+      reason: `Non-ready status: ${data.timelineStatus}`,
     }
   }
-  
+
   if (shouldUseMediaTypeRenderer(data)) {
     return {
       type: 'mediatype',
       value: data.mediaType,
-      reason: `Ready status with known media type: ${data.mediaType}`
+      reason: `Ready status with known media type: ${data.mediaType}`,
     }
   }
-  
+
   return {
     type: 'default',
     value: 'default',
-    reason: `Ready status with unknown media type or no specific renderer`
+    reason: `Ready status with unknown media type or no specific renderer`,
   }
 }
 
@@ -173,9 +173,11 @@ export function getTimelineItemDuration(data: UnifiedTimelineItemData): number {
 export function isTimelineItemInRange(
   data: UnifiedTimelineItemData,
   startFrame: number,
-  endFrame: number
+  endFrame: number,
 ): boolean {
-  return !(data.timeRange.timelineEndTime <= startFrame || data.timeRange.timelineStartTime >= endFrame)
+  return !(
+    data.timeRange.timelineEndTime <= startFrame || data.timeRange.timelineStartTime >= endFrame
+  )
 }
 
 /**
@@ -183,7 +185,7 @@ export function isTimelineItemInRange(
  */
 export function doesTimelineItemContainFrame(
   data: UnifiedTimelineItemData,
-  frame: number
+  frame: number,
 ): boolean {
   return frame >= data.timeRange.timelineStartTime && frame < data.timeRange.timelineEndTime
 }
@@ -209,13 +211,13 @@ export function getStatusCssClass(status: TimelineItemStatus): string {
  */
 export function getTimelineItemCssClasses(
   data: UnifiedTimelineItemData,
-  additionalClasses: string[] = []
+  additionalClasses: string[] = [],
 ): string[] {
   return [
     'timeline-item',
     getMediaTypeCssClass(data.mediaType),
     getStatusCssClass(data.timelineStatus),
-    ...additionalClasses
+    ...additionalClasses,
   ]
 }
 
@@ -279,6 +281,6 @@ export function getTimelineItemDebugInfo(data: UnifiedTimelineItemData): {
     status: data.timelineStatus,
     duration: getTimelineItemDuration(data),
     timeRange: `${data.timeRange.timelineStartTime}-${data.timeRange.timelineEndTime}`,
-    configName: getTimelineItemDisplayName(data)
+    configName: getTimelineItemDisplayName(data),
   }
 }

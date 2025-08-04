@@ -19,11 +19,7 @@ import type {
   TimelineItemStatus,
 } from '../../timelineitem/TimelineItemData'
 
-import type {
-  UnifiedMediaItemData,
-  MediaType,
-  MediaTypeOrUnknown,
-} from '../../mediaitem/types'
+import type { UnifiedMediaItemData, MediaType, MediaTypeOrUnknown } from '../../mediaitem/types'
 
 import type {
   VideoMediaConfig,
@@ -31,14 +27,10 @@ import type {
   TextMediaConfig,
   BaseMediaProps,
 } from '../../../types'
-import type {
-  UnifiedTimeRange,
-} from '../../types/timeRange'
+import type { UnifiedTimeRange } from '../../types/timeRange'
 
 // ==================== 新架构工具导入 ====================
-import {
-  createSpriteFromUnifiedMediaItem,
-} from '../../utils/UnifiedSpriteFactory'
+import { createSpriteFromUnifiedMediaItem } from '../../utils/UnifiedSpriteFactory'
 
 import { regenerateThumbnailForUnifiedTimelineItem } from '../../utils/thumbnailGenerator'
 
@@ -156,8 +148,7 @@ export class SplitTimelineItemCommand implements SimpleCommand {
     const clipStartTimeFrames = originalTimeRange.clipStartTime || 0
     const clipEndTimeFrames = originalTimeRange.clipEndTime || mediaItem.duration || 0
     const clipDurationFrames = clipEndTimeFrames - clipStartTimeFrames
-    const splitClipTimeFrames =
-      clipStartTimeFrames + Math.round(clipDurationFrames * relativeRatio)
+    const splitClipTimeFrames = clipStartTimeFrames + Math.round(clipDurationFrames * relativeRatio)
 
     firstSprite.setTimeRange({
       clipStartTime: clipStartTimeFrames,
@@ -179,7 +170,7 @@ export class SplitTimelineItemCommand implements SimpleCommand {
         | VideoMediaConfig
         | ImageMediaConfig
         | TextMediaConfig
-      
+
       // 应用到第一个sprite
       if (config.x !== undefined) firstSprite.rect.x = config.x
       if (config.y !== undefined) firstSprite.rect.y = config.y
@@ -215,7 +206,7 @@ export class SplitTimelineItemCommand implements SimpleCommand {
         : undefined,
       timelineStatus: 'ready' as TimelineItemStatus,
       runtime: {
-        sprite: markRaw(firstSprite)
+        sprite: markRaw(firstSprite),
       },
     }) as KnownTimelineItem
 
@@ -231,7 +222,7 @@ export class SplitTimelineItemCommand implements SimpleCommand {
         : undefined,
       timelineStatus: 'ready' as TimelineItemStatus,
       runtime: {
-        sprite: markRaw(secondSprite)
+        sprite: markRaw(secondSprite),
       },
     }) as KnownTimelineItem
 
@@ -304,7 +295,7 @@ export class SplitTimelineItemCommand implements SimpleCommand {
         : undefined,
       timelineStatus: 'ready' as TimelineItemStatus,
       runtime: {
-        sprite: markRaw(newSprite)
+        sprite: markRaw(newSprite),
       },
     }) as KnownTimelineItem
 

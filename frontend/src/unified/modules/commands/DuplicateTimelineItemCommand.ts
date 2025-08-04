@@ -18,11 +18,7 @@ import type {
   TimelineItemStatus,
 } from '../../timelineitem/TimelineItemData'
 
-import type {
-  UnifiedMediaItemData,
-  MediaType,
-  MediaTypeOrUnknown,
-} from '../../mediaitem/types'
+import type { UnifiedMediaItemData, MediaType, MediaTypeOrUnknown } from '../../mediaitem/types'
 
 import type {
   VideoMediaConfig,
@@ -32,9 +28,7 @@ import type {
 } from '../../../types'
 
 // ==================== 新架构工具导入 ====================
-import {
-  createSpriteFromUnifiedMediaItem,
-} from '../../utils/UnifiedSpriteFactory'
+import { createSpriteFromUnifiedMediaItem } from '../../utils/UnifiedSpriteFactory'
 
 import { regenerateThumbnailForUnifiedTimelineItem } from '../../utils/thumbnailGenerator'
 
@@ -202,7 +196,7 @@ export class DuplicateTimelineItemCommand implements SimpleCommand {
         : undefined,
       timelineStatus: 'ready' as TimelineItemStatus,
       runtime: {
-        sprite: markRaw(newSprite)
+        sprite: markRaw(newSprite),
       },
     }) as KnownTimelineItem
 
@@ -224,7 +218,9 @@ export class DuplicateTimelineItemCommand implements SimpleCommand {
     console.log('🔄 [DuplicateTimelineItemCommand] 重建未知处理时间轴项目...')
 
     // 使用统一的 cloneTimelineItem 函数
-    const newUnknownTimelineItem: UnknownTimelineItem = cloneTimelineItem(this.originalTimelineItemData)
+    const newUnknownTimelineItem: UnknownTimelineItem = cloneTimelineItem(
+      this.originalTimelineItemData,
+    )
 
     // 更新新项目的属性
     // 注意：在统一架构中，我们需要创建一个新的对象而不是修改只读属性

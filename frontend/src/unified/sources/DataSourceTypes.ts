@@ -17,9 +17,7 @@ import type { RemoteFileConfig } from './RemoteFileSource'
 /**
  * 统一数据源联合类型
  */
-export type UnifiedDataSourceData =
-  | UserSelectedFileSourceData
-  | RemoteFileSourceData
+export type UnifiedDataSourceData = UserSelectedFileSourceData | RemoteFileSourceData
 
 // ==================== 统一工厂函数 ====================
 
@@ -31,12 +29,9 @@ export const DataSourceFactory = {
     return UserSelectedFileSourceFactory.createUserSelectedSource(file)
   },
 
-  createRemoteSource(
-    remoteUrl: string,
-    config: RemoteFileConfig = {}
-  ): RemoteFileSourceData {
+  createRemoteSource(remoteUrl: string, config: RemoteFileConfig = {}): RemoteFileSourceData {
     return RemoteFileSourceFactory.createRemoteSource(remoteUrl, config)
-  }
+  },
 }
 
 // ==================== 统一查询函数 ====================
@@ -56,5 +51,5 @@ export const DataSourceQueries = {
 
   isRemoteSource(source: UnifiedDataSourceData): source is RemoteFileSourceData {
     return RemoteFileTypeGuards.isRemoteSource(source)
-  }
+  },
 }

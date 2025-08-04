@@ -5,7 +5,7 @@ import type {
   UnifiedTimelineItemData,
   createUnifiedMediaItemData,
   UnifiedMediaItemQueries,
-  UnifiedMediaItemActions
+  UnifiedMediaItemActions,
 } from '..'
 import type { UnifiedTrackData } from '../track/TrackTypes'
 
@@ -85,7 +85,7 @@ export class UnifiedProjectManager {
 
       // 按更新时间排序
       projects.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
-      
+
       return projects
     } catch (error) {
       console.error('扫描项目列表失败:', error)
@@ -96,7 +96,10 @@ export class UnifiedProjectManager {
   /**
    * 创建新项目
    */
-  async createProject(name: string, template?: Partial<UnifiedProjectConfig>): Promise<UnifiedProjectConfig> {
+  async createProject(
+    name: string,
+    template?: Partial<UnifiedProjectConfig>,
+  ): Promise<UnifiedProjectConfig> {
     const workspaceHandle = await directoryManager.getWorkspaceHandle()
     if (!workspaceHandle) {
       throw new Error('未设置工作目录')
@@ -114,25 +117,25 @@ export class UnifiedProjectManager {
       version: '1.0.0',
       thumbnail: template?.thumbnail,
       duration: template?.duration,
-      
+
       settings: template?.settings || {
         videoResolution: {
           name: '1080p',
           width: 1920,
           height: 1080,
-          aspectRatio: '16:9'
+          aspectRatio: '16:9',
         },
         frameRate: 30,
-        timelineDurationFrames: 1800
+        timelineDurationFrames: 1800,
       },
-      
+
       timeline: template?.timeline || {
         tracks: [],
         timelineItems: [],
-        mediaItems: []
+        mediaItems: [],
       },
-      
-      exports: []
+
+      exports: [],
     }
 
     try {
@@ -143,7 +146,7 @@ export class UnifiedProjectManager {
       // 创建子文件夹结构
       await projectHandle.getDirectoryHandle('media', { create: true })
       await projectHandle.getDirectoryHandle('exports', { create: true })
-      
+
       const mediaHandle = await projectHandle.getDirectoryHandle('media')
       await mediaHandle.getDirectoryHandle('videos', { create: true })
       await mediaHandle.getDirectoryHandle('images', { create: true })
@@ -196,7 +199,7 @@ export class UnifiedProjectManager {
       console.log(`✅ [Unified Settings Preload] 项目设置预加载成功:`, {
         videoResolution: projectConfig.settings.videoResolution,
         frameRate: projectConfig.settings.frameRate,
-        timelineDurationFrames: projectConfig.settings.timelineDurationFrames
+        timelineDurationFrames: projectConfig.settings.timelineDurationFrames,
       })
 
       return projectConfig.settings
@@ -221,13 +224,9 @@ export class UnifiedProjectManager {
    */
   async loadProjectWithOptions(
     projectId: string,
-    options: UnifiedLoadProjectOptions = {}
+    options: UnifiedLoadProjectOptions = {},
   ): Promise<UnifiedProjectLoadResult | null> {
-    const {
-      loadMedia = true,
-      loadTimeline = true,
-      onProgress
-    } = options
+    const { loadMedia = true, loadTimeline = true, onProgress } = options
 
     const workspaceHandle = await directoryManager.getWorkspaceHandle()
     if (!workspaceHandle) {
@@ -253,21 +252,22 @@ export class UnifiedProjectManager {
 
       let mediaItems: UnifiedMediaItemData[] | undefined
 
-      if (loadMedia && projectConfig.timeline.mediaItems && projectConfig.timeline.mediaItems.length > 0) {
+      if (
+        loadMedia &&
+        projectConfig.timeline.mediaItems &&
+        projectConfig.timeline.mediaItems.length > 0
+      ) {
         // 阶段2: 加载媒体文件 (20% -> 80%)
         onProgress?.('加载媒体文件...', 40)
 
         try {
-          mediaItems = await this.loadUnifiedMediaItems(
-            projectConfig.timeline.mediaItems,
-            {
-              onProgress: (loaded, total) => {
-                // 将媒体加载进度映射到40%-80%范围
-                const mediaProgress = 40 + (loaded / total) * 40
-                onProgress?.(`加载媒体文件 ${loaded}/${total}...`, mediaProgress)
-              }
-            }
-          )
+          mediaItems = await this.loadUnifiedMediaItems(projectConfig.timeline.mediaItems, {
+            onProgress: (loaded, total) => {
+              // 将媒体加载进度映射到40%-80%范围
+              const mediaProgress = 40 + (loaded / total) * 40
+              onProgress?.(`加载媒体文件 ${loaded}/${total}...`, mediaProgress)
+            },
+          })
 
           loadedStages.push('media')
           console.log(`✅ [Unified] 媒体文件加载完成: ${mediaItems.length}个文件`)
@@ -295,7 +295,9 @@ export class UnifiedProjectManager {
 
         onProgress?.('时间轴数据加载完成...', 95)
         loadedStages.push('timeline-loaded')
-        console.log(`✅ [Unified] 时间轴数据加载完成: ${tracks.length}个轨道, ${timelineItems.length}个项目`)
+        console.log(
+          `✅ [Unified] 时间轴数据加载完成: ${tracks.length}个轨道, ${timelineItems.length}个项目`,
+        )
       }
 
       // 阶段4: 完成加载 (95% -> 100%)
@@ -307,12 +309,12 @@ export class UnifiedProjectManager {
         mediaItems,
         timelineItems,
         tracks,
-        loadedStages
+        loadedStages,
       }
 
       console.log(`✅ [Unified] 项目加载完成: ${projectConfig.name}`, {
         stages: loadedStages,
-        mediaCount: mediaItems?.length || 0
+        mediaCount: mediaItems?.length || 0,
       })
 
       return result
@@ -332,13 +334,9 @@ export class UnifiedProjectManager {
   async loadProjectContent(
     projectId: string,
     preloadedSettings?: UnifiedProjectConfig['settings'],
-    options: UnifiedLoadProjectOptions = {}
+    options: UnifiedLoadProjectOptions = {},
   ): Promise<UnifiedProjectLoadResult | null> {
-    const {
-      loadMedia = true,
-      loadTimeline = true,
-      onProgress
-    } = options
+    const { loadMedia = true, loadTimeline = true, onProgress } = options
 
     const workspaceHandle = await directoryManager.getWorkspaceHandle()
     if (!workspaceHandle) {
@@ -368,7 +366,7 @@ export class UnifiedProjectManager {
         // 使用预加载的设置覆盖文件中的设置
         projectConfig = {
           ...fullConfig,
-          settings: preloadedSettings
+          settings: preloadedSettings,
         }
       } else {
         console.log(`📂 [Unified Content Load] 加载完整项目配置...`)
@@ -391,22 +389,25 @@ export class UnifiedProjectManager {
       // 阶段2: 加载媒体文件 (20% -> 80%)
       let mediaItems: UnifiedMediaItemData[] | undefined
 
-      if (loadMedia && projectConfig.timeline.mediaItems && projectConfig.timeline.mediaItems.length > 0) {
+      if (
+        loadMedia &&
+        projectConfig.timeline.mediaItems &&
+        projectConfig.timeline.mediaItems.length > 0
+      ) {
         onProgress?.('加载媒体文件...', 30)
 
-        console.log(`📁 [Unified Content Load] 开始加载媒体文件: ${projectConfig.timeline.mediaItems.length}个文件`)
+        console.log(
+          `📁 [Unified Content Load] 开始加载媒体文件: ${projectConfig.timeline.mediaItems.length}个文件`,
+        )
 
         try {
-          mediaItems = await this.loadUnifiedMediaItems(
-            projectConfig.timeline.mediaItems,
-            {
-              onProgress: (loaded, total) => {
-                // 将媒体加载进度映射到30%-80%范围
-                const mediaProgress = 30 + (loaded / total) * 50
-                onProgress?.(`加载媒体文件 ${loaded}/${total}...`, mediaProgress)
-              }
-            }
-          )
+          mediaItems = await this.loadUnifiedMediaItems(projectConfig.timeline.mediaItems, {
+            onProgress: (loaded, total) => {
+              // 将媒体加载进度映射到30%-80%范围
+              const mediaProgress = 30 + (loaded / total) * 50
+              onProgress?.(`加载媒体文件 ${loaded}/${total}...`, mediaProgress)
+            },
+          })
 
           loadedStages.push('media-loaded')
           console.log(`✅ [Unified Content Load] 媒体文件加载完成: ${mediaItems.length}个文件`)
@@ -432,7 +433,9 @@ export class UnifiedProjectManager {
 
         onProgress?.('时间轴数据加载完成...', 95)
         loadedStages.push('timeline-loaded')
-        console.log(`✅ [Unified Content Load] 时间轴数据加载完成: ${tracks.length}个轨道, ${timelineItems.length}个项目`)
+        console.log(
+          `✅ [Unified Content Load] 时间轴数据加载完成: ${tracks.length}个轨道, ${timelineItems.length}个项目`,
+        )
       }
 
       // 阶段4: 完成加载 (95% -> 100%)
@@ -444,14 +447,14 @@ export class UnifiedProjectManager {
         mediaItems,
         timelineItems,
         tracks,
-        loadedStages
+        loadedStages,
       }
 
       console.log(`✅ [Unified Content Load] 项目内容加载完成: ${projectConfig.name}`, {
         loadedStages,
         mediaItemsCount: mediaItems?.length || 0,
         timelineItemsCount: timelineItems?.length || 0,
-        tracksCount: tracks?.length || 0
+        tracksCount: tracks?.length || 0,
       })
 
       return result
@@ -514,7 +517,7 @@ export class UnifiedProjectManager {
     mediaItemsData: UnifiedMediaItemData[],
     options: {
       onProgress?: (loaded: number, total: number) => void
-    } = {}
+    } = {},
   ): Promise<UnifiedMediaItemData[]> {
     const { onProgress } = options
     const loadedItems: UnifiedMediaItemData[] = []
@@ -546,7 +549,9 @@ export class UnifiedProjectManager {
   /**
    * 获取或创建projects文件夹
    */
-  private async getOrCreateProjectsFolder(workspaceHandle: FileSystemDirectoryHandle): Promise<FileSystemDirectoryHandle> {
+  private async getOrCreateProjectsFolder(
+    workspaceHandle: FileSystemDirectoryHandle,
+  ): Promise<FileSystemDirectoryHandle> {
     try {
       return await workspaceHandle.getDirectoryHandle(this.PROJECTS_FOLDER)
     } catch (error) {
@@ -558,7 +563,9 @@ export class UnifiedProjectManager {
   /**
    * 从项目文件夹加载配置
    */
-  private async loadProjectConfig(projectHandle: FileSystemDirectoryHandle): Promise<UnifiedProjectConfig | null> {
+  private async loadProjectConfig(
+    projectHandle: FileSystemDirectoryHandle,
+  ): Promise<UnifiedProjectConfig | null> {
     try {
       const configFileHandle = await projectHandle.getFileHandle('project.json')
       const configFile = await configFileHandle.getFile()
@@ -574,7 +581,10 @@ export class UnifiedProjectManager {
   /**
    * 保存项目配置到文件
    */
-  private async saveProjectConfig(projectHandle: FileSystemDirectoryHandle, config: UnifiedProjectConfig): Promise<void> {
+  private async saveProjectConfig(
+    projectHandle: FileSystemDirectoryHandle,
+    config: UnifiedProjectConfig,
+  ): Promise<void> {
     const configFileHandle = await projectHandle.getFileHandle('project.json', { create: true })
     const writable = await configFileHandle.createWritable()
 

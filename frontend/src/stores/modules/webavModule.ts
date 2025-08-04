@@ -6,11 +6,7 @@ import { VideoVisibleSprite } from '../../utils/VideoVisibleSprite'
 import { ImageVisibleSprite } from '../../utils/ImageVisibleSprite'
 import type { VideoTimeRange, ImageTimeRange, PlayOptions, CanvasBackup } from '../../types'
 import { isLocalTimelineItem } from '../../types'
-import {
-  framesToMicroseconds,
-  microsecondsToFrames,
-  framesToTimecode,
-} from '../utils/timeUtils'
+import { framesToMicroseconds, microsecondsToFrames, framesToTimecode } from '../utils/timeUtils'
 import {
   logWebAVInitStart,
   logWebAVInitStep,
@@ -166,8 +162,8 @@ export function createWebAVModule() {
       isAvailable: isWebAVAvailable(),
       canvasInfo: avCanvas.value
         ? {
-            width: ('width' in avCanvas.value) ? avCanvas.value.width : 'unknown',
-            height: ('height' in avCanvas.value) ? avCanvas.value.height : 'unknown',
+            width: 'width' in avCanvas.value ? avCanvas.value.width : 'unknown',
+            height: 'height' in avCanvas.value ? avCanvas.value.height : 'unknown',
             constructor: avCanvas.value.constructor.name,
           }
         : null,
@@ -426,7 +422,11 @@ export function createWebAVModule() {
    * @param endFrames 结束帧数，如果未提供则使用总时长作为结束时间
    * @param playbackRate 播放速度倍率
    */
-  async function play(startFrames?: number, endFrames?: number, playbackRate?: number): Promise<void> {
+  async function play(
+    startFrames?: number,
+    endFrames?: number,
+    playbackRate?: number,
+  ): Promise<void> {
     if (!globalAVCanvas) return
 
     const videoStore = await getVideoStore()
@@ -533,10 +533,12 @@ export function createWebAVModule() {
 
       // 创建ImgClip
       const response = new Response(file)
-      const imgClip = markRaw(new ImgClip({
-        type: file.type as any,
-        stream: response.body!,
-      }))
+      const imgClip = markRaw(
+        new ImgClip({
+          type: file.type as any,
+          stream: response.body!,
+        }),
+      )
 
       // 等待ImgClip准备完成
       await imgClip.ready
@@ -696,7 +698,7 @@ export function createWebAVModule() {
             resolve() // 完成Promise
           }
         },
-        { immediate: true } // 立即执行一次，以防在watch设置前状态已经变为true
+        { immediate: true }, // 立即执行一次，以防在watch设置前状态已经变为true
       )
     })
   }
@@ -828,7 +830,10 @@ export function createWebAVModule() {
 
               // 类型安全的配置访问
               if (!hasVisualPropsData(itemData)) {
-                console.warn('🎨 [WebAV Module] Item does not have visual properties:', itemData.mediaType)
+                console.warn(
+                  '🎨 [WebAV Module] Item does not have visual properties:',
+                  itemData.mediaType,
+                )
                 continue
               }
 
@@ -854,7 +859,8 @@ export function createWebAVModule() {
               newSprite.rect.w = config.width
               newSprite.rect.h = config.height
               newSprite.rect.angle = (config as any).angle || 0
-              newSprite.opacity = (config as any).opacity !== undefined ? (config as any).opacity : 1
+              newSprite.opacity =
+                (config as any).opacity !== undefined ? (config as any).opacity : 1
               newSprite.zIndex = (config as any).zIndex || 0
 
               logSpriteRestore(itemData.id, 'Transform properties restored')
@@ -885,7 +891,9 @@ export function createWebAVModule() {
           }
         }
 
-        console.log(`✅ Canvas recreation completed: ${restoredCount}/${backup.timelineItems.length} items restored`)
+        console.log(
+          `✅ Canvas recreation completed: ${restoredCount}/${backup.timelineItems.length} items restored`,
+        )
       }
 
       const recreateTime = recreateTimer.end()

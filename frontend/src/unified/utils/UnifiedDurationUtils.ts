@@ -13,9 +13,7 @@ import { secondsToFrames } from './UnifiedTimeUtils'
  * @param timelineItems 统一时间轴项目数组
  * @returns 内容结束时间（帧数）
  */
-export function calculateContentEndTimeFrames(
-  timelineItems: UnifiedTimelineItemData[],
-): number {
+export function calculateContentEndTimeFrames(timelineItems: UnifiedTimelineItemData[]): number {
   if (timelineItems.length === 0) return 0
   return Math.max(
     ...timelineItems.map((item) => {

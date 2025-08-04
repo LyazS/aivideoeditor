@@ -32,7 +32,7 @@ import { TextVisibleSprite } from '../visiblesprite/TextVisibleSprite'
  */
 export function createSpriteForTimelineItem(
   mediaData: UnifiedMediaItemData,
-  timelineData: UnifiedTimelineItemData
+  timelineData: UnifiedTimelineItemData,
 ): Raw<UnifiedSprite> {
   const { mediaType, webav } = mediaData
 
@@ -76,7 +76,7 @@ export function createSpriteForTimelineItem(
  */
 function setupSpriteProperties(
   sprite: Raw<UnifiedSprite>,
-  timelineData: UnifiedTimelineItemData
+  timelineData: UnifiedTimelineItemData,
 ): void {
   // 设置时间范围
   updateSpriteTimeRange(sprite, timelineData.timeRange)
@@ -90,7 +90,7 @@ function setupSpriteProperties(
       y: config.y,
       width: config.width,
       height: config.height,
-      rotation: config.rotation
+      rotation: config.rotation,
     })
 
     // 设置透明度
@@ -105,7 +105,7 @@ function setupSpriteProperties(
  */
 export function updateSpriteTimeRange(
   sprite: Raw<UnifiedSprite>,
-  timeRange: UnifiedTimeRange
+  timeRange: UnifiedTimeRange,
 ): void {
   // 根据Sprite类型调用相应的时间设置方法
   if (sprite instanceof VideoVisibleSprite) {
@@ -138,10 +138,7 @@ export function updateSpriteTimeRange(
  * @param sprite Sprite实例
  * @param transform 变换数据
  */
-export function updateSpriteTransform(
-  sprite: Raw<UnifiedSprite>,
-  transform: TransformData
-): void {
+export function updateSpriteTransform(sprite: Raw<UnifiedSprite>, transform: TransformData): void {
   // 直接设置rect属性
   if (transform.x !== undefined) sprite.rect.x = transform.x
   if (transform.y !== undefined) sprite.rect.y = transform.y
@@ -155,10 +152,7 @@ export function updateSpriteTransform(
  * @param sprite Sprite实例
  * @param opacity 透明度值 (0-1)
  */
-export function updateSpriteOpacity(
-  sprite: Raw<UnifiedSprite>,
-  opacity: number
-): void {
+export function updateSpriteOpacity(sprite: Raw<UnifiedSprite>, opacity: number): void {
   sprite.opacity = opacity
 }
 
@@ -173,7 +167,7 @@ export function updateSpriteProperties(
     timeRange: UnifiedTimeRange
     transform: TransformData
     opacity: number
-  }>
+  }>,
 ): void {
   try {
     // 更新时间范围
@@ -205,7 +199,7 @@ export function updateSpriteProperties(
  */
 export async function addSpriteToCanvas(
   sprite: Raw<UnifiedSprite>,
-  avCanvas: Raw<AVCanvas>
+  avCanvas: Raw<AVCanvas>,
 ): Promise<void> {
   await avCanvas.addSprite(sprite)
   console.log('✅ Sprite 已添加到 AVCanvas')
@@ -216,10 +210,7 @@ export async function addSpriteToCanvas(
  * @param sprite Sprite实例
  * @param avCanvas AVCanvas实例
  */
-export function removeSpriteFromCanvas(
-  sprite: Raw<UnifiedSprite>,
-  avCanvas: Raw<AVCanvas>
-): void {
+export function removeSpriteFromCanvas(sprite: Raw<UnifiedSprite>, avCanvas: Raw<AVCanvas>): void {
   avCanvas.removeSprite(sprite)
   console.log('🗑️ Sprite 已从 AVCanvas 移除')
 }
@@ -235,25 +226,25 @@ export function removeSpriteFromCanvas(
 export async function createSpriteForTimelineData(
   timelineData: UnifiedTimelineItemData,
   mediaData: UnifiedMediaItemData,
-  avCanvas: Raw<AVCanvas>
+  avCanvas: Raw<AVCanvas>,
 ): Promise<void> {
   // 如果已有Sprite，先清理
   if (timelineData.runtime.sprite) {
     await destroySpriteForTimelineData(timelineData, avCanvas)
   }
-  
+
   // 创建新的Sprite
   const sprite = createSpriteForTimelineItem(mediaData, timelineData)
-  
+
   // 添加到AVCanvas
   await addSpriteToCanvas(sprite, avCanvas)
-  
+
   // 设置引用
   if (!timelineData.runtime) {
     timelineData.runtime = {}
   }
   timelineData.runtime.sprite = sprite
-  
+
   console.log(`✅ 为时间轴项目 ${timelineData.id} 创建了Sprite`)
 }
 
@@ -264,7 +255,7 @@ export async function createSpriteForTimelineData(
  */
 export async function destroySpriteForTimelineData(
   timelineData: UnifiedTimelineItemData,
-  avCanvas: Raw<AVCanvas>
+  avCanvas: Raw<AVCanvas>,
 ): Promise<void> {
   if (!timelineData.runtime.sprite) return
 
@@ -273,7 +264,7 @@ export async function destroySpriteForTimelineData(
 
   // 清除引用
   timelineData.runtime.sprite = undefined
-  
+
   console.log(`🗑️ 销毁了时间轴项目 ${timelineData.id} 的Sprite`)
 }
 
@@ -288,13 +279,13 @@ export async function updateSpriteForTimelineData(
     timeRange: UnifiedTimeRange
     transform: TransformData
     opacity: number
-  }>
+  }>,
 ): Promise<void> {
   if (!timelineData.runtime.sprite) return
 
   // 更新属性
   updateSpriteProperties(timelineData.runtime.sprite, updates)
-  
+
   console.log(`✅ 更新了时间轴项目 ${timelineData.id} 的Sprite属性`)
 }
 
@@ -325,7 +316,7 @@ export function getSprite(timelineData: UnifiedTimelineItemData) {
 export async function createSpritesForTimelineItems(
   timelineItems: UnifiedTimelineItemData[],
   getMediaData: (mediaItemId: string) => UnifiedMediaItemData | undefined,
-  avCanvas: Raw<AVCanvas>
+  avCanvas: Raw<AVCanvas>,
 ): Promise<void> {
   for (const timelineItem of timelineItems) {
     const mediaData = getMediaData(timelineItem.mediaItemId)
@@ -346,7 +337,7 @@ export async function createSpritesForTimelineItems(
  */
 export async function destroySpritesForTimelineItems(
   timelineItems: UnifiedTimelineItemData[],
-  avCanvas: Raw<AVCanvas>
+  avCanvas: Raw<AVCanvas>,
 ): Promise<void> {
   for (const timelineItem of timelineItems) {
     try {
@@ -361,16 +352,14 @@ export async function destroySpritesForTimelineItems(
  * 同步时间轴项目配置到Sprite
  * @param timelineData 时间轴项目数据
  */
-export async function syncConfigToSprite(
-  timelineData: UnifiedTimelineItemData
-): Promise<void> {
+export async function syncConfigToSprite(timelineData: UnifiedTimelineItemData): Promise<void> {
   if (!timelineData.runtime.sprite) return
-  
+
   const updates: Parameters<typeof updateSpriteForTimelineData>[1] = {}
-  
+
   // 同步时间范围
   updates.timeRange = timelineData.timeRange
-  
+
   // 同步变换属性（使用类型守卫）
   if (hasVisualProperties(timelineData)) {
     // 类型守卫确保了timelineData.config具有视觉属性
@@ -380,12 +369,12 @@ export async function syncConfigToSprite(
       y: config.y,
       width: config.width,
       height: config.height,
-      rotation: config.rotation
+      rotation: config.rotation,
     }
 
     // 同步透明度
     updates.opacity = config.opacity
   }
-  
+
   await updateSpriteForTimelineData(timelineData, updates)
 }

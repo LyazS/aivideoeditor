@@ -2,14 +2,9 @@ import { generateCommandId } from '../../../utils/idGenerator'
 import type { SimpleCommand } from './types'
 
 // 类型导入
-import type {
-  UnifiedTimelineItemData,
-} from '../../timelineitem/TimelineItemData'
+import type { UnifiedTimelineItemData } from '../../timelineitem/TimelineItemData'
 
-import type {
-  UnifiedMediaItemData,
-  MediaTypeOrUnknown,
-} from '../../mediaitem/types'
+import type { UnifiedMediaItemData, MediaTypeOrUnknown } from '../../mediaitem/types'
 
 /**
  * 选择时间轴项目命令

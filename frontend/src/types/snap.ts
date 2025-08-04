@@ -50,10 +50,10 @@ export interface TimelineStartSnapPoint extends BaseSnapPoint {
 /**
  * 所有吸附点类型的联合类型
  */
-export type SnapPoint = 
-  | ClipBoundarySnapPoint 
-  | KeyframeSnapPoint 
-  | PlayheadSnapPoint 
+export type SnapPoint =
+  | ClipBoundarySnapPoint
+  | KeyframeSnapPoint
+  | PlayheadSnapPoint
   | TimelineStartSnapPoint
 
 /**
@@ -62,16 +62,16 @@ export type SnapPoint =
 export interface SnapConfig {
   // 全局吸附开关
   enabled: boolean
-  
+
   // 分类型开关
-  clipBoundaries: boolean    // 片段边界吸附
-  keyframes: boolean         // 关键帧吸附
-  playhead: boolean          // 播放头吸附
-  timelineStart: boolean     // 时间轴起始位置吸附
-  
+  clipBoundaries: boolean // 片段边界吸附
+  keyframes: boolean // 关键帧吸附
+  playhead: boolean // 播放头吸附
+  timelineStart: boolean // 时间轴起始位置吸附
+
   // 吸附参数
-  threshold: number          // 吸附阈值（像素）
-  visualFeedback: boolean    // 可视化反馈开关
+  threshold: number // 吸附阈值（像素）
+  visualFeedback: boolean // 可视化反馈开关
 }
 
 /**
@@ -80,13 +80,13 @@ export interface SnapConfig {
 export interface SnapResult {
   // 是否发生了吸附
   snapped: boolean
-  
+
   // 吸附后的帧数
   frame: number
-  
+
   // 吸附点信息（如果发生了吸附）
   snapPoint?: SnapPoint
-  
+
   // 吸附距离（帧数）
   distance?: number
 }
@@ -111,19 +111,19 @@ export interface SnapCalculationOptions {
 export interface SnapPointCollectionOptions {
   // 是否包含片段边界点
   includeClipBoundaries?: boolean
-  
+
   // 是否包含关键帧点
   includeKeyframes?: boolean
-  
+
   // 是否包含播放头位置
   includePlayhead?: boolean
-  
+
   // 是否包含时间轴起始位置
   includeTimelineStart?: boolean
-  
+
   // 排除的片段ID列表
   excludeClipIds?: string[]
-  
+
   // 帧数范围限制（只收集此范围内的吸附点）
   frameRange?: {
     start: number

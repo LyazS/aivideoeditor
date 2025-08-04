@@ -20,7 +20,7 @@ import type {
   UnknownMediaItem,
   KnownMediaItem,
   VisualMediaItem,
-  AudioCapableMediaItem
+  AudioCapableMediaItem,
 } from './types'
 
 // ==================== 查询函数模块 ====================
@@ -39,8 +39,7 @@ export const UnifiedMediaItemQueries = {
   },
 
   isProcessing(item: UnifiedMediaItemData): item is ProcessingMediaItem {
-    return item.mediaStatus === 'asyncprocessing' ||
-           item.mediaStatus === 'webavdecoding'
+    return item.mediaStatus === 'asyncprocessing' || item.mediaStatus === 'webavdecoding'
   },
 
   hasError(item: UnifiedMediaItemData): item is ErrorMediaItem & { mediaStatus: 'error' } {
@@ -48,14 +47,15 @@ export const UnifiedMediaItemQueries = {
   },
 
   hasAnyError(item: UnifiedMediaItemData): item is ErrorMediaItem {
-    return item.mediaStatus === 'error' ||
-           item.mediaStatus === 'cancelled' ||
-           item.mediaStatus === 'missing'
+    return (
+      item.mediaStatus === 'error' ||
+      item.mediaStatus === 'cancelled' ||
+      item.mediaStatus === 'missing'
+    )
   },
 
   isParsing(item: UnifiedMediaItemData): boolean {
-    return UnifiedMediaItemQueries.isPending(item) ||
-           UnifiedMediaItemQueries.isProcessing(item)
+    return UnifiedMediaItemQueries.isPending(item) || UnifiedMediaItemQueries.isProcessing(item)
   },
 
   // 状态转换验证
@@ -104,7 +104,7 @@ export const UnifiedMediaItemQueries = {
     if (item.webav?.originalWidth && item.webav?.originalHeight) {
       return {
         width: item.webav.originalWidth,
-        height: item.webav.originalHeight
+        height: item.webav.originalHeight,
       }
     }
     return undefined
@@ -142,7 +142,7 @@ export const UnifiedMediaItemQueries = {
 
   hasKnownType(item: UnifiedMediaItemData): item is KnownMediaItem {
     return item.mediaType !== 'unknown'
-  }
+  },
 }
 
 // ==================== 行为函数模块 ====================
@@ -152,11 +152,7 @@ export const UnifiedMediaItemQueries = {
  */
 export const UnifiedMediaItemActions = {
   // 状态转换
-  transitionTo(
-    item: UnifiedMediaItemData,
-    newStatus: MediaStatus,
-    context?: any
-  ): boolean {
+  transitionTo(item: UnifiedMediaItemData, newStatus: MediaStatus, context?: any): boolean {
     if (!UnifiedMediaItemQueries.canTransitionTo(item, newStatus)) {
       console.warn(`无效状态转换: ${item.mediaStatus} → ${newStatus}`)
       return false
@@ -215,5 +211,5 @@ export const UnifiedMediaItemActions = {
         item.source.status = 'cancelled'
       }
     }
-  }
+  },
 }

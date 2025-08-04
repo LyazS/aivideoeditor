@@ -67,17 +67,14 @@ export class TextVisibleSprite extends BaseVisibleSprite {
     this.#textStyle = style
 
     // 初始化防抖更新函数
-    this.#debouncedUpdate = debounce(
-      () => this.#performUpdate(),
-      TextVisibleSprite.DEBOUNCE_DELAY
-    )
+    this.#debouncedUpdate = debounce(() => this.#performUpdate(), TextVisibleSprite.DEBOUNCE_DELAY)
 
     // 初始化时间设置
     this.#updateVisibleSpriteTime()
 
     console.log('✅ [TextVisibleSprite] 文本精灵创建完成:', {
       text: text.substring(0, 20) + (text.length > 20 ? '...' : ''),
-      style: style
+      style: style,
     })
   }
 
@@ -89,7 +86,7 @@ export class TextVisibleSprite extends BaseVisibleSprite {
    */
   static async create(
     text: string = '示例文本',
-    style: Partial<TextStyleConfig> = {}
+    style: Partial<TextStyleConfig> = {},
   ): Promise<TextVisibleSprite> {
     try {
       console.log('🎨 [TextVisibleSprite] 开始创建文本精灵:', { text, style })
@@ -125,7 +122,7 @@ export class TextVisibleSprite extends BaseVisibleSprite {
 
     console.log('📝 [TextVisibleSprite] 更新文本内容:', {
       old: this.#text.substring(0, 20) + '...',
-      new: text.substring(0, 20) + '...'
+      new: text.substring(0, 20) + '...',
     })
 
     this.#text = text
@@ -138,7 +135,7 @@ export class TextVisibleSprite extends BaseVisibleSprite {
    */
   async updateStyle(style: Partial<TextStyleConfig>): Promise<void> {
     const newStyle = TextHelper.validateTextStyle({ ...this.#textStyle, ...style })
-    
+
     // 检查样式是否真的有变化
     if (JSON.stringify(this.#textStyle) === JSON.stringify(newStyle)) {
       console.log('🎨 [TextVisibleSprite] 文本样式未变化，跳过更新')
@@ -158,11 +155,11 @@ export class TextVisibleSprite extends BaseVisibleSprite {
    */
   async updateTextAndStyle(text: string, style: Partial<TextStyleConfig>): Promise<void> {
     const newStyle = TextHelper.validateTextStyle({ ...this.#textStyle, ...style })
-    
+
     // 检查是否有变化
     const textChanged = this.#text !== text
     const styleChanged = JSON.stringify(this.#textStyle) !== JSON.stringify(newStyle)
-    
+
     if (!textChanged && !styleChanged) {
       console.log('📝🎨 [TextVisibleSprite] 文本和样式均未变化，跳过更新')
       return
@@ -172,7 +169,7 @@ export class TextVisibleSprite extends BaseVisibleSprite {
       textChanged,
       styleChanged,
       text: text.substring(0, 20) + '...',
-      style: newStyle
+      style: newStyle,
     })
 
     this.#text = text
@@ -342,12 +339,11 @@ export class TextVisibleSprite extends BaseVisibleSprite {
         textUpdate: {
           text: this.#text,
           style: this.#textStyle,
-          needsRecreation: true
-        }
+          needsRecreation: true,
+        },
       })
 
       console.log('📢 [TextVisibleSprite] 文本更新事件已触发，等待外部重新创建精灵')
-
     } catch (error) {
       console.error('❌ [TextVisibleSprite] 文本更新失败:', error)
       throw error
@@ -396,11 +392,11 @@ export class TextVisibleSprite extends BaseVisibleSprite {
         y: this.rect.y,
         w: this.rect.w,
         h: this.rect.h,
-        angle: this.rect.angle
+        angle: this.rect.angle,
       },
       opacity: this.getOpacityValue(),
       zIndex: this.zIndex,
-      timeRange: { ...this.#timeRange }
+      timeRange: { ...this.#timeRange },
     }
   }
 

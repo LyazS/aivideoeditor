@@ -2,42 +2,61 @@
   <Transition name="loading-fade" appear>
     <div v-if="visible" class="loading-overlay">
       <div class="loading-content">
-      <!-- 加载图标 -->
-      <div class="loading-icon">
-        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" class="loading-spinner">
-          <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-dasharray="31.416" stroke-dashoffset="31.416">
-            <animate attributeName="stroke-dasharray" dur="2s" values="0 31.416;15.708 15.708;0 31.416" repeatCount="indefinite"/>
-            <animate attributeName="stroke-dashoffset" dur="2s" values="0;-15.708;-31.416" repeatCount="indefinite"/>
-          </circle>
-        </svg>
-      </div>
-
-      <!-- 加载标题 -->
-      <h2 class="loading-title">正在加载项目</h2>
-
-      <!-- 当前阶段 -->
-      <p class="loading-stage">{{ currentStage }}</p>
-
-      <!-- 进度条 -->
-      <div class="progress-container">
-        <div class="progress-bar">
-          <div
-            class="progress-fill"
-            :style="{ width: Math.max(0, Math.min(100, progress || 0)) + '%' }"
-          ></div>
+        <!-- 加载图标 -->
+        <div class="loading-icon">
+          <svg width="64" height="64" viewBox="0 0 24 24" fill="none" class="loading-spinner">
+            <circle
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-dasharray="31.416"
+              stroke-dashoffset="31.416"
+            >
+              <animate
+                attributeName="stroke-dasharray"
+                dur="2s"
+                values="0 31.416;15.708 15.708;0 31.416"
+                repeatCount="indefinite"
+              />
+              <animate
+                attributeName="stroke-dashoffset"
+                dur="2s"
+                values="0;-15.708;-31.416"
+                repeatCount="indefinite"
+              />
+            </circle>
+          </svg>
         </div>
-        <span class="progress-text">{{ Math.round(progress || 0) }}%</span>
-      </div>
 
-      <!-- 详细信息 -->
-      <div class="loading-details" v-if="details">
-        <p class="details-text">{{ details }}</p>
-      </div>
+        <!-- 加载标题 -->
+        <h2 class="loading-title">正在加载项目</h2>
 
-      <!-- 提示信息 -->
-      <div class="loading-tips">
-        <p class="tip-text">请稍候，正在为您准备编辑环境...</p>
-      </div>
+        <!-- 当前阶段 -->
+        <p class="loading-stage">{{ currentStage }}</p>
+
+        <!-- 进度条 -->
+        <div class="progress-container">
+          <div class="progress-bar">
+            <div
+              class="progress-fill"
+              :style="{ width: Math.max(0, Math.min(100, progress || 0)) + '%' }"
+            ></div>
+          </div>
+          <span class="progress-text">{{ Math.round(progress || 0) }}%</span>
+        </div>
+
+        <!-- 详细信息 -->
+        <div class="loading-details" v-if="details">
+          <p class="details-text">{{ details }}</p>
+        </div>
+
+        <!-- 提示信息 -->
+        <div class="loading-tips">
+          <p class="tip-text">请稍候，正在为您准备编辑环境...</p>
+        </div>
       </div>
     </div>
   </Transition>
@@ -62,15 +81,13 @@ const props = withDefaults(defineProps<Props>(), {
   visible: false,
   stage: '准备中...',
   progress: 0,
-  details: ''
+  details: '',
 })
 
 // 计算属性
 const currentStage = computed(() => {
   return props.stage || '准备中...'
 })
-
-
 </script>
 
 <style scoped>
@@ -154,7 +171,8 @@ const currentStage = computed(() => {
 
 .progress-fill {
   height: 100%;
-  background: linear-gradient(90deg,
+  background: linear-gradient(
+    90deg,
     var(--color-accent-primary, #4caf50),
     var(--color-accent-secondary, #2196f3)
   );
@@ -250,7 +268,7 @@ const currentStage = computed(() => {
   .loading-overlay {
     background: rgba(0, 0, 0, 0.98);
   }
-  
+
   .progress-bar {
     border: 1px solid var(--color-border-primary);
   }
@@ -262,7 +280,7 @@ const currentStage = computed(() => {
   .progress-fill {
     animation: none;
   }
-  
+
   .loading-overlay {
     animation: none;
   }

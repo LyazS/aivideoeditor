@@ -1,5 +1,16 @@
-import type { LocalMediaItem, LocalTimelineItem, AsyncProcessingMediaItem, AsyncProcessingTimelineItem } from '../../types'
-import { requiresMediaItem, isLocalMediaItem, isAsyncProcessingMediaItem, isLocalTimelineItem, isAsyncProcessingTimelineItem } from '../../types'
+import type {
+  LocalMediaItem,
+  LocalTimelineItem,
+  AsyncProcessingMediaItem,
+  AsyncProcessingTimelineItem,
+} from '../../types'
+import {
+  requiresMediaItem,
+  isLocalMediaItem,
+  isAsyncProcessingMediaItem,
+  isLocalTimelineItem,
+  isAsyncProcessingTimelineItem,
+} from '../../types'
 import { framesToTimecode } from './timeUtils'
 
 // ==================== 调试开关 ====================
@@ -70,7 +81,7 @@ export function printDebugInfo(
           type: item.type,
           mediaType: item.mediaType,
           hasMP4Clip: !!item.mp4Clip,
-          status: 'local'
+          status: 'local',
         }
       } else if (isAsyncProcessingMediaItem(item)) {
         // 异步处理媒体项目
@@ -81,7 +92,7 @@ export function printDebugInfo(
           type: item.processingType,
           mediaType: item.mediaType,
           hasMP4Clip: false,
-          status: `${item.processingStatus} (${item.processingProgress}%)`
+          status: `${item.processingStatus} (${item.processingProgress}%)`,
         }
       } else {
         // 未知类型（理论上不应该到达这里）
@@ -92,7 +103,7 @@ export function printDebugInfo(
           type: 'unknown',
           mediaType: 'unknown',
           hasMP4Clip: false,
-          status: 'unknown'
+          status: 'unknown',
         }
       }
     }),
@@ -110,12 +121,12 @@ export function printDebugInfo(
           mediaType: item.mediaType,
           position: framesToTimecode(item.timeRange.timelineStartTime),
           hasSprite: !!item.sprite,
-          type: 'local'
+          type: 'local',
         }
       } else if (isAsyncProcessingTimelineItem(item)) {
         // 异步处理时间轴项目 - 从对应的素材项目获取状态
-        const asyncMediaItem = mediaItems.find(media =>
-          isAsyncProcessingMediaItem(media) && media.id === item.mediaItemId
+        const asyncMediaItem = mediaItems.find(
+          (media) => isAsyncProcessingMediaItem(media) && media.id === item.mediaItemId,
         ) as AsyncProcessingMediaItem | undefined
 
         return {
@@ -126,7 +137,9 @@ export function printDebugInfo(
           position: framesToTimecode(item.timeRange.timelineStartTime),
           hasSprite: !!item.sprite,
           type: `async-${asyncMediaItem?.processingType || 'unknown'}`,
-          status: asyncMediaItem ? `${asyncMediaItem.processingStatus} (${asyncMediaItem.processingProgress}%)` : 'unknown'
+          status: asyncMediaItem
+            ? `${asyncMediaItem.processingStatus} (${asyncMediaItem.processingProgress}%)`
+            : 'unknown',
         }
       } else {
         // 未知类型（理论上不应该到达这里）
@@ -137,7 +150,7 @@ export function printDebugInfo(
           mediaType: 'unknown',
           position: 'unknown',
           hasSprite: false,
-          type: 'unknown'
+          type: 'unknown',
         }
       }
     }),
@@ -149,8 +162,12 @@ export function printDebugInfo(
   const localTimelineCount = timelineItems.filter(isLocalTimelineItem).length
   const asyncTimelineCount = timelineItems.filter(isAsyncProcessingTimelineItem).length
 
-  console.log(`- 素材库项目数: ${mediaItems.length} (本地: ${localMediaCount}, 异步处理: ${asyncMediaCount})`)
-  console.log(`- 时间轴项目数: ${timelineItems.length} (本地: ${localTimelineCount}, 异步处理: ${asyncTimelineCount})`)
+  console.log(
+    `- 素材库项目数: ${mediaItems.length} (本地: ${localMediaCount}, 异步处理: ${asyncMediaCount})`,
+  )
+  console.log(
+    `- 时间轴项目数: ${timelineItems.length} (本地: ${localTimelineCount}, 异步处理: ${asyncTimelineCount})`,
+  )
   console.log(`- 轨道数: ${tracks.length}`)
 
   // 检查引用关系（只检查需要素材库项目的媒体类型）

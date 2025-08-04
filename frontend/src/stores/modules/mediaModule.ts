@@ -204,7 +204,7 @@ export function createMediaModule() {
   function removeAsyncProcessingItem(
     itemId: string,
     timelineItems?: Ref<(LocalTimelineItem | AsyncProcessingTimelineItem)[]>,
-    removeTimelineItemCallback?: (timelineItemId: string) => void
+    removeTimelineItemCallback?: (timelineItemId: string) => void,
   ) {
     const index = asyncProcessingItems.value.findIndex((item) => item.id === itemId)
     if (index !== -1) {
@@ -213,7 +213,7 @@ export function createMediaModule() {
       // 如果提供了时间轴项目引用，清理相关的异步处理时间轴项目
       if (timelineItems && removeTimelineItemCallback) {
         const relatedTimelineItems = timelineItems.value.filter(
-          (timelineItem) => timelineItem.mediaItemId === itemId
+          (timelineItem) => timelineItem.mediaItemId === itemId,
         )
 
         // 删除相关的时间轴项目
@@ -334,7 +334,7 @@ export function createMediaModule() {
           }
           // 如果是 'parsing' 状态，继续等待
         },
-        { immediate: true } // 立即执行一次，检查当前状态
+        { immediate: true }, // 立即执行一次，检查当前状态
       )
     })
   }

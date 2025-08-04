@@ -113,7 +113,7 @@ export class UnifiedSnapCalculator {
       if (excludeClipIds.includes(item.id)) {
         continue
       }
-      
+
       // 跳过异步处理中的时间轴项目
       if (isUnknownTimelineItem(item)) continue
 

@@ -164,13 +164,15 @@ export function smartExpandTimelineIfNeeded(
     const currentDuration = timelineDurationFrames.value
     const expansionRatio = Math.min(
       Math.max(targetFrames / currentDuration, minExpansionRatio),
-      maxExpansionRatio
+      maxExpansionRatio,
     )
-    
+
     const newDuration = Math.ceil(currentDuration * expansionRatio)
     timelineDurationFrames.value = newDuration
-    
-    console.log(`📏 [UnifiedTimeUtils] 智能扩展时间轴: ${currentDuration} → ${newDuration} 帧 (比例: ${expansionRatio.toFixed(2)})`)
+
+    console.log(
+      `📏 [UnifiedTimeUtils] 智能扩展时间轴: ${currentDuration} → ${newDuration} 帧 (比例: ${expansionRatio.toFixed(2)})`,
+    )
     return true
   }
   return false
@@ -189,13 +191,15 @@ export function batchExpandTimelineIfNeeded(
   expansionRatio: number = 1.5,
 ): boolean {
   const maxTargetFrames = Math.max(...targetFramesList)
-  
+
   if (maxTargetFrames > timelineDurationFrames.value) {
     const newDuration = Math.ceil(maxTargetFrames * expansionRatio)
     const oldDuration = timelineDurationFrames.value
     timelineDurationFrames.value = newDuration
-    
-    console.log(`📏 [UnifiedTimeUtils] 批量扩展时间轴: ${oldDuration} → ${newDuration} 帧 (适应 ${targetFramesList.length} 个目标)`)
+
+    console.log(
+      `📏 [UnifiedTimeUtils] 批量扩展时间轴: ${oldDuration} → ${newDuration} 帧 (适应 ${targetFramesList.length} 个目标)`,
+    )
     return true
   }
   return false
@@ -218,12 +222,14 @@ export function predictiveExpandTimeline(
 ): boolean {
   const currentDuration = timelineDurationFrames.value
   const usageRatio = currentUsedFrames / currentDuration
-  
+
   if (usageRatio > usageThreshold) {
     const newDuration = Math.ceil(currentDuration * expansionRatio)
     timelineDurationFrames.value = newDuration
-    
-    console.log(`📏 [UnifiedTimeUtils] 预测性扩展时间轴: ${currentDuration} → ${newDuration} 帧 (使用率: ${(usageRatio * 100).toFixed(1)}%)`)
+
+    console.log(
+      `📏 [UnifiedTimeUtils] 预测性扩展时间轴: ${currentDuration} → ${newDuration} 帧 (使用率: ${(usageRatio * 100).toFixed(1)}%)`,
+    )
     return true
   }
   return false
@@ -251,7 +257,7 @@ export function getTimelineExpansionSuggestion(
       needsExpansion: false,
       suggestedDuration: currentDuration,
       expansionRatio: 1.0,
-      reason: '当前时间轴长度足够'
+      reason: '当前时间轴长度足够',
     }
   }
 
@@ -277,6 +283,6 @@ export function getTimelineExpansionSuggestion(
     needsExpansion: true,
     suggestedDuration: Math.ceil(currentDuration * expansionRatio),
     expansionRatio,
-    reason
+    reason,
   }
 }

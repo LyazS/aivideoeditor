@@ -6,7 +6,9 @@
         <h3>编辑项目</h3>
         <button class="close-btn" @click="closeDialog">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z" />
+            <path
+              d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z"
+            />
           </svg>
         </button>
       </div>
@@ -37,9 +39,9 @@
       </div>
       <div class="dialog-footer">
         <button class="btn btn-secondary" @click="closeDialog">取消</button>
-        <button 
-          class="btn btn-primary" 
-          @click="saveProject" 
+        <button
+          class="btn btn-primary"
+          @click="saveProject"
           :disabled="!form.name.trim() || isSaving"
         >
           {{ isSaving ? '保存中...' : '保存' }}
@@ -66,7 +68,7 @@ interface Emits {
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  isSaving: false
+  isSaving: false,
 })
 
 const emit = defineEmits<Emits>()
@@ -74,24 +76,31 @@ const emit = defineEmits<Emits>()
 // 表单数据
 const form = ref({
   name: '',
-  description: ''
+  description: '',
 })
 
 // 监听项目变化，更新表单数据
-watch(() => props.project, (newProject) => {
-  if (newProject) {
-    form.value.name = newProject.name
-    form.value.description = newProject.description || ''
-  }
-}, { immediate: true })
+watch(
+  () => props.project,
+  (newProject) => {
+    if (newProject) {
+      form.value.name = newProject.name
+      form.value.description = newProject.description || ''
+    }
+  },
+  { immediate: true },
+)
 
 // 监听显示状态，重置表单
-watch(() => props.show, (newShow) => {
-  if (newShow && props.project) {
-    form.value.name = props.project.name
-    form.value.description = props.project.description || ''
-  }
-})
+watch(
+  () => props.show,
+  (newShow) => {
+    if (newShow && props.project) {
+      form.value.name = props.project.name
+      form.value.description = props.project.description || ''
+    }
+  },
+)
 
 // 关闭对话框
 function closeDialog() {
@@ -112,7 +121,7 @@ function saveProject() {
 
   emit('save', {
     name: form.value.name.trim(),
-    description: form.value.description.trim()
+    description: form.value.description.trim(),
   })
 }
 </script>

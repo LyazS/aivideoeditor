@@ -14,13 +14,13 @@ import type { UnifiedDataSourceData } from '../sources/DataSourceTypes'
  * 媒体状态枚举
  */
 export type MediaStatus =
-  | 'pending'         // 等待开始处理
+  | 'pending' // 等待开始处理
   | 'asyncprocessing' // 异步获取中（抽象状态，对应各种数据源的获取阶段）
-  | 'webavdecoding'   // WebAV解析中
-  | 'ready'           // 就绪
-  | 'error'           // 错误
-  | 'cancelled'       // 取消
-  | 'missing'         // 缺失（加载工程时本地文件不存在）
+  | 'webavdecoding' // WebAV解析中
+  | 'ready' // 就绪
+  | 'error' // 错误
+  | 'cancelled' // 取消
+  | 'missing' // 缺失（加载工程时本地文件不存在）
 
 /**
  * 核心媒体类型 - 支持视频、图片、音频和文本
@@ -41,7 +41,7 @@ export interface WebAVObjects {
   audioClip?: Raw<AudioClip>
   thumbnailUrl?: string
   // WebAV解析得到的原始尺寸信息
-  originalWidth?: number  // 原始宽度（视频和图片）
+  originalWidth?: number // 原始宽度（视频和图片）
   originalHeight?: number // 原始高度（视频和图片）
 }
 
@@ -178,7 +178,7 @@ export function createUnifiedMediaItemData(
   id: string,
   name: string,
   source: UnifiedDataSourceData,
-  options?: Partial<UnifiedMediaItemData>
+  options?: Partial<UnifiedMediaItemData>,
 ): UnifiedMediaItemData {
   return reactive({
     id,
@@ -187,7 +187,6 @@ export function createUnifiedMediaItemData(
     mediaStatus: 'pending' as MediaStatus,
     mediaType: 'unknown' as MediaType | 'unknown',
     source,
-    ...options
+    ...options,
   })
 }
-

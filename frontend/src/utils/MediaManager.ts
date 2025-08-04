@@ -1,7 +1,13 @@
 import { directoryManager } from './DirectoryManager'
 import type { Raw } from 'vue'
 import type { MP4Clip, ImgClip, AudioClip } from '@webav/av-cliper'
-import type { MediaType, LocalMediaItem, MediaMetadata, LocalMediaReference, MediaErrorType } from '../types'
+import type {
+  MediaType,
+  LocalMediaItem,
+  MediaMetadata,
+  LocalMediaReference,
+  MediaErrorType,
+} from '../types'
 
 /**
  * 媒体文件管理器
@@ -40,10 +46,10 @@ export class MediaManager {
       // 获取项目目录
       const projectsHandle = await workspaceHandle.getDirectoryHandle('projects')
       const projectHandle = await projectsHandle.getDirectoryHandle(projectId)
-      
+
       // 确保media目录存在
       const mediaHandle = await this.ensureDirectoryExists(projectHandle, this.MEDIA_FOLDER)
-      
+
       // 根据媒体类型确定子目录
       let subFolder: string
       switch (mediaType) {
@@ -59,26 +65,26 @@ export class MediaManager {
         default:
           throw new Error(`不支持的媒体类型: ${mediaType}`)
       }
-      
+
       // 确保子目录存在
       const subHandle = await this.ensureDirectoryExists(mediaHandle, subFolder)
-      
+
       // 生成唯一文件名（避免冲突）
       const timestamp = Date.now()
       const randomSuffix = Math.random().toString(36).substring(2, 8)
       const fileExtension = this.getFileExtension(file.name)
       const uniqueFileName = `${timestamp}_${randomSuffix}${fileExtension}`
-      
+
       // 保存文件
       const fileHandle = await subHandle.getFileHandle(uniqueFileName, { create: true })
       const writable = await fileHandle.createWritable()
       await writable.write(file)
       await writable.close()
-      
+
       // 返回相对路径
       const relativePath = `${this.MEDIA_FOLDER}/${subFolder}/${uniqueFileName}`
       console.log(`✅ 媒体文件已保存: ${relativePath}`)
-      
+
       return relativePath
     } catch (error) {
       console.error('保存媒体文件失败:', error)
@@ -96,15 +102,15 @@ export class MediaManager {
   async generateMediaMetadata(
     file: File,
     clip: Raw<MP4Clip> | Raw<ImgClip> | Raw<AudioClip>,
-    mediaType: MediaType
+    mediaType: MediaType,
   ): Promise<MediaMetadata> {
     try {
       // 计算文件校验和
       const checksum = await this.calculateChecksum(file)
-      
+
       // 等待clip准备完成
       const meta = await clip.ready
-      
+
       // 确定clip类型
       let clipType: 'MP4Clip' | 'ImgClip' | 'AudioClip'
       switch (mediaType) {
@@ -120,7 +126,7 @@ export class MediaManager {
         default:
           throw new Error(`不支持的媒体类型: ${mediaType}`)
       }
-      
+
       // 构建元数据
       const metadata: MediaMetadata = {
         id: Date.now().toString() + Math.random().toString(36).substring(2, 11),
@@ -129,19 +135,19 @@ export class MediaManager {
         mimeType: file.type,
         checksum,
         clipType,
-        importedAt: new Date().toISOString()
+        importedAt: new Date().toISOString(),
       }
-      
+
       // 根据媒体类型添加特定元数据
       if (mediaType === 'video' || mediaType === 'audio') {
         metadata.duration = meta.duration // WebAV返回的是微秒
       }
-      
+
       if (mediaType === 'video' || mediaType === 'image') {
         metadata.width = meta.width
         metadata.height = meta.height
       }
-      
+
       console.log(`📊 生成媒体元数据: ${file.name}`, metadata)
       return metadata
     } catch (error) {
@@ -156,7 +162,11 @@ export class MediaManager {
    * @param storedPath 媒体文件存储路径
    * @param metadata 元数据
    */
-  async saveMediaMetadata(projectId: string, storedPath: string, metadata: MediaMetadata): Promise<void> {
+  async saveMediaMetadata(
+    projectId: string,
+    storedPath: string,
+    metadata: MediaMetadata,
+  ): Promise<void> {
     const workspaceHandle = await directoryManager.getWorkspaceHandle()
     if (!workspaceHandle) {
       throw new Error('未设置工作目录')
@@ -166,24 +176,24 @@ export class MediaManager {
       // 获取项目目录
       const projectsHandle = await workspaceHandle.getDirectoryHandle('projects')
       const projectHandle = await projectsHandle.getDirectoryHandle(projectId)
-      
+
       // 构建.meta文件路径
       const metaPath = storedPath + '.meta'
       const pathParts = metaPath.split('/')
-      
+
       // 逐级获取目录句柄
       let currentHandle: FileSystemDirectoryHandle = projectHandle
       for (let i = 0; i < pathParts.length - 1; i++) {
         currentHandle = await currentHandle.getDirectoryHandle(pathParts[i])
       }
-      
+
       // 保存.meta文件
       const metaFileName = pathParts[pathParts.length - 1]
       const metaFileHandle = await currentHandle.getFileHandle(metaFileName, { create: true })
       const writable = await metaFileHandle.createWritable()
       await writable.write(JSON.stringify(metadata, null, 2))
       await writable.close()
-      
+
       console.log(`✅ 元数据文件已保存: ${metaPath}`)
     } catch (error) {
       console.error('保存元数据文件失败:', error)
@@ -201,7 +211,7 @@ export class MediaManager {
       const buffer = await file.arrayBuffer()
       const hashBuffer = await crypto.subtle.digest('SHA-256', buffer)
       const hashArray = Array.from(new Uint8Array(hashBuffer))
-      return hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
+      return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('')
     } catch (error) {
       console.error('计算文件校验和失败:', error)
       throw error
@@ -215,7 +225,11 @@ export class MediaManager {
    * @param expectedChecksum 期望的校验和
    * @returns 是否完整
    */
-  async verifyMediaIntegrity(projectId: string, storedPath: string, expectedChecksum: string): Promise<boolean> {
+  async verifyMediaIntegrity(
+    projectId: string,
+    storedPath: string,
+    expectedChecksum: string,
+  ): Promise<boolean> {
     try {
       const file = await this.loadMediaFromProject(projectId, storedPath)
       const actualChecksum = await this.calculateChecksum(file)
@@ -242,19 +256,19 @@ export class MediaManager {
       // 获取项目目录
       const projectsHandle = await workspaceHandle.getDirectoryHandle('projects')
       const projectHandle = await projectsHandle.getDirectoryHandle(projectId)
-      
+
       // 解析路径并获取文件
       const pathParts = storedPath.split('/')
       let currentHandle: FileSystemDirectoryHandle = projectHandle
-      
+
       for (let i = 0; i < pathParts.length - 1; i++) {
         currentHandle = await currentHandle.getDirectoryHandle(pathParts[i])
       }
-      
+
       const fileName = pathParts[pathParts.length - 1]
       const fileHandle = await currentHandle.getFileHandle(fileName)
       const file = await fileHandle.getFile()
-      
+
       console.log(`✅ 媒体文件已加载: ${storedPath}`)
       return file
     } catch (error) {
@@ -271,7 +285,7 @@ export class MediaManager {
    */
   private async ensureDirectoryExists(
     parentHandle: FileSystemDirectoryHandle,
-    dirName: string
+    dirName: string,
   ): Promise<FileSystemDirectoryHandle> {
     try {
       return await parentHandle.getDirectoryHandle(dirName)
@@ -336,7 +350,7 @@ export class MediaManager {
     file: File,
     clip: Raw<MP4Clip> | Raw<ImgClip> | Raw<AudioClip>,
     projectId: string,
-    mediaType: MediaType
+    mediaType: MediaType,
   ): Promise<LocalMediaReference> {
     try {
       console.log(`📁 开始导入媒体文件: ${file.name}`)
@@ -356,7 +370,7 @@ export class MediaManager {
         storedPath,
         type: mediaType,
         fileSize: file.size,
-        checksum: metadata.checksum
+        checksum: metadata.checksum,
       }
 
       console.log(`✅ 媒体文件导入完成: ${file.name}`)
@@ -396,7 +410,10 @@ export class MediaManager {
    * @param mediaType 媒体类型
    * @returns 重建的WebAV Clip对象
    */
-  async rebuildWebAVClip(file: File, mediaType: MediaType): Promise<Raw<MP4Clip> | Raw<ImgClip> | Raw<AudioClip>> {
+  async rebuildWebAVClip(
+    file: File,
+    mediaType: MediaType,
+  ): Promise<Raw<MP4Clip> | Raw<ImgClip> | Raw<AudioClip>> {
     try {
       console.log(`🔄 开始从源头重建WebAV Clip: ${file.name} (${mediaType})`)
 
@@ -438,7 +455,7 @@ export class MediaManager {
   async rebuildMediaItemFromLocal(
     mediaId: string,
     reference: LocalMediaReference,
-    projectId: string
+    projectId: string,
   ): Promise<LocalMediaItem> {
     try {
       console.log(`🔄 开始重建LocalMediaItem: ${reference.originalFileName}`)
@@ -486,8 +503,8 @@ export class MediaManager {
 
           thumbnailUrl = await generateThumbnailForMediaItem({
             mediaType: reference.type,
-            mp4Clip: reference.type === 'video' ? clip as Raw<MP4Clip> : null,
-            imgClip: reference.type === 'image' ? clip as Raw<ImgClip> : null,
+            mp4Clip: reference.type === 'video' ? (clip as Raw<MP4Clip>) : null,
+            imgClip: reference.type === 'image' ? (clip as Raw<ImgClip>) : null,
           })
 
           if (thumbnailUrl) {
@@ -511,18 +528,18 @@ export class MediaManager {
         duration: durationFrames,
         type: localFile.type,
         mediaType: reference.type,
-        mp4Clip: reference.type === 'video' ? clip as Raw<MP4Clip> : null,
-        imgClip: reference.type === 'image' ? clip as Raw<ImgClip> : null,
-        audioClip: reference.type === 'audio' ? clip as Raw<AudioClip> : null,
+        mp4Clip: reference.type === 'video' ? (clip as Raw<MP4Clip>) : null,
+        imgClip: reference.type === 'image' ? (clip as Raw<ImgClip>) : null,
+        audioClip: reference.type === 'audio' ? (clip as Raw<AudioClip>) : null,
         status: 'ready',
-        thumbnailUrl
+        thumbnailUrl,
       }
 
       console.log(`✅ LocalMediaItem重建成功: ${reference.originalFileName}`, {
         id: mediaId,
         type: reference.type,
         duration: `${durationFrames}帧`,
-        fileSize: `${(localFile.size / 1024 / 1024).toFixed(2)}MB`
+        fileSize: `${(localFile.size / 1024 / 1024).toFixed(2)}MB`,
       })
 
       return mediaItem
@@ -548,7 +565,7 @@ export class MediaManager {
     projectId: string,
     mediaType: MediaType,
     errorType: MediaErrorType,
-    errorMessage: string
+    errorMessage: string,
   ): Promise<LocalMediaReference> {
     try {
       console.log(`💾 开始保存错误状态媒体引用: ${file.name}`)
@@ -568,8 +585,8 @@ export class MediaManager {
           name: file.name,
           size: file.size,
           type: file.type,
-          lastModified: file.lastModified
-        }
+          lastModified: file.lastModified,
+        },
       }
 
       console.log(`✅ 错误状态媒体引用创建完成: ${file.name}`)
@@ -585,7 +602,10 @@ export class MediaManager {
    * @param projectId 项目ID
    * @param mediaReference 媒体引用信息
    */
-  async deleteMediaFromProject(projectId: string, mediaReference: LocalMediaReference): Promise<void> {
+  async deleteMediaFromProject(
+    projectId: string,
+    mediaReference: LocalMediaReference,
+  ): Promise<void> {
     const workspaceHandle = await directoryManager.getWorkspaceHandle()
     if (!workspaceHandle) {
       throw new Error('未设置工作目录')
@@ -640,10 +660,7 @@ export class MediaManager {
    * @param reference 错误状态的媒体引用
    * @returns 错误状态的LocalMediaItem
    */
-  private restoreErrorMediaItem(
-    mediaId: string,
-    reference: LocalMediaReference
-  ): LocalMediaItem {
+  private restoreErrorMediaItem(mediaId: string, reference: LocalMediaReference): LocalMediaItem {
     console.log(`🔴 恢复错误状态媒体项: ${reference.originalFileName}`)
 
     const errorMediaItem: LocalMediaItem = {
@@ -658,7 +675,7 @@ export class MediaManager {
       mp4Clip: null,
       imgClip: null,
       audioClip: null,
-      status: 'error'
+      status: 'error',
     }
 
     return errorMediaItem
@@ -677,7 +694,7 @@ export class MediaManager {
     options?: {
       batchSize?: number
       onProgress?: (loaded: number, total: number) => void
-    }
+    },
   ): Promise<LocalMediaItem[]> {
     try {
       const { batchSize = 3, onProgress } = options || {}
@@ -693,7 +710,9 @@ export class MediaManager {
       for (let i = 0; i < mediaEntries.length; i += batchSize) {
         const batch = mediaEntries.slice(i, i + batchSize)
 
-        console.log(`📦 处理批次 ${Math.floor(i / batchSize) + 1}/${Math.ceil(mediaEntries.length / batchSize)}: ${batch.length}个文件`)
+        console.log(
+          `📦 处理批次 ${Math.floor(i / batchSize) + 1}/${Math.ceil(mediaEntries.length / batchSize)}: ${batch.length}个文件`,
+        )
 
         // 并行处理当前批次
         const batchPromises = batch.map(async ([mediaId, reference]) => {
@@ -725,7 +744,7 @@ export class MediaManager {
                 status: 'error',
                 errorType: 'file_load_error',
                 errorMessage: error instanceof Error ? error.message : String(error),
-                errorTimestamp: new Date().toISOString()
+                errorTimestamp: new Date().toISOString(),
               }
 
               loadedCount++

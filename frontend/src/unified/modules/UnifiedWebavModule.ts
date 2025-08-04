@@ -170,8 +170,8 @@ export function createUnifiedWebavModule() {
       isAvailable: isWebAVAvailable(),
       canvasInfo: avCanvas.value
         ? {
-            width: ('width' in avCanvas.value) ? avCanvas.value.width : 'unknown',
-            height: ('height' in avCanvas.value) ? avCanvas.value.height : 'unknown',
+            width: 'width' in avCanvas.value ? avCanvas.value.width : 'unknown',
+            height: 'height' in avCanvas.value ? avCanvas.value.height : 'unknown',
             constructor: avCanvas.value.constructor.name,
           }
         : null,
@@ -266,10 +266,12 @@ export function createUnifiedWebavModule() {
 
       // 创建ImgClip
       const response = new Response(file)
-      const imgClip = markRaw(new ImgClip({
-        type: file.type as any,
-        stream: response.body!,
-      }))
+      const imgClip = markRaw(
+        new ImgClip({
+          type: file.type as any,
+          stream: response.body!,
+        }),
+      )
 
       // 等待ImgClip准备完成
       await imgClip.ready
@@ -507,7 +509,11 @@ export function createUnifiedWebavModule() {
    * @param endFrames 结束帧数，如果未提供则使用总时长作为结束时间
    * @param playbackRate 播放速度倍率
    */
-  async function play(startFrames?: number, endFrames?: number, playbackRate?: number): Promise<void> {
+  async function play(
+    startFrames?: number,
+    endFrames?: number,
+    playbackRate?: number,
+  ): Promise<void> {
     if (!globalAVCanvas) return
 
     const unifiedStore = await getUnifiedStore()
@@ -700,7 +706,7 @@ export function createUnifiedWebavModule() {
             resolve() // 完成Promise
           }
         },
-        { immediate: true } // 立即执行一次，以防在watch设置前状态已经变为true
+        { immediate: true }, // 立即执行一次，以防在watch设置前状态已经变为true
       )
     })
   }

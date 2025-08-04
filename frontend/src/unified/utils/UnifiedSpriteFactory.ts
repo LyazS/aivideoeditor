@@ -1,12 +1,12 @@
 /**
  * 统一架构的 Sprite 工厂类
- * 
+ *
  * 职责：
  * 1. 基于统一媒体项目数据创建对应的 Sprite 实例
  * 2. 提供统一的错误处理和状态验证
  * 3. 支持视频、图片、音频三种媒体类型
  * 4. 遵循新架构的"数据与行为分离"设计模式
- * 
+ *
  * 设计理念：
  * - 使用 UnifiedMediaItemData 作为输入参数
  * - 集成现有的 Sprite 类实现
@@ -25,19 +25,19 @@ import { AudioVisibleSprite } from '../visiblesprite/AudioVisibleSprite'
 
 /**
  * 从统一媒体项目数据创建对应的 Sprite 实例
- * 
+ *
  * 这是现有 spriteFactory.createSpriteFromMediaItem 的统一架构版本，
  * 使用新的 UnifiedMediaItemData 类型作为输入参数。
- * 
+ *
  * @param mediaData 统一媒体项目数据
  * @returns 创建的 Sprite 实例
  * @throws 当媒体项目未准备好或类型不支持时抛出错误
- * 
+ *
  * @example
  * ```typescript
  * // 基本使用
  * const sprite = await createSpriteFromUnifiedMediaItem(mediaData)
- * 
+ *
  * // 错误处理
  * try {
  *   const sprite = await createSpriteFromUnifiedMediaItem(mediaData)
@@ -52,7 +52,9 @@ export async function createSpriteFromUnifiedMediaItem(
 ): Promise<UnifiedSprite> {
   // 1. 验证媒体项目状态
   if (mediaData.mediaStatus !== 'ready') {
-    throw new Error(`媒体项目尚未就绪，当前状态: ${mediaData.mediaStatus}，素材名称: ${mediaData.name}`)
+    throw new Error(
+      `媒体项目尚未就绪，当前状态: ${mediaData.mediaStatus}，素材名称: ${mediaData.name}`,
+    )
   }
 
   // 2. 验证媒体类型
@@ -76,7 +78,7 @@ export async function createSpriteFromUnifiedMediaItem(
         if (!mediaData.webav.mp4Clip) {
           throw new Error(`视频 WebAV 对象缺失，无法创建 Sprite: ${mediaData.name}`)
         }
-        
+
         // 克隆 MP4Clip 以避免多个 Sprite 共享同一个 Clip
         const clonedMP4Clip = await unifiedStore.cloneMP4Clip(mediaData.webav.mp4Clip)
         return new VideoVisibleSprite(clonedMP4Clip)
@@ -86,7 +88,7 @@ export async function createSpriteFromUnifiedMediaItem(
         if (!mediaData.webav.imgClip) {
           throw new Error(`图片 WebAV 对象缺失，无法创建 Sprite: ${mediaData.name}`)
         }
-        
+
         // 克隆 ImgClip 以避免多个 Sprite 共享同一个 Clip
         const clonedImgClip = await unifiedStore.cloneImgClip(mediaData.webav.imgClip)
         return new ImageVisibleSprite(clonedImgClip)
@@ -96,7 +98,7 @@ export async function createSpriteFromUnifiedMediaItem(
         if (!mediaData.webav.audioClip) {
           throw new Error(`音频 WebAV 对象缺失，无法创建 Sprite: ${mediaData.name}`)
         }
-        
+
         // 克隆 AudioClip 以避免多个 Sprite 共享同一个 Clip
         const clonedAudioClip = await unifiedStore.cloneAudioClip(mediaData.webav.audioClip)
         return new AudioVisibleSprite(clonedAudioClip)
@@ -126,13 +128,13 @@ export async function createSpriteFromUnifiedMediaItem(
 
 /**
  * 检查统一媒体项目数据是否可以创建 Sprite
- * 
+ *
  * 这是一个辅助函数，用于在创建 Sprite 之前进行预检查，
  * 避免不必要的异步操作和错误处理。
- * 
+ *
  * @param mediaData 统一媒体项目数据
  * @returns 检查结果对象
- * 
+ *
  * @example
  * ```typescript
  * const checkResult = canCreateSpriteFromUnifiedMediaItem(mediaData)
@@ -143,14 +145,15 @@ export async function createSpriteFromUnifiedMediaItem(
  * }
  * ```
  */
-export function canCreateSpriteFromUnifiedMediaItem(
-  mediaData: UnifiedMediaItemData,
-): { canCreate: boolean; reason?: string } {
+export function canCreateSpriteFromUnifiedMediaItem(mediaData: UnifiedMediaItemData): {
+  canCreate: boolean
+  reason?: string
+} {
   // 检查媒体状态
   if (mediaData.mediaStatus !== 'ready') {
     return {
       canCreate: false,
-      reason: `媒体项目尚未就绪，当前状态: ${mediaData.mediaStatus}`
+      reason: `媒体项目尚未就绪，当前状态: ${mediaData.mediaStatus}`,
     }
   }
 
@@ -158,7 +161,7 @@ export function canCreateSpriteFromUnifiedMediaItem(
   if (mediaData.mediaType === 'unknown') {
     return {
       canCreate: false,
-      reason: '媒体类型未确定'
+      reason: '媒体类型未确定',
     }
   }
 
@@ -166,7 +169,7 @@ export function canCreateSpriteFromUnifiedMediaItem(
   if (mediaData.mediaType === 'text') {
     return {
       canCreate: false,
-      reason: '文本类型不支持通过媒体项目创建 Sprite'
+      reason: '文本类型不支持通过媒体项目创建 Sprite',
     }
   }
 
@@ -174,7 +177,7 @@ export function canCreateSpriteFromUnifiedMediaItem(
   if (!mediaData.webav) {
     return {
       canCreate: false,
-      reason: 'WebAV 对象未就绪'
+      reason: 'WebAV 对象未就绪',
     }
   }
 
@@ -184,7 +187,7 @@ export function canCreateSpriteFromUnifiedMediaItem(
       if (!mediaData.webav.mp4Clip) {
         return {
           canCreate: false,
-          reason: '视频 WebAV 对象缺失'
+          reason: '视频 WebAV 对象缺失',
         }
       }
       break
@@ -193,7 +196,7 @@ export function canCreateSpriteFromUnifiedMediaItem(
       if (!mediaData.webav.imgClip) {
         return {
           canCreate: false,
-          reason: '图片 WebAV 对象缺失'
+          reason: '图片 WebAV 对象缺失',
         }
       }
       break
@@ -202,7 +205,7 @@ export function canCreateSpriteFromUnifiedMediaItem(
       if (!mediaData.webav.audioClip) {
         return {
           canCreate: false,
-          reason: '音频 WebAV 对象缺失'
+          reason: '音频 WebAV 对象缺失',
         }
       }
       break
@@ -213,16 +216,14 @@ export function canCreateSpriteFromUnifiedMediaItem(
 
 /**
  * 获取媒体项目支持的 Sprite 类型
- * 
+ *
  * 根据统一媒体项目数据返回对应的 Sprite 类型名称，
  * 用于调试和日志记录。
- * 
+ *
  * @param mediaData 统一媒体项目数据
  * @returns Sprite 类型名称
  */
-export function getSpriteTypeFromUnifiedMediaItem(
-  mediaData: UnifiedMediaItemData,
-): string {
+export function getSpriteTypeFromUnifiedMediaItem(mediaData: UnifiedMediaItemData): string {
   switch (mediaData.mediaType) {
     case 'video':
       return 'VideoVisibleSprite'
@@ -241,17 +242,17 @@ export function getSpriteTypeFromUnifiedMediaItem(
 
 /**
  * 批量检查多个媒体项目是否可以创建 Sprite
- * 
+ *
  * 用于批量操作场景，可以快速筛选出可以创建 Sprite 的媒体项目。
- * 
+ *
  * @param mediaItems 统一媒体项目数据数组
  * @returns 检查结果数组
  */
 export function batchCheckCanCreateSprite(
   mediaItems: UnifiedMediaItemData[],
 ): Array<{ mediaData: UnifiedMediaItemData; canCreate: boolean; reason?: string }> {
-  return mediaItems.map(mediaData => ({
+  return mediaItems.map((mediaData) => ({
     mediaData,
-    ...canCreateSpriteFromUnifiedMediaItem(mediaData)
+    ...canCreateSpriteFromUnifiedMediaItem(mediaData),
   }))
 }

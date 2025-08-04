@@ -239,7 +239,7 @@ async function handleResizeUpdate(
   itemId: string,
   newStartTime: number,
   newEndTime: number,
-  direction: 'left' | 'right'
+  direction: 'left' | 'right',
 ) {
   console.log('🔧 [VideoClip] 处理resize-update事件:', {
     itemId,

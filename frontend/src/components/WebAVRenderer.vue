@@ -353,7 +353,7 @@ async function waitForProjectSettingsReady(): Promise<void> {
           resolve()
         }
       },
-      { immediate: true }
+      { immediate: true },
     )
 
     // 不设置超时，如果设置加载失败，应该让错误暴露出来
@@ -379,7 +379,10 @@ onMounted(async () => {
     console.log('✅ [WebAV Renderer] Resize observer setup completed')
 
     // 检查项目设置状态（应该在父组件onBeforeMount中已完成）
-    console.log('🔄 [LIFECYCLE] WebAVRenderer 检查项目设置状态:', unifiedStore.isProjectSettingsReady)
+    console.log(
+      '🔄 [LIFECYCLE] WebAVRenderer 检查项目设置状态:',
+      unifiedStore.isProjectSettingsReady,
+    )
 
     if (!unifiedStore.isProjectSettingsReady) {
       console.log('🔄 [LIFECYCLE] WebAVRenderer 等待项目设置完成')

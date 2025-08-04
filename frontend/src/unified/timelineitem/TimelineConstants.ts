@@ -15,27 +15,27 @@ export const DEFAULT_TIMELINE_STATUS: TimelineItemStatus = 'loading'
  * 状态优先级（用于排序和比较）
  */
 export const STATUS_PRIORITY: Record<TimelineItemStatus, number> = {
-  'error': 0,    // 最高优先级，需要用户关注
-  'loading': 1,  // 中等优先级，正在处理
-  'ready': 2     // 最低优先级，正常状态
+  error: 0, // 最高优先级，需要用户关注
+  loading: 1, // 中等优先级，正在处理
+  ready: 2, // 最低优先级，正常状态
 }
 
 /**
  * 状态颜色映射（用于UI显示）
  */
 export const STATUS_COLORS = {
-  'ready': '#52c41a',    // 绿色
-  'loading': '#1890ff',  // 蓝色
-  'error': '#ff4d4f'     // 红色
+  ready: '#52c41a', // 绿色
+  loading: '#1890ff', // 蓝色
+  error: '#ff4d4f', // 红色
 } as const
 
 /**
  * 状态图标映射
  */
 export const STATUS_ICONS = {
-  'ready': 'check-circle',
-  'loading': 'loading',
-  'error': 'exclamation-circle'
+  ready: 'check-circle',
+  loading: 'loading',
+  error: 'exclamation-circle',
 } as const
 
 // ==================== 时间相关常量 ====================
@@ -81,7 +81,7 @@ export const DEFAULT_TRANSFORM = {
   playbackRate: 1,
   volume: 1,
   isMuted: false,
-  gain: 0
+  gain: 0,
 } as const
 
 /**
@@ -93,7 +93,7 @@ export const TRANSFORM_LIMITS = {
   playbackRate: { min: 0.1, max: 4 },
   gain: { min: -60, max: 20 }, // dB
   rotation: { min: -360, max: 360 },
-  zIndex: { min: 0, max: 9999 }
+  zIndex: { min: 0, max: 9999 },
 } as const
 
 // ==================== 媒体类型相关常量 ====================
@@ -112,22 +112,22 @@ export const MEDIA_TYPE_DEFAULTS = {
     hasAudioTrack: true,
     defaultDuration: DEFAULT_ITEM_DURATION,
     supportsCropping: true,
-    supportsTransform: true
+    supportsTransform: true,
   },
   audio: {
     hasVisualTrack: false,
     hasAudioTrack: true,
     defaultDuration: DEFAULT_ITEM_DURATION,
     supportsCropping: false,
-    supportsTransform: false
+    supportsTransform: false,
   },
   image: {
     hasVisualTrack: true,
     hasAudioTrack: false,
     defaultDuration: DEFAULT_ITEM_DURATION,
     supportsCropping: false,
-    supportsTransform: true
-  }
+    supportsTransform: true,
+  },
 } as const
 
 /**
@@ -137,7 +137,7 @@ export const MEDIA_TYPE_ICONS = {
   video: 'video-camera',
   audio: 'audio',
   image: 'picture',
-  unknown: 'file'
+  unknown: 'file',
 } as const
 
 // ==================== 轨道相关常量 ====================
@@ -148,7 +148,7 @@ export const MEDIA_TYPE_ICONS = {
 export const DEFAULT_TRACK_TYPES = {
   VIDEO: 'video',
   AUDIO: 'audio',
-  SUBTITLE: 'subtitle'
+  SUBTITLE: 'subtitle',
 } as const
 
 /**
@@ -159,7 +159,7 @@ export const TRACK_HEIGHTS = {
   audio: 60,
   text: 60,
   subtitle: 60,
-  effect: 60
+  effect: 60,
 } as const
 
 // ==================== 错误相关常量 ====================
@@ -172,21 +172,21 @@ export const ERROR_CODES = {
   FILE_MISSING: 'FILE_MISSING',
   FILE_CORRUPTED: 'FILE_CORRUPTED',
   FILE_TOO_LARGE: 'FILE_TOO_LARGE',
-  
+
   // 网络相关错误
   NETWORK_ERROR: 'NETWORK_ERROR',
   DOWNLOAD_FAILED: 'DOWNLOAD_FAILED',
   TIMEOUT: 'TIMEOUT',
-  
+
   // 解析相关错误
   PARSE_ERROR: 'PARSE_ERROR',
   UNSUPPORTED_FORMAT: 'UNSUPPORTED_FORMAT',
   CODEC_ERROR: 'CODEC_ERROR',
-  
+
   // 系统相关错误
   MEMORY_ERROR: 'MEMORY_ERROR',
   PERMISSION_DENIED: 'PERMISSION_DENIED',
-  UNKNOWN_ERROR: 'UNKNOWN_ERROR'
+  UNKNOWN_ERROR: 'UNKNOWN_ERROR',
 } as const
 
 /**
@@ -204,7 +204,7 @@ export const ERROR_MESSAGES = {
   [ERROR_CODES.CODEC_ERROR]: '编解码器错误',
   [ERROR_CODES.MEMORY_ERROR]: '内存不足',
   [ERROR_CODES.PERMISSION_DENIED]: '权限不足',
-  [ERROR_CODES.UNKNOWN_ERROR]: '未知错误'
+  [ERROR_CODES.UNKNOWN_ERROR]: '未知错误',
 } as const
 
 /**
@@ -214,7 +214,7 @@ export const RECOVERABLE_ERROR_CODES = new Set([
   ERROR_CODES.NETWORK_ERROR,
   ERROR_CODES.DOWNLOAD_FAILED,
   ERROR_CODES.TIMEOUT,
-  ERROR_CODES.FILE_MISSING
+  ERROR_CODES.FILE_MISSING,
 ])
 
 // ==================== 性能相关常量 ====================
@@ -248,7 +248,7 @@ export const LOG_LEVELS = {
   ERROR: 0,
   WARN: 1,
   INFO: 2,
-  DEBUG: 3
+  DEBUG: 3,
 } as const
 
 /**
@@ -298,5 +298,5 @@ export const TimelineConstants = {
   // 调试相关
   DEBUG_MODE,
   LOG_LEVELS,
-  CURRENT_LOG_LEVEL
+  CURRENT_LOG_LEVEL,
 }

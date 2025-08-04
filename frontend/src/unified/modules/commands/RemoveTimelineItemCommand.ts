@@ -18,11 +18,7 @@ import type {
   TimelineItemStatus,
 } from '../../timelineitem/TimelineItemData'
 
-import type {
-  UnifiedMediaItemData,
-  MediaType,
-  MediaTypeOrUnknown,
-} from '../../mediaitem/types'
+import type { UnifiedMediaItemData, MediaType, MediaTypeOrUnknown } from '../../mediaitem/types'
 
 import type {
   VideoMediaConfig,
@@ -34,9 +30,7 @@ import type {
 import type { UnifiedTimeRange } from '../../types/timeRange'
 
 // ==================== 新架构工具导入 ====================
-import {
-  createSpriteFromUnifiedMediaItem,
-} from '../../utils/UnifiedSpriteFactory'
+import { createSpriteFromUnifiedMediaItem } from '../../utils/UnifiedSpriteFactory'
 
 import { regenerateThumbnailForUnifiedTimelineItem } from '../../utils/thumbnailGenerator'
 
@@ -179,7 +173,7 @@ export class RemoveTimelineItemCommand implements SimpleCommand {
         : undefined,
       timelineStatus: 'ready' as TimelineItemStatus,
       runtime: {
-        sprite: markRaw(newSprite)
+        sprite: markRaw(newSprite),
       },
     }) as KnownTimelineItem
 
@@ -209,7 +203,9 @@ export class RemoveTimelineItemCommand implements SimpleCommand {
     console.log('🔄 开始重建未知处理时间轴项目占位符...')
 
     // 使用统一的 cloneTimelineItem 函数
-    const newUnknownTimelineItem: UnknownTimelineItem = cloneTimelineItem(this.originalTimelineItemData)
+    const newUnknownTimelineItem: UnknownTimelineItem = cloneTimelineItem(
+      this.originalTimelineItemData,
+    )
 
     console.log('🔄 重建未知处理时间轴项目完成:', {
       id: newUnknownTimelineItem.id,
@@ -253,7 +249,7 @@ export class RemoveTimelineItemCommand implements SimpleCommand {
       this.originalTimelineItemData.trackId || '',
       duration,
       videoResolution,
-      this.originalTimelineItemData.id // 传入原始ID
+      this.originalTimelineItemData.id, // 传入原始ID
     )
 
     // 恢复原始的位置、尺寸和其他属性（createTextTimelineItem 创建的是默认位置）
@@ -283,7 +279,7 @@ export class RemoveTimelineItemCommand implements SimpleCommand {
       sprite.rect.angle = originalConfig.rotation
       sprite.opacity = originalConfig.opacity
       sprite.zIndex = originalConfig.zIndex
-      
+
       // 恢复时间范围
       sprite.setTimeRange(originalTimeRange)
     }

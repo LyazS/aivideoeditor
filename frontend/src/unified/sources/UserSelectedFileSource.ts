@@ -3,14 +3,10 @@
  * 基于"核心数据与行为分离"的重构方案
  * 行为函数已移动到 UserSelectedFileManager 中
  */
-import type {
-  BaseDataSourceData
-} from './BaseDataSource'
+import type { BaseDataSourceData } from './BaseDataSource'
 import { reactive } from 'vue'
 import { generateUUID4 } from '@/utils/idGenerator'
-import {
-  getMediaTypeFromMimeType
-} from '../utils/mediaTypeDetector'
+import { getMediaTypeFromMimeType } from '../utils/mediaTypeDetector'
 
 // ==================== 用户选择文件数据源类型定义 ====================
 
@@ -36,9 +32,9 @@ export const UserSelectedFileSourceFactory = {
       progress: 0,
       file: null,
       url: null,
-      selectedFile: file
+      selectedFile: file,
     }) as UserSelectedFileSourceData
-  }
+  },
 }
 
 // ==================== 类型守卫 ====================
@@ -49,7 +45,7 @@ export const UserSelectedFileSourceFactory = {
 export const UserSelectedFileTypeGuards = {
   isUserSelectedSource(source: BaseDataSourceData): source is UserSelectedFileSourceData {
     return source.type === 'user-selected'
-  }
+  },
 }
 
 // ==================== 支持的文件类型配置 ====================
@@ -66,8 +62,6 @@ export interface FileValidationResult {
   mediaType?: 'video' | 'audio' | 'image'
   fileSize?: number
 }
-
-
 
 // ==================== 用户选择文件特定查询函数 ====================
 
@@ -96,7 +90,7 @@ export const UserSelectedFileQueries = {
       name: file.name,
       size: file.size,
       type: file.type,
-      lastModified: file.lastModified
+      lastModified: file.lastModified,
     }
   },
 
@@ -105,7 +99,7 @@ export const UserSelectedFileQueries = {
    */
   getFormattedFileSize(source: UserSelectedFileSourceData): string {
     const size = source.selectedFile.size
-    
+
     if (size < 1024) {
       return `${size} B`
     } else if (size < 1024 * 1024) {
@@ -168,14 +162,14 @@ export const UserSelectedFileQueries = {
     if (!file) {
       return {
         isValid: false,
-        errorMessage: '文件不存在'
+        errorMessage: '文件不存在',
       }
     }
 
     if (file.size === 0) {
       return {
         isValid: false,
-        errorMessage: '文件为空'
+        errorMessage: '文件为空',
       }
     }
 
@@ -183,14 +177,14 @@ export const UserSelectedFileQueries = {
     if (!mediaType) {
       return {
         isValid: false,
-        errorMessage: '不支持的文件类型'
+        errorMessage: '不支持的文件类型',
       }
     }
 
     return {
       isValid: true,
       mediaType,
-      fileSize: file.size
+      fileSize: file.size,
     }
-  }
+  },
 }

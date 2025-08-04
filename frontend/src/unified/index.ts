@@ -16,7 +16,7 @@ export {
   UnifiedDataSourceActions,
 
   // 基础查询函数
-  DataSourceQueries as BaseDataSourceQueries
+  DataSourceQueries as BaseDataSourceQueries,
 } from './sources/BaseDataSource'
 
 // ==================== 统一数据源类型系统 ====================
@@ -28,7 +28,7 @@ export {
   DataSourceFactory,
 
   // 扩展查询函数（包含类型查询功能）
-  DataSourceQueries
+  DataSourceQueries,
 } from './sources/DataSourceTypes'
 
 // ==================== 用户选择文件数据源 ====================
@@ -44,7 +44,7 @@ export {
   UserSelectedFileTypeGuards,
 
   // 查询函数
-  UserSelectedFileQueries
+  UserSelectedFileQueries,
 } from './sources/UserSelectedFileSource'
 
 // ==================== 远程文件数据源 ====================
@@ -65,7 +65,7 @@ export {
   RemoteFileTypeGuards,
 
   // 查询函数
-  RemoteFileQueries
+  RemoteFileQueries,
 } from './sources/RemoteFileSource'
 
 // ==================== 管理器基础类 ====================
@@ -76,20 +76,20 @@ export {
   type ManagerStats,
 
   // 基础管理器类
-  DataSourceManager
+  DataSourceManager,
 } from './managers/BaseDataSourceManager'
 
 // ==================== 具体管理器实现 ====================
 export {
   // 用户选择文件管理器
-  UserSelectedFileManager
+  UserSelectedFileManager,
 } from './managers/UserSelectedFileManager'
 
 export {
   // 远程文件管理器
   RemoteFileManager,
   type RemoteFileManagerConfig,
-  DEFAULT_MANAGER_CONFIG
+  DEFAULT_MANAGER_CONFIG,
 } from './managers/RemoteFileManager'
 
 // ==================== 管理器注册中心 ====================
@@ -101,7 +101,7 @@ export {
   getManagerRegistry,
   startDataSourceAcquisition,
   cancelDataSourceAcquisition,
-  retryDataSourceAcquisition
+  retryDataSourceAcquisition,
 } from './managers/DataSourceManagerRegistry'
 
 // ==================== 统一媒体项目 ====================
@@ -136,7 +136,7 @@ export {
   UnifiedMediaItemQueries,
 
   // 行为函数
-  UnifiedMediaItemActions
+  UnifiedMediaItemActions,
 } from './mediaitem'
 
 // ==================== 媒体类型检测工具 ====================
@@ -154,7 +154,7 @@ export {
   isSupportedMimeType,
   getMediaTypeFromMimeType,
   getMediaTypeDisplayName,
-  getMediaTypeIcon
+  getMediaTypeIcon,
 } from './utils/mediaTypeDetector'
 
 // ==================== 统一轨道系统 ====================
@@ -170,7 +170,7 @@ export {
   isTextTrack,
   isSubtitleTrack,
   isEffectTrack,
-  generateTrackId
+  generateTrackId,
 } from './track'
 
 // ==================== 统一时间轴项目系统 ====================
@@ -211,44 +211,44 @@ export {
   getStatusText,
 
   // 管理器
-  TimelineMediaSyncManager
+  TimelineMediaSyncManager,
 } from './timelineitem'
 
 // ==================== 统一模块系统 ====================
 export {
   // 统一轨道模块
   createUnifiedTrackModule,
-  type UnifiedTrackModule
+  type UnifiedTrackModule,
 } from './modules/UnifiedTrackModule'
 
 export {
   // 统一媒体模块
   createUnifiedMediaModule,
-  type UnifiedMediaModule
+  type UnifiedMediaModule,
 } from './modules/UnifiedMediaModule'
 
 export {
   // 统一时间轴模块
   createUnifiedTimelineModule,
-  type UnifiedTimelineModule
+  type UnifiedTimelineModule,
 } from './modules/UnifiedTimelineModule'
 
 export {
   // 统一视口模块
   createUnifiedViewportModule,
-  type UnifiedViewportModule
+  type UnifiedViewportModule,
 } from './modules/UnifiedViewportModule'
 
 export {
   // 统一选择模块
   createUnifiedSelectionModule,
-  type UnifiedSelectionModule
+  type UnifiedSelectionModule,
 } from './modules/UnifiedSelectionModule'
 
 export {
   // 统一片段操作模块
   createUnifiedClipOperationsModule,
-  type UnifiedClipOperationsModule
+  type UnifiedClipOperationsModule,
 } from './modules/UnifiedClipOperationsModule'
 
 // ==================== 统一工具函数 ====================
@@ -271,22 +271,22 @@ export {
   globalUnifiedWebAVAnimationManager,
 
   // 吸附计算器
-  UnifiedSnapCalculator
+  UnifiedSnapCalculator,
 } from './utils'
 
 // ==================== 统一Composables ====================
 export {
   // 吸附配置
   useSnapConfig,
-  
+
   // 吸附管理器
   useSnapManager,
-  
+
   // 拖拽预览管理器
   getDragPreviewManager,
-  
+
   // 播放控制
-  usePlaybackControls
+  usePlaybackControls,
 } from './composables'
 
 // ==================== 统一类型定义 ====================

@@ -60,7 +60,10 @@ export function handleTimelineItemDurationChange(
  * @param item 视频TimelineItem
  * @param newPlaybackRate 新的播放倍速
  */
-export function handleVideoPlaybackRateChange(item: LocalTimelineItem, newPlaybackRate: number): void {
+export function handleVideoPlaybackRateChange(
+  item: LocalTimelineItem,
+  newPlaybackRate: number,
+): void {
   if (item.mediaType !== 'video' || !isVideoTimeRange(item.timeRange)) {
     console.warn('🔄 [Duration Change] Item is not a video, cannot change playback rate')
     return

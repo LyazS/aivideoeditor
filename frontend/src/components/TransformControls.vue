@@ -5,7 +5,7 @@
       <div class="section-header">
         <h4>位置大小</h4>
       </div>
-      
+
       <!-- 位置：XY在同一行 -->
       <div class="property-item">
         <label>位置</label>
@@ -210,7 +210,7 @@
           />
         </div>
       </div>
-      
+
       <div class="property-item">
         <label>透明度</label>
         <div class="opacity-controls">
@@ -234,7 +234,7 @@
           />
         </div>
       </div>
-      
+
       <div class="property-item">
         <label>层级</label>
         <NumberInput
@@ -264,11 +264,11 @@ interface Props {
   rotation: number
   opacity: number
   zIndex: number
-  
+
   // 缩放相关
   proportionalScale: boolean
   uniformScale: number
-  
+
   // 位置限制
   positionLimits: {
     minX: number
@@ -335,8 +335,6 @@ defineEmits<Emits>()
   gap: var(--spacing-xs);
   flex: 1;
 }
-
-
 
 .alignment-controls {
   display: flex;

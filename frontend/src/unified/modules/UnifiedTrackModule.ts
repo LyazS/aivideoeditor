@@ -1,19 +1,12 @@
 import { ref, type Ref } from 'vue'
-import type {
-  UnifiedTrackData,
-  UnifiedTrackType
-} from '../track/TrackTypes'
-import {
-  createUnifiedTrackData,
-  isVideoTrack,
-  isAudioTrack
-} from '../track/TrackTypes'
+import type { UnifiedTrackData, UnifiedTrackType } from '../track/TrackTypes'
+import { createUnifiedTrackData, isVideoTrack, isAudioTrack } from '../track/TrackTypes'
 import type { UnifiedTimelineItemData } from '../timelineitem/TimelineItemData'
 
 /**
  * 统一轨道管理模块
  * 基于新架构的统一类型系统重构的轨道管理功能
- * 
+ *
  * 主要变化：
  * 1. 使用 UnifiedTrackData 替代原有的 Track 类型
  * 2. 支持更丰富的轨道状态和属性管理
@@ -38,10 +31,14 @@ export function createUnifiedTrackModule() {
    * @param position 插入位置（可选，默认为末尾）
    * @returns 新创建的轨道对象
    */
-  function addTrack(type: UnifiedTrackType = 'video', name?: string, position?: number): UnifiedTrackData {
+  function addTrack(
+    type: UnifiedTrackType = 'video',
+    name?: string,
+    position?: number,
+  ): UnifiedTrackData {
     // 计算同类型轨道的数量，用于生成默认名称
     const sameTypeCount = tracks.value.filter((t) => t.type === type).length + 1
-    
+
     // 生成默认名称
     const typeNames = {
       video: '视频轨道',
@@ -50,9 +47,9 @@ export function createUnifiedTrackModule() {
       subtitle: '字幕轨道',
       effect: '特效轨道',
     }
-    
+
     const trackName = name || `${typeNames[type]} ${sameTypeCount}`
-    
+
     // 创建新轨道
     const newTrack = createUnifiedTrackData(type, trackName)
 
@@ -126,10 +123,7 @@ export function createUnifiedTrackModule() {
    * @param trackId 轨道ID
    * @param timelineItems 时间轴项目列表（用于同步sprite可见性）
    */
-  function toggleTrackVisibility(
-    trackId: string,
-    timelineItems?: Ref<UnifiedTimelineItemData[]>,
-  ) {
+  function toggleTrackVisibility(trackId: string, timelineItems?: Ref<UnifiedTimelineItemData[]>) {
     const track = tracks.value.find((t) => t.id === trackId)
     if (!track) {
       console.warn('⚠️ 找不到轨道:', trackId)
@@ -176,10 +170,7 @@ export function createUnifiedTrackModule() {
    * @param trackId 轨道ID
    * @param timelineItems 时间轴项目列表（用于同步sprite静音状态）
    */
-  function toggleTrackMute(
-    trackId: string,
-    timelineItems?: Ref<UnifiedTimelineItemData[]>,
-  ) {
+  function toggleTrackMute(trackId: string, timelineItems?: Ref<UnifiedTimelineItemData[]>) {
     const track = tracks.value.find((t) => t.id === trackId)
     if (!track) {
       console.warn('⚠️ 找不到轨道:', trackId)

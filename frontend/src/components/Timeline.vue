@@ -34,7 +34,10 @@
           <!-- 轨道名称 -->
           <div class="track-name">
             <!-- 轨道类型图标和片段数量 -->
-            <div class="track-type-info" :title="`${getTrackTypeLabel(track.type)}轨道，共 ${getClipsForTrack(track.id).length} 个片段`">
+            <div
+              class="track-type-info"
+              :title="`${getTrackTypeLabel(track.type)}轨道，共 ${getClipsForTrack(track.id).length} 个片段`"
+            >
               <div class="track-type-icon">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                   <path :d="getTrackTypeIcon(track.type)" />
@@ -59,12 +62,7 @@
                 }
               "
             />
-            <span
-              v-else
-              @dblclick="startRename(track)"
-              class="track-name-text"
-              :title='track.name'
-            >
+            <span v-else @dblclick="startRename(track)" class="track-name-text" :title="track.name">
               {{ track.name }}
             </span>
           </div>
@@ -193,17 +191,9 @@
           </svg>
         </template>
       </ContextMenuItem>
-      <ContextMenuGroup
-        v-else-if="'label' in item && 'children' in item"
-        :label="item.label"
-      >
+      <ContextMenuGroup v-else-if="'label' in item && 'children' in item" :label="item.label">
         <template #icon>
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="currentColor"
-          >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
             <path :d="item.icon" />
           </svg>
         </template>
@@ -215,12 +205,7 @@
             @click="child.onClick"
           >
             <template #icon>
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="currentColor"
-              >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                 <path :d="child.icon" />
               </svg>
             </template>
@@ -270,7 +255,12 @@ import TimelineAudioClip from './TimelineAudioClip.vue'
 import TimelineAsyncProcessingClip from './TimelineAsyncProcessingClip.vue'
 import TimeScale from './TimeScale.vue'
 import HoverButton from './HoverButton.vue'
-import { ContextMenu, ContextMenuItem, ContextMenuSeparator, ContextMenuGroup } from '@imengyu/vue3-context-menu'
+import {
+  ContextMenu,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuGroup,
+} from '@imengyu/vue3-context-menu'
 
 // 菜单项类型定义
 type MenuItem =
@@ -424,7 +414,7 @@ const getTrackMenuItems = (): MenuItem[] => {
       label: '重命名轨道',
       icon: 'M20.71,7.04C21.1,6.65 21.1,6 20.71,5.63L18.37,3.29C18,2.9 17.35,2.9 16.96,3.29L15.12,5.12L18.87,8.87M3,17.25V21H6.75L17.81,9.93L14.06,6.18L3,17.25Z',
       onClick: () => renameTrack(),
-    }
+    },
   )
 
   // 可见性控制 - 音频轨道不显示
@@ -450,39 +440,34 @@ const getTrackMenuItems = (): MenuItem[] => {
   }
 
   // 添加新轨道子菜单
-  menuItems.push(
-    { type: 'separator' } as MenuItem,
-    {
-      label: '添加新轨道',
-      icon: 'M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z',
-      children: [
-        {
-          label: '视频轨道',
-          icon: 'M17,10.5V7A1,1 0 0,0 16,6H4A1,1 0 0,0 3,7V17A1,1 0 0,0 4,18H16A1,1 0 0,0 17,17V13.5L21,17.5V6.5L17,10.5Z',
-          onClick: () => addNewTrackAfter('video', trackId),
-        },
-        {
-          label: '音频轨道',
-          icon: 'M14,3.23V5.29C16.89,6.15 19,8.83 19,12C19,15.17 16.89,17.85 14,18.71V20.77C18,19.86 21,16.28 21,12C21,7.72 18,4.14 14,3.23M16.5,12C16.5,10.23 15.5,8.71 14,7.97V16C15.5,15.29 16.5,13.76 16.5,12Z',
-          onClick: () => addNewTrackAfter('audio', trackId),
-        },
-        {
-          label: '文本轨道',
-          icon: 'M18,11H16.5V10.5H14.5V13.5H16.5V13H18V14A1,1 0 0,1 17,15H14A1,1 0 0,1 13,14V10A1,1 0 0,1 14,9H17A1,1 0 0,1 18,10V11M11,15H9V9H11V15M8,9H6V15H8V9Z',
-          onClick: () => addNewTrackAfter('text', trackId),
-        },
-      ],
-    },
-  )
+  menuItems.push({ type: 'separator' } as MenuItem, {
+    label: '添加新轨道',
+    icon: 'M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z',
+    children: [
+      {
+        label: '视频轨道',
+        icon: 'M17,10.5V7A1,1 0 0,0 16,6H4A1,1 0 0,0 3,7V17A1,1 0 0,0 4,18H16A1,1 0 0,0 17,17V13.5L21,17.5V6.5L17,10.5Z',
+        onClick: () => addNewTrackAfter('video', trackId),
+      },
+      {
+        label: '音频轨道',
+        icon: 'M14,3.23V5.29C16.89,6.15 19,8.83 19,12C19,15.17 16.89,17.85 14,18.71V20.77C18,19.86 21,16.28 21,12C21,7.72 18,4.14 14,3.23M16.5,12C16.5,10.23 15.5,8.71 14,7.97V16C15.5,15.29 16.5,13.76 16.5,12Z',
+        onClick: () => addNewTrackAfter('audio', trackId),
+      },
+      {
+        label: '文本轨道',
+        icon: 'M18,11H16.5V10.5H14.5V13.5H16.5V13H18V14A1,1 0 0,1 17,15H14A1,1 0 0,1 13,14V10A1,1 0 0,1 14,9H17A1,1 0 0,1 18,10V11M11,15H9V9H11V15M8,9H6V15H8V9Z',
+        onClick: () => addNewTrackAfter('text', trackId),
+      },
+    ],
+  })
   // 删除轨道选项
   if (canDelete) {
-    menuItems.push(
-      {
-        label: '删除轨道',
-        icon: 'M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z',
-        onClick: () => removeTrack(trackId),
-      } as MenuItem
-    )
+    menuItems.push({
+      label: '删除轨道',
+      icon: 'M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z',
+      onClick: () => removeTrack(trackId),
+    } as MenuItem)
   }
 
   return menuItems
@@ -530,7 +515,7 @@ async function addNewTrack(type: TrackType = 'video') {
 async function addNewTrackAfter(type: TrackType, afterTrackId: string) {
   try {
     // 找到目标轨道的位置
-    const afterTrackIndex = tracks.value.findIndex(track => track.id === afterTrackId)
+    const afterTrackIndex = tracks.value.findIndex((track) => track.id === afterTrackId)
     if (afterTrackIndex === -1) {
       console.error('❌ 找不到目标轨道:', afterTrackId)
       return
@@ -539,7 +524,14 @@ async function addNewTrackAfter(type: TrackType, afterTrackId: string) {
     // 在目标轨道后插入新轨道（位置为 afterTrackIndex + 1）
     const newTrackId = await videoStore.addTrackWithHistory(type, undefined, afterTrackIndex + 1)
     if (newTrackId) {
-      console.log('✅ 轨道添加成功，新轨道ID:', newTrackId, '类型:', type, '位置:', afterTrackIndex + 1)
+      console.log(
+        '✅ 轨道添加成功，新轨道ID:',
+        newTrackId,
+        '类型:',
+        type,
+        '位置:',
+        afterTrackIndex + 1,
+      )
 
       // 显示成功提示
       if (type === 'text') {
@@ -816,7 +808,7 @@ function handleMediaItemDragOver(event: DragEvent) {
   if (snapResult && snapResult.snapped && snapResult.snapPoint) {
     snapIndicatorManager.show(snapResult.snapPoint, timelineWidth.value, {
       timelineOffset: { x: 150, y: 0 },
-      lineHeight: 400
+      lineHeight: 400,
     })
   } else {
     snapIndicatorManager.hide(true) // 立即隐藏，不延迟
@@ -888,7 +880,7 @@ function handleTimelineItemDragOver(event: DragEvent) {
   if (snapResult && snapResult.snapped && snapResult.snapPoint) {
     snapIndicatorManager.show(snapResult.snapPoint, timelineWidth.value, {
       timelineOffset: { x: 150, y: 0 },
-      lineHeight: 400
+      lineHeight: 400,
     })
   } else {
     snapIndicatorManager.hide(true) // 立即隐藏，不延迟
@@ -923,7 +915,7 @@ function handleTimelineItemDragOver(event: DragEvent) {
       isConflict,
       currentDragData.selectedItems.length > 1,
       currentDragData.selectedItems.length,
-      draggedItem.mediaType === 'unknown' ? 'video' : draggedItem.mediaType as MediaType,
+      draggedItem.mediaType === 'unknown' ? 'video' : (draggedItem.mediaType as MediaType),
     )
 
     dragPreviewManager.updatePreview(previewData, timelineWidth.value)
@@ -997,13 +989,17 @@ async function handleTimelineItemDrop(event: DragEvent, dragData: TimelineItemDr
   if (draggedItem) {
     const targetTrack = tracks.value.find((t) => t.id === targetTrackId)
     // 异步处理项目（unknown类型）可以拖拽到任何轨道，转换时会重新分配
-    if (targetTrack && draggedItem.mediaType !== 'unknown' && !isMediaCompatibleWithTrack(draggedItem.mediaType as MediaType, targetTrack.type)) {
+    if (
+      targetTrack &&
+      draggedItem.mediaType !== 'unknown' &&
+      !isMediaCompatibleWithTrack(draggedItem.mediaType as MediaType, targetTrack.type)
+    ) {
       // 获取媒体类型标签
       const mediaTypeLabels = {
         video: '视频',
         image: '图片',
         audio: '音频',
-        text: '文本'
+        text: '文本',
       }
       const mediaTypeLabel = mediaTypeLabels[draggedItem.mediaType as MediaType] || '未知'
       const trackTypeLabel = getTrackTypeLabel(targetTrack.type)
@@ -1101,13 +1097,16 @@ async function handleMediaItemDrop(event: DragEvent, mediaDragData: MediaItemDra
 
     // 检查素材类型与轨道类型的兼容性
     // 异步处理素材（unknown类型）可以拖拽到任何轨道，转换时会重新分配
-    if (mediaItem.mediaType !== 'unknown' && !isMediaCompatibleWithTrack(mediaItem.mediaType as MediaType, targetTrack.type)) {
+    if (
+      mediaItem.mediaType !== 'unknown' &&
+      !isMediaCompatibleWithTrack(mediaItem.mediaType as MediaType, targetTrack.type)
+    ) {
       // 获取媒体类型标签
       const mediaTypeLabels: Record<MediaType, string> = {
         video: '视频',
         image: '图片',
         audio: '音频',
-        text: '文本'
+        text: '文本',
       }
       const mediaTypeLabel = mediaTypeLabels[mediaItem.mediaType as MediaType] || '未知'
       const trackTypeLabel = getTrackTypeLabel(targetTrack.type)
@@ -1182,14 +1181,14 @@ async function handleMediaItemDrop(event: DragEvent, mediaDragData: MediaItemDra
 async function createAsyncProcessingTimelineItem(
   asyncProcessingItem: AsyncProcessingMediaItem,
   dropTime: number,
-  targetTrackId: string
+  targetTrackId: string,
 ) {
   console.log('🔧 [Timeline] 创建异步处理时间轴项目占位符:', {
     id: asyncProcessingItem.id,
     name: asyncProcessingItem.name,
     dropTime,
     targetTrackId,
-    expectedDuration: asyncProcessingItem.expectedDuration
+    expectedDuration: asyncProcessingItem.expectedDuration,
   })
 
   // 生成时间轴项目ID
@@ -1205,18 +1204,18 @@ async function createAsyncProcessingTimelineItem(
     // 时间范围
     timeRange: {
       timelineStartTime: dropTime,
-      timelineEndTime: dropTime + asyncProcessingItem.expectedDuration
+      timelineEndTime: dropTime + asyncProcessingItem.expectedDuration,
     },
 
     // 占位符配置
     config: {
       name: asyncProcessingItem.name,
-      expectedDuration: asyncProcessingItem.expectedDuration
+      expectedDuration: asyncProcessingItem.expectedDuration,
     },
 
     // 标识字段
     isAsyncProcessingPlaceholder: true,
-    sprite: null
+    sprite: null,
   }
 
   // 添加到时间轴
@@ -1537,22 +1536,24 @@ async function handleTimelineItemPositionUpdate(
   }
 }
 
-
 // 类型安全的时间轴项目渲染函数
-function renderTimelineItem(item: LocalTimelineItem<MediaType> | AsyncProcessingTimelineItem, track: any) {
+function renderTimelineItem(
+  item: LocalTimelineItem<MediaType> | AsyncProcessingTimelineItem,
+  track: any,
+) {
   const commonProps = {
     track: track,
     timelineWidth: timelineWidth.value,
     totalDurationFrames: videoStore.totalDurationFrames,
     onSelect: handleSelectClip,
     'onUpdate-position': handleTimelineItemPositionUpdate,
-    onRemove: handleTimelineItemRemove
+    onRemove: handleTimelineItemRemove,
   }
 
   if (isAsyncProcessingTimelineItem(item)) {
     return h(TimelineAsyncProcessingClip, {
       timelineItem: item, // TypeScript知道这里item是AsyncProcessingTimelineItem
-      ...commonProps
+      ...commonProps,
     })
   }
 
@@ -1562,26 +1563,26 @@ function renderTimelineItem(item: LocalTimelineItem<MediaType> | AsyncProcessing
       return h(TimelineTextClip, {
         // 使用类型断言告诉TypeScript这里的item是LocalTimelineItem<'text'>
         timelineItem: item as LocalTimelineItem<'text'>,
-        ...commonProps
+        ...commonProps,
       })
     case 'audio':
       return h(TimelineAudioClip, {
         // 使用类型断言告诉TypeScript这里的item是LocalTimelineItem<'audio'>
         timelineItem: item as LocalTimelineItem<'audio'>,
-        ...commonProps
+        ...commonProps,
       })
     case 'video':
     case 'image':
       return h(TimelineVideoClip, {
         // 使用类型断言告诉TypeScript这里的item是LocalTimelineItem<'video'|'image'>
         timelineItem: item as LocalTimelineItem<'video' | 'image'>,
-        ...commonProps
+        ...commonProps,
       })
     default:
       // 默认情况下也使用VideoClip
       return h(TimelineVideoClip, {
         timelineItem: item as LocalTimelineItem<'video' | 'image'>,
-        ...commonProps
+        ...commonProps,
       })
   }
 }
@@ -1940,7 +1941,7 @@ async function createTextAtPosition(trackId: string) {
       timePosition, // 开始时间（帧数）
       trackId, // 轨道ID
       150, // 默认时长（5秒@30fps）
-      videoStore.videoResolution // 视频分辨率
+      videoStore.videoResolution, // 视频分辨率
     )
 
     // 添加到时间轴（带历史记录）
@@ -1949,12 +1950,11 @@ async function createTextAtPosition(trackId: string) {
     console.log('✅ [Timeline] 文本项目创建成功:', {
       id: textItem.id,
       text: textItem.config.text,
-      position: timePosition
+      position: timePosition,
     })
 
     // 选中新创建的文本项目
     videoStore.selectTimelineItem(textItem.id)
-
   } catch (error) {
     console.error('❌ [Timeline] 创建文本项目失败:', error)
     dialogs.showOperationError('创建文本项目', (error as Error).message)
