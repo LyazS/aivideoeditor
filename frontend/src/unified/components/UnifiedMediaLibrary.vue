@@ -79,7 +79,7 @@
             [`status-${item.mediaStatus}`]: true,
           }"
           :data-media-item-id="item.id"
-          :draggable="item.mediaStatus === 'ready'"
+          :draggable="item.mediaType !== 'unknown' && (item.duration || 0) > 0"
           @dragstart="handleItemDragStart($event, item)"
           @dragend="handleItemDragEnd"
           @contextmenu="handleMediaItemContextMenu($event, item)"
@@ -734,10 +734,10 @@ const removeMediaItem = async (id: string) => {
 const handleItemDragStart = (event: DragEvent, item: UnifiedMediaItemData) => {
   console.log('🎯 [UnifiedMediaLibrary] 开始拖拽素材:', item.name, 'status:', item.mediaStatus)
 
-  // 如果素材还未解析完成，阻止拖拽
-  if (item.mediaStatus !== 'ready') {
+  // 如果媒体类型未知或时长为0，阻止拖拽
+  if (item.mediaType === 'unknown' || (item.duration || 0) <= 0) {
     event.preventDefault()
-    console.log('❌ [UnifiedMediaLibrary] 素材解析中，无法拖拽:', item.name)
+    console.log('❌ [UnifiedMediaLibrary] 媒体类型未知或时长为0，无法拖拽:', item.name)
     return
   }
 

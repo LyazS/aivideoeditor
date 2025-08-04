@@ -16,6 +16,7 @@ import {
   DataSourceDataActions,
   DataSourceQueries,
 } from '../sources/BaseDataSource'
+import type { DetectedMediaType } from '../utils/mediaTypeDetector'
 
 // ==================== 下载管理器配置 ====================
 
@@ -116,6 +117,16 @@ export class RemoteFileManager extends DataSourceManager<RemoteFileSourceData> {
       if (!this.isValidUrl(source.remoteUrl)) {
         DataSourceBusinessActions.setError(source, '无效的URL地址')
         return
+      }
+
+      // 预先检测媒体类型
+      const predictedType = await this.detectMediaTypeFromUrl(source.remoteUrl)
+      if (predictedType === 'unknown') {
+        // 如果通过HEAD请求无法确定，尝试通过文件扩展名
+        const extensionType = this.detectMediaTypeFromUrlExtension(source.remoteUrl)
+        await this.setPredictedMediaType(source, extensionType)
+      } else {
+        await this.setPredictedMediaType(source, predictedType)
       }
 
       // 合并配置
@@ -478,7 +489,83 @@ export class RemoteFileManager extends DataSourceManager<RemoteFileSourceData> {
   // ==================== 特定功能方法 ====================
 
   /**
-   * 检测并设置媒体类型
+   * 从URL检测媒体类型（通过HEAD请求获取Content-Type）
+   */
+  private async detectMediaTypeFromUrl(url: string): Promise<DetectedMediaType> {
+    try {
+      const response = await fetch(url, {
+        method: 'HEAD',
+        signal: AbortSignal.timeout(5000), // 5秒超时
+      })
+
+      if (!response.ok) {
+        return 'unknown'
+      }
+
+      const contentType = response.headers.get('content-type')
+      if (!contentType) {
+        return 'unknown'
+      }
+
+      // 使用 mediaTypeDetector 中的方法
+      const { getMediaTypeFromMimeType } = await import('../utils/mediaTypeDetector')
+      return getMediaTypeFromMimeType(contentType)
+    } catch (error) {
+      console.error('通过HEAD请求检测媒体类型失败:', error)
+      return 'unknown'
+    }
+  }
+
+  /**
+   * 从URL扩展名检测媒体类型
+   */
+  private detectMediaTypeFromUrlExtension(url: string): DetectedMediaType {
+    try {
+      const urlObj = new URL(url)
+      const pathname = urlObj.pathname
+      const extension = pathname.toLowerCase().split('.').pop() || ''
+
+      const videoExtensions = ['mp4', 'avi', 'mov', 'mkv', 'wmv', 'flv', 'webm', 'm4v', '3gp']
+      const audioExtensions = ['mp3', 'wav', 'aac', 'flac', 'ogg', 'm4a', 'wma']
+      const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg', 'tiff']
+
+      if (videoExtensions.includes(extension)) {
+        return 'video'
+      } else if (audioExtensions.includes(extension)) {
+        return 'audio'
+      } else if (imageExtensions.includes(extension)) {
+        return 'image'
+      }
+
+      return 'unknown'
+    } catch (error) {
+      return 'unknown'
+    }
+  }
+
+  /**
+   * 设置预测的媒体类型
+   */
+  private async setPredictedMediaType(source: RemoteFileSourceData, mediaType: DetectedMediaType): Promise<void> {
+    try {
+      // 使用媒体模块方法查找对应的媒体项目
+      const { useUnifiedStore } = await import('../unifiedStore')
+      const unifiedStore = useUnifiedStore()
+      const mediaItem = unifiedStore.getMediaItemBySourceId(source.id)
+
+      if (mediaItem && mediaItem.mediaType === 'unknown') {
+        mediaItem.mediaType = mediaType
+        console.log(
+          `🔍 [RemoteFileManager] 预测媒体类型设置完成: ${source.remoteUrl} -> ${mediaType}`,
+        )
+      }
+    } catch (error) {
+      console.error('设置预测媒体类型失败:', error)
+    }
+  }
+
+  /**
+   * 检测并设置媒体类型（下载完成后验证）
    */
   private async detectAndSetMediaType(source: RemoteFileSourceData): Promise<void> {
     if (!source.file) {
@@ -496,16 +583,23 @@ export class RemoteFileManager extends DataSourceManager<RemoteFileSourceData> {
       const unifiedStore = useUnifiedStore()
       const mediaItem = unifiedStore.getMediaItemBySourceId(source.id)
 
-      // 这里就不需要类型守卫了
-      if (mediaItem && mediaItem.mediaType === 'unknown') {
-        mediaItem.mediaType = detectedType
-        console.log(
-          `🔍 [RemoteFileManager] 媒体类型检测并设置完成: ${source.file.name} -> ${detectedType}`,
-        )
-      } else if (!mediaItem) {
-        console.warn(`找不到数据源ID为 ${source.id} 的媒体项目`)
+      if (mediaItem) {
+        // 检查预测的类型是否与实际类型一致
+        if (mediaItem.mediaType !== 'unknown' && mediaItem.mediaType !== detectedType) {
+          console.log(
+            `🔍 [RemoteFileManager] 媒体类型修正: ${source.file.name} ${mediaItem.mediaType} -> ${detectedType}`,
+          )
+          mediaItem.mediaType = detectedType
+        } else if (mediaItem.mediaType === 'unknown') {
+          mediaItem.mediaType = detectedType
+          console.log(
+            `🔍 [RemoteFileManager] 媒体类型检测并设置完成: ${source.file.name} -> ${detectedType}`,
+          )
+        } else {
+          console.log(`媒体项目 ${mediaItem.name} 的类型已经是 ${mediaItem.mediaType}，跳过设置`)
+        }
       } else {
-        console.log(`媒体项目 ${mediaItem.name} 的类型已经是 ${mediaItem.mediaType}，跳过设置`)
+        console.warn(`找不到数据源ID为 ${source.id} 的媒体项目`)
       }
     } catch (error) {
       console.error('媒体类型检测失败:', error)
