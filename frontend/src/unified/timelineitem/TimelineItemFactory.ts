@@ -447,16 +447,16 @@ export function cloneTimelineItem<T extends MediaTypeOrUnknown>(
     animation?: T extends MediaType ? AnimationConfig<T> : undefined
   }
 ): UnifiedTimelineItemData<T> {
-  // 深拷贝原始对象，排除不需要克隆的 sprite 属性
+  // 深拷贝原始对象，排除不需要克隆的 runtime 属性
   const cloned = cloneDeep({
     ...original,
-    sprite: undefined // 明确排除 sprite，它需要重新创建
+    runtime: {} // 明确排除 runtime，它需要重新创建
   })
 
   // 应用覆盖值
   const result = {
     ...cloned,
-    id: overrides?.id || generateUUID4(), // 总是生成新ID
+    id: overrides?.id || cloned.id,
     mediaItemId: overrides?.mediaItemId || cloned.mediaItemId,
     trackId: overrides?.trackId || cloned.trackId,
     timelineStatus: overrides?.timelineStatus || cloned.timelineStatus,
@@ -487,6 +487,7 @@ export function duplicateTimelineItem<T extends MediaTypeOrUnknown>(
   }
 
   return cloneTimelineItem(original, {
+    id: generateUUID4(),
     trackId: newTrackId,
     timeRange: newTimeRange as any,
     config: newConfig as any

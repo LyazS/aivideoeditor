@@ -5,10 +5,10 @@
  */
 
 import { generateCommandId } from '../../../utils/idGenerator'
-import { cloneDeep } from 'lodash'
 import { reactive, markRaw } from 'vue'
 import type { VisibleSprite } from '@webav/av-cliper'
 import type { SimpleCommand } from './types'
+import { cloneTimelineItem } from '../../timelineitem/TimelineItemFactory'
 
 // ==================== 新架构类型导入 ====================
 import type {
@@ -92,8 +92,8 @@ export class RemoveTimelineItemCommand implements SimpleCommand {
         this.description = `移除时间轴项目: ${mediaItem?.name || '未知素材'}`
       }
 
-      // 保存重建所需的完整元数据 - 明确传入原始ID以避免重新生成
-      this.originalTimelineItemData = TimelineItemFactory.clone(timelineItem, { id: timelineItem.id })
+      // 保存重建所需的完整元数据
+      this.originalTimelineItemData = TimelineItemFactory.clone(timelineItem)
 
       console.log('💾 保存删除已知项目的重建数据:', {
         id: this.originalTimelineItemData.id,
@@ -107,8 +107,8 @@ export class RemoveTimelineItemCommand implements SimpleCommand {
       const mediaItem = this.mediaModule.getMediaItem(timelineItem.mediaItemId)
       this.description = `移除未知处理项目: ${mediaItem?.name || '未知素材'}`
 
-      // 保存未知项目的完整数据（使用 lodash 深拷贝避免引用问题）
-      this.originalTimelineItemData = cloneDeep(timelineItem)
+      // 保存未知项目的完整数据（使用统一的 cloneTimelineItem 函数）
+      this.originalTimelineItemData = cloneTimelineItem(timelineItem)
 
       console.log('💾 保存删除未知项目的数据:', {
         id: this.originalTimelineItemData.id,
@@ -208,8 +208,8 @@ export class RemoveTimelineItemCommand implements SimpleCommand {
 
     console.log('🔄 开始重建未知处理时间轴项目占位符...')
 
-    // 使用 lodash 深拷贝确保完全独立的数据副本
-    const newUnknownTimelineItem: UnknownTimelineItem = cloneDeep(this.originalTimelineItemData)
+    // 使用统一的 cloneTimelineItem 函数
+    const newUnknownTimelineItem: UnknownTimelineItem = cloneTimelineItem(this.originalTimelineItemData)
 
     console.log('🔄 重建未知处理时间轴项目完成:', {
       id: newUnknownTimelineItem.id,

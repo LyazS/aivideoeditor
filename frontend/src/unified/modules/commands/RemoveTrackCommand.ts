@@ -1,8 +1,8 @@
 import { generateCommandId } from '../../../utils/idGenerator'
-import { cloneDeep } from 'lodash'
 import { reactive, markRaw, ref, type Ref } from 'vue'
 import type { VisibleSprite } from '@webav/av-cliper'
 import type { SimpleCommand } from './types'
+import { cloneTimelineItem } from '../../timelineitem/TimelineItemFactory'
 
 // 类型导入
 import type {
@@ -111,9 +111,11 @@ export class RemoveTrackCommand implements SimpleCommand {
     // 分别处理已知和未知项目
     for (const item of affectedItems) {
       if (isKnownTimelineItem(item)) {
-        this.affectedKnownTimelineItems.push(TimelineItemFactory.clone(item, { id: item.id }))
+        this.affectedKnownTimelineItems.push(TimelineItemFactory.clone(item))
       } else if (isUnknownTimelineItem(item)) {
-        this.affectedUnknownTimelineItems.push(cloneDeep(item))
+        // 使用统一的 cloneTimelineItem 函数
+        const clonedItem = cloneTimelineItem(item)
+        this.affectedUnknownTimelineItems.push(clonedItem)
       }
     }
 

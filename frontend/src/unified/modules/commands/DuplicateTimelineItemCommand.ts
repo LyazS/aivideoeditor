@@ -5,10 +5,10 @@
  */
 
 import { generateCommandId } from '../../../utils/idGenerator'
-import { cloneDeep } from 'lodash'
 import { reactive, markRaw } from 'vue'
 import type { VisibleSprite } from '@webav/av-cliper'
 import type { SimpleCommand } from './types'
+import { cloneTimelineItem } from '../../timelineitem/TimelineItemFactory'
 
 // ==================== 新架构类型导入 ====================
 import type {
@@ -85,14 +85,14 @@ export class DuplicateTimelineItemCommand implements SimpleCommand {
       const mediaItem = this.mediaModule.getMediaItem(originalTimelineItem.mediaItemId)
       this.description = `复制时间轴项目: ${mediaItem?.name || '未知素材'}`
 
-      // 保存原始项目的完整重建元数据 - 明确传入原始ID以避免重新生成
-      this.originalTimelineItemData = TimelineItemFactory.clone(originalTimelineItem, { id: originalTimelineItem.id })
+      // 保存原始项目的完整重建元数据
+      this.originalTimelineItemData = TimelineItemFactory.clone(originalTimelineItem)
     } else if (isUnknownTimelineItem(originalTimelineItem)) {
       // 未知项目处理逻辑
       this.description = `复制未知处理项目: ${originalTimelineItem.config.name || '未知素材'}`
 
-      // 保存未知项目的完整数据（使用 lodash 深拷贝避免引用问题）
-      this.originalTimelineItemData = cloneDeep(originalTimelineItem)
+      // 保存未知项目的完整数据（使用统一的 cloneTimelineItem 函数）
+      this.originalTimelineItemData = cloneTimelineItem(originalTimelineItem)
     } else {
       throw new Error('不支持的时间轴项目类型')
     }
@@ -223,8 +223,8 @@ export class DuplicateTimelineItemCommand implements SimpleCommand {
 
     console.log('🔄 [DuplicateTimelineItemCommand] 重建未知处理时间轴项目...')
 
-    // 使用 lodash 深拷贝确保完全独立的数据副本
-    const newUnknownTimelineItem: UnknownTimelineItem = cloneDeep(this.originalTimelineItemData)
+    // 使用统一的 cloneTimelineItem 函数
+    const newUnknownTimelineItem: UnknownTimelineItem = cloneTimelineItem(this.originalTimelineItemData)
 
     // 更新新项目的属性
     // 注意：在统一架构中，我们需要创建一个新的对象而不是修改只读属性

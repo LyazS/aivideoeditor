@@ -4,9 +4,9 @@
  * 采用统一重建逻辑：每次执行都从原始素材重新创建sprite（已知项目）或重建占位符（未知项目）
  */
 
-import { cloneDeep } from 'lodash'
 import { reactive, markRaw } from 'vue'
 import type { VisibleSprite } from '@webav/av-cliper'
+import { cloneTimelineItem } from '../../timelineitem/TimelineItemFactory'
 
 // ==================== 新架构类型导入 ====================
 import type { SimpleCommand } from './types'
@@ -79,17 +79,15 @@ export class AddTimelineItemCommand implements SimpleCommand {
       const mediaItem = this.mediaModule.getMediaItem(timelineItem.mediaItemId)
       this.description = `添加时间轴项目: ${mediaItem?.name || '未知素材'}`
 
-      // 保存原始数据用于重建sprite - 明确传入原始ID以避免重新生成
-      this.originalTimelineItemData = TimelineItemFactory.clone(timelineItem, {
-        id: timelineItem.id,
-      })
+      // 保存原始数据用于重建sprite
+      this.originalTimelineItemData = TimelineItemFactory.clone(timelineItem)
     } else if (isUnknownTimelineItem(timelineItem)) {
       // 未知项目处理逻辑
       const mediaItem = this.mediaModule.getMediaItem(timelineItem.mediaItemId)
       this.description = `添加异步处理项目: ${mediaItem?.name || '未知素材'}`
 
-      // 保存未知项目的完整数据（使用 lodash 深拷贝避免引用问题）
-      this.originalTimelineItemData = cloneDeep(timelineItem)
+      // 保存未知项目的完整数据（使用统一的 cloneTimelineItem 函数）
+      this.originalTimelineItemData = cloneTimelineItem(timelineItem)
     } else {
       throw new Error('不支持的时间轴项目类型')
     }
@@ -183,8 +181,8 @@ export class AddTimelineItemCommand implements SimpleCommand {
 
     console.log('🔄 开始重建未知处理时间轴项目占位符...')
 
-    // 使用 lodash 深拷贝确保完全独立的数据副本
-    const newUnknownTimelineItem: UnknownTimelineItem = cloneDeep(this.originalTimelineItemData)
+    // 使用统一的 cloneTimelineItem 函数
+    const newUnknownTimelineItem: UnknownTimelineItem = cloneTimelineItem(this.originalTimelineItemData)
 
     console.log('🔄 重建未知处理时间轴项目完成:', {
       id: newUnknownTimelineItem.id,

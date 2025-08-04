@@ -101,7 +101,8 @@ import {
 } from './modules/commands/batchCommands'
 
 import {
-  AddTextItemCommand
+  AddTextItemCommand,
+  RemoveTextItemCommand
 } from './modules/commands/textCommands'
 
 /**
@@ -387,15 +388,8 @@ export const useUnifiedStore = defineStore('unified', () => {
    * @param textItem 要添加的文本时间轴项目
    */
   async function addTextItemWithHistory(textItem: UnifiedTimelineItemData<'text'>) {
-    const textConfig = textItem.config as TextMediaConfig
-    const trackId = textItem.trackId || 'default-track' // 提供默认值
     const command = new AddTextItemCommand(
-      textConfig.text,
-      textConfig.style,
-      textItem.timeRange.timelineStartTime,
-      trackId,
-      textItem.timeRange.timelineEndTime - textItem.timeRange.timelineStartTime,
-      unifiedConfigModule.videoResolution.value,
+      textItem,
       {
         addTimelineItem: unifiedTimelineModule.addTimelineItem,
         removeTimelineItem: unifiedTimelineModule.removeTimelineItem,
@@ -420,6 +414,13 @@ export const useUnifiedStore = defineStore('unified', () => {
       return
     }
 
+    // 检查是否是文本项目，使用专门的文本命令
+    if (timelineItem.mediaType === 'text') {
+      // 类型检查确保这是文本项目
+      await removeTextItemWithHistory(timelineItemId)
+      return
+    }
+
     const command = new RemoveTimelineItemCommand(
       timelineItemId,
       timelineItem, // 传入完整的timelineItem用于保存重建数据
@@ -434,6 +435,29 @@ export const useUnifiedStore = defineStore('unified', () => {
       },
       {
         getMediaItem: unifiedMediaModule.getMediaItem,
+      },
+    )
+    await unifiedHistoryModule.executeCommand(command)
+  }
+
+  /**
+   * 带历史记录的删除文本项目方法
+   * @param timelineItemId 要删除的文本时间轴项目ID
+   */
+  async function removeTextItemWithHistory(timelineItemId: string) {
+    const command = new RemoveTextItemCommand(
+      timelineItemId,
+      {
+        addTimelineItem: unifiedTimelineModule.addTimelineItem,
+        removeTimelineItem: unifiedTimelineModule.removeTimelineItem,
+        getTimelineItem: (id: string) => {
+          const item = unifiedTimelineModule.getTimelineItem(id)
+          return item && item.mediaType === 'text' ? item as UnifiedTimelineItemData<'text'> : undefined
+        },
+      },
+      {
+        addSprite: unifiedWebavModule.addSprite,
+        removeSprite: unifiedWebavModule.removeSprite,
       },
     )
     await unifiedHistoryModule.executeCommand(command)
@@ -1055,6 +1079,7 @@ export const useUnifiedStore = defineStore('unified', () => {
     addTimelineItemWithHistory,
     addTextItemWithHistory,
     removeTimelineItemWithHistory,
+    removeTextItemWithHistory,
     moveTimelineItemWithHistory,
     updateTimelineItemTransformWithHistory,
     splitTimelineItemAtTimeWithHistory,
