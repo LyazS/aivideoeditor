@@ -1,46 +1,60 @@
 <template>
-  <div
-    :class="clipClasses"
-    :style="clipStyles"
-    :data-media-type="data.mediaType"
-    :data-timeline-item-id="data.id"
-    :data-timeline-status="data.timelineStatus"
-    :draggable="true"
-    @dragstart="handleDragStart"
-    @dragend="handleDragEnd"
-    @click="handleSelect"
-    @dblclick="handleDoubleClick"
-    @contextmenu="handleContextMenu"
-    @mouseenter="showTooltip"
-    @mousemove="updateTooltipPosition"
-    @mouseleave="hideTooltip"
-  >
-    <!-- 左侧调整把手 -->
+  <div class="unified-timeline-clip-container">
     <div
-      class="resize-handle resize-handle-left"
-      @mousedown.stop="handleResizeStart('left', $event)"
-    ></div>
+      :class="clipClasses"
+      :style="clipStyles"
+      :data-media-type="data.mediaType"
+      :data-timeline-item-id="data.id"
+      :data-timeline-status="data.timelineStatus"
+      :draggable="true"
+      @dragstart="handleDragStart"
+      @dragend="handleDragEnd"
+      @click="handleSelect"
+      @dblclick="handleDoubleClick"
+      @contextmenu="handleContextMenu"
+      @mouseenter="showTooltip"
+      @mousemove="updateTooltipPosition"
+      @mouseleave="hideTooltip"
+    >
+      <!-- 左侧调整把手 -->
+      <div
+        class="resize-handle resize-handle-left"
+        @mousedown.stop="handleResizeStart('left', $event)"
+      ></div>
 
-    <!-- 动态渲染的内容区域 -->
-    <div class="clip-content">
-      <component :is="renderedContent" />
+      <!-- 动态渲染的内容区域 -->
+      <div class="clip-content">
+        <component :is="renderedContent" />
+      </div>
+
+      <!-- 右侧调整把手 -->
+      <div
+        class="resize-handle resize-handle-right"
+        @mousedown.stop="handleResizeStart('right', $event)"
+      ></div>
+
+      <!-- 状态指示器（如果渲染器提供） -->
+      <div v-if="statusIndicator" class="status-indicator">
+        <component :is="statusIndicator" />
+      </div>
+
+      <!-- 进度条（如果渲染器提供） -->
+      <div v-if="progressBar" class="progress-bar-container">
+        <component :is="progressBar" />
+      </div>
     </div>
 
-    <!-- 右侧调整把手 -->
-    <div
-      class="resize-handle resize-handle-right"
-      @mousedown.stop="handleResizeStart('right', $event)"
-    ></div>
-
-    <!-- 状态指示器（如果渲染器提供） -->
-    <div v-if="statusIndicator" class="status-indicator">
-      <component :is="statusIndicator" />
-    </div>
-
-    <!-- 进度条（如果渲染器提供） -->
-    <div v-if="progressBar" class="progress-bar-container">
-      <component :is="progressBar" />
-    </div>
+    <!-- Tooltip 组件 -->
+    <UnifiedClipTooltip
+      :visible="showTooltipFlag"
+      :title="clipName"
+      :media-type="props.data.mediaType"
+      :duration="formattedDuration"
+      :position="formattedPosition"
+      :mouse-x="tooltipPosition.x"
+      :mouse-y="tooltipPosition.y"
+      :clip-top="clipTopPosition"
+    />
   </div>
 </template>
 
@@ -61,6 +75,7 @@ import { getSnapIndicatorManager } from '../composables/useSnapIndicator'
 import { usePlaybackControls } from '../composables/usePlaybackControls'
 import { useSnapManager } from '../composables/useSnapManager'
 import { alignFramesToFrame } from '../../stores/utils/timeUtils'
+import UnifiedClipTooltip from './UnifiedClipTooltip.vue'
 
 // ==================== 组件定义 ====================
 
@@ -227,6 +242,39 @@ const clipStyles = computed(() => {
 
   return { ...baseStyles, ...customStyles }
 })
+
+// ==================== Tooltip 计算属性 ====================
+
+/**
+ * 获取clip名称
+ */
+const clipName = computed(() => {
+  const mediaItem = unifiedStore.getMediaItem(props.data.mediaItemId)
+  return mediaItem?.name || '未知片段'
+})
+
+/**
+ * 格式化时长
+ */
+const formattedDuration = computed(() => {
+  const durationFrames = props.data.timeRange.timelineEndTime - props.data.timeRange.timelineStartTime
+  const seconds = durationFrames / unifiedStore.frameRate
+  return `${seconds.toFixed(2)}秒`
+})
+
+/**
+ * 格式化位置
+ */
+const formattedPosition = computed(() => {
+  const startFrame = props.data.timeRange.timelineStartTime
+  const seconds = startFrame / unifiedStore.frameRate
+  return `${seconds.toFixed(2)}秒`
+})
+
+/**
+ * 获取clip元素的顶部位置
+ */
+const clipTopPosition = ref(0)
 
 // ==================== 事件处理 ====================
 
@@ -566,18 +614,42 @@ function cleanupResize() {
  * 显示工具提示
  */
 function showTooltip(event: MouseEvent) {
+  // 如果正在拖拽或调整大小，不显示tooltip
+  if (isDragging.value || isResizing.value) return
+
   showTooltipFlag.value = true
-  updateTooltipPosition(event)
+
+  // 获取clip元素的位置信息
+  const clipElement = event.currentTarget as HTMLElement
+  const clipRect = clipElement.getBoundingClientRect()
+
+  // 更新tooltip位置数据
+  tooltipPosition.value = {
+    x: event.clientX,
+    y: event.clientY
+  }
+  clipTopPosition.value = clipRect.top
 }
 
 /**
  * 更新工具提示位置
  */
 function updateTooltipPosition(event: MouseEvent) {
+  // 只有在tooltip显示时才更新位置
+  if (!showTooltipFlag.value) return
+  // 如果正在拖拽或调整大小，不更新tooltip位置
+  if (isDragging.value || isResizing.value) return
+
+  // 获取clip元素的位置信息
+  const clipElement = event.currentTarget as HTMLElement
+  const clipRect = clipElement.getBoundingClientRect()
+
+  // 更新tooltip位置数据
   tooltipPosition.value = {
     x: event.clientX,
     y: event.clientY
   }
+  clipTopPosition.value = clipRect.top
 }
 
 /**
@@ -597,6 +669,13 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+/* 容器样式 */
+.unified-timeline-clip-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
 .unified-timeline-clip {
   position: absolute;
   /* 固定高度50px，与旧架构保持一致 */
