@@ -14,7 +14,7 @@
  * - 包含详细的错误信息和状态检查
  */
 
-import type { Raw } from 'vue'
+import { markRaw, type Raw } from 'vue'
 import type { UnifiedMediaItemData } from '../mediaitem/types'
 import type { UnifiedSprite } from '../visiblesprite'
 
@@ -81,7 +81,7 @@ export async function createSpriteFromUnifiedMediaItem(
 
         // 克隆 MP4Clip 以避免多个 Sprite 共享同一个 Clip
         const clonedMP4Clip = await unifiedStore.cloneMP4Clip(mediaData.webav.mp4Clip)
-        return new VideoVisibleSprite(clonedMP4Clip)
+        return markRaw(new VideoVisibleSprite(clonedMP4Clip))
       }
 
       case 'image': {
@@ -91,7 +91,7 @@ export async function createSpriteFromUnifiedMediaItem(
 
         // 克隆 ImgClip 以避免多个 Sprite 共享同一个 Clip
         const clonedImgClip = await unifiedStore.cloneImgClip(mediaData.webav.imgClip)
-        return new ImageVisibleSprite(clonedImgClip)
+        return markRaw(new ImageVisibleSprite(clonedImgClip))
       }
 
       case 'audio': {
@@ -101,7 +101,7 @@ export async function createSpriteFromUnifiedMediaItem(
 
         // 克隆 AudioClip 以避免多个 Sprite 共享同一个 Clip
         const clonedAudioClip = await unifiedStore.cloneAudioClip(mediaData.webav.audioClip)
-        return new AudioVisibleSprite(clonedAudioClip)
+        return markRaw(new AudioVisibleSprite(clonedAudioClip))
       }
 
       case 'text': {

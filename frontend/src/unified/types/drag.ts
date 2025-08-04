@@ -41,6 +41,11 @@ export interface DragPreviewData {
   count?: number
   height?: number // 预览高度（像素）- 与被拖拽clip的高度一致
   mediaType?: 'video' | 'image' | 'audio' | 'text' // 媒体类型，用于确定默认高度
+  statusInfo?: {
+    isReady: boolean
+    isLoading: boolean
+    hasError?: boolean
+  } // 新增：素材状态信息
 }
 
 /**

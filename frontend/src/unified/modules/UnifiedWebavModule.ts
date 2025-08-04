@@ -2,11 +2,7 @@ import { ref, markRaw, watch, type Raw } from 'vue'
 import { AVCanvas } from '@webav/av-canvas'
 import { MP4Clip, ImgClip, AudioClip } from '@webav/av-cliper'
 import type { VisibleSprite } from '@webav/av-cliper'
-import { VideoVisibleSprite } from '../../utils/VideoVisibleSprite'
-import { ImageVisibleSprite } from '../../utils/ImageVisibleSprite'
 import type { PlayOptions, CanvasBackup } from '../../types'
-import type { UnifiedTimeRange } from '../types/timeRange'
-import { isLocalTimelineItem } from '../../types'
 import {
   framesToMicroseconds,
   microsecondsToFrames,

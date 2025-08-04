@@ -21,6 +21,7 @@ import type { UnifiedMediaItemData, MediaType, MediaTypeOrUnknown } from '../../
 
 // ==================== 新架构工具导入 ====================
 import { createSpriteFromUnifiedMediaItem } from '../../utils/UnifiedSpriteFactory'
+import { useTimelineMediaSync } from '../../composables/useTimelineMediaSync'
 
 import { regenerateThumbnailForUnifiedTimelineItem } from '../../utils/thumbnailGenerator'
 
@@ -110,64 +111,116 @@ export class AddTimelineItemCommand implements SimpleCommand {
       throw new Error(`原始素材不存在: ${this.originalTimelineItemData.mediaItemId}`)
     }
 
-    // 确保素材已经解析完成
-    if (!UnifiedMediaItemQueries.isReady(mediaItem)) {
-      throw new Error(`素材尚未解析完成: ${mediaItem.name}`)
+    // 检查素材状态和重建条件
+    const isReady = UnifiedMediaItemQueries.isReady(mediaItem)
+    const hasError = UnifiedMediaItemQueries.hasError(mediaItem)
+
+    // 只阻止错误状态的素材
+    if (hasError) {
+      throw new Error(`素材解析失败，无法重建时间轴项目: ${mediaItem.name}`)
     }
 
-    // 2. 从原始素材重新创建sprite
-    const newSprite = await createSpriteFromUnifiedMediaItem(mediaItem)
-
-    // 3. 设置时间范围
-    newSprite.setTimeRange(this.originalTimelineItemData.timeRange)
-
-    // 4. 应用变换属性
-    if (hasVisualProperties(this.originalTimelineItemData)) {
-      const config = this.originalTimelineItemData.config as
-        | VideoMediaConfig
-        | ImageMediaConfig
-        | TextMediaConfig
-      if (config.x !== undefined) newSprite.rect.x = config.x
-      if (config.y !== undefined) newSprite.rect.y = config.y
-      if (config.width !== undefined) newSprite.rect.w = config.width
-      if (config.height !== undefined) newSprite.rect.h = config.height
-      if (config.rotation !== undefined) newSprite.rect.angle = config.rotation
-      if (config.opacity !== undefined) newSprite.opacity = config.opacity
+    // 检查媒体类型和时长
+    if (mediaItem.mediaType === 'unknown') {
+      throw new Error(`素材类型未确定，无法重建时间轴项目: ${mediaItem.name}`)
     }
 
-    // 安全地获取 zIndex，所有媒体类型的配置都应该有 zIndex 属性
-    const config = this.originalTimelineItemData.config as BaseMediaProps
-    newSprite.zIndex = config.zIndex
+    const availableDuration = mediaItem.duration
+    if (!availableDuration || availableDuration <= 0) {
+      throw new Error(`素材时长信息不可用，无法重建时间轴项目: ${mediaItem.name}`)
+    }
 
-    // 5. 创建新的TimelineItem（先不设置缩略图）
-    const newTimelineItem = reactive({
-      id: this.originalTimelineItemData.id,
-      mediaItemId: this.originalTimelineItemData.mediaItemId,
-      trackId: this.originalTimelineItemData.trackId,
-      mediaType: this.originalTimelineItemData.mediaType,
-      timeRange: newSprite.getTimeRange(),
-      config: { ...this.originalTimelineItemData.config },
-      animation: this.originalTimelineItemData.animation
-        ? { ...this.originalTimelineItemData.animation }
-        : undefined,
-      timelineStatus: 'ready' as TimelineItemStatus,
-      runtime: {
-        sprite: markRaw(newSprite),
-      },
+    // 根据素材状态确定时间轴项目状态
+    const timelineStatus: TimelineItemStatus = isReady ? 'ready' : 'loading'
+
+    if (isReady) {
+      // Ready素材：创建包含sprite的完整时间轴项目
+      console.log('✅ [AddTimelineItemCommand] 重建ready状态时间轴项目')
+
+      // 2. 从原始素材重新创建sprite
+      const newSprite = await createSpriteFromUnifiedMediaItem(mediaItem)
+
+      // 3. 设置时间范围
+      newSprite.setTimeRange(this.originalTimelineItemData.timeRange)
+
+      // 4. 应用变换属性
+      if (hasVisualProperties(this.originalTimelineItemData)) {
+        const config = this.originalTimelineItemData.config as
+          | VideoMediaConfig
+          | ImageMediaConfig
+          | TextMediaConfig
+        if (config.x !== undefined) newSprite.rect.x = config.x
+        if (config.y !== undefined) newSprite.rect.y = config.y
+        if (config.width !== undefined) newSprite.rect.w = config.width
+        if (config.height !== undefined) newSprite.rect.h = config.height
+        if (config.rotation !== undefined) newSprite.rect.angle = config.rotation
+        if (config.opacity !== undefined) newSprite.opacity = config.opacity
+      }
+
+      // 安全地获取 zIndex，所有媒体类型的配置都应该有 zIndex 属性
+      const config = this.originalTimelineItemData.config as BaseMediaProps
+      newSprite.zIndex = config.zIndex
+
+      // 5. 创建新的TimelineItem（先不设置缩略图）
+      const newTimelineItem = reactive({
+        id: this.originalTimelineItemData.id,
+        mediaItemId: this.originalTimelineItemData.mediaItemId,
+        trackId: this.originalTimelineItemData.trackId,
+        mediaType: this.originalTimelineItemData.mediaType,
+        timeRange: newSprite.getTimeRange(),
+        config: { ...this.originalTimelineItemData.config },
+        animation: this.originalTimelineItemData.animation
+          ? { ...this.originalTimelineItemData.animation }
+          : undefined,
+        timelineStatus: timelineStatus,
+        runtime: {
+          sprite: markRaw(newSprite),
+        },
     }) as KnownTimelineItem
 
     // 6. 重新生成缩略图（异步执行，不阻塞重建过程）
     await this.regenerateThumbnailForAddedItem(newTimelineItem, mediaItem)
 
-    console.log('🔄 重建已知时间轴项目完成:', {
-      id: newTimelineItem.id,
-      mediaType: mediaItem.mediaType,
-      timeRange: this.originalTimelineItemData.timeRange,
-      position: { x: newSprite.rect.x, y: newSprite.rect.y },
-      size: { w: newSprite.rect.w, h: newSprite.rect.h },
-    })
+      console.log('🔄 重建ready状态时间轴项目完成:', {
+        id: newTimelineItem.id,
+        mediaType: mediaItem.mediaType,
+        timeRange: this.originalTimelineItemData.timeRange,
+        position: { x: newSprite.rect.x, y: newSprite.rect.y },
+        size: { w: newSprite.rect.w, h: newSprite.rect.h },
+      })
 
-    return newTimelineItem
+      return newTimelineItem
+    } else {
+      // 未Ready素材：创建loading状态的时间轴项目，设置状态同步监听
+      console.log('⏳ [AddTimelineItemCommand] 重建loading状态时间轴项目')
+
+      // 创建loading状态的时间轴项目
+      const newTimelineItem = reactive({
+        id: this.originalTimelineItemData.id,
+        mediaItemId: this.originalTimelineItemData.mediaItemId,
+        trackId: this.originalTimelineItemData.trackId,
+        mediaType: this.originalTimelineItemData.mediaType,
+        timeRange: { ...this.originalTimelineItemData.timeRange },
+        config: { ...this.originalTimelineItemData.config },
+        animation: this.originalTimelineItemData.animation
+          ? { ...this.originalTimelineItemData.animation }
+          : undefined,
+        timelineStatus: timelineStatus,
+        runtime: {}, // loading状态暂时没有sprite
+      }) as KnownTimelineItem
+
+      // 设置状态同步监听
+      this.setupMediaSyncForLoadingItem(newTimelineItem, mediaItem)
+
+      console.log('🔄 重建loading状态时间轴项目完成:', {
+        id: newTimelineItem.id,
+        mediaType: mediaItem.mediaType,
+        timeRange: this.originalTimelineItemData.timeRange,
+        status: 'loading',
+      })
+
+      return newTimelineItem
+    }
   }
 
   /**
@@ -316,6 +369,30 @@ export class AddTimelineItemCommand implements SimpleCommand {
       }
     } catch (error) {
       console.error('❌ 添加项目缩略图生成失败:', error)
+    }
+  }
+
+  /**
+   * 为loading状态的时间轴项目设置媒体状态同步
+   * @param timelineItem loading状态的时间轴项目
+   * @param mediaItem 对应的媒体项目
+   */
+  private setupMediaSyncForLoadingItem(
+    timelineItem: KnownTimelineItem,
+    mediaItem: UnifiedMediaItemData
+  ): void {
+    try {
+      const { setupMediaSync } = useTimelineMediaSync()
+      const unwatch = setupMediaSync(timelineItem.id, mediaItem.id)
+
+      if (unwatch) {
+        console.log(`🔗 [AddTimelineItemCommand] 已设置状态同步: ${timelineItem.id} <-> ${mediaItem.id}`)
+        // TODO: 在适当的时候清理监听器（例如时间轴项目被删除时）
+      } else {
+        console.warn(`⚠️ [AddTimelineItemCommand] 无法设置状态同步: ${timelineItem.id} <-> ${mediaItem.id}`)
+      }
+    } catch (error) {
+      console.error(`❌ [AddTimelineItemCommand] 设置状态同步失败:`, error)
     }
   }
 }

@@ -64,7 +64,6 @@ import {
 import { VideoVisibleSprite } from '../../../utils/VideoVisibleSprite'
 import { ImageVisibleSprite } from '../../../utils/ImageVisibleSprite'
 import { AudioVisibleSprite } from '../../../utils/AudioVisibleSprite'
-import { isVideoVisibleSprite, isAudioVisibleSprite } from '../../utils/SpriteTypeGuards'
 
 // ==================== 关键帧属性枚举 ====================
 /**

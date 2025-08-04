@@ -1,5 +1,5 @@
 import { useUnifiedStore } from '../unifiedStore'
-import type { DragPreviewData } from '../../types'
+import type { DragPreviewData } from '../types/drag'
 
 // 统一拖拽预览管理器
 class DragPreviewManager {
@@ -132,8 +132,25 @@ class DragPreviewManager {
       preview.textContent = `${data.count} 个项目`
     } else {
       const displayName = data.name.length > 12 ? data.name.substring(0, 10) + '..' : data.name
-      preview.textContent = displayName
+
+      // 如果有状态信息，添加状态指示器
+      if (data.statusInfo) {
+        const statusIcon = this.getStatusIcon(data.statusInfo)
+        preview.innerHTML = `<span>${displayName}</span><span style="margin-left: 4px;">${statusIcon}</span>`
+      } else {
+        preview.textContent = displayName
+      }
     }
+  }
+
+  /**
+   * 获取状态图标
+   */
+  private getStatusIcon(statusInfo: { isReady: boolean; isLoading: boolean; hasError?: boolean }): string {
+    if (statusInfo.hasError) return '❌'      // 错误状态
+    else if (statusInfo.isLoading) return '⏳' // 加载中
+    else if (statusInfo.isReady) return '✅'   // 就绪状态
+    else return '⏸️'                          // 等待状态
   }
 
   /**

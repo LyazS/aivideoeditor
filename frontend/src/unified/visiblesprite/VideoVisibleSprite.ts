@@ -79,6 +79,9 @@ export class VideoVisibleSprite extends BaseVisibleSprite {
 
     // 设置音频拦截器来控制音量
     this.#setupVolumeInterceptor()
+
+    // 初始化时间设置（确保getPlaybackRate等方法可以安全调用）
+    // this.#updateVisibleSpriteTime()
   }
 
   /**

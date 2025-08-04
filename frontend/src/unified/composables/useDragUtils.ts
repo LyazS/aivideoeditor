@@ -145,6 +145,7 @@ export function useDragUtils() {
     isMultiple: boolean = false,
     count?: number,
     mediaType?: MediaType,
+    statusInfo?: { isReady: boolean; isLoading: boolean; hasError?: boolean },
   ) {
     // 计算预览高度
     let height: number
@@ -164,6 +165,7 @@ export function useDragUtils() {
       count,
       height,
       mediaType,
+      statusInfo,
     }
   }
 

@@ -428,10 +428,16 @@ export class VideoContentRenderer implements ContentRenderer<'video' | 'image'> 
    * 检查是否有播放速度调整（仅适用于视频）
    */
   private hasSpeedAdjustment(data: UnifiedTimelineItemData<'video'>): boolean {
-    // 检查视频是否有播放速度调整
     if (data.runtime.sprite && 'getPlaybackRate' in data.runtime.sprite) {
-      const playbackRate = data.runtime.sprite.getPlaybackRate()
-      return Math.abs(playbackRate - 1.0) > 0.01 // 允许小的浮点误差
+      try {
+        // 类型断言：我们知道这是video类型的sprite，应该有getPlaybackRate方法
+        const sprite = data.runtime.sprite as any
+        const playbackRate = sprite.getPlaybackRate()
+        return Math.abs(playbackRate - 1.0) > 0.01
+      } catch (error) {
+        console.warn(`获取播放速度失败: ${data.id}`, error)
+        return false
+      }
     }
     return false
   }
@@ -441,11 +447,18 @@ export class VideoContentRenderer implements ContentRenderer<'video' | 'image'> 
    */
   private getSpeedText(data: UnifiedTimelineItemData<'video'>): string {
     if (data.runtime.sprite && 'getPlaybackRate' in data.runtime.sprite) {
-      const playbackRate = data.runtime.sprite.getPlaybackRate()
-      if (Math.abs(playbackRate - 1.0) <= 0.01) {
+      try {
+        // 类型断言：我们知道这是video类型的sprite，应该有getPlaybackRate方法
+        const sprite = data.runtime.sprite as any
+        const playbackRate = sprite.getPlaybackRate()
+        if (Math.abs(playbackRate - 1.0) <= 0.01) {
+          return '正常速度'
+        } else {
+          return `${playbackRate.toFixed(1)}x`
+        }
+      } catch (error) {
+        console.warn(`获取播放速度失败: ${data.id}`, error)
         return '正常速度'
-      } else {
-        return `${playbackRate.toFixed(1)}x`
       }
     }
     return '正常速度'

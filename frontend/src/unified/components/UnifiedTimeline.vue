@@ -224,6 +224,7 @@ import { getDragPreviewManager } from '../composables/useDragPreview'
 import { useDragUtils } from '../composables/useDragUtils'
 import { useDialogs } from '../composables/useDialogs'
 import { getSnapIndicatorManager } from '../composables/useSnapIndicator'
+import { useTimelineMediaSync } from '../composables/useTimelineMediaSync'
 import { calculateVisibleFrameRange } from '../utils/coordinateUtils'
 import { framesToTimecode } from '../utils/UnifiedTimeUtils'
 import type { UnifiedTrackType } from '../track/TrackTypes'
@@ -231,6 +232,7 @@ import type { MediaType, MediaTypeOrUnknown, UnifiedMediaItemData } from '../med
 import type {
   UnifiedTimelineItemData,
   GetTimelineItemConfig,
+  TimelineItemStatus,
 } from '../timelineitem/TimelineItemData'
 import type { TimelineItemDragData, MediaItemDragData, ConflictInfo } from '../types'
 import type {
@@ -756,11 +758,17 @@ function handleMediaItemDragOver(event: DragEvent) {
   // 使用统一的拖拽工具获取素材拖拽数据
   const mediaDragData = dragUtils.getCurrentMediaItemDragData()
   if (mediaDragData) {
+    // 获取素材项目以检查状态
+    const mediaItem = unifiedStore.getMediaItem(mediaDragData.mediaItemId)
+    const isReady = mediaItem ? UnifiedMediaItemQueries.isReady(mediaItem) : false
+    const isLoading = mediaItem ? UnifiedMediaItemQueries.isProcessing(mediaItem) : false
+    const hasError = mediaItem ? UnifiedMediaItemQueries.hasError(mediaItem) : false
+
     // 检测素材库拖拽的重叠冲突
     const conflicts = detectMediaItemConflicts(dropTime, targetTrackId, mediaDragData.duration)
     const isConflict = conflicts.length > 0
 
-    // 使用统一的拖拽工具创建预览数据
+    // 使用统一的拖拽工具创建预览数据，包含状态信息
     const previewData = dragUtils.createDragPreviewData(
       mediaDragData.name,
       mediaDragData.duration,
@@ -770,6 +778,7 @@ function handleMediaItemDragOver(event: DragEvent) {
       false,
       undefined,
       mediaDragData.mediaType,
+      { isReady, isLoading, hasError }, // 新增状态信息
     )
 
     dragPreviewManager.updatePreview(previewData, timelineWidth.value)
@@ -1467,10 +1476,28 @@ async function createMediaClipFromMediaItem(
       throw new Error('找不到对应的素材项目')
     }
 
-    // 检查素材是否已经解析完成
-    if (!UnifiedMediaItemQueries.isReady(storeMediaItem)) {
-      throw new Error('素材还在解析中，请稍后再试')
+    // 检查素材状态和拖拽条件
+    const isReady = UnifiedMediaItemQueries.isReady(storeMediaItem)
+    const hasError = UnifiedMediaItemQueries.hasError(storeMediaItem)
+
+    // 只阻止错误状态的素材
+    if (hasError) {
+      throw new Error('素材解析失败，无法添加到时间轴')
     }
+
+    // 检查媒体类型是否已知
+    if (storeMediaItem.mediaType === 'unknown') {
+      throw new Error('素材类型未确定，请等待检测完成')
+    }
+
+    // 检查是否有可用的时长信息
+    const availableDuration = storeMediaItem.duration
+    if (!availableDuration || availableDuration <= 0) {
+      throw new Error('素材时长信息不可用，请等待解析完成')
+    }
+
+    // 根据素材状态确定时间轴项目状态
+    const timelineStatus: TimelineItemStatus = isReady ? 'ready' : 'loading'
 
     console.log(
       '🎬 [UnifiedTimeline] 创建时间轴项目 for mediaItem:',
@@ -1524,13 +1551,13 @@ async function createMediaClipFromMediaItem(
       mediaType: storeMediaItem.mediaType,
       timeRange: {
         timelineStartTime: startTimeFrames,
-        timelineEndTime: startTimeFrames + storeMediaItem.duration,
+        timelineEndTime: startTimeFrames + availableDuration,
         clipStartTime: 0,
-        clipEndTime: storeMediaItem.duration,
+        clipEndTime: availableDuration,
       },
       config: config,
       animation: undefined, // 新创建的项目默认没有动画
-      timelineStatus: 'ready', // 添加必需的 timelineStatus 字段
+      timelineStatus: timelineStatus, // 根据素材状态设置时间轴项目状态
       runtime: {}, // 添加必需的 runtime 字段
       // 如果统一架构支持，添加媒体名称
       ...(storeMediaItem.name && { mediaName: storeMediaItem.name }),
@@ -1548,6 +1575,16 @@ async function createMediaClipFromMediaItem(
       `📝 [UnifiedTimeline] 添加时间轴项目: ${storeMediaItem.name} -> 轨道${trackId}, 位置${Math.max(0, startTimeFrames)}帧`,
     )
     await unifiedStore.addTimelineItemWithHistory(timelineItemData)
+
+    // 如果是loading状态，设置状态同步
+    if (timelineStatus === 'loading') {
+      const { setupMediaSync } = useTimelineMediaSync()
+      const unwatch = setupMediaSync(timelineItemData.id, storeMediaItem.id)
+      if (unwatch) {
+        console.log(`🔗 [UnifiedTimeline] 已设置状态同步: ${timelineItemData.id} <-> ${storeMediaItem.id}`)
+        // TODO: 在适当的时候清理监听器（例如时间轴项目被删除时）
+      }
+    }
 
     console.log(`✅ [UnifiedTimeline] 时间轴项目创建完成: ${timelineItemData.id}`)
   } catch (error) {
