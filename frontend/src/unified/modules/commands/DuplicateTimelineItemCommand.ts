@@ -345,7 +345,7 @@ export class DuplicateTimelineItemCommand implements SimpleCommand {
       const thumbnailUrl = await regenerateThumbnailForUnifiedTimelineItem(timelineItem, mediaItem)
 
       if (thumbnailUrl) {
-        // 在新架构中，缩略图可能存储在不同的位置
+        // 缩略图已存储到runtime.thumbnailUrl中
         // 这里暂时保留原有逻辑，需要根据实际实现调整
         console.log('✅ 复制项目缩略图生成完成')
       }

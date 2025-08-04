@@ -300,27 +300,10 @@ export class AddTimelineItemCommand implements SimpleCommand {
     }
 
     // 检查是否已经有缩略图，避免重复生成
-    // 缩略图URL存储在config中
-    if (hasVisualProperties(timelineItem)) {
-      if (isVideoTimelineItem(timelineItem)) {
-        const config = timelineItem.config as VideoMediaConfig
-        if (config && 'thumbnailUrl' in config && config.thumbnailUrl) {
-          console.log('✅ 项目已有缩略图，跳过重新生成')
-          return
-        }
-      } else if (isImageTimelineItem(timelineItem)) {
-        const config = timelineItem.config as ImageMediaConfig
-        if (config && 'thumbnailUrl' in config && config.thumbnailUrl) {
-          console.log('✅ 项目已有缩略图，跳过重新生成')
-          return
-        }
-      } else if (isTextTimelineItem(timelineItem)) {
-        const config = timelineItem.config as TextMediaConfig
-        if (config && 'thumbnailUrl' in config && config.thumbnailUrl) {
-          console.log('✅ 项目已有缩略图，跳过重新生成')
-          return
-        }
-      }
+    // 缩略图URL存储在runtime中
+    if (timelineItem.runtime.thumbnailUrl) {
+      console.log('✅ 项目已有缩略图，跳过重新生成')
+      return
     }
 
     try {
@@ -329,9 +312,7 @@ export class AddTimelineItemCommand implements SimpleCommand {
       const thumbnailUrl = await regenerateThumbnailForUnifiedTimelineItem(timelineItem, mediaItem)
 
       if (thumbnailUrl) {
-        // 在新架构中，缩略图可能存储在不同的位置
-        // 这里暂时保留原有逻辑，需要根据实际实现调整
-        console.log('✅ 添加项目缩略图生成完成')
+        console.log('✅ 添加项目缩略图生成完成，已存储到runtime')
       }
     } catch (error) {
       console.error('❌ 添加项目缩略图生成失败:', error)

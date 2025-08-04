@@ -331,10 +331,13 @@ export class VideoContentRenderer implements ContentRenderer<'video' | 'image'> 
    * 获取缩略图URL
    */
   private getThumbnailUrl(data: UnifiedTimelineItemData<'video' | 'image'>, currentFrame: number): string | null {
-    // 在统一架构中，缩略图URL存储在配置中
-    const config = data.config as any
+    // 优先从runtime中获取缩略图URL
+    if (data.runtime.thumbnailUrl) {
+      return data.runtime.thumbnailUrl
+    }
 
-    // 检查配置中是否有thumbnailUrl
+    // 兼容性检查：检查配置中是否有thumbnailUrl（向后兼容）
+    const config = data.config as any
     if (config && config.thumbnailUrl) {
       return config.thumbnailUrl
     }

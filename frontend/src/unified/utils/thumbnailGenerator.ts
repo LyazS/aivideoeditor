@@ -346,7 +346,9 @@ export async function regenerateThumbnailForUnifiedTimelineItem(
     const thumbnailUrl = await generateThumbnailForUnifiedMediaItem(mediaItem, thumbnailTime)
 
     if (thumbnailUrl) {
-      console.log('✅ [ThumbnailGenerator] 时间轴clip缩略图重新生成成功')
+      // 将缩略图URL存储到runtime中
+      timelineItem.runtime.thumbnailUrl = thumbnailUrl
+      console.log('✅ [ThumbnailGenerator] 时间轴clip缩略图重新生成成功，已存储到runtime')
     }
 
     return thumbnailUrl
