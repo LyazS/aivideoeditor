@@ -1,5 +1,5 @@
 <template>
-  <div class="timeline" @click="handleTimelineContainerClick" @contextmenu="handleContextMenu">
+  <div class="timeline" @click="handleTimelineContainerClick" @contextmenu="handleContextMenu" @dragover="handleDragOver" @dragleave="handleDragLeave" @drop="handleDrop">
     <!-- 顶部区域：轨道管理器头部 + 时间刻度 -->
     <div class="timeline-header">
       <div class="track-manager-header">
@@ -123,8 +123,6 @@
             [`track-type-${track.type}`]: true,
           }"
           :data-track-id="track.id"
-          @dragover="handleDragOver"
-          @drop="handleDrop"
           @click="handleTimelineClick"
           @wheel="handleWheel"
         >

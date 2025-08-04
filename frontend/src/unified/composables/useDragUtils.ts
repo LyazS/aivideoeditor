@@ -239,7 +239,35 @@ export function useDragUtils() {
     enableSnapping: boolean = true,
   ) {
     const targetElement = event.target as HTMLElement
-    const trackContent = targetElement.closest('.track-content')
+    let trackContent = targetElement.closest('.track-content')
+
+    // 如果没有找到track-content，尝试在整个时间轴容器内查找最近的轨道
+    if (!trackContent) {
+      const timelineContainer = targetElement.closest('.timeline')
+      if (timelineContainer) {
+        // 获取所有轨道元素
+        const allTrackContents = timelineContainer.querySelectorAll('.track-content')
+        if (allTrackContents.length > 0) {
+          // 计算鼠标位置与每个轨道的距离
+          const mouseY = event.clientY
+          let closestTrack: HTMLElement | null = null
+          let minDistance = Infinity
+
+          allTrackContents.forEach(track => {
+            const rect = track.getBoundingClientRect()
+            const trackCenterY = rect.top + rect.height / 2
+            const distance = Math.abs(mouseY - trackCenterY)
+
+            if (distance < minDistance) {
+              minDistance = distance
+              closestTrack = track as HTMLElement
+            }
+          })
+
+          trackContent = closestTrack
+        }
+      }
+    }
 
     if (!trackContent) {
       return null
