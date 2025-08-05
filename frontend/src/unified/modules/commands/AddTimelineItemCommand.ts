@@ -349,11 +349,13 @@ export class AddTimelineItemCommand implements SimpleCommand {
   }
 
   /**
-   * 更新保存的原始时间轴项目时长
+   * 更新保存的原始时间轴项目时长和状态
    * 当素材从loading状态转换为ready状态时，时长可能会发生变化，需要更新保存的时长数据
+   * 同时更新timelineStatus为传入的状态
    * @param duration 新的时长
+   * @param timelineStatus 新的时间轴状态
    */
-  public updateOriginalTimelineItemDuration(duration: number): void {
+  public updateOriginalTimelineItemDuration(duration: number, timelineStatus: TimelineItemStatus): void {
     if (!this.originalTimelineItemData) {
       console.warn('⚠️ [AddTimelineItemCommand] 没有原始时间轴项目数据，无法更新时长')
       return
@@ -364,12 +366,18 @@ export class AddTimelineItemCommand implements SimpleCommand {
     console.log('🔄 [AddTimelineItemCommand] 更新原始时间轴项目时长', {
       oldDuration,
       newDuration: duration,
+      timelineStatus,
     })
 
     // 更新时间范围的结束时间，保持开始时间不变
     this.originalTimelineItemData.timeRange.timelineEndTime = this.originalTimelineItemData.timeRange.timelineStartTime + duration
     this.originalTimelineItemData.timeRange.clipEndTime = duration
     
-    console.log('✅ [AddTimelineItemCommand] 原始时间轴项目时长更新完成')
+    // 更新状态为传入的状态
+    this.originalTimelineItemData.timelineStatus = timelineStatus
+    
+    console.log('✅ [AddTimelineItemCommand] 原始时间轴项目时长和状态更新完成', {
+      timelineStatus: this.originalTimelineItemData.timelineStatus
+    })
   }
 }

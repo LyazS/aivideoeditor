@@ -148,14 +148,15 @@ export function useTimelineMediaSync() {
       const actualDuration = mediaItem.duration
       const currentDuration = timelineItem.timeRange.timelineEndTime - timelineItem.timeRange.timelineStartTime
 
+      // 回调更新命令中的原始数据
       if (actualDuration && actualDuration !== currentDuration) {
         // 调整时间轴项目的结束时间
         timelineItem.timeRange.timelineEndTime = timelineItem.timeRange.timelineStartTime + actualDuration
         timelineItem.timeRange.clipEndTime = actualDuration
         
-        // 如果有命令引用，更新命令中的originalTimelineItemData时长
+        // 如果有命令引用，更新命令中的originalTimelineItemData时长和状态
         if (command && command.updateOriginalTimelineItemDuration) {
-          command.updateOriginalTimelineItemDuration(actualDuration)
+          command.updateOriginalTimelineItemDuration(actualDuration, 'ready')
         }
         
         console.log('📏 [TimelineMediaSync] 调整时间轴项目时长', {
