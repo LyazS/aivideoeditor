@@ -191,7 +191,7 @@ export class AddTimelineItemCommand implements SimpleCommand {
 
       return newTimelineItem
     } else {
-      // 未Ready素材：创建loading状态的时间轴项目，设置状态同步监听
+      // 未Ready素材：创建loading状态的时间轴项目
       console.log('⏳ [AddTimelineItemCommand] 重建loading状态时间轴项目')
 
       // 创建loading状态的时间轴项目
@@ -209,8 +209,7 @@ export class AddTimelineItemCommand implements SimpleCommand {
         runtime: {}, // loading状态暂时没有sprite
       }) as KnownTimelineItem
 
-      // 设置状态同步监听
-      this.setupMediaSyncForLoadingItem(newTimelineItem, mediaItem)
+      // 注意：状态同步监听将在execute方法中设置，确保时间轴项目已添加到store
 
       console.log('🔄 重建loading状态时间轴项目完成:', {
         id: newTimelineItem.id,
@@ -269,6 +268,15 @@ export class AddTimelineItemCommand implements SimpleCommand {
         if (newTimelineItem.runtime.sprite) {
           await this.webavModule.addSprite(newTimelineItem.runtime.sprite)
         }
+        
+        // 3. 针对loading状态的项目设置状态同步（确保时间轴项目已添加到store）
+        if (newTimelineItem.timelineStatus === 'loading') {
+          const mediaItem = this.mediaModule.getMediaItem(newTimelineItem.mediaItemId)
+          if (mediaItem) {
+            this.setupMediaSyncForLoadingItem(newTimelineItem, mediaItem)
+          }
+        }
+
 
         console.log(`✅ 已添加已知时间轴项目: ${this.originalTimelineItemData.mediaItemId}`)
       } else if (
@@ -306,6 +314,13 @@ export class AddTimelineItemCommand implements SimpleCommand {
         if (!existingItem) {
           console.warn(`⚠️ 已知时间轴项目不存在，无法撤销: ${this.originalTimelineItemData.id}`)
           return
+        }
+        
+        // 先清理监听器
+        if (existingItem.runtime.unwatchMediaSync) {
+          existingItem.runtime.unwatchMediaSync()
+          existingItem.runtime.unwatchMediaSync = undefined
+          console.log(`🗑️ [AddTimelineItemCommand.undo] 已清理监听器: ${existingItem.id}`)
         }
 
         // 移除时间轴项目（这会自动处理sprite的清理）
@@ -387,7 +402,10 @@ export class AddTimelineItemCommand implements SimpleCommand {
 
       if (unwatch) {
         console.log(`🔗 [AddTimelineItemCommand] 已设置状态同步: ${timelineItem.id} <-> ${mediaItem.id}`)
-        // TODO: 在适当的时候清理监听器（例如时间轴项目被删除时）
+        
+        // 保存监听器清理函数到时间轴项目的runtime中
+        timelineItem.runtime.unwatchMediaSync = unwatch
+        console.log(`💾 [AddTimelineItemCommand] 已保存监听器到runtime: ${timelineItem.id}`)
       } else {
         console.warn(`⚠️ [AddTimelineItemCommand] 无法设置状态同步: ${timelineItem.id} <-> ${mediaItem.id}`)
       }

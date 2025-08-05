@@ -241,9 +241,28 @@ export function createUnifiedTimelineModule(
       const item = timelineItems.value[index]
       const mediaItem = mediaModule.getMediaItem(item.mediaItemId)
 
+      // 先清理媒体状态同步监听器
+      if (item.runtime.unwatchMediaSync) {
+        item.runtime.unwatchMediaSync()
+        item.runtime.unwatchMediaSync = undefined
+        console.log(`🗑️ [UnifiedTimelineModule] 已清理监听器(删除项目): ${timelineItemId}`)
+      }
+
+      // 🆕 增强的清理逻辑：无论状态如何，都检查并清理sprite
+      if (item.runtime.sprite) {
+        try {
+          console.log(`🧹 开始清理时间轴项目sprite: ${timelineItemId}`)
+          webavModule.removeSprite(item.runtime.sprite)
+          console.log(`✅ 成功从WebAV画布移除sprite: ${timelineItemId}`)
+        } catch (error) {
+          console.warn(`⚠️ 从WebAV画布移除sprite时出错: ${timelineItemId}`, error)
+        }
+      }
+
       // 检查时间轴项目状态
       if (isLoading(item) || hasError(item)) {
-        // 加载中或错误状态的时间轴项目不需要清理sprite相关资源
+        // 加载中或错误状态的时间轴项目不需要额外清理sprite相关资源
+        // （已经在上面统一处理）
         unifiedDebugLog('移除非就绪状态的时间轴项目', {
           timelineItemId,
           status: item.timelineStatus,
@@ -254,9 +273,9 @@ export function createUnifiedTimelineModule(
         // 注意：新的事件系统使用 on 方法返回的取消函数来清理监听器
         // 这里不需要手动清理，因为 sprite 销毁时会自动清理所有事件监听器
 
-        // 从WebAV画布移除
+        // 🆕 双重保护：确保sprite已清理（虽然上面已经处理过了）
         if (item.runtime.sprite) {
-          webavModule.removeSprite(item.runtime.sprite)
+          console.log(`🔍 双重检查：ready状态项目sprite清理: ${timelineItemId}`)
         }
 
         // TODO: 清理动画管理器（仅就绪状态的已知类型时间轴项目）

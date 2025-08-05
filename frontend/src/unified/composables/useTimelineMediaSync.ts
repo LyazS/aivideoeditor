@@ -7,6 +7,7 @@ import { watch, type WatchStopHandle } from 'vue'
 import type { UnifiedTimelineItemData } from '../timelineitem/TimelineItemData'
 import type { UnifiedMediaItemData, MediaStatus } from '../mediaitem/types'
 import { createSpriteFromUnifiedMediaItem } from '../utils/UnifiedSpriteFactory'
+import { regenerateThumbnailForUnifiedTimelineItem } from '../utils/thumbnailGenerator'
 import { useUnifiedStore } from '../unifiedStore'
 
 /**
@@ -14,7 +15,7 @@ import { useUnifiedStore } from '../unifiedStore'
  */
 export function useTimelineMediaSync() {
   const unifiedStore = useUnifiedStore()
-
+  
   /**
    * 为时间轴项目设置素材状态监听
    * @param timelineItemId 时间轴项目ID
@@ -93,6 +94,14 @@ export function useTimelineMediaSync() {
             mediaName: mediaItem.name,
             errorStatus: newStatus,
           })
+          
+          // 清理监听器
+          if (timelineItem.runtime.unwatchMediaSync) {
+            timelineItem.runtime.unwatchMediaSync()
+            timelineItem.runtime.unwatchMediaSync = undefined
+            console.log(`🗑️ [TimelineMediaSync] 已清理监听器(错误状态): ${timelineItem.id}`)
+          }
+          
           timelineItem.timelineStatus = 'error'
         }
       }
@@ -104,7 +113,13 @@ export function useTimelineMediaSync() {
         error: error instanceof Error ? error.message : String(error),
       })
       
-      // 发生错误时，将时间轴项目标记为错误状态
+      // 发生错误时，清理监听器并标记时间轴项目为错误状态
+      if (timelineItem.runtime.unwatchMediaSync) {
+        timelineItem.runtime.unwatchMediaSync()
+        timelineItem.runtime.unwatchMediaSync = undefined
+        console.log(`🗑️ [TimelineMediaSync] 已清理监听器(异常): ${timelineItem.id}`)
+      }
+      
       if (timelineItem.timelineStatus === 'loading') {
         timelineItem.timelineStatus = 'error'
       }
@@ -153,8 +168,18 @@ export function useTimelineMediaSync() {
       // 创建WebAV sprite等运行时对象
       await createRuntimeObjects(timelineItem, mediaItem)
 
+      // 生成缩略图（异步执行，不阻塞状态转换）
+      await generateThumbnailForTransitionedItem(timelineItem, mediaItem)
+
       // 转换状态为ready
       timelineItem.timelineStatus = 'ready'
+
+      // 状态转换完成，清理监听器
+      if (timelineItem.runtime.unwatchMediaSync) {
+        timelineItem.runtime.unwatchMediaSync()
+        timelineItem.runtime.unwatchMediaSync = undefined
+        console.log(`🗑️ [TimelineMediaSync] 已清理监听器: ${timelineItem.id}`)
+      }
 
       console.log('✅ [TimelineMediaSync] 时间轴项目转换为ready状态完成', {
         timelineItemId: timelineItem.id,
@@ -167,6 +192,14 @@ export function useTimelineMediaSync() {
         mediaItemId: mediaItem.id,
         error: error instanceof Error ? error.message : String(error),
       })
+      
+      // 状态转换失败，也要清理监听器
+      if (timelineItem.runtime.unwatchMediaSync) {
+        timelineItem.runtime.unwatchMediaSync()
+        timelineItem.runtime.unwatchMediaSync = undefined
+        console.log(`🗑️ [TimelineMediaSync] 已清理监听器(错误状态): ${timelineItem.id}`)
+      }
+      
       timelineItem.timelineStatus = 'error'
       throw error
     }
@@ -194,24 +227,22 @@ export function useTimelineMediaSync() {
         // 设置sprite的时间范围（这很重要！）
         sprite.setTimeRange(timelineItem.timeRange)
 
-        // 获取AVCanvas实例
-        const avCanvas = unifiedStore.getAVCanvas()
-        if (avCanvas) {
-          // 将sprite添加到AVCanvas
-          await avCanvas.addSprite(sprite)
-          console.log('✅ [TimelineMediaSync] Sprite已添加到AVCanvas', {
-            timelineItemId: timelineItem.id,
-            spriteType: sprite.constructor.name,
-          })
-        } else {
-          console.warn('⚠️ [TimelineMediaSync] AVCanvas不可用，跳过sprite添加')
-        }
-
-        // 设置到时间轴项目
+        // 🆕 先设置到时间轴项目
         if (!timelineItem.runtime) {
           timelineItem.runtime = {}
         }
         timelineItem.runtime.sprite = sprite
+        console.log('✅ [TimelineMediaSync] Sprite已设置到时间轴项目', {
+          timelineItemId: timelineItem.id,
+          spriteType: sprite.constructor.name,
+        })
+
+        // 再将sprite添加到AVCanvas
+        await unifiedStore.addSpriteToCanvas(sprite)
+        console.log('✅ [TimelineMediaSync] Sprite已添加到AVCanvas', {
+          timelineItemId: timelineItem.id,
+          spriteType: sprite.constructor.name,
+        })
 
         console.log('✅ [TimelineMediaSync] 运行时对象创建完成', {
           timelineItemId: timelineItem.id,
@@ -233,10 +264,61 @@ export function useTimelineMediaSync() {
     }
   }
 
+  /**
+   * 为状态转换的时间轴项目生成缩略图
+   * @param timelineItem 时间轴项目
+   * @param mediaItem 媒体项目
+   */
+  async function generateThumbnailForTransitionedItem(
+    timelineItem: UnifiedTimelineItemData,
+    mediaItem: UnifiedMediaItemData
+  ): Promise<void> {
+    // 音频不需要缩略图
+    if (mediaItem.mediaType === 'audio') {
+      console.log('🎵 [TimelineMediaSync] 音频不需要缩略图，跳过生成')
+      return
+    }
+
+    // 检查是否已经有缩略图，避免重复生成
+    if (timelineItem.runtime.thumbnailUrl) {
+      console.log('✅ [TimelineMediaSync] 项目已有缩略图，跳过重新生成')
+      return
+    }
+
+    try {
+      console.log('🖼️ [TimelineMediaSync] 开始为状态转换的项目生成缩略图...', {
+        timelineItemId: timelineItem.id,
+        mediaItemId: mediaItem.id,
+        mediaType: mediaItem.mediaType,
+      })
+
+      const thumbnailUrl = await regenerateThumbnailForUnifiedTimelineItem(timelineItem, mediaItem)
+
+      if (thumbnailUrl) {
+        console.log('✅ [TimelineMediaSync] 状态转换项目缩略图生成完成', {
+          timelineItemId: timelineItem.id,
+          hasThumbnailUrl: !!thumbnailUrl,
+        })
+      } else {
+        console.warn('⚠️ [TimelineMediaSync] 状态转换项目缩略图生成失败，未返回URL', {
+          timelineItemId: timelineItem.id,
+        })
+      }
+    } catch (error) {
+      console.error('❌ [TimelineMediaSync] 状态转换项目缩略图生成失败', {
+        timelineItemId: timelineItem.id,
+        mediaItemId: mediaItem.id,
+        error: error instanceof Error ? error.message : String(error),
+      })
+      // 缩略图生成失败不应该影响状态转换，只记录错误
+    }
+  }
+
   return {
     setupMediaSync,
     handleMediaStatusChange,
     transitionToReady,
     createRuntimeObjects,
+    generateThumbnailForTransitionedItem,
   }
 }

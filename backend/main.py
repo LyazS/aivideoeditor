@@ -1,5 +1,5 @@
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, Response
 from fastapi.middleware.cors import CORSMiddleware
 import os
 import asyncio
@@ -179,6 +179,60 @@ async def _generate_file_stream(file_path: Path):
                 await asyncio.sleep(expected_time - elapsed_time)
 
             yield chunk
+
+
+@app.head("/media/{file_name:path}")
+async def head_media_file(file_name: str):
+    """
+    获取媒体文件的头部信息（不返回文件内容）
+
+    Args:
+        file_name: 请求的文件名（支持URL编码的中文文件名）
+
+    Returns:
+        响应头或错误信息
+    """
+    # URL解码文件名以支持中文文件名
+    print(f"Received HEAD request for file: {file_name}")
+    decoded_file_name = unquote(file_name)
+
+    # 构建完整的文件路径
+    file_path = Path(MEDIA_FILES_PATH) / decoded_file_name
+
+    # 检查文件是否存在
+    if not file_path.exists():
+        raise HTTPException(
+            status_code=404, detail=f"File '{decoded_file_name}' not found"
+        )
+
+    # 检查是否是文件（不是目录）
+    if not file_path.is_file():
+        raise HTTPException(
+            status_code=400, detail=f"'{decoded_file_name}' is not a file"
+        )
+
+    # 获取文件的MIME类型和大小
+    file_extension = file_path.suffix.lower()
+    mime_type = _get_mime_type(file_extension)
+    file_size = file_path.stat().st_size
+
+    print(
+        f"HEAD request for file: {decoded_file_name} ({file_size} bytes)"
+    )
+
+    # 处理中文文件名的编码问题
+    # 使用 RFC 5987 标准的 filename* 参数来支持 UTF-8 编码的文件名
+    encoded_filename = quote(file_path.name.encode("utf-8"))
+
+    # 返回空响应体，但包含相同的头部信息
+    return Response(
+        media_type=mime_type,
+        headers={
+            "Content-Length": str(file_size),
+            "Content-Disposition": f"attachment; filename*=UTF-8''{encoded_filename}",
+            "Accept-Ranges": "bytes",
+        },
+    )
 
 
 @app.get("/media/{file_name:path}")

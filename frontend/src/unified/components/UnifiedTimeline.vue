@@ -1576,16 +1576,6 @@ async function createMediaClipFromMediaItem(
     )
     await unifiedStore.addTimelineItemWithHistory(timelineItemData)
 
-    // 如果是loading状态，设置状态同步
-    if (timelineStatus === 'loading') {
-      const { setupMediaSync } = useTimelineMediaSync()
-      const unwatch = setupMediaSync(timelineItemData.id, storeMediaItem.id)
-      if (unwatch) {
-        console.log(`🔗 [UnifiedTimeline] 已设置状态同步: ${timelineItemData.id} <-> ${storeMediaItem.id}`)
-        // TODO: 在适当的时候清理监听器（例如时间轴项目被删除时）
-      }
-    }
-
     console.log(`✅ [UnifiedTimeline] 时间轴项目创建完成: ${timelineItemData.id}`)
   } catch (error) {
     console.error('❌ [UnifiedTimeline] 创建时间轴项目失败:', error)
