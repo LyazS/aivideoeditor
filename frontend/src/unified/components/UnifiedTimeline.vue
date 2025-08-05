@@ -1677,10 +1677,10 @@ function renderTimelineItem(item: UnifiedTimelineItemData | any, track: any) {
     'timeline-width': timelineWidth.value, // 传递时间轴宽度用于坐标转换
     // 事件处理
     onSelect: handleSelectClip,
-    'onDouble-click': (id: string) => handleTimelineItemDoubleClick(id),
-    'onContext-menu': (event: MouseEvent, id: string) => handleTimelineItemContextMenu(event, id),
+    onDoubleClick: (id: string) => handleTimelineItemDoubleClick(id),
+    onContextMenu: (event: MouseEvent, id: string) => handleTimelineItemContextMenu(event, id),
     // 拖拽现在由UnifiedTimelineClip内部处理，不需要事件监听器
-    'onResize-start': handleTimelineItemResizeStart,
+    onResizeStart: handleTimelineItemResizeStart,
   }
 
   // 统一使用 UnifiedTimelineClip，它会根据 mediaType 自动选择合适的渲染器
