@@ -374,6 +374,9 @@ export const useUnifiedStore = defineStore('unified', () => {
       {
         getMediaItem: unifiedMediaModule.getMediaItem,
       },
+      {
+        videoResolution: unifiedConfigModule.videoResolution,
+      },
     )
     await unifiedHistoryModule.executeCommand(command)
   }
@@ -430,6 +433,9 @@ export const useUnifiedStore = defineStore('unified', () => {
       },
       {
         getMediaItem: unifiedMediaModule.getMediaItem,
+      },
+      {
+        videoResolution: unifiedConfigModule.videoResolution,
       },
     )
     await unifiedHistoryModule.executeCommand(command)
@@ -818,6 +824,9 @@ export const useUnifiedStore = defineStore('unified', () => {
       {
         getMediaItem: unifiedMediaModule.getMediaItem,
       },
+      {
+        videoResolution: unifiedConfigModule.videoResolution,
+      },
     )
     await unifiedHistoryModule.executeCommand(command)
   }
@@ -875,6 +884,9 @@ export const useUnifiedStore = defineStore('unified', () => {
       },
       {
         getMediaItem: unifiedMediaModule.getMediaItem,
+      },
+      {
+        videoResolution: unifiedConfigModule.videoResolution,
       },
     )
     await unifiedHistoryModule.executeCommand(command)

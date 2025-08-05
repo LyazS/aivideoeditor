@@ -9,6 +9,8 @@ import type { UnifiedMediaItemData, MediaStatus } from '../mediaitem/types'
 import { createSpriteFromUnifiedMediaItem } from '../utils/UnifiedSpriteFactory'
 import { regenerateThumbnailForUnifiedTimelineItem } from '../utils/thumbnailGenerator'
 import { useUnifiedStore } from '../unifiedStore'
+import { hasVisualProperties } from '../timelineitem'
+import { UnifiedMediaItemQueries } from '../mediaitem'
 
 /**
  * 时间轴素材状态同步组合函数
@@ -148,22 +150,7 @@ export function useTimelineMediaSync() {
       const actualDuration = mediaItem.duration
       const currentDuration = timelineItem.timeRange.timelineEndTime - timelineItem.timeRange.timelineStartTime
 
-      // 回调更新命令中的原始数据
-      if (actualDuration && actualDuration !== currentDuration) {
-        // 调整时间轴项目的结束时间
-        timelineItem.timeRange.timelineEndTime = timelineItem.timeRange.timelineStartTime + actualDuration
-        timelineItem.timeRange.clipEndTime = actualDuration
-        
-        // 如果有命令引用，更新命令中的originalTimelineItemData时长和状态
-        if (command && command.updateOriginalTimelineItemDuration) {
-          command.updateOriginalTimelineItemDuration(actualDuration, 'ready')
-        }
-        
-        console.log('📏 [TimelineMediaSync] 调整时间轴项目时长', {
-          timelineItemId: timelineItem.id,
-          durationChange: `${currentDuration} → ${actualDuration}`,
-        })
-      }
+      
 
       // 更新媒体类型（如果从unknown变为具体类型）
       // 注意：由于时间轴项目不再支持 unknown 类型，这个检查已不再需要
@@ -186,6 +173,47 @@ export function useTimelineMediaSync() {
       // 转换状态为ready
       timelineItem.timelineStatus = 'ready'
 
+      // 回调更新命令中的原始数据
+      if (actualDuration && actualDuration !== currentDuration) {
+        // 调整时间轴项目的结束时间
+        timelineItem.timeRange.timelineEndTime = timelineItem.timeRange.timelineStartTime + actualDuration
+        timelineItem.timeRange.clipEndTime = actualDuration
+
+        // 如果有命令引用，更新命令中的originalTimelineItemData时长和状态
+        if (command && command.updateOriginalTimelineItemDuration) {
+          // 准备更新的配置信息（包含原始分辨率等）
+          let updatedConfig: any = undefined
+
+          // 对于视觉媒体，获取原始分辨率信息并更新配置
+          if (hasVisualProperties(timelineItem) && mediaItem.webav) {
+            const originalSize = UnifiedMediaItemQueries.getOriginalSize(mediaItem)
+            if (originalSize) {
+              updatedConfig = {
+                originalWidth: originalSize.width,
+                originalHeight: originalSize.height,
+                // 保持当前的宽高比例，根据新的原始尺寸重新计算
+                width: originalSize.width,
+                height: originalSize.height,
+              }
+
+              console.log('📐 [TimelineMediaSync] 准备更新配置中的原始分辨率', {
+                timelineItemId: timelineItem.id,
+                originalSize,
+                updatedConfig,
+              })
+            }
+          }
+
+          // 更新命令中的原始数据
+          command.updateOriginalTimelineItemDuration(actualDuration, 'ready', updatedConfig)
+        }
+
+        console.log('📏 [TimelineMediaSync] 调整时间轴项目时长', {
+          timelineItemId: timelineItem.id,
+          durationChange: `${currentDuration} → ${actualDuration}`,
+        })
+      }
+      
       // 状态转换完成，清理监听器
       if (timelineItem.runtime.unwatchMediaSync) {
         timelineItem.runtime.unwatchMediaSync()

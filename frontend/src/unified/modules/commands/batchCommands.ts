@@ -49,6 +49,9 @@ export class BatchDeleteCommand extends BaseBatchCommand {
     private mediaModule: {
       getMediaItem: (id: string) => UnifiedMediaItemData | undefined
     },
+    private configModule: {
+      videoResolution: { value: { width: number; height: number } }
+    },
   ) {
     super(`批量删除 ${timelineItemIds.length} 个时间轴项目`)
     this.buildDeleteCommands()
@@ -67,6 +70,7 @@ export class BatchDeleteCommand extends BaseBatchCommand {
           this.timelineModule,
           this.webavModule,
           this.mediaModule,
+          this.configModule,
         )
         this.addCommand(deleteCommand)
       }

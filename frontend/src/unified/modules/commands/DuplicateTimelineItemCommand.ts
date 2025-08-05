@@ -70,6 +70,9 @@ export class DuplicateTimelineItemCommand implements SimpleCommand {
     private mediaModule: {
       getMediaItem: (id: string) => UnifiedMediaItemData | undefined
     },
+    private configModule: {
+      videoResolution: { value: { width: number; height: number } }
+    },
   ) {
     this.id = generateCommandId()
 
@@ -155,14 +158,35 @@ export class DuplicateTimelineItemCommand implements SimpleCommand {
       })
     }
 
-    // 4. 应用变换属性
+    // 4. 应用变换属性（使用坐标转换）
     if (hasVisualProperties(this.originalTimelineItemData)) {
       const config = this.originalTimelineItemData.config as
         | VideoMediaConfig
         | ImageMediaConfig
         | TextMediaConfig
-      if (config.x !== undefined) newSprite.rect.x = config.x
-      if (config.y !== undefined) newSprite.rect.y = config.y
+
+      // 导入坐标转换工具
+      const { projectToWebavCoords } = await import('../../utils/coordinateTransform')
+
+      // 获取画布分辨率
+      const canvasWidth = this.configModule.videoResolution.value.width
+      const canvasHeight = this.configModule.videoResolution.value.height
+
+      // 使用坐标转换将项目坐标系转换为WebAV坐标系
+      if (config.x !== undefined && config.y !== undefined && config.width !== undefined && config.height !== undefined) {
+        const webavCoords = projectToWebavCoords(
+          config.x,
+          config.y,
+          config.width,
+          config.height,
+          canvasWidth,
+          canvasHeight,
+        )
+        newSprite.rect.x = webavCoords.x
+        newSprite.rect.y = webavCoords.y
+      }
+
+      // 设置尺寸和其他属性
       if (config.width !== undefined) newSprite.rect.w = config.width
       if (config.height !== undefined) newSprite.rect.h = config.height
       if (config.rotation !== undefined) newSprite.rect.angle = config.rotation

@@ -71,6 +71,9 @@ export class AddTimelineItemCommand implements SimpleCommand {
     private mediaModule: {
       getMediaItem: (id: string) => UnifiedMediaItemData | undefined
     },
+    private configModule: {
+      videoResolution: { value: { width: number; height: number } }
+    },
   ) {
     this.id = generateCommandId()
 
@@ -131,14 +134,35 @@ export class AddTimelineItemCommand implements SimpleCommand {
       // 3. 设置时间范围
       newSprite.setTimeRange(this.originalTimelineItemData.timeRange)
 
-      // 4. 应用变换属性
+      // 4. 应用变换属性（使用坐标转换）
       if (hasVisualProperties(this.originalTimelineItemData)) {
         const config = this.originalTimelineItemData.config as
           | VideoMediaConfig
           | ImageMediaConfig
           | TextMediaConfig
-        if (config.x !== undefined) newSprite.rect.x = config.x
-        if (config.y !== undefined) newSprite.rect.y = config.y
+
+        // 导入坐标转换工具
+        const { projectToWebavCoords } = await import('../../utils/coordinateTransform')
+
+        // 获取画布分辨率
+        const canvasWidth = this.configModule.videoResolution.value.width
+        const canvasHeight = this.configModule.videoResolution.value.height
+
+        // 使用坐标转换将项目坐标系转换为WebAV坐标系
+        if (config.x !== undefined && config.y !== undefined && config.width !== undefined && config.height !== undefined) {
+          const webavCoords = projectToWebavCoords(
+            config.x,
+            config.y,
+            config.width,
+            config.height,
+            canvasWidth,
+            canvasHeight,
+          )
+          newSprite.rect.x = webavCoords.x
+          newSprite.rect.y = webavCoords.y
+        }
+
+        // 设置尺寸和其他属性
         if (config.width !== undefined) newSprite.rect.w = config.width
         if (config.height !== undefined) newSprite.rect.h = config.height
         if (config.rotation !== undefined) newSprite.rect.angle = config.rotation
@@ -351,11 +375,16 @@ export class AddTimelineItemCommand implements SimpleCommand {
   /**
    * 更新保存的原始时间轴项目时长和状态
    * 当素材从loading状态转换为ready状态时，时长可能会发生变化，需要更新保存的时长数据
-   * 同时更新timelineStatus为传入的状态
+   * 同时更新timelineStatus为传入的状态，并更新config中的原始分辨率信息
    * @param duration 新的时长
    * @param timelineStatus 新的时间轴状态
+   * @param updatedConfig 更新后的配置信息（可选，用于更新原始分辨率等信息）
    */
-  public updateOriginalTimelineItemDuration(duration: number, timelineStatus: TimelineItemStatus): void {
+  public updateOriginalTimelineItemDuration(
+    duration: number,
+    timelineStatus: TimelineItemStatus,
+    updatedConfig?: Partial<VideoMediaConfig | ImageMediaConfig | AudioMediaConfig | TextMediaConfig>
+  ): void {
     if (!this.originalTimelineItemData) {
       console.warn('⚠️ [AddTimelineItemCommand] 没有原始时间轴项目数据，无法更新时长')
       return
@@ -363,20 +392,32 @@ export class AddTimelineItemCommand implements SimpleCommand {
 
     const oldDuration = this.originalTimelineItemData.timeRange.timelineEndTime - this.originalTimelineItemData.timeRange.timelineStartTime
 
-    console.log('🔄 [AddTimelineItemCommand] 更新原始时间轴项目时长', {
+    console.log('🔄 [AddTimelineItemCommand] 更新原始时间轴项目时长和配置', {
       oldDuration,
       newDuration: duration,
       timelineStatus,
+      mediaType: this.originalTimelineItemData.mediaType,
+      hasUpdatedConfig: !!updatedConfig,
     })
 
     // 更新时间范围的结束时间，保持开始时间不变
     this.originalTimelineItemData.timeRange.timelineEndTime = this.originalTimelineItemData.timeRange.timelineStartTime + duration
     this.originalTimelineItemData.timeRange.clipEndTime = duration
-    
+
     // 更新状态为传入的状态
     this.originalTimelineItemData.timelineStatus = timelineStatus
-    
-    console.log('✅ [AddTimelineItemCommand] 原始时间轴项目时长和状态更新完成', {
+
+    // 如果提供了更新的配置信息，则更新config
+    if (updatedConfig) {
+      console.log('🔄 [AddTimelineItemCommand] 应用更新的配置信息', updatedConfig)
+
+      // 合并更新的配置到原始配置中
+      Object.assign(this.originalTimelineItemData.config, updatedConfig)
+
+      console.log('✅ [AddTimelineItemCommand] 配置信息已更新')
+    }
+
+    console.log('✅ [AddTimelineItemCommand] 原始时间轴项目时长、状态和配置更新完成', {
       timelineStatus: this.originalTimelineItemData.timelineStatus
     })
   }

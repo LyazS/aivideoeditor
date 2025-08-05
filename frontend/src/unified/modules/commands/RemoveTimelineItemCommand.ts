@@ -70,6 +70,9 @@ export class RemoveTimelineItemCommand implements SimpleCommand {
     private mediaModule: {
       getMediaItem: (id: string) => UnifiedMediaItemData | undefined
     },
+    private configModule: {
+      videoResolution: { value: { width: number; height: number } }
+    },
   ) {
     this.id = generateCommandId()
 
@@ -237,11 +240,29 @@ export class RemoveTimelineItemCommand implements SimpleCommand {
       newTimelineItem.animation = this.originalTimelineItemData.animation
     }
 
-    // 同步更新sprite的属性以匹配配置
+    // 同步更新sprite的属性以匹配配置（使用坐标转换）
     if (newTimelineItem.runtime.sprite) {
       const sprite = newTimelineItem.runtime.sprite as any
-      sprite.rect.x = originalConfig.x
-      sprite.rect.y = originalConfig.y
+
+      // 导入坐标转换工具
+      const { projectToWebavCoords } = await import('../../utils/coordinateTransform')
+
+      // 获取画布分辨率
+      const canvasWidth = this.configModule.videoResolution.value.width
+      const canvasHeight = this.configModule.videoResolution.value.height
+
+      // 使用坐标转换将项目坐标系转换为WebAV坐标系
+      const webavCoords = projectToWebavCoords(
+        originalConfig.x,
+        originalConfig.y,
+        originalConfig.width,
+        originalConfig.height,
+        canvasWidth,
+        canvasHeight,
+      )
+
+      sprite.rect.x = webavCoords.x
+      sprite.rect.y = webavCoords.y
       sprite.rect.w = originalConfig.width
       sprite.rect.h = originalConfig.height
       sprite.rect.angle = originalConfig.rotation
