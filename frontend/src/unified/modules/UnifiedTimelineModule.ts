@@ -45,6 +45,7 @@ function unifiedDebugLog(operation: string, details: any) {
 import { syncTimeRange } from '../utils/UnifiedTimeRangeUtils'
 import { microsecondsToFrames } from '../utils/UnifiedTimeUtils'
 import { globalUnifiedWebAVAnimationManager } from '../utils/UnifiedWebAVAnimationManager'
+import { hasAudioCapabilities } from '../utils/UnifiedSpriteTypeGuards'
 
 /**
  * 统一时间轴核心管理模块
@@ -184,22 +185,12 @@ export function createUnifiedTimelineModule(
           // 设置可见性
           timelineItem.runtime.sprite.visible = track.isVisible
 
-          // 为视频片段设置轨道静音检查函数
+          // 为具有音频功能的片段设置静音状态
           if (
-            timelineItem.mediaType === 'video' &&
-            'setTrackMuteChecker' in timelineItem.runtime.sprite
+            timelineItem.runtime.sprite &&
+            hasAudioCapabilities(timelineItem.runtime.sprite)
           ) {
-            const sprite = timelineItem.runtime.sprite as VideoVisibleSprite
-            sprite.setTrackMuteChecker(() => track.isMuted)
-          }
-
-          // 为音频片段设置轨道静音检查函数
-          if (
-            timelineItem.mediaType === 'audio' &&
-            'setTrackMuteChecker' in timelineItem.runtime.sprite
-          ) {
-            const sprite = timelineItem.runtime.sprite as AudioVisibleSprite
-            sprite.setTrackMuteChecker(() => track.isMuted)
+            timelineItem.runtime.sprite.setTrackMuted(track.isMuted)
           }
         }
       }

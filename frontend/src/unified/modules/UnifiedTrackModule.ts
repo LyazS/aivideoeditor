@@ -1,7 +1,9 @@
 import { ref, type Ref } from 'vue'
 import type { UnifiedTrackData, UnifiedTrackType } from '../track/TrackTypes'
-import { createUnifiedTrackData, isVideoTrack, isAudioTrack } from '../track/TrackTypes'
+import { createUnifiedTrackData } from '../track/TrackTypes'
 import type { UnifiedTimelineItemData } from '../timelineitem/TimelineItemData'
+import { isReady } from '../timelineitem/TimelineItemQueries'
+import { hasAudioCapabilities } from '../utils/UnifiedSpriteTypeGuards'
 
 /**
  * 统一轨道管理模块
@@ -142,10 +144,12 @@ export function createUnifiedTrackModule() {
     // 同步该轨道上所有TimelineItem的sprite可见性（仅限视觉轨道）
     if (timelineItems) {
       const trackItems = timelineItems.value.filter((item) => item.trackId === trackId)
-      trackItems.forEach((_item) => {
-        // 注意：这里需要根据实际的sprite管理方式来同步可见性
-        // 在新架构中，sprite由SpriteLifecycleManager管理
-        // 这里保留原有逻辑的结构，但需要适配新的sprite管理方式
+      trackItems.forEach((item) => {
+        // 使用 isReady 函数检查时间轴项目是否就绪且有 sprite
+        if (isReady(item)) {
+          // 所有UnifiedSprite都继承自WebAV的VisibleSprite，都有visible属性
+          item.runtime.sprite!.visible = track.isVisible
+        }
       })
 
       console.log('👁️ 切换轨道可见性:', {
@@ -188,29 +192,21 @@ export function createUnifiedTrackModule() {
 
     // 同步该轨道上所有TimelineItem的sprite静音状态
     if (timelineItems) {
+      // 获取该轨道上具有音频功能的时间轴项目
+      const trackItems = timelineItems.value.filter((item) => item.trackId === trackId)
       let affectedClips = 0
 
-      if (isVideoTrack(track)) {
-        // 视频轨道：只影响视频类型的项目
-        const trackItems = timelineItems.value.filter(
-          (item) => item.trackId === trackId && item.mediaType === 'video',
-        )
-        trackItems.forEach((_item) => {
-          // 注意：在新架构中，sprite管理方式可能不同
-          // 这里保留原有逻辑结构，但需要适配新的sprite管理方式
-          affectedClips++
-        })
-      } else if (isAudioTrack(track)) {
-        // 音频轨道：影响音频类型的项目
-        const trackItems = timelineItems.value.filter(
-          (item) => item.trackId === trackId && item.mediaType === 'audio',
-        )
-        trackItems.forEach((_item) => {
-          // 注意：在新架构中，sprite管理方式可能不同
-          // 这里保留原有逻辑结构，但需要适配新的sprite管理方式
-          affectedClips++
-        })
-      }
+      trackItems.forEach((item) => {
+        // 使用 isReady 函数检查时间轴项目是否就绪且有 sprite
+        if (isReady(item)) {
+          const sprite = item.runtime.sprite!
+          // 检查sprite是否具有音频功能（VideoVisibleSprite 或 AudioVisibleSprite）
+          if (hasAudioCapabilities(sprite)) {
+            sprite.setTrackMuted(track.isMuted)
+          }
+        }
+        affectedClips++
+      })
 
       console.log('🔇 切换轨道静音状态:', {
         trackId,

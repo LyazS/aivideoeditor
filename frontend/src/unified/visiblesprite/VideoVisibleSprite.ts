@@ -42,10 +42,9 @@ export class VideoVisibleSprite extends BaseVisibleSprite {
   }
 
   /**
-   * 轨道静音状态检查函数
-   * 这个函数由外部设置，用于检查当前sprite所在轨道是否被静音
+   * 轨道静音状态
    */
-  #trackMuteChecker: (() => boolean) | null = null
+  #isTrackMuted: boolean = false
 
   /**
    * 时间范围信息（帧数版本）
@@ -79,9 +78,6 @@ export class VideoVisibleSprite extends BaseVisibleSprite {
 
     // 设置音频拦截器来控制音量
     this.#setupVolumeInterceptor()
-
-    // 初始化时间设置（确保getPlaybackRate等方法可以安全调用）
-    // this.#updateVisibleSpriteTime()
   }
 
   /**
@@ -365,12 +361,9 @@ export class VideoVisibleSprite extends BaseVisibleSprite {
       ): Promise<T> => {
         // 如果有音频数据，根据静音状态和音量调整
         if (tickRet.audio && tickRet.audio.length > 0) {
-          // 检查轨道是否被静音
-          const isTrackMuted = this.#trackMuteChecker ? this.#trackMuteChecker() : false
-
           // 计算实际音量：轨道静音或片段静音时为0，否则使用当前音量
           const effectiveVolume =
-            this.#audioState.isMuted || isTrackMuted ? 0 : this.#audioState.volume
+            this.#audioState.isMuted || this.#isTrackMuted ? 0 : this.#audioState.volume
 
           if (effectiveVolume !== 1) {
             // 对每个声道的PCM数据进行音量调整
@@ -459,11 +452,11 @@ export class VideoVisibleSprite extends BaseVisibleSprite {
   }
 
   /**
-   * 设置轨道静音状态检查函数
-   * @param checker 检查函数，返回true表示轨道被静音
+   * 设置轨道静音状态
+   * @param muted 是否静音
    */
-  public setTrackMuteChecker(checker: (() => boolean) | null): void {
-    this.#trackMuteChecker = checker
+  public setTrackMuted(muted: boolean): void {
+    this.#isTrackMuted = muted
   }
 
   /**
@@ -471,7 +464,7 @@ export class VideoVisibleSprite extends BaseVisibleSprite {
    * @returns 是否因轨道静音而被静音
    */
   public isTrackMuted(): boolean {
-    return this.#trackMuteChecker ? this.#trackMuteChecker() : false
+    return this.#isTrackMuted
   }
 
   /**
@@ -479,7 +472,7 @@ export class VideoVisibleSprite extends BaseVisibleSprite {
    * @returns 是否被静音
    */
   public isEffectivelyMuted(): boolean {
-    return this.#audioState.isMuted || this.isTrackMuted()
+    return this.#audioState.isMuted || this.#isTrackMuted
   }
 
   // ==================== 动画方法（从BaseSprite复制） ====================
