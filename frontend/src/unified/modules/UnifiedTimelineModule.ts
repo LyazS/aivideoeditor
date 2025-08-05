@@ -19,7 +19,6 @@ import {
   isLoading,
   hasError,
 } from '../timelineitem/TimelineItemQueries'
-import { convertUnknownToKnown } from '../timelineitem/TimelineItemBehaviors'
 import { TimelineItemFactory } from '../timelineitem/TimelineItemFactory'
 import type { UnifiedMediaItemData } from '../mediaitem/types'
 import type { UnifiedTrackData } from '../track/TrackTypes'
@@ -73,7 +72,7 @@ export function createUnifiedTimelineModule(
 ) {
   // ==================== 状态定义 ====================
 
-  const timelineItems = ref<UnifiedTimelineItemData<MediaTypeOrUnknown>[]>([])
+  const timelineItems = ref<UnifiedTimelineItemData<MediaType>[]>([])
 
   // ==================== 双向数据同步函数 ====================
 
@@ -91,7 +90,7 @@ export function createUnifiedTimelineModule(
    * - opacity: 通过自定义回调实现类似数据流向
    * - volume, isMuted: WebAV不支持相关事件，只能直接修改config
    */
-  function setupBidirectionalSync(timelineItem: UnifiedTimelineItemData<MediaTypeOrUnknown>) {
+  function setupBidirectionalSync(timelineItem: UnifiedTimelineItemData<MediaType>) {
     // 只有已知类型且就绪状态的时间轴项目才需要双向同步
     if (!isKnownTimelineItem(timelineItem) || !isReady(timelineItem)) {
       return
@@ -162,7 +161,7 @@ export function createUnifiedTimelineModule(
    * 添加时间轴项目
    * @param timelineItem 要添加的时间轴项目
    */
-  function addTimelineItem(timelineItem: UnifiedTimelineItemData<MediaTypeOrUnknown>) {
+  function addTimelineItem(timelineItem: UnifiedTimelineItemData<MediaType>) {
     // 如果没有指定轨道，默认分配到第一个轨道
     if (!timelineItem.trackId && trackModule) {
       const firstTrack = trackModule.tracks.value[0]
@@ -235,7 +234,7 @@ export function createUnifiedTimelineModule(
    */
   function removeTimelineItem(timelineItemId: string) {
     const index = timelineItems.value.findIndex(
-      (item: UnifiedTimelineItemData<MediaTypeOrUnknown>) => item.id === timelineItemId,
+      (item: UnifiedTimelineItemData<MediaType>) => item.id === timelineItemId,
     )
     if (index > -1) {
       const item = timelineItems.value[index]
@@ -304,9 +303,9 @@ export function createUnifiedTimelineModule(
    */
   function getTimelineItem(
     timelineItemId: string,
-  ): UnifiedTimelineItemData<MediaTypeOrUnknown> | undefined {
+  ): UnifiedTimelineItemData<MediaType> | undefined {
     return timelineItems.value.find(
-      (item: UnifiedTimelineItemData<MediaTypeOrUnknown>) => item.id === timelineItemId,
+      (item: UnifiedTimelineItemData<MediaType>) => item.id === timelineItemId,
     )
   }
 

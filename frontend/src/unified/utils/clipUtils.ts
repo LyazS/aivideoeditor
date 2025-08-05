@@ -3,7 +3,7 @@
  */
 
 import type { UnifiedTimelineItemData } from '../timelineitem/TimelineItemData'
-import type { MediaTypeOrUnknown } from '../mediaitem/types'
+import type { MediaType } from '../mediaitem/types'
 import type { TimelineItemStatus } from '../timelineitem/TimelineItemData'
 
 // ==================== 状态判断工具 ====================
@@ -11,36 +11,38 @@ import type { TimelineItemStatus } from '../timelineitem/TimelineItemData'
 /**
  * 检查时间轴项目是否处于加载状态
  */
-export function isTimelineItemLoading(data: UnifiedTimelineItemData): boolean {
+export function isTimelineItemLoading(data: UnifiedTimelineItemData<MediaType>): boolean {
   return data.timelineStatus === 'loading'
 }
 
 /**
  * 检查时间轴项目是否处于错误状态
  */
-export function isTimelineItemError(data: UnifiedTimelineItemData): boolean {
+export function isTimelineItemError(data: UnifiedTimelineItemData<MediaType>): boolean {
   return data.timelineStatus === 'error'
 }
 
 /**
  * 检查时间轴项目是否就绪
  */
-export function isTimelineItemReady(data: UnifiedTimelineItemData): boolean {
+export function isTimelineItemReady(data: UnifiedTimelineItemData<MediaType>): boolean {
   return data.timelineStatus === 'ready'
 }
 
 /**
  * 检查时间轴项目是否为未知媒体类型
+ * 注意：由于类型约束，现在总是返回 false
  */
-export function isUnknownMediaType(data: UnifiedTimelineItemData): boolean {
-  return data.mediaType === 'unknown'
+export function isUnknownMediaType(data: UnifiedTimelineItemData<MediaType>): boolean {
+  return false // 由于类型约束，不再有 unknown 类型
 }
 
 /**
  * 检查时间轴项目是否为已知媒体类型
+ * 注意：由于类型约束，现在总是返回 true
  */
-export function isKnownMediaType(data: UnifiedTimelineItemData): boolean {
-  return data.mediaType !== 'unknown'
+export function isKnownMediaType(data: UnifiedTimelineItemData<MediaType>): boolean {
+  return true // 由于类型约束，都是已知类型
 }
 
 // ==================== 类型判断工具 ====================
@@ -48,35 +50,35 @@ export function isKnownMediaType(data: UnifiedTimelineItemData): boolean {
 /**
  * 检查是否为视频类型
  */
-export function isVideoType(mediaType: MediaTypeOrUnknown): boolean {
+export function isVideoType(mediaType: MediaType): boolean {
   return mediaType === 'video'
 }
 
 /**
  * 检查是否为图片类型
  */
-export function isImageType(mediaType: MediaTypeOrUnknown): boolean {
+export function isImageType(mediaType: MediaType): boolean {
   return mediaType === 'image'
 }
 
 /**
  * 检查是否为音频类型
  */
-export function isAudioType(mediaType: MediaTypeOrUnknown): boolean {
+export function isAudioType(mediaType: MediaType): boolean {
   return mediaType === 'audio'
 }
 
 /**
  * 检查是否为文本类型
  */
-export function isTextType(mediaType: MediaTypeOrUnknown): boolean {
+export function isTextType(mediaType: MediaType): boolean {
   return mediaType === 'text'
 }
 
 /**
  * 检查是否为视觉媒体类型（视频或图片）
  */
-export function isVisualMediaType(mediaType: MediaTypeOrUnknown): boolean {
+export function isVisualMediaType(mediaType: MediaType): boolean {
   return mediaType === 'video' || mediaType === 'image'
 }
 
@@ -116,21 +118,21 @@ export function getStatusPriority(status: TimelineItemStatus): number {
 /**
  * 判断是否应该使用状态渲染器
  */
-export function shouldUseStatusRenderer(data: UnifiedTimelineItemData): boolean {
+export function shouldUseStatusRenderer(data: UnifiedTimelineItemData<MediaType>): boolean {
   return data.timelineStatus !== 'ready'
 }
 
 /**
  * 判断是否应该使用媒体类型渲染器
  */
-export function shouldUseMediaTypeRenderer(data: UnifiedTimelineItemData): boolean {
-  return data.timelineStatus === 'ready' && data.mediaType !== 'unknown'
+export function shouldUseMediaTypeRenderer(data: UnifiedTimelineItemData<MediaType>): boolean {
+  return data.timelineStatus === 'ready' // 由于类型约束，不再需要检查 unknown
 }
 
 /**
  * 获取渲染器选择的描述信息
  */
-export function getRendererSelectionInfo(data: UnifiedTimelineItemData): {
+export function getRendererSelectionInfo(data: UnifiedTimelineItemData<MediaType>): {
   type: 'status' | 'mediatype' | 'default'
   value: string
   reason: string
@@ -163,7 +165,7 @@ export function getRendererSelectionInfo(data: UnifiedTimelineItemData): {
 /**
  * 计算时间轴项目的持续时间（帧数）
  */
-export function getTimelineItemDuration(data: UnifiedTimelineItemData): number {
+export function getTimelineItemDuration(data: UnifiedTimelineItemData<MediaType>): number {
   return data.timeRange.timelineEndTime - data.timeRange.timelineStartTime
 }
 
@@ -171,7 +173,7 @@ export function getTimelineItemDuration(data: UnifiedTimelineItemData): number {
  * 检查时间轴项目是否在指定时间范围内
  */
 export function isTimelineItemInRange(
-  data: UnifiedTimelineItemData,
+  data: UnifiedTimelineItemData<MediaType>,
   startFrame: number,
   endFrame: number,
 ): boolean {
@@ -184,7 +186,7 @@ export function isTimelineItemInRange(
  * 检查时间轴项目是否包含指定帧
  */
 export function doesTimelineItemContainFrame(
-  data: UnifiedTimelineItemData,
+  data: UnifiedTimelineItemData<MediaType>,
   frame: number,
 ): boolean {
   return frame >= data.timeRange.timelineStartTime && frame < data.timeRange.timelineEndTime
@@ -195,7 +197,7 @@ export function doesTimelineItemContainFrame(
 /**
  * 获取媒体类型对应的CSS类名
  */
-export function getMediaTypeCssClass(mediaType: MediaTypeOrUnknown): string {
+export function getMediaTypeCssClass(mediaType: MediaType): string {
   return `media-type-${mediaType}`
 }
 
@@ -210,7 +212,7 @@ export function getStatusCssClass(status: TimelineItemStatus): string {
  * 获取时间轴项目的完整CSS类名数组
  */
 export function getTimelineItemCssClasses(
-  data: UnifiedTimelineItemData,
+  data: UnifiedTimelineItemData<MediaType>,
   additionalClasses: string[] = [],
 ): string[] {
   return [
@@ -226,7 +228,7 @@ export function getTimelineItemCssClasses(
 /**
  * 获取时间轴项目关联的媒体项目名称
  */
-export function getMediaItemName(data: UnifiedTimelineItemData): string {
+export function getMediaItemName(data: UnifiedTimelineItemData<MediaType>): string {
   // 动态导入避免循环依赖
   try {
     // 这里需要在运行时获取store，避免在模块加载时导入
@@ -241,7 +243,7 @@ export function getMediaItemName(data: UnifiedTimelineItemData): string {
 /**
  * 获取时间轴项目的显示名称（优先使用媒体项目名称）
  */
-export function getTimelineItemDisplayName(data: UnifiedTimelineItemData): string {
+export function getTimelineItemDisplayName(data: UnifiedTimelineItemData<MediaType>): string {
   // 对于文本类型，优先显示文本内容
   if (data.mediaType === 'text' && 'text' in data.config) {
     const textContent = (data.config as any).text
@@ -250,13 +252,7 @@ export function getTimelineItemDisplayName(data: UnifiedTimelineItemData): strin
     }
   }
 
-  // 对于unknown类型，如果config中有name属性，使用它
-  if (data.mediaType === 'unknown' && 'name' in data.config) {
-    const configName = (data.config as any).name
-    if (configName && typeof configName === 'string') {
-      return configName.length > 20 ? configName.substring(0, 20) + '...' : configName
-    }
-  }
+  // 注意：由于类型约束，不再有 unknown 类型，移除相关逻辑
 
   // 其他情况尝试获取媒体项目名称
   return getMediaItemName(data)
@@ -267,9 +263,9 @@ export function getTimelineItemDisplayName(data: UnifiedTimelineItemData): strin
 /**
  * 获取时间轴项目的调试信息
  */
-export function getTimelineItemDebugInfo(data: UnifiedTimelineItemData): {
+export function getTimelineItemDebugInfo(data: UnifiedTimelineItemData<MediaType>): {
   id: string
-  mediaType: MediaTypeOrUnknown
+  mediaType: MediaType
   status: TimelineItemStatus
   duration: number
   timeRange: string

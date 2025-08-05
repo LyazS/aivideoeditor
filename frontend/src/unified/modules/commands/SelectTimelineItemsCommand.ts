@@ -4,7 +4,7 @@ import type { SimpleCommand } from './types'
 // 类型导入
 import type { UnifiedTimelineItemData } from '../../timelineitem/TimelineItemData'
 
-import type { UnifiedMediaItemData, MediaTypeOrUnknown } from '../../mediaitem/types'
+import type { UnifiedMediaItemData, MediaType } from '../../mediaitem/types'
 
 /**
  * 选择时间轴项目命令
@@ -26,7 +26,7 @@ export class SelectTimelineItemsCommand implements SimpleCommand {
       syncAVCanvasSelection: () => void
     },
     private timelineModule: {
-      getTimelineItem: (id: string) => UnifiedTimelineItemData<MediaTypeOrUnknown> | undefined
+      getTimelineItem: (id: string) => UnifiedTimelineItemData<MediaType> | undefined
     },
     private mediaModule: {
       getMediaItem: (id: string) => UnifiedMediaItemData | undefined

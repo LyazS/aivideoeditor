@@ -55,14 +55,14 @@ import { generateCommandId } from '../../../utils/idGenerator'
 export class AddTimelineItemCommand implements SimpleCommand {
   public readonly id: string
   public readonly description: string
-  private originalTimelineItemData: UnifiedTimelineItemData<MediaTypeOrUnknown> | null = null // 保存原始项目的重建数据
+  private originalTimelineItemData: UnifiedTimelineItemData<MediaType> | null = null // 保存原始项目的重建数据
 
   constructor(
-    timelineItem: UnifiedTimelineItemData<MediaTypeOrUnknown>,
+    timelineItem: UnifiedTimelineItemData<MediaType>,
     private timelineModule: {
-      addTimelineItem: (item: UnifiedTimelineItemData<MediaTypeOrUnknown>) => void
+      addTimelineItem: (item: UnifiedTimelineItemData<MediaType>) => void
       removeTimelineItem: (id: string) => void
-      getTimelineItem: (id: string) => UnifiedTimelineItemData<MediaTypeOrUnknown> | undefined
+      getTimelineItem: (id: string) => UnifiedTimelineItemData<MediaType> | undefined
     },
     private webavModule: {
       addSprite: (sprite: VisibleSprite) => Promise<boolean>
@@ -74,24 +74,12 @@ export class AddTimelineItemCommand implements SimpleCommand {
   ) {
     this.id = generateCommandId()
 
-    // 使用类型守卫来区分已知和未知项目
-    if (isKnownTimelineItem(timelineItem)) {
-      // 已知项目处理逻辑
-      const mediaItem = this.mediaModule.getMediaItem(timelineItem.mediaItemId)
-      this.description = `添加时间轴项目: ${mediaItem?.name || '未知素材'}`
+    // 新架构只支持已知媒体类型
+    const mediaItem = this.mediaModule.getMediaItem(timelineItem.mediaItemId)
+    this.description = `添加时间轴项目: ${mediaItem?.name || '未知素材'}`
 
-      // 保存原始数据用于重建sprite
-      this.originalTimelineItemData = TimelineItemFactory.clone(timelineItem)
-    } else if (isUnknownTimelineItem(timelineItem)) {
-      // 未知项目处理逻辑
-      const mediaItem = this.mediaModule.getMediaItem(timelineItem.mediaItemId)
-      this.description = `添加异步处理项目: ${mediaItem?.name || '未知素材'}`
-
-      // 保存未知项目的完整数据（使用统一的 cloneTimelineItem 函数）
-      this.originalTimelineItemData = cloneTimelineItem(timelineItem)
-    } else {
-      throw new Error('不支持的时间轴项目类型')
-    }
+    // 保存原始数据用于重建sprite
+    this.originalTimelineItemData = TimelineItemFactory.clone(timelineItem)
   }
 
   /**
@@ -99,8 +87,8 @@ export class AddTimelineItemCommand implements SimpleCommand {
    * 统一重建逻辑：每次都从原始素材完全重新创建
    */
   private async rebuildKnownTimelineItem(): Promise<KnownTimelineItem> {
-    if (!this.originalTimelineItemData || !isKnownTimelineItem(this.originalTimelineItemData)) {
-      throw new Error('已知时间轴项目数据不存在')
+    if (!this.originalTimelineItemData) {
+      throw new Error('时间轴项目数据不存在')
     }
 
     console.log('🔄 开始从源头重建已知时间轴项目...')
@@ -222,31 +210,7 @@ export class AddTimelineItemCommand implements SimpleCommand {
     }
   }
 
-  /**
-   * 重建未知处理时间轴项目占位符
-   * 不需要创建sprite，只需要重建占位符数据
-   */
-  private rebuildUnknownTimelineItem(): UnknownTimelineItem {
-    if (!this.originalTimelineItemData || !isUnknownTimelineItem(this.originalTimelineItemData)) {
-      throw new Error('未知时间轴项目数据不存在')
-    }
-
-    console.log('🔄 开始重建未知处理时间轴项目占位符...')
-
-    // 使用统一的 cloneTimelineItem 函数
-    const newUnknownTimelineItem: UnknownTimelineItem = cloneTimelineItem(
-      this.originalTimelineItemData,
-    )
-
-    console.log('🔄 重建未知处理时间轴项目完成:', {
-      id: newUnknownTimelineItem.id,
-      mediaType: newUnknownTimelineItem.mediaType,
-      mediaItemId: newUnknownTimelineItem.mediaItemId,
-      timeRange: newUnknownTimelineItem.timeRange,
-    })
-
-    return newUnknownTimelineItem
-  }
+  // 注意：新架构不再支持未知类型的时间轴项目，移除 rebuildUnknownTimelineItem 方法
 
   /**
    * 执行命令：添加时间轴项目
@@ -254,48 +218,32 @@ export class AddTimelineItemCommand implements SimpleCommand {
    */
   async execute(): Promise<void> {
     try {
-      if (this.originalTimelineItemData && isKnownTimelineItem(this.originalTimelineItemData)) {
-        // 已知项目处理逻辑
-        console.log(`🔄 执行添加操作：从源头重建已知时间轴项目...`)
-
-        // 从原始素材重新创建TimelineItem和sprite
-        const newTimelineItem = await this.rebuildKnownTimelineItem()
-
-        // 1. 添加到时间轴
-        this.timelineModule.addTimelineItem(newTimelineItem)
-
-        // 2. 添加sprite到WebAV画布
-        if (newTimelineItem.runtime.sprite) {
-          await this.webavModule.addSprite(newTimelineItem.runtime.sprite)
-        }
-        
-        // 3. 针对loading状态的项目设置状态同步（确保时间轴项目已添加到store）
-        if (newTimelineItem.timelineStatus === 'loading') {
-          const mediaItem = this.mediaModule.getMediaItem(newTimelineItem.mediaItemId)
-          if (mediaItem) {
-            this.setupMediaSyncForLoadingItem(newTimelineItem, mediaItem)
-          }
-        }
-
-
-        console.log(`✅ 已添加已知时间轴项目: ${this.originalTimelineItemData.mediaItemId}`)
-      } else if (
-        this.originalTimelineItemData &&
-        isUnknownTimelineItem(this.originalTimelineItemData)
-      ) {
-        // 未知项目处理逻辑
-        console.log(`🔄 执行添加操作：重建未知处理时间轴项目占位符...`)
-
-        // 重建未知处理时间轴项目占位符
-        const newUnknownTimelineItem = this.rebuildUnknownTimelineItem()
-
-        // 1. 添加到时间轴（未知项目不需要添加sprite到WebAV画布）
-        this.timelineModule.addTimelineItem(newUnknownTimelineItem)
-
-        console.log(`✅ 已添加未知处理时间轴项目: ${newUnknownTimelineItem.config.name}`)
-      } else {
+      if (!this.originalTimelineItemData) {
         throw new Error('没有有效的时间轴项目数据')
       }
+
+      console.log(`🔄 执行添加操作：从源头重建时间轴项目...`)
+
+      // 从原始素材重新创建TimelineItem和sprite
+      const newTimelineItem = await this.rebuildKnownTimelineItem()
+
+      // 1. 添加到时间轴
+      this.timelineModule.addTimelineItem(newTimelineItem)
+
+      // 2. 添加sprite到WebAV画布
+      if (newTimelineItem.runtime.sprite) {
+        await this.webavModule.addSprite(newTimelineItem.runtime.sprite)
+      }
+      
+      // 3. 针对loading状态的项目设置状态同步（确保时间轴项目已添加到store）
+      if (newTimelineItem.timelineStatus === 'loading') {
+        const mediaItem = this.mediaModule.getMediaItem(newTimelineItem.mediaItemId)
+        if (mediaItem) {
+          this.setupMediaSyncForLoadingItem(newTimelineItem, mediaItem)
+        }
+      }
+
+      console.log(`✅ 已添加时间轴项目: ${this.originalTimelineItemData.mediaItemId}`)
     } catch (error) {
       const itemName = this.originalTimelineItemData?.mediaItemId || '未知项目'
       console.error(`❌ 添加时间轴项目失败: ${itemName}`, error)
@@ -308,43 +256,28 @@ export class AddTimelineItemCommand implements SimpleCommand {
    */
   async undo(): Promise<void> {
     try {
-      if (this.originalTimelineItemData && isKnownTimelineItem(this.originalTimelineItemData)) {
-        // 已知项目撤销逻辑
-        const existingItem = this.timelineModule.getTimelineItem(this.originalTimelineItemData.id)
-        if (!existingItem) {
-          console.warn(`⚠️ 已知时间轴项目不存在，无法撤销: ${this.originalTimelineItemData.id}`)
-          return
-        }
-        
-        // 先清理监听器
-        if (existingItem.runtime.unwatchMediaSync) {
-          existingItem.runtime.unwatchMediaSync()
-          existingItem.runtime.unwatchMediaSync = undefined
-          console.log(`🗑️ [AddTimelineItemCommand.undo] 已清理监听器: ${existingItem.id}`)
-        }
-
-        // 移除时间轴项目（这会自动处理sprite的清理）
-        this.timelineModule.removeTimelineItem(this.originalTimelineItemData.id)
-        const mediaItem = this.mediaModule.getMediaItem(this.originalTimelineItemData.mediaItemId)
-        console.log(`↩️ 已撤销添加已知时间轴项目: ${mediaItem?.name || '未知素材'}`)
-      } else if (
-        this.originalTimelineItemData &&
-        isUnknownTimelineItem(this.originalTimelineItemData)
-      ) {
-        // 未知项目撤销逻辑
-        const existingItem = this.timelineModule.getTimelineItem(this.originalTimelineItemData.id)
-        if (!existingItem) {
-          console.warn(`⚠️ 未知处理时间轴项目不存在，无法撤销: ${this.originalTimelineItemData.id}`)
-          return
-        }
-
-        // 移除未知处理时间轴项目
-        this.timelineModule.removeTimelineItem(this.originalTimelineItemData.id)
-        const mediaItem = this.mediaModule.getMediaItem(this.originalTimelineItemData.mediaItemId)
-        console.log(`↩️ 已撤销添加未知处理时间轴项目: ${mediaItem?.name || '未知素材'}`)
-      } else {
+      if (!this.originalTimelineItemData) {
         console.warn('⚠️ 没有有效的时间轴项目数据，无法撤销')
+        return
       }
+
+      const existingItem = this.timelineModule.getTimelineItem(this.originalTimelineItemData.id)
+      if (!existingItem) {
+        console.warn(`⚠️ 时间轴项目不存在，无法撤销: ${this.originalTimelineItemData.id}`)
+        return
+      }
+      
+      // 先清理监听器
+      if (existingItem.runtime.unwatchMediaSync) {
+        existingItem.runtime.unwatchMediaSync()
+        existingItem.runtime.unwatchMediaSync = undefined
+        console.log(`🗑️ [AddTimelineItemCommand.undo] 已清理监听器: ${existingItem.id}`)
+      }
+
+      // 移除时间轴项目（这会自动处理sprite的清理）
+      this.timelineModule.removeTimelineItem(this.originalTimelineItemData.id)
+      const mediaItem = this.mediaModule.getMediaItem(this.originalTimelineItemData.mediaItemId)
+      console.log(`↩️ 已撤销添加时间轴项目: ${mediaItem?.name || '未知素材'}`)
     } catch (error) {
       const itemName = this.originalTimelineItemData?.mediaItemId || '未知项目'
       console.error(`❌ 撤销添加时间轴项目失败: ${itemName}`, error)

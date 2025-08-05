@@ -5,7 +5,7 @@ import type { SimpleCommand } from './types'
 // 类型导入
 import type { UnifiedTimelineItemData } from '../../timelineitem/TimelineItemData'
 
-import type { UnifiedMediaItemData, MediaTypeOrUnknown } from '../../mediaitem/types'
+import type { UnifiedMediaItemData, MediaType } from '../../mediaitem/types'
 
 import type { UnifiedTimeRange } from '../../types/timeRange'
 
@@ -34,7 +34,7 @@ export class ResizeTimelineItemCommand implements SimpleCommand {
     originalTimeRange: UnifiedTimeRange, // 原始时间范围
     newTimeRange: UnifiedTimeRange, // 新的时间范围
     private timelineModule: {
-      getTimelineItem: (id: string) => UnifiedTimelineItemData<MediaTypeOrUnknown> | undefined
+      getTimelineItem: (id: string) => UnifiedTimelineItemData<MediaType> | undefined
     },
     private mediaModule: {
       getMediaItem: (id: string) => UnifiedMediaItemData | undefined
@@ -116,9 +116,9 @@ export class ResizeTimelineItemCommand implements SimpleCommand {
 
       // 同步timeRange到TimelineItem
       timelineItem.timeRange = sprite.getTimeRange()
-    } else if (isUnknownTimelineItem(timelineItem)) {
-      // 未知项目处理逻辑：直接更新timeRange（未知项目没有sprite）
-      timelineItem.timeRange = timeRange
+    } else {
+      // 新架构不再支持未知类型的时间轴项目
+      throw new Error('不支持的时间轴项目类型')
     }
   }
 

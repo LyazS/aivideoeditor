@@ -18,7 +18,7 @@ import type {
   TimelineItemStatus,
 } from '../../timelineitem/TimelineItemData'
 
-import type { UnifiedMediaItemData, MediaType, MediaTypeOrUnknown } from '../../mediaitem/types'
+import type { UnifiedMediaItemData, MediaType } from '../../mediaitem/types'
 
 import type {
   VideoMediaConfig,
@@ -53,15 +53,15 @@ import { createTextTimelineItem } from '../../utils/textTimelineUtils'
 export class RemoveTimelineItemCommand implements SimpleCommand {
   public readonly id: string
   public readonly description: string
-  private originalTimelineItemData: UnifiedTimelineItemData<MediaTypeOrUnknown> | null = null // 保存原始项目的重建数据
+  private originalTimelineItemData: UnifiedTimelineItemData<MediaType> | null = null // 保存原始项目的重建数据
 
   constructor(
     private timelineItemId: string,
-    timelineItem: UnifiedTimelineItemData<MediaTypeOrUnknown>,
+    timelineItem: UnifiedTimelineItemData<MediaType>,
     private timelineModule: {
-      addTimelineItem: (item: UnifiedTimelineItemData<MediaTypeOrUnknown>) => void
+      addTimelineItem: (item: UnifiedTimelineItemData<MediaType>) => void
       removeTimelineItem: (id: string) => void
-      getTimelineItem: (id: string) => UnifiedTimelineItemData<MediaTypeOrUnknown> | undefined
+      getTimelineItem: (id: string) => UnifiedTimelineItemData<MediaType> | undefined
     },
     private webavModule: {
       addSprite: (sprite: VisibleSprite) => Promise<boolean>
@@ -96,19 +96,7 @@ export class RemoveTimelineItemCommand implements SimpleCommand {
         timeRange: this.originalTimelineItemData.timeRange,
         config: this.originalTimelineItemData.config,
       })
-    } else if (isUnknownTimelineItem(timelineItem)) {
-      // 未知项目处理逻辑
-      const mediaItem = this.mediaModule.getMediaItem(timelineItem.mediaItemId)
-      this.description = `移除未知处理项目: ${mediaItem?.name || '未知素材'}`
-
-      // 保存未知项目的完整数据（使用统一的 cloneTimelineItem 函数）
-      this.originalTimelineItemData = cloneTimelineItem(timelineItem)
-
-      console.log('💾 保存删除未知项目的数据:', {
-        id: this.originalTimelineItemData.id,
-        mediaItemId: this.originalTimelineItemData.mediaItemId,
-        timeRange: this.originalTimelineItemData.timeRange,
-      })
+    // 注意：由于不再支持 unknown 类型，移除了对 isUnknownTimelineItem 的处理
     } else {
       throw new Error('不支持的时间轴项目类型')
     }
@@ -195,27 +183,7 @@ export class RemoveTimelineItemCommand implements SimpleCommand {
    * 重建未知处理时间轴项目占位符
    * 不需要创建sprite，只需要重建占位符数据
    */
-  private rebuildUnknownTimelineItem(): UnknownTimelineItem {
-    if (!this.originalTimelineItemData || !isUnknownTimelineItem(this.originalTimelineItemData)) {
-      throw new Error('未知时间轴项目数据不存在')
-    }
-
-    console.log('🔄 开始重建未知处理时间轴项目占位符...')
-
-    // 使用统一的 cloneTimelineItem 函数
-    const newUnknownTimelineItem: UnknownTimelineItem = cloneTimelineItem(
-      this.originalTimelineItemData,
-    )
-
-    console.log('🔄 重建未知处理时间轴项目完成:', {
-      id: newUnknownTimelineItem.id,
-      mediaType: newUnknownTimelineItem.mediaType,
-      mediaItemId: newUnknownTimelineItem.mediaItemId,
-      timeRange: newUnknownTimelineItem.timeRange,
-    })
-
-    return newUnknownTimelineItem
-  }
+  // 注意：rebuildUnknownTimelineItem 方法已被移除，因为不再支持 unknown 类型
 
   /**
    * 重建文本时间轴项目
@@ -314,13 +282,7 @@ export class RemoveTimelineItemCommand implements SimpleCommand {
         // 已知项目删除日志
         const mediaItem = this.mediaModule.getMediaItem(this.originalTimelineItemData.mediaItemId)
         console.log(`🗑️ 已删除已知时间轴项目: ${mediaItem?.name || '未知素材'}`)
-      } else if (
-        this.originalTimelineItemData &&
-        isUnknownTimelineItem(this.originalTimelineItemData)
-      ) {
-        // 未知项目删除日志
-        const mediaItem = this.mediaModule.getMediaItem(this.originalTimelineItemData.mediaItemId)
-        console.log(`🗑️ 已删除未知处理时间轴项目: ${mediaItem?.name || '未知素材'}`)
+      // 注意：移除了对未知项目的处理逻辑
       }
     } catch (error) {
       const itemName = this.originalTimelineItemData?.mediaItemId || '未知项目'
@@ -372,21 +334,7 @@ export class RemoveTimelineItemCommand implements SimpleCommand {
           const mediaItem = this.mediaModule.getMediaItem(this.originalTimelineItemData.mediaItemId)
           console.log(`↩️ 已撤销删除已知时间轴项目: ${mediaItem?.name || '未知素材'}`)
         }
-      } else if (
-        this.originalTimelineItemData &&
-        isUnknownTimelineItem(this.originalTimelineItemData)
-      ) {
-        // 未知项目撤销逻辑
-        console.log(`🔄 撤销删除操作：重建未知处理时间轴项目占位符...`)
-
-        // 重建未知处理时间轴项目占位符
-        const newUnknownTimelineItem = this.rebuildUnknownTimelineItem()
-
-        // 1. 添加到时间轴（未知项目不需要添加sprite到WebAV画布）
-        this.timelineModule.addTimelineItem(newUnknownTimelineItem)
-
-        const mediaItem = this.mediaModule.getMediaItem(this.originalTimelineItemData.mediaItemId)
-        console.log(`↩️ 已撤销删除未知处理时间轴项目: ${mediaItem?.name || '未知素材'}`)
+      // 注意：移除了对未知项目撤销的处理逻辑
       } else {
         throw new Error('没有有效的时间轴项目数据')
       }

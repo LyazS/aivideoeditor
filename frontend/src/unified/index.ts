@@ -190,9 +190,6 @@ export {
   setReady,
   setError,
 
-  // 类型转换函数
-  convertUnknownToKnown,
-
   // 类型守卫函数
   isKnownTimelineItem,
   isUnknownTimelineItem,

@@ -63,8 +63,7 @@ export class RemoveTrackCommand implements SimpleCommand {
   public readonly id: string
   public readonly description: string
   private trackData: UnifiedTrackData // 保存被删除的轨道数据
-  private affectedKnownTimelineItems: UnifiedTimelineItemData<MediaType>[] = [] // 保存被删除的已知时间轴项目的重建元数据
-  private affectedUnknownTimelineItems: UnifiedTimelineItemData<'unknown'>[] = [] // 保存被删除的未知时间轴项目的完整数据
+  private affectedTimelineItems: UnifiedTimelineItemData<MediaType>[] = [] // 保存被删除的时间轴项目的重建元数据
 
   constructor(
     private trackId: string,
@@ -72,17 +71,17 @@ export class RemoveTrackCommand implements SimpleCommand {
       addTrack: (type: UnifiedTrackType, name?: string) => UnifiedTrackData
       removeTrack: (
         trackId: string,
-        timelineItems: Ref<UnifiedTimelineItemData<MediaTypeOrUnknown>[]>,
+        timelineItems: Ref<UnifiedTimelineItemData<MediaType>[]>,
         removeTimelineItemCallback?: (id: string) => void,
       ) => void
       getTrack: (trackId: string) => UnifiedTrackData | undefined
       tracks: { value: UnifiedTrackData[] }
     },
     private timelineModule: {
-      addTimelineItem: (item: UnifiedTimelineItemData<MediaTypeOrUnknown>) => void
+      addTimelineItem: (item: UnifiedTimelineItemData<MediaType>) => void
       removeTimelineItem: (id: string) => void
-      getTimelineItem: (id: string) => UnifiedTimelineItemData<MediaTypeOrUnknown> | undefined
-      timelineItems: { value: UnifiedTimelineItemData<MediaTypeOrUnknown>[] }
+      getTimelineItem: (id: string) => UnifiedTimelineItemData<MediaType> | undefined
+      timelineItems: { value: UnifiedTimelineItemData<MediaType>[] }
     },
     private webavModule: {
       addSprite: (sprite: VisibleSprite) => Promise<boolean>
@@ -108,19 +107,13 @@ export class RemoveTrackCommand implements SimpleCommand {
       (item) => item.trackId === trackId,
     )
 
-    // 分别处理已知和未知项目
+    // 保存所有受影响的时间轴项目（新架构只支持已知类型）
     for (const item of affectedItems) {
-      if (isKnownTimelineItem(item)) {
-        this.affectedKnownTimelineItems.push(TimelineItemFactory.clone(item))
-      } else if (isUnknownTimelineItem(item)) {
-        // 使用统一的 cloneTimelineItem 函数
-        const clonedItem = cloneTimelineItem(item)
-        this.affectedUnknownTimelineItems.push(clonedItem)
-      }
+      this.affectedTimelineItems.push(TimelineItemFactory.clone(item))
     }
 
     console.log(
-      `📋 准备删除轨道: ${track.name}, 受影响的项目: ${this.affectedKnownTimelineItems.length}个已知项目, ${this.affectedUnknownTimelineItems.length}个未知项目`,
+      `📋 准备删除轨道: ${track.name}, 受影响的项目: ${this.affectedTimelineItems.length}个`,
     )
   }
 
@@ -269,10 +262,8 @@ export class RemoveTrackCommand implements SimpleCommand {
         this.timelineModule.removeTimelineItem,
       )
 
-      const totalAffectedItems =
-        this.affectedKnownTimelineItems.length + this.affectedUnknownTimelineItems.length
       console.log(
-        `✅ 已删除轨道: ${this.trackData.name}, 删除了 ${totalAffectedItems} 个时间轴项目 (${this.affectedKnownTimelineItems.length}个已知项目, ${this.affectedUnknownTimelineItems.length}个未知项目)`,
+        `✅ 已删除轨道: ${this.trackData.name}, 删除了 ${this.affectedTimelineItems.length} 个时间轴项目`,
       )
     } catch (error) {
       console.error(`❌ 删除轨道失败: ${this.trackData.name}`, error)
@@ -299,9 +290,9 @@ export class RemoveTrackCommand implements SimpleCommand {
         tracks.splice(insertIndex, 0, { ...this.trackData })
       }
 
-      // 2. 重建所有受影响的已知时间轴项目
-      for (const itemData of this.affectedKnownTimelineItems) {
-        console.log(`🔄 重建已知时间轴项目: ${itemData.id}`)
+      // 2. 重建所有受影响的时间轴项目
+      for (const itemData of this.affectedTimelineItems) {
+        console.log(`🔄 重建时间轴项目: ${itemData.id}`)
 
         const newTimelineItem = await this.rebuildTimelineItem(itemData)
 
@@ -314,18 +305,8 @@ export class RemoveTrackCommand implements SimpleCommand {
         }
       }
 
-      // 3. 重建所有受影响的未知时间轴项目
-      for (const asyncItem of this.affectedUnknownTimelineItems) {
-        console.log(`🔄 重建未知处理时间轴项目: ${asyncItem.id}`)
-
-        // 未知项目不需要重建sprite，直接添加到时间轴
-        this.timelineModule.addTimelineItem(asyncItem)
-      }
-
-      const totalAffectedItems =
-        this.affectedKnownTimelineItems.length + this.affectedUnknownTimelineItems.length
       console.log(
-        `↩️ 已撤销删除轨道: ${this.trackData.name}, 恢复了 ${totalAffectedItems} 个时间轴项目 (${this.affectedKnownTimelineItems.length}个已知项目, ${this.affectedUnknownTimelineItems.length}个未知项目)`,
+        `↩️ 已撤销删除轨道: ${this.trackData.name}, 恢复了 ${this.affectedTimelineItems.length} 个时间轴项目`,
       )
     } catch (error) {
       console.error(`❌ 撤销删除轨道失败: ${this.trackData.name}`, error)

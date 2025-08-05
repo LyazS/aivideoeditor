@@ -372,7 +372,7 @@ export interface UnifiedTimelineItemRuntime {
  * 4. 纯数据对象，使用 reactive() 包装
  * 5. 除sprite之外都可以持久化保存
  */
-export interface UnifiedTimelineItemData<T extends MediaTypeOrUnknown = MediaTypeOrUnknown> {
+export interface UnifiedTimelineItemData<T extends MediaType = MediaType> {
   // ==================== 核心属性 ====================
   readonly id: string
   mediaItemId: string // 关联的统一媒体项目ID
@@ -409,9 +409,11 @@ export type KnownTimelineItem =
   | UnifiedTimelineItemData<'text'>
 
 /**
- * 未知媒体类型的时间轴项目（异步处理中）
+ * 未知媒体类型的时间轴项目（已弃用）
+ * 新架构不再支持未知类型的时间轴项目
+ * @deprecated 新架构不再支持未知类型，此类型仅用于向后兼容
  */
-export type UnknownTimelineItem = UnifiedTimelineItemData<'unknown'>
+export type UnknownTimelineItem = never
 
 // ==================== 工厂函数选项类型 ====================
 
@@ -446,6 +448,6 @@ export interface CreateTimelineItemOptions {
   trackId?: string
   timeRange: UnifiedTimeRange
   config: UnknownMediaConfig
-  mediaType?: MediaTypeOrUnknown
+  mediaType?: MediaType
   initialStatus?: TimelineItemStatus
 }

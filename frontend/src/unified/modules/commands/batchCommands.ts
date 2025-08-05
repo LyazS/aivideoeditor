@@ -23,7 +23,7 @@ import type {
   UnknownTimelineItem,
 } from '../../timelineitem/TimelineItemData'
 
-import type { UnifiedMediaItemData, MediaTypeOrUnknown } from '../../mediaitem/types'
+import type { UnifiedMediaItemData, MediaType } from '../../mediaitem/types'
 
 import type { UnifiedTrackData } from '../../track/TrackTypes'
 
@@ -38,8 +38,8 @@ export class BatchDeleteCommand extends BaseBatchCommand {
   constructor(
     private timelineItemIds: string[],
     private timelineModule: {
-      getTimelineItem: (id: string) => UnifiedTimelineItemData<MediaTypeOrUnknown> | undefined
-      addTimelineItem: (item: UnifiedTimelineItemData<MediaTypeOrUnknown>) => void
+      getTimelineItem: (id: string) => UnifiedTimelineItemData<MediaType> | undefined
+      addTimelineItem: (item: UnifiedTimelineItemData<MediaType>) => void
       removeTimelineItem: (id: string) => void
     },
     private webavModule: {
@@ -83,9 +83,9 @@ export class BatchDeleteCommand extends BaseBatchCommand {
 export class BatchAutoArrangeTrackCommand extends BaseBatchCommand {
   constructor(
     private trackId: string,
-    private timelineItems: UnifiedTimelineItemData<MediaTypeOrUnknown>[],
+    private timelineItems: UnifiedTimelineItemData<MediaType>[],
     private timelineModule: {
-      getTimelineItem: (id: string) => UnifiedTimelineItemData<MediaTypeOrUnknown> | undefined
+      getTimelineItem: (id: string) => UnifiedTimelineItemData<MediaType> | undefined
       updateTimelineItemPosition: (id: string, positionFrames: number, trackId?: string) => void
     },
     private mediaModule: {

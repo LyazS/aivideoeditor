@@ -29,7 +29,7 @@ import type {
   GetTimelineItemConfig,
 } from '../../timelineitem/TimelineItemData'
 
-import type { MediaType, MediaTypeOrUnknown } from '../../mediaitem/types'
+import type { MediaType } from '../../mediaitem/types'
 
 import type { BaseMediaProps } from '../../../types'
 import type { UnifiedTimeRange } from '../../types/timeRange'
@@ -438,7 +438,7 @@ export class CreateKeyframeCommand implements SimpleCommand {
     private timelineItemId: string,
     private frame: number,
     private timelineModule: {
-      getTimelineItem: (id: string) => UnifiedTimelineItemData<MediaTypeOrUnknown> | undefined
+      getTimelineItem: (id: string) => UnifiedTimelineItemData<MediaType> | undefined
     },
     private webavAnimationManager: {
       updateWebAVAnimation: (item: UnifiedTimelineItemData<MediaType>) => Promise<void>
@@ -599,7 +599,7 @@ export class DeleteKeyframeCommand implements SimpleCommand {
     private timelineItemId: string,
     private frame: number,
     private timelineModule: {
-      getTimelineItem: (id: string) => UnifiedTimelineItemData<MediaTypeOrUnknown> | undefined
+      getTimelineItem: (id: string) => UnifiedTimelineItemData<MediaType> | undefined
     },
     private webavAnimationManager: {
       updateWebAVAnimation: (item: UnifiedTimelineItemData<MediaType>) => Promise<void>
@@ -759,7 +759,7 @@ export class UpdatePropertyCommand implements SimpleCommand {
     private property: string,
     private newValue: KeyframeProperties[keyof KeyframeProperties] | number,
     private timelineModule: {
-      getTimelineItem: (id: string) => UnifiedTimelineItemData<MediaTypeOrUnknown> | undefined
+      getTimelineItem: (id: string) => UnifiedTimelineItemData<MediaType> | undefined
     },
     private webavAnimationManager: {
       updateWebAVAnimation: (item: UnifiedTimelineItemData<MediaType>) => Promise<void>
@@ -983,7 +983,7 @@ export class ToggleKeyframeCommand implements SimpleCommand {
     private timeFrames: number, // 时间点（帧数）
     private properties: KeyframeProperty[], // 要操作的关键帧属性
     private timelineModule: {
-      getTimelineItem: (id: string) => UnifiedTimelineItemData<MediaTypeOrUnknown> | undefined
+      getTimelineItem: (id: string) => UnifiedTimelineItemData<MediaType> | undefined
       updateTimelineItemAnimation: (
         id: string,
         animation: AnimationConfig<MediaType> | undefined,
@@ -1022,7 +1022,7 @@ export class ToggleKeyframeCommand implements SimpleCommand {
    * 检查指定时间点是否有关键帧
    */
   private checkHasKeyframeAtTime(
-    timelineItem: UnifiedTimelineItemData<MediaTypeOrUnknown> | undefined,
+    timelineItem: UnifiedTimelineItemData<MediaType> | undefined,
     timeFrames: number,
     properties: KeyframeProperty[],
   ): boolean {
@@ -1182,7 +1182,7 @@ export class UpdateKeyframeCommand implements SimpleCommand {
     private oldEasing: KeyframeEasing, // 原始缓动函数
     private newEasing: KeyframeEasing, // 新缓动函数
     private timelineModule: {
-      getTimelineItem: (id: string) => UnifiedTimelineItemData<MediaTypeOrUnknown> | undefined
+      getTimelineItem: (id: string) => UnifiedTimelineItemData<MediaType> | undefined
       updateTimelineItemAnimation: (
         id: string,
         animation: AnimationConfig<MediaType> | undefined,
@@ -1319,7 +1319,7 @@ export class ToggleAnimationCommand implements SimpleCommand {
     private timelineItemId: string,
     private enable: boolean, // true表示启用，false表示禁用
     private timelineModule: {
-      getTimelineItem: (id: string) => UnifiedTimelineItemData<MediaTypeOrUnknown> | undefined
+      getTimelineItem: (id: string) => UnifiedTimelineItemData<MediaType> | undefined
       updateTimelineItemAnimation: (
         id: string,
         animation: AnimationConfig<MediaType> | undefined,
@@ -1436,7 +1436,7 @@ export class ClearAllKeyframesCommand implements SimpleCommand {
   constructor(
     private timelineItemId: string,
     private timelineModule: {
-      getTimelineItem: (id: string) => UnifiedTimelineItemData<MediaTypeOrUnknown> | undefined
+      getTimelineItem: (id: string) => UnifiedTimelineItemData<MediaType> | undefined
       updateTimelineItemAnimation: (
         id: string,
         animation: AnimationConfig<MediaType> | undefined,
@@ -1551,7 +1551,7 @@ export const KeyframeCommandFactory = {
     timeFrames: number,
     properties: KeyframeProperty[],
     timelineModule: {
-      getTimelineItem: (id: string) => UnifiedTimelineItemData<MediaTypeOrUnknown> | undefined
+      getTimelineItem: (id: string) => UnifiedTimelineItemData<MediaType> | undefined
       updateTimelineItemAnimation: (
         id: string,
         animation: AnimationConfig<MediaType> | undefined,
@@ -1585,7 +1585,7 @@ export const KeyframeCommandFactory = {
     oldEasing: KeyframeEasing,
     newEasing: KeyframeEasing,
     timelineModule: {
-      getTimelineItem: (id: string) => UnifiedTimelineItemData<MediaTypeOrUnknown> | undefined
+      getTimelineItem: (id: string) => UnifiedTimelineItemData<MediaType> | undefined
       updateTimelineItemAnimation: (
         id: string,
         animation: AnimationConfig<MediaType> | undefined,
@@ -1618,7 +1618,7 @@ export const KeyframeCommandFactory = {
     timelineItemId: string,
     enable: boolean,
     timelineModule: {
-      getTimelineItem: (id: string) => UnifiedTimelineItemData<MediaTypeOrUnknown> | undefined
+      getTimelineItem: (id: string) => UnifiedTimelineItemData<MediaType> | undefined
       updateTimelineItemAnimation: (
         id: string,
         animation: AnimationConfig<MediaType> | undefined,
@@ -1637,7 +1637,7 @@ export const KeyframeCommandFactory = {
   createClearAllKeyframesCommand(
     timelineItemId: string,
     timelineModule: {
-      getTimelineItem: (id: string) => UnifiedTimelineItemData<MediaTypeOrUnknown> | undefined
+      getTimelineItem: (id: string) => UnifiedTimelineItemData<MediaType> | undefined
       updateTimelineItemAnimation: (
         id: string,
         animation: AnimationConfig<MediaType> | undefined,

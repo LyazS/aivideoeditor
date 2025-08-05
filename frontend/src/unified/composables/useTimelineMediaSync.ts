@@ -157,8 +157,11 @@ export function useTimelineMediaSync() {
       }
 
       // 更新媒体类型（如果从unknown变为具体类型）
-      if (timelineItem.mediaType === 'unknown' && mediaItem.mediaType !== 'unknown') {
-        timelineItem.mediaType = mediaItem.mediaType
+      // 注意：由于时间轴项目不再支持 unknown 类型，这个检查已不再需要
+      // 但为了保持代码的完整性，我们保留这个逻辑结构
+      if (false && mediaItem.mediaType !== 'unknown') {
+        // 由于时间轴项目不再支持 unknown 类型，这段代码已被禁用
+        // timelineItem.mediaType = mediaItem.mediaType
         console.log('🎭 [TimelineMediaSync] 更新媒体类型', {
           timelineItemId: timelineItem.id,
           typeChange: `unknown → ${mediaItem.mediaType}`,

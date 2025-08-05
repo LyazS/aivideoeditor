@@ -13,17 +13,17 @@ import { h } from 'vue'
 import type { VNode } from 'vue'
 import type { ContentRenderer, ContentRenderContext } from '../../../types/clipRenderer'
 import type { UnifiedTimelineItemData } from '../../../timelineitem/TimelineItemData'
-import type { MediaTypeOrUnknown } from '../../../mediaitem/types'
+import type { MediaType } from '../../../mediaitem/types'
 import type { UnifiedMediaItemData } from '../../../mediaitem/types'
 import { getTimelineItemDisplayName } from '../../../utils/clipUtils'
 
 /**
  * 加载状态内容渲染器
  */
-export class LoadingContentRenderer implements ContentRenderer<MediaTypeOrUnknown> {
+export class LoadingContentRenderer implements ContentRenderer<MediaType> {
   readonly type = 'loading' as const
 
-  renderContent(context: ContentRenderContext<MediaTypeOrUnknown>): VNode {
+  renderContent(context: ContentRenderContext<MediaType>): VNode {
     const { data, isSelected } = context
 
     return h(
@@ -32,15 +32,13 @@ export class LoadingContentRenderer implements ContentRenderer<MediaTypeOrUnknow
         class: ['loading-content', { selected: isSelected }],
       },
       [
-        // 根据媒体类型和具体状态渲染不同内容
-        data.mediaType === 'unknown'
-          ? this.renderAsyncProcessing(context)
-          : this.renderNormalLoading(context),
+        // 只渲染普通加载内容，因为不再支持 unknown 类型
+        this.renderNormalLoading(context),
       ],
     )
   }
 
-  renderStatusIndicator(context: ContentRenderContext<MediaTypeOrUnknown>): VNode {
+  renderStatusIndicator(context: ContentRenderContext<MediaType>): VNode {
     return h(
       'div',
       {
@@ -50,7 +48,7 @@ export class LoadingContentRenderer implements ContentRenderer<MediaTypeOrUnknow
     )
   }
 
-  renderProgressBar(context: ContentRenderContext<MediaTypeOrUnknown>): VNode | null {
+  renderProgressBar(context: ContentRenderContext<MediaType>): VNode | null {
     const { data } = context
     const progressInfo = this.getProgressInfo(data)
 
@@ -77,22 +75,18 @@ export class LoadingContentRenderer implements ContentRenderer<MediaTypeOrUnknow
     ])
   }
 
-  getCustomClasses(context: ContentRenderContext<MediaTypeOrUnknown>): string[] {
+  getCustomClasses(context: ContentRenderContext<MediaType>): string[] {
     const { data } = context
     const classes = ['loading-renderer']
 
     // 添加媒体类型特定的类
-    if (data.mediaType === 'unknown') {
-      classes.push('async-processing')
-    } else {
-      classes.push('normal-loading', `loading-${data.mediaType}`)
-    }
+    classes.push('normal-loading', `loading-${data.mediaType}`)
 
     return classes
   }
 
   getCustomStyles(
-    context: ContentRenderContext<MediaTypeOrUnknown>,
+    context: ContentRenderContext<MediaType>,
   ): Record<string, string | number> {
     return {
       borderStyle: 'dashed',
@@ -105,7 +99,7 @@ export class LoadingContentRenderer implements ContentRenderer<MediaTypeOrUnknow
   /**
    * 渲染异步处理内容（unknown类型）
    */
-  private renderAsyncProcessing(context: ContentRenderContext<MediaTypeOrUnknown>): VNode {
+  private renderAsyncProcessing(context: ContentRenderContext<MediaType>): VNode {
     const { data } = context
 
     return h('div', { class: 'async-processing-content' }, [
@@ -121,7 +115,7 @@ export class LoadingContentRenderer implements ContentRenderer<MediaTypeOrUnknow
   /**
    * 渲染普通加载内容
    */
-  private renderNormalLoading(context: ContentRenderContext<MediaTypeOrUnknown>): VNode {
+  private renderNormalLoading(context: ContentRenderContext<MediaType>): VNode {
     const { data } = context
 
     return h('div', { class: 'normal-loading-content' }, [
@@ -140,7 +134,7 @@ export class LoadingContentRenderer implements ContentRenderer<MediaTypeOrUnknow
   /**
    * 渲染处理类型图标
    */
-  private renderProcessingTypeIcon(data: UnifiedTimelineItemData<MediaTypeOrUnknown>): VNode {
+  private renderProcessingTypeIcon(data: UnifiedTimelineItemData<MediaType>): VNode {
     // 根据配置名称或其他信息推断处理类型
     const processingType = this.inferProcessingType(data)
 
@@ -156,7 +150,7 @@ export class LoadingContentRenderer implements ContentRenderer<MediaTypeOrUnknow
   /**
    * 渲染处理状态文本
    */
-  private renderProcessingStatus(data: UnifiedTimelineItemData<MediaTypeOrUnknown>): VNode {
+  private renderProcessingStatus(data: UnifiedTimelineItemData<MediaType>): VNode {
     const statusText = this.getProcessingStatusText(data)
 
     return h('div', { class: 'processing-status' }, [
@@ -168,7 +162,7 @@ export class LoadingContentRenderer implements ContentRenderer<MediaTypeOrUnknow
   /**
    * 渲染进度圆环
    */
-  private renderProgressRing(context: ContentRenderContext<MediaTypeOrUnknown>): VNode | null {
+  private renderProgressRing(context: ContentRenderContext<MediaType>): VNode | null {
     const progressInfo = this.getProgressInfo(context.data)
 
     if (!progressInfo.hasProgress) {
@@ -225,13 +219,12 @@ export class LoadingContentRenderer implements ContentRenderer<MediaTypeOrUnknow
   /**
    * 渲染媒体类型图标
    */
-  private renderMediaTypeIcon(mediaType: MediaTypeOrUnknown): VNode {
+  private renderMediaTypeIcon(mediaType: MediaType): VNode {
     const iconMap = {
       video: '🎬',
       image: '🖼️',
       audio: '🎵',
       text: '📝',
-      unknown: '❓',
     }
 
     return h(
@@ -239,7 +232,7 @@ export class LoadingContentRenderer implements ContentRenderer<MediaTypeOrUnknow
       {
         class: ['media-type-icon', `icon-${mediaType}`],
       },
-      iconMap[mediaType] || iconMap.unknown,
+      iconMap[mediaType] || '❓',
     )
   }
 
@@ -255,7 +248,7 @@ export class LoadingContentRenderer implements ContentRenderer<MediaTypeOrUnknow
   /**
    * 获取进度信息
    */
-  private getProgressInfo(data: UnifiedTimelineItemData): {
+  private getProgressInfo(data: UnifiedTimelineItemData<MediaType>): {
     hasProgress: boolean
     percent: number
     speed?: string
@@ -263,8 +256,8 @@ export class LoadingContentRenderer implements ContentRenderer<MediaTypeOrUnknow
     // 这里需要通过mediaItemId获取关联的媒体项目数据
     // 暂时返回模拟数据，实际实现需要从store或管理器中获取
     return {
-      hasProgress: data.mediaType === 'unknown',
-      percent: data.mediaType === 'unknown' ? 45 : 0,
+      hasProgress: false, // 不再支持 unknown 类型，所以没有进度
+      percent: 0,
       speed: undefined,
     }
   }
@@ -272,7 +265,7 @@ export class LoadingContentRenderer implements ContentRenderer<MediaTypeOrUnknow
   /**
    * 推断处理类型
    */
-  private inferProcessingType(data: UnifiedTimelineItemData<MediaTypeOrUnknown>): string {
+  private inferProcessingType(data: UnifiedTimelineItemData<MediaType>): string {
     const name = getTimelineItemDisplayName(data)
 
     if (name.includes('http') || name.includes('download')) {
@@ -299,7 +292,7 @@ export class LoadingContentRenderer implements ContentRenderer<MediaTypeOrUnknow
   /**
    * 获取处理状态文本
    */
-  private getProcessingStatusText(data: UnifiedTimelineItemData<MediaTypeOrUnknown>): {
+  private getProcessingStatusText(data: UnifiedTimelineItemData<MediaType>): {
     main: string
     sub?: string
   } {
@@ -314,22 +307,21 @@ export class LoadingContentRenderer implements ContentRenderer<MediaTypeOrUnknow
   /**
    * 获取加载标题
    */
-  private getLoadingTitle(data: UnifiedTimelineItemData<MediaTypeOrUnknown>): string {
+  private getLoadingTitle(data: UnifiedTimelineItemData<MediaType>): string {
     const typeMap = {
       video: '视频加载中',
       image: '图片加载中',
       audio: '音频加载中',
       text: '文本加载中',
-      unknown: '加载中',
     }
 
-    return typeMap[data.mediaType] || typeMap.unknown
+    return typeMap[data.mediaType] || '加载中'
   }
 
   /**
    * 获取加载副标题
    */
-  private getLoadingSubtitle(data: UnifiedTimelineItemData<MediaTypeOrUnknown>): string {
+  private getLoadingSubtitle(data: UnifiedTimelineItemData<MediaType>): string {
     const name = getTimelineItemDisplayName(data)
     return name.length > 15 ? name.substring(0, 15) + '...' : name
   }

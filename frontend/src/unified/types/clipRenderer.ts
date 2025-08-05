@@ -10,7 +10,7 @@
 
 import type { VNode } from 'vue'
 import type { UnifiedTimelineItemData } from '../timelineitem/TimelineItemData'
-import type { MediaTypeOrUnknown } from '../mediaitem/types'
+import type { MediaType } from '../mediaitem/types'
 
 // ==================== 渲染上下文接口 ====================
 
@@ -18,7 +18,7 @@ import type { MediaTypeOrUnknown } from '../mediaitem/types'
  * 内容渲染上下文
  * 包含渲染所需的所有信息和回调函数
  */
-export interface ContentRenderContext<T extends MediaTypeOrUnknown = MediaTypeOrUnknown> {
+export interface ContentRenderContext<T extends MediaType = MediaType> {
   /** 时间轴项目数据 */
   data: UnifiedTimelineItemData<T>
 
@@ -56,7 +56,7 @@ export interface ContentRenderContext<T extends MediaTypeOrUnknown = MediaTypeOr
  * 内容渲染器基础接口
  * 定义所有内容渲染器必须实现的方法
  */
-export interface ContentRenderer<T extends MediaTypeOrUnknown = MediaTypeOrUnknown> {
+export interface ContentRenderer<T extends MediaType = MediaType> {
   /** 渲染器类型标识 */
   readonly type: T | string
 
@@ -123,7 +123,7 @@ export interface ContentRendererFactory {
    * 获取指定数据的内容渲染器
    * 优先基于状态选择，然后基于媒体类型选择
    */
-  getRenderer<T extends MediaTypeOrUnknown>(data: UnifiedTimelineItemData<T>): ContentRenderer<T>
+  getRenderer<T extends MediaType>(data: UnifiedTimelineItemData<T>): ContentRenderer<T>
 
   /**
    * 注册状态渲染器
@@ -133,7 +133,7 @@ export interface ContentRendererFactory {
   /**
    * 注册媒体类型渲染器
    */
-  registerMediaTypeRenderer<T extends MediaTypeOrUnknown>(
+  registerMediaTypeRenderer<T extends MediaType>(
     type: T,
     renderer: ContentRenderer<T>,
   ): void
@@ -144,7 +144,7 @@ export interface ContentRendererFactory {
 /**
  * UnifiedTimelineClip组件属性
  */
-export interface UnifiedTimelineClipProps<T extends MediaTypeOrUnknown = MediaTypeOrUnknown> {
+export interface UnifiedTimelineClipProps<T extends MediaType = MediaType> {
   /** 时间轴项目数据 */
   data: UnifiedTimelineItemData<T>
 

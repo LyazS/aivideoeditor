@@ -18,7 +18,7 @@ import type {
   TimelineItemStatus,
 } from '../../timelineitem/TimelineItemData'
 
-import type { UnifiedMediaItemData, MediaType, MediaTypeOrUnknown } from '../../mediaitem/types'
+import type { UnifiedMediaItemData, MediaType } from '../../mediaitem/types'
 
 import type {
   VideoMediaConfig,
@@ -51,17 +51,17 @@ import { UnifiedMediaItemQueries } from '../../mediaitem'
 export class DuplicateTimelineItemCommand implements SimpleCommand {
   public readonly id: string
   public readonly description: string
-  private originalTimelineItemData: UnifiedTimelineItemData<MediaTypeOrUnknown> | null = null // 保存原始项目的重建数据
+  private originalTimelineItemData: UnifiedTimelineItemData<MediaType> | null = null // 保存原始项目的重建数据
   public readonly newTimelineItemId: string // 新创建的项目ID
 
   constructor(
     private originalTimelineItemId: string,
-    originalTimelineItem: UnifiedTimelineItemData<MediaTypeOrUnknown>, // 支持已知和未知项目
+    originalTimelineItem: UnifiedTimelineItemData<MediaType>, // 只支持已知项目
     private newPositionFrames: number, // 新项目的时间位置（帧数）
     private timelineModule: {
-      addTimelineItem: (item: UnifiedTimelineItemData<MediaTypeOrUnknown>) => void
+      addTimelineItem: (item: UnifiedTimelineItemData<MediaType>) => void
       removeTimelineItem: (id: string) => void
-      getTimelineItem: (id: string) => UnifiedTimelineItemData<MediaTypeOrUnknown> | undefined
+      getTimelineItem: (id: string) => UnifiedTimelineItemData<MediaType> | undefined
     },
     private webavModule: {
       addSprite: (sprite: VisibleSprite) => Promise<boolean>
@@ -81,12 +81,7 @@ export class DuplicateTimelineItemCommand implements SimpleCommand {
 
       // 保存原始项目的完整重建元数据
       this.originalTimelineItemData = TimelineItemFactory.clone(originalTimelineItem)
-    } else if (isUnknownTimelineItem(originalTimelineItem)) {
-      // 未知项目处理逻辑
-      this.description = `复制未知处理项目: ${originalTimelineItem.config.name || '未知素材'}`
-
-      // 保存未知项目的完整数据（使用统一的 cloneTimelineItem 函数）
-      this.originalTimelineItemData = cloneTimelineItem(originalTimelineItem)
+    // 注意：移除了对 isUnknownTimelineItem 的处理，因为不再支持 unknown 类型
     } else {
       throw new Error('不支持的时间轴项目类型')
     }
@@ -98,16 +93,11 @@ export class DuplicateTimelineItemCommand implements SimpleCommand {
   /**
    * 从原始素材重建复制的时间轴项目
    */
-  private async rebuildDuplicatedItem(): Promise<UnifiedTimelineItemData<MediaTypeOrUnknown>> {
+  private async rebuildDuplicatedItem(): Promise<UnifiedTimelineItemData<MediaType>> {
     if (this.originalTimelineItemData && isKnownTimelineItem(this.originalTimelineItemData)) {
       // 已知项目重建逻辑
       return this.rebuildKnownDuplicatedItem()
-    } else if (
-      this.originalTimelineItemData &&
-      isUnknownTimelineItem(this.originalTimelineItemData)
-    ) {
-      // 未知项目重建逻辑
-      return this.rebuildUnknownDuplicatedItem()
+    // 注意：移除了对未知项目的处理逻辑
     } else {
       throw new Error('没有有效的时间轴项目数据')
     }
@@ -210,42 +200,7 @@ export class DuplicateTimelineItemCommand implements SimpleCommand {
   /**
    * 重建未知处理时间轴项目的复制
    */
-  private rebuildUnknownDuplicatedItem(): UnknownTimelineItem {
-    if (!this.originalTimelineItemData || !isUnknownTimelineItem(this.originalTimelineItemData)) {
-      throw new Error('未知时间轴项目数据不存在')
-    }
-
-    console.log('🔄 [DuplicateTimelineItemCommand] 重建未知处理时间轴项目...')
-
-    // 使用统一的 cloneTimelineItem 函数
-    const newUnknownTimelineItem: UnknownTimelineItem = cloneTimelineItem(
-      this.originalTimelineItemData,
-    )
-
-    // 更新新项目的属性
-    // 注意：在统一架构中，我们需要创建一个新的对象而不是修改只读属性
-    const updatedUnknownTimelineItem: UnknownTimelineItem = {
-      ...newUnknownTimelineItem,
-      id: this.newTimelineItemId,
-      timeRange: {
-        ...newUnknownTimelineItem.timeRange,
-        timelineStartTime: this.newPositionFrames,
-        timelineEndTime:
-          this.newPositionFrames +
-          (this.originalTimelineItemData.timeRange.timelineEndTime -
-            this.originalTimelineItemData.timeRange.timelineStartTime),
-      },
-    }
-
-    console.log('🔄 重建未知处理时间轴项目完成:', {
-      id: newUnknownTimelineItem.id,
-      mediaType: newUnknownTimelineItem.mediaType,
-      mediaItemId: newUnknownTimelineItem.mediaItemId,
-      timeRange: newUnknownTimelineItem.timeRange,
-    })
-
-    return updatedUnknownTimelineItem
-  }
+  // 注意：rebuildUnknownDuplicatedItem 方法已被移除，因为不再支持 unknown 类型
 
   /**
    * 执行命令：创建复制的时间轴项目
@@ -271,16 +226,12 @@ export class DuplicateTimelineItemCommand implements SimpleCommand {
         console.log(
           `✅ 已复制已知时间轴项目: ${this.originalTimelineItemData?.mediaItemId || '未知素材'}`,
         )
-      } else if (isUnknownTimelineItem(newTimelineItem)) {
-        // 未知项目处理逻辑（不需要添加sprite）
-        console.log(`✅ 已复制未知处理时间轴项目: ${newTimelineItem.config.name || '未知素材'}`)
+      // 注意：移除了对未知项目的处理逻辑
       }
     } catch (error) {
       const itemName =
         this.originalTimelineItemData?.mediaItemId ||
-        (this.originalTimelineItemData && isUnknownTimelineItem(this.originalTimelineItemData)
-          ? this.originalTimelineItemData.config.name
-          : '未知项目')
+        '未知项目'
       console.error(`❌ 复制时间轴项目失败: ${itemName}`, error)
       throw error
     }
@@ -302,19 +253,14 @@ export class DuplicateTimelineItemCommand implements SimpleCommand {
         console.log(`↩️ 已撤销复制已知时间轴项目: ${mediaItem?.name || '未知素材'}`)
       } else if (
         this.originalTimelineItemData &&
-        isUnknownTimelineItem(this.originalTimelineItemData)
+        false // 不再支持未知项目
       ) {
-        // 未知项目撤销日志
-        console.log(
-          `↩️ 已撤销复制未知处理时间轴项目: ${this.originalTimelineItemData.config.name || '未知素材'}`,
-        )
+        // 移除了未知项目撤销日志
       }
     } catch (error) {
       const itemName =
         this.originalTimelineItemData?.mediaItemId ||
-        (this.originalTimelineItemData && isUnknownTimelineItem(this.originalTimelineItemData)
-          ? this.originalTimelineItemData.config.name
-          : '未知项目')
+        '未知项目'
       console.error(`❌ 撤销复制时间轴项目失败: ${itemName}`, error)
       throw error
     }

@@ -3,7 +3,7 @@
  * 提供各种查询和计算功能的纯函数
  */
 
-import type { MediaTypeOrUnknown } from '../mediaitem'
+import type { MediaType } from '../mediaitem'
 import type {
   UnifiedTimelineItemData,
   TimelineItemStatus,
@@ -19,43 +19,45 @@ import { useUnifiedStore } from '../unifiedStore'
  * 检查是否为已知媒体类型的时间轴项目
  */
 export function isKnownTimelineItem(
-  item: UnifiedTimelineItemData<MediaTypeOrUnknown>,
+  item: UnifiedTimelineItemData<MediaType>,
 ): item is KnownTimelineItem {
-  return item.mediaType !== 'unknown'
+  return true // 新架构只支持已知类型，所以总是返回 true
 }
 
 /**
  * 检查是否为未知媒体类型的时间轴项目
  */
+// 注意：新架构不再支持未知类型的时间轴项目
+// 此函数保留用于向后兼容，但总是返回 false
 export function isUnknownTimelineItem(
-  item: UnifiedTimelineItemData<MediaTypeOrUnknown>,
-): item is UnknownTimelineItem {
-  return item.mediaType === 'unknown'
+  item: UnifiedTimelineItemData<MediaType>,
+): item is never {
+  return false // 新架构不支持未知类型
 }
 
 /**
  * 媒体类型特定的类型守卫
  */
 export function isVideoTimelineItem(
-  item: UnifiedTimelineItemData<MediaTypeOrUnknown>,
+  item: UnifiedTimelineItemData<MediaType>,
 ): item is UnifiedTimelineItemData<'video'> {
   return item.mediaType === 'video'
 }
 
 export function isImageTimelineItem(
-  item: UnifiedTimelineItemData<MediaTypeOrUnknown>,
+  item: UnifiedTimelineItemData<MediaType>,
 ): item is UnifiedTimelineItemData<'image'> {
   return item.mediaType === 'image'
 }
 
 export function isAudioTimelineItem(
-  item: UnifiedTimelineItemData<MediaTypeOrUnknown>,
+  item: UnifiedTimelineItemData<MediaType>,
 ): item is UnifiedTimelineItemData<'audio'> {
   return item.mediaType === 'audio'
 }
 
 export function isTextTimelineItem(
-  item: UnifiedTimelineItemData<MediaTypeOrUnknown>,
+  item: UnifiedTimelineItemData<MediaType>,
 ): item is UnifiedTimelineItemData<'text'> {
   return item.mediaType === 'text'
 }
@@ -64,7 +66,7 @@ export function isTextTimelineItem(
  * 检查是否为具有视觉属性的时间轴项目（video, image, text）
  */
 export function hasVisualProperties(
-  item: UnifiedTimelineItemData<MediaTypeOrUnknown>,
+  item: UnifiedTimelineItemData<MediaType>,
 ): item is
   | UnifiedTimelineItemData<'video'>
   | UnifiedTimelineItemData<'image'>
@@ -76,7 +78,7 @@ export function hasVisualProperties(
  * 检查是否为具有音频属性的时间轴项目（video, audio）
  */
 export function hasAudioProperties(
-  item: UnifiedTimelineItemData<MediaTypeOrUnknown>,
+  item: UnifiedTimelineItemData<MediaType>,
 ): item is UnifiedTimelineItemData<'video'> | UnifiedTimelineItemData<'audio'> {
   return isVideoTimelineItem(item) || isAudioTimelineItem(item)
 }
@@ -86,42 +88,42 @@ export function hasAudioProperties(
 /**
  * 检查是否为就绪状态
  */
-export function isReady(data: UnifiedTimelineItemData<MediaTypeOrUnknown>): boolean {
+export function isReady(data: UnifiedTimelineItemData<MediaType>): boolean {
   return data.timelineStatus === 'ready' && !!data.runtime.sprite
 }
 
 /**
  * 检查是否正在加载
  */
-export function isLoading(data: UnifiedTimelineItemData<MediaTypeOrUnknown>): boolean {
+export function isLoading(data: UnifiedTimelineItemData<MediaType>): boolean {
   return data.timelineStatus === 'loading'
 }
 
 /**
  * 检查是否有错误
  */
-export function hasError(data: UnifiedTimelineItemData<MediaTypeOrUnknown>): boolean {
+export function hasError(data: UnifiedTimelineItemData<MediaType>): boolean {
   return data.timelineStatus === 'error'
 }
 
 /**
  * 检查是否可以播放
  */
-export function canPlay(data: UnifiedTimelineItemData<MediaTypeOrUnknown>): boolean {
+export function canPlay(data: UnifiedTimelineItemData<MediaType>): boolean {
   return isReady(data) && hasValidTimeRange(data)
 }
 
 /**
  * 检查是否可以编辑
  */
-export function canEdit(data: UnifiedTimelineItemData<MediaTypeOrUnknown>): boolean {
+export function canEdit(data: UnifiedTimelineItemData<MediaType>): boolean {
   return data.timelineStatus !== 'loading'
 }
 
 /**
  * 获取状态显示文本
  */
-export function getStatusText(data: UnifiedTimelineItemData<MediaTypeOrUnknown>): string {
+export function getStatusText(data: UnifiedTimelineItemData<MediaType>): string {
   const unifiedStore = useUnifiedStore()
   const mediaData = unifiedStore.getMediaItem(data.mediaItemId)
   return mediaData ? TimelineStatusDisplayUtils.getStatusText(mediaData) : '未知状态'
@@ -130,7 +132,7 @@ export function getStatusText(data: UnifiedTimelineItemData<MediaTypeOrUnknown>)
 /**
  * 获取进度信息
  */
-export function getProgressInfo(data: UnifiedTimelineItemData<MediaTypeOrUnknown>): {
+export function getProgressInfo(data: UnifiedTimelineItemData<MediaType>): {
   hasProgress: boolean
   percent: number
   text: string
@@ -160,7 +162,7 @@ export function getProgressInfo(data: UnifiedTimelineItemData<MediaTypeOrUnknown
 /**
  * 获取错误信息
  */
-export function getErrorInfo(data: UnifiedTimelineItemData<MediaTypeOrUnknown>): {
+export function getErrorInfo(data: UnifiedTimelineItemData<MediaType>): {
   hasError: boolean
   message: string
   recoverable: boolean
@@ -184,7 +186,7 @@ export function getErrorInfo(data: UnifiedTimelineItemData<MediaTypeOrUnknown>):
 /**
  * 获取项目持续时间（帧数）
  */
-export function getDuration(data: UnifiedTimelineItemData<MediaTypeOrUnknown>): number {
+export function getDuration(data: UnifiedTimelineItemData<MediaType>): number {
   return data.timeRange.timelineEndTime - data.timeRange.timelineStartTime
 }
 
@@ -192,7 +194,7 @@ export function getDuration(data: UnifiedTimelineItemData<MediaTypeOrUnknown>): 
  * 获取项目持续时间（秒）
  */
 export function getDurationInSeconds(
-  data: UnifiedTimelineItemData<MediaTypeOrUnknown>,
+  data: UnifiedTimelineItemData<MediaType>,
   frameRate: number = 30,
 ): number {
   return getDuration(data) / frameRate
@@ -201,7 +203,7 @@ export function getDurationInSeconds(
 /**
  * 检查时间范围是否有效
  */
-export function hasValidTimeRange(data: UnifiedTimelineItemData<MediaTypeOrUnknown>): boolean {
+export function hasValidTimeRange(data: UnifiedTimelineItemData<MediaType>): boolean {
   return (
     data.timeRange.timelineEndTime > data.timeRange.timelineStartTime &&
     data.timeRange.timelineStartTime >= 0
@@ -212,8 +214,8 @@ export function hasValidTimeRange(data: UnifiedTimelineItemData<MediaTypeOrUnkno
  * 检查是否与另一个项目在时间上重叠
  */
 export function isOverlapping(
-  data1: UnifiedTimelineItemData<MediaTypeOrUnknown>,
-  data2: UnifiedTimelineItemData<MediaTypeOrUnknown>,
+  data1: UnifiedTimelineItemData<MediaType>,
+  data2: UnifiedTimelineItemData<MediaType>,
 ): boolean {
   // 不同轨道不算重叠
   if (data1.trackId !== data2.trackId) {
@@ -232,7 +234,7 @@ export function isOverlapping(
  * 检查指定时间点是否在项目范围内
  */
 export function containsTime(
-  data: UnifiedTimelineItemData<MediaTypeOrUnknown>,
+  data: UnifiedTimelineItemData<MediaType>,
   time: number,
 ): boolean {
   return time >= data.timeRange.timelineStartTime && time < data.timeRange.timelineEndTime
@@ -241,7 +243,7 @@ export function containsTime(
 /**
  * 获取项目在时间轴上的位置信息
  */
-export function getTimelinePosition(data: UnifiedTimelineItemData<MediaTypeOrUnknown>): {
+export function getTimelinePosition(data: UnifiedTimelineItemData<MediaType>): {
   startTime: number
   endTime: number
   duration: number
@@ -260,7 +262,7 @@ export function getTimelinePosition(data: UnifiedTimelineItemData<MediaTypeOrUnk
 /**
  * 获取变换配置
  */
-export function getTransform(data: UnifiedTimelineItemData<MediaTypeOrUnknown>) {
+export function getTransform(data: UnifiedTimelineItemData<MediaType>) {
   // 只有视觉媒体类型（video, image, text）才有变换配置
   if (hasVisualProperties(data)) {
     const config = data.config
@@ -280,7 +282,7 @@ export function getTransform(data: UnifiedTimelineItemData<MediaTypeOrUnknown>) 
 /**
  * 获取透明度
  */
-export function getOpacity(data: UnifiedTimelineItemData<MediaTypeOrUnknown>): number {
+export function getOpacity(data: UnifiedTimelineItemData<MediaType>): number {
   // 只有视觉媒体类型（video, image, text）才有透明度
   if (hasVisualProperties(data)) {
     return data.config.opacity ?? 1
@@ -291,7 +293,7 @@ export function getOpacity(data: UnifiedTimelineItemData<MediaTypeOrUnknown>): n
 /**
  * 获取音量
  */
-export function getVolume(data: UnifiedTimelineItemData<MediaTypeOrUnknown>): number {
+export function getVolume(data: UnifiedTimelineItemData<MediaType>): number {
   // 只有视频和音频类型的项目才有音量配置
   if (hasAudioProperties(data)) {
     return data.config.volume ?? 1
@@ -302,7 +304,7 @@ export function getVolume(data: UnifiedTimelineItemData<MediaTypeOrUnknown>): nu
 /**
  * 检查是否静音
  */
-export function isMuted(data: UnifiedTimelineItemData<MediaTypeOrUnknown>): boolean {
+export function isMuted(data: UnifiedTimelineItemData<MediaType>): boolean {
   // 只有视频和音频类型的项目才有静音配置
   if (hasAudioProperties(data)) {
     return data.config.isMuted ?? false
@@ -314,7 +316,7 @@ export function isMuted(data: UnifiedTimelineItemData<MediaTypeOrUnknown>): bool
  * 获取视频裁剪信息
  * 注意：当前的配置结构中，裁剪信息存储在 timeRange 中，而不是 config 中
  */
-export function getVideoClip(data: UnifiedTimelineItemData<MediaTypeOrUnknown>): {
+export function getVideoClip(data: UnifiedTimelineItemData<MediaType>): {
   hasClip: boolean
   startTime?: number
   endTime?: number
@@ -351,9 +353,9 @@ export function getVideoClip(data: UnifiedTimelineItemData<MediaTypeOrUnknown>):
  * 过滤指定状态的项目
  */
 export function filterByStatus(
-  items: UnifiedTimelineItemData<MediaTypeOrUnknown>[],
+  items: UnifiedTimelineItemData<MediaType>[],
   status: TimelineItemStatus,
-): UnifiedTimelineItemData<MediaTypeOrUnknown>[] {
+): UnifiedTimelineItemData<MediaType>[] {
   return items.filter((item) => item.timelineStatus === status)
 }
 
@@ -361,9 +363,9 @@ export function filterByStatus(
  * 过滤指定轨道的项目
  */
 export function filterByTrack(
-  items: UnifiedTimelineItemData<MediaTypeOrUnknown>[],
+  items: UnifiedTimelineItemData<MediaType>[],
   trackId: string,
-): UnifiedTimelineItemData<MediaTypeOrUnknown>[] {
+): UnifiedTimelineItemData<MediaType>[] {
   return items.filter((item) => item.trackId === trackId)
 }
 
@@ -371,9 +373,9 @@ export function filterByTrack(
  * 过滤指定媒体类型的项目
  */
 export function filterByMediaType(
-  items: UnifiedTimelineItemData<MediaTypeOrUnknown>[],
+  items: UnifiedTimelineItemData<MediaType>[],
   mediaType: string,
-): UnifiedTimelineItemData<MediaTypeOrUnknown>[] {
+): UnifiedTimelineItemData<MediaType>[] {
   return items.filter((item) => item.mediaType === mediaType)
 }
 
@@ -381,8 +383,8 @@ export function filterByMediaType(
  * 按时间排序项目
  */
 export function sortByTime(
-  items: UnifiedTimelineItemData<MediaTypeOrUnknown>[],
-): UnifiedTimelineItemData<MediaTypeOrUnknown>[] {
+  items: UnifiedTimelineItemData<MediaType>[],
+): UnifiedTimelineItemData<MediaType>[] {
   return [...items].sort((a, b) => a.timeRange.timelineStartTime - b.timeRange.timelineStartTime)
 }
 
@@ -390,9 +392,9 @@ export function sortByTime(
  * 查找指定时间点的所有项目
  */
 export function findItemsAtTime(
-  items: UnifiedTimelineItemData<MediaTypeOrUnknown>[],
+  items: UnifiedTimelineItemData<MediaType>[],
   time: number,
-): UnifiedTimelineItemData<MediaTypeOrUnknown>[] {
+): UnifiedTimelineItemData<MediaType>[] {
   return items.filter((item) => containsTime(item, time))
 }
 
@@ -400,9 +402,9 @@ export function findItemsAtTime(
  * 查找与指定项目重叠的所有项目
  */
 export function findOverlappingItems(
-  items: UnifiedTimelineItemData<MediaTypeOrUnknown>[],
-  targetItem: UnifiedTimelineItemData<MediaTypeOrUnknown>,
-): UnifiedTimelineItemData<MediaTypeOrUnknown>[] {
+  items: UnifiedTimelineItemData<MediaType>[],
+  targetItem: UnifiedTimelineItemData<MediaType>,
+): UnifiedTimelineItemData<MediaType>[] {
   return items.filter((item) => item.id !== targetItem.id && isOverlapping(item, targetItem))
 }
 
@@ -410,7 +412,7 @@ export function findOverlappingItems(
  * 获取轨道的时间范围统计
  */
 export function getTrackTimeStats(
-  items: UnifiedTimelineItemData<MediaTypeOrUnknown>[],
+  items: UnifiedTimelineItemData<MediaType>[],
   trackId: string,
 ): {
   itemCount: number

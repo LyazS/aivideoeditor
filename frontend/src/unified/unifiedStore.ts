@@ -351,7 +351,7 @@ export const useUnifiedStore = defineStore('unified', () => {
    * @param timelineItem 要添加的时间轴项目
    */
   async function addTimelineItemWithHistory(
-    timelineItem: UnifiedTimelineItemData<MediaTypeOrUnknown>,
+    timelineItem: UnifiedTimelineItemData<MediaType>,
   ) {
     // 检查是否是文本项目，使用专门的文本命令
     if (timelineItem.mediaType === 'text') {

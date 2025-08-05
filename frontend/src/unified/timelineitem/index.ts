@@ -15,8 +15,8 @@ export type {
   UnknownTimelineItem,
 } from './TimelineItemData'
 
-// 从mediaitem模块导入MediaTypeOrUnknown
-export type { MediaTypeOrUnknown } from '../mediaitem'
+// 从mediaitem模块导入MediaType
+export type { MediaType } from '../mediaitem'
 
 // ==================== 常量导出 ====================
 export { VALID_TIMELINE_TRANSITIONS, MEDIA_TO_TIMELINE_STATUS_MAP } from './TimelineItemData'
@@ -57,7 +57,6 @@ export {
   resizeTimelineItem,
 
   // 类型转换函数
-  convertUnknownToKnown,
 } from './TimelineItemBehaviors'
 
 // 从 TimelineItemBehaviors 导出的状态查询函数（避免与 TimelineItemQueries 冲突）
@@ -209,7 +208,6 @@ import {
   updateTimeRange,
   moveTimelineItem,
   resizeTimelineItem,
-  convertUnknownToKnown,
 } from './TimelineItemBehaviors'
 
 import {
@@ -240,7 +238,7 @@ import {
 } from './TimelineStatusDisplayUtils'
 import { TimelineMediaSyncManager } from './TimelineMediaSyncManager'
 import type { UnifiedTimelineItemData } from './TimelineItemData'
-import type { MediaTypeOrUnknown } from '../mediaitem'
+import type { MediaType } from '../mediaitem'
 
 /**
  * 默认导出：统一时间轴项目工具集合
@@ -273,8 +271,6 @@ export default {
     moveItem: moveTimelineItem,
     resizeItem: resizeTimelineItem,
 
-    // 类型转换函数
-    convertUnknownToKnown,
   },
 
   // 查询函数
@@ -293,7 +289,7 @@ export default {
     isReady,
     isLoading,
     hasError,
-    canPlay: (data: UnifiedTimelineItemData<MediaTypeOrUnknown>) =>
+    canPlay: (data: UnifiedTimelineItemData<MediaType>) =>
       isReady(data) && hasValidTimeRange(data),
     getDuration,
     getStatusText,

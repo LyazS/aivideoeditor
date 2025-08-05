@@ -10,7 +10,7 @@ import type { SimpleCommand } from './types'
 // ==================== 新架构类型导入 ====================
 import type { UnifiedTimelineItemData, TransformData } from '../../timelineitem/TimelineItemData'
 
-import type { UnifiedMediaItemData, MediaTypeOrUnknown } from '../../mediaitem/types'
+import type { UnifiedMediaItemData, MediaType, MediaTypeOrUnknown } from '../../mediaitem/types'
 
 import type { VideoMediaConfig, AudioMediaConfig } from '../../../types'
 
@@ -84,7 +84,7 @@ export class UpdateTransformCommand implements SimpleCommand {
     },
     private timelineModule: {
       updateTimelineItemTransform: (id: string, transform: TransformData) => void
-      getTimelineItem: (id: string) => UnifiedTimelineItemData<MediaTypeOrUnknown> | undefined
+      getTimelineItem: (id: string) => UnifiedTimelineItemData<MediaType> | undefined
     },
     private mediaModule: {
       getMediaItem: (id: string) => UnifiedMediaItemData | undefined

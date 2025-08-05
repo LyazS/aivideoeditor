@@ -228,7 +228,7 @@ import { useTimelineMediaSync } from '../composables/useTimelineMediaSync'
 import { calculateVisibleFrameRange } from '../utils/coordinateUtils'
 import { framesToTimecode } from '../utils/UnifiedTimeUtils'
 import type { UnifiedTrackType } from '../track/TrackTypes'
-import type { MediaType, MediaTypeOrUnknown, UnifiedMediaItemData } from '../mediaitem/types'
+import type { MediaType, UnifiedMediaItemData } from '../mediaitem/types'
 import type {
   UnifiedTimelineItemData,
   GetTimelineItemConfig,
@@ -863,7 +863,7 @@ function handleTimelineItemDragOver(event: DragEvent) {
       isConflict,
       currentDragData.selectedItems.length > 1,
       currentDragData.selectedItems.length,
-      draggedItem.mediaType === 'unknown' ? 'video' : (draggedItem.mediaType as MediaType),
+      draggedItem.mediaType,
     )
 
     dragPreviewManager.updatePreview(previewData, timelineWidth.value)
@@ -936,10 +936,9 @@ async function handleTimelineItemDrop(event: DragEvent, dragData: TimelineItemDr
   const draggedItem = unifiedStore.getTimelineItem(dragData.itemId)
   if (draggedItem) {
     const targetTrack = tracks.value.find((t) => t.id === targetTrackId)
-    // 异步处理项目（unknown类型）可以拖拽到任何轨道，转换时会重新分配
+    // unknown类型的素材不能拖拽到任何轨道
     if (
       targetTrack &&
-      draggedItem.mediaType !== 'unknown' &&
       !isMediaCompatibleWithTrack(draggedItem.mediaType as MediaType, targetTrack.type)
     ) {
       // 获取媒体类型标签
@@ -1040,7 +1039,6 @@ async function handleMediaItemDrop(event: DragEvent, mediaDragData: MediaItemDra
 
     // 检查素材类型与轨道类型的兼容性
     if (
-      mediaItem.mediaType !== 'unknown' &&
       !isMediaCompatibleWithTrack(mediaItem.mediaType as MediaType, targetTrack.type)
     ) {
       // 获取媒体类型标签
@@ -1485,10 +1483,13 @@ async function createMediaClipFromMediaItem(
       throw new Error('素材解析失败，无法添加到时间轴')
     }
 
-    // 检查媒体类型是否已知
+    // 检查媒体类型是否已知 - 阻止未知类型素材创建时间轴项目
     if (storeMediaItem.mediaType === 'unknown') {
       throw new Error('素材类型未确定，请等待检测完成')
     }
+
+    // 现在 mediaType 已经确定不是 'unknown'，可以安全地转换为 MediaType
+    const knownMediaType = storeMediaItem.mediaType as MediaType
 
     // 检查是否有可用的时长信息
     const availableDuration = storeMediaItem.duration
@@ -1503,7 +1504,7 @@ async function createMediaClipFromMediaItem(
       '🎬 [UnifiedTimeline] 创建时间轴项目 for mediaItem:',
       storeMediaItem.id,
       'type:',
-      storeMediaItem.mediaType,
+      knownMediaType,
     )
 
     // 获取媒体的原始分辨率（仅对视觉媒体有效）
@@ -1520,7 +1521,7 @@ async function createMediaClipFromMediaItem(
 
     // 创建增强的默认配置
     const config = createEnhancedDefaultConfig(
-      storeMediaItem.mediaType,
+      knownMediaType,
       originalResolution,
       unifiedStore.videoResolution,
     )
@@ -1548,7 +1549,7 @@ async function createMediaClipFromMediaItem(
       id: generateId(),
       mediaItemId: storeMediaItem.id,
       trackId: trackId,
-      mediaType: storeMediaItem.mediaType,
+      mediaType: knownMediaType,
       timeRange: {
         timelineStartTime: startTimeFrames,
         timelineEndTime: startTimeFrames + availableDuration,
@@ -1585,10 +1586,10 @@ async function createMediaClipFromMediaItem(
 
 // 创建增强的默认配置 - 考虑原始分辨率和画布尺寸
 function createEnhancedDefaultConfig(
-  mediaType: MediaTypeOrUnknown,
+  mediaType: MediaType,
   originalResolution: { width: number; height: number } | null,
   canvasResolution: { width: number; height: number },
-): GetTimelineItemConfig<MediaTypeOrUnknown> {
+): GetTimelineItemConfig<MediaType> {
   // 根据媒体类型创建对应的默认配置
   switch (mediaType) {
     case 'video': {
@@ -1675,19 +1676,9 @@ function createEnhancedDefaultConfig(
         zIndex: 0,
       } as TextMediaConfig
 
-    case 'unknown':
-      return {
-        name: '未知媒体',
-        expectedDuration: 0,
-        transform: {},
-      } as GetTimelineItemConfig<'unknown'>
-
     default:
-      return {
-        name: '默认配置',
-        expectedDuration: 0,
-        transform: {},
-      } as GetTimelineItemConfig<'unknown'>
+      // 由于类型系统已经约束为 MediaType，不应该到达这里
+      throw new Error(`不支持的媒体类型: ${mediaType}`)
   }
 }
 

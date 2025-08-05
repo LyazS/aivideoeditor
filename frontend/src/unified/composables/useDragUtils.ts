@@ -1,6 +1,6 @@
 import { useUnifiedStore } from '../unifiedStore'
 import type { TimelineItemDragData, MediaItemDragData } from '../types'
-import type { MediaType, MediaTypeOrUnknown } from '../mediaitem'
+import type { MediaType } from '../mediaitem'
 import type { UnifiedTrackType } from '../track/TrackTypes'
 import { alignFramesToFrame } from '../utils/UnifiedTimeUtils'
 import { useSnapManager } from './useSnapManager'
@@ -105,7 +105,7 @@ export function useDragUtils() {
   /**
    * 根据媒体类型计算clip高度
    */
-  function getClipHeightByMediaType(mediaType: MediaTypeOrUnknown): number {
+  function getClipHeightByMediaType(mediaType: MediaType): number {
     // 统一所有类型的clip高度为50px
     return 50 // 所有clip统一高度50px，轨道高度60px，上下各留5px间距
   }
@@ -173,11 +173,10 @@ export function useDragUtils() {
    * 检查媒体类型与轨道类型的兼容性
    */
   function isMediaCompatibleWithTrack(
-    mediaType: MediaTypeOrUnknown,
+    mediaType: MediaType,
     trackType: UnifiedTrackType,
   ): boolean {
     // 视频轨道支持视频和图片素材
-    if (mediaType === 'unknown') return true
     if (trackType === 'video') {
       return mediaType === 'video' || mediaType === 'image'
     }
@@ -200,7 +199,7 @@ export function useDragUtils() {
    */
   function findNearestCompatibleTrack(
     mouseY: number,
-    mediaType: MediaTypeOrUnknown,
+    mediaType: MediaType,
   ): string | null {
     const tracks = unifiedStore.tracks
     if (tracks.length === 0) return null
@@ -281,7 +280,7 @@ export function useDragUtils() {
       trackContent.getAttribute('data-track-id') || unifiedStore.tracks[0]?.id || ''
 
     // 获取拖拽的媒体类型和排除的片段ID
-    let draggedMediaType: MediaTypeOrUnknown | null = null
+    let draggedMediaType: MediaType | null = null
     let excludeClipIds: string[] = []
 
     // 检查是否是时间轴项目拖拽

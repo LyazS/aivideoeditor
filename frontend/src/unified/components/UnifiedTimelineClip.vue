@@ -65,7 +65,6 @@ import type {
   UnifiedTimelineClipEvents,
   ContentRenderContext,
 } from '../types/clipRenderer'
-import type { MediaTypeOrUnknown } from '../mediaitem/types'
 import type { VideoTimeRange, ImageTimeRange } from '../../types/index'
 import type { UnifiedTimeRange } from '../types/timeRange'
 import { ContentRendererFactory } from './renderers/ContentRendererFactory'

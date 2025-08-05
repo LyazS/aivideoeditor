@@ -19,7 +19,7 @@ import type {
   TimelineItemStatus,
 } from '../../timelineitem/TimelineItemData'
 
-import type { UnifiedMediaItemData, MediaType, MediaTypeOrUnknown } from '../../mediaitem/types'
+import type { UnifiedMediaItemData, MediaType } from '../../mediaitem/types'
 
 import type {
   VideoMediaConfig,
@@ -51,18 +51,18 @@ import { UnifiedMediaItemQueries } from '../../mediaitem'
 export class SplitTimelineItemCommand implements SimpleCommand {
   public readonly id: string
   public readonly description: string
-  private originalTimelineItemData: UnifiedTimelineItemData<MediaTypeOrUnknown> // 保存原始项目的重建数据
+  private originalTimelineItemData: UnifiedTimelineItemData<MediaType> // 保存原始项目的重建数据
   private firstItemId: string // 分割后第一个项目的ID
   private secondItemId: string // 分割后第二个项目的ID
 
   constructor(
     private originalTimelineItemId: string,
-    originalTimelineItem: UnifiedTimelineItemData<MediaTypeOrUnknown>, // 要分割的原始时间轴项目
+    originalTimelineItem: UnifiedTimelineItemData<MediaType>, // 要分割的原始时间轴项目
     private splitTimeFrames: number, // 分割时间点（帧数）
     private timelineModule: {
-      addTimelineItem: (item: UnifiedTimelineItemData<MediaTypeOrUnknown>) => void
+      addTimelineItem: (item: UnifiedTimelineItemData<MediaType>) => void
       removeTimelineItem: (id: string) => void
-      getTimelineItem: (id: string) => UnifiedTimelineItemData<MediaTypeOrUnknown> | undefined
+      getTimelineItem: (id: string) => UnifiedTimelineItemData<MediaType> | undefined
     },
     private webavModule: {
       addSprite: (sprite: VisibleSprite) => Promise<boolean>
@@ -82,12 +82,7 @@ export class SplitTimelineItemCommand implements SimpleCommand {
 
       // 保存原始项目的完整重建元数据
       this.originalTimelineItemData = TimelineItemFactory.clone(originalTimelineItem)
-    } else if (isUnknownTimelineItem(originalTimelineItem)) {
-      // 未知项目处理逻辑
-      this.description = `分割未知处理项目: ${originalTimelineItem.config.name || '未知素材'} (在 ${framesToTimecode(splitTimeFrames)})`
-
-      // 保存未知项目的完整数据（使用统一的 cloneTimelineItem 函数）
-      this.originalTimelineItemData = cloneTimelineItem(originalTimelineItem)
+    // 注意：移除了对 isUnknownTimelineItem 的处理，因为不再支持 unknown 类型
     } else {
       throw new Error('不支持的时间轴项目类型')
     }
@@ -112,8 +107,8 @@ export class SplitTimelineItemCommand implements SimpleCommand {
    * 遵循"从源头重建"原则，每次都完全重新创建
    */
   private async rebuildSplitItems(): Promise<{
-    firstItem: UnifiedTimelineItemData<MediaTypeOrUnknown>
-    secondItem: UnifiedTimelineItemData<MediaTypeOrUnknown>
+    firstItem: UnifiedTimelineItemData<MediaType>
+    secondItem: UnifiedTimelineItemData<MediaType>
   }> {
     console.log('🔄 开始从源头重建分割后的时间轴项目...')
 
@@ -244,7 +239,7 @@ export class SplitTimelineItemCommand implements SimpleCommand {
    * 从原始素材重建原始项目
    * 用于撤销分割操作
    */
-  private async rebuildOriginalItem(): Promise<UnifiedTimelineItemData<MediaTypeOrUnknown>> {
+  private async rebuildOriginalItem(): Promise<UnifiedTimelineItemData<MediaType>> {
     console.log('🔄 开始从源头重建原始时间轴项目...')
 
     // 1. 获取原始素材

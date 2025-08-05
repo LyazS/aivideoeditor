@@ -13,16 +13,16 @@ import { h } from 'vue'
 import type { VNode } from 'vue'
 import type { ContentRenderer, ContentRenderContext } from '../../../types/clipRenderer'
 import type { UnifiedTimelineItemData } from '../../../timelineitem/TimelineItemData'
-import type { MediaTypeOrUnknown } from '../../../mediaitem/types'
+import type { MediaType } from '../../../mediaitem/types'
 import { getTimelineItemDisplayName } from '../../../utils/clipUtils'
 
 /**
  * 错误状态内容渲染器
  */
-export class ErrorContentRenderer implements ContentRenderer<MediaTypeOrUnknown> {
+export class ErrorContentRenderer implements ContentRenderer<MediaType> {
   readonly type = 'error' as const
 
-  renderContent(context: ContentRenderContext<MediaTypeOrUnknown>): VNode {
+  renderContent(context: ContentRenderContext<MediaType>): VNode {
     const { data, isSelected } = context
 
     return h(
@@ -41,7 +41,7 @@ export class ErrorContentRenderer implements ContentRenderer<MediaTypeOrUnknown>
     )
   }
 
-  renderStatusIndicator(context: ContentRenderContext<MediaTypeOrUnknown>): VNode {
+  renderStatusIndicator(context: ContentRenderContext<MediaType>): VNode {
     return h(
       'div',
       {
@@ -51,7 +51,7 @@ export class ErrorContentRenderer implements ContentRenderer<MediaTypeOrUnknown>
     )
   }
 
-  getCustomClasses(context: ContentRenderContext<MediaTypeOrUnknown>): string[] {
+  getCustomClasses(context: ContentRenderContext<MediaType>): string[] {
     const { data } = context
     const classes = ['error-renderer', 'error-state']
 
@@ -63,7 +63,7 @@ export class ErrorContentRenderer implements ContentRenderer<MediaTypeOrUnknown>
   }
 
   getCustomStyles(
-    context: ContentRenderContext<MediaTypeOrUnknown>,
+    context: ContentRenderContext<MediaType>,
   ): Record<string, string | number> {
     return {
       borderColor: '#ff4d4f',
@@ -76,7 +76,7 @@ export class ErrorContentRenderer implements ContentRenderer<MediaTypeOrUnknown>
   /**
    * 渲染错误图标
    */
-  private renderErrorIcon(data: UnifiedTimelineItemData<MediaTypeOrUnknown>): VNode {
+  private renderErrorIcon(data: UnifiedTimelineItemData<MediaType>): VNode {
     const errorType = this.getErrorType(data)
     const iconMap = {
       network: '🌐',
@@ -106,7 +106,7 @@ export class ErrorContentRenderer implements ContentRenderer<MediaTypeOrUnknown>
   /**
    * 渲染错误信息
    */
-  private renderErrorMessage(data: UnifiedTimelineItemData<MediaTypeOrUnknown>): VNode {
+  private renderErrorMessage(data: UnifiedTimelineItemData<MediaType>): VNode {
     const errorInfo = this.getErrorInfo(data)
 
     return h('div', { class: 'error-message-container' }, [
@@ -122,7 +122,7 @@ export class ErrorContentRenderer implements ContentRenderer<MediaTypeOrUnknown>
   /**
    * 渲染重试按钮
    */
-  private renderRetryButton(context: ContentRenderContext<MediaTypeOrUnknown>): VNode | null {
+  private renderRetryButton(context: ContentRenderContext<MediaType>): VNode | null {
     const { data } = context
     const errorInfo = this.getErrorInfo(data)
 
@@ -163,7 +163,7 @@ export class ErrorContentRenderer implements ContentRenderer<MediaTypeOrUnknown>
   /**
    * 获取错误类型
    */
-  private getErrorType(data: UnifiedTimelineItemData<MediaTypeOrUnknown>): string {
+  private getErrorType(data: UnifiedTimelineItemData<MediaType>): string {
     // 这里需要通过mediaItemId获取关联的媒体项目数据来判断错误类型
     // 暂时根据配置名称推断错误类型
     const name = getTimelineItemDisplayName(data)
@@ -210,7 +210,7 @@ export class ErrorContentRenderer implements ContentRenderer<MediaTypeOrUnknown>
   /**
    * 获取错误信息
    */
-  private getErrorInfo(data: UnifiedTimelineItemData<MediaTypeOrUnknown>): {
+  private getErrorInfo(data: UnifiedTimelineItemData<MediaType>): {
     message: string
     details?: string
     recoverable: boolean
@@ -259,7 +259,7 @@ export class ErrorContentRenderer implements ContentRenderer<MediaTypeOrUnknown>
   /**
    * 处理重试操作
    */
-  private handleRetry(data: UnifiedTimelineItemData<MediaTypeOrUnknown>): void {
+  private handleRetry(data: UnifiedTimelineItemData<MediaType>): void {
     console.log(`🔄 重试加载项目: ${data.id}`)
 
     // 这里需要调用相应的重试逻辑
@@ -275,7 +275,7 @@ export class ErrorContentRenderer implements ContentRenderer<MediaTypeOrUnknown>
   /**
    * 处理删除操作
    */
-  private handleRemove(data: UnifiedTimelineItemData<MediaTypeOrUnknown>): void {
+  private handleRemove(data: UnifiedTimelineItemData<MediaType>): void {
     console.log(`🗑️ 删除错误项目: ${data.id}`)
 
     // 这里需要调用相应的删除逻辑

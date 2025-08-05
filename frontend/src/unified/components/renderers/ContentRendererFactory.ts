@@ -18,7 +18,7 @@ import type {
   MediaTypeRendererType,
 } from '../../types/clipRenderer'
 import type { UnifiedTimelineItemData } from '../../timelineitem/TimelineItemData'
-import type { MediaTypeOrUnknown } from '../../mediaitem/types'
+import type { MediaType, MediaTypeOrUnknown } from '../../mediaitem/types'
 import type { TimelineItemStatus } from '../../timelineitem/TimelineItemData'
 import { getTimelineItemDisplayName } from '../../utils/clipUtils'
 
@@ -31,10 +31,10 @@ import { VideoContentRenderer, AudioContentRenderer, TextContentRenderer } from 
 /**
  * 默认渲染器 - 用作兜底
  */
-class DefaultContentRenderer implements ContentRenderer<MediaTypeOrUnknown> {
+class DefaultContentRenderer implements ContentRenderer<MediaType> {
   readonly type = 'default' as const
 
-  renderContent(context: ContentRenderContext<MediaTypeOrUnknown>): VNode {
+  renderContent(context: ContentRenderContext<MediaType>): VNode {
     const { data, isSelected } = context
 
     return h(
@@ -50,7 +50,7 @@ class DefaultContentRenderer implements ContentRenderer<MediaTypeOrUnknown> {
     )
   }
 
-  renderStatusIndicator(context: ContentRenderContext<MediaTypeOrUnknown>): VNode | null {
+  renderStatusIndicator(context: ContentRenderContext<MediaType>): VNode | null {
     const { data } = context
 
     if (data.timelineStatus === 'ready') {
@@ -66,7 +66,7 @@ class DefaultContentRenderer implements ContentRenderer<MediaTypeOrUnknown> {
     )
   }
 
-  getCustomClasses(context: ContentRenderContext<MediaTypeOrUnknown>): string[] {
+  getCustomClasses(context: ContentRenderContext<MediaType>): string[] {
     return ['default-renderer']
   }
 
@@ -94,7 +94,7 @@ export class ContentRendererFactory {
   private static statusRenderers = new Map<TimelineItemStatus, ContentRenderer>()
 
   // 媒体类型渲染器映射（仅用于ready状态）
-  private static mediaTypeRenderers = new Map<MediaTypeOrUnknown, ContentRenderer>()
+  private static mediaTypeRenderers = new Map<MediaType, ContentRenderer>()
 
   // 默认渲染器
   private static defaultRenderer = new DefaultContentRenderer()
@@ -108,7 +108,7 @@ export class ContentRendererFactory {
    * 获取指定数据的内容渲染器
    * 优先基于状态选择，然后基于媒体类型选择
    */
-  static getRenderer<T extends MediaTypeOrUnknown>(
+  static getRenderer<T extends MediaType>(
     data: UnifiedTimelineItemData<T>,
   ): ContentRenderer<T> {
     // 确保渲染器已初始化
@@ -150,7 +150,7 @@ export class ContentRendererFactory {
    * @param type 媒体类型
    * @param renderer 渲染器实例
    */
-  static registerMediaTypeRenderer<T extends MediaTypeOrUnknown>(
+  static registerMediaTypeRenderer<T extends MediaType>(
     type: T,
     renderer: ContentRenderer<T>,
   ): void {
@@ -169,7 +169,7 @@ export class ContentRendererFactory {
   /**
    * 获取所有已注册的媒体类型渲染器
    */
-  static getMediaTypeRenderers(): Map<MediaTypeOrUnknown, ContentRenderer> {
+  static getMediaTypeRenderers(): Map<MediaType, ContentRenderer> {
     return new Map(this.mediaTypeRenderers)
   }
 
@@ -183,7 +183,7 @@ export class ContentRendererFactory {
   /**
    * 检查是否有指定媒体类型的渲染器
    */
-  static hasMediaTypeRenderer(type: MediaTypeOrUnknown): boolean {
+  static hasMediaTypeRenderer(type: MediaType): boolean {
     return this.mediaTypeRenderers.has(type)
   }
 
@@ -199,7 +199,7 @@ export class ContentRendererFactory {
   /**
    * 移除媒体类型渲染器
    */
-  static removeMediaTypeRenderer(type: MediaTypeOrUnknown): boolean {
+  static removeMediaTypeRenderer(type: MediaType): boolean {
     return this.mediaTypeRenderers.delete(type)
   }
 
@@ -224,7 +224,7 @@ export class ContentRendererFactory {
   /**
    * 获取渲染器选择的调试信息
    */
-  static getDebugInfo<T extends MediaTypeOrUnknown>(
+  static getDebugInfo<T extends MediaType>(
     data: UnifiedTimelineItemData<T>,
   ): {
     selectedRenderer: string

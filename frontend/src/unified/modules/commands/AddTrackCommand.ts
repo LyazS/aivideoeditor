@@ -11,7 +11,7 @@ import type { SimpleCommand } from './types'
 // ==================== 新架构类型导入 ====================
 import type { UnifiedTrackData, UnifiedTrackType } from '../../track/TrackTypes'
 import type { UnifiedTimelineItemData } from '../../timelineitem/TimelineItemData'
-import type { MediaTypeOrUnknown } from '../../mediaitem/types'
+import type { MediaType, MediaTypeOrUnknown } from '../../mediaitem/types'
 
 /**
  * 添加轨道命令
@@ -32,7 +32,7 @@ export class AddTrackCommand implements SimpleCommand {
       addTrack: (type: UnifiedTrackType, name?: string, position?: number) => UnifiedTrackData
       removeTrack: (
         trackId: string,
-        timelineItems: { value: UnifiedTimelineItemData<MediaTypeOrUnknown>[] },
+        timelineItems: { value: UnifiedTimelineItemData<MediaType>[] },
         removeTimelineItemCallback?: (id: string) => void,
       ) => void
       getTrack: (trackId: string) => UnifiedTrackData | undefined

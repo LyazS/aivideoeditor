@@ -61,17 +61,9 @@ export function createUnknownTimelineItem(options: {
   timeRange: UnifiedTimeRange
   config: UnknownMediaConfig
   timelineStatus?: 'loading' | 'ready' | 'error'
-}): UnifiedTimelineItemData<'unknown'> {
-  return reactive({
-    id: options.id || generateUUID4(),
-    mediaItemId: options.mediaItemId,
-    trackId: options.trackId,
-    mediaType: 'unknown' as const,
-    timeRange: options.timeRange,
-    config: options.config,
-    timelineStatus: options.timelineStatus || 'loading',
-    runtime: {},
-  })
+}): never {
+  // 不再支持创建 unknown 类型的时间轴项目
+  throw new Error('不再支持创建 unknown 类型的时间轴项目，请使用已知的媒体类型')
 }
 
 // ==================== 具体媒体类型工厂函数 ====================
@@ -417,18 +409,9 @@ export function createUnknownTimelineItemWithDefaults(options: {
   timelineEndTime: number
   name: string
   expectedDuration?: number
-}): UnifiedTimelineItemData<'unknown'> {
-  const timeRange = createBaseTimeRange(options.timelineStartTime, options.timelineEndTime)
-  const expectedDuration =
-    options.expectedDuration || options.timelineEndTime - options.timelineStartTime
-  const config = createDefaultUnknownConfig(options.name, expectedDuration)
-
-  return createUnknownTimelineItem({
-    mediaItemId: options.mediaItemId,
-    trackId: options.trackId,
-    timeRange,
-    config,
-  })
+}): never {
+  // 不再支持创建 unknown 类型的时间轴项目
+  throw new Error('不再支持创建 unknown 类型的时间轴项目，请使用已知的媒体类型')
 }
 
 // ==================== 克隆和复制函数 ====================
@@ -437,16 +420,16 @@ export function createUnknownTimelineItemWithDefaults(options: {
  * 克隆时间轴项目（深拷贝）
  * 使用 lodash.cloneDeep 确保完整的深拷贝
  */
-export function cloneTimelineItem<T extends MediaTypeOrUnknown>(
+export function cloneTimelineItem<T extends MediaType>(
   original: UnifiedTimelineItemData<T>,
   overrides?: {
     id?: string
     mediaItemId?: string
     trackId?: string
     timeRange?: UnifiedTimeRange
-    config?: T extends 'unknown' ? UnknownMediaConfig : GetMediaConfig<T & MediaType>
+    config?: GetMediaConfig<T>
     timelineStatus?: 'loading' | 'ready' | 'error'
-    animation?: T extends MediaType ? AnimationConfig<T> : undefined
+    animation?: AnimationConfig<T>
   },
 ): UnifiedTimelineItemData<T> {
   // 深拷贝原始对象，排除不需要克隆的 runtime 属性
@@ -473,7 +456,7 @@ export function cloneTimelineItem<T extends MediaTypeOrUnknown>(
 /**
  * 复制时间轴项目到新轨道
  */
-export function duplicateTimelineItem<T extends MediaTypeOrUnknown>(
+export function duplicateTimelineItem<T extends MediaType>(
   original: UnifiedTimelineItemData<T>,
   newTrackId: string,
   timeOffset: number = 0,
@@ -501,7 +484,7 @@ export function duplicateTimelineItem<T extends MediaTypeOrUnknown>(
 /**
  * 验证时间轴项目数据的有效性
  */
-export function validateTimelineItem<T extends MediaTypeOrUnknown>(
+export function validateTimelineItem<T extends MediaType>(
   item: UnifiedTimelineItemData<T>,
 ): { isValid: boolean; errors: string[] } {
   const errors: string[] = []
@@ -534,18 +517,16 @@ export function validateTimelineItem<T extends MediaTypeOrUnknown>(
   }
 
   // 检查媒体类型特定的配置
-  if (item.mediaType !== 'unknown') {
-    // 已知媒体类型的额外验证
-    const knownItem = item as KnownTimelineItem
+  // 已知媒体类型的额外验证
+  const knownItem = item as KnownTimelineItem
 
-    if (knownItem.mediaType === 'video' || knownItem.mediaType === 'audio') {
-      const timeRange = knownItem.timeRange
-      if (timeRange.clipStartTime < 0) {
-        errors.push('素材开始时间不能为负数')
-      }
-      if (timeRange.clipEndTime <= timeRange.clipStartTime) {
-        errors.push('素材结束时间必须大于开始时间')
-      }
+  if (knownItem.mediaType === 'video' || knownItem.mediaType === 'audio') {
+    const timeRange = knownItem.timeRange
+    if (timeRange.clipStartTime < 0) {
+      errors.push('素材开始时间不能为负数')
+    }
+    if (timeRange.clipEndTime <= timeRange.clipStartTime) {
+      errors.push('素材结束时间必须大于开始时间')
     }
   }
 

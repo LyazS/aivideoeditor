@@ -5,7 +5,7 @@ import type { SimpleCommand } from './types'
 // 类型导入
 import type { UnifiedTimelineItemData } from '../../timelineitem/TimelineItemData'
 
-import type { MediaTypeOrUnknown } from '../../mediaitem/types'
+import type { MediaType, MediaTypeOrUnknown } from '../../mediaitem/types'
 
 import type { UnifiedTrackData } from '../../track/TrackTypes'
 
@@ -25,11 +25,11 @@ export class ToggleTrackMuteCommand implements SimpleCommand {
       getTrack: (trackId: string) => UnifiedTrackData | undefined
       toggleTrackMute: (
         trackId: string,
-        timelineItems?: Ref<UnifiedTimelineItemData<MediaTypeOrUnknown>[]>,
+        timelineItems?: Ref<UnifiedTimelineItemData<MediaType>[]>,
       ) => void
     },
     private timelineModule: {
-      timelineItems: { value: UnifiedTimelineItemData<MediaTypeOrUnknown>[] }
+      timelineItems: { value: UnifiedTimelineItemData<MediaType>[] }
     },
   ) {
     this.id = generateCommandId()
