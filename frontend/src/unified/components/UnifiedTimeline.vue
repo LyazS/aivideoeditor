@@ -1526,24 +1526,6 @@ async function createMediaClipFromMediaItem(
       unifiedStore.videoResolution,
     )
 
-    // 生成时间轴clip的缩略图（音频不需要缩略图）
-    // let thumbnailUrl: string | undefined
-    // if (UnifiedMediaItemQueries.isVideo(storeMediaItem) || UnifiedMediaItemQueries.isImage(storeMediaItem)) {
-    //   console.log('🖼️ [UnifiedTimeline] 生成时间轴clip缩略图...')
-    //   try {
-    //       thumbnailUrl = await generateThumbnailForUnifiedMediaItem(storeMediaItem)
-    //       console.log('✅ [UnifiedTimeline] 缩略图生成成功')
-    //       // 如果生成了缩略图，将其添加到配置中
-    //       if (thumbnailUrl) {
-    //         (config as GetTimelineItemConfig<'video'|'image'>).thumbnailUrl = thumbnailUrl
-    //       }
-    //   } catch (thumbnailError) {
-    //     console.warn('⚠️ [UnifiedTimeline] 缩略图生成失败，继续创建项目:', thumbnailError)
-    //   }
-    // } else {
-    //   console.log('🎵 [UnifiedTimeline] 音频不需要缩略图，跳过生成')
-    // }
-
     // 创建时间轴项目数据
     const timelineItemData: UnifiedTimelineItemData = {
       id: generateId(),

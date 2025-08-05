@@ -22,7 +22,7 @@ export function useTimelineMediaSync() {
    * @param mediaItemId 媒体项目ID
    * @returns 清理函数，用于停止监听
    */
-  function setupMediaSync(timelineItemId: string, mediaItemId: string): WatchStopHandle | null {
+  function setupMediaSync(timelineItemId: string, mediaItemId: string, command?: any): WatchStopHandle | null {
     const mediaItem = unifiedStore.getMediaItem(mediaItemId)
     const timelineItem = unifiedStore.getTimelineItem(timelineItemId)
 
@@ -54,7 +54,7 @@ export function useTimelineMediaSync() {
           statusChange: `${oldStatus} → ${newStatus}`,
         })
 
-        await handleMediaStatusChange(timelineItem, mediaItem, newStatus, oldStatus)
+        await handleMediaStatusChange(timelineItem, mediaItem, newStatus, oldStatus, command)
       },
       { immediate: false }
     )
@@ -74,7 +74,8 @@ export function useTimelineMediaSync() {
     timelineItem: UnifiedTimelineItemData,
     mediaItem: UnifiedMediaItemData,
     newStatus: MediaStatus,
-    oldStatus: MediaStatus
+    oldStatus: MediaStatus,
+    command?: any
   ): Promise<void> {
     try {
       if (newStatus === 'ready' && timelineItem.timelineStatus === 'loading') {
@@ -84,7 +85,7 @@ export function useTimelineMediaSync() {
           mediaItemId: mediaItem.id,
           mediaName: mediaItem.name,
         })
-        await transitionToReady(timelineItem, mediaItem)
+        await transitionToReady(timelineItem, mediaItem, command)
       } else if (['error', 'cancelled', 'missing'].includes(newStatus)) {
         // 素材出错了，标记时间轴项目为错误
         if (timelineItem.timelineStatus === 'loading') {
@@ -133,7 +134,8 @@ export function useTimelineMediaSync() {
    */
   async function transitionToReady(
     timelineItem: UnifiedTimelineItemData,
-    mediaItem: UnifiedMediaItemData
+    mediaItem: UnifiedMediaItemData,
+    command?: any
   ): Promise<void> {
     try {
       console.log('🔄 [TimelineMediaSync] 开始转换时间轴项目为ready状态', {
@@ -150,6 +152,12 @@ export function useTimelineMediaSync() {
         // 调整时间轴项目的结束时间
         timelineItem.timeRange.timelineEndTime = timelineItem.timeRange.timelineStartTime + actualDuration
         timelineItem.timeRange.clipEndTime = actualDuration
+        
+        // 如果有命令引用，更新命令中的originalTimelineItemData时长
+        if (command && command.updateOriginalTimelineItemDuration) {
+          command.updateOriginalTimelineItemDuration(actualDuration)
+        }
+        
         console.log('📏 [TimelineMediaSync] 调整时间轴项目时长', {
           timelineItemId: timelineItem.id,
           durationChange: `${currentDuration} → ${actualDuration}`,

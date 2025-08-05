@@ -331,7 +331,8 @@ export class AddTimelineItemCommand implements SimpleCommand {
   ): void {
     try {
       const { setupMediaSync } = useTimelineMediaSync()
-      const unwatch = setupMediaSync(timelineItem.id, mediaItem.id)
+      // 传递this（命令实例）给setupMediaSync
+      const unwatch = setupMediaSync(timelineItem.id, mediaItem.id, this)
 
       if (unwatch) {
         console.log(`🔗 [AddTimelineItemCommand] 已设置状态同步: ${timelineItem.id} <-> ${mediaItem.id}`)
@@ -345,5 +346,30 @@ export class AddTimelineItemCommand implements SimpleCommand {
     } catch (error) {
       console.error(`❌ [AddTimelineItemCommand] 设置状态同步失败:`, error)
     }
+  }
+
+  /**
+   * 更新保存的原始时间轴项目时长
+   * 当素材从loading状态转换为ready状态时，时长可能会发生变化，需要更新保存的时长数据
+   * @param duration 新的时长
+   */
+  public updateOriginalTimelineItemDuration(duration: number): void {
+    if (!this.originalTimelineItemData) {
+      console.warn('⚠️ [AddTimelineItemCommand] 没有原始时间轴项目数据，无法更新时长')
+      return
+    }
+
+    const oldDuration = this.originalTimelineItemData.timeRange.timelineEndTime - this.originalTimelineItemData.timeRange.timelineStartTime
+
+    console.log('🔄 [AddTimelineItemCommand] 更新原始时间轴项目时长', {
+      oldDuration,
+      newDuration: duration,
+    })
+
+    // 更新时间范围的结束时间，保持开始时间不变
+    this.originalTimelineItemData.timeRange.timelineEndTime = this.originalTimelineItemData.timeRange.timelineStartTime + duration
+    this.originalTimelineItemData.timeRange.clipEndTime = duration
+    
+    console.log('✅ [AddTimelineItemCommand] 原始时间轴项目时长更新完成')
   }
 }
