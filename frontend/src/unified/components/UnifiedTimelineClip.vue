@@ -1,5 +1,8 @@
 <template>
-  <div class="unified-timeline-clip-container">
+  <div
+    class="unified-timeline-clip-container"
+    :style="containerStyles"
+  >
     <div
       :class="clipClasses"
       :style="clipStyles"
@@ -210,9 +213,19 @@ const clipClasses = computed(() => {
 })
 
 /**
- * 动态样式（包含位置和尺寸计算，与旧架构TimelineBaseClip保持一致）
+ * 动态样式（只包含渲染器提供的自定义样式，位置和尺寸由容器处理）
  */
 const clipStyles = computed(() => {
+  // 添加渲染器提供的自定义样式
+  const customStyles = renderer.value.getCustomStyles?.(renderContext.value) || {}
+
+  return { ...customStyles }
+})
+
+/**
+ * 容器样式（将位置和尺寸应用到容器上）
+ */
+const containerStyles = computed(() => {
   // 计算clip的位置和尺寸
   const timeRange = props.data.timeRange
 
@@ -230,16 +243,12 @@ const clipStyles = computed(() => {
   const right = unifiedStore.frameToPixel(endFrames, props.timelineWidth)
   const width = Math.max(right - left, 20) // 最小宽度20px
 
-  const baseStyles = {
+  return {
     left: `${left}px`,
     width: `${width}px`,
-    // 其他样式在CSS中定义
+    height: '60px', // 轨道高度
+    top: '0px',
   }
-
-  // 添加渲染器提供的自定义样式
-  const customStyles = renderer.value.getCustomStyles?.(renderContext.value) || {}
-
-  return { ...baseStyles, ...customStyles }
 })
 
 // ==================== Tooltip 计算属性 ====================
@@ -667,13 +676,17 @@ onUnmounted(() => {
 <style scoped>
 /* 容器样式 */
 .unified-timeline-clip-container {
-  position: relative;
-  width: 100%;
-  height: 100%;
+  position: absolute;
+  /* 容器大小由 clipStyles 动态控制，而不是占满整个轨道 */
+  width: auto;
+  height: auto;
+  /* 确保容器不会超出轨道边界 */
+  max-width: 100%;
+  max-height: 100%;
 }
 
 .unified-timeline-clip {
-  position: absolute;
+  position: relative;
   /* 固定高度50px，与旧架构保持一致 */
   height: 50px;
   /* 垂直居中定位（轨道高度60px，clip高度50px，上下各留5px） */
@@ -684,6 +697,9 @@ onUnmounted(() => {
   transition: all 0.2s ease;
   /* 确保时间轴项目在网格线之上 */
   z-index: 10;
+  /* 确保clip占满容器 */
+  width: 100%;
+  display: block;
 
   /* 基础边框和背景 - 与旧架构保持一致 */
   border: 2px solid transparent;
