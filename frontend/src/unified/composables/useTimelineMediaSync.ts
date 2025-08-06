@@ -11,6 +11,8 @@ import { regenerateThumbnailForUnifiedTimelineItem } from '../utils/thumbnailGen
 import { useUnifiedStore } from '../unifiedStore'
 import { hasVisualProperties } from '../timelineitem'
 import { UnifiedMediaItemQueries } from '../mediaitem'
+import { SimplifiedMediaSyncManager } from '../timelineitem/SimplifiedMediaSyncManager'
+import type { SimpleCommand } from '../modules/commands/types'
 
 /**
  * 时间轴素材状态同步组合函数
@@ -351,11 +353,236 @@ export function useTimelineMediaSync() {
     }
   }
 
+  /**
+   * 为时间轴项目设置媒体同步（如果需要的话）
+   * 自动检测素材和时间轴项目状态，只为loading状态的项目设置同步
+   * @param timelineItem 时间轴项目
+   * @param mediaItem 媒体项目
+   * @param command 可选的命令实例，用于状态转换时更新原始数据
+   * @returns 是否成功设置了同步
+   */
+  function setupMediaSyncIfNeeded(
+    timelineItem: UnifiedTimelineItemData,
+    mediaItem: UnifiedMediaItemData,
+    command?: any,
+  ): boolean {
+    try {
+      // 只为loading状态的时间轴项目设置同步
+      if (timelineItem.timelineStatus !== 'loading') {
+        console.log(`⏭️ [TimelineMediaSync] 跳过同步设置，时间轴项目状态不是loading: ${timelineItem.timelineStatus}`, {
+          timelineItemId: timelineItem.id,
+          mediaItemId: mediaItem.id,
+        })
+        return false
+      }
+
+      // 检查媒体项目状态，只有非ready状态才需要设置同步
+      const isReady = UnifiedMediaItemQueries.isReady(mediaItem)
+      const hasError = UnifiedMediaItemQueries.hasError(mediaItem)
+
+      if (isReady) {
+        console.log(`⏭️ [TimelineMediaSync] 跳过同步设置，媒体项目已经ready: ${mediaItem.name}`, {
+          timelineItemId: timelineItem.id,
+          mediaItemId: mediaItem.id,
+        })
+        return false
+      }
+
+      if (hasError) {
+        console.log(`⏭️ [TimelineMediaSync] 跳过同步设置，媒体项目有错误: ${mediaItem.name}`, {
+          timelineItemId: timelineItem.id,
+          mediaItemId: mediaItem.id,
+          mediaStatus: mediaItem.mediaStatus,
+        })
+        return false
+      }
+
+      // 设置媒体状态同步
+      const unwatch = setupMediaSync(timelineItem.id, mediaItem.id, command)
+
+      if (unwatch) {
+        console.log(`🔗 [TimelineMediaSync] 已设置状态同步: ${timelineItem.id} <-> ${mediaItem.id}`, {
+          mediaName: mediaItem.name,
+          mediaStatus: mediaItem.mediaStatus,
+          timelineStatus: timelineItem.timelineStatus,
+        })
+
+        // 保存监听器清理函数到时间轴项目的runtime中
+        if (!timelineItem.runtime) {
+          timelineItem.runtime = {}
+        }
+        timelineItem.runtime.unwatchMediaSync = unwatch
+        console.log(`💾 [TimelineMediaSync] 已保存监听器到runtime: ${timelineItem.id}`)
+        
+        return true
+      } else {
+        console.warn(`⚠️ [TimelineMediaSync] 无法设置状态同步: ${timelineItem.id} <-> ${mediaItem.id}`, {
+          mediaName: mediaItem.name,
+          mediaStatus: mediaItem.mediaStatus,
+        })
+        return false
+      }
+    } catch (error) {
+      console.error(`❌ [TimelineMediaSync] 设置状态同步失败:`, {
+        timelineItemId: timelineItem.id,
+        mediaItemId: mediaItem.id,
+        error: error instanceof Error ? error.message : String(error),
+      })
+      return false
+    }
+  }
+
+  /**
+   * 清理时间轴项目的媒体同步监听器
+   * @param timelineItem 时间轴项目
+   */
+  function cleanupMediaSync(timelineItem: UnifiedTimelineItemData): void {
+    try {
+      if (timelineItem.runtime?.unwatchMediaSync) {
+        timelineItem.runtime.unwatchMediaSync()
+        timelineItem.runtime.unwatchMediaSync = undefined
+        console.log(`🗑️ [TimelineMediaSync] 已清理监听器: ${timelineItem.id}`)
+      }
+    } catch (error) {
+      console.error(`❌ [TimelineMediaSync] 清理监听器失败:`, {
+        timelineItemId: timelineItem.id,
+        error: error instanceof Error ? error.message : String(error),
+      })
+    }
+  }
+
+  /**
+   * 设置命令与媒体项目的直接同步
+   * @param commandId 命令ID
+   * @param mediaItem 媒体项目
+   */
+  function setupCommandMediaSync(
+    commandId: string,
+    mediaItem: UnifiedMediaItemData
+  ): boolean {
+    try {
+      // 检查媒体项目状态，只有非ready状态才需要设置同步
+      const isReady = UnifiedMediaItemQueries.isReady(mediaItem)
+      const hasError = UnifiedMediaItemQueries.hasError(mediaItem)
+
+      if (isReady) {
+        console.log(`⏭️ [TimelineMediaSync] 跳过命令同步设置，媒体项目已经ready: ${mediaItem.name}`, {
+          commandId,
+          mediaItemId: mediaItem.id,
+        })
+        return false
+      }
+
+      if (hasError) {
+        console.log(`⏭️ [TimelineMediaSync] 跳过命令同步设置，媒体项目有错误: ${mediaItem.name}`, {
+          commandId,
+          mediaItemId: mediaItem.id,
+          mediaStatus: mediaItem.mediaStatus,
+        })
+        return false
+      }
+
+      // 设置媒体状态同步
+      const unwatch = setupDirectMediaSync(commandId, mediaItem.id)
+
+      if (unwatch) {
+        console.log(`🔗 [TimelineMediaSync] 已为命令设置直接状态同步: ${commandId} <-> ${mediaItem.id}`, {
+          mediaName: mediaItem.name,
+          mediaStatus: mediaItem.mediaStatus,
+        })
+
+        // 注册到SimplifiedMediaSyncManager中
+        const syncManager = SimplifiedMediaSyncManager.getInstance()
+        syncManager.registerCommandMediaSync(commandId, mediaItem.id, unwatch)
+        
+        console.log(`💾 [TimelineMediaSync] 已注册监听器到简化媒体同步管理器: ${commandId}`)
+        
+        return true
+      } else {
+        console.warn(`⚠️ [TimelineMediaSync] 无法为命令设置直接状态同步: ${commandId} <-> ${mediaItem.id}`, {
+          mediaName: mediaItem.name,
+          mediaStatus: mediaItem.mediaStatus,
+        })
+        return false
+      }
+    } catch (error) {
+      console.error(`❌ [TimelineMediaSync] 为命令设置直接状态同步失败:`, {
+        commandId,
+        mediaItemId: mediaItem.id,
+        error: error instanceof Error ? error.message : String(error),
+      })
+      return false
+    }
+  }
+
+  /**
+   * 设置直接的媒体状态同步
+   * 不依赖时间轴项目，直接在命令和媒体项目之间建立同步
+   */
+  function setupDirectMediaSync(
+    commandId: string,
+    mediaItemId: string
+  ): (() => void) | null {
+    // 获取媒体项目
+    const mediaItem = unifiedStore.getMediaItem(mediaItemId)
+    if (!mediaItem) {
+      console.error(`❌ [TimelineMediaSync] 无法获取媒体项目: ${mediaItemId}`)
+      return null
+    }
+    
+    // 使用Vue的watch监听媒体项目状态变化
+    const unwatch = watch(
+      () => mediaItem.mediaStatus,
+      (newStatus, oldStatus) => {
+        // 只在媒体状态为"准备好"时更新命令的媒体数据
+        if (newStatus === 'ready') {
+          // 获取命令
+          const command = unifiedStore.getCommandById(commandId)
+          if (command && !command.isDisposed) {
+            // 更新命令中保存的媒体数据
+            command.updateMediaData?.(mediaItem)
+            console.log(`🔄 [TimelineMediaSync] 已更新命令媒体数据: ${commandId} <- ${mediaItemId}`, {
+              mediaName: mediaItem.name,
+              mediaStatus: newStatus,
+              statusChange: `${oldStatus} → ${newStatus}`,
+            })
+          }
+        }
+      },
+      { immediate: true } // 立即执行一次，以免错过已经准备好的媒体项目
+    )
+    
+    return unwatch
+  }
+
+  /**
+   * 清理命令的所有媒体同步
+   * @param commandId 命令ID
+   */
+  function cleanupCommandMediaSync(commandId: string): void {
+    try {
+      const syncManager = SimplifiedMediaSyncManager.getInstance()
+      syncManager.cleanupCommandMediaSync(commandId)
+      
+      console.log(`🗑️ [TimelineMediaSync] 已清理命令所有媒体同步: ${commandId}`)
+    } catch (error) {
+      console.error(`❌ [TimelineMediaSync] 清理命令媒体同步失败:`, {
+        commandId,
+        error: error instanceof Error ? error.message : String(error),
+      })
+    }
+  }
+
   return {
     setupMediaSync,
+    setupMediaSyncIfNeeded,
+    cleanupMediaSync,
     handleMediaStatusChange,
     transitionToReady,
     createRuntimeObjects,
     generateThumbnailForTransitionedItem,
+    setupCommandMediaSync,
+    setupDirectMediaSync,
+    cleanupCommandMediaSync,
   }
 }

@@ -1340,7 +1340,8 @@ export const useUnifiedStore = defineStore('unified', () => {
     getHistorySummary: unifiedHistoryModule.getHistorySummary,
     startBatch: unifiedHistoryModule.startBatch,
     executeBatchCommand: unifiedHistoryModule.executeBatchCommand,
-
+    getCommandById: unifiedHistoryModule.getCommandById,
+    
     // ==================== 统一选择模块状态和方法 ====================
 
     // 选择状态

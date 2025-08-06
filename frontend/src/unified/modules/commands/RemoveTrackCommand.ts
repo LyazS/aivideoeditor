@@ -11,6 +11,7 @@ import type {
   UnknownTimelineItem,
   TimelineItemStatus,
   TransformData,
+  TextMediaConfig,
 } from '../../timelineitem/TimelineItemData'
 
 import type {
@@ -22,37 +23,28 @@ import type {
 
 import type { UnifiedTrackData, UnifiedTrackType } from '../../track/TrackTypes'
 
-import type {
-  VideoMediaConfig,
-  ImageMediaConfig,
-  AudioMediaConfig,
-  TextMediaConfig,
-  BaseMediaProps,
-} from '../../../types'
 
 // 工具导入
 import {
   createSpriteFromUnifiedMediaItem,
   canCreateSpriteFromUnifiedMediaItem,
+  createSpriteFromUnifiedTimelineItem,
 } from '../../utils/UnifiedSpriteFactory'
+
+import { regenerateThumbnailForUnifiedTimelineItem } from '../../utils/thumbnailGenerator'
 
 import {
   isKnownTimelineItem,
   isUnknownTimelineItem,
-  isVideoTimelineItem,
-  isImageTimelineItem,
-  isAudioTimelineItem,
-  isTextTimelineItem,
   isReady,
   isLoading,
   hasError,
   getDuration,
-  hasVisualProperties,
-  hasAudioProperties,
   TimelineItemFactory,
 } from '../../timelineitem'
 
 import { UnifiedMediaItemQueries } from '../../mediaitem'
+import { useTimelineMediaSync } from '../../composables/useTimelineMediaSync'
 
 /**
  * 删除轨道命令
@@ -131,57 +123,8 @@ export class RemoveTrackCommand implements SimpleCommand {
       return await this.rebuildTextTimelineItem(itemData as UnifiedTimelineItemData<'text'>)
     }
 
-    const mediaItem = this.mediaModule.getMediaItem(itemData.mediaItemId)
-    if (!mediaItem) {
-      throw new Error(`找不到素材项目: ${itemData.mediaItemId}`)
-    }
-
-    // 确保素材已经解析完成
-    if (!UnifiedMediaItemQueries.isReady(mediaItem)) {
-      throw new Error('素材还在解析中，无法重建')
-    }
-
-    // 从原始素材重新创建sprite
-    const newSprite = await createSpriteFromUnifiedMediaItem(mediaItem)
-
-    // 设置时间范围
-    newSprite.setTimeRange(itemData.timeRange)
-
-    // 应用变换属性（使用坐标转换）
-    if (hasVisualProperties(itemData)) {
-      const config = itemData.config as VideoMediaConfig | ImageMediaConfig | TextMediaConfig
-
-      // 导入坐标转换工具
-      const { projectToWebavCoords } = await import('../../utils/coordinateTransform')
-
-      // 获取画布分辨率
-      const canvasWidth = this.configModule.videoResolution.value.width
-      const canvasHeight = this.configModule.videoResolution.value.height
-
-      // 使用坐标转换将项目坐标系转换为WebAV坐标系
-      if (config.x !== undefined && config.y !== undefined && config.width !== undefined && config.height !== undefined) {
-        const webavCoords = projectToWebavCoords(
-          config.x,
-          config.y,
-          config.width,
-          config.height,
-          canvasWidth,
-          canvasHeight,
-        )
-        newSprite.rect.x = webavCoords.x
-        newSprite.rect.y = webavCoords.y
-      }
-
-      // 设置尺寸和其他属性
-      if (config.width !== undefined) newSprite.rect.w = config.width
-      if (config.height !== undefined) newSprite.rect.h = config.height
-      if (config.rotation !== undefined) newSprite.rect.angle = config.rotation
-      if (config.opacity !== undefined) newSprite.opacity = config.opacity
-    }
-
-    // 安全地获取 zIndex，所有媒体类型的配置都应该有 zIndex 属性
-    const config = itemData.config as BaseMediaProps
-    newSprite.zIndex = config.zIndex
+    // 使用新的统一函数从时间轴项目数据创建sprite
+    const newSprite = await createSpriteFromUnifiedTimelineItem(itemData)
 
     // 创建新的TimelineItem
     const newTimelineItem = reactive({
@@ -198,7 +141,48 @@ export class RemoveTrackCommand implements SimpleCommand {
       },
     }) as KnownTimelineItem
 
+    // 重新生成缩略图（异步执行，不阻塞重建过程）
+    const mediaItem = this.mediaModule.getMediaItem(itemData.mediaItemId)
+    if (mediaItem) {
+      await this.regenerateThumbnailForRebuiltItem(newTimelineItem, mediaItem)
+    }
+
     return newTimelineItem
+  }
+
+  /**
+   * 为重建的项目重新生成缩略图
+   * @param timelineItem 重建的时间轴项目
+   * @param mediaItem 对应的媒体项目
+   */
+  private async regenerateThumbnailForRebuiltItem(
+    timelineItem: KnownTimelineItem,
+    mediaItem: UnifiedMediaItemData,
+  ) {
+    // 音频不需要缩略图
+    if (mediaItem.mediaType === 'audio') {
+      console.log('🎵 音频不需要缩略图，跳过生成')
+      return
+    }
+
+    // 检查是否已经有缩略图，避免重复生成
+    // 缩略图URL存储在runtime中
+    if (timelineItem.runtime.thumbnailUrl) {
+      console.log('✅ 项目已有缩略图，跳过重新生成')
+      return
+    }
+
+    try {
+      console.log('🖼️ 开始为重建的项目重新生成缩略图...')
+
+      const thumbnailUrl = await regenerateThumbnailForUnifiedTimelineItem(timelineItem, mediaItem)
+
+      if (thumbnailUrl) {
+        console.log('✅ 重建项目缩略图生成完成，已存储到runtime')
+      }
+    } catch (error) {
+      console.error('❌ 重建项目缩略图生成失败:', error)
+    }
   }
 
   /**
@@ -326,6 +310,13 @@ export class RemoveTrackCommand implements SimpleCommand {
         // 添加sprite到WebAV画布
         if (newTimelineItem.runtime.sprite) {
           await this.webavModule.addSprite(newTimelineItem.runtime.sprite)
+        }
+
+        // 为loading状态的项目设置媒体同步
+        const mediaItem = this.mediaModule.getMediaItem(newTimelineItem.mediaItemId)
+        if (mediaItem) {
+          const { setupMediaSyncIfNeeded } = useTimelineMediaSync()
+          setupMediaSyncIfNeeded(newTimelineItem, mediaItem)
         }
       }
 

@@ -14,4 +14,13 @@ export interface SimpleCommand {
 
   /** 撤销命令 */
   undo(): Promise<void>
+
+  /** 更新媒体数据（由媒体同步调用） */
+  updateMediaData?(mediaData: import('../../mediaitem/types').UnifiedMediaItemData): void
+
+  /** 检查命令是否已被清理 */
+  isDisposed?: boolean
+
+  /** 清理命令持有的资源 */
+  dispose?(): void
 }

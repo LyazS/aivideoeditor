@@ -209,11 +209,10 @@ export class AddTimelineItemCommand implements SimpleCommand {
       }
 
       // 3. 针对loading状态的项目设置状态同步（确保时间轴项目已添加到store）
-      if (newTimelineItem.timelineStatus === 'loading') {
-        const mediaItem = this.mediaModule.getMediaItem(newTimelineItem.mediaItemId)
-        if (mediaItem) {
-          this.setupMediaSyncForLoadingItem(newTimelineItem, mediaItem)
-        }
+      const mediaItem = this.mediaModule.getMediaItem(newTimelineItem.mediaItemId)
+      if (mediaItem) {
+        const { setupMediaSyncIfNeeded } = useTimelineMediaSync()
+        setupMediaSyncIfNeeded(newTimelineItem, mediaItem, this)
       }
 
       console.log(`✅ 已添加时间轴项目: ${this.originalTimelineItemData.mediaItemId}`)
@@ -241,11 +240,8 @@ export class AddTimelineItemCommand implements SimpleCommand {
       }
 
       // 先清理监听器
-      if (existingItem.runtime.unwatchMediaSync) {
-        existingItem.runtime.unwatchMediaSync()
-        existingItem.runtime.unwatchMediaSync = undefined
-        console.log(`🗑️ [AddTimelineItemCommand.undo] 已清理监听器: ${existingItem.id}`)
-      }
+      const { cleanupMediaSync } = useTimelineMediaSync()
+      cleanupMediaSync(existingItem)
 
       // 移除时间轴项目（这会自动处理sprite的清理）
       this.timelineModule.removeTimelineItem(this.originalTimelineItemData.id)
@@ -293,37 +289,6 @@ export class AddTimelineItemCommand implements SimpleCommand {
     }
   }
 
-  /**
-   * 为loading状态的时间轴项目设置媒体状态同步
-   * @param timelineItem loading状态的时间轴项目
-   * @param mediaItem 对应的媒体项目
-   */
-  private setupMediaSyncForLoadingItem(
-    timelineItem: KnownTimelineItem,
-    mediaItem: UnifiedMediaItemData,
-  ): void {
-    try {
-      const { setupMediaSync } = useTimelineMediaSync()
-      // 传递this（命令实例）给setupMediaSync
-      const unwatch = setupMediaSync(timelineItem.id, mediaItem.id, this)
-
-      if (unwatch) {
-        console.log(
-          `🔗 [AddTimelineItemCommand] 已设置状态同步: ${timelineItem.id} <-> ${mediaItem.id}`,
-        )
-
-        // 保存监听器清理函数到时间轴项目的runtime中
-        timelineItem.runtime.unwatchMediaSync = unwatch
-        console.log(`💾 [AddTimelineItemCommand] 已保存监听器到runtime: ${timelineItem.id}`)
-      } else {
-        console.warn(
-          `⚠️ [AddTimelineItemCommand] 无法设置状态同步: ${timelineItem.id} <-> ${mediaItem.id}`,
-        )
-      }
-    } catch (error) {
-      console.error(`❌ [AddTimelineItemCommand] 设置状态同步失败:`, error)
-    }
-  }
 
   /**
    * 更新保存的原始时间轴项目时长和状态
