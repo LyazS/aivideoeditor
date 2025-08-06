@@ -81,7 +81,7 @@ export class RemoveTrackCommand implements SimpleCommand {
       addTimelineItem: (item: UnifiedTimelineItemData<MediaType>) => void
       removeTimelineItem: (id: string) => void
       getTimelineItem: (id: string) => UnifiedTimelineItemData<MediaType> | undefined
-      timelineItems: { value: UnifiedTimelineItemData<MediaType>[] }
+      timelineItems: Ref<UnifiedTimelineItemData<MediaType>[]>
     },
     private webavModule: {
       addSprite: (sprite: VisibleSprite) => Promise<boolean>
@@ -282,7 +282,7 @@ export class RemoveTrackCommand implements SimpleCommand {
       // 删除轨道（这会自动删除轨道上的所有时间轴项目）
       this.trackModule.removeTrack(
         this.trackId,
-        ref(this.timelineModule.timelineItems.value),
+        this.timelineModule.timelineItems,
         this.timelineModule.removeTimelineItem,
       )
 

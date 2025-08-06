@@ -5,7 +5,7 @@
  */
 
 import { generateCommandId } from '../../../utils/idGenerator'
-import { ref } from 'vue'
+import { ref, type Ref } from 'vue'
 import type { SimpleCommand } from './types'
 
 // ==================== 新架构类型导入 ====================
@@ -37,7 +37,7 @@ export class AddTrackCommand implements SimpleCommand {
       ) => UnifiedTrackData
       removeTrack: (
         trackId: string,
-        timelineItems: { value: UnifiedTimelineItemData<MediaType>[] },
+        timelineItems: Ref<UnifiedTimelineItemData<MediaType>[]>,
         removeTimelineItemCallback?: (id: string) => void,
       ) => void
       getTrack: (trackId: string) => UnifiedTrackData | undefined
@@ -99,11 +99,9 @@ export class AddTrackCommand implements SimpleCommand {
       if (this.newTrackId) {
         this.trackModule.removeTrack(this.newTrackId, ref([]), undefined)
         console.log(`↩️ 已撤销添加轨道: ${this.trackData.name}`)
-      }
-      else {
+      } else {
         throw new Error(`无法撤销添加轨道操作：轨道ID不存在 (轨道名称: ${this.trackData.name})`)
       }
-
     } catch (error) {
       console.error(`❌ 撤销添加轨道失败: ${this.trackData.name}`, error)
       throw error

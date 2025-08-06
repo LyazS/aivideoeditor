@@ -12,18 +12,18 @@
  */
 
 // 导出所有命令类
-export { AddTimelineItemCommand } from './AddTimelineItemCommand'
-export { RemoveTimelineItemCommand } from './RemoveTimelineItemCommand'
-export { MoveTimelineItemCommand } from './MoveTimelineItemCommand'
-export { UpdateTransformCommand } from './UpdateTransformCommand'
-export { SplitTimelineItemCommand } from './SplitTimelineItemCommand'
-export { AddTrackCommand } from './AddTrackCommand'
-export { RenameTrackCommand } from './RenameTrackCommand'
-export { RemoveTrackCommand } from './RemoveTrackCommand'
-export { ToggleTrackVisibilityCommand } from './ToggleTrackVisibilityCommand'
-export { ToggleTrackMuteCommand } from './ToggleTrackMuteCommand'
-export { ResizeTimelineItemCommand } from './ResizeTimelineItemCommand'
-export { SelectTimelineItemsCommand } from './SelectTimelineItemsCommand'
+export { AddTimelineItemCommand } from './AddTimelineItemCommand' // ok
+export { RemoveTimelineItemCommand } from './RemoveTimelineItemCommand' // ok
+export { MoveTimelineItemCommand } from './MoveTimelineItemCommand' // ok
+export { UpdateTransformCommand } from './UpdateTransformCommand' // -
+export { SplitTimelineItemCommand } from './SplitTimelineItemCommand' // ok
+export { AddTrackCommand } from './AddTrackCommand' // ok
+export { RenameTrackCommand } from './RenameTrackCommand' // no
+export { RemoveTrackCommand } from './RemoveTrackCommand' // no
+export { ToggleTrackVisibilityCommand } from './ToggleTrackVisibilityCommand' // ok
+export { ToggleTrackMuteCommand } from './ToggleTrackMuteCommand' // ok
+export { ResizeTimelineItemCommand } from './ResizeTimelineItemCommand' // ok
+export { SelectTimelineItemsCommand } from './SelectTimelineItemsCommand' // ok
 
 // 导出类型定义
 export type { SimpleCommand } from './types'

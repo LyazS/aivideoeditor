@@ -229,77 +229,7 @@ export const useUnifiedStore = defineStore('unified', () => {
     return unifiedWebavModule.isWebAVAvailable()
   })
 
-  // ==================== 媒体管理方法 ====================
 
-  /**
-   * 添加媒体项目
-   * @param mediaItem 统一媒体项目数据
-   */
-  function addMediaItem(mediaItem: UnifiedMediaItemData) {
-    unifiedMediaModule.addMediaItem(mediaItem)
-    console.log('📚 [UnifiedStore] 添加媒体项目:', mediaItem.name)
-  }
-
-  /**
-   * 移除媒体项目（带日志）
-   * @param mediaItemId 媒体项目ID
-   */
-  function removeMediaItem(mediaItemId: string) {
-    const mediaItem = unifiedMediaModule.getMediaItem(mediaItemId)
-    if (mediaItem) {
-      unifiedMediaModule.removeMediaItem(mediaItemId)
-      console.log('🗑️ [UnifiedStore] 移除媒体项目:', mediaItem.name)
-    }
-  }
-
-  // ==================== 轨道管理方法 ====================
-
-  /**
-   * 添加轨道（带日志）
-   * @param type 轨道类型
-   * @param name 轨道名称（可选）
-   * @param position 插入位置（可选）
-   * @param id 轨道ID（可选）
-   */
-  function addTrack(
-    type: UnifiedTrackType = 'video',
-    name?: string,
-    position?: number,
-    id?: string,
-  ) {
-    const newTrack = unifiedTrackModule.addTrack(type, name, position, id)
-    console.log('🎵 [UnifiedStore] 添加轨道:', newTrack.name)
-    return newTrack
-  }
-
-  /**
-   * 移除轨道（带日志）
-   * @param trackId 轨道ID
-   */
-  function removeTrack(trackId: string) {
-    const track = unifiedTrackModule.getTrack(trackId)
-    if (track) {
-      // 注意：这里应该传入时间轴项目引用，但为了保持代码简洁
-      // 暂时传入空的引用，后续可以直接使用unifiedTimelineModule.timelineItems
-      const emptyTimelineItems = ref([])
-      unifiedTrackModule.removeTrack(trackId, emptyTimelineItems)
-      console.log('🗑️ [UnifiedStore] 移除轨道:', track.name)
-    }
-  }
-
-  /**
-   * 重命名轨道（带日志）
-   * @param trackId 轨道ID
-   * @param newName 新名称
-   */
-  function renameTrack(trackId: string, newName: string) {
-    const track = unifiedTrackModule.getTrack(trackId)
-    if (track) {
-      const oldName = track.name
-      unifiedTrackModule.renameTrack(trackId, newName)
-      console.log('✏️ [UnifiedStore] 重命名轨道:', { oldName, newName })
-    }
-  }
 
   // ==================== 批量操作方法（带日志） ====================
 
@@ -859,8 +789,7 @@ export const useUnifiedStore = defineStore('unified', () => {
   ) {
     const command = new AddTrackCommand(type, name, position, {
       addTrack: unifiedTrackModule.addTrack,
-      removeTrack: (trackId: string) =>
-        unifiedTrackModule.removeTrack(trackId, unifiedTimelineModule.timelineItems),
+      removeTrack: unifiedTrackModule.removeTrack,
       getTrack: unifiedTrackModule.getTrack,
     })
     await unifiedHistoryModule.executeCommand(command)
@@ -882,8 +811,7 @@ export const useUnifiedStore = defineStore('unified', () => {
       trackId,
       {
         addTrack: unifiedTrackModule.addTrack,
-        removeTrack: (trackId: string) =>
-          unifiedTrackModule.removeTrack(trackId, unifiedTimelineModule.timelineItems),
+        removeTrack: unifiedTrackModule.removeTrack,
         getTrack: unifiedTrackModule.getTrack,
         tracks: unifiedTrackModule.tracks,
       },
@@ -1120,8 +1048,8 @@ export const useUnifiedStore = defineStore('unified', () => {
     mediaItems: unifiedMediaModule.mediaItems,
 
     // 媒体项目管理方法
-    addMediaItem,
-    removeMediaItem,
+    addMediaItem: unifiedMediaModule.addMediaItem,
+    removeMediaItem: unifiedMediaModule.removeMediaItem,
     getMediaItem: unifiedMediaModule.getMediaItem,
     getMediaItemBySourceId: unifiedMediaModule.getMediaItemBySourceId,
     updateMediaItemName: unifiedMediaModule.updateMediaItemName,
@@ -1162,9 +1090,9 @@ export const useUnifiedStore = defineStore('unified', () => {
     tracks: unifiedTrackModule.tracks,
 
     // 轨道管理方法
-    addTrack,
-    removeTrack,
-    renameTrack,
+    addTrack: unifiedTrackModule.addTrack,
+    removeTrack: (trackId: string) => unifiedTrackModule.removeTrack(trackId, unifiedTimelineModule.timelineItems),
+    renameTrack: unifiedTrackModule.renameTrack,
     getTrack: unifiedTrackModule.getTrack,
     setTrackHeight: unifiedTrackModule.setTrackHeight,
     toggleTrackVisibility: unifiedTrackModule.toggleTrackVisibility,
