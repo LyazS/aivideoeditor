@@ -461,21 +461,21 @@ export function duplicateTimelineItem<T extends MediaType>(
   newTrackId: string,
   timeOffset: number = 0,
 ): UnifiedTimelineItemData<T> {
-  const newTimeRange = {
+  const newTimeRange: UnifiedTimeRange = {
     ...original.timeRange,
     timelineStartTime: original.timeRange.timelineStartTime + timeOffset,
     timelineEndTime: original.timeRange.timelineEndTime + timeOffset,
   }
 
-  const newConfig = {
+  const newConfig: GetMediaConfig<T> = {
     ...original.config,
   }
 
   return cloneTimelineItem(original, {
     id: generateUUID4(),
     trackId: newTrackId,
-    timeRange: newTimeRange as any,
-    config: newConfig as any,
+    timeRange: newTimeRange,
+    config: newConfig,
   })
 }
 

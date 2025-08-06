@@ -86,7 +86,6 @@ import {
   MoveTimelineItemCommand,
   UpdateTransformCommand,
   SplitTimelineItemCommand,
-  DuplicateTimelineItemCommand,
   AddTrackCommand,
   RemoveTrackCommand,
   RenameTrackCommand,
@@ -262,7 +261,12 @@ export const useUnifiedStore = defineStore('unified', () => {
    * @param position 插入位置（可选）
    * @param id 轨道ID（可选）
    */
-  function addTrack(type: UnifiedTrackType = 'video', name?: string, position?: number, id?: string) {
+  function addTrack(
+    type: UnifiedTrackType = 'video',
+    name?: string,
+    position?: number,
+    id?: string,
+  ) {
     const newTrack = unifiedTrackModule.addTrack(type, name, position, id)
     console.log('🎵 [UnifiedStore] 添加轨道:', newTrack.name)
     return newTrack
@@ -351,9 +355,7 @@ export const useUnifiedStore = defineStore('unified', () => {
    * 带历史记录的添加时间轴项目方法
    * @param timelineItem 要添加的时间轴项目
    */
-  async function addTimelineItemWithHistory(
-    timelineItem: UnifiedTimelineItemData<MediaType>,
-  ) {
+  async function addTimelineItemWithHistory(timelineItem: UnifiedTimelineItemData<MediaType>) {
     // 检查是否是文本项目，使用专门的文本命令
     if (timelineItem.mediaType === 'text') {
       // 类型检查确保这是文本项目
@@ -809,10 +811,22 @@ export const useUnifiedStore = defineStore('unified', () => {
       return
     }
 
-    const command = new DuplicateTimelineItemCommand(
-      timelineItemId,
+    // 计算时间偏移
+    const currentPosition = timelineItem.timeRange.timelineStartTime
+    const targetPosition =
+      newPositionFrames || timelineItem.timeRange.timelineEndTime
+    const timeOffset = targetPosition - currentPosition
+
+    // 使用 TimelineItemFactory 复制项目
+    const duplicatedItem = duplicateTimelineItem(
       timelineItem,
-      newPositionFrames || timelineItem.timeRange.timelineStartTime + 100, // 提供默认位置
+      newTrackId || timelineItem.trackId || 'default-track',
+      timeOffset,
+    )
+
+    // 使用 AddTimelineItemCommand 添加复制后的项目
+    const command = new AddTimelineItemCommand(
+      duplicatedItem,
       {
         addTimelineItem: unifiedTimelineModule.addTimelineItem,
         removeTimelineItem: unifiedTimelineModule.removeTimelineItem,
