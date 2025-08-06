@@ -13,38 +13,29 @@ import type { SimpleCommand } from './types'
 import type {
   UnifiedTimelineItemData,
   KnownTimelineItem,
-  UnknownTimelineItem,
   TimelineItemStatus,
+  VideoMediaConfig,
+  ImageMediaConfig,
+  AudioMediaConfig,
+  TextMediaConfig,
 } from '../../timelineitem/TimelineItemData'
 
 import type { UnifiedMediaItemData, MediaType, MediaTypeOrUnknown } from '../../mediaitem/types'
 
 // ==================== 新架构工具导入 ====================
-import { createSpriteFromUnifiedMediaItem } from '../../utils/UnifiedSpriteFactory'
+import {
+  createSpriteFromUnifiedMediaItem,
+  createSpriteFromUnifiedTimelineItem,
+} from '../../utils/UnifiedSpriteFactory'
 import { useTimelineMediaSync } from '../../composables/useTimelineMediaSync'
 
 import { regenerateThumbnailForUnifiedTimelineItem } from '../../utils/thumbnailGenerator'
 
-import {
-  isKnownTimelineItem,
-  isUnknownTimelineItem,
-  isVideoTimelineItem,
-  isImageTimelineItem,
-  isTextTimelineItem,
-  hasVisualProperties,
-  TimelineItemFactory,
-} from '../../timelineitem'
+import { isKnownTimelineItem, isUnknownTimelineItem, TimelineItemFactory } from '../../timelineitem'
 
 import { UnifiedMediaItemQueries } from '../../mediaitem'
 
 // ==================== 旧架构类型工具导入 ====================
-import type {
-  VideoMediaConfig,
-  ImageMediaConfig,
-  AudioMediaConfig,
-  TextMediaConfig,
-  BaseMediaProps,
-} from '../../../types'
 import { generateCommandId } from '../../../utils/idGenerator'
 
 /**
@@ -128,52 +119,10 @@ export class AddTimelineItemCommand implements SimpleCommand {
       // Ready素材：创建包含sprite的完整时间轴项目
       console.log('✅ [AddTimelineItemCommand] 重建ready状态时间轴项目')
 
-      // 2. 从原始素材重新创建sprite
-      const newSprite = await createSpriteFromUnifiedMediaItem(mediaItem)
+      // 2. 使用新的统一函数从时间轴项目数据创建sprite
+      const newSprite = await createSpriteFromUnifiedTimelineItem(this.originalTimelineItemData)
 
-      // 3. 设置时间范围
-      newSprite.setTimeRange(this.originalTimelineItemData.timeRange)
-
-      // 4. 应用变换属性（使用坐标转换）
-      if (hasVisualProperties(this.originalTimelineItemData)) {
-        const config = this.originalTimelineItemData.config as
-          | VideoMediaConfig
-          | ImageMediaConfig
-          | TextMediaConfig
-
-        // 导入坐标转换工具
-        const { projectToWebavCoords } = await import('../../utils/coordinateTransform')
-
-        // 获取画布分辨率
-        const canvasWidth = this.configModule.videoResolution.value.width
-        const canvasHeight = this.configModule.videoResolution.value.height
-
-        // 使用坐标转换将项目坐标系转换为WebAV坐标系
-        if (config.x !== undefined && config.y !== undefined && config.width !== undefined && config.height !== undefined) {
-          const webavCoords = projectToWebavCoords(
-            config.x,
-            config.y,
-            config.width,
-            config.height,
-            canvasWidth,
-            canvasHeight,
-          )
-          newSprite.rect.x = webavCoords.x
-          newSprite.rect.y = webavCoords.y
-        }
-
-        // 设置尺寸和其他属性
-        if (config.width !== undefined) newSprite.rect.w = config.width
-        if (config.height !== undefined) newSprite.rect.h = config.height
-        if (config.rotation !== undefined) newSprite.rect.angle = config.rotation
-        if (config.opacity !== undefined) newSprite.opacity = config.opacity
-      }
-
-      // 安全地获取 zIndex，所有媒体类型的配置都应该有 zIndex 属性
-      const config = this.originalTimelineItemData.config as BaseMediaProps
-      newSprite.zIndex = config.zIndex
-
-      // 5. 创建新的TimelineItem（先不设置缩略图）
+      // 3. 创建新的TimelineItem（先不设置缩略图）
       const newTimelineItem = reactive({
         id: this.originalTimelineItemData.id,
         mediaItemId: this.originalTimelineItemData.mediaItemId,
@@ -188,10 +137,10 @@ export class AddTimelineItemCommand implements SimpleCommand {
         runtime: {
           sprite: markRaw(newSprite),
         },
-    }) as KnownTimelineItem
+      }) as KnownTimelineItem
 
-    // 6. 重新生成缩略图（异步执行，不阻塞重建过程）
-    await this.regenerateThumbnailForAddedItem(newTimelineItem, mediaItem)
+      // 4. 重新生成缩略图（异步执行，不阻塞重建过程）
+      await this.regenerateThumbnailForAddedItem(newTimelineItem, mediaItem)
 
       console.log('🔄 重建ready状态时间轴项目完成:', {
         id: newTimelineItem.id,
@@ -258,7 +207,7 @@ export class AddTimelineItemCommand implements SimpleCommand {
       if (newTimelineItem.runtime.sprite) {
         await this.webavModule.addSprite(newTimelineItem.runtime.sprite)
       }
-      
+
       // 3. 针对loading状态的项目设置状态同步（确保时间轴项目已添加到store）
       if (newTimelineItem.timelineStatus === 'loading') {
         const mediaItem = this.mediaModule.getMediaItem(newTimelineItem.mediaItemId)
@@ -290,7 +239,7 @@ export class AddTimelineItemCommand implements SimpleCommand {
         console.warn(`⚠️ 时间轴项目不存在，无法撤销: ${this.originalTimelineItemData.id}`)
         return
       }
-      
+
       // 先清理监听器
       if (existingItem.runtime.unwatchMediaSync) {
         existingItem.runtime.unwatchMediaSync()
@@ -351,7 +300,7 @@ export class AddTimelineItemCommand implements SimpleCommand {
    */
   private setupMediaSyncForLoadingItem(
     timelineItem: KnownTimelineItem,
-    mediaItem: UnifiedMediaItemData
+    mediaItem: UnifiedMediaItemData,
   ): void {
     try {
       const { setupMediaSync } = useTimelineMediaSync()
@@ -359,13 +308,17 @@ export class AddTimelineItemCommand implements SimpleCommand {
       const unwatch = setupMediaSync(timelineItem.id, mediaItem.id, this)
 
       if (unwatch) {
-        console.log(`🔗 [AddTimelineItemCommand] 已设置状态同步: ${timelineItem.id} <-> ${mediaItem.id}`)
-        
+        console.log(
+          `🔗 [AddTimelineItemCommand] 已设置状态同步: ${timelineItem.id} <-> ${mediaItem.id}`,
+        )
+
         // 保存监听器清理函数到时间轴项目的runtime中
         timelineItem.runtime.unwatchMediaSync = unwatch
         console.log(`💾 [AddTimelineItemCommand] 已保存监听器到runtime: ${timelineItem.id}`)
       } else {
-        console.warn(`⚠️ [AddTimelineItemCommand] 无法设置状态同步: ${timelineItem.id} <-> ${mediaItem.id}`)
+        console.warn(
+          `⚠️ [AddTimelineItemCommand] 无法设置状态同步: ${timelineItem.id} <-> ${mediaItem.id}`,
+        )
       }
     } catch (error) {
       console.error(`❌ [AddTimelineItemCommand] 设置状态同步失败:`, error)
@@ -383,14 +336,18 @@ export class AddTimelineItemCommand implements SimpleCommand {
   public updateOriginalTimelineItemData(
     duration: number,
     timelineStatus: TimelineItemStatus,
-    updatedConfig?: Partial<VideoMediaConfig | ImageMediaConfig | AudioMediaConfig | TextMediaConfig>
+    updatedConfig?: Partial<
+      VideoMediaConfig | ImageMediaConfig | AudioMediaConfig | TextMediaConfig
+    >,
   ): void {
     if (!this.originalTimelineItemData) {
       console.warn('⚠️ [AddTimelineItemCommand] 没有原始时间轴项目数据，无法更新时长')
       return
     }
 
-    const oldDuration = this.originalTimelineItemData.timeRange.timelineEndTime - this.originalTimelineItemData.timeRange.timelineStartTime
+    const oldDuration =
+      this.originalTimelineItemData.timeRange.timelineEndTime -
+      this.originalTimelineItemData.timeRange.timelineStartTime
 
     console.log('🔄 [AddTimelineItemCommand] 更新原始时间轴项目时长和配置', {
       oldDuration,
@@ -401,7 +358,8 @@ export class AddTimelineItemCommand implements SimpleCommand {
     })
 
     // 更新时间范围的结束时间，保持开始时间不变
-    this.originalTimelineItemData.timeRange.timelineEndTime = this.originalTimelineItemData.timeRange.timelineStartTime + duration
+    this.originalTimelineItemData.timeRange.timelineEndTime =
+      this.originalTimelineItemData.timeRange.timelineStartTime + duration
     this.originalTimelineItemData.timeRange.clipEndTime = duration
 
     // 更新状态为传入的状态
@@ -418,7 +376,7 @@ export class AddTimelineItemCommand implements SimpleCommand {
     }
 
     console.log('✅ [AddTimelineItemCommand] 原始时间轴项目时长、状态和配置更新完成', {
-      timelineStatus: this.originalTimelineItemData.timelineStatus
+      timelineStatus: this.originalTimelineItemData.timelineStatus,
     })
   }
 }

@@ -57,7 +57,7 @@ export interface TextStyleConfig {
 /**
  * 基础媒体属性（所有媒体类型共享）
  */
-interface BaseMediaProps<T extends MediaType = MediaType> {
+export interface BaseMediaProps<T extends MediaType = MediaType> {
   /** 层级控制 */
   zIndex: number
   /** 动画配置（可选） */

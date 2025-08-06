@@ -15,8 +15,16 @@
  */
 
 import { markRaw, type Raw } from 'vue'
-import type { UnifiedMediaItemData } from '../mediaitem/types'
+import type { UnifiedMediaItemData, MediaType } from '../mediaitem/types'
 import type { UnifiedSprite } from '../visiblesprite'
+import type {
+  UnifiedTimelineItemData,
+  VideoMediaConfig,
+  ImageMediaConfig,
+  TextMediaConfig,
+  BaseMediaProps
+} from '../timelineitem/TimelineItemData'
+import { hasVisualProperties } from '../timelineitem/TimelineItemQueries'
 
 // 导入统一架构的 Sprite 类
 import { VideoVisibleSprite } from '../visiblesprite/VideoVisibleSprite'
@@ -256,3 +264,91 @@ export function batchCheckCanCreateSprite(
     ...canCreateSpriteFromUnifiedMediaItem(mediaData),
   }))
 }
+
+/**
+ * 从统一时间轴项目数据创建对应的 Sprite 实例
+ *
+ * 这个函数用于从时间轴项目数据重建 sprite 实例，包括：
+ * 1. 从关联的媒体项目创建 sprite
+ * 2. 设置时间范围
+ * 3. 应用变换属性（使用坐标转换）
+ * 4. 设置 zIndex
+ *
+ * @param timelineItemData 统一时间轴项目数据
+ * @returns 创建的 Sprite 实例
+ * @throws 当媒体项目未准备好或类型不支持时抛出错误
+ *
+ * @example
+ * ```typescript
+ * // 基本使用
+ * const sprite = await createSpriteFromUnifiedTimelineItem(timelineItemData)
+ *
+ * // 错误处理
+ * try {
+ *   const sprite = await createSpriteFromUnifiedTimelineItem(timelineItemData)
+ *   // 使用 sprite...
+ * } catch (error) {
+ *   console.error('创建 Sprite 失败:', error.message)
+ * }
+ * ```
+ */
+export async function createSpriteFromUnifiedTimelineItem(
+  timelineItemData: UnifiedTimelineItemData<MediaType>,
+): Promise<UnifiedSprite> {
+  // 1. 获取关联的媒体项目和画布大小
+  const { useUnifiedStore } = await import('../unifiedStore')
+  const unifiedStore = useUnifiedStore()
+  const mediaItem = unifiedStore.getMediaItem(timelineItemData.mediaItemId)
+  
+  if (!mediaItem) {
+    throw new Error(`找不到关联的媒体项目: ${timelineItemData.mediaItemId}`)
+  }
+
+  // 获取画布分辨率
+  const canvasWidth = unifiedStore.videoResolution.width
+  const canvasHeight = unifiedStore.videoResolution.height
+
+  // 2. 从原始素材重新创建 sprite
+  const newSprite = await createSpriteFromUnifiedMediaItem(mediaItem)
+
+  // 3. 设置时间范围
+  newSprite.setTimeRange(timelineItemData.timeRange)
+
+  // 4. 应用变换属性（使用坐标转换）
+  if (hasVisualProperties(timelineItemData)) {
+    const config = timelineItemData.config as
+      | VideoMediaConfig
+      | ImageMediaConfig
+      | TextMediaConfig
+
+    // 导入坐标转换工具
+    const { projectToWebavCoords } = await import('./coordinateTransform')
+
+    // 使用坐标转换将项目坐标系转换为 WebAV 坐标系
+    if (config.x !== undefined && config.y !== undefined && config.width !== undefined && config.height !== undefined) {
+      const webavCoords = projectToWebavCoords(
+        config.x,
+        config.y,
+        config.width,
+        config.height,
+        canvasWidth,
+        canvasHeight,
+      )
+      newSprite.rect.x = webavCoords.x
+      newSprite.rect.y = webavCoords.y
+    }
+
+    // 设置尺寸和其他属性
+    if (config.width !== undefined) newSprite.rect.w = config.width
+    if (config.height !== undefined) newSprite.rect.h = config.height
+    if (config.rotation !== undefined) newSprite.rect.angle = config.rotation
+    if (config.opacity !== undefined) newSprite.opacity = config.opacity
+  }
+
+  // 5. 设置 zIndex
+  const config = timelineItemData.config as BaseMediaProps
+  newSprite.zIndex = config.zIndex
+
+  return newSprite
+}
+
