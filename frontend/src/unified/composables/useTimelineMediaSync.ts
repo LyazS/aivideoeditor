@@ -5,7 +5,7 @@
 
 import { watch, type WatchStopHandle } from 'vue'
 import type { UnifiedTimelineItemData } from '../timelineitem/TimelineItemData'
-import type { UnifiedMediaItemData, MediaStatus } from '../mediaitem/types'
+import type { UnifiedMediaItemData, MediaStatus, ReadyMediaItem } from '../mediaitem/types'
 import { createSpriteFromUnifiedMediaItem } from '../utils/UnifiedSpriteFactory'
 import { regenerateThumbnailForUnifiedTimelineItem } from '../utils/thumbnailGenerator'
 import { useUnifiedStore } from '../unifiedStore'
@@ -17,14 +17,18 @@ import { UnifiedMediaItemQueries } from '../mediaitem'
  */
 export function useTimelineMediaSync() {
   const unifiedStore = useUnifiedStore()
-  
+
   /**
    * 为时间轴项目设置素材状态监听
    * @param timelineItemId 时间轴项目ID
    * @param mediaItemId 媒体项目ID
    * @returns 清理函数，用于停止监听
    */
-  function setupMediaSync(timelineItemId: string, mediaItemId: string, command?: any): WatchStopHandle | null {
+  function setupMediaSync(
+    timelineItemId: string,
+    mediaItemId: string,
+    command?: any,
+  ): WatchStopHandle | null {
     const mediaItem = unifiedStore.getMediaItem(mediaItemId)
     const timelineItem = unifiedStore.getTimelineItem(timelineItemId)
 
@@ -56,9 +60,9 @@ export function useTimelineMediaSync() {
           statusChange: `${oldStatus} → ${newStatus}`,
         })
 
-        await handleMediaStatusChange(timelineItem, mediaItem, newStatus, oldStatus, command)
+        await handleMediaStatusChange(timelineItem, mediaItem as ReadyMediaItem, newStatus, oldStatus, command)
       },
-      { immediate: false }
+      { immediate: false },
     )
 
     // 返回清理函数
@@ -74,10 +78,10 @@ export function useTimelineMediaSync() {
    */
   async function handleMediaStatusChange(
     timelineItem: UnifiedTimelineItemData,
-    mediaItem: UnifiedMediaItemData,
+    mediaItem: ReadyMediaItem,
     newStatus: MediaStatus,
     oldStatus: MediaStatus,
-    command?: any
+    command?: any,
   ): Promise<void> {
     try {
       if (newStatus === 'ready' && timelineItem.timelineStatus === 'loading') {
@@ -97,14 +101,14 @@ export function useTimelineMediaSync() {
             mediaName: mediaItem.name,
             errorStatus: newStatus,
           })
-          
+
           // 清理监听器
           if (timelineItem.runtime.unwatchMediaSync) {
             timelineItem.runtime.unwatchMediaSync()
             timelineItem.runtime.unwatchMediaSync = undefined
             console.log(`🗑️ [TimelineMediaSync] 已清理监听器(错误状态): ${timelineItem.id}`)
           }
-          
+
           timelineItem.timelineStatus = 'error'
         }
       }
@@ -115,14 +119,14 @@ export function useTimelineMediaSync() {
         statusChange: `${oldStatus} → ${newStatus}`,
         error: error instanceof Error ? error.message : String(error),
       })
-      
+
       // 发生错误时，清理监听器并标记时间轴项目为错误状态
       if (timelineItem.runtime.unwatchMediaSync) {
         timelineItem.runtime.unwatchMediaSync()
         timelineItem.runtime.unwatchMediaSync = undefined
         console.log(`🗑️ [TimelineMediaSync] 已清理监听器(异常): ${timelineItem.id}`)
       }
-      
+
       if (timelineItem.timelineStatus === 'loading') {
         timelineItem.timelineStatus = 'error'
       }
@@ -136,8 +140,8 @@ export function useTimelineMediaSync() {
    */
   async function transitionToReady(
     timelineItem: UnifiedTimelineItemData,
-    mediaItem: UnifiedMediaItemData,
-    command?: any
+    mediaItem: ReadyMediaItem,
+    command?: any,
   ): Promise<void> {
     try {
       console.log('🔄 [TimelineMediaSync] 开始转换时间轴项目为ready状态', {
@@ -148,21 +152,8 @@ export function useTimelineMediaSync() {
 
       // 更新时长（如果有变化）
       const actualDuration = mediaItem.duration
-      const currentDuration = timelineItem.timeRange.timelineEndTime - timelineItem.timeRange.timelineStartTime
-
-      
-
-      // 更新媒体类型（如果从unknown变为具体类型）
-      // 注意：由于时间轴项目不再支持 unknown 类型，这个检查已不再需要
-      // 但为了保持代码的完整性，我们保留这个逻辑结构
-      if (false && mediaItem.mediaType !== 'unknown') {
-        // 由于时间轴项目不再支持 unknown 类型，这段代码已被禁用
-        // timelineItem.mediaType = mediaItem.mediaType
-        console.log('🎭 [TimelineMediaSync] 更新媒体类型', {
-          timelineItemId: timelineItem.id,
-          typeChange: `unknown → ${mediaItem.mediaType}`,
-        })
-      }
+      const currentDuration =
+        timelineItem.timeRange.timelineEndTime - timelineItem.timeRange.timelineStartTime
 
       // 创建WebAV sprite等运行时对象
       await createRuntimeObjects(timelineItem, mediaItem)
@@ -176,11 +167,12 @@ export function useTimelineMediaSync() {
       // 回调更新命令中的原始数据
       if (actualDuration && actualDuration !== currentDuration) {
         // 调整时间轴项目的结束时间
-        timelineItem.timeRange.timelineEndTime = timelineItem.timeRange.timelineStartTime + actualDuration
+        timelineItem.timeRange.timelineEndTime =
+          timelineItem.timeRange.timelineStartTime + actualDuration
         timelineItem.timeRange.clipEndTime = actualDuration
 
         // 如果有命令引用，更新命令中的originalTimelineItemData时长和状态
-        if (command && command.updateOriginalTimelineItemDuration) {
+        if (command && command.updateOriginalTimelineItemData) {
           // 准备更新的配置信息（包含原始分辨率等）
           let updatedConfig: any = undefined
 
@@ -205,7 +197,7 @@ export function useTimelineMediaSync() {
           }
 
           // 更新命令中的原始数据
-          command.updateOriginalTimelineItemDuration(actualDuration, 'ready', updatedConfig)
+          command.updateOriginalTimelineItemData(actualDuration, 'ready', updatedConfig)
         }
 
         console.log('📏 [TimelineMediaSync] 调整时间轴项目时长', {
@@ -213,7 +205,7 @@ export function useTimelineMediaSync() {
           durationChange: `${currentDuration} → ${actualDuration}`,
         })
       }
-      
+
       // 状态转换完成，清理监听器
       if (timelineItem.runtime.unwatchMediaSync) {
         timelineItem.runtime.unwatchMediaSync()
@@ -232,14 +224,14 @@ export function useTimelineMediaSync() {
         mediaItemId: mediaItem.id,
         error: error instanceof Error ? error.message : String(error),
       })
-      
+
       // 状态转换失败，也要清理监听器
       if (timelineItem.runtime.unwatchMediaSync) {
         timelineItem.runtime.unwatchMediaSync()
         timelineItem.runtime.unwatchMediaSync = undefined
         console.log(`🗑️ [TimelineMediaSync] 已清理监听器(错误状态): ${timelineItem.id}`)
       }
-      
+
       timelineItem.timelineStatus = 'error'
       throw error
     }
@@ -252,7 +244,7 @@ export function useTimelineMediaSync() {
    */
   async function createRuntimeObjects(
     timelineItem: UnifiedTimelineItemData,
-    mediaItem: UnifiedMediaItemData
+    mediaItem: ReadyMediaItem,
   ): Promise<void> {
     try {
       console.log('🏗️ [TimelineMediaSync] 开始创建运行时对象', {
@@ -265,7 +257,12 @@ export function useTimelineMediaSync() {
       const sprite = await createSpriteFromUnifiedMediaItem(mediaItem)
       if (sprite) {
         // 设置sprite的时间范围（这很重要！）
-        sprite.setTimeRange(timelineItem.timeRange)
+        sprite.setTimeRange({
+          clipStartTime: 0,
+          clipEndTime: mediaItem.duration,
+          timelineStartTime: timelineItem.timeRange.timelineStartTime,
+          timelineEndTime: timelineItem.timeRange.timelineStartTime + mediaItem.duration,
+        })
 
         // 🆕 先设置到时间轴项目
         if (!timelineItem.runtime) {
@@ -311,7 +308,7 @@ export function useTimelineMediaSync() {
    */
   async function generateThumbnailForTransitionedItem(
     timelineItem: UnifiedTimelineItemData,
-    mediaItem: UnifiedMediaItemData
+    mediaItem: UnifiedMediaItemData,
   ): Promise<void> {
     // 音频不需要缩略图
     if (mediaItem.mediaType === 'audio') {

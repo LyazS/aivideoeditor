@@ -380,7 +380,7 @@ export class AddTimelineItemCommand implements SimpleCommand {
    * @param timelineStatus 新的时间轴状态
    * @param updatedConfig 更新后的配置信息（可选，用于更新原始分辨率等信息）
    */
-  public updateOriginalTimelineItemDuration(
+  public updateOriginalTimelineItemData(
     duration: number,
     timelineStatus: TimelineItemStatus,
     updatedConfig?: Partial<VideoMediaConfig | ImageMediaConfig | AudioMediaConfig | TextMediaConfig>
