@@ -1338,6 +1338,7 @@ export const useUnifiedStore = defineStore('unified', () => {
     redo: unifiedHistoryModule.redo,
     clearHistory: unifiedHistoryModule.clear,
     getHistorySummary: unifiedHistoryModule.getHistorySummary,
+    getCommand: unifiedHistoryModule.getCommand,
     startBatch: unifiedHistoryModule.startBatch,
     executeBatchCommand: unifiedHistoryModule.executeBatchCommand,
 

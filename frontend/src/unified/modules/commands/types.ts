@@ -1,3 +1,5 @@
+import type { UnifiedMediaItemData } from '../../mediaitem/types'
+
 /**
  * 命令模式接口定义
  * 用于实现撤销/重做功能的统一命令接口
@@ -14,4 +16,13 @@ export interface SimpleCommand {
 
   /** 撤销命令 */
   undo(): Promise<void>
+
+  /** 更新媒体数据（由媒体同步调用） */
+  updateMediaData?(mediaData: UnifiedMediaItemData): void
+
+  /** 检查命令是否已被清理 */
+  readonly isDisposed?: boolean
+
+  /** 清理命令持有的资源 */
+  dispose?(): void
 }

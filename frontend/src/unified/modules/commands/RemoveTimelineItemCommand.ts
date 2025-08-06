@@ -44,6 +44,7 @@ import {
 import { UnifiedMediaItemQueries } from '../../mediaitem'
 
 import { createTextTimelineItem } from '../../utils/textTimelineUtils'
+import { setupCommandMediaSync, cleanupCommandMediaSync } from '../../composables/useTimelineMediaSync'
 
 /**
  * 移除时间轴项目命令
@@ -54,6 +55,7 @@ export class RemoveTimelineItemCommand implements SimpleCommand {
   public readonly id: string
   public readonly description: string
   private originalTimelineItemData: UnifiedTimelineItemData<MediaType> | null = null // 保存原始项目的重建数据
+  private _isDisposed = false
 
   constructor(
     private timelineItemId: string,
@@ -295,7 +297,15 @@ export class RemoveTimelineItemCommand implements SimpleCommand {
         console.warn(`⚠️ 时间轴项目不存在，无法删除: ${this.timelineItemId}`)
         return
       }
-
+      
+      // 设置媒体同步（只针对loading状态的项目）
+      if (existingItem.timelineStatus === 'loading') {
+        const mediaItem = this.mediaModule.getMediaItem(existingItem.mediaItemId)
+        if (mediaItem) {
+          setupCommandMediaSync(this.id, mediaItem)
+        }
+      }
+      
       // 删除时间轴项目（这会自动处理sprite的清理和WebAV画布移除）
       this.timelineModule.removeTimelineItem(this.timelineItemId)
 
@@ -352,6 +362,14 @@ export class RemoveTimelineItemCommand implements SimpleCommand {
             await this.webavModule.addSprite(newTimelineItem.runtime.sprite)
           }
 
+          // 3. 如果项目仍然是loading状态，重新设置媒体同步
+          if (newTimelineItem.timelineStatus === 'loading') {
+            const mediaItem = this.mediaModule.getMediaItem(this.originalTimelineItemData.mediaItemId)
+            if (mediaItem) {
+              setupCommandMediaSync(this.id, mediaItem)
+            }
+          }
+
           const mediaItem = this.mediaModule.getMediaItem(this.originalTimelineItemData.mediaItemId)
           console.log(`↩️ 已撤销删除已知时间轴项目: ${mediaItem?.name || '未知素材'}`)
         }
@@ -364,6 +382,54 @@ export class RemoveTimelineItemCommand implements SimpleCommand {
       console.error(`❌ 撤销删除时间轴项目失败: ${itemName}`, error)
       throw error
     }
+  }
+
+  /**
+   * 更新媒体数据（由媒体同步调用）
+   * @param mediaData 最新的媒体数据
+   */
+  updateMediaData(mediaData: UnifiedMediaItemData): void {
+    if (this.originalTimelineItemData && isKnownTimelineItem(this.originalTimelineItemData)) {
+      // 更新命令中保存的媒体数据
+      // 这里只更新需要同步的媒体属性（宽高、时长等）
+      const config = this.originalTimelineItemData.config as any
+      
+      if (mediaData.width !== undefined && mediaData.height !== undefined) {
+        config.width = mediaData.width
+        config.height = mediaData.height
+      }
+      
+      if (mediaData.duration !== undefined) {
+        config.duration = mediaData.duration
+      }
+      
+      console.log(`🔄 [RemoveTimelineItemCommand] 已更新媒体数据: ${this.id}`, {
+        width: config.width,
+        height: config.height,
+        duration: config.duration,
+      })
+    }
+  }
+  
+  /**
+   * 检查命令是否已被清理
+   */
+  get isDisposed(): boolean {
+    return this._isDisposed
+  }
+  
+  /**
+   * 清理命令持有的资源
+   */
+  dispose(): void {
+    if (this._isDisposed) {
+      return
+    }
+    
+    this._isDisposed = true
+    // 清理媒体同步
+    cleanupCommandMediaSync(this.id)
+    console.log(`🗑️ [RemoveTimelineItemCommand] 命令资源已清理: ${this.id}`)
   }
 
   /**

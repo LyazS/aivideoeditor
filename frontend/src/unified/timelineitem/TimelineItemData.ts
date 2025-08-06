@@ -352,8 +352,6 @@ export interface UnifiedTimelineItemRuntime {
   /** 缩略图URL - 运行时生成的Blob URL */
   thumbnailUrl?: string
 
-  /** 媒体状态同步监听器清理函数 */
-  unwatchMediaSync?: () => void
 
   /** 预留：未来可能的运行时字段 */
   // renderCache?: RenderCacheData
