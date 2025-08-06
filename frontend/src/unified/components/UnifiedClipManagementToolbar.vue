@@ -213,7 +213,7 @@ async function redo() {
 }
 
 function debugTimeline() {
-  console.group('🎬 时间轴配置调试信息')
+  console.group('🎬 时间轴配置调试信息 - 按轨道输出')
 
   // 基本配置
   console.group('📊 基本配置')
@@ -226,37 +226,147 @@ function debugTimeline() {
   console.log('播放速度:', unifiedStore.playbackRate + 'x')
   console.groupEnd()
 
-  // 素材信息
-  console.group('📁 素材信息 (' + unifiedStore.mediaItems.length + ' 个)')
-  unifiedStore.mediaItems.forEach((item, index) => {
-    console.group(`素材 ${index + 1}: ${item.name}`)
-    console.log('ID:', item.id)
-    console.log('文件名:', item.name)
-    console.log('时长 (帧):', item.duration)
-    console.log('媒体状态:', item.mediaStatus)
-    console.log('媒体类型:', item.mediaType)
-    if (item.source.type === 'user-selected') {
-      console.log('文件大小:', formatFileSize(item.source.selectedFile.size))
-      console.log('文件类型:', item.source.selectedFile.type)
+  // 轨道信息统计
+  console.group('🎵 轨道统计信息')
+  console.log('轨道总数:', unifiedStore.tracks.length)
+  const trackStats = unifiedStore.tracks.map(track => ({
+    name: track.name,
+    type: track.type,
+    itemCount: unifiedStore.getTimelineItemsByTrack(track.id).length,
+    isVisible: track.isVisible,
+    isMuted: track.isMuted
+  }))
+  console.table(trackStats)
+  console.groupEnd()
+
+  // 按轨道输出详细信息
+  console.group('🎭 按轨道详细信息 (' + unifiedStore.tracks.length + ' 个轨道)')
+  
+  unifiedStore.tracks.forEach((track, trackIndex) => {
+    const trackItems = unifiedStore.getTimelineItemsByTrack(track.id)
+    const trackTypeIcon = {
+      'video': '🎥',
+      'audio': '🎵',
+      'text': '📝',
+      'subtitle': '💬',
+      'effect': '✨'
+    }[track.type] || '❓'
+    
+    console.group(`${trackTypeIcon} 轨道 ${trackIndex + 1}: ${track.name} (${track.type})`)
+    
+    // 轨道基本信息
+    console.group('📋 轨道属性')
+    console.log('轨道ID:', track.id)
+    console.log('轨道类型:', track.type)
+    console.log('轨道高度:', track.height + 'px')
+    console.log('可见状态:', track.isVisible ? '👁️ 可见' : '🙈 隐藏')
+    console.log('静音状态:', track.isMuted ? '🔇 静音' : '🔊 正常')
+    console.log('项目数量:', trackItems.length + ' 个')
+    console.groupEnd()
+
+    // 轨道上的时间轴项目
+    if (trackItems.length > 0) {
+      console.group(`🎞️ 轨道项目详情 (${trackItems.length} 个)`)
+      
+      // 按时间排序显示
+      const sortedItems = [...trackItems].sort((a, b) =>
+        a.timeRange.timelineStartTime - b.timeRange.timelineStartTime
+      )
+      
+      sortedItems.forEach((item, itemIndex) => {
+        const mediaItem = unifiedStore.getMediaItem(item.mediaItemId)
+        const timeRange = item.timeRange
+        const duration = timeRange.timelineEndTime - timeRange.timelineStartTime
+        const mediaTypeIcon = {
+          'video': '🎬',
+          'audio': '🎵',
+          'image': '🖼️',
+          'text': '📝',
+          'unknown': '❓'
+        }[item.mediaType] || '❓'
+        
+        console.group(`${mediaTypeIcon} 项目 ${itemIndex + 1}: ${mediaItem?.name || 'Unknown'}`)
+        console.log('项目ID:', item.id)
+        console.log('素材ID:', item.mediaItemId)
+        console.log('媒体类型:', item.mediaType)
+        console.log('状态:', item.timelineStatus)
+        console.log('时间轴开始:', `${timeRange.timelineStartTime}帧 (${framesToSeconds(timeRange.timelineStartTime)}秒)`)
+        console.log('时间轴结束:', `${timeRange.timelineEndTime}帧 (${framesToSeconds(timeRange.timelineEndTime)}秒)`)
+        console.log('持续时长:', `${duration}帧 (${framesToSeconds(duration)}秒)`)
+        
+        // 显示素材信息
+        if (mediaItem) {
+          const mediaDuration = mediaItem.duration || 0
+          console.log('素材时长:', `${mediaDuration}帧 (${framesToSeconds(mediaDuration)}秒)`)
+          console.log('素材状态:', mediaItem.mediaStatus)
+          if (mediaItem.source.type === 'user-selected') {
+            console.log('文件大小:', formatFileSize(mediaItem.source.selectedFile.size))
+            console.log('文件类型:', mediaItem.source.selectedFile.type)
+          }
+        }
+        
+        // 显示配置信息（如果有的话）
+        if (item.config && Object.keys(item.config).length > 0) {
+          console.log('配置信息:', item.config)
+        }
+        
+        console.groupEnd()
+      })
+      console.groupEnd()
+    } else {
+      console.log('📭 该轨道暂无项目')
     }
+    
     console.groupEnd()
   })
   console.groupEnd()
 
-  // 时间轴项目信息
-  console.group('🎞️ 时间轴项目信息 (' + timelineItems.value.length + ' 个)')
+  // 素材库信息（简化版）
+  console.group('📁 素材库信息 (' + unifiedStore.mediaItems.length + ' 个)')
+  const mediaStats = {
+    total: unifiedStore.mediaItems.length,
+    ready: unifiedStore.getReadyMediaItems().length,
+    processing: unifiedStore.getProcessingMediaItems().length,
+    error: unifiedStore.getErrorMediaItems().length,
+    byType: {} as Record<string, number>
+  }
+  
+  // 按类型统计
+  unifiedStore.mediaItems.forEach(item => {
+    const mediaType = item.mediaType as string
+    mediaStats.byType[mediaType] = (mediaStats.byType[mediaType] || 0) + 1
+  })
+  
+  console.log('📊 素材统计:', mediaStats)
+  console.groupEnd()
+
+  // 完整的时间轴项目信息（保留原有功能）
+  console.group('🎞️ 完整时间轴项目列表 (' + timelineItems.value.length + ' 个)')
   timelineItems.value.forEach((item, index) => {
     const mediaItem = unifiedStore.getMediaItem(item.mediaItemId)
-    // 直接从timelineItem.timeRange获取，与unifiedStore的同步机制保持一致
+    const track = unifiedStore.getTrack(item.trackId || '')
     const timeRange = item.timeRange
+    const duration = timeRange.timelineEndTime - timeRange.timelineStartTime
 
-    console.group(`时间轴项目 ${index + 1}: ${mediaItem?.name || 'Unknown'}`)
+    console.group(`项目 ${index + 1}: ${mediaItem?.name || 'Unknown'}`)
     console.log('ID:', item.id)
     console.log('素材ID:', item.mediaItemId)
     console.log('轨道ID:', item.trackId)
+    console.log('轨道名称:', track?.name || '未知轨道')
     console.log('媒体类型:', item.mediaType)
+    console.log('状态:', item.timelineStatus)
     console.log('时间轴开始 (帧):', timeRange.timelineStartTime)
     console.log('时间轴结束 (帧):', timeRange.timelineEndTime)
+    console.log('持续时长 (帧):', duration)
+    console.log('时间轴开始 (秒):', framesToSeconds(timeRange.timelineStartTime))
+    console.log('时间轴结束 (秒):', framesToSeconds(timeRange.timelineEndTime))
+    console.log('持续时长 (秒):', framesToSeconds(duration))
+    
+    // 显示配置信息
+    if (item.config && Object.keys(item.config).length > 0) {
+      console.log('配置信息:', item.config)
+    }
+    
     console.groupEnd()
   })
   console.groupEnd()

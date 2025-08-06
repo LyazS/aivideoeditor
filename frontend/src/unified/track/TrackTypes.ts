@@ -131,9 +131,10 @@ export function createUnifiedTrackData(
   type: UnifiedTrackType,
   name?: string,
   options?: Partial<UnifiedTrackData>,
+  id?: string,
 ): UnifiedTrackData {
   const baseData: UnifiedTrackData = {
-    id: generateTrackId(),
+    id: id || generateTrackId(),
     name: name || getDefaultTrackName(type),
     type,
     isVisible: true,

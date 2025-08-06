@@ -37,6 +37,7 @@ export function createUnifiedTrackModule() {
     type: UnifiedTrackType = 'video',
     name?: string,
     position?: number,
+    id?: string,
   ): UnifiedTrackData {
     // 计算同类型轨道的数量，用于生成默认名称
     const sameTypeCount = tracks.value.filter((t) => t.type === type).length + 1
@@ -53,7 +54,7 @@ export function createUnifiedTrackModule() {
     const trackName = name || `${typeNames[type]} ${sameTypeCount}`
 
     // 创建新轨道
-    const newTrack = createUnifiedTrackData(type, trackName)
+    const newTrack = createUnifiedTrackData(type, trackName, undefined, id)
 
     // 根据位置参数决定插入位置
     if (position !== undefined && position >= 0 && position <= tracks.value.length) {
@@ -321,9 +322,7 @@ export function createUnifiedTrackModule() {
       // 创建新的响应式轨道对象
       const restoredTrack = createUnifiedTrackData(track.type, track.name, {
         ...track,
-        // 确保恢复时保持原有的ID
-        id: track.id,
-      })
+      }, track.id)
 
       tracks.value.push(restoredTrack)
       console.log(`📋 恢复轨道: ${track.name} (${track.type})`)

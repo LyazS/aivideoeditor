@@ -21,7 +21,7 @@ import type { MediaType, MediaTypeOrUnknown } from '../../mediaitem/types'
 export class AddTrackCommand implements SimpleCommand {
   public readonly id: string
   public readonly description: string
-  private newTrackId: string = '' // 新创建的轨道ID
+  private newTrackId: string | undefined = undefined // 新创建的轨道ID
   private trackData: UnifiedTrackData // 保存轨道数据
 
   constructor(
@@ -29,7 +29,12 @@ export class AddTrackCommand implements SimpleCommand {
     private trackName: string | undefined, // 轨道名称（可选）
     private position: number | undefined, // 插入位置（可选）
     private trackModule: {
-      addTrack: (type: UnifiedTrackType, name?: string, position?: number) => UnifiedTrackData
+      addTrack: (
+        type: UnifiedTrackType,
+        name?: string,
+        position?: number,
+        id?: string,
+      ) => UnifiedTrackData
       removeTrack: (
         trackId: string,
         timelineItems: { value: UnifiedTimelineItemData<MediaType>[] },
@@ -43,7 +48,7 @@ export class AddTrackCommand implements SimpleCommand {
 
     // 预先计算新轨道ID（模拟trackModule的逻辑）
     // 注意：这里我们无法直接访问tracks数组，所以在execute时会获取实际的轨道数据
-    this.newTrackId = '' // 将在execute时设置
+    this.newTrackId = undefined // 将在execute时设置
     this.trackData = {
       id: '',
       name: '',
@@ -55,13 +60,6 @@ export class AddTrackCommand implements SimpleCommand {
   }
 
   /**
-   * 获取新创建的轨道ID
-   */
-  get createdTrackId(): string {
-    return this.newTrackId
-  }
-
-  /**
    * 执行命令：添加轨道
    */
   async execute(): Promise<void> {
@@ -69,7 +67,12 @@ export class AddTrackCommand implements SimpleCommand {
       console.log(`🔄 执行添加轨道操作...`)
 
       // 调用trackModule的addTrack方法，传入位置参数
-      const newTrack = this.trackModule.addTrack(this.trackType, this.trackName, this.position)
+      const newTrack = this.trackModule.addTrack(
+        this.trackType,
+        this.trackName,
+        this.position,
+        this.newTrackId,
+      )
 
       // 保存轨道数据用于撤销
       this.newTrackId = newTrack.id
@@ -93,9 +96,14 @@ export class AddTrackCommand implements SimpleCommand {
 
       // 删除添加的轨道
       // 注意：这里传入空的timelineItems和回调，因为新添加的轨道上不应该有任何项目
-      this.trackModule.removeTrack(this.newTrackId, ref([]), undefined)
+      if (this.newTrackId) {
+        this.trackModule.removeTrack(this.newTrackId, ref([]), undefined)
+        console.log(`↩️ 已撤销添加轨道: ${this.trackData.name}`)
+      }
+      else {
+        throw new Error(`无法撤销添加轨道操作：轨道ID不存在 (轨道名称: ${this.trackData.name})`)
+      }
 
-      console.log(`↩️ 已撤销添加轨道: ${this.trackData.name}`)
     } catch (error) {
       console.error(`❌ 撤销添加轨道失败: ${this.trackData.name}`, error)
       throw error

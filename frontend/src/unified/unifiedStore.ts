@@ -260,9 +260,10 @@ export const useUnifiedStore = defineStore('unified', () => {
    * @param type 轨道类型
    * @param name 轨道名称（可选）
    * @param position 插入位置（可选）
+   * @param id 轨道ID（可选）
    */
-  function addTrack(type: UnifiedTrackType = 'video', name?: string, position?: number) {
-    const newTrack = unifiedTrackModule.addTrack(type, name, position)
+  function addTrack(type: UnifiedTrackType = 'video', name?: string, position?: number, id?: string) {
+    const newTrack = unifiedTrackModule.addTrack(type, name, position, id)
     console.log('🎵 [UnifiedStore] 添加轨道:', newTrack.name)
     return newTrack
   }
