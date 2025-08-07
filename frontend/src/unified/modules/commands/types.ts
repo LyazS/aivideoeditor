@@ -18,7 +18,7 @@ export interface SimpleCommand {
   undo(): Promise<void>
 
   /** 更新媒体数据（由媒体同步调用） */
-  updateMediaData?(mediaData: UnifiedMediaItemData): void
+  updateMediaData?(mediaData: UnifiedMediaItemData, timelineItemId?: string): void
 
   /** 检查命令是否已被清理 */
   readonly isDisposed?: boolean

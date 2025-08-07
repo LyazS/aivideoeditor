@@ -23,6 +23,7 @@ export function setupCommandMediaSync(
   commandId: string,
   mediaItemId: string,
   timelineItemId?: string,
+  description?: string,
 ): boolean {
   try {
     // 设置媒体状态同步
@@ -35,7 +36,7 @@ export function setupCommandMediaSync(
 
       // 注册到SimplifiedMediaSyncManager中
       const syncManager = SimplifiedMediaSyncManager.getInstance()
-      syncManager.registerCommandMediaSync(commandId, mediaItemId, unwatch)
+      syncManager.registerCommandMediaSync(commandId, mediaItemId, unwatch, undefined, description)
 
       console.log(`💾 [TimelineMediaSync] 已注册监听器到简化媒体同步管理器: ${commandId}`)
 
@@ -100,7 +101,7 @@ function setupDirectMediaSync(
       if (newStatus === 'ready') {
         const command = unifiedStore.getCommand(commandId)
         if (command && !command.isDisposed && command.updateMediaData) {
-          command.updateMediaData(mediaItem)
+          command.updateMediaData(mediaItem, timelineItemId)
           console.log(`🔄 [TimelineMediaSync] 已更新命令媒体数据: ${commandId} <- ${mediaItemId}`, {
             mediaName: mediaItem.name,
             mediaStatus: mediaItem.mediaStatus,
@@ -188,6 +189,18 @@ async function transitionTimelineItemToReady(
       return
     }
 
+    // 检查时间轴项目状态，只有loading状态才需要处理
+    if (timelineItem.timelineStatus !== 'loading') {
+      console.log(
+        `⏭️ [TimelineMediaSync] 跳过运行时内容创建，时间轴项目状态不是loading: ${timelineItemId}`,
+        {
+          currentStatus: timelineItem.timelineStatus,
+          commandId,
+        },
+      )
+      return
+    }
+
     // 1. 创建Sprite
     try {
       // 先更新timelineItem的timeRange和config配置里的宽高
@@ -198,10 +211,9 @@ async function transitionTimelineItemToReady(
 
       // 将sprite存储到runtime中，并更新sprite时间
       timelineItem.runtime.sprite = sprite
-      timelineItem.runtime.sprite.setTimeRange({...timelineItem.timeRange})
+      timelineItem.runtime.sprite.setTimeRange({ ...timelineItem.timeRange })
       await unifiedStore.addSpriteToCanvas(timelineItem.runtime.sprite)
       console.log(`✅ [TimelineMediaSync] Sprite创建成功并存储到runtime: ${timelineItemId}`)
-
     } catch (spriteError) {
       console.error(`❌ [TimelineMediaSync] 创建Sprite失败: ${timelineItemId}`, spriteError)
       // Sprite创建失败不影响后续操作

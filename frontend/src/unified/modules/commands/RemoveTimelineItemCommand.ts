@@ -100,6 +100,10 @@ export class RemoveTimelineItemCommand implements SimpleCommand {
    * 执行命令：删除时间轴项目
    */
   async execute(): Promise<void> {
+    if (!this.originalTimelineItemData) {
+      console.warn('⚠️ 没有有效的时间轴项目数据，无法撤销')
+      return
+    }
     try {
       // 检查项目是否存在
       const existingItem = this.timelineModule.getTimelineItem(this.timelineItemId)
@@ -112,16 +116,15 @@ export class RemoveTimelineItemCommand implements SimpleCommand {
       if (existingItem.timelineStatus === 'loading') {
         const mediaItem = this.mediaModule.getMediaItem(existingItem.mediaItemId)
         if (mediaItem) {
-          setupCommandMediaSync(this.id, mediaItem.id)
+          setupCommandMediaSync(this.id, mediaItem.id, undefined, this.description)
         }
       }
 
       // 删除时间轴项目（这会自动处理sprite的清理和WebAV画布移除）
       this.timelineModule.removeTimelineItem(this.timelineItemId)
-
+      console.log(`↩️ 已删除时间轴项目: ${this.originalTimelineItemData.id}`)
     } catch (error) {
-      const itemName = this.originalTimelineItemData?.id || '未知项目'
-      console.error(`❌ 删除时间轴项目失败: ${itemName}`, error)
+      console.error(`❌ 删除时间轴项目失败: ${this.originalTimelineItemData.id}`, error)
       throw error
     }
   }
@@ -131,11 +134,10 @@ export class RemoveTimelineItemCommand implements SimpleCommand {
    * 遵循"从源头重建"原则，从原始素材完全重新创建
    */
   async undo(): Promise<void> {
+    if (!this.originalTimelineItemData) {
+      throw new Error('没有有效的时间轴项目数据')
+    }
     try {
-      if (!this.originalTimelineItemData) {
-        throw new Error('没有有效的时间轴项目数据')
-      }
-
       console.log(`🔄 执行撤销删除操作：从源头重建时间轴项目...`)
 
       // 从原始素材重新创建TimelineItem和sprite
@@ -161,12 +163,16 @@ export class RemoveTimelineItemCommand implements SimpleCommand {
 
       // 3. 针对loading状态的项目设置状态同步（确保时间轴项目已添加到store）
       if (newTimelineItem.timelineStatus === 'loading') {
-        setupCommandMediaSync(this.id, newTimelineItem.mediaItemId, newTimelineItem.id)
+        setupCommandMediaSync(
+          this.id,
+          newTimelineItem.mediaItemId,
+          newTimelineItem.id,
+          this.description,
+        )
       }
-      console.log(`✅ 已撤销删除时间轴项目: ${this.originalTimelineItemData.mediaItemId}`)
+      console.log(`✅ 已撤销删除时间轴项目: ${this.originalTimelineItemData.id}`)
     } catch (error) {
-      const itemName = this.originalTimelineItemData?.mediaItemId || '未知项目'
-      console.error(`❌ 撤销删除时间轴项目失败: ${itemName}`, error)
+      console.error(`❌ 撤销删除时间轴项目失败: ${this.originalTimelineItemData.id}`, error)
       throw error
     }
   }
@@ -175,7 +181,7 @@ export class RemoveTimelineItemCommand implements SimpleCommand {
    * 更新媒体数据（由媒体同步调用）
    * @param mediaData 最新的媒体数据
    */
-  updateMediaData(mediaData: UnifiedMediaItemData): void {
+  updateMediaData(mediaData: UnifiedMediaItemData, timelineItemId?: string): void {
     if (this.originalTimelineItemData) {
       const config = this.originalTimelineItemData.config as any
 
@@ -203,7 +209,7 @@ export class RemoveTimelineItemCommand implements SimpleCommand {
       console.log(`🔄 [RemoveTimelineItemCommand] 已更新媒体数据: ${this.id}`, {
         width: config.width,
         height: config.height,
-        duration: config.duration,
+        duration: mediaData.duration,
       })
     }
   }

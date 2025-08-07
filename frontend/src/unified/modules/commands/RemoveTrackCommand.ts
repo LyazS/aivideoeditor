@@ -125,7 +125,6 @@ export class RemoveTrackCommand implements SimpleCommand {
     )
   }
 
-
   /**
    * 执行命令：删除轨道及其上的所有时间轴项目
    */
@@ -143,6 +142,16 @@ export class RemoveTrackCommand implements SimpleCommand {
       if (!track) {
         console.warn(`⚠️ 轨道不存在，无法删除: ${this.trackId}`)
         return
+      }
+
+      // 为所有处于loading状态的时间轴项目设置媒体同步
+      for (const item of this.affectedTimelineItems) {
+        if (item.timelineStatus === 'loading') {
+          const mediaItem = this.mediaModule.getMediaItem(item.mediaItemId)
+          if (mediaItem) {
+            setupCommandMediaSync(this.id, mediaItem.id, undefined, this.description)
+          }
+        }
       }
 
       // 删除轨道（这会自动删除轨道上的所有时间轴项目）
@@ -182,74 +191,39 @@ export class RemoveTrackCommand implements SimpleCommand {
 
       // 2. 重建所有受影响的时间轴项目
       for (const itemData of this.affectedTimelineItems) {
-        console.log(`🔄 重建时间轴项目: ${itemData.id}`)
+        console.log(`🔄 执行撤销删除轨道操作：从源头重建时间轴项目...`)
 
-        // 检查是否为文本项目
-        if (itemData.mediaType === 'text') {
-          // 文本项目特殊处理 - 不需要媒体项目
-          console.log(`🔄 撤销删除操作：重建文本时间轴项目...`)
+        // 从原始素材重新创建TimelineItem和sprite
+        const rebuildResult = await TimelineItemFactory.rebuildKnown({
+          originalTimelineItemData: itemData,
+          getMediaItem: (id: string) => this.mediaModule.getMediaItem(id),
+          logIdentifier: 'RemoveTrackCommand',
+        })
 
-          // 使用 TimelineItemFactory 重建文本时间轴项目
-          const rebuildResult = await TimelineItemFactory.rebuildText({
-            originalTimelineItemData: itemData as UnifiedTimelineItemData<'text'>,
-            videoResolution: this.configModule.videoResolution.value,
-            logIdentifier: "RemoveTrackCommand"
-          })
-          
-          if (!rebuildResult.success) {
-            throw new Error(`重建文本时间轴项目失败: ${rebuildResult.error}`)
-          }
-          
-          const newTimelineItem = rebuildResult.timelineItem
-
-          // 1. 添加到时间轴
-          this.timelineModule.addTimelineItem(newTimelineItem)
-
-          // 2. 添加sprite到WebAV画布
-          if (newTimelineItem.runtime.sprite) {
-            await this.webavModule.addSprite(newTimelineItem.runtime.sprite)
-          }
-
-          const textConfig = itemData.config as TextMediaConfig
-          console.log(`↩️ 已撤销删除文本时间轴项目: ${textConfig.text.substring(0, 20)}...`)
-        } else {
-          // 常规媒体项目撤销逻辑
-          console.log(`🔄 撤销删除操作：重建已知时间轴项目...`)
-
-          // 从原始素材重新创建TimelineItem和sprite
-          const rebuildResult = await TimelineItemFactory.rebuildKnown({
-            originalTimelineItemData: itemData,
-            getMediaItem: (id: string) => this.mediaModule.getMediaItem(id),
-            logIdentifier: "RemoveTrackCommand"
-          })
-          
-          if (!rebuildResult.success) {
-            throw new Error(`重建时间轴项目失败: ${rebuildResult.error}`)
-          }
-          
-          const newTimelineItem = rebuildResult.timelineItem
-
-          // 1. 添加到时间轴
-          this.timelineModule.addTimelineItem(newTimelineItem)
-
-          // 2. 添加sprite到WebAV画布
-          if (newTimelineItem.runtime.sprite) {
-            await this.webavModule.addSprite(newTimelineItem.runtime.sprite)
-          }
-
-          // 3. 如果项目仍然是loading状态，重新设置媒体同步
-          if (newTimelineItem.timelineStatus === 'loading') {
-            const mediaItem = this.mediaModule.getMediaItem(
-              itemData.mediaItemId,
-            )
-            if (mediaItem) {
-              setupCommandMediaSync(this.id, mediaItem.id, newTimelineItem.id)
-            }
-          }
-
-          const mediaItem = this.mediaModule.getMediaItem(itemData.mediaItemId)
-          console.log(`↩️ 已撤销删除已知时间轴项目: ${mediaItem?.name || '未知素材'}`)
+        if (!rebuildResult.success) {
+          throw new Error(`轨道删除撤销重建时间轴项目失败: ${rebuildResult.error}`)
         }
+
+        const newTimelineItem = rebuildResult.timelineItem
+
+        // 1. 添加到时间轴
+        this.timelineModule.addTimelineItem(newTimelineItem)
+
+        // 2. 添加sprite到WebAV画布
+        if (newTimelineItem.runtime.sprite) {
+          await this.webavModule.addSprite(newTimelineItem.runtime.sprite)
+        }
+
+        // 3. 针对loading状态的项目设置状态同步（确保时间轴项目已添加到store）
+        if (newTimelineItem.timelineStatus === 'loading') {
+          setupCommandMediaSync(
+            this.id,
+            newTimelineItem.mediaItemId,
+            newTimelineItem.id,
+            this.description,
+          )
+        }
+        console.log(`✅ 轨道删除撤销已撤销删除时间轴项目: ${itemData.id}`)
       }
 
       console.log(
@@ -258,6 +232,56 @@ export class RemoveTrackCommand implements SimpleCommand {
     } catch (error) {
       console.error(`❌ 撤销删除轨道失败: ${this.trackData.name}`, error)
       throw error
+    }
+  }
+
+  /**
+   * 更新媒体数据（由媒体同步调用）
+   * @param mediaData 最新的媒体数据
+   * @param timelineItemId 可选的时间轴项目ID，用于指定要更新哪个项目
+   */
+  updateMediaData(mediaData: UnifiedMediaItemData, timelineItemId?: string): void {
+    // 遍历所有受影响的时间轴项目
+    for (const timelineItem of this.affectedTimelineItems) {
+      // 如果指定了timelineItemId，则只更新匹配的项目
+      if (timelineItemId && timelineItem.id !== timelineItemId) {
+        continue
+      }
+      
+      // 如果没有指定timelineItemId或者项目ID匹配，则更新该项目
+      const config = timelineItem.config as any
+
+      // 从 webav 对象中获取原始尺寸信息
+      if (
+        mediaData.webav?.originalWidth !== undefined &&
+        mediaData.webav?.originalHeight !== undefined
+      ) {
+        config.width = mediaData.webav.originalWidth
+        config.height = mediaData.webav.originalHeight
+      }
+
+      if (mediaData.duration !== undefined) {
+        // 更新timeRange的持续时间，而不是config.duration
+        const startTime = timelineItem.timeRange.timelineStartTime
+        const clipStartTime = timelineItem.timeRange.clipStartTime
+        timelineItem.timeRange = {
+          timelineStartTime: startTime,
+          timelineEndTime: startTime + mediaData.duration,
+          clipStartTime: clipStartTime,
+          clipEndTime: clipStartTime + mediaData.duration,
+        }
+      }
+
+      console.log(`🔄 [RemoveTrackCommand] 已更新媒体数据: ${timelineItem.id}`, {
+        width: config.width,
+        height: config.height,
+        duration: mediaData.duration,
+      })
+      
+      // 如果指定了timelineItemId且已找到并更新了对应项目，则退出循环
+      if (timelineItemId && timelineItem.id === timelineItemId) {
+        break
+      }
     }
   }
 }

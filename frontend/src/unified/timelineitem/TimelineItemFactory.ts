@@ -674,13 +674,13 @@ export async function rebuildKnownTimelineItem(
         throw new Error(`原始素材不存在: ${originalTimelineItemData.mediaItemId}`)
       }
 
-      // 检查素材状态和重建条件
-      const isReady = UnifiedMediaItemQueries.isReady(mediaItem)
-
       // 检查媒体类型和时长
       if (mediaItem.mediaType === 'unknown') {
         throw new Error(`素材类型未确定，无法重建时间轴项目: ${mediaItem.name}`)
       }
+
+      // 检查素材状态和重建条件
+      const isReady = UnifiedMediaItemQueries.isReady(mediaItem)
 
       const availableDuration = mediaItem.duration
       if (!availableDuration || availableDuration <= 0) {
