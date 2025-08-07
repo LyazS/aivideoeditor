@@ -22,7 +22,7 @@ app.add_middleware(
 MEDIA_FILES_PATH = "E:/Downloads"  # 修改为你想要的路径
 
 # 网速限制配置（字节/秒）
-DOWNLOAD_SPEED_LIMIT = 10240 // 4 * 1024  # 1MB/s，可以调整这个值来模拟不同网速
+DOWNLOAD_SPEED_LIMIT = 10240 // 8 * 1024  # 1MB/s，可以调整这个值来模拟不同网速
 CHUNK_SIZE = 8192  # 8KB 每个数据块
 
 
@@ -181,6 +181,46 @@ async def _generate_file_stream(file_path: Path):
             yield chunk
 
 
+async def _generate_error_file_stream(file_path: Path):
+    """
+    生成带网速限制的文件流，但在传输过程中故意断开连接以模拟错误场景
+
+    Args:
+        file_path: 文件路径
+
+    Yields:
+        文件数据块，但在传输到一半时会引发异常
+    """
+    with open(file_path, "rb") as file:
+        start_time = time.time()
+        bytes_sent = 0
+        
+        # 获取文件总大小，以便在传输到一半时断开连接
+        file_size = file_path.stat().st_size
+        half_size = file_size // 2
+        
+        while True:
+            chunk = file.read(CHUNK_SIZE)
+            if not chunk:
+                break
+
+            # 计算应该等待的时间来限制网速
+            bytes_sent += len(chunk)
+            elapsed_time = time.time() - start_time
+            expected_time = bytes_sent / DOWNLOAD_SPEED_LIMIT
+
+            if expected_time > elapsed_time:
+                await asyncio.sleep(expected_time - elapsed_time)
+
+            # 检查是否已经传输了一半的数据
+            if bytes_sent >= half_size:
+                # 在传输到一半时故意断开连接
+                print(f"模拟错误：在传输到一半时断开连接（已发送 {bytes_sent}/{file_size} 字节）")
+                raise ConnectionError("模拟的连接错误：传输过程中断开")
+
+            yield chunk
+
+
 @app.head("/media/{file_name:path}")
 async def head_media_file(file_name: str):
     """
@@ -281,6 +321,61 @@ async def get_media_file(file_name: str):
     # 返回流式响应
     return StreamingResponse(
         _generate_file_stream(file_path),
+        media_type=mime_type,
+        headers={
+            "Content-Length": str(file_size),
+            "Content-Disposition": f"attachment; filename*=UTF-8''{encoded_filename}",
+            "Accept-Ranges": "bytes",
+        },
+    )
+
+
+@app.get("/errormedia/{file_name:path}")
+async def get_error_media_file(file_name: str):
+    """
+    获取媒体文件（带网速限制），但在传输过程中故意断开连接以模拟错误场景
+
+    Args:
+        file_name: 请求的文件名（支持URL编码的中文文件名）
+
+    Returns:
+        流式文件响应或错误信息
+    """
+    # URL解码文件名以支持中文文件名
+    print(f"Received ERROR request for file: {file_name}")
+    decoded_file_name = unquote(file_name)
+
+    # 构建完整的文件路径
+    file_path = Path(MEDIA_FILES_PATH) / decoded_file_name
+
+    # 检查文件是否存在
+    if not file_path.exists():
+        raise HTTPException(
+            status_code=404, detail=f"File '{decoded_file_name}' not found"
+        )
+
+    # 检查是否是文件（不是目录）
+    if not file_path.is_file():
+        raise HTTPException(
+            status_code=400, detail=f"'{decoded_file_name}' is not a file"
+        )
+
+    # 获取文件的MIME类型和大小
+    file_extension = file_path.suffix.lower()
+    mime_type = _get_mime_type(file_extension)
+    file_size = file_path.stat().st_size
+
+    print(
+        f"Serving file with ERROR simulation: {decoded_file_name} ({file_size} bytes) at {DOWNLOAD_SPEED_LIMIT/1024/1024:.1f} MB/s"
+    )
+
+    # 处理中文文件名的编码问题
+    # 使用 RFC 5987 标准的 filename* 参数来支持 UTF-8 编码的文件名
+    encoded_filename = quote(file_path.name.encode("utf-8"))
+
+    # 返回流式响应，使用错误模拟的文件流生成器
+    return StreamingResponse(
+        _generate_error_file_stream(file_path),
         media_type=mime_type,
         headers={
             "Content-Length": str(file_size),

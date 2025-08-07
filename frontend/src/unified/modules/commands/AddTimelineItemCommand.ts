@@ -27,7 +27,7 @@ import {
   createSpriteFromUnifiedMediaItem,
   createSpriteFromUnifiedTimelineItem,
 } from '../../utils/UnifiedSpriteFactory'
-import { useTimelineMediaSync } from '../../composables/useTimelineMediaSync'
+import { setupCommandMediaSync, cleanupCommandMediaSync } from '../../composables/useCommandMediaSync'
 
 import { regenerateThumbnailForUnifiedTimelineItem } from '../../utils/thumbnailGenerator'
 
@@ -47,6 +47,7 @@ export class AddTimelineItemCommand implements SimpleCommand {
   public readonly id: string
   public readonly description: string
   private originalTimelineItemData: UnifiedTimelineItemData<MediaType> | null = null // 保存原始项目的重建数据
+  private _isDisposed = false
 
   constructor(
     timelineItem: UnifiedTimelineItemData<MediaType>,
@@ -95,12 +96,6 @@ export class AddTimelineItemCommand implements SimpleCommand {
 
     // 检查素材状态和重建条件
     const isReady = UnifiedMediaItemQueries.isReady(mediaItem)
-    const hasError = UnifiedMediaItemQueries.hasError(mediaItem)
-
-    // 只阻止错误状态的素材
-    if (hasError) {
-      throw new Error(`素材解析失败，无法重建时间轴项目: ${mediaItem.name}`)
-    }
 
     // 检查媒体类型和时长
     if (mediaItem.mediaType === 'unknown') {
@@ -183,7 +178,6 @@ export class AddTimelineItemCommand implements SimpleCommand {
     }
   }
 
-  // 注意：新架构不再支持未知类型的时间轴项目，移除 rebuildUnknownTimelineItem 方法
 
   /**
    * 执行命令：添加时间轴项目
@@ -210,12 +204,8 @@ export class AddTimelineItemCommand implements SimpleCommand {
 
       // 3. 针对loading状态的项目设置状态同步（确保时间轴项目已添加到store）
       if (newTimelineItem.timelineStatus === 'loading') {
-        const mediaItem = this.mediaModule.getMediaItem(newTimelineItem.mediaItemId)
-        if (mediaItem) {
-          this.setupMediaSyncForLoadingItem(newTimelineItem, mediaItem)
-        }
+        setupCommandMediaSync(this.id, newTimelineItem.mediaItemId, newTimelineItem.id)
       }
-
       console.log(`✅ 已添加时间轴项目: ${this.originalTimelineItemData.mediaItemId}`)
     } catch (error) {
       const itemName = this.originalTimelineItemData?.mediaItemId || '未知项目'
@@ -240,12 +230,6 @@ export class AddTimelineItemCommand implements SimpleCommand {
         return
       }
 
-      // 先清理监听器
-      if (existingItem.runtime.unwatchMediaSync) {
-        existingItem.runtime.unwatchMediaSync()
-        existingItem.runtime.unwatchMediaSync = undefined
-        console.log(`🗑️ [AddTimelineItemCommand.undo] 已清理监听器: ${existingItem.id}`)
-      }
 
       // 移除时间轴项目（这会自动处理sprite的清理）
       this.timelineModule.removeTimelineItem(this.originalTimelineItemData.id)
@@ -294,89 +278,57 @@ export class AddTimelineItemCommand implements SimpleCommand {
   }
 
   /**
-   * 为loading状态的时间轴项目设置媒体状态同步
-   * @param timelineItem loading状态的时间轴项目
-   * @param mediaItem 对应的媒体项目
+   * 更新媒体数据（由媒体同步调用）
+   * @param mediaData 最新的媒体数据
    */
-  private setupMediaSyncForLoadingItem(
-    timelineItem: KnownTimelineItem,
-    mediaItem: UnifiedMediaItemData,
-  ): void {
-    try {
-      const { setupMediaSync } = useTimelineMediaSync()
-      // 传递this（命令实例）给setupMediaSync
-      const unwatch = setupMediaSync(timelineItem.id, mediaItem.id, this)
-
-      if (unwatch) {
-        console.log(
-          `🔗 [AddTimelineItemCommand] 已设置状态同步: ${timelineItem.id} <-> ${mediaItem.id}`,
-        )
-
-        // 保存监听器清理函数到时间轴项目的runtime中
-        timelineItem.runtime.unwatchMediaSync = unwatch
-        console.log(`💾 [AddTimelineItemCommand] 已保存监听器到runtime: ${timelineItem.id}`)
-      } else {
-        console.warn(
-          `⚠️ [AddTimelineItemCommand] 无法设置状态同步: ${timelineItem.id} <-> ${mediaItem.id}`,
-        )
+  updateMediaData(mediaData: UnifiedMediaItemData): void {
+    if (this.originalTimelineItemData && isKnownTimelineItem(this.originalTimelineItemData)) {
+      const config = this.originalTimelineItemData.config as any
+      
+      // 从 webav 对象中获取原始尺寸信息
+      if (mediaData.webav?.originalWidth !== undefined && mediaData.webav?.originalHeight !== undefined) {
+        config.width = mediaData.webav.originalWidth
+        config.height = mediaData.webav.originalHeight
       }
-    } catch (error) {
-      console.error(`❌ [AddTimelineItemCommand] 设置状态同步失败:`, error)
+      
+      if (mediaData.duration !== undefined) {
+        // 更新timeRange的持续时间，而不是config.duration
+        const startTime = this.originalTimelineItemData.timeRange.timelineStartTime
+        const clipStartTime = this.originalTimelineItemData.timeRange.clipStartTime
+        this.originalTimelineItemData.timeRange = {
+          timelineStartTime: startTime,
+          timelineEndTime: startTime + mediaData.duration,
+          clipStartTime: clipStartTime,
+          clipEndTime: clipStartTime + mediaData.duration
+        }
+      }
+      
+      console.log(`🔄 [AddTimelineItemCommand] 已更新媒体数据: ${this.id}`, {
+        width: config.width,
+        height: config.height,
+        duration: config.duration,
+      })
     }
   }
-
+  
   /**
-   * 更新保存的原始时间轴项目时长和状态
-   * 当素材从loading状态转换为ready状态时，时长可能会发生变化，需要更新保存的时长数据
-   * 同时更新timelineStatus为传入的状态，并更新config中的原始分辨率信息
-   * @param duration 新的时长
-   * @param timelineStatus 新的时间轴状态
-   * @param updatedConfig 更新后的配置信息（可选，用于更新原始分辨率等信息）
+   * 检查命令是否已被清理
    */
-  public updateOriginalTimelineItemData(
-    duration: number,
-    timelineStatus: TimelineItemStatus,
-    updatedConfig?: Partial<
-      VideoMediaConfig | ImageMediaConfig | AudioMediaConfig | TextMediaConfig
-    >,
-  ): void {
-    if (!this.originalTimelineItemData) {
-      console.warn('⚠️ [AddTimelineItemCommand] 没有原始时间轴项目数据，无法更新时长')
+  get isDisposed(): boolean {
+    return this._isDisposed
+  }
+  
+  /**
+   * 清理命令持有的资源
+   */
+  dispose(): void {
+    if (this._isDisposed) {
       return
     }
-
-    const oldDuration =
-      this.originalTimelineItemData.timeRange.timelineEndTime -
-      this.originalTimelineItemData.timeRange.timelineStartTime
-
-    console.log('🔄 [AddTimelineItemCommand] 更新原始时间轴项目时长和配置', {
-      oldDuration,
-      newDuration: duration,
-      timelineStatus,
-      mediaType: this.originalTimelineItemData.mediaType,
-      hasUpdatedConfig: !!updatedConfig,
-    })
-
-    // 更新时间范围的结束时间，保持开始时间不变
-    this.originalTimelineItemData.timeRange.timelineEndTime =
-      this.originalTimelineItemData.timeRange.timelineStartTime + duration
-    this.originalTimelineItemData.timeRange.clipEndTime = duration
-
-    // 更新状态为传入的状态
-    this.originalTimelineItemData.timelineStatus = timelineStatus
-
-    // 如果提供了更新的配置信息，则更新config
-    if (updatedConfig) {
-      console.log('🔄 [AddTimelineItemCommand] 应用更新的配置信息', updatedConfig)
-
-      // 合并更新的配置到原始配置中
-      Object.assign(this.originalTimelineItemData.config, updatedConfig)
-
-      console.log('✅ [AddTimelineItemCommand] 配置信息已更新')
-    }
-
-    console.log('✅ [AddTimelineItemCommand] 原始时间轴项目时长、状态和配置更新完成', {
-      timelineStatus: this.originalTimelineItemData.timelineStatus,
-    })
+    
+    this._isDisposed = true
+    // 清理媒体同步
+    cleanupCommandMediaSync(this.id)
+    console.log(`🗑️ [AddTimelineItemCommand] 命令资源已清理: ${this.id}`)
   }
 }

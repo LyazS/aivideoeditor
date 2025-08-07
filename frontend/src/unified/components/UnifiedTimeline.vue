@@ -224,7 +224,6 @@ import { getDragPreviewManager } from '../composables/useDragPreview'
 import { useDragUtils } from '../composables/useDragUtils'
 import { useDialogs } from '../composables/useDialogs'
 import { getSnapIndicatorManager } from '../composables/useSnapIndicator'
-import { useTimelineMediaSync } from '../composables/useTimelineMediaSync'
 import { calculateVisibleFrameRange } from '../utils/coordinateUtils'
 import { framesToTimecode } from '../utils/UnifiedTimeUtils'
 import type { UnifiedTrackType } from '../track/TrackTypes'
@@ -1434,15 +1433,8 @@ async function handleTimelineItemPositionUpdate(
   newPositionFrames: number,
   newTrackId?: string,
 ) {
-  try {
-    // 使用带历史记录的移动方法
-    await unifiedStore.moveTimelineItemWithHistory(timelineItemId, newPositionFrames, newTrackId)
-    console.log('✅ 时间轴项目移动成功')
-  } catch (error) {
-    console.error('❌ 移动时间轴项目失败:', error)
-    // 如果历史记录移动失败，回退到直接移动
-    await unifiedStore.updateTimelineItemPosition(timelineItemId, newPositionFrames, newTrackId)
-  }
+  // 使用带历史记录的移动方法
+  await unifiedStore.moveTimelineItemWithHistory(timelineItemId, newPositionFrames, newTrackId)
 }
 
 // 从素材库项创建时间轴项目 - 适配统一架构
@@ -1688,32 +1680,14 @@ function renderTimelineItem(item: UnifiedTimelineItemData | any, track: any) {
 }
 
 async function handleTimelineItemRemove(timelineItemId: string) {
-  try {
-    const item = unifiedStore.getTimelineItem(timelineItemId)
-    if (item) {
-      const mediaItem = unifiedStore.getMediaItem(item.mediaItemId)
-      console.log(`🗑️ 准备从时间轴删除项目: ${mediaItem?.name || '未知'} (ID: ${timelineItemId})`)
+  const item = unifiedStore.getTimelineItem(timelineItemId)
+  if (item) {
+    const mediaItem = unifiedStore.getMediaItem(item.mediaItemId)
+    console.log(`🗑️ 准备从时间轴删除项目: ${mediaItem?.name || '未知'} (ID: ${timelineItemId})`)
 
-      // 使用统一架构的删除方法
-      await unifiedStore.removeTimelineItemWithHistory(timelineItemId)
-      console.log(`✅ 时间轴项目删除完成: ${timelineItemId}`)
-    }
-  } catch (error) {
-    console.error('❌ 删除时间轴项目失败:', error)
-    // 如果历史记录删除失败，回退到直接删除
-    try {
-      const item = unifiedStore.getTimelineItem(timelineItemId)
-      if (item) {
-        // 从画布移除sprite
-        if (item.runtime.sprite) {
-          unifiedStore.removeSpriteFromCanvas(item.runtime.sprite)
-        }
-        // 从store中移除TimelineItem
-        unifiedStore.removeTimelineItem(timelineItemId)
-      }
-    } catch (fallbackError) {
-      console.error('❌ 回退删除也失败:', fallbackError)
-    }
+    // 使用统一架构的删除方法
+    await unifiedStore.removeTimelineItemWithHistory(timelineItemId)
+    console.log(`✅ 时间轴项目删除完成: ${timelineItemId}`)
   }
 }
 

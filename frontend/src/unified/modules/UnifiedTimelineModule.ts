@@ -231,12 +231,6 @@ export function createUnifiedTimelineModule(
       const item = timelineItems.value[index]
       const mediaItem = mediaModule.getMediaItem(item.mediaItemId)
 
-      // 先清理媒体状态同步监听器
-      if (item.runtime.unwatchMediaSync) {
-        item.runtime.unwatchMediaSync()
-        item.runtime.unwatchMediaSync = undefined
-        console.log(`🗑️ [UnifiedTimelineModule] 已清理监听器(删除项目): ${timelineItemId}`)
-      }
 
       // 🆕 增强的清理逻辑：无论状态如何，都检查并清理sprite
       if (item.runtime.sprite) {
