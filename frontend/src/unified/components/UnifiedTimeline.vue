@@ -1776,26 +1776,9 @@ async function removeTrack(trackId: string) {
       return
     }
 
-    // 检查轨道上是否有项目
-    const trackItems = getClipsForTrack(trackId)
-    if (trackItems.length > 0) {
-      // 询问用户是否确认删除
-      const confirmed = confirm(
-        `轨道"${track.name}"上有 ${trackItems.length} 个片段，删除轨道将同时删除这些片段。\n\n确定要删除吗？`,
-      )
-
-      if (!confirmed) {
-        showContextMenu.value = false
-        return
-      }
-    }
-
     // 使用带历史记录的删除方法
     await unifiedStore.removeTrackWithHistory(trackId)
     console.log('✅ 轨道删除成功:', trackId)
-
-    // 显示成功提示
-    dialogs.showSuccess(`轨道"${track.name}"已删除`)
   } catch (error) {
     console.error('❌ 删除轨道时出错:', error)
     dialogs.showOperationError('删除轨道', (error as Error).message)

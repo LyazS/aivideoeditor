@@ -54,6 +54,11 @@ import {
 
 import { UnifiedMediaItemQueries } from '../../mediaitem'
 
+import {
+  setupCommandMediaSync,
+  cleanupCommandMediaSync,
+} from '../../composables/useCommandMediaSync'
+
 /**
  * 删除轨道命令
  * 支持删除轨道的撤销/重做操作，兼容已知和未知时间轴项目
@@ -120,145 +125,6 @@ export class RemoveTrackCommand implements SimpleCommand {
     )
   }
 
-  /**
-   * 从原始素材重建时间轴项目
-   */
-  private async rebuildTimelineItem(
-    itemData: UnifiedTimelineItemData<MediaType>,
-  ): Promise<KnownTimelineItem> {
-    // 特殊处理文本类型的时间轴项目
-    if (itemData.mediaType === 'text') {
-      return await this.rebuildTextTimelineItem(itemData as UnifiedTimelineItemData<'text'>)
-    }
-
-    const mediaItem = this.mediaModule.getMediaItem(itemData.mediaItemId)
-    if (!mediaItem) {
-      throw new Error(`找不到素材项目: ${itemData.mediaItemId}`)
-    }
-
-    // 确保素材已经解析完成
-    if (!UnifiedMediaItemQueries.isReady(mediaItem)) {
-      throw new Error('素材还在解析中，无法重建')
-    }
-
-    // 从原始素材重新创建sprite
-    const newSprite = await createSpriteFromUnifiedMediaItem(mediaItem)
-
-    // 设置时间范围
-    newSprite.setTimeRange(itemData.timeRange)
-
-    // 应用变换属性（使用坐标转换）
-    if (hasVisualProperties(itemData)) {
-      const config = itemData.config as VideoMediaConfig | ImageMediaConfig | TextMediaConfig
-
-      // 导入坐标转换工具
-      const { projectToWebavCoords } = await import('../../utils/coordinateTransform')
-
-      // 获取画布分辨率
-      const canvasWidth = this.configModule.videoResolution.value.width
-      const canvasHeight = this.configModule.videoResolution.value.height
-
-      // 使用坐标转换将项目坐标系转换为WebAV坐标系
-      if (config.x !== undefined && config.y !== undefined && config.width !== undefined && config.height !== undefined) {
-        const webavCoords = projectToWebavCoords(
-          config.x,
-          config.y,
-          config.width,
-          config.height,
-          canvasWidth,
-          canvasHeight,
-        )
-        newSprite.rect.x = webavCoords.x
-        newSprite.rect.y = webavCoords.y
-      }
-
-      // 设置尺寸和其他属性
-      if (config.width !== undefined) newSprite.rect.w = config.width
-      if (config.height !== undefined) newSprite.rect.h = config.height
-      if (config.rotation !== undefined) newSprite.rect.angle = config.rotation
-      if (config.opacity !== undefined) newSprite.opacity = config.opacity
-    }
-
-    // 安全地获取 zIndex，所有媒体类型的配置都应该有 zIndex 属性
-    const config = itemData.config as BaseMediaProps
-    newSprite.zIndex = config.zIndex
-
-    // 创建新的TimelineItem
-    const newTimelineItem = reactive({
-      id: itemData.id,
-      mediaItemId: itemData.mediaItemId,
-      trackId: itemData.trackId,
-      mediaType: itemData.mediaType,
-      timeRange: newSprite.getTimeRange(),
-      config: { ...itemData.config },
-      animation: itemData.animation ? { ...itemData.animation } : undefined,
-      timelineStatus: 'ready' as TimelineItemStatus,
-      runtime: {
-        sprite: markRaw(newSprite),
-      },
-    }) as KnownTimelineItem
-
-    return newTimelineItem
-  }
-
-  /**
-   * 重建文本时间轴项目
-   */
-  private async rebuildTextTimelineItem(
-    itemData: UnifiedTimelineItemData<'text'>,
-  ): Promise<KnownTimelineItem> {
-    console.log('🔄 [RemoveTrackCommand] 重建文本时间轴项目...')
-
-    // 从保存的配置中获取文本内容和样式
-    const textConfig = itemData.config as TextMediaConfig
-    const text = textConfig.text
-    const style = textConfig.style
-
-    console.log('📝 [RemoveTrackCommand] 文本重建参数:', {
-      text: text.substring(0, 20) + '...',
-      style,
-      timeRange: itemData.timeRange,
-    })
-
-    // 动态导入TextVisibleSprite
-    const { TextVisibleSprite } = await import('../../visiblesprite/TextVisibleSprite')
-
-    // 重新创建文本精灵
-    const newSprite = await TextVisibleSprite.create(text, style)
-
-    // 设置时间范围
-    newSprite.setTimeRange(itemData.timeRange)
-
-    // 设置变换属性
-    const rect = newSprite.rect
-    rect.x = textConfig.x
-    rect.y = textConfig.y
-    rect.w = textConfig.width
-    rect.h = textConfig.height
-    rect.angle = textConfig.rotation
-    newSprite.opacity = textConfig.opacity
-
-    // 设置其他属性
-    newSprite.zIndex = textConfig.zIndex
-
-    // 创建新的TimelineItem
-    const newTimelineItem = reactive({
-      id: itemData.id,
-      mediaItemId: '', // 文本项目不需要媒体库项目
-      trackId: itemData.trackId,
-      mediaType: 'text',
-      timeRange: { ...itemData.timeRange },
-      config: { ...itemData.config },
-      animation: itemData.animation ? { ...itemData.animation } : undefined,
-      timelineStatus: 'ready' as TimelineItemStatus,
-      runtime: {
-        sprite: markRaw(newSprite),
-      },
-    }) as KnownTimelineItem
-
-    console.log('✅ [RemoveTrackCommand] 文本时间轴项目重建完成')
-    return newTimelineItem
-  }
 
   /**
    * 执行命令：删除轨道及其上的所有时间轴项目
@@ -318,14 +184,71 @@ export class RemoveTrackCommand implements SimpleCommand {
       for (const itemData of this.affectedTimelineItems) {
         console.log(`🔄 重建时间轴项目: ${itemData.id}`)
 
-        const newTimelineItem = await this.rebuildTimelineItem(itemData)
+        // 检查是否为文本项目
+        if (itemData.mediaType === 'text') {
+          // 文本项目特殊处理 - 不需要媒体项目
+          console.log(`🔄 撤销删除操作：重建文本时间轴项目...`)
 
-        // 添加到时间轴
-        this.timelineModule.addTimelineItem(newTimelineItem)
+          // 使用 TimelineItemFactory 重建文本时间轴项目
+          const rebuildResult = await TimelineItemFactory.rebuildText({
+            originalTimelineItemData: itemData as UnifiedTimelineItemData<'text'>,
+            videoResolution: this.configModule.videoResolution.value,
+            logIdentifier: "RemoveTrackCommand"
+          })
+          
+          if (!rebuildResult.success) {
+            throw new Error(`重建文本时间轴项目失败: ${rebuildResult.error}`)
+          }
+          
+          const newTimelineItem = rebuildResult.timelineItem
 
-        // 添加sprite到WebAV画布
-        if (newTimelineItem.runtime.sprite) {
-          await this.webavModule.addSprite(newTimelineItem.runtime.sprite)
+          // 1. 添加到时间轴
+          this.timelineModule.addTimelineItem(newTimelineItem)
+
+          // 2. 添加sprite到WebAV画布
+          if (newTimelineItem.runtime.sprite) {
+            await this.webavModule.addSprite(newTimelineItem.runtime.sprite)
+          }
+
+          const textConfig = itemData.config as TextMediaConfig
+          console.log(`↩️ 已撤销删除文本时间轴项目: ${textConfig.text.substring(0, 20)}...`)
+        } else {
+          // 常规媒体项目撤销逻辑
+          console.log(`🔄 撤销删除操作：重建已知时间轴项目...`)
+
+          // 从原始素材重新创建TimelineItem和sprite
+          const rebuildResult = await TimelineItemFactory.rebuildKnown({
+            originalTimelineItemData: itemData,
+            getMediaItem: (id: string) => this.mediaModule.getMediaItem(id),
+            logIdentifier: "RemoveTrackCommand"
+          })
+          
+          if (!rebuildResult.success) {
+            throw new Error(`重建时间轴项目失败: ${rebuildResult.error}`)
+          }
+          
+          const newTimelineItem = rebuildResult.timelineItem
+
+          // 1. 添加到时间轴
+          this.timelineModule.addTimelineItem(newTimelineItem)
+
+          // 2. 添加sprite到WebAV画布
+          if (newTimelineItem.runtime.sprite) {
+            await this.webavModule.addSprite(newTimelineItem.runtime.sprite)
+          }
+
+          // 3. 如果项目仍然是loading状态，重新设置媒体同步
+          if (newTimelineItem.timelineStatus === 'loading') {
+            const mediaItem = this.mediaModule.getMediaItem(
+              itemData.mediaItemId,
+            )
+            if (mediaItem) {
+              setupCommandMediaSync(this.id, mediaItem.id, newTimelineItem.id)
+            }
+          }
+
+          const mediaItem = this.mediaModule.getMediaItem(itemData.mediaItemId)
+          console.log(`↩️ 已撤销删除已知时间轴项目: ${mediaItem?.name || '未知素材'}`)
         }
       }
 
