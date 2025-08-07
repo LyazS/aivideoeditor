@@ -217,93 +217,6 @@ export class UpdateTextCommand implements SimpleCommand {
   }
 }
 
-// ==================== 删除文本项目命令 ====================
-/**
- * 删除文本项目命令
- * 支持撤销/重做的文本项目删除操作
- * 遵循"从源头重建"原则：保存完整的重建元数据，撤销时从原始配置重新创建
- */
-export class RemoveTextItemCommand implements SimpleCommand {
-  public readonly id: string
-  public readonly description: string
-  private originalTimelineItemData: UnifiedTimelineItemData<'text'> | null = null // 保存原始项目的重建数据
-
-  constructor(
-    private timelineItemId: string,
-    private timelineModule: {
-      addTimelineItem: (item: UnifiedTimelineItemData<'text'>) => void
-      removeTimelineItem: (id: string) => void
-      getTimelineItem: (id: string) => UnifiedTimelineItemData<'text'> | undefined
-    },
-    private webavModule: {
-      addSprite: (sprite: VisibleSprite) => Promise<boolean>
-      removeSprite: (sprite: VisibleSprite) => boolean
-    },
-  ) {
-    this.id = generateCommandId()
-    this.description = `删除文本项目`
-  }
-
-  /**
-   * 执行命令：删除文本时间轴项目
-   */
-  async execute(): Promise<void> {
-    try {
-      console.log(`🔄 执行删除文本操作...`)
-
-      const item = this.timelineModule.getTimelineItem(this.timelineItemId)
-      if (!item || !isTextTimelineItem(item)) {
-        throw new Error(`文本项目不存在或类型错误: ${this.timelineItemId}`)
-      }
-
-      // 保存项目用于撤销
-      this.originalTimelineItemData = TimelineItemFactory.clone(item)
-
-      // 从时间轴移除项目
-      this.timelineModule.removeTimelineItem(this.timelineItemId)
-
-      console.log(`✅ 文本项目删除成功: ${this.timelineItemId}`)
-    } catch (error) {
-      console.error(`❌ 删除文本项目失败:`, error)
-      throw error
-    }
-  }
-
-  /**
-   * 撤销命令：重新创建文本时间轴项目
-   * 遵循"从源头重建"原则，复用 textTimelineUtils 中的工具函数
-   */
-  async undo(): Promise<void> {
-    try {
-      if (this.originalTimelineItemData) {
-        console.log(`🔄 撤销删除文本操作...`)
-
-        // 1. 使用 TimelineItemFactory.clone 创建新的 TimelineItem（确保独立性和正确的 runtime 处理）
-        const newTimelineItem = TimelineItemFactory.clone(this.originalTimelineItemData)
-
-        // 2. 使用 textTimelineUtils 中的工具函数创建精灵
-        const newSprite = await createSpriteForTextTimelineItem(newTimelineItem)
-
-        // 3. 将精灵添加到 runtime
-        newTimelineItem.runtime.sprite = markRaw(newSprite)
-
-        // 4. 重新添加到时间轴
-        this.timelineModule.addTimelineItem(newTimelineItem)
-
-        // 5. 重新添加sprite到WebAV画布
-        if (newTimelineItem.runtime.sprite) {
-          await this.webavModule.addSprite(newTimelineItem.runtime.sprite)
-        }
-
-        console.log(`✅ 文本项目恢复成功: ${newTimelineItem.id}`)
-      }
-    } catch (error) {
-      console.error(`❌ 撤销删除文本项目失败:`, error)
-      throw error
-    }
-  }
-}
-
 // ==================== 文本命令工厂函数 ====================
 /**
  * 文本命令工厂函数
@@ -321,16 +234,5 @@ export const TextCommandFactory = {
     webavModule: any,
   ): UpdateTextCommand {
     return new UpdateTextCommand(timelineItemId, newText, newStyle, timelineModule, webavModule)
-  },
-
-  /**
-   * 创建删除文本项目命令
-   */
-  createRemoveTextCommand(
-    timelineItemId: string,
-    timelineModule: any,
-    webavModule: any,
-  ): RemoveTextItemCommand {
-    return new RemoveTextItemCommand(timelineItemId, timelineModule, webavModule)
   },
 }

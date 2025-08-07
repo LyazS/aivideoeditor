@@ -27,7 +27,10 @@ import {
   createSpriteFromUnifiedMediaItem,
   createSpriteFromUnifiedTimelineItem,
 } from '../../utils/UnifiedSpriteFactory'
-import { setupCommandMediaSync, cleanupCommandMediaSync } from '../../composables/useCommandMediaSync'
+import {
+  setupCommandMediaSync,
+  cleanupCommandMediaSync,
+} from '../../composables/useCommandMediaSync'
 
 import { regenerateThumbnailForUnifiedTimelineItem } from '../../utils/thumbnailGenerator'
 
@@ -76,7 +79,6 @@ export class AddTimelineItemCommand implements SimpleCommand {
     this.originalTimelineItemData = TimelineItemFactory.clone(timelineItem)
   }
 
-
   /**
    * 执行命令：添加时间轴项目
    * 统一重建逻辑：每次执行都从原始素材重新创建（已知项目）或重建占位符（未知项目）
@@ -93,13 +95,13 @@ export class AddTimelineItemCommand implements SimpleCommand {
       const rebuildResult = await TimelineItemFactory.rebuildKnown({
         originalTimelineItemData: this.originalTimelineItemData,
         getMediaItem: (id: string) => this.mediaModule.getMediaItem(id),
-        logIdentifier: 'AddTimelineItemCommand'
+        logIdentifier: 'AddTimelineItemCommand',
       })
-      
+
       if (!rebuildResult.success) {
         throw new Error(`重建时间轴项目失败: ${rebuildResult.error}`)
       }
-      
+
       const newTimelineItem = rebuildResult.timelineItem
 
       // 1. 添加到时间轴
@@ -138,13 +140,12 @@ export class AddTimelineItemCommand implements SimpleCommand {
         return
       }
 
-
       // 移除时间轴项目（这会自动处理sprite的清理）
       this.timelineModule.removeTimelineItem(this.originalTimelineItemData.id)
       const mediaItem = this.mediaModule.getMediaItem(this.originalTimelineItemData.mediaItemId)
       console.log(`↩️ 已撤销添加时间轴项目: ${mediaItem?.name || '未知素材'}`)
     } catch (error) {
-      const itemName = this.originalTimelineItemData?.mediaItemId || '未知项目'
+      const itemName = this.originalTimelineItemData?.id || '未知项目'
       console.error(`❌ 撤销添加时间轴项目失败: ${itemName}`, error)
       throw error
     }
@@ -155,15 +156,18 @@ export class AddTimelineItemCommand implements SimpleCommand {
    * @param mediaData 最新的媒体数据
    */
   updateMediaData(mediaData: UnifiedMediaItemData): void {
-    if (this.originalTimelineItemData && isKnownTimelineItem(this.originalTimelineItemData)) {
+    if (this.originalTimelineItemData) {
       const config = this.originalTimelineItemData.config as any
-      
+
       // 从 webav 对象中获取原始尺寸信息
-      if (mediaData.webav?.originalWidth !== undefined && mediaData.webav?.originalHeight !== undefined) {
+      if (
+        mediaData.webav?.originalWidth !== undefined &&
+        mediaData.webav?.originalHeight !== undefined
+      ) {
         config.width = mediaData.webav.originalWidth
         config.height = mediaData.webav.originalHeight
       }
-      
+
       if (mediaData.duration !== undefined) {
         // 更新timeRange的持续时间，而不是config.duration
         const startTime = this.originalTimelineItemData.timeRange.timelineStartTime
@@ -172,10 +176,10 @@ export class AddTimelineItemCommand implements SimpleCommand {
           timelineStartTime: startTime,
           timelineEndTime: startTime + mediaData.duration,
           clipStartTime: clipStartTime,
-          clipEndTime: clipStartTime + mediaData.duration
+          clipEndTime: clipStartTime + mediaData.duration,
         }
       }
-      
+
       console.log(`🔄 [AddTimelineItemCommand] 已更新媒体数据: ${this.id}`, {
         width: config.width,
         height: config.height,
@@ -183,14 +187,14 @@ export class AddTimelineItemCommand implements SimpleCommand {
       })
     }
   }
-  
+
   /**
    * 检查命令是否已被清理
    */
   get isDisposed(): boolean {
     return this._isDisposed
   }
-  
+
   /**
    * 清理命令持有的资源
    */
@@ -198,7 +202,7 @@ export class AddTimelineItemCommand implements SimpleCommand {
     if (this._isDisposed) {
       return
     }
-    
+
     this._isDisposed = true
     // 清理媒体同步
     cleanupCommandMediaSync(this.id)

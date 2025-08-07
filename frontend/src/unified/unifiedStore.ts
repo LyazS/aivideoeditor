@@ -96,8 +96,6 @@ import {
 
 import { BatchDeleteCommand, BatchAutoArrangeTrackCommand } from './modules/commands/batchCommands'
 
-import { RemoveTextItemCommand } from './modules/commands/textCommands'
-
 /**
  * 统一视频编辑器存储
  * 基于新的统一类型系统重构的主要状态管理
@@ -324,13 +322,6 @@ export const useUnifiedStore = defineStore('unified', () => {
       return
     }
 
-    // 检查是否是文本项目，使用专门的文本命令
-    if (timelineItem.mediaType === 'text') {
-      // 类型检查确保这是文本项目
-      await removeTextItemWithHistory(timelineItemId)
-      return
-    }
-
     const command = new RemoveTimelineItemCommand(
       timelineItemId,
       timelineItem, // 传入完整的timelineItem用于保存重建数据
@@ -348,31 +339,6 @@ export const useUnifiedStore = defineStore('unified', () => {
       },
       {
         videoResolution: unifiedConfigModule.videoResolution,
-      },
-    )
-    await unifiedHistoryModule.executeCommand(command)
-  }
-
-  /**
-   * 带历史记录的删除文本项目方法
-   * @param timelineItemId 要删除的文本时间轴项目ID
-   */
-  async function removeTextItemWithHistory(timelineItemId: string) {
-    const command = new RemoveTextItemCommand(
-      timelineItemId,
-      {
-        addTimelineItem: unifiedTimelineModule.addTimelineItem,
-        removeTimelineItem: unifiedTimelineModule.removeTimelineItem,
-        getTimelineItem: (id: string) => {
-          const item = unifiedTimelineModule.getTimelineItem(id)
-          return item && item.mediaType === 'text'
-            ? (item as UnifiedTimelineItemData<'text'>)
-            : undefined
-        },
-      },
-      {
-        addSprite: unifiedWebavModule.addSprite,
-        removeSprite: unifiedWebavModule.removeSprite,
       },
     )
     await unifiedHistoryModule.executeCommand(command)
@@ -1004,7 +970,6 @@ export const useUnifiedStore = defineStore('unified', () => {
     // 时间轴项目历史记录方法
     addTimelineItemWithHistory,
     removeTimelineItemWithHistory,
-    removeTextItemWithHistory,
     moveTimelineItemWithHistory,
     updateTimelineItemTransformWithHistory,
     splitTimelineItemAtTimeWithHistory,
