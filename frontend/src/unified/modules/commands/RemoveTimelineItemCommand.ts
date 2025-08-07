@@ -45,7 +45,6 @@ import {
 
 import { UnifiedMediaItemQueries } from '../../mediaitem'
 
-import { createTextTimelineItem } from '../../utils/textTimelineUtils'
 import {
   setupCommandMediaSync,
   cleanupCommandMediaSync,
@@ -112,201 +111,6 @@ export class RemoveTimelineItemCommand implements SimpleCommand {
     }
   }
 
-  /**
-   * 从原始素材重建已知时间轴项目的sprite和timelineItem
-   * 遵循"从源头重建"原则，每次都完全重新创建
-   */
-  private async rebuildKnownTimelineItem(): Promise<KnownTimelineItem> {
-    if (!this.originalTimelineItemData) {
-      throw new Error('时间轴项目数据不存在')
-    }
-
-    console.log('🔄 开始从源头重建已知时间轴项目...')
-
-    // 1. 获取原始素材
-    const mediaItem = this.mediaModule.getMediaItem(this.originalTimelineItemData.mediaItemId)
-    if (!mediaItem) {
-      throw new Error(`原始素材不存在: ${this.originalTimelineItemData.mediaItemId}`)
-    }
-
-    // 检查素材状态和重建条件
-    const isReady = UnifiedMediaItemQueries.isReady(mediaItem)
-
-    // 检查媒体类型和时长
-    if (mediaItem.mediaType === 'unknown') {
-      throw new Error(`素材类型未确定，无法重建时间轴项目: ${mediaItem.name}`)
-    }
-
-    const availableDuration = mediaItem.duration
-    if (!availableDuration || availableDuration <= 0) {
-      throw new Error(`素材时长信息不可用，无法重建时间轴项目: ${mediaItem.name}`)
-    }
-
-    // 根据素材状态确定时间轴项目状态
-    const timelineStatus: TimelineItemStatus = isReady ? 'ready' : 'loading'
-
-    if (isReady) {
-      // Ready素材：创建包含sprite的完整时间轴项目
-      console.log('✅ [AddTimelineItemCommand] 重建ready状态时间轴项目')
-
-      // 2. 使用新的统一函数从时间轴项目数据创建sprite
-      const newSprite = await createSpriteFromUnifiedTimelineItem(this.originalTimelineItemData)
-
-      // 3. 创建新的TimelineItem（先不设置缩略图）
-      const newTimelineItem = reactive({
-        id: this.originalTimelineItemData.id,
-        mediaItemId: this.originalTimelineItemData.mediaItemId,
-        trackId: this.originalTimelineItemData.trackId,
-        mediaType: this.originalTimelineItemData.mediaType,
-        timeRange: newSprite.getTimeRange(),
-        config: { ...this.originalTimelineItemData.config },
-        animation: this.originalTimelineItemData.animation
-          ? { ...this.originalTimelineItemData.animation }
-          : undefined,
-        timelineStatus: timelineStatus,
-        runtime: {
-          sprite: markRaw(newSprite),
-        },
-      }) as KnownTimelineItem
-
-      // 4. 重新生成缩略图（异步执行，不阻塞重建过程）
-      await this.regenerateThumbnailForAddedItem(newTimelineItem, mediaItem)
-
-      console.log('🔄 重建ready状态时间轴项目完成:', {
-        id: newTimelineItem.id,
-        mediaType: mediaItem.mediaType,
-        timeRange: this.originalTimelineItemData.timeRange,
-        position: { x: newSprite.rect.x, y: newSprite.rect.y },
-        size: { w: newSprite.rect.w, h: newSprite.rect.h },
-      })
-
-      return newTimelineItem
-    } else {
-      // 未Ready素材：创建loading状态的时间轴项目
-      console.log('⏳ [AddTimelineItemCommand] 重建loading状态时间轴项目')
-
-      // 创建loading状态的时间轴项目
-      const newTimelineItem = reactive({
-        id: this.originalTimelineItemData.id,
-        mediaItemId: this.originalTimelineItemData.mediaItemId,
-        trackId: this.originalTimelineItemData.trackId,
-        mediaType: this.originalTimelineItemData.mediaType,
-        timeRange: { ...this.originalTimelineItemData.timeRange },
-        config: { ...this.originalTimelineItemData.config },
-        animation: this.originalTimelineItemData.animation
-          ? { ...this.originalTimelineItemData.animation }
-          : undefined,
-        timelineStatus: timelineStatus,
-        runtime: {}, // loading状态暂时没有sprite
-      }) as KnownTimelineItem
-
-      // 注意：状态同步监听将在execute方法中设置，确保时间轴项目已添加到store
-
-      console.log('🔄 重建loading状态时间轴项目完成:', {
-        id: newTimelineItem.id,
-        mediaType: mediaItem.mediaType,
-        timeRange: this.originalTimelineItemData.timeRange,
-        status: 'loading',
-      })
-
-      return newTimelineItem
-    }
-  }
-  /**
-   * 重建文本时间轴项目
-   * 使用 createTextTimelineItem 直接重建，避免重复代码
-   */
-  private async rebuildTextTimelineItem(): Promise<KnownTimelineItem> {
-    if (!this.originalTimelineItemData || !isKnownTimelineItem(this.originalTimelineItemData)) {
-      throw new Error('文本时间轴项目数据不存在')
-    }
-
-    if (this.originalTimelineItemData.mediaType !== 'text') {
-      throw new Error('不是文本项目，无法使用文本重建方法')
-    }
-
-    console.log('🔄 开始重建文本时间轴项目...')
-
-    const originalConfig = this.originalTimelineItemData.config as TextMediaConfig
-    const originalTimeRange = this.originalTimelineItemData.timeRange
-
-    // 计算视频分辨率（从项目配置获取，这里使用默认值）
-    const videoResolution = { width: 1920, height: 1080 } // 实际应该从项目配置获取
-
-    // 计算duration（显示时长）
-    const duration = originalTimeRange.timelineEndTime - originalTimeRange.timelineStartTime
-
-    // 直接使用 createTextTimelineItem 重建，传入原始ID以保持一致性
-    const newTimelineItem = await createTextTimelineItem(
-      originalConfig.text,
-      originalConfig.style,
-      originalTimeRange.timelineStartTime,
-      this.originalTimelineItemData.trackId || '',
-      duration,
-      videoResolution,
-      this.originalTimelineItemData.id, // 传入原始ID
-    )
-
-    // 恢复原始的位置、尺寸和其他属性（createTextTimelineItem 创建的是默认位置）
-    newTimelineItem.config.x = originalConfig.x
-    newTimelineItem.config.y = originalConfig.y
-    newTimelineItem.config.width = originalConfig.width
-    newTimelineItem.config.height = originalConfig.height
-    newTimelineItem.config.rotation = originalConfig.rotation
-    newTimelineItem.config.opacity = originalConfig.opacity
-    newTimelineItem.config.zIndex = originalConfig.zIndex
-    newTimelineItem.config.originalWidth = originalConfig.originalWidth
-    newTimelineItem.config.originalHeight = originalConfig.originalHeight
-    newTimelineItem.config.proportionalScale = originalConfig.proportionalScale
-
-    // 恢复动画配置（如果存在）
-    if (this.originalTimelineItemData.animation) {
-      newTimelineItem.animation = this.originalTimelineItemData.animation
-    }
-
-    // 同步更新sprite的属性以匹配配置（使用坐标转换）
-    if (newTimelineItem.runtime.sprite) {
-      const sprite = newTimelineItem.runtime.sprite as any
-
-      // 导入坐标转换工具
-      const { projectToWebavCoords } = await import('../../utils/coordinateTransform')
-
-      // 获取画布分辨率
-      const canvasWidth = this.configModule.videoResolution.value.width
-      const canvasHeight = this.configModule.videoResolution.value.height
-
-      // 使用坐标转换将项目坐标系转换为WebAV坐标系
-      const webavCoords = projectToWebavCoords(
-        originalConfig.x,
-        originalConfig.y,
-        originalConfig.width,
-        originalConfig.height,
-        canvasWidth,
-        canvasHeight,
-      )
-
-      sprite.rect.x = webavCoords.x
-      sprite.rect.y = webavCoords.y
-      sprite.rect.w = originalConfig.width
-      sprite.rect.h = originalConfig.height
-      sprite.rect.angle = originalConfig.rotation
-      sprite.opacity = originalConfig.opacity
-      sprite.zIndex = originalConfig.zIndex
-
-      // 恢复时间范围
-      sprite.setTimeRange(originalTimeRange)
-    }
-
-    console.log('🔄 重建文本时间轴项目完成:', {
-      id: newTimelineItem.id,
-      text: originalConfig.text.substring(0, 20) + '...',
-      timeRange: originalTimeRange,
-      position: { x: originalConfig.x, y: originalConfig.y },
-      size: { w: originalConfig.width, h: originalConfig.height },
-    })
-
-    return newTimelineItem
-  }
 
   /**
    * 执行命令：删除时间轴项目
@@ -356,8 +160,18 @@ export class RemoveTimelineItemCommand implements SimpleCommand {
           // 文本项目特殊处理 - 不需要媒体项目
           console.log(`🔄 撤销删除操作：重建文本时间轴项目...`)
 
-          // 从原始配置重新创建文本TimelineItem和sprite
-          const newTimelineItem = await this.rebuildTextTimelineItem()
+          // 使用 TimelineItemFactory 重建文本时间轴项目
+          const rebuildResult = await TimelineItemFactory.rebuildText({
+            originalTimelineItemData: this.originalTimelineItemData as UnifiedTimelineItemData<'text'>,
+            videoResolution: this.configModule.videoResolution.value,
+            logIdentifier: "RemoveTimelineItemCommand"
+          })
+          
+          if (!rebuildResult.success) {
+            throw new Error(`重建文本时间轴项目失败: ${rebuildResult.error}`)
+          }
+          
+          const newTimelineItem = rebuildResult.timelineItem
 
           // 1. 添加到时间轴
           this.timelineModule.addTimelineItem(newTimelineItem)
@@ -374,7 +188,17 @@ export class RemoveTimelineItemCommand implements SimpleCommand {
           console.log(`🔄 撤销删除操作：重建已知时间轴项目...`)
 
           // 从原始素材重新创建TimelineItem和sprite
-          const newTimelineItem = await this.rebuildKnownTimelineItem()
+          const rebuildResult = await TimelineItemFactory.rebuildKnown({
+            originalTimelineItemData: this.originalTimelineItemData,
+            getMediaItem: (id: string) => this.mediaModule.getMediaItem(id),
+            logIdentifier: "RemoveTimelineItemCommand"
+          })
+          
+          if (!rebuildResult.success) {
+            throw new Error(`重建时间轴项目失败: ${rebuildResult.error}`)
+          }
+          
+          const newTimelineItem = rebuildResult.timelineItem
 
           // 1. 添加到时间轴
           this.timelineModule.addTimelineItem(newTimelineItem)
@@ -408,40 +232,6 @@ export class RemoveTimelineItemCommand implements SimpleCommand {
     }
   }
 
-  /**
-   * 为添加的项目重新生成缩略图
-   * @param timelineItem 添加的时间轴项目
-   * @param mediaItem 对应的媒体项目
-   */
-  private async regenerateThumbnailForAddedItem(
-    timelineItem: KnownTimelineItem,
-    mediaItem: UnifiedMediaItemData,
-  ) {
-    // 音频不需要缩略图
-    if (mediaItem.mediaType === 'audio') {
-      console.log('🎵 音频不需要缩略图，跳过生成')
-      return
-    }
-
-    // 检查是否已经有缩略图，避免重复生成
-    // 缩略图URL存储在runtime中
-    if (timelineItem.runtime.thumbnailUrl) {
-      console.log('✅ 项目已有缩略图，跳过重新生成')
-      return
-    }
-
-    try {
-      console.log('🖼️ 开始为添加的项目重新生成缩略图...')
-
-      const thumbnailUrl = await regenerateThumbnailForUnifiedTimelineItem(timelineItem, mediaItem)
-
-      if (thumbnailUrl) {
-        console.log('✅ 添加项目缩略图生成完成，已存储到runtime')
-      }
-    } catch (error) {
-      console.error('❌ 添加项目缩略图生成失败:', error)
-    }
-  }
 
   /**
    * 更新媒体数据（由媒体同步调用）

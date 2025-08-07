@@ -190,16 +190,18 @@ async function transitionTimelineItemToReady(
 
     // 1. 创建Sprite
     try {
+      // 先更新timelineItem的timeRange和config配置里的宽高
+      updateTimelineItemDimensions(timelineItem, mediaItem)
+
       console.log(`🔄 [TimelineMediaSync] 为时间轴项目创建Sprite: ${timelineItemId}`)
       const sprite = await createSpriteFromUnifiedMediaItem(mediaItem)
 
-      // 将sprite存储到runtime中
+      // 将sprite存储到runtime中，并更新sprite时间
       timelineItem.runtime.sprite = sprite
+      timelineItem.runtime.sprite.setTimeRange({...timelineItem.timeRange})
       await unifiedStore.addSpriteToCanvas(timelineItem.runtime.sprite)
       console.log(`✅ [TimelineMediaSync] Sprite创建成功并存储到runtime: ${timelineItemId}`)
 
-      // 更新timelineItem的timeRange和config配置里的宽高
-      updateTimelineItemDimensions(timelineItem, mediaItem)
     } catch (spriteError) {
       console.error(`❌ [TimelineMediaSync] 创建Sprite失败: ${timelineItemId}`, spriteError)
       // Sprite创建失败不影响后续操作
