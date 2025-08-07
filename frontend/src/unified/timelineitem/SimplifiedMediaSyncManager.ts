@@ -9,6 +9,7 @@ import type { SimpleCommand } from '../modules/commands/types'
  * 命令媒体同步信息
  */
 interface CommandMediaSyncInfo {
+  id: string // 唯一标识符，用于确保每个注册操作都有唯一的 key
   commandId: string
   mediaItemId: string
   timelineItemId?: string
@@ -45,15 +46,35 @@ export class SimplifiedMediaSyncManager {
     unwatch: () => void,
     timelineItemId?: string
   ): void {
-    const key = `${commandId}:${mediaItemId}`
+    // 生成唯一标识符，确保每个注册操作都有唯一的 key
+    const uniqueId = this.generateUniqueId()
+    const key = `${commandId}:${mediaItemId}:${uniqueId}`
+    
     this.commandMediaSyncMap.set(key, {
+      id: uniqueId,
       commandId,
       mediaItemId,
       timelineItemId,
       unwatch
     })
     
-    console.log(`🔗 [SimplifiedMediaSyncManager] 已注册命令媒体同步: ${commandId} <-> ${mediaItemId}`)
+    console.log(`🔗 [SimplifiedMediaSyncManager] 已注册命令媒体同步: ${commandId} <-> ${mediaItemId} (唯一ID: ${uniqueId})`)
+  }
+
+  /**
+   * 生成唯一标识符
+   * 优先使用 crypto.randomUUID()，如果不可用则使用时间戳 + 随机数
+   */
+  private generateUniqueId(): string {
+    // 检查是否支持 crypto.randomUUID()
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+      return crypto.randomUUID()
+    }
+    
+    // 回退方案：使用时间戳 + 随机数
+    const timestamp = Date.now().toString(36)
+    const randomPart = Math.floor(Math.random() * 1000000).toString(36)
+    return `${timestamp}-${randomPart}`
   }
 
   /**
@@ -61,16 +82,23 @@ export class SimplifiedMediaSyncManager {
    * @param commandId 命令ID
    */
   cleanupCommandMediaSync(commandId: string): void {
+    const cleanedKeys: string[] = []
+    
     for (const [key, sync] of this.commandMediaSyncMap) {
       if (sync.commandId === commandId) {
         try {
           sync.unwatch()
+          cleanedKeys.push(key)
           this.commandMediaSyncMap.delete(key)
-          console.log(`🗑️ [SimplifiedMediaSyncManager] 已清理命令媒体同步: ${commandId}`)
         } catch (error) {
-          console.error(`❌ [SimplifiedMediaSyncManager] 清理命令媒体同步失败: ${commandId}`, error)
+          console.error(`❌ [SimplifiedMediaSyncManager] 清理命令媒体同步失败: ${commandId} (唯一ID: ${sync.id})`, error)
         }
       }
+    }
+    
+    if (cleanedKeys.length > 0) {
+      console.log(`🗑️ [SimplifiedMediaSyncManager] 已清理命令媒体同步: ${commandId} (清理了 ${cleanedKeys.length} 个监听器)`)
+      console.debug(`🔍 [SimplifiedMediaSyncManager] 清理的监听器唯一IDs: ${cleanedKeys.map(k => k.split(':')[2]).join(', ')}`)
     }
   }
 
@@ -79,16 +107,23 @@ export class SimplifiedMediaSyncManager {
    * @param mediaItemId 媒体项目ID
    */
   cleanupMediaItemSync(mediaItemId: string): void {
+    const cleanedKeys: string[] = []
+    
     for (const [key, sync] of this.commandMediaSyncMap) {
       if (sync.mediaItemId === mediaItemId) {
         try {
           sync.unwatch()
+          cleanedKeys.push(key)
           this.commandMediaSyncMap.delete(key)
-          console.log(`🗑️ [SimplifiedMediaSyncManager] 已清理媒体项目同步: ${mediaItemId}`)
         } catch (error) {
-          console.error(`❌ [SimplifiedMediaSyncManager] 清理媒体项目同步失败: ${mediaItemId}`, error)
+          console.error(`❌ [SimplifiedMediaSyncManager] 清理媒体项目同步失败: ${mediaItemId} (唯一ID: ${sync.id})`, error)
         }
       }
+    }
+    
+    if (cleanedKeys.length > 0) {
+      console.log(`🗑️ [SimplifiedMediaSyncManager] 已清理媒体项目同步: ${mediaItemId} (清理了 ${cleanedKeys.length} 个监听器)`)
+      console.debug(`🔍 [SimplifiedMediaSyncManager] 清理的监听器唯一IDs: ${cleanedKeys.map(k => k.split(':')[2]).join(', ')}`)
     }
   }
 
@@ -96,15 +131,25 @@ export class SimplifiedMediaSyncManager {
    * 清理所有同步监听
    */
   cleanup(): void {
+    const cleanedKeys: string[] = []
+    let errorCount = 0
+    
     for (const [key, sync] of this.commandMediaSyncMap) {
       try {
         sync.unwatch()
+        cleanedKeys.push(key)
       } catch (error) {
-        console.error(`❌ [SimplifiedMediaSyncManager] 清理命令媒体同步失败: ${key}`, error)
+        errorCount++
+        console.error(`❌ [SimplifiedMediaSyncManager] 清理命令媒体同步失败: ${key} (唯一ID: ${sync.id})`, error)
       }
     }
+    
     this.commandMediaSyncMap.clear()
-    console.log(`🧹 [SimplifiedMediaSyncManager] 已清理所有同步监听`)
+    
+    console.log(`🧹 [SimplifiedMediaSyncManager] 已清理所有同步监听 (成功: ${cleanedKeys.length}, 失败: ${errorCount})`)
+    if (cleanedKeys.length > 0) {
+      console.debug(`🔍 [SimplifiedMediaSyncManager] 清理的监听器唯一IDs: ${cleanedKeys.map(k => k.split(':')[2]).join(', ')}`)
+    }
   }
 
   /**
@@ -114,19 +159,54 @@ export class SimplifiedMediaSyncManager {
     activeSyncCount: number
     commandCount: number
     mediaItemCount: number
+    uniqueIds: string[]
   } {
     const commandIds = new Set<string>()
     const mediaItemIds = new Set<string>()
+    const uniqueIds: string[] = []
     
     for (const sync of this.commandMediaSyncMap.values()) {
       commandIds.add(sync.commandId)
       mediaItemIds.add(sync.mediaItemId)
+      uniqueIds.push(sync.id)
     }
 
     return {
       activeSyncCount: this.commandMediaSyncMap.size,
       commandCount: commandIds.size,
-      mediaItemCount: mediaItemIds.size
+      mediaItemCount: mediaItemIds.size,
+      uniqueIds
+    }
+  }
+
+  /**
+   * 获取调试信息
+   */
+  getDebugInfo(): {
+    totalSyncs: number
+    syncDetails: Array<{
+      key: string
+      id: string
+      commandId: string
+      mediaItemId: string
+      timelineItemId?: string
+    }>
+  } {
+    const syncDetails = []
+    
+    for (const [key, sync] of this.commandMediaSyncMap) {
+      syncDetails.push({
+        key,
+        id: sync.id,
+        commandId: sync.commandId,
+        mediaItemId: sync.mediaItemId,
+        timelineItemId: sync.timelineItemId
+      })
+    }
+
+    return {
+      totalSyncs: this.commandMediaSyncMap.size,
+      syncDetails
     }
   }
 }

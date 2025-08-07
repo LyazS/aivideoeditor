@@ -48,6 +48,28 @@ export abstract class BaseBatchCommand implements SimpleCommand {
   }
 
   /**
+   * 清理批量命令及其子命令的资源
+   */
+  dispose(): void {
+    try {
+      // 先清理所有子命令
+      this.subCommands.forEach(command => {
+        if (typeof command.dispose === 'function') {
+          command.dispose()
+        }
+      })
+      
+      // 清空子命令数组
+      this.subCommands = []
+      
+      console.log(`🧹 批量命令资源已清理: ${this.description}`)
+    } catch (error) {
+      console.error(`❌ 清理批量命令资源失败: ${this.description}`, error)
+      // 不抛出错误，避免影响主要功能
+    }
+  }
+
+  /**
    * 生成命令ID
    */
   private generateCommandId(): string {
@@ -114,6 +136,29 @@ class SimpleHistoryManager {
   }
 
   /**
+   * 安全地调用命令的 dispose 方法
+   * @param command 要清理的命令
+   */
+  private disposeCommand(command: SimpleCommand): void {
+    try {
+      // 检查命令是否已被清理
+      if (command.isDisposed) {
+        console.log(`⚠️ 命令已被清理: ${command.description}`)
+        return
+      }
+
+      // 检查命令是否有 dispose 方法
+      if (typeof command.dispose === 'function') {
+        command.dispose()
+        console.log(`🧹 命令资源已清理: ${command.description}`)
+      }
+    } catch (error) {
+      console.error(`❌ 清理命令资源失败: ${command.description}`, error)
+      // 不抛出错误，避免影响主要功能
+    }
+  }
+
+  /**
    * 执行命令并添加到历史记录
    * @param command 要执行的命令
    */
@@ -124,7 +169,10 @@ class SimpleHistoryManager {
 
       // 清除当前位置之后的所有命令（如果用户在历史中间执行了新命令）
       if (this.currentIndex < this.commands.length - 1) {
-        this.commands.splice(this.currentIndex + 1)
+        const removedCommands = this.commands.splice(this.currentIndex + 1)
+        // 清理被移除命令的资源
+        removedCommands.forEach(command => this.disposeCommand(command))
+        console.log(`🧹 已清理 ${removedCommands.length} 个被移除命令的资源`)
       }
 
       // 添加新命令到历史记录
@@ -239,9 +287,13 @@ class SimpleHistoryManager {
    * 清空历史记录
    */
   clear(): void {
+    // 清理所有命令的资源
+    const commandsToDispose = [...this.commands]
+    commandsToDispose.forEach(command => this.disposeCommand(command))
+    
     this.commands = []
     this.currentIndex = -1
-    console.log('🗑️ 历史记录已清空')
+    console.log(`🗑️ 历史记录已清空，已清理 ${commandsToDispose.length} 个命令的资源`)
   }
 
   /**
@@ -263,7 +315,10 @@ class SimpleHistoryManager {
 
       // 添加到历史记录（作为单个条目）
       if (this.currentIndex < this.commands.length - 1) {
-        this.commands.splice(this.currentIndex + 1)
+        const removedCommands = this.commands.splice(this.currentIndex + 1)
+        // 清理被移除命令的资源
+        removedCommands.forEach(command => this.disposeCommand(command))
+        console.log(`🧹 已清理 ${removedCommands.length} 个被移除批量命令的资源`)
       }
 
       this.commands.push(batchCommand)

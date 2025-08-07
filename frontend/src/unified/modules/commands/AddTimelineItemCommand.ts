@@ -27,7 +27,7 @@ import {
   createSpriteFromUnifiedMediaItem,
   createSpriteFromUnifiedTimelineItem,
 } from '../../utils/UnifiedSpriteFactory'
-import { setupCommandMediaSync, cleanupCommandMediaSync } from '../../composables/useTimelineMediaSync'
+import { setupCommandMediaSync, cleanupCommandMediaSync } from '../../composables/useCommandMediaSync'
 
 import { regenerateThumbnailForUnifiedTimelineItem } from '../../utils/thumbnailGenerator'
 
@@ -96,12 +96,6 @@ export class AddTimelineItemCommand implements SimpleCommand {
 
     // 检查素材状态和重建条件
     const isReady = UnifiedMediaItemQueries.isReady(mediaItem)
-    const hasError = UnifiedMediaItemQueries.hasError(mediaItem)
-
-    // 只阻止错误状态的素材
-    if (hasError) {
-      throw new Error(`素材解析失败，无法重建时间轴项目: ${mediaItem.name}`)
-    }
 
     // 检查媒体类型和时长
     if (mediaItem.mediaType === 'unknown') {
@@ -184,7 +178,6 @@ export class AddTimelineItemCommand implements SimpleCommand {
     }
   }
 
-  // 注意：新架构不再支持未知类型的时间轴项目，移除 rebuildUnknownTimelineItem 方法
 
   /**
    * 执行命令：添加时间轴项目
@@ -211,12 +204,8 @@ export class AddTimelineItemCommand implements SimpleCommand {
 
       // 3. 针对loading状态的项目设置状态同步（确保时间轴项目已添加到store）
       if (newTimelineItem.timelineStatus === 'loading') {
-        const mediaItem = this.mediaModule.getMediaItem(newTimelineItem.mediaItemId)
-        if (mediaItem) {
-          setupCommandMediaSync(this.id, mediaItem)
-        }
+        setupCommandMediaSync(this.id, newTimelineItem.mediaItemId, newTimelineItem.id)
       }
-
       console.log(`✅ 已添加时间轴项目: ${this.originalTimelineItemData.mediaItemId}`)
     } catch (error) {
       const itemName = this.originalTimelineItemData?.mediaItemId || '未知项目'
