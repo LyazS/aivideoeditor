@@ -36,110 +36,6 @@ import { TextVisibleSprite } from '../../visiblesprite/TextVisibleSprite'
 import type { TextStyleConfig } from '../../../types'
 import type { TextMediaConfig } from '../../timelineitem/TimelineItemData'
 
-// ==================== 添加文本项目命令 ====================
-/**
- * 添加文本项目命令
- * 支持撤销/重做的文本项目创建操作
- * 采用统一重建逻辑：每次执行都从原始配置重新创建sprite
- */
-export class AddTextItemCommand implements SimpleCommand {
-  public readonly id: string
-  public readonly description: string
-  private originalTimelineItemData: UnifiedTimelineItemData<'text'> | null = null // 保存原始项目的重建数据
-
-  constructor(
-    private textItem: UnifiedTimelineItemData<'text'>,
-    private timelineModule: {
-      addTimelineItem: (item: UnifiedTimelineItemData<'text'>) => void
-      removeTimelineItem: (id: string) => void
-    },
-    private webavModule: {
-      addSprite: (sprite: VisibleSprite) => Promise<boolean>
-      removeSprite: (sprite: VisibleSprite) => boolean
-    },
-  ) {
-    this.id = generateCommandId()
-    const textConfig = textItem.config as TextMediaConfig
-    this.description = `添加文本: ${textConfig.text.substring(0, 10)}${textConfig.text.length > 10 ? '...' : ''}`
-
-    // 保存原始项目数据用于重建
-    this.originalTimelineItemData = TimelineItemFactory.clone(textItem)
-  }
-
-  /**
-   * 执行命令：添加文本时间轴项目
-   * 统一重建逻辑：每次执行都从原始数据重新创建完整的 TimelineItem 和 sprite
-   */
-  async execute(): Promise<void> {
-    try {
-      console.log(`🔄 执行添加文本操作...`)
-
-      if (!this.originalTimelineItemData) {
-        throw new Error('原始文本项目数据不存在')
-      }
-
-      console.log('🔄 开始从原始数据重建文本时间轴项目...')
-
-      // 1. 使用 TimelineItemFactory.clone 创建新的 TimelineItem（确保独立性和正确的 runtime 处理）
-      const newTimelineItem = TimelineItemFactory.clone(this.originalTimelineItemData)
-
-      // 2. 使用 textTimelineUtils 中的工具函数创建精灵
-      const newSprite = await createSpriteForTextTimelineItem(newTimelineItem)
-
-      // 3. 将精灵添加到 runtime
-      newTimelineItem.runtime.sprite = markRaw(newSprite)
-
-      const originalConfig = this.originalTimelineItemData.config as TextMediaConfig
-      console.log('✅ 文本时间轴项目重建完成:', {
-        id: newTimelineItem.id,
-        text: originalConfig.text.substring(0, 20) + '...',
-        timeRange: newTimelineItem.timeRange,
-        position: { x: newSprite.rect.x, y: newSprite.rect.y },
-        size: { w: newSprite.rect.w, h: newSprite.rect.h },
-      })
-
-      // 4. 添加到时间轴
-      this.timelineModule.addTimelineItem(newTimelineItem)
-
-      // 5. 添加sprite到WebAV画布
-      if (newTimelineItem.runtime.sprite) {
-        await this.webavModule.addSprite(newTimelineItem.runtime.sprite)
-      }
-
-      console.log(`✅ 文本项目添加成功:`, {
-        id: newTimelineItem.id,
-        text: originalConfig.text.substring(0, 20) + '...',
-        startTime: framesToTimecode(newTimelineItem.timeRange.timelineStartTime),
-        duration: framesToTimecode(
-          newTimelineItem.timeRange.timelineEndTime - newTimelineItem.timeRange.timelineStartTime,
-        ),
-      })
-    } catch (error) {
-      console.error(`❌ 添加文本项目失败:`, error)
-      throw error
-    }
-  }
-
-  /**
-   * 撤销命令：移除文本时间轴项目
-   */
-  async undo(): Promise<void> {
-    try {
-      if (this.originalTimelineItemData) {
-        console.log(`🔄 撤销添加文本操作...`)
-
-        // 移除时间轴项目（这会自动处理sprite的清理）
-        this.timelineModule.removeTimelineItem(this.originalTimelineItemData.id)
-
-        console.log(`✅ 文本项目撤销成功: ${this.originalTimelineItemData.id}`)
-      }
-    } catch (error) {
-      console.error(`❌ 撤销文本项目失败:`, error)
-      throw error
-    }
-  }
-}
-
 // ==================== 更新文本内容命令 ====================
 /**
  * 更新文本内容命令
@@ -414,17 +310,6 @@ export class RemoveTextItemCommand implements SimpleCommand {
  * 提供便捷的命令创建方法
  */
 export const TextCommandFactory = {
-  /**
-   * 创建添加文本项目命令
-   */
-  createAddTextCommand(
-    textItem: UnifiedTimelineItemData<'text'>,
-    timelineModule: any,
-    webavModule: any,
-  ): AddTextItemCommand {
-    return new AddTextItemCommand(textItem, timelineModule, webavModule)
-  },
-
   /**
    * 创建更新文本命令
    */

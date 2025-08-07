@@ -23,10 +23,14 @@ import type {
   Keyframe,
   TimelineItemStatus,
 } from './TimelineItemData'
-import { createSpriteFromUnifiedTimelineItem } from '../utils/UnifiedSpriteFactory'
-import { regenerateThumbnailForUnifiedTimelineItem } from '../utils/thumbnailGenerator'
+import { TimelineItemQueries } from './TimelineItemQueries'
 import { UnifiedMediaItemQueries } from '../mediaitem'
-import { createTextTimelineItem as createTextTimelineItemFromUtils } from '../utils/textTimelineUtils'
+import { regenerateThumbnailForUnifiedTimelineItem } from '../utils/thumbnailGenerator'
+import { createSpriteFromUnifiedTimelineItem } from '../utils/UnifiedSpriteFactory'
+import {
+  createTextTimelineItem as createTextTimelineItemFromUtils,
+  createSpriteForTextTimelineItem,
+} from '../utils/textTimelineUtils'
 import { projectToWebavCoords } from '../utils/coordinateTransform'
 
 // ==================== 基础工厂函数 ====================
@@ -632,7 +636,6 @@ export interface RebuildTextTimelineItemResult {
   error?: string
 }
 
-
 /**
  * 从原始素材重建完整的已知TimelineItem
  * 统一重建逻辑：每次都从原始素材完全重新创建
@@ -651,105 +654,113 @@ export async function rebuildKnownTimelineItem(
     }
 
     console.log(`🔄 [${logIdentifier}] 开始从源头重建已知时间轴项目...`)
+    if (TimelineItemQueries.isTextTimelineItem(originalTimelineItemData)) {
+      // 1. 使用 TimelineItemFactory.clone 创建新的 TimelineItem（确保独立性和正确的 runtime 处理）
+      const newTimelineItem = cloneTimelineItem(originalTimelineItemData)
 
-    // 1. 获取原始素材
-    const mediaItem = getMediaItem(originalTimelineItemData.mediaItemId)
-    if (!mediaItem) {
-      throw new Error(`原始素材不存在: ${originalTimelineItemData.mediaItemId}`)
-    }
+      // 2. 使用 textTimelineUtils 中的工具函数创建精灵
+      const newSprite = await createSpriteForTextTimelineItem(newTimelineItem)
 
-    // 检查素材状态和重建条件
-    const isReady = UnifiedMediaItemQueries.isReady(mediaItem)
-
-    // 检查媒体类型和时长
-    if (mediaItem.mediaType === 'unknown') {
-      throw new Error(`素材类型未确定，无法重建时间轴项目: ${mediaItem.name}`)
-    }
-
-    const availableDuration = mediaItem.duration
-    if (!availableDuration || availableDuration <= 0) {
-      throw new Error(`素材时长信息不可用，无法重建时间轴项目: ${mediaItem.name}`)
-    }
-
-    // 根据素材状态确定时间轴项目状态
-    const timelineStatus: TimelineItemStatus = isReady ? 'ready' : 'loading'
-
-    if (isReady) {
-      // Ready素材：创建包含sprite的完整时间轴项目
-      console.log(`🔄 [${logIdentifier}] 重建ready状态时间轴项目`)
-
-      // 2. 使用新的统一函数从时间轴项目数据创建sprite
-      const newSprite = await createSpriteFromUnifiedTimelineItem(originalTimelineItemData)
-
-      // 3. 创建新的TimelineItem（先不设置缩略图）
-      const newTimelineItem = reactive({
-        id: originalTimelineItemData.id,
-        mediaItemId: originalTimelineItemData.mediaItemId,
-        trackId: originalTimelineItemData.trackId,
-        mediaType: originalTimelineItemData.mediaType,
-        timeRange: newSprite.getTimeRange(),
-        config: { ...originalTimelineItemData.config },
-        animation: originalTimelineItemData.animation
-          ? { ...originalTimelineItemData.animation }
-          : undefined,
-        timelineStatus: timelineStatus,
-        runtime: {
-          sprite: markRaw(newSprite),
-        },
-      }) as KnownTimelineItem
-
-      // 4. 重新生成缩略图（异步执行，不阻塞重建过程）
-      await regenerateThumbnailForAddedItem(newTimelineItem, mediaItem, logIdentifier)
-
-      console.log(`🔄 [${logIdentifier}] 重建ready状态时间轴项目完成:`, {
-        id: newTimelineItem.id,
-        mediaType: mediaItem.mediaType,
-        timeRange: originalTimelineItemData.timeRange,
-        position: { x: newSprite.rect.x, y: newSprite.rect.y },
-        size: { w: newSprite.rect.w, h: newSprite.rect.h },
-      })
-
+      // 3. 将精灵添加到 runtime
+      newTimelineItem.runtime.sprite = markRaw(newSprite)
       return {
         timelineItem: newTimelineItem,
         success: true,
       }
     } else {
-      // 未Ready素材：创建loading状态的时间轴项目
-      console.log(`🔄 [${logIdentifier}] 重建loading状态时间轴项目`)
+      // 1. 获取原始素材
+      const mediaItem = getMediaItem(originalTimelineItemData.mediaItemId)
+      if (!mediaItem) {
+        throw new Error(`原始素材不存在: ${originalTimelineItemData.mediaItemId}`)
+      }
 
-      // 创建loading状态的时间轴项目
-      const newTimelineItem = reactive({
-        id: originalTimelineItemData.id,
-        mediaItemId: originalTimelineItemData.mediaItemId,
-        trackId: originalTimelineItemData.trackId,
-        mediaType: originalTimelineItemData.mediaType,
-        timeRange: { ...originalTimelineItemData.timeRange },
-        config: { ...originalTimelineItemData.config },
-        animation: originalTimelineItemData.animation
-          ? { ...originalTimelineItemData.animation }
-          : undefined,
-        timelineStatus: timelineStatus,
-        runtime: {}, // loading状态暂时没有sprite
-      }) as KnownTimelineItem
+      // 检查素材状态和重建条件
+      const isReady = UnifiedMediaItemQueries.isReady(mediaItem)
 
-      // 注意：状态同步监听将在调用方设置，确保时间轴项目已添加到store
+      // 检查媒体类型和时长
+      if (mediaItem.mediaType === 'unknown') {
+        throw new Error(`素材类型未确定，无法重建时间轴项目: ${mediaItem.name}`)
+      }
 
-      console.log(`🔄 [${logIdentifier}] 重建loading状态时间轴项目完成:`, {
-        id: newTimelineItem.id,
-        mediaType: mediaItem.mediaType,
-        timeRange: originalTimelineItemData.timeRange,
-        status: 'loading',
-      })
+      const availableDuration = mediaItem.duration
+      if (!availableDuration || availableDuration <= 0) {
+        throw new Error(`素材时长信息不可用，无法重建时间轴项目: ${mediaItem.name}`)
+      }
 
-      return {
-        timelineItem: newTimelineItem,
-        success: true,
+      // 根据素材状态确定时间轴项目状态
+      const timelineStatus: TimelineItemStatus = isReady ? 'ready' : 'loading'
+
+      if (isReady) {
+        // Ready素材：创建包含sprite的完整时间轴项目
+        console.log(`🔄 [${logIdentifier}] 重建ready状态时间轴项目`)
+
+        // 2. 使用新的统一函数从时间轴项目数据创建sprite
+        const newSprite = await createSpriteFromUnifiedTimelineItem(originalTimelineItemData)
+
+        // 3. 使用TimelineItemFactory.clone创建新的TimelineItem（先不设置缩略图）
+        const newTimelineItem = cloneTimelineItem(originalTimelineItemData, {
+          timeRange: newSprite.getTimeRange(),
+          timelineStatus: timelineStatus,
+        }) as KnownTimelineItem
+
+        // 4. 设置runtime和sprite
+        newTimelineItem.runtime = {
+          sprite: markRaw(newSprite),
+        }
+
+        // 4. 重新生成缩略图（异步执行，不阻塞重建过程）
+        await regenerateThumbnailForAddedItem(newTimelineItem, mediaItem, logIdentifier)
+
+        console.log(`🔄 [${logIdentifier}] 重建ready状态时间轴项目完成:`, {
+          id: newTimelineItem.id,
+          mediaType: mediaItem.mediaType,
+          timeRange: originalTimelineItemData.timeRange,
+          position: { x: newSprite.rect.x, y: newSprite.rect.y },
+          size: { w: newSprite.rect.w, h: newSprite.rect.h },
+        })
+
+        return {
+          timelineItem: newTimelineItem,
+          success: true,
+        }
+      } else {
+        // 未Ready素材：创建loading状态的时间轴项目
+        console.log(`🔄 [${logIdentifier}] 重建loading状态时间轴项目`)
+
+        // 创建loading状态的时间轴项目
+        const newTimelineItem = reactive({
+          id: originalTimelineItemData.id,
+          mediaItemId: originalTimelineItemData.mediaItemId,
+          trackId: originalTimelineItemData.trackId,
+          mediaType: originalTimelineItemData.mediaType,
+          timeRange: { ...originalTimelineItemData.timeRange },
+          config: { ...originalTimelineItemData.config },
+          animation: originalTimelineItemData.animation
+            ? { ...originalTimelineItemData.animation }
+            : undefined,
+          timelineStatus: timelineStatus,
+          runtime: {}, // loading状态暂时没有sprite
+        }) as KnownTimelineItem
+
+        // 注意：状态同步监听将在调用方设置，确保时间轴项目已添加到store
+
+        console.log(`🔄 [${logIdentifier}] 重建loading状态时间轴项目完成:`, {
+          id: newTimelineItem.id,
+          mediaType: mediaItem.mediaType,
+          timeRange: originalTimelineItemData.timeRange,
+          status: 'loading',
+        })
+
+        return {
+          timelineItem: newTimelineItem,
+          success: true,
+        }
       }
     }
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error)
     console.error(`❌ [${logIdentifier}] 重建时间轴项目失败:`, errorMessage)
-    
+
     return {
       timelineItem: originalTimelineItemData as KnownTimelineItem,
       success: false,
@@ -897,7 +908,7 @@ export async function rebuildTextTimelineItem(
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error)
     console.error(`❌ [${logIdentifier}] 重建文本时间轴项目失败:`, errorMessage)
-    
+
     return {
       timelineItem: originalTimelineItemData,
       success: false,

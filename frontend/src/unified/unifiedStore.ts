@@ -96,7 +96,7 @@ import {
 
 import { BatchDeleteCommand, BatchAutoArrangeTrackCommand } from './modules/commands/batchCommands'
 
-import { AddTextItemCommand, RemoveTextItemCommand } from './modules/commands/textCommands'
+import { RemoveTextItemCommand } from './modules/commands/textCommands'
 
 /**
  * 统一视频编辑器存储
@@ -229,8 +229,6 @@ export const useUnifiedStore = defineStore('unified', () => {
     return unifiedWebavModule.isWebAVAvailable()
   })
 
-
-
   // ==================== 批量操作方法（带日志） ====================
 
   /**
@@ -287,11 +285,11 @@ export const useUnifiedStore = defineStore('unified', () => {
    */
   async function addTimelineItemWithHistory(timelineItem: UnifiedTimelineItemData<MediaType>) {
     // 检查是否是文本项目，使用专门的文本命令
-    if (timelineItem.mediaType === 'text') {
-      // 类型检查确保这是文本项目
-      await addTextItemWithHistory(timelineItem as UnifiedTimelineItemData<'text'>)
-      return
-    }
+    // if (timelineItem.mediaType === 'text') {
+    //   // 类型检查确保这是文本项目
+    //   await addTextItemWithHistory(timelineItem as UnifiedTimelineItemData<'text'>)
+    //   return
+    // }
 
     const command = new AddTimelineItemCommand(
       timelineItem,
@@ -309,25 +307,6 @@ export const useUnifiedStore = defineStore('unified', () => {
       },
       {
         videoResolution: unifiedConfigModule.videoResolution,
-      },
-    )
-    await unifiedHistoryModule.executeCommand(command)
-  }
-
-  /**
-   * 带历史记录的添加文本项目方法
-   * @param textItem 要添加的文本时间轴项目
-   */
-  async function addTextItemWithHistory(textItem: UnifiedTimelineItemData<'text'>) {
-    const command = new AddTextItemCommand(
-      textItem,
-      {
-        addTimelineItem: unifiedTimelineModule.addTimelineItem,
-        removeTimelineItem: unifiedTimelineModule.removeTimelineItem,
-      },
-      {
-        addSprite: unifiedWebavModule.addSprite,
-        removeSprite: unifiedWebavModule.removeSprite,
       },
     )
     await unifiedHistoryModule.executeCommand(command)
@@ -743,8 +722,7 @@ export const useUnifiedStore = defineStore('unified', () => {
 
     // 计算时间偏移
     const currentPosition = timelineItem.timeRange.timelineStartTime
-    const targetPosition =
-      newPositionFrames || timelineItem.timeRange.timelineEndTime
+    const targetPosition = newPositionFrames || timelineItem.timeRange.timelineEndTime
     const timeOffset = targetPosition - currentPosition
 
     // 使用 TimelineItemFactory 复制项目
@@ -1025,7 +1003,6 @@ export const useUnifiedStore = defineStore('unified', () => {
 
     // 时间轴项目历史记录方法
     addTimelineItemWithHistory,
-    addTextItemWithHistory,
     removeTimelineItemWithHistory,
     removeTextItemWithHistory,
     moveTimelineItemWithHistory,
@@ -1091,7 +1068,8 @@ export const useUnifiedStore = defineStore('unified', () => {
 
     // 轨道管理方法
     addTrack: unifiedTrackModule.addTrack,
-    removeTrack: (trackId: string) => unifiedTrackModule.removeTrack(trackId, unifiedTimelineModule.timelineItems),
+    removeTrack: (trackId: string) =>
+      unifiedTrackModule.removeTrack(trackId, unifiedTimelineModule.timelineItems),
     renameTrack: unifiedTrackModule.renameTrack,
     getTrack: unifiedTrackModule.getTrack,
     setTrackHeight: unifiedTrackModule.setTrackHeight,

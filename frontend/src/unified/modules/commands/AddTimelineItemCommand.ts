@@ -70,8 +70,7 @@ export class AddTimelineItemCommand implements SimpleCommand {
     this.id = generateCommandId()
 
     // 新架构只支持已知媒体类型
-    const mediaItem = this.mediaModule.getMediaItem(timelineItem.mediaItemId)
-    this.description = `添加时间轴项目: ${mediaItem?.name || '未知素材'}`
+    this.description = `添加时间轴项目: ${timelineItem.id}`
 
     // 保存原始数据用于重建sprite
     this.originalTimelineItemData = TimelineItemFactory.clone(timelineItem)
