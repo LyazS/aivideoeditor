@@ -1,0 +1,372 @@
+/* 统一Clip Loading状态优化样式
+ * 注意：使用clip-前缀避免与全局loading覆盖层冲突
+ */
+
+/* ==================== CSS变量定义 ==================== */
+:root {
+  /* 统一Loading状态颜色 */
+  --clip-color-loading-bg: #1873ac;
+  --clip-color-loading-border: #1873ac;
+  --clip-color-loading-text: #ffffff;
+  --clip-color-loading-progress: #ffffff;
+
+  /* 统一错误状态颜色 - 暗主题下的灰色红色 */
+  --clip-color-error-border: #ac1f18;
+  --clip-color-error-text: #FFFFFF;
+  --clip-color-error-bg: #ac1f18;
+
+  /* 动画时长 */
+  --clip-loading-animation-duration: 2s;
+  --clip-loading-pulse-duration: 1.5s;
+}
+
+/* ==================== 基础样式 ==================== */
+
+/* Loading状态基础样式 */
+.clip-loading-content {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  width: 100%;
+  background: var(--clip-color-loading-bg);
+  border-radius: var(--border-radius-medium);
+  position: relative;
+  overflow: hidden;
+}
+
+/* 状态指示器 */
+.clip-loading-status-indicator {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 16px;
+  height: 16px;
+}
+
+/* 渲染器基础样式 */
+.clip-loading-renderer {
+  position: relative;
+}
+
+/* 普通加载样式 */
+.clip-normal-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 媒体类型特定样式 */
+.clip-loading-video,
+.clip-loading-image,
+.clip-loading-audio,
+.clip-loading-text {
+  width: 100%;
+  height: 100%;
+}
+
+/* 普通加载内容 */
+.clip-normal-loading-content {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  width: 100%;
+}
+
+/* 脉冲边框效果 */
+.unified-timeline-clip.status-loading {
+  border: 2px solid var(--clip-color-loading-border);
+  animation: clip-loading-pulse var(--clip-loading-pulse-duration) infinite;
+}
+
+@keyframes clip-loading-pulse {
+
+  0%,
+  100% {
+    opacity: 1;
+    box-shadow: 0 0 0 0 rgba(102, 102, 102, 0.4);
+  }
+
+  50% {
+    opacity: 0.6;
+    box-shadow: 0 0 0 4px rgba(102, 102, 102, 0);
+  }
+}
+
+/* ==================== 加载动画 ==================== */
+
+/* 旋转加载图标 */
+.clip-loading-spinner {
+  width: 24px;
+  height: 24px;
+  margin-bottom: var(--spacing-sm);
+  position: relative;
+}
+
+.clip-spinner-ring {
+  width: 100%;
+  height: 100%;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: var(--clip-color-loading-text);
+  border-radius: 50%;
+  animation: clip-spinner-rotate 1s linear infinite;
+}
+
+@keyframes clip-spinner-rotate {
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* ==================== 进度条样式 ==================== */
+
+/* 进度条容器 */
+.clip-loading-progress-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* 进度填充 */
+.clip-progress-fill {
+  height: 100%;
+  background: var(--clip-color-loading-progress);
+  transition: width 0.3s ease;
+}
+
+
+/* ==================== 文本样式 ==================== */
+
+/* 加载文本 */
+.clip-loading-text {
+  text-align: center;
+  color: var(--clip-color-loading-text);
+}
+
+.clip-loading-title {
+  font-size: var(--font-size-base);
+  font-weight: 500;
+  margin-bottom: var(--spacing-xs);
+}
+
+.clip-loading-subtitle {
+  font-size: var(--font-size-sm);
+  opacity: 0.8;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ==================== 错误状态基础样式 ==================== */
+
+/* 统一错误状态基础样式 - 简洁的暗红色边框和背景 */
+.unified-timeline-clip.status-error {
+  /* 使用暗红色背景和边框 */
+  border: 1px solid var(--clip-color-error-border);
+  background-color: var(--clip-color-error-bg);
+}
+
+/* 错误状态悬停效果 */
+.unified-timeline-clip.status-error:hover {
+  border-color: var(--clip-color-error-border);
+}
+
+/* 错误状态选中效果 */
+.unified-timeline-clip.status-error.selected {
+  border-color: var(--clip-color-error-border);
+  box-shadow: 0 0 0 1px rgba(139, 0, 0, 0.3);
+}
+
+/* ==================== 错误内容样式 ==================== */
+
+/* 错误内容容器 */
+.clip-error-content {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  width: 100%;
+  background: var(--clip-color-error-bg);
+  border-radius: var(--border-radius-medium);
+  position: relative;
+  overflow: hidden;
+}
+
+/* 错误信息容器 */
+.clip-error-message-container {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  width: 100%;
+  background: var(--clip-color-error-bg);
+  border-radius: var(--border-radius-medium);
+  position: relative;
+  overflow: hidden;
+  color: var(--clip-color-error-text);
+}
+
+/* 错误图标 */
+.clip-error-icon {
+  font-size: 14px;
+  margin-right: 4px;
+  color: var(--clip-color-error-text);
+}
+
+/* 错误文本容器 */
+.clip-error-text {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  width: 100%;
+  color: var(--clip-color-error-text);
+}
+
+/* 错误消息 */
+.clip-error-message {
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--clip-color-error-text);
+}
+
+/* 错误渲染器 */
+.clip-error-renderer {
+  position: relative;
+}
+
+/* 错误大图标 */
+.clip-error-icon-large {
+  width: 32px;
+  height: 32px;
+  margin-right: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 错误表情符号 */
+.clip-error-emoji {
+  font-size: 20px;
+  line-height: 1;
+}
+
+/* 错误类型文本 */
+.clip-error-type-text {
+  font-size: 10px;
+  margin-top: 2px;
+  text-align: center;
+}
+
+/* 错误操作按钮容器 */
+.clip-error-actions {
+  display: flex;
+  gap: 4px;
+  margin-top: 8px;
+}
+
+/* 重试按钮 */
+.clip-error-retry-button,
+.clip-error-remove-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 8px;
+  border: none;
+  border-radius: var(--border-radius-small);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.clip-error-retry-button {
+  background-color: rgba(255, 255, 255, 0.2);
+  color: white;
+}
+
+.clip-error-retry-button:hover {
+  background-color: rgba(255, 255, 255, 0.3);
+}
+
+.clip-error-remove-button {
+  background-color: rgba(255, 0, 0, 0.3);
+  color: white;
+}
+
+.clip-error-remove-button:hover {
+  background-color: rgba(255, 0, 0, 0.5);
+}
+
+/* 按钮图标和文本 */
+.clip-error-retry-icon,
+.clip-error-remove-icon,
+.clip-error-retry-text,
+.clip-error-remove-text {
+  font-size: 12px;
+}
+
+.clip-error-retry-icon,
+.clip-error-remove-icon {
+  margin-right: 4px;
+}
+
+/* 特定错误类型样式 */
+.clip-error-network .clip-error-emoji {
+  color: #4A90E2; /* 网络错误 - 蓝色 */
+}
+
+.clip-error-file .clip-error-emoji {
+  color: #F5A623; /* 文件错误 - 橙色 */
+}
+
+.clip-error-format .clip-error-emoji {
+  color: #D0021B; /* 格式错误 - 红色 */
+}
+
+.clip-error-permission .clip-error-emoji {
+  color: #9013FE; /* 权限错误 - 紫色 */
+}
+
+.clip-error-timeout .clip-error-emoji {
+  color: #50E3C2; /* 超时错误 - 青色 */
+}
+
+.clip-error-unknown .clip-error-emoji {
+  color: #9B9B9B; /* 未知错误 - 灰色 */
+}
+
+/* ==================== 响应式设计 ==================== */
+
+/* 响应式布局 */
+@media (max-width: 100px) {
+  .clip-loading-subtitle {
+    display: none;
+  }
+
+}
+
+@media (min-width: 150px) {
+  .clip-loading-text {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+}

@@ -102,13 +102,16 @@ export class SimplifiedMediaSyncManager {
    */
   cleanupMediaItemSync(mediaItemId: string): void {
     const cleanedKeys: string[] = []
+    const cleanedCommandIds = new Set<string>()
 
     for (const [key, sync] of this.commandMediaSyncMap) {
       if (sync.mediaItemId === mediaItemId) {
         try {
           sync.unwatch()
           cleanedKeys.push(key)
+          cleanedCommandIds.add(sync.commandId)
           this.commandMediaSyncMap.delete(key)
+          console.log(`❌ [SimplifiedMediaSyncManager] 清理媒体项目同步: ${mediaItemId} (命令: ${sync.commandId}, 唯一ID: ${sync.id})`)
         } catch (error) {
           console.error(
             `❌ [SimplifiedMediaSyncManager] 清理媒体项目同步失败: ${mediaItemId} (唯一ID: ${sync.id})`,
@@ -120,7 +123,7 @@ export class SimplifiedMediaSyncManager {
 
     if (cleanedKeys.length > 0) {
       console.log(
-        `🗑️ [SimplifiedMediaSyncManager] 已清理媒体项目同步: ${mediaItemId} (清理了 ${cleanedKeys.length} 个监听器): ${cleanedKeys.map((k) => k.split(':')[2]).join(', ')}`,
+        `🗑️ [SimplifiedMediaSyncManager] 已清理媒体项目同步: ${mediaItemId} (清理了 ${cleanedKeys.length} 个监听器, 涉及 ${cleanedCommandIds.size} 个命令): ${cleanedKeys.map((k) => k.split(':')[2]).join(', ')}`,
       )
     }
   }

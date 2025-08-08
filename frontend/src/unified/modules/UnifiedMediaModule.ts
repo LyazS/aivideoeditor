@@ -8,6 +8,8 @@ import {
   UnifiedMediaItemActions,
 } from '@/unified'
 import { microsecondsToFrames, secondsToFrames } from '@/stores/utils/timeUtils'
+import { SimplifiedMediaSyncManager } from '../timelineitem/SimplifiedMediaSyncManager'
+import { useUnifiedStore } from '../unifiedStore'
 
 // ==================== 统一媒体项目调试工具 ====================
 
@@ -110,12 +112,18 @@ export function createUnifiedMediaModule() {
     if (index > -1) {
       const mediaItem = mediaItems.value[index]
 
-      // 调用清理回调
+      // 1. 清理相关的时间轴项目
+      cleanupRelatedTimelineItems(mediaItemId)
+      
+      // 2. 清理命令同步
+      cleanupCommandMediaSyncForMediaItem(mediaItemId)
+      
+      // 3. 调用外部清理回调
       if (cleanupCallback) {
         cleanupCallback(mediaItem)
       }
-
-      // 从数组中移除
+      
+      // 4. 从数组中移除
       mediaItems.value.splice(index, 1)
 
       printUnifiedDebugInfo(
@@ -570,6 +578,52 @@ export function createUnifiedMediaModule() {
     console.log(`清理了 ${cancelledItems.length} 个已取消的项目`)
   }
 
+  // ==================== 清理方法 ====================
+
+  /**
+   * 清理与媒体项目相关的时间轴项目
+   * @param mediaItemId 媒体项目ID
+   */
+  function cleanupRelatedTimelineItems(mediaItemId: string): void {
+    try {
+      // 获取统一存储实例
+      const unifiedStore = useUnifiedStore()
+      
+      // 获取所有时间轴项目
+      const timelineItems = unifiedStore.timelineItems
+      
+      // 找出使用该素材的所有时间轴项目
+      const relatedTimelineItems = timelineItems.filter(
+        (item) => item.mediaItemId === mediaItemId
+      )
+      
+      // 清理每个相关的时间轴项目
+      relatedTimelineItems.forEach((timelineItem) => {
+        console.log(`🧹 清理时间轴项目: ${timelineItem.id}`)
+        unifiedStore.removeTimelineItem(timelineItem.id)
+      })
+      
+      console.log(`✅ 已清理 ${relatedTimelineItems.length} 个相关时间轴项目`)
+    } catch (error) {
+      console.error(`❌ 清理相关时间轴项目失败: ${mediaItemId}`, error)
+    }
+  }
+
+  /**
+   * 清理与媒体项目相关的命令同步
+   * @param mediaItemId 媒体项目ID
+   */
+  function cleanupCommandMediaSyncForMediaItem(mediaItemId: string): void {
+    try {
+      const syncManager = SimplifiedMediaSyncManager.getInstance()
+      syncManager.cleanupMediaItemSync(mediaItemId)
+      
+      console.log(`✅ 已清理媒体项目相关的命令同步: ${mediaItemId}`)
+    } catch (error) {
+      console.error(`❌ 清理媒体项目命令同步失败: ${mediaItemId}`, error)
+    }
+  }
+
   return {
     // 状态
     mediaItems,
@@ -605,6 +659,10 @@ export function createUnifiedMediaModule() {
     // 批量操作方法
     retryAllErrorItems,
     clearCancelledItems,
+
+    // 清理方法
+    cleanupRelatedTimelineItems,
+    cleanupCommandMediaSyncForMediaItem,
 
     // 工厂函数和查询函数
     createUnifiedMediaItemData,

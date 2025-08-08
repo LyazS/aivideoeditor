@@ -40,6 +40,13 @@ export interface ContentRenderContext<T extends MediaType = MediaType> {
   /** 轨道高度 */
   trackHeight: number
 
+  /** 进度信息（可选） */
+  progressInfo?: {
+    hasProgress: boolean
+    percent: number
+    speed?: string
+  }
+
   /** 事件回调 */
   callbacks: {
     onSelect: (id: string) => void
@@ -66,13 +73,6 @@ export interface ContentRenderer<T extends MediaType = MediaType> {
    * @returns Vue虚拟节点
    */
   renderContent(context: ContentRenderContext<T>): VNode | VNode[]
-
-  /**
-   * 渲染状态指示器（可选）
-   * @param context 渲染上下文
-   * @returns Vue虚拟节点或null
-   */
-  renderStatusIndicator?(context: ContentRenderContext<T>): VNode | null
 
   /**
    * 渲染进度条（可选）

@@ -21,6 +21,7 @@
     >
       <!-- 左侧调整把手 -->
       <div
+        v-if="data.timelineStatus === 'ready'"
         class="resize-handle resize-handle-left"
         @mousedown.stop="handleResizeStart('left', $event)"
       ></div>
@@ -32,14 +33,11 @@
 
       <!-- 右侧调整把手 -->
       <div
+        v-if="data.timelineStatus === 'ready'"
         class="resize-handle resize-handle-right"
         @mousedown.stop="handleResizeStart('right', $event)"
       ></div>
 
-      <!-- 状态指示器（如果渲染器提供） -->
-      <div v-if="statusIndicator" class="status-indicator">
-        <component :is="statusIndicator" />
-      </div>
 
       <!-- 进度条（如果渲染器提供） -->
       <div v-if="progressBar" class="progress-bar-container">
@@ -78,6 +76,7 @@ import { usePlaybackControls } from '../composables/usePlaybackControls'
 import { useSnapManager } from '../composables/useSnapManager'
 import { alignFramesToFrame } from '../../stores/utils/timeUtils'
 import UnifiedClipTooltip from './UnifiedClipTooltip.vue'
+import type { RemoteFileSourceData } from '../sources/RemoteFileSource'
 
 // ==================== 组件定义 ====================
 
@@ -129,6 +128,49 @@ const tooltipPosition = ref({ x: 0, y: 0 })
 // ==================== 计算属性 ====================
 
 /**
+ * Clip进度信息计算属性
+ */
+const clipProgress = computed(() => {
+  // 获取当前clip关联的媒体项目
+  const mediaItem = unifiedStore.getMediaItem(props.data.mediaItemId)
+  if (!mediaItem || !mediaItem.source) {
+    return {
+      hasProgress: false,
+      percent: 0,
+      speed: undefined
+    }
+  }
+
+  const source = mediaItem.source
+  
+  // 根据数据源类型获取进度信息
+  if (source.type === 'remote') {
+    // 远程文件源：使用下载字节数计算进度
+    const remoteSource = source as RemoteFileSourceData
+    if (remoteSource.totalBytes === 0) {
+      return {
+        hasProgress: false,
+        percent: 0,
+        speed: undefined
+      }
+    }
+    const percent = (remoteSource.downloadedBytes / remoteSource.totalBytes) * 100
+    return {
+      hasProgress: true,
+      percent,
+      speed: remoteSource.downloadSpeed
+    }
+  } else {
+    // 其他类型：使用基础进度值
+    return {
+      hasProgress: source.progress > 0,
+      percent: source.progress,
+      speed: undefined
+    }
+  }
+})
+
+/**
  * 构建渲染上下文
  */
 const renderContext = computed<ContentRenderContext>(() => ({
@@ -139,6 +181,7 @@ const renderContext = computed<ContentRenderContext>(() => ({
   currentFrame: props.currentFrame,
   scale: props.scale,
   trackHeight: props.trackHeight,
+  progressInfo: clipProgress.value, // 添加进度信息
   callbacks: {
     onSelect: (id: string) => emit('select', id),
     onDoubleClick: (id: string) => emit('doubleClick', id),
@@ -169,16 +212,6 @@ const renderedContent = computed(() => {
   return () => renderer.value.renderContent(renderContext.value)
 })
 
-/**
- * 状态指示器
- */
-const statusIndicator = computed(() => {
-  if (!renderer.value.renderStatusIndicator) {
-    return null
-  }
-
-  return () => renderer.value.renderStatusIndicator!(renderContext.value)
-})
 
 /**
  * 进度条
@@ -778,13 +811,15 @@ onUnmounted(() => {
 }
 
 .unified-timeline-clip.status-loading {
-  border-style: dashed;
+  border: 2px dashed var(--clip-color-loading-border) !important;
+  background: var(--clip-color-loading-bg) !important;
   animation: loading-pulse 2s infinite;
 }
 
 .unified-timeline-clip.status-error {
-  border-color: #ff4d4f;
-  background: linear-gradient(135deg, #fff2f0 0%, #ffccc7 100%);
+  /* 使用暗红色背景和边框 */
+  border: 1px solid var(--clip-color-error-border) !important;
+  background: var(--clip-color-error-bg) !important;
 }
 
 @keyframes loading-pulse {
@@ -829,13 +864,6 @@ onUnmounted(() => {
   right: 0;
 }
 
-/* 状态指示器 */
-.status-indicator {
-  position: absolute;
-  top: 4px;
-  right: 4px;
-  z-index: 5;
-}
 
 /* 进度条容器 */
 .progress-bar-container {

@@ -1,33 +1,23 @@
 /**
- * 统一架构下的文本命令实现
- * 基于"核心数据与行为分离"的响应式重构版本
- *
- * 主要变化：
- * 1. 使用 UnifiedTimelineItemData 替代原有的 LocalTimelineItem
- * 2. 使用新架构的类型系统和工具
- * 3. 保持与原有命令相同的API接口，便于迁移
+ * 更新文本内容命令
+ * 支持撤销/重做的文本内容和样式更新操作
+ * 遵循"从源头重建"原则：保存完整的重建元数据，撤销时从原始配置重新创建
  */
 
 import { generateCommandId } from '../../../utils/idGenerator'
-import { framesToTimecode } from '../../utils/UnifiedTimeUtils'
 import { cloneDeep } from 'lodash'
-import { reactive, markRaw, ref, type Raw, type Ref } from 'vue'
+import { markRaw } from 'vue'
 import type { VisibleSprite } from '@webav/av-cliper'
 import type { SimpleCommand } from './types'
 
 // ==================== 新架构类型导入 ====================
 import type {
   UnifiedTimelineItemData,
-  KnownTimelineItem,
-  TimelineItemStatus,
 } from '../../timelineitem/TimelineItemData'
 
-import type { UnifiedTimeRange } from '../../types/timeRange'
-
 // ==================== 新架构工具导入 ====================
-import { isTextTimelineItem, isReady, TimelineItemFactory } from '../../timelineitem'
+import { isTextTimelineItem, TimelineItemFactory } from '../../timelineitem'
 import {
-  createTextTimelineItem,
   createSpriteForTextTimelineItem,
 } from '../../utils/textTimelineUtils'
 
@@ -36,12 +26,6 @@ import { TextVisibleSprite } from '../../visiblesprite/TextVisibleSprite'
 import type { TextStyleConfig } from '../../../types'
 import type { TextMediaConfig } from '../../timelineitem/TimelineItemData'
 
-// ==================== 更新文本内容命令 ====================
-/**
- * 更新文本内容命令
- * 支持撤销/重做的文本内容和样式更新操作
- * 遵循"从源头重建"原则：保存完整的重建元数据，撤销时从原始配置重新创建
- */
 export class UpdateTextCommand implements SimpleCommand {
   public readonly id: string
   public readonly description: string
@@ -215,24 +199,4 @@ export class UpdateTextCommand implements SimpleCommand {
       throw error
     }
   }
-}
-
-// ==================== 文本命令工厂函数 ====================
-/**
- * 文本命令工厂函数
- * 提供便捷的命令创建方法
- */
-export const TextCommandFactory = {
-  /**
-   * 创建更新文本命令
-   */
-  createUpdateTextCommand(
-    timelineItemId: string,
-    newText: string,
-    newStyle: Partial<TextStyleConfig>,
-    timelineModule: any,
-    webavModule: any,
-  ): UpdateTextCommand {
-    return new UpdateTextCommand(timelineItemId, newText, newStyle, timelineModule, webavModule)
-  },
 }

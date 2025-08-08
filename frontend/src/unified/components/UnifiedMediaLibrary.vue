@@ -526,7 +526,7 @@ const handleRemoteDownloadSubmit = async (config: any, expectedDuration: number,
       mediaItemName,
       remoteSource,
       {
-        duration: expectedDuration ? secondsToFrames(expectedDuration) : undefined,
+        duration: expectedDuration,
         mediaType: 'unknown',
       },
     )

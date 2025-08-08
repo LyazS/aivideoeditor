@@ -62,7 +62,7 @@
               @keyup.enter="finishRename"
               @keyup.escape="cancelRename"
               class="track-name-input"
-              ref="nameInput"
+              :ref="(el) => { if (el) nameInputs[track.id] = el as HTMLInputElement }"
             />
             <span v-else @dblclick="startRename(track)" class="track-name-text" :title="track.name">
               {{ track.name }}
@@ -292,7 +292,8 @@ const tracks = computed(() => unifiedStore.tracks)
 // 编辑轨道名称相关
 const editingTrackId = ref<string | null>(null)
 const editingTrackName = ref('')
-const nameInput = ref<HTMLInputElement>()
+// 为每个轨道使用单独的ref，避免多轨道间引用冲突
+const nameInputs = ref<Record<string, HTMLInputElement>>({})
 
 // 右键菜单相关
 const showContextMenu = ref(false)
@@ -449,8 +450,15 @@ async function startRename(track: { id: string; name: string }) {
   editingTrackId.value = track.id
   editingTrackName.value = track.name
   await nextTick()
-  nameInput.value?.focus()
-  nameInput.value?.select()
+  
+  // 使用轨道ID作为key获取对应的输入框
+  const input = nameInputs.value[track.id]
+  if (input && typeof input.focus === 'function') {
+    input.focus()
+    input.select()
+  } else {
+    console.warn(`无法获取到轨道 ${track.id} 的输入框引用`)
+  }
 }
 
 async function finishRename() {
@@ -462,11 +470,19 @@ async function finishRename() {
       console.error('❌ 重命名轨道时出错:', error)
     }
   }
+  // 清理输入框引用
+  if (editingTrackId.value) {
+    delete nameInputs.value[editingTrackId.value]
+  }
   editingTrackId.value = null
   editingTrackName.value = ''
 }
 
 function cancelRename() {
+  // 清理输入框引用
+  if (editingTrackId.value) {
+    delete nameInputs.value[editingTrackId.value]
+  }
   editingTrackId.value = null
   editingTrackName.value = ''
 }

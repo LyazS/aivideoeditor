@@ -16,12 +16,15 @@ import type { UnifiedTimelineItemData } from '../../../timelineitem/TimelineItem
 import type { MediaType } from '../../../mediaitem/types'
 import type { UnifiedMediaItemData } from '../../../mediaitem/types'
 import { getTimelineItemDisplayName } from '../../../utils/clipUtils'
+import { useUnifiedStore } from '../../../unifiedStore'
+import type { RemoteFileSourceData } from '../../../sources/RemoteFileSource'
 
 /**
  * 加载状态内容渲染器
  */
 export class LoadingContentRenderer implements ContentRenderer<MediaType> {
   readonly type = 'loading' as const
+  private unifiedStore = useUnifiedStore()
 
   renderContent(context: ContentRenderContext<MediaType>): VNode {
     const { data, isSelected } = context
@@ -29,7 +32,7 @@ export class LoadingContentRenderer implements ContentRenderer<MediaType> {
     return h(
       'div',
       {
-        class: ['loading-content', { selected: isSelected }],
+        class: ['clip-loading-content', { selected: isSelected }],
       },
       [
         // 只渲染普通加载内容，因为不再支持 unknown 类型
@@ -38,79 +41,43 @@ export class LoadingContentRenderer implements ContentRenderer<MediaType> {
     )
   }
 
-  renderStatusIndicator(context: ContentRenderContext<MediaType>): VNode {
-    return h(
-      'div',
-      {
-        class: 'loading-status-indicator',
-      },
-      [this.renderLoadingSpinner()],
-    )
-  }
-
   renderProgressBar(context: ContentRenderContext<MediaType>): VNode | null {
-    const { data } = context
-    const progressInfo = this.getProgressInfo(data)
+    // 优先从上下文中获取进度信息（如果由UnifiedTimelineClip.vue提供）
+    const progressInfo = context.progressInfo || this.getProgressInfo(context.data)
 
     if (!progressInfo.hasProgress) {
       return null
     }
 
-    return h('div', { class: 'loading-progress-bar' }, [
+    return h('div', { class: 'clip-loading-progress-bar' }, [
       h('div', {
-        class: 'progress-fill',
+        class: 'clip-progress-fill',
         style: {
           width: `${progressInfo.percent}%`,
           transition: 'width 0.3s ease',
         },
       }),
-      // 进度文本
-      h(
-        'div',
-        {
-          class: 'progress-text',
-        },
-        `${Math.round(progressInfo.percent)}%`,
-      ),
     ])
   }
 
   getCustomClasses(context: ContentRenderContext<MediaType>): string[] {
     const { data } = context
-    const classes = ['loading-renderer']
+    const classes = ['clip-loading-renderer']
 
     // 添加媒体类型特定的类
-    classes.push('normal-loading', `loading-${data.mediaType}`)
+    classes.push('clip-normal-loading', `clip-loading-${data.mediaType}`)
 
     return classes
   }
 
-  getCustomStyles(
-    context: ContentRenderContext<MediaType>,
-  ): Record<string, string | number> {
+  getCustomStyles(context: ContentRenderContext<MediaType>): Record<string, string | number> {
     return {
       borderStyle: 'dashed',
-      animation: 'loading-pulse 2s infinite',
+      animation: 'clip-loading-pulse 2s infinite',
     }
   }
 
   // ==================== 私有方法 ====================
-
-  /**
-   * 渲染异步处理内容（unknown类型）
-   */
-  private renderAsyncProcessing(context: ContentRenderContext<MediaType>): VNode {
-    const { data } = context
-
-    return h('div', { class: 'async-processing-content' }, [
-      // 处理类型图标
-      this.renderProcessingTypeIcon(data),
-      // 处理状态文本
-      this.renderProcessingStatus(data),
-      // 进度圆环（如果有进度信息）
-      this.renderProgressRing(context),
-    ])
-  }
 
   /**
    * 渲染普通加载内容
@@ -118,204 +85,65 @@ export class LoadingContentRenderer implements ContentRenderer<MediaType> {
   private renderNormalLoading(context: ContentRenderContext<MediaType>): VNode {
     const { data } = context
 
-    return h('div', { class: 'normal-loading-content' }, [
-      // 媒体类型图标
-      this.renderMediaTypeIcon(data.mediaType),
+    return h('div', { class: 'clip-normal-loading-content' }, [
+      // 统一的加载图标
+      // this.renderLoadingSpinner(),
       // 加载文本
-      h('div', { class: 'loading-text' }, [
-        h('div', { class: 'loading-title' }, this.getLoadingTitle(data)),
-        h('div', { class: 'loading-subtitle' }, this.getLoadingSubtitle(data)),
+      h('div', { class: 'clip-loading-text' }, [
+        h('div', { class: 'clip-loading-title' }, '加载中'),
+        h('div', { class: 'clip-loading-subtitle' }, this.getLoadingSubtitle(data)),
       ]),
-      // 加载动画
-      this.renderLoadingSpinner(),
     ])
-  }
-
-  /**
-   * 渲染处理类型图标
-   */
-  private renderProcessingTypeIcon(data: UnifiedTimelineItemData<MediaType>): VNode {
-    // 根据配置名称或其他信息推断处理类型
-    const processingType = this.inferProcessingType(data)
-
-    return h(
-      'div',
-      {
-        class: ['processing-type-icon', `type-${processingType}`],
-      },
-      this.getProcessingTypeEmoji(processingType),
-    )
-  }
-
-  /**
-   * 渲染处理状态文本
-   */
-  private renderProcessingStatus(data: UnifiedTimelineItemData<MediaType>): VNode {
-    const statusText = this.getProcessingStatusText(data)
-
-    return h('div', { class: 'processing-status' }, [
-      h('div', { class: 'status-text' }, statusText.main),
-      statusText.sub && h('div', { class: 'status-subtext' }, statusText.sub),
-    ])
-  }
-
-  /**
-   * 渲染进度圆环
-   */
-  private renderProgressRing(context: ContentRenderContext<MediaType>): VNode | null {
-    const progressInfo = this.getProgressInfo(context.data)
-
-    if (!progressInfo.hasProgress) {
-      return null
-    }
-
-    const radius = 16
-    const circumference = 2 * Math.PI * radius
-    const strokeDasharray = circumference
-    const strokeDashoffset = circumference - (progressInfo.percent / 100) * circumference
-
-    return h('div', { class: 'progress-ring-container' }, [
-      h(
-        'svg',
-        {
-          class: 'progress-ring',
-          width: 40,
-          height: 40,
-        },
-        [
-          // 背景圆环
-          h('circle', {
-            cx: 20,
-            cy: 20,
-            r: radius,
-            fill: 'none',
-            stroke: '#e6e6e6',
-            'stroke-width': 3,
-          }),
-          // 进度圆环
-          h('circle', {
-            cx: 20,
-            cy: 20,
-            r: radius,
-            fill: 'none',
-            stroke: '#1890ff',
-            'stroke-width': 3,
-            'stroke-linecap': 'round',
-            'stroke-dasharray': strokeDasharray,
-            'stroke-dashoffset': strokeDashoffset,
-            style: {
-              transition: 'stroke-dashoffset 0.3s ease',
-              transform: 'rotate(-90deg)',
-              'transform-origin': '20px 20px',
-            },
-          }),
-        ],
-      ),
-      // 中心文本
-      h('div', { class: 'progress-ring-text' }, `${Math.round(progressInfo.percent)}%`),
-    ])
-  }
-
-  /**
-   * 渲染媒体类型图标
-   */
-  private renderMediaTypeIcon(mediaType: MediaType): VNode {
-    const iconMap = {
-      video: '🎬',
-      image: '🖼️',
-      audio: '🎵',
-      text: '📝',
-    }
-
-    return h(
-      'div',
-      {
-        class: ['media-type-icon', `icon-${mediaType}`],
-      },
-      iconMap[mediaType] || '❓',
-    )
   }
 
   /**
    * 渲染加载旋转器
    */
   private renderLoadingSpinner(): VNode {
-    return h('div', { class: 'loading-spinner' }, [h('div', { class: 'spinner-ring' })])
+    return h('div', { class: 'clip-loading-spinner' }, [h('div', { class: 'clip-spinner-ring' })])
   }
 
   // ==================== 辅助方法 ====================
 
   /**
-   * 获取进度信息
+   * 获取进度信息 - 从媒体项目获取实际进度数据
    */
   private getProgressInfo(data: UnifiedTimelineItemData<MediaType>): {
     hasProgress: boolean
     percent: number
     speed?: string
   } {
-    // 这里需要通过mediaItemId获取关联的媒体项目数据
-    // 暂时返回模拟数据，实际实现需要从store或管理器中获取
-    return {
-      hasProgress: false, // 不再支持 unknown 类型，所以没有进度
-      percent: 0,
-      speed: undefined,
-    }
-  }
-
-  /**
-   * 推断处理类型
-   */
-  private inferProcessingType(data: UnifiedTimelineItemData<MediaType>): string {
-    const name = getTimelineItemDisplayName(data)
-
-    if (name.includes('http') || name.includes('download')) {
-      return 'download'
+    // 通过mediaItemId获取关联的媒体项目数据
+    const mediaItem = this.unifiedStore.getMediaItem(data.mediaItemId)
+    if (!mediaItem) {
+      return { hasProgress: false, percent: 0 }
     }
 
-    return 'processing'
-  }
-
-  /**
-   * 获取处理类型表情符号
-   */
-  private getProcessingTypeEmoji(type: string): string {
-    const emojiMap: Record<string, string> = {
-      download: '⬇️',
-      processing: '⚙️',
-      converting: '🔄',
-      analyzing: '🔍',
+    const source = mediaItem.source
+    if (!source) {
+      return { hasProgress: false, percent: 0 }
     }
 
-    return emojiMap[type] || '⚙️'
-  }
-
-  /**
-   * 获取处理状态文本
-   */
-  private getProcessingStatusText(data: UnifiedTimelineItemData<MediaType>): {
-    main: string
-    sub?: string
-  } {
-    const name = getTimelineItemDisplayName(data)
-
-    return {
-      main: '处理中...',
-      sub: name.length > 20 ? name.substring(0, 20) + '...' : name,
+    // 根据数据源类型获取进度信息
+    if (source.type === 'remote') {
+      // 远程文件源：使用下载字节数计算进度
+      const remoteSource = source as RemoteFileSourceData
+      if (remoteSource.totalBytes === 0) {
+        return { hasProgress: false, percent: 0 }
+      }
+      const percent = (remoteSource.downloadedBytes / remoteSource.totalBytes) * 100
+      return {
+        hasProgress: true,
+        percent,
+        speed: remoteSource.downloadSpeed,
+      }
+    } else {
+      // 其他类型：使用基础进度值
+      return {
+        hasProgress: source.progress > 0,
+        percent: source.progress,
+      }
     }
-  }
-
-  /**
-   * 获取加载标题
-   */
-  private getLoadingTitle(data: UnifiedTimelineItemData<MediaType>): string {
-    const typeMap = {
-      video: '视频加载中',
-      image: '图片加载中',
-      audio: '音频加载中',
-      text: '文本加载中',
-    }
-
-    return typeMap[data.mediaType] || '加载中'
   }
 
   /**

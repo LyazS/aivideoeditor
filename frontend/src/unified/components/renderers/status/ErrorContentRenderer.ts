@@ -28,50 +28,44 @@ export class ErrorContentRenderer implements ContentRenderer<MediaType> {
     return h(
       'div',
       {
-        class: ['error-content', { selected: isSelected }],
+        class: ['clip-error-content', { selected: isSelected }],
       },
       [
-        // 错误图标
-        this.renderErrorIcon(data),
-        // 错误信息
-        this.renderErrorMessage(data),
-        // 重试按钮（如果支持）
-        this.renderRetryButton(context),
+        // 只渲染错误内容，确保与clip-content大小一致
+        this.renderErrorContent(context),
       ],
-    )
-  }
-
-  renderStatusIndicator(context: ContentRenderContext<MediaType>): VNode {
-    return h(
-      'div',
-      {
-        class: 'error-status-indicator',
-      },
-      [h('div', { class: 'error-icon-small' }, '⚠️')],
     )
   }
 
   getCustomClasses(context: ContentRenderContext<MediaType>): string[] {
     const { data } = context
-    const classes = ['error-renderer', 'error-state']
+    const classes = ['clip-error-renderer']
 
-    // 添加错误类型特定的类
-    const errorType = this.getErrorType(data)
-    classes.push(`error-${errorType}`)
+    // 使用与加载内容相似的结构，确保大小一致
+    classes.push('error-message-container')
 
     return classes
   }
 
-  getCustomStyles(
-    context: ContentRenderContext<MediaType>,
-  ): Record<string, string | number> {
-    return {
-      borderColor: '#ff4d4f',
-      backgroundColor: 'rgba(255, 77, 79, 0.1)',
-    }
-  }
 
   // ==================== 私有方法 ====================
+
+  /**
+   * 渲染错误内容 - 确保与clip-content大小一致
+   */
+  private renderErrorContent(context: ContentRenderContext<MediaType>): VNode {
+    const { data } = context
+
+    return h('div', { class: 'clip-error-message-container' }, [
+      // 错误文本
+      h('div', { class: 'clip-error-text' }, [
+        // 错误图标
+        h('span', { class: 'clip-error-icon' }, '❌'),
+        // 错误消息
+        h('span', { class: 'clip-error-message' }, `错误：${this.getErrorInfo(data).message || '未知错误'}`),
+      ]),
+    ])
+  }
 
   /**
    * 渲染错误图标
@@ -90,15 +84,15 @@ export class ErrorContentRenderer implements ContentRenderer<MediaType> {
     return h(
       'div',
       {
-        class: ['error-icon-large', `error-${errorType}`],
+        class: ['clip-error-icon-large', `clip-error-${errorType}`],
       },
       [
         h(
           'div',
-          { class: 'error-emoji' },
+          { class: 'clip-error-emoji' },
           iconMap[errorType as keyof typeof iconMap] || iconMap.unknown,
         ),
-        h('div', { class: 'error-type-text' }, this.getErrorTypeText(errorType)),
+        h('div', { class: 'clip-error-type-text' }, this.getErrorTypeText(errorType)),
       ],
     )
   }
@@ -108,14 +102,13 @@ export class ErrorContentRenderer implements ContentRenderer<MediaType> {
    */
   private renderErrorMessage(data: UnifiedTimelineItemData<MediaType>): VNode {
     const errorInfo = this.getErrorInfo(data)
-
-    return h('div', { class: 'error-message-container' }, [
-      // 主要错误信息
-      h('div', { class: 'error-message-main' }, errorInfo.message),
-      // 详细错误信息（如果有）
-      errorInfo.details && h('div', { class: 'error-message-details' }, errorInfo.details),
-      // 项目名称
-      h('div', { class: 'error-item-name' }, getTimelineItemDisplayName(data)),
+    const errorMessage = errorInfo.message || '未知错误';
+    
+    return h('div', { class: 'clip-error-message-container' }, [
+      // 错误图标
+      h('span', { class: 'clip-error-icon' }, '❌'),
+      // 错误文本
+      h('span', { class: 'clip-error-message' }, `错误：${errorMessage}`),
     ])
   }
 
@@ -131,29 +124,29 @@ export class ErrorContentRenderer implements ContentRenderer<MediaType> {
       return null
     }
 
-    return h('div', { class: 'error-actions' }, [
+    return h('div', { class: 'clip-error-actions' }, [
       h(
         'button',
         {
-          class: 'retry-button',
+          class: 'clip-error-retry-button',
           onClick: (event: MouseEvent) => {
             event.stopPropagation()
             this.handleRetry(data)
           },
         },
-        [h('span', { class: 'retry-icon' }, '🔄'), h('span', { class: 'retry-text' }, '重试')],
+        [h('span', { class: 'clip-error-retry-icon' }, '🔄'), h('span', { class: 'clip-error-retry-text' }, '重试')],
       ),
       // 删除按钮
       h(
         'button',
         {
-          class: 'remove-button',
+          class: 'clip-error-remove-button',
           onClick: (event: MouseEvent) => {
             event.stopPropagation()
             this.handleRemove(data)
           },
         },
-        [h('span', { class: 'remove-icon' }, '🗑️'), h('span', { class: 'remove-text' }, '删除')],
+        [h('span', { class: 'clip-error-remove-icon' }, '🗑️'), h('span', { class: 'clip-error-remove-text' }, '删除')],
       ),
     ])
   }

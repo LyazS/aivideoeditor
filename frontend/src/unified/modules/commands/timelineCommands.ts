@@ -18,12 +18,13 @@ export { MoveTimelineItemCommand } from './MoveTimelineItemCommand' // ok
 export { UpdateTransformCommand } from './UpdateTransformCommand' // -
 export { SplitTimelineItemCommand } from './SplitTimelineItemCommand' // ok
 export { AddTrackCommand } from './AddTrackCommand' // ok
-export { RenameTrackCommand } from './RenameTrackCommand' // no
-export { RemoveTrackCommand } from './RemoveTrackCommand' // no
+export { RenameTrackCommand } from './RenameTrackCommand' // ok
+export { RemoveTrackCommand } from './RemoveTrackCommand' // ok
 export { ToggleTrackVisibilityCommand } from './ToggleTrackVisibilityCommand' // ok
 export { ToggleTrackMuteCommand } from './ToggleTrackMuteCommand' // ok
 export { ResizeTimelineItemCommand } from './ResizeTimelineItemCommand' // ok
 export { SelectTimelineItemsCommand } from './SelectTimelineItemsCommand' // ok
+export { UpdateTextCommand } from './UpdateTextCommand' // ok
 
 // 导出类型定义
 export type { SimpleCommand } from './types'

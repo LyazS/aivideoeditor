@@ -50,38 +50,10 @@ class DefaultContentRenderer implements ContentRenderer<MediaType> {
     )
   }
 
-  renderStatusIndicator(context: ContentRenderContext<MediaType>): VNode | null {
-    const { data } = context
-
-    if (data.timelineStatus === 'ready') {
-      return null
-    }
-
-    return h(
-      'div',
-      {
-        class: ['default-status-indicator', `status-${data.timelineStatus}`],
-      },
-      this.getStatusIcon(data.timelineStatus),
-    )
-  }
-
   getCustomClasses(context: ContentRenderContext<MediaType>): string[] {
     return ['default-renderer']
   }
 
-  private getStatusIcon(status: TimelineItemStatus): string {
-    switch (status) {
-      case 'loading':
-        return '⏳'
-      case 'error':
-        return '❌'
-      case 'ready':
-        return '✅'
-      default:
-        return '❓'
-    }
-  }
 }
 
 // ==================== 渲染器工厂类 ====================
