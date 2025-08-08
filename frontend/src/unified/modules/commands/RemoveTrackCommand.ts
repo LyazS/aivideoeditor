@@ -271,6 +271,7 @@ export class RemoveTrackCommand implements SimpleCommand {
           clipEndTime: clipStartTime + mediaData.duration,
         }
       }
+      timelineItem.timelineStatus = 'ready'
 
       console.log(`🔄 [RemoveTrackCommand] 已更新媒体数据: ${timelineItem.id}`, {
         width: config.width,

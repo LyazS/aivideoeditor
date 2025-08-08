@@ -94,7 +94,7 @@ export class AddTimelineItemCommand implements SimpleCommand {
       const rebuildResult = await TimelineItemFactory.rebuildKnown({
         originalTimelineItemData: this.originalTimelineItemData,
         getMediaItem: (id: string) => this.mediaModule.getMediaItem(id),
-        logIdentifier: 'AddTimelineItemCommand',
+        logIdentifier: 'AddTimelineItemCommand execute',
       })
 
       if (!rebuildResult.success) {
@@ -117,7 +117,7 @@ export class AddTimelineItemCommand implements SimpleCommand {
           this.id,
           newTimelineItem.mediaItemId,
           newTimelineItem.id,
-          this.description,
+          `execute ${this.description}`,
         )
       }
       console.log(`✅ 已添加时间轴项目: ${this.originalTimelineItemData.id}`)
@@ -179,6 +179,7 @@ export class AddTimelineItemCommand implements SimpleCommand {
           clipEndTime: clipStartTime + mediaData.duration,
         }
       }
+      this.originalTimelineItemData.timelineStatus = 'ready'
 
       console.log(`🔄 [AddTimelineItemCommand] 已更新媒体数据: ${this.id}`, {
         width: config.width,

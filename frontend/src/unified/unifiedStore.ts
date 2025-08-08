@@ -315,16 +315,8 @@ export const useUnifiedStore = defineStore('unified', () => {
    * @param timelineItemId 要删除的时间轴项目ID
    */
   async function removeTimelineItemWithHistory(timelineItemId: string) {
-    // 获取要删除的时间轴项目
-    const timelineItem = unifiedTimelineModule.getTimelineItem(timelineItemId)
-    if (!timelineItem) {
-      console.warn(`⚠️ 时间轴项目不存在，无法删除: ${timelineItemId}`)
-      return
-    }
-
     const command = new RemoveTimelineItemCommand(
       timelineItemId,
-      timelineItem, // 传入完整的timelineItem用于保存重建数据
       {
         addTimelineItem: unifiedTimelineModule.addTimelineItem,
         removeTimelineItem: unifiedTimelineModule.removeTimelineItem,

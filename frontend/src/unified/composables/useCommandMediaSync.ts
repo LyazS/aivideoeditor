@@ -27,23 +27,25 @@ export function setupCommandMediaSync(
 ): boolean {
   try {
     // 设置媒体状态同步
-    const unwatch = setupDirectMediaSync(commandId, mediaItemId, timelineItemId)
+    const unwatch = setupDirectMediaSync(commandId, mediaItemId, timelineItemId, description)
 
     if (unwatch) {
       console.log(
-        `🔗 [TimelineMediaSync] 已为命令设置直接状态同步: ${commandId} <-> ${mediaItemId}`,
+        `🔗 [TimelineMediaSync] 已为命令设置直接状态同步: ${description} ${commandId} <-> ${mediaItemId}`,
       )
 
       // 注册到SimplifiedMediaSyncManager中
       const syncManager = SimplifiedMediaSyncManager.getInstance()
       syncManager.registerCommandMediaSync(commandId, mediaItemId, unwatch, undefined, description)
 
-      console.log(`💾 [TimelineMediaSync] 已注册监听器到简化媒体同步管理器: ${commandId}`)
+      console.log(
+        `💾 [TimelineMediaSync] 已注册监听器到简化媒体同步管理器: ${description} ${commandId}`,
+      )
 
       return true
     } else {
       console.warn(
-        `⚠️ [TimelineMediaSync] 无法为命令设置直接状态同步: ${commandId} <-> ${mediaItemId}`,
+        `⚠️ [TimelineMediaSync] 无法为命令设置直接状态同步: ${description} ${commandId} <-> ${mediaItemId}`,
       )
       return false
     }
@@ -65,6 +67,7 @@ function setupDirectMediaSync(
   commandId: string,
   mediaItemId: string,
   timelineItemId?: string,
+  description?: string,
 ): (() => void) | null {
   const unifiedStore = useUnifiedStore()
 
@@ -89,7 +92,7 @@ function setupDirectMediaSync(
   const unwatch = watch(
     () => mediaItem.mediaStatus,
     async (newStatus, oldStatus) => {
-      console.log(`🔄 [TimelineMediaSync] 媒体状态变化，通知命令: ${commandId}`, {
+      console.log(`🔄 [TimelineMediaSync] 媒体状态变化，通知命令: ${description} ${commandId}`, {
         mediaItemId,
         mediaName: mediaItem.name,
         statusChange: `${oldStatus} → ${newStatus}`,
@@ -102,7 +105,7 @@ function setupDirectMediaSync(
         const command = unifiedStore.getCommand(commandId)
         if (command && !command.isDisposed && command.updateMediaData) {
           command.updateMediaData(mediaItem, timelineItemId)
-          console.log(`🔄 [TimelineMediaSync] 已更新命令媒体数据: ${commandId} <- ${mediaItemId}`, {
+          console.log(`🔄 [TimelineMediaSync] 已更新命令媒体数据: ${description} ${commandId} <- ${mediaItemId}`, {
             mediaName: mediaItem.name,
             mediaStatus: mediaItem.mediaStatus,
           })
@@ -114,13 +117,13 @@ function setupDirectMediaSync(
           shouldCleanup = true
         } else {
           if (!command) {
-            console.warn(`⚠️ [TimelineMediaSync] 找不到命令实例: ${commandId}`)
+            console.warn(`⚠️ [TimelineMediaSync] 找不到命令实例: ${description} ${commandId}`)
           } else if (command.isDisposed) {
-            console.warn(`⚠️ [TimelineMediaSync] 命令已被清理，跳过更新: ${commandId}`)
+            console.warn(`⚠️ [TimelineMediaSync] 命令已被清理，跳过更新: ${description} ${commandId}`)
             // 命令已被清理，标记为需要清理
             shouldCleanup = true
           } else if (!command.updateMediaData) {
-            console.warn(`⚠️ [TimelineMediaSync] 命令不支持媒体数据更新: ${commandId}`)
+            console.warn(`⚠️ [TimelineMediaSync] 命令不支持媒体数据更新: ${description} ${commandId}`)
             // 命令不支持更新，标记为需要清理
             shouldCleanup = true
           }
@@ -146,14 +149,15 @@ function setupDirectMediaSync(
       // 如果达到终态，自动清理监听器
       if (shouldCleanup) {
         console.log(
-          `🧹 [TimelineMediaSync] 媒体达到终态(${newStatus})，自动清理监听器: ${commandId} <-> ${mediaItemId}`,
+          `🧹 [TimelineMediaSync] 媒体达到终态(${newStatus})，自动清理监听器: ${description} ${commandId} <-> ${mediaItemId}`,
         )
 
         // 从SimplifiedMediaSyncManager中移除（内部会调用unwatch）
+        // 如果同一个命令有多个监听器（例如多次重做设置了多个监听器），也会一起清理掉
         const syncManager = SimplifiedMediaSyncManager.getInstance()
         syncManager.cleanupCommandMediaSync(commandId)
 
-        console.log(`✅ [TimelineMediaSync] 监听器清理完成: ${commandId} <-> ${mediaItemId}`)
+        console.log(`✅ [TimelineMediaSync] 监听器清理完成: ${description} ${commandId} <-> ${mediaItemId}`)
       }
     },
     { immediate: true },
@@ -185,7 +189,7 @@ async function transitionTimelineItemToReady(
     // 获取时间轴项目
     const timelineItem = unifiedStore.getTimelineItem(timelineItemId)
     if (!timelineItem) {
-      console.warn(`⚠️ [TimelineMediaSync] 找不到时间轴项目: ${timelineItemId}`)
+      console.log(`⚠️ [TimelineMediaSync] 找不到时间轴项目: ${timelineItemId}，跳过运行时内容创建`)
       return
     }
 

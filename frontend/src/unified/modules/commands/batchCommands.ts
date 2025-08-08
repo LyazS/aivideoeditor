@@ -62,19 +62,16 @@ export class BatchDeleteCommand extends BaseBatchCommand {
    */
   private buildDeleteCommands() {
     for (const itemId of this.timelineItemIds) {
-      const item = this.timelineModule.getTimelineItem(itemId)
-      if (item) {
-        const deleteCommand = new RemoveTimelineItemCommand(
-          itemId,
-          item,
-          this.timelineModule,
-          this.webavModule,
-          this.mediaModule,
-          this.configModule,
-        )
-        this.addCommand(deleteCommand)
-      }
+      const deleteCommand = new RemoveTimelineItemCommand(
+        itemId,
+        this.timelineModule,
+        this.webavModule,
+        this.mediaModule,
+        this.configModule,
+      )
+      this.addCommand(deleteCommand)
     }
+    
 
     console.log(`📋 准备批量删除 ${this.subCommands.length} 个时间轴项目`)
   }
