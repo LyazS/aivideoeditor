@@ -20,7 +20,7 @@
         </div>
       </div>
       <div class="header-buttons">
-        <HoverButton @click="debugMediaItems" title="调试统一媒体">
+        <!-- <HoverButton @click="debugMediaItems" title="调试统一媒体">
           <template #icon>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
               <path
@@ -28,7 +28,7 @@
               />
             </svg>
           </template>
-        </HoverButton>
+        </HoverButton> -->
         <HoverButton @click="showImportMenu" title="导入文件">
           <template #icon>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
@@ -1184,20 +1184,20 @@ const debugMediaItems = () => {
 }
 
 .media-item.status-pending .media-thumbnail {
-  border: 2px solid #f39c12;
+  border: 2px solid var(--color-status-pending);
 }
 
 .media-item.status-processing .media-thumbnail {
-  border: 2px solid #3498db;
+  border: 2px solid var(--color-status-processing);
 }
 
 .media-item.status-error .media-thumbnail,
 .media-item.status-unsupported .media-thumbnail {
-  border: 2px solid #e74c3c;
+  border: 2px solid var(--color-status-error);
 }
 
 .media-item.status-completed .media-thumbnail {
-  border: 2px solid #27ae60;
+  border: 2px solid var(--color-status-completed);
 }
 
 /* 异步处理显示区域 */
@@ -1227,19 +1227,19 @@ const debugMediaItems = () => {
 }
 
 .processing-status.pending .status-icon {
-  color: #f39c12;
+  color: var(--color-status-pending);
 }
 
 .processing-status.processing .status-icon {
-  color: #3498db;
+  color: var(--color-status-processing);
 }
 
 .processing-status.error .status-icon {
-  color: #e74c3c;
+  color: var(--color-status-error);
 }
 
 .processing-status.completed .status-icon {
-  color: #27ae60;
+  color: var(--color-status-completed);
 }
 
 .progress-circle {
@@ -1248,10 +1248,10 @@ const debugMediaItems = () => {
   border-radius: 50%;
   background: conic-gradient(
     from 0deg,
-    #3498db 0deg,
-    #3498db calc(var(--progress, 0) * 3.6deg),
-    #2c3e50 calc(var(--progress, 0) * 3.6deg),
-    #2c3e50 360deg
+    var(--color-status-processing) 0deg,
+    var(--color-status-processing) calc(var(--progress, 0) * 3.6deg),
+    var(--color-progress-background) calc(var(--progress, 0) * 3.6deg),
+    var(--color-progress-background) 360deg
   );
   position: relative;
   display: flex;
@@ -1303,11 +1303,11 @@ const debugMediaItems = () => {
 }
 
 .status-icon.pending {
-  color: #f39c12;
+  color: var(--color-status-pending);
 }
 
 .status-icon.processing {
-  color: #3498db;
+  color: var(--color-status-processing);
 }
 
 .status-icon.processing svg {
@@ -1315,7 +1315,7 @@ const debugMediaItems = () => {
 }
 
 .status-icon.error {
-  color: #e74c3c;
+  color: var(--color-status-error);
 }
 
 /* 本地媒体项错误状态样式 */
@@ -1333,12 +1333,12 @@ const debugMediaItems = () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #e74c3c;
+  color: var(--color-status-error);
 }
 
 /* 本地媒体项错误状态的边框 */
 .media-item.status-error .media-thumbnail {
-  border: 2px solid #e74c3c;
+  border: 2px solid var(--color-status-error);
 }
 
 /* 从旧组件复制的样式 */
