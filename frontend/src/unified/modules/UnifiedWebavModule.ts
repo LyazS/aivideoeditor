@@ -7,7 +7,7 @@ import {
   framesToMicroseconds,
   microsecondsToFrames,
   framesToTimecode,
-} from '../utils/UnifiedTimeUtils'
+} from '../utils/timeUtils'
 import {
   logWebAVInitStart,
   logWebAVInitStep,

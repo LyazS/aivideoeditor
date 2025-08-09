@@ -4,7 +4,7 @@
  */
 
 import { generateCommandId } from '../../../utils/idGenerator'
-import { framesToMicroseconds, framesToTimecode } from '../../utils/UnifiedTimeUtils'
+import { framesToMicroseconds, framesToTimecode } from '../../utils/timeUtils'
 import type { SimpleCommand } from './types'
 
 // ==================== 新架构类型导入 ====================
@@ -30,7 +30,7 @@ import {
   isUnifiedVideoVisibleSprite,
   isUnifiedAudioVisibleSprite,
   hasAudioCapabilities,
-} from '../../utils/UnifiedSpriteTypeGuards'
+} from '../../utils/spriteTypeGuards'
 
 /**
  * 更新变换属性命令

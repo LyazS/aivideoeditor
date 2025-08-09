@@ -22,7 +22,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import type { SnapPoint } from '../../types/snap'
-import { framesToTimecode } from '../utils/UnifiedTimeUtils'
+import { framesToTimecode } from '../utils/timeUtils'
 import { useUnifiedStore } from '../unifiedStore'
 
 interface Props {

@@ -2,7 +2,7 @@ import { useUnifiedStore } from '../unifiedStore'
 import type { TimelineItemDragData, MediaItemDragData } from '../types'
 import type { MediaType } from '../mediaitem'
 import type { UnifiedTrackType } from '../track/TrackTypes'
-import { alignFramesToFrame } from '../utils/UnifiedTimeUtils'
+import { alignFramesToFrame } from '../utils/timeUtils'
 import { useSnapManager } from './useSnapManager'
 
 /**

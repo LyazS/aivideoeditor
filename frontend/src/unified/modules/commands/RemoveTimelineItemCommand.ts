@@ -33,7 +33,7 @@ import type { UnifiedTimeRange } from '../../types/timeRange'
 import {
   createSpriteFromUnifiedMediaItem,
   createSpriteFromUnifiedTimelineItem,
-} from '../../utils/UnifiedSpriteFactory'
+} from '../../utils/spriteFactory'
 import { regenerateThumbnailForUnifiedTimelineItem } from '../../utils/thumbnailGenerator'
 
 import {

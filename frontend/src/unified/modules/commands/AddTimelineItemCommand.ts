@@ -26,7 +26,7 @@ import type { UnifiedMediaItemData, MediaType, MediaTypeOrUnknown } from '../../
 import {
   createSpriteFromUnifiedMediaItem,
   createSpriteFromUnifiedTimelineItem,
-} from '../../utils/UnifiedSpriteFactory'
+} from '../../utils/spriteFactory'
 import {
   setupCommandMediaSync,
   cleanupCommandMediaSync,

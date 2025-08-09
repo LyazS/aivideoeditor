@@ -26,7 +26,7 @@ import type {
 import { TimelineItemQueries } from './TimelineItemQueries'
 import { UnifiedMediaItemQueries } from '../mediaitem'
 import { regenerateThumbnailForUnifiedTimelineItem } from '../utils/thumbnailGenerator'
-import { createSpriteFromUnifiedTimelineItem } from '../utils/UnifiedSpriteFactory'
+import { createSpriteFromUnifiedTimelineItem } from '../utils/spriteFactory'
 import {
   createTextTimelineItem as createTextTimelineItemFromUtils,
   createSpriteForTextTimelineItem,

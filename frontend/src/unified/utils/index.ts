@@ -43,16 +43,7 @@ export {
 
   // 工具集合
   UnifiedTimeRangeUtils,
-} from './UnifiedTimeRangeUtils'
-
-// ==================== 统一WebAV动画管理器 ====================
-export {
-  // 管理器类
-  UnifiedWebAVAnimationManager,
-
-  // 全局管理器
-  globalUnifiedWebAVAnimationManager,
-} from './UnifiedWebAVAnimationManager'
+} from './timeRangeUtils'
 
 // ==================== 统一Sprite工厂 ====================
 export {
@@ -63,7 +54,7 @@ export {
   canCreateSpriteFromUnifiedMediaItem,
   getSpriteTypeFromUnifiedMediaItem,
   batchCheckCanCreateSprite,
-} from './UnifiedSpriteFactory'
+} from './spriteFactory'
 
 // ==================== 坐标转换工具 ====================
 export {
@@ -108,7 +99,7 @@ export {
   framesToTimecode,
   timecodeToFrames,
   alignFramesToFrame,
-} from './UnifiedTimeUtils'
+} from './timeUtils'
 
 // ==================== 统一时间重叠检测工具 ====================
 export {
@@ -178,7 +169,7 @@ export {
 
   // 检测播放头是否在时间轴项目的时间范围内
   isPlayheadInTimelineItem,
-} from './UnifiedTimelineSearchUtils'
+} from './timelineSearchUtils'
 
 // ==================== 统一文本时间轴工具 ====================
 export {
@@ -199,3 +190,87 @@ export {
   isValidTextContent,
   createTextItemPreview,
 } from './textTimelineUtils'
+
+// ==================== 统一动画转换器 ====================
+export {
+  // 转换核心函数
+  framesToPercentage,
+  convertKeyframeToWebAV,
+  convertToWebAVAnimation,
+  
+  // 验证和工具函数
+  isValidAnimationConfig,
+  isKeyframeInRange,
+  filterKeyframesInRange,
+} from './animationConverter'
+
+// ==================== WebAV动画管理器 ====================
+export {
+  // 动画管理器类
+  WebAVAnimationManager,
+  globalWebAVAnimationManager,
+  
+  // 便捷函数
+  updateWebAVAnimation,
+} from './webavAnimationManager'
+
+// ==================== 统一关键帧工具 ====================
+export {
+  // 关键帧位置转换工具函数
+  absoluteFrameToRelativeFrame,
+  relativeFrameToAbsoluteFrame,
+  getKeyframePositionTolerance,
+  
+  // 关键帧基础操作
+  initializeAnimation,
+  createKeyframe,
+  hasAnimation,
+  isCurrentFrameOnKeyframe,
+  getKeyframeButtonState,
+  getKeyframeUIState,
+  
+  // 关键帧操作
+  enableAnimation,
+  disableAnimation,
+  removeKeyframeAtFrame,
+  
+  // 关键帧时长变化处理
+  adjustKeyframesForDurationChange,
+  sortKeyframes,
+  
+  // 统一关键帧交互逻辑
+  toggleKeyframe,
+  
+  // 属性修改处理
+  updatePropertiesBatchViaWebAV,
+  handlePropertyChange,
+  
+  // 关键帧导航
+  getPreviousKeyframeFrame,
+  getNextKeyframeFrame,
+  
+  // 清理和重置
+  clearAllKeyframes,
+  getKeyframeCount,
+  getAllKeyframeFrames,
+  
+  // 调试和验证
+  validateKeyframes,
+  debugKeyframes,
+} from './unifiedKeyframeUtils'
+
+// ==================== 关键帧调试工具 ====================
+export {
+  // 调试函数
+  getKeyframeDebugInfo,
+  logKeyframeDebugInfo,
+  debugWebAVAnimationUpdate,
+  
+  // 调试开关
+  enableKeyframeDebug,
+  disableKeyframeDebug,
+  isKeyframeDebugEnabled,
+  
+  // 快速调试
+  debugCurrentItem,
+} from './keyframeDebugger'

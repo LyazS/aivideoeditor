@@ -1,6 +1,6 @@
 import { MP4Clip } from '@webav/av-cliper'
 import type { UnifiedTimeRange } from '../types/timeRange'
-import { framesToMicroseconds } from '../utils/UnifiedTimeUtils'
+import { framesToMicroseconds } from '../utils/timeUtils'
 import { BaseVisibleSprite } from './BaseVisibleSprite'
 import type { AudioState } from './types'
 

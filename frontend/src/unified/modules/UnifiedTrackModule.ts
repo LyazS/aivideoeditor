@@ -3,7 +3,7 @@ import type { UnifiedTrackData, UnifiedTrackType } from '../track/TrackTypes'
 import { createUnifiedTrackData } from '../track/TrackTypes'
 import type { UnifiedTimelineItemData } from '../timelineitem/TimelineItemData'
 import { isReady } from '../timelineitem/TimelineItemQueries'
-import { hasAudioCapabilities } from '../utils/UnifiedSpriteTypeGuards'
+import { hasAudioCapabilities } from '../utils/spriteTypeGuards'
 
 /**
  * 统一轨道管理模块

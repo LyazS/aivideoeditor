@@ -263,10 +263,6 @@ export {
   trimTimelineItem,
   UnifiedTimeRangeUtils,
 
-  // WebAV动画管理器
-  UnifiedWebAVAnimationManager,
-  globalUnifiedWebAVAnimationManager,
-
   // 吸附计算器
   UnifiedSnapCalculator,
 } from './utils'

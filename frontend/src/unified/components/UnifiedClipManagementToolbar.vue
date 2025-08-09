@@ -87,7 +87,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useUnifiedStore } from '../unifiedStore'
-import { formatFileSize, framesToSeconds } from '../utils/UnifiedTimeUtils'
+import { formatFileSize, framesToSeconds } from '../utils/timeUtils'
 import { countOverlappingItems } from '../utils/timeOverlapUtils'
 import HoverButton from '@/components/HoverButton.vue'
 
@@ -111,9 +111,22 @@ const selectedItemSupportsSplit = computed(() => {
   return item.mediaType === 'video' || item.mediaType === 'audio'
 })
 
+// 检查选中的项目是否处于ready状态
+const isSelectedItemReady = computed(() => {
+  if (!unifiedStore.selectedTimelineItemId) return false
+  const item = unifiedStore.getTimelineItem(unifiedStore.selectedTimelineItemId)
+  if (!item) return false
+  
+  const mediaItem = unifiedStore.getMediaItem(item.mediaItemId)
+  if (!mediaItem) return false
+  
+  // 只有ready状态的媒体项才能进行裁剪
+  return mediaItem.mediaStatus === 'ready'
+})
+
 // 裁剪按钮是否禁用
 const isSplitButtonDisabled = computed(() => {
-  return !selectedItemSupportsSplit.value
+  return !selectedItemSupportsSplit.value || !isSelectedItemReady.value
 })
 
 // 裁剪按钮的提示文本
@@ -125,6 +138,25 @@ const splitButtonTitle = computed(() => {
   const item = unifiedStore.getTimelineItem(unifiedStore.selectedTimelineItemId)
   if (!item) {
     return '片段不存在'
+  }
+
+  const mediaItem = unifiedStore.getMediaItem(item.mediaItemId)
+  if (!mediaItem) {
+    return '媒体素材不存在'
+  }
+
+  // 检查媒体状态
+  if (mediaItem.mediaStatus !== 'ready') {
+    const statusText = {
+      'pending': '等待处理中',
+      'asyncprocessing': '异步处理中',
+      'webavdecoding': '解码中',
+      'error': '媒体加载错误',
+      'cancelled': '处理已取消',
+      'missing': '媒体文件缺失'
+    }[mediaItem.mediaStatus] || '未知状态'
+    
+    return `媒体${statusText}，无法裁剪`
   }
 
   if (item.mediaType === 'text') {

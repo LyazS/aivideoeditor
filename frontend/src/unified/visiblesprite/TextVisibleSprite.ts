@@ -2,7 +2,7 @@ import { ImgClip } from '@webav/av-cliper'
 import { debounce } from 'lodash'
 import type { UnifiedTimeRange } from '../types/timeRange'
 import type { TextStyleConfig } from '../timelineitem/TimelineItemData'
-import { framesToMicroseconds } from '../utils/UnifiedTimeUtils'
+import { framesToMicroseconds } from '../utils/timeUtils'
 import { BaseVisibleSprite } from './BaseVisibleSprite'
 import { TextHelper } from '../../utils/TextHelper'
 

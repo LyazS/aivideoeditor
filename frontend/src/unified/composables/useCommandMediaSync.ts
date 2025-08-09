@@ -11,7 +11,7 @@ import { UnifiedMediaItemQueries } from '../mediaitem'
 import { TimelineItemQueries } from '../timelineitem/TimelineItemQueries'
 import { SimplifiedMediaSyncManager } from '../timelineitem/SimplifiedMediaSyncManager'
 import { useUnifiedStore } from '../unifiedStore'
-import { createSpriteFromUnifiedMediaItem } from '../utils/UnifiedSpriteFactory'
+import { createSpriteFromUnifiedMediaItem } from '../utils/spriteFactory'
 import { regenerateThumbnailForUnifiedTimelineItem } from '../utils/thumbnailGenerator'
 
 /**

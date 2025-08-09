@@ -42,10 +42,9 @@ function unifiedDebugLog(operation: string, details: any) {
     console.log(`🎬 [UnifiedTimelineModule] ${operation}:`, details)
   }
 }
-import { syncTimeRange } from '../utils/UnifiedTimeRangeUtils'
-import { microsecondsToFrames } from '../utils/UnifiedTimeUtils'
-import { globalUnifiedWebAVAnimationManager } from '../utils/UnifiedWebAVAnimationManager'
-import { hasAudioCapabilities } from '../utils/UnifiedSpriteTypeGuards'
+import { syncTimeRange } from '../utils/timeRangeUtils'
+import { microsecondsToFrames } from '../utils/timeUtils'
+import { hasAudioCapabilities } from '../utils/spriteTypeGuards'
 
 /**
  * 统一时间轴核心管理模块

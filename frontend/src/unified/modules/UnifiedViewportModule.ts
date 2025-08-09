@@ -7,7 +7,7 @@ import {
 import {
   calculateContentEndTimeFrames,
   calculateMaxVisibleDurationFrames,
-} from '../utils/UnifiedDurationUtils'
+} from '../utils/durationUtils'
 import type { UnifiedTimelineItemData } from '../timelineitem/TimelineItemData'
 
 /**

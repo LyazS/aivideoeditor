@@ -5,7 +5,7 @@
  */
 
 import { generateCommandId } from '../../../utils/idGenerator'
-import { framesToTimecode } from '../../utils/UnifiedTimeUtils'
+import { framesToTimecode } from '../../utils/timeUtils'
 import { reactive, markRaw } from 'vue'
 import type { VisibleSprite } from '@webav/av-cliper'
 import type { SimpleCommand } from './types'
@@ -30,7 +30,7 @@ import type {
 import type { UnifiedTimeRange } from '../../types/timeRange'
 
 // ==================== 新架构工具导入 ====================
-import { createSpriteFromUnifiedMediaItem } from '../../utils/UnifiedSpriteFactory'
+import { createSpriteFromUnifiedMediaItem } from '../../utils/spriteFactory'
 
 import { regenerateThumbnailForUnifiedTimelineItem } from '../../utils/thumbnailGenerator'
 

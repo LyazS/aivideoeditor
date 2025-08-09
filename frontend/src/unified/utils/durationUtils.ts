@@ -4,7 +4,7 @@
  */
 
 import type { UnifiedTimelineItemData } from '../timelineitem/TimelineItemData'
-import { secondsToFrames } from './UnifiedTimeUtils'
+import { secondsToFrames } from './timeUtils'
 
 // ==================== 帧数版本的时长计算工具 ====================
 

@@ -34,7 +34,7 @@ import type {
 import {
   createSpriteFromUnifiedMediaItem,
   canCreateSpriteFromUnifiedMediaItem,
-} from '../../utils/UnifiedSpriteFactory'
+} from '../../utils/spriteFactory'
 
 import {
   isKnownTimelineItem,

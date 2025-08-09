@@ -1,6 +1,6 @@
 import { ImgClip } from '@webav/av-cliper'
 import type { UnifiedTimeRange } from '../types/timeRange'
-import { framesToMicroseconds } from '../utils/UnifiedTimeUtils'
+import { framesToMicroseconds } from '../utils/timeUtils'
 import { BaseVisibleSprite } from './BaseVisibleSprite'
 
 /**

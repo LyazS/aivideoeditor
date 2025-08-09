@@ -12,7 +12,7 @@ import { createUnifiedPlaybackModule } from './modules/UnifiedPlaybackModule'
 import { createUnifiedWebavModule } from './modules/UnifiedWebavModule'
 import { createUnifiedNotificationModule } from './modules/UnifiedNotificationModule'
 import { createUnifiedHistoryModule } from './modules/UnifiedHistoryModule'
-import { calculateTotalDurationFrames } from './utils/UnifiedDurationUtils'
+import { calculateTotalDurationFrames } from './utils/durationUtils'
 import type { UnifiedMediaItemData, MediaType, MediaTypeOrUnknown } from '@/unified'
 import type { UnifiedTrackType } from './track/TrackTypes'
 import type { UnifiedTimelineItemData, TransformData } from './timelineitem/TimelineItemData'
@@ -27,7 +27,7 @@ import {
   batchExpandTimelineIfNeeded,
   predictiveExpandTimeline,
   getTimelineExpansionSuggestion,
-} from './utils/UnifiedTimeUtils'
+} from './utils/timeUtils'
 import {
   getTimelineItemAtFrames,
   getTimelineItemsByTrack,
@@ -42,7 +42,7 @@ import {
   findOverlappingTimelineItems,
   findOverlappingTimelineItemsOnTrack,
   findOrphanedTimelineItems,
-} from './utils/UnifiedTimelineSearchUtils'
+} from './utils/timelineSearchUtils'
 import {
   isVideoTimelineItem,
   isImageTimelineItem,

@@ -4,7 +4,7 @@ import type { UnifiedMediaItemData } from '../mediaitem/types'
 import { VideoVisibleSprite } from '../visiblesprite/VideoVisibleSprite'
 import { ImageVisibleSprite } from '../visiblesprite/ImageVisibleSprite'
 import { AudioVisibleSprite } from '../visiblesprite/AudioVisibleSprite'
-import { syncTimeRange } from '../utils/UnifiedTimeRangeUtils'
+import { syncTimeRange } from '../utils/timeRangeUtils'
 import { isReady } from '../timelineitem/TimelineItemQueries'
 import { isVideoTimeRange } from '../../types'
 

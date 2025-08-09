@@ -1,5 +1,5 @@
 import { generateCommandId } from '../../../utils/idGenerator'
-import { framesToTimecode } from '../../utils/UnifiedTimeUtils'
+import { framesToTimecode } from '../../utils/timeUtils'
 import type { SimpleCommand } from './types'
 
 // 类型导入

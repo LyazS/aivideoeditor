@@ -25,3 +25,9 @@ export { useSnapIndicator } from './useSnapIndicator'
 
 // 重新导出 useKeyboardShortcuts 函数
 export { useKeyboardShortcuts } from './useKeyboardShortcuts'
+
+// 重新导出 useUnifiedKeyframeTransformControls 函数
+export { useUnifiedKeyframeTransformControls } from './useKeyframeTransformControls'
+
+// 重新导出 useUnifiedKeyframeUI 函数
+export { useUnifiedKeyframeUI } from './useUnifiedKeyframeUI'

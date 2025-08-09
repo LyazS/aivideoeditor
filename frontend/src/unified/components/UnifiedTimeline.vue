@@ -225,7 +225,7 @@ import { useDragUtils } from '../composables/useDragUtils'
 import { useDialogs } from '../composables/useDialogs'
 import { getSnapIndicatorManager } from '../composables/useSnapIndicator'
 import { calculateVisibleFrameRange } from '../utils/coordinateUtils'
-import { framesToTimecode } from '../utils/UnifiedTimeUtils'
+import { framesToTimecode } from '../utils/timeUtils'
 import type { UnifiedTrackType } from '../track/TrackTypes'
 import type { MediaType, UnifiedMediaItemData } from '../mediaitem/types'
 import type {

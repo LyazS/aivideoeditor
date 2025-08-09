@@ -30,7 +30,7 @@ import { ref, computed, onUnmounted } from 'vue'
 import { useUnifiedStore } from '../unifiedStore'
 import { usePlaybackControls } from '../composables/usePlaybackControls'
 import { useSnapManager } from '../composables/useSnapManager'
-import { alignFramesToFrame, framesToMicroseconds } from '../utils/UnifiedTimeUtils'
+import { alignFramesToFrame, framesToMicroseconds } from '../utils/timeUtils'
 
 interface PlayheadProps {
   /** 时间轴容器宽度 */
