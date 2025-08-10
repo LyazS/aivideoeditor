@@ -61,7 +61,7 @@
 
         <!-- 右侧：属性面板 -->
         <div class="properties-panel-container" :style="{ width: rightPanelWidth + 'px' }">
-          <!-- <PropertiesPanel /> -->
+          <UnifiedPropertiesPanel />
         </div>
       </div>
 
@@ -181,6 +181,7 @@ import UnifiedMediaLibrary from '@/unified/components/UnifiedMediaLibrary.vue'
 import UnifiedTimeline from '@/unified/components/UnifiedTimeline.vue'
 import UnifiedPlaybackControls from '@/unified/components/UnifiedPlaybackControls.vue'
 import UnifiedClipManagementToolbar from '@/unified/components/UnifiedClipManagementToolbar.vue'
+import UnifiedPropertiesPanel from '@/unified/components/UnifiedPropertiesPanel.vue'
 import { useUnifiedStore } from '@/unified/unifiedStore'
 import { useKeyboardShortcuts } from '@/unified/composables/useKeyboardShortcuts'
 import { logWebAVReadyStateChange, logComponentLifecycle } from '../utils/webavDebug'

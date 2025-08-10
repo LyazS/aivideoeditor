@@ -345,9 +345,9 @@ export function useUnifiedKeyframeTransformControls(
    * 实现对齐功能（基于项目坐标系：中心为原点）
    */
   const alignHorizontal = (alignment: 'left' | 'center' | 'right') => {
-    if (!selectedTimelineItem.value) return
+    if (!selectedTimelineItem.value || !selectedTimelineItem.value.runtime.sprite) return
 
-    const sprite = selectedTimelineItem.value.runtime.sprite!
+    const sprite = selectedTimelineItem.value.runtime.sprite
     const canvasWidth = unifiedStore.videoResolution.width
     const spriteWidth = sprite.rect.w || canvasWidth
 
