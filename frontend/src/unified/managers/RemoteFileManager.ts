@@ -181,7 +181,7 @@ export class RemoteFileManager extends DataSourceManager<RemoteFileSourceData> {
         throw new Error('无法读取响应流')
       }
 
-      const chunks: Uint8Array[] = []
+      const chunks: BlobPart[] = []
       let downloadedBytes = 0
 
       while (true) {

@@ -14,96 +14,8 @@ import { VALID_TIMELINE_TRANSITIONS } from './TimelineItemData'
 import type { MediaType } from '../../types'
 
 // ==================== 状态转换行为函数 ====================
-
-/**
- * 状态转换行为函数 - 无状态纯函数
- * 基于简化的3状态转换，状态显示信息通过关联媒体项目计算
- */
-export async function transitionTimelineStatus(
-  data: UnifiedTimelineItemData,
-  newStatus: TimelineItemStatus,
-): Promise<void> {
-  if (!canTransitionTo(data, newStatus)) {
-    throw new Error(`Invalid timeline transition: ${data.timelineStatus} → ${newStatus}`)
-  }
-
-  const oldStatus = data.timelineStatus
-  data.timelineStatus = newStatus // ✅ 自动触发响应式更新
-
-  // 精灵生命周期管理 - 更清晰的3分支
-  await handleSpriteLifecycle(data, oldStatus, newStatus)
-
-  console.log(`✅ 时间轴项目状态转换: ${oldStatus} → ${newStatus}`)
-}
-
-/**
- * Sprite生命周期管理函数
- */
-async function handleSpriteLifecycle(
-  data: UnifiedTimelineItemData,
-  oldStatus: TimelineItemStatus,
-  newStatus: TimelineItemStatus,
-): Promise<void> {
-  switch (newStatus) {
-    case 'ready':
-      // 只在ready时创建sprite，所有准备工作已完成
-      if (oldStatus !== 'ready') {
-        await createSprite(data)
-      }
-      break
-
-    case 'loading': // 保持现状不变
-    case 'error': // 清理资源
-    default:
-      if (oldStatus === 'ready') {
-        await destroySprite(data)
-      }
-  }
-}
-
-/**
- * 创建Sprite函数
- */
-async function createSprite(data: UnifiedTimelineItemData): Promise<void> {
-  // 检查时间轴项目是否为就绪状态
-  if (data.timelineStatus !== 'ready') {
-    throw new Error('时间轴项目必须为就绪状态才能创建Sprite')
-  }
-
-  // 获取关联的媒体项目 - 需要从全局状态或传入的上下文中获取
-  // 这里暂时使用 null，实际使用时需要传入正确的媒体数据
-  // TODO: 重构为接受媒体数据参数或从全局状态获取
-  const mediaData = null // await getMediaItem(data.mediaItemId)
-  if (!mediaData) {
-    console.warn('无法找到关联的媒体项目，跳过Sprite创建')
-    return
-  }
-
-  // 通过新的方式创建Sprite
-  const { createSpriteForTimelineData } = await import('./TimelineItemSpriteOperations')
-
-  // 需要获取AVCanvas实例，这里暂时使用占位符
-  const avCanvas = null as any // TODO: 需要从外部传入AVCanvas实例
-
-  await createSpriteForTimelineData(data, mediaData, avCanvas)
-}
-
-/**
- * 销毁Sprite函数
- */
-async function destroySprite(data: UnifiedTimelineItemData): Promise<void> {
-  if (!data.runtime.sprite) {
-    return
-  }
-
-  // 动态导入以避免循环依赖
-  const { destroySpriteForTimelineData } = await import('./TimelineItemSpriteOperations')
-
-  // 需要获取AVCanvas实例，这里暂时使用占位符
-  const avCanvas = null as any // TODO: 需要从外部传入AVCanvas实例
-
-  await destroySpriteForTimelineData(data, avCanvas)
-}
+// 注意：状态转换函数已被删除，因为未被使用
+// 如果需要状态转换功能，请直接修改 timelineStatus 属性
 
 // ==================== 查询函数 ====================
 
@@ -155,36 +67,6 @@ export function hasValidTimeRange(data: UnifiedTimelineItemData): boolean {
     data.timeRange.timelineEndTime > data.timeRange.timelineStartTime &&
     data.timeRange.timelineStartTime >= 0
   )
-}
-
-// ==================== 简化的状态转换函数 ====================
-
-/**
- * 设置为加载状态
- */
-export function setLoading(data: UnifiedTimelineItemData): Promise<void> {
-  return transitionTimelineStatus(data, 'loading')
-}
-
-/**
- * 设置为就绪状态
- */
-export function setReady(data: UnifiedTimelineItemData): Promise<void> {
-  return transitionTimelineStatus(data, 'ready')
-}
-
-/**
- * 设置错误状态
- */
-export function setError(data: UnifiedTimelineItemData): Promise<void> {
-  return transitionTimelineStatus(data, 'error')
-}
-
-/**
- * 重置为加载状态（用于重试）
- */
-export function resetToLoading(data: UnifiedTimelineItemData): Promise<void> {
-  return transitionTimelineStatus(data, 'loading')
 }
 
 // ==================== 时间范围操作函数 ====================

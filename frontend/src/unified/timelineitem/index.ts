@@ -39,17 +39,8 @@ export type { StatusDisplayInfo } from './TimelineStatusDisplayUtils'
 
 // ==================== 行为函数导出 ====================
 export {
-  // 核心状态转换函数
-  transitionTimelineStatus,
-
   // 状态查询函数
   canTransitionTo,
-
-  // 简化的状态转换函数
-  setLoading,
-  setReady,
-  setError,
-  resetToLoading,
 
   // 时间范围操作函数
   updateTimeRange,
@@ -116,7 +107,7 @@ export {
 } from './TimelineItemQueries'
 
 // ==================== 管理器导出 ====================
-export { TimelineMediaSyncManager } from './TimelineMediaSyncManager'
+// TimelineMediaSyncManager 已删除，因为未被使用
 
 // ==================== 便捷使用示例 ====================
 
@@ -124,7 +115,7 @@ export { TimelineMediaSyncManager } from './TimelineMediaSyncManager'
  * 使用示例：创建视频时间轴项目
  *
  * ```typescript
- * import { createVideoTimelineItem, transitionTimelineStatus, setReady } from '@/unified/timelineitem'
+ * import { createVideoTimelineItem } from '@/unified/timelineitem'
  *
  * // 创建视频时间轴项目
  * const videoItem = createVideoTimelineItem({
@@ -137,7 +128,7 @@ export { TimelineMediaSyncManager } from './TimelineMediaSyncManager'
  * })
  *
  * // 状态转换
- * await setReady(videoItem, { duration: 300, format: 'mp4' })
+ * videoItem.timelineStatus = 'ready' // 直接设置状态
  *
  * // 查询状态
  * console.log(isReady(videoItem)) // true
@@ -148,22 +139,8 @@ export { TimelineMediaSyncManager } from './TimelineMediaSyncManager'
 /**
  * 使用示例：状态同步管理
  *
- * ```typescript
- * import { TimelineMediaSyncManager } from '@/unified/timelineitem'
- *
- * const syncManager = TimelineMediaSyncManager.getInstance()
- *
- * // 注册媒体项目
- * syncManager.registerMediaItem(mediaData)
- *
- * // 创建时间轴项目（自动建立状态同步）
- * const timelineItem = syncManager.createTimelineItem(
- *   'media-123',
- *   'video-track-1',
- *   { timelineStartTime: 0, timelineEndTime: 300 },
- *   { name: '我的视频' }
- * )
- * ```
+ * 注意：TimelineMediaSyncManager 和 transitionTimelineStatus 函数已删除，因为未被使用
+ * 如果需要状态转换功能，请直接修改 timelineStatus 属性
  */
 
 /**
@@ -199,12 +176,7 @@ export { TimelineMediaSyncManager } from './TimelineMediaSyncManager'
 import { TimelineItemFactory } from './TimelineItemFactory'
 
 import {
-  transitionTimelineStatus,
   canTransitionTo,
-  setLoading,
-  setReady,
-  setError,
-  resetToLoading,
   updateTimeRange,
   moveTimelineItem,
   resizeTimelineItem,
@@ -236,7 +208,6 @@ import {
   TimelineStatusDisplayUtils,
   createStatusDisplayComputeds,
 } from './TimelineStatusDisplayUtils'
-import { TimelineMediaSyncManager } from './TimelineMediaSyncManager'
 import type { UnifiedTimelineItemData } from './TimelineItemData'
 import type { MediaType } from '../mediaitem'
 
@@ -257,14 +228,7 @@ export default {
 
   // 行为函数
   Behaviors: {
-    transitionStatus: transitionTimelineStatus,
     canTransition: canTransitionTo,
-
-    // 简化的状态转换函数
-    setLoading,
-    setReady,
-    setError,
-    resetToLoading,
 
     // 时间范围操作
     updateTimeRange,
@@ -307,7 +271,7 @@ export default {
   },
 
   // 管理器
-  Managers: {
-    MediaSync: TimelineMediaSyncManager,
-  },
+  // Managers: {
+  //   MediaSync: TimelineMediaSyncManager, // 已删除，因为未被使用
+  // },
 }

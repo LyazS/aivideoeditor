@@ -81,7 +81,7 @@ export class RemoteDownloadProcessor implements AsyncProcessor {
         throw new Error('无法读取响应流')
       }
 
-      const chunks: Uint8Array[] = []
+      const chunks: BlobPart[] = []
       let receivedSize = 0
 
       try {

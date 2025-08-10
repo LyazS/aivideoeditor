@@ -73,12 +73,7 @@ import {
 } from './timelineitem/TimelineItemFactory'
 
 // 从TimelineItemBehaviors导入行为函数
-import {
-  transitionTimelineStatus,
-  setLoading,
-  setReady,
-  setError,
-} from './timelineitem/TimelineItemBehaviors'
+// transitionTimelineStatus 已删除，因为未被使用
 // ==================== 命令类导入 ====================
 import {
   AddTimelineItemCommand,
@@ -1062,10 +1057,7 @@ export const useUnifiedStore = defineStore('unified', () => {
     duplicateTimelineItem,
 
     // 时间轴项目状态转换函数
-    transitionTimelineStatus,
-    setTimelineItemLoading: setLoading,
-    setTimelineItemReady: setReady,
-    setTimelineItemError: setError,
+    // transitionTimelineStatus 已删除，因为未被使用
 
     // 时间轴项目查询函数
     isTimelineItemReady: isReady,

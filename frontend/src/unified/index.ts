@@ -185,10 +185,7 @@ export {
   TimelineItemFactory,
 
   // 状态转换函数
-  transitionTimelineStatus,
-  setLoading,
-  setReady,
-  setError,
+  // transitionTimelineStatus 已删除，因为未被使用
 
   // 类型守卫函数
   isKnownTimelineItem,
@@ -208,7 +205,7 @@ export {
   getStatusText,
 
   // 管理器
-  TimelineMediaSyncManager,
+  // TimelineMediaSyncManager 已删除，因为未被使用
 } from './timelineitem'
 
 // ==================== 统一模块系统 ====================
