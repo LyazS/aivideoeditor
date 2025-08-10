@@ -465,7 +465,7 @@ export const useUnifiedStore = defineStore('unified', () => {
     }
 
     // 检查是否具有音频属性
-    if (hasVisualProperties(timelineItem)) {
+    if (hasAudioProperties(timelineItem)) {
       const config = timelineItem.config as any
       if (newTransform.volume !== undefined) {
         oldTransform.volume = config.volume ?? 1
