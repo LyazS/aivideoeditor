@@ -1,29 +1,21 @@
 <template>
   <div class="video-preview-engine">
-    <!-- 状态栏 -->
-    <div class="status-bar-container">
-      <div class="status-bar">
-        <div class="status-content">
-          <span class="app-title">AI编辑器</span>
-        </div>
-      </div>
-    </div>
-
     <div class="main-content">
       <!-- 预览区域：三列布局 -->
       <div class="preview-section" :style="{ height: previewHeight + '%' }">
         <!-- 左侧：素材库 -->
         <div class="media-library-panel" :style="{ width: leftPanelWidth + 'px' }">
-          <MediaLibrary />
+          <!-- <MediaLibrary /> -->
+          <UnifiedMediaLibrary />
         </div>
 
         <!-- 左侧分割器 -->
         <div
-          class="vertical-splitter left-splitter"
+          class="splitter vertical left-splitter"
           @mousedown="startLeftResize"
           :class="{ dragging: isLeftDragging }"
         >
-          <div class="vertical-splitter-handle"></div>
+          <div class="splitter-handle"></div>
         </div>
 
         <!-- 中间：预览窗口和控制面板 -->
@@ -33,12 +25,16 @@
           <div class="controls-section">
             <!-- 时间显示 -->
             <div class="time-display">
-              {{ formatTime(videoStore.currentTime) }} /
-              {{ formatTime(videoStore.contentEndTime || videoStore.totalDuration) }}
+              {{ framesToTimecode(unifiedStore.currentFrame) }} /
+              {{
+                framesToTimecode(
+                  unifiedStore.contentEndTimeFrames || unifiedStore.totalDurationFrames,
+                )
+              }}
             </div>
             <!-- 中间播放控制 -->
             <div class="center-controls">
-              <PlaybackControls />
+              <UnifiedPlaybackControls />
             </div>
             <!-- 右侧比例按钮 -->
             <div class="right-controls">
@@ -56,21 +52,21 @@
 
         <!-- 右侧分割器 -->
         <div
-          class="vertical-splitter right-splitter"
+          class="splitter vertical right-splitter"
           @mousedown="startRightResize"
           :class="{ dragging: isRightDragging }"
         >
-          <div class="vertical-splitter-handle"></div>
+          <div class="splitter-handle"></div>
         </div>
 
         <!-- 右侧：属性面板 -->
         <div class="properties-panel-container" :style="{ width: rightPanelWidth + 'px' }">
-          <PropertiesPanel />
+          <UnifiedPropertiesPanel />
         </div>
       </div>
 
       <!-- 可拖动的分割器 -->
-      <div class="resizable-splitter" @mousedown="startResize" :class="{ dragging: isDragging }">
+      <div class="splitter horizontal" @mousedown="startResize" :class="{ dragging: isDragging }">
         <div class="splitter-handle"></div>
       </div>
 
@@ -78,10 +74,11 @@
       <div class="timeline-section" :style="{ height: timelineHeight + '%' }">
         <!-- 片段管理工具栏在时间刻度上方 -->
         <div class="clip-management-toolbar">
-          <ClipManagementToolbar />
+          <UnifiedClipManagementToolbar />
         </div>
         <!-- 只有WebAV初始化完成后才显示Timeline -->
-        <Timeline v-if="videoStore.isWebAVReady" />
+        <!-- <Timeline v-if="unifiedStore.isWebAVReady" /> -->
+        <UnifiedTimeline v-if="unifiedStore.isWebAVReady" />
         <div v-else class="timeline-loading">
           <div class="loading-spinner"></div>
           <p>正在初始化WebAV引擎...</p>
@@ -178,30 +175,86 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onUnmounted } from 'vue'
+import { ref, computed, watch, onUnmounted, onMounted } from 'vue'
 import PreviewWindow from './PreviewWindow.vue'
-import Timeline from './Timeline.vue'
-import PlaybackControls from './PlaybackControls.vue'
-import ClipManagementToolbar from './ClipManagementToolbar.vue'
-import MediaLibrary from './MediaLibrary.vue'
-import PropertiesPanel from './PropertiesPanel.vue'
-import { useVideoStore } from '../stores/videostore'
+import UnifiedMediaLibrary from '@/unified/components/UnifiedMediaLibrary.vue'
+import UnifiedTimeline from '@/unified/components/UnifiedTimeline.vue'
+import UnifiedPlaybackControls from '@/unified/components/UnifiedPlaybackControls.vue'
+import UnifiedClipManagementToolbar from '@/unified/components/UnifiedClipManagementToolbar.vue'
+import UnifiedPropertiesPanel from '@/unified/components/UnifiedPropertiesPanel.vue'
+import { useUnifiedStore } from '@/unified/unifiedStore'
+import { useKeyboardShortcuts } from '@/unified/composables/useKeyboardShortcuts'
+import { logWebAVReadyStateChange, logComponentLifecycle } from '../utils/webavDebug'
+import { framesToTimecode } from '../stores/utils/timeUtils'
 
-const videoStore = useVideoStore()
+const unifiedStore = useUnifiedStore()
+
+// 注册全局快捷键
+useKeyboardShortcuts()
+
+// 添加WebAV就绪状态监听
+watch(
+  () => unifiedStore.isWebAVReady,
+  (isReady, wasReady) => {
+    logWebAVReadyStateChange(isReady, wasReady)
+  },
+  { immediate: true },
+)
+
+// 窗口大小变化时调整面板宽度
+const adjustPanelWidths = () => {
+  const mainContent = document.querySelector('.main-content')
+  const containerWidth = mainContent ? mainContent.clientWidth : window.innerWidth
+
+  // 计算最大允许宽度
+  const totalPanelWidth = leftPanelWidth.value + rightPanelWidth.value
+  const availableWidth = containerWidth - 220 // 减去分割器和最小预览区域宽度
+
+  if (totalPanelWidth > availableWidth) {
+    // 按比例缩小两个面板
+    const ratio = availableWidth / totalPanelWidth
+    leftPanelWidth.value = Math.max(100, leftPanelWidth.value * ratio)
+    rightPanelWidth.value = Math.max(100, rightPanelWidth.value * ratio)
+  }
+}
+
+onMounted(() => {
+  logComponentLifecycle('VideoPreviewEngine', 'mounted', {
+    isWebAVReady: unifiedStore.isWebAVReady,
+    hasAVCanvas: !!unifiedStore.avCanvas,
+  })
+
+  // 添加窗口大小变化监听器
+  window.addEventListener('resize', adjustPanelWidths)
+})
 
 // 响应式数据
-const previewHeight = ref(60) // 默认预览窗口占60%
-const timelineHeight = ref(40) // 默认时间轴占40%
+const previewHeight = ref(45) // 默认预览窗口占45%
+const timelineHeight = ref(55) // 默认时间轴占55%
 const isDragging = ref(false)
 
 // 分辨率相关
 const showResolutionModal = ref(false)
-const currentResolution = ref({
-  name: '1080p',
-  width: 1920,
-  height: 1080,
-  aspectRatio: '16:9',
-  category: '横屏',
+
+// 从videoStore获取当前分辨率，而不是使用硬编码的默认值
+const currentResolution = computed(() => {
+  const resolution = unifiedStore.videoResolution
+  // 根据分辨率判断类别
+  const aspectRatio = resolution.width / resolution.height
+  let category = '横屏'
+  if (aspectRatio < 1) {
+    category = '竖屏'
+  } else if (Math.abs(aspectRatio - 1) < 0.1) {
+    category = '方形'
+  }
+
+  return {
+    name: resolution.name,
+    width: resolution.width,
+    height: resolution.height,
+    aspectRatio: resolution.aspectRatio,
+    category: category,
+  }
 })
 
 const resolutionOptions = [
@@ -233,7 +286,13 @@ const currentResolutionText = computed(() => {
 })
 
 // 临时选择的分辨率（在弹窗中选择但未确认）
-const tempSelectedResolution = ref(currentResolution.value)
+const tempSelectedResolution = ref({
+  name: '1080p',
+  width: 1920,
+  height: 1080,
+  aspectRatio: '16:9',
+  category: '横屏',
+})
 
 // 自定义分辨率
 const showCustomResolution = ref(false)
@@ -329,8 +388,16 @@ const handleLeftResize = (event: MouseEvent) => {
   const deltaX = event.clientX - startX
   let newWidth = startLeftWidth + deltaX
 
-  // 限制最小宽度，允许更大的最大宽度
-  newWidth = Math.max(100, Math.min(600, newWidth))
+  // 获取主内容区域的宽度
+  const mainContent = document.querySelector('.main-content')
+  const containerWidth = mainContent ? mainContent.clientWidth : window.innerWidth
+
+  // 计算可用宽度（总宽度减去右侧面板宽度和分割器宽度）
+  const availableWidth = containerWidth - rightPanelWidth.value - 20 // 20px为分割器宽度
+
+  // 限制最小宽度和最大宽度，确保不超出可用空间
+  const maxAllowedWidth = Math.min(800, availableWidth - 200) // 至少保留200px给中间预览区域
+  newWidth = Math.max(100, Math.min(maxAllowedWidth, newWidth))
 
   leftPanelWidth.value = newWidth
 }
@@ -361,8 +428,16 @@ const handleRightResize = (event: MouseEvent) => {
   const deltaX = event.clientX - startX
   let newWidth = startRightWidth - deltaX // 注意：右侧是反向的
 
-  // 限制最小宽度，允许更大的最大宽度
-  newWidth = Math.max(100, Math.min(600, newWidth))
+  // 获取主内容区域的宽度
+  const mainContent = document.querySelector('.main-content')
+  const containerWidth = mainContent ? mainContent.clientWidth : window.innerWidth
+
+  // 计算可用宽度（总宽度减去左侧面板宽度和分割器宽度）
+  const availableWidth = containerWidth - leftPanelWidth.value - 20 // 20px为分割器宽度
+
+  // 限制最小宽度和最大宽度，确保不超出可用空间
+  const maxAllowedWidth = Math.min(800, availableWidth - 200) // 至少保留200px给中间预览区域
+  newWidth = Math.max(100, Math.min(maxAllowedWidth, newWidth))
 
   rightPanelWidth.value = newWidth
 }
@@ -373,12 +448,6 @@ const stopRightResize = () => {
   document.removeEventListener('mouseup', stopRightResize)
   document.body.style.cursor = ''
   document.body.style.userSelect = ''
-}
-
-function formatTime(seconds: number): string {
-  const mins = Math.floor(seconds / 60)
-  const secs = Math.floor(seconds % 60)
-  return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
 }
 
 // 获取预览样式（根据分辨率比例）
@@ -405,33 +474,45 @@ function getPreviewStyle(resolution: { width: number; height: number }) {
 }
 
 function confirmSelection() {
+  let selectedResolution
+
   if (showCustomResolution.value) {
     // 使用自定义分辨率
-    const customResolution = {
+    selectedResolution = {
       name: '自定义',
       width: customWidth.value,
       height: customHeight.value,
       aspectRatio: customResolutionText.value,
-      category: '自定义',
     }
-    currentResolution.value = customResolution
-    videoStore.setVideoResolution(customResolution)
   } else {
-    // 使用预设分辨率
-    currentResolution.value = tempSelectedResolution.value
-    videoStore.setVideoResolution(tempSelectedResolution.value)
+    // 使用预设分辨率，转换为VideoResolution格式
+    selectedResolution = {
+      name: tempSelectedResolution.value.name,
+      width: tempSelectedResolution.value.width,
+      height: tempSelectedResolution.value.height,
+      aspectRatio: tempSelectedResolution.value.aspectRatio,
+    }
   }
+
+  // 更新videoStore中的分辨率
+  unifiedStore.setVideoResolution(selectedResolution)
 
   showResolutionModal.value = false
   showCustomResolution.value = false
-
+  console.log('确认选择分辨率:', selectedResolution)
 }
 
 function cancelSelection() {
   showResolutionModal.value = false
   showCustomResolution.value = false
-  // 重置临时选择
-  tempSelectedResolution.value = currentResolution.value
+  // 重置临时选择为当前分辨率
+  tempSelectedResolution.value = {
+    name: currentResolution.value.name,
+    width: currentResolution.value.width,
+    height: currentResolution.value.height,
+    aspectRatio: currentResolution.value.aspectRatio,
+    category: currentResolution.value.category,
+  }
 }
 
 function selectPresetResolution(resolution: (typeof resolutionOptions)[0]) {
@@ -452,7 +533,13 @@ function selectCustomResolution() {
 
 function openResolutionModal() {
   // 初始化临时选择为当前分辨率
-  tempSelectedResolution.value = currentResolution.value
+  tempSelectedResolution.value = {
+    name: currentResolution.value.name,
+    width: currentResolution.value.width,
+    height: currentResolution.value.height,
+    aspectRatio: currentResolution.value.aspectRatio,
+    category: currentResolution.value.category,
+  }
   showCustomResolution.value = false
 
   // 如果当前分辨率是自定义的，显示自定义输入
@@ -473,6 +560,7 @@ onUnmounted(() => {
   document.removeEventListener('mouseup', stopLeftResize)
   document.removeEventListener('mousemove', handleRightResize)
   document.removeEventListener('mouseup', stopRightResize)
+  window.removeEventListener('resize', adjustPanelWidths)
 })
 </script>
 
@@ -482,99 +570,88 @@ onUnmounted(() => {
   height: 100vh;
   display: flex;
   flex-direction: column;
-  background-color: #1a1a1a;
-  color: white;
-}
-
-.status-bar-container {
-  padding: 6px 6px 0 6px;
-  flex-shrink: 0;
-}
-
-.status-bar {
-  height: 30px;
-  background-color: #2a2a2a;
-  border-radius: 4px;
-  display: flex;
-  align-items: center;
-  flex-shrink: 0;
-  padding: 0 12px;
-}
-
-.status-content {
-  display: flex;
-  align-items: center;
-  width: 100%;
-}
-
-.app-title {
-  font-size: 13px;
-  color: #ccc;
-  font-weight: 500;
-  letter-spacing: 0.5px;
+  background-color: var(--color-bg-primary);
+  color: var(--color-text-primary);
 }
 
 .main-content {
   flex: 1;
   display: flex;
   flex-direction: column;
-  padding: 6px;
-  height: calc(100vh - 48px); /* 减去padding和状态栏容器高度 */
+  padding: var(--spacing-sm);
   overflow: hidden;
+  height: 100%;
 }
 
 .preview-section {
-  /* 三列布局容器 */
   width: 100%;
   height: 100%;
   display: flex;
   flex-direction: row;
   overflow: hidden;
-  min-height: 20%; /* 最小高度 */
+  min-height: 20%;
 }
 
 .media-library-panel {
   flex-shrink: 0;
-  background-color: #2a2a2a;
-  border-radius: 4px;
+  background-color: var(--color-bg-secondary);
+  border-radius: var(--border-radius-medium);
   min-width: 100px;
-  max-width: 600px;
+  max-width: 800px;
 }
 
-.vertical-splitter {
-  width: 8px;
+/* 分割器样式 - 从 common.css 迁移 */
+.splitter {
   background-color: transparent;
   cursor: ew-resize;
   display: flex;
   align-items: center;
   justify-content: center;
   position: relative;
-  transition: background-color 0.2s ease;
+  transition: background-color var(--transition-fast);
   flex-shrink: 0;
 }
 
-.vertical-splitter:hover {
+.splitter.vertical {
+  width: 8px;
+  cursor: ew-resize;
+}
+
+.splitter.horizontal {
+  height: 8px;
+  cursor: ns-resize;
+}
+
+.splitter:hover {
   background-color: transparent;
 }
 
-.vertical-splitter.dragging {
+.splitter.dragging {
   background-color: transparent;
 }
 
-.vertical-splitter-handle {
+.splitter-handle {
+  background-color: var(--color-border-secondary);
+  border-radius: 2px;
+  transition: background-color var(--transition-fast);
+}
+
+.splitter.vertical .splitter-handle {
   width: 4px;
   height: 40px;
-  background-color: #666;
-  border-radius: 2px;
-  transition: background-color 0.2s ease;
 }
 
-.vertical-splitter:hover .vertical-splitter-handle {
-  background-color: #888;
+.splitter.horizontal .splitter-handle {
+  width: 40px;
+  height: 4px;
 }
 
-.vertical-splitter.dragging .vertical-splitter-handle {
-  background-color: #fff;
+.splitter:hover .splitter-handle {
+  background-color: var(--color-text-muted);
+}
+
+.splitter.dragging .splitter-handle {
+  background-color: var(--color-text-primary);
 }
 
 .preview-center {
@@ -583,63 +660,27 @@ onUnmounted(() => {
   flex-direction: column;
   align-items: center;
   gap: 10px;
-  min-width: 200px; /* 减小最小宽度，允许更多压缩 */
+  min-width: 200px;
   overflow: hidden;
-  background-color: #1a1a1a;
+  background-color: var(--color-bg-primary);
 }
 
 .properties-panel-container {
   flex-shrink: 0;
-  background-color: #2a2a2a;
-  border-radius: 4px;
+  background-color: var(--color-bg-secondary);
+  border-radius: var(--border-radius-medium);
   min-width: 100px;
-  max-width: 600px;
-}
-
-.resizable-splitter {
-  height: 8px;
-  background-color: transparent;
-  cursor: ns-resize;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-  transition: background-color 0.2s ease;
-  flex-shrink: 0;
-}
-
-.resizable-splitter:hover {
-  background-color: transparent;
-}
-
-.resizable-splitter.dragging {
-  background-color: transparent;
-}
-
-.splitter-handle {
-  width: 40px;
-  height: 4px;
-  background-color: #666;
-  border-radius: 2px;
-  transition: background-color 0.2s ease;
-}
-
-.resizable-splitter:hover .splitter-handle {
-  background-color: #888;
-}
-
-.resizable-splitter.dragging .splitter-handle {
-  background-color: #fff;
+  max-width: 800px;
 }
 
 .timeline-section {
-  background-color: #2a2a2a;
-  border-radius: 4px;
-  padding: 4px;
+  background-color: var(--color-bg-secondary);
+  border-radius: var(--border-radius-medium);
+  padding: var(--spacing-xs);
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  min-height: 20%; /* 最小高度 */
+  min-height: 20%;
 }
 
 .timeline-loading {
@@ -648,21 +689,21 @@ onUnmounted(() => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  color: #ccc;
-  gap: 12px;
+  color: var(--color-text-secondary);
+  gap: var(--spacing-lg);
 }
 
 .timeline-loading .loading-spinner {
   width: 30px;
   height: 30px;
-  border: 3px solid #333;
-  border-top: 3px solid #ff4444;
+  border: 3px solid var(--color-bg-tertiary);
+  border-top: 3px solid var(--color-accent-warning);
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }
 
 .timeline-loading p {
-  font-size: 14px;
+  font-size: var(--font-size-lg);
   margin: 0;
 }
 
@@ -672,61 +713,60 @@ onUnmounted(() => {
 }
 
 .controls-section {
-  /* 可压缩的控制面板 */
   height: 50px;
   width: 100%;
-  background-color: #2a2a2a;
-  border-radius: 6px;
+  background-color: var(--color-bg-secondary);
+  border-radius: var(--border-radius-large);
   display: flex;
   align-items: center;
-  padding: 0 8px; /* 减小内边距以适应压缩 */
+  padding: 0 var(--spacing-md);
   flex-shrink: 0;
-  min-width: 200px; /* 设置最小宽度 */
-  overflow: hidden; /* 防止内容溢出 */
+  min-width: 200px;
+  overflow: hidden;
 }
 
 .time-display {
-  color: #ccc;
-  font-size: 12px;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-base);
   font-family: monospace;
-  flex-shrink: 0; /* 防止时间显示被压缩 */
-  min-width: 80px; /* 确保有足够空间显示时间 */
+  flex-shrink: 0;
+  min-width: 80px;
 }
 
 .center-controls {
-  flex: 1; /* 占据中间剩余空间 */
+  flex: 1;
   display: flex;
-  justify-content: center; /* 中间对齐 */
-  background-color: #2a2a2a;
+  justify-content: center;
+  background-color: var(--color-bg-secondary);
 }
 
 .right-controls {
-  min-width: 80px; /* 与左侧时间显示对称 */
+  min-width: 80px;
   flex-shrink: 0;
   display: flex;
   justify-content: flex-end;
   align-items: center;
-  gap: 4px;
+  gap: var(--spacing-xs);
 }
 
 .aspect-ratio-btn {
   background: none;
-  border: 1px solid #555;
-  color: #ccc;
+  border: 1px solid var(--color-border-primary);
+  color: var(--color-text-secondary);
   cursor: pointer;
-  padding: 4px 8px;
-  border-radius: 4px;
+  padding: var(--spacing-xs) var(--spacing-md);
+  border-radius: var(--border-radius-medium);
   display: flex;
   align-items: center;
-  gap: 4px;
-  font-size: 11px;
-  transition: all 0.2s;
+  gap: var(--spacing-xs);
+  font-size: var(--font-size-sm);
+  transition: all var(--transition-fast);
 }
 
 .aspect-ratio-btn:hover {
-  background-color: #444;
-  border-color: #666;
-  color: white;
+  background-color: var(--color-bg-quaternary);
+  border-color: var(--color-border-secondary);
+  color: var(--color-text-primary);
 }
 
 .aspect-ratio-text {
@@ -955,28 +995,5 @@ onUnmounted(() => {
   background-color: #ff6666;
 }
 
-/* 自定义滚动条样式 */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-
-::-webkit-scrollbar-track {
-  background: #1a1a1a;
-  border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb {
-  background: #555;
-  border-radius: 4px;
-  border: 1px solid #333;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: #666;
-}
-
-::-webkit-scrollbar-corner {
-  background: #1a1a1a;
-}
+/* 滚动条样式已在全局样式中定义 */
 </style>

@@ -11,7 +11,7 @@
       :max="max"
       :placeholder="placeholder"
       :style="inputStyle"
-      class="number-input"
+      :class="['number-input', inputClass]"
     />
     <div v-if="showControls" class="number-controls">
       <button @click="handleIncrement" class="number-btn number-btn-up">▲</button>
@@ -42,7 +42,9 @@ interface Props {
   /** 单位文本 */
   unit?: string
   /** 输入框自定义样式 */
-  inputStyle?: Record<string, any>
+  inputStyle?: Record<string, string | number>
+  /** 输入框额外CSS类 */
+  inputClass?: string
   /** 是否实时更新（input事件），否则只在确认时更新 */
   realtime?: boolean
 }
@@ -61,7 +63,8 @@ const props = withDefaults(defineProps<Props>(), {
   placeholder: '',
   unit: '',
   inputStyle: () => ({}),
-  realtime: false
+  inputClass: '',
+  realtime: false,
 })
 
 const emit = defineEmits<Emits>()
@@ -75,18 +78,21 @@ const displayValue = computed(() => {
   if (isEditing.value) {
     return tempValue.value
   }
-  
+
+  // 确保 modelValue 不是 undefined 或 null
+  const value = props.modelValue ?? 0
+
   if (props.precision !== undefined) {
-    return props.modelValue.toFixed(props.precision)
+    return value.toFixed(props.precision)
   }
-  
-  return props.modelValue.toString()
+
+  return value.toString()
 })
 
 // 格式化数值
 const formatValue = (value: number): number => {
   let formatted = value
-  
+
   // 应用范围限制
   if (props.min !== undefined) {
     formatted = Math.max(props.min, formatted)
@@ -94,12 +100,12 @@ const formatValue = (value: number): number => {
   if (props.max !== undefined) {
     formatted = Math.min(props.max, formatted)
   }
-  
+
   // 应用精度
   if (props.precision !== undefined) {
     formatted = parseFloat(formatted.toFixed(props.precision))
   }
-  
+
   return formatted
 }
 
@@ -108,7 +114,7 @@ const handleInput = (event: Event) => {
   const input = event.target as HTMLInputElement
   tempValue.value = input.value
   isEditing.value = true
-  
+
   if (props.realtime) {
     const value = parseFloat(input.value)
     if (!isNaN(value)) {
@@ -123,10 +129,10 @@ const handleInput = (event: Event) => {
 const handleConfirm = (event: Event) => {
   const input = event.target as HTMLInputElement
   const value = parseFloat(input.value)
-  
+
   isEditing.value = false
   tempValue.value = ''
-  
+
   if (!isNaN(value)) {
     const formatted = formatValue(value)
     emit('update:modelValue', formatted)
@@ -136,47 +142,60 @@ const handleConfirm = (event: Event) => {
 
 // 处理增加
 const handleIncrement = () => {
-  const newValue = formatValue(props.modelValue + props.step)
+  const currentValue = props.modelValue ?? 0
+  const newValue = formatValue(currentValue + props.step)
   emit('update:modelValue', newValue)
   emit('change', newValue)
 }
 
 // 处理减少
 const handleDecrement = () => {
-  const newValue = formatValue(props.modelValue - props.step)
+  const currentValue = props.modelValue ?? 0
+  const newValue = formatValue(currentValue - props.step)
   emit('update:modelValue', newValue)
   emit('change', newValue)
 }
 </script>
 
 <style scoped>
+/* NumberInput 组件完整样式 - 从 common.css 迁移 */
+
+/* 数字输入框容器 */
 .number-input-container {
   display: flex;
-  align-items: stretch;
-  position: relative;
-  border-radius: 3px;
+  align-items: center;
+  background: var(--color-bg-quaternary);
+  border: 1px solid var(--color-border-secondary);
+  border-radius: var(--border-radius-small);
   overflow: hidden;
+  width: 78px;
+  height: 24px;
+  position: relative;
 }
 
-.number-input {
-  background: #444;
-  border: 1px solid #666;
-  color: #fff;
-  font-size: 12px;
-  padding: 4px 6px;
+.number-input-container.with-controls {
+  padding-right: 0;
+}
+
+/* 数字输入框 */
+.number-input-container .number-input {
+  background: transparent;
+  border: none;
+  color: var(--color-text-primary);
+  font-size: var(--font-size-sm);
+  padding: 2px var(--spacing-xs);
+  text-align: center;
   flex: 1;
   min-width: 0;
-  border-radius: 3px;
+}
+
+.number-input-container .number-input:focus {
+  outline: none;
 }
 
 .with-controls .number-input {
-  border-radius: 3px 0 0 3px;
+  border-radius: var(--border-radius-small) 0 0 var(--border-radius-small);
   border-right: none;
-}
-
-.number-input:focus {
-  outline: none;
-  border-color: #4caf50;
 }
 
 /* 隐藏默认的数字输入框箭头 */
@@ -188,21 +207,23 @@ const handleDecrement = () => {
 
 .number-input[type='number'] {
   -moz-appearance: textfield;
+  appearance: textfield;
 }
 
-/* 控制按钮 */
-.number-controls {
+/* 控制按钮容器 */
+.number-input-container .number-controls {
   display: flex;
   flex-direction: column;
   width: 18px;
   flex-shrink: 0;
 }
 
-.number-btn {
-  background: #555;
-  border: 1px solid #666;
+/* 控制按钮 */
+.number-input-container .number-btn {
+  background: var(--color-bg-active);
+  border: 1px solid var(--color-border-secondary);
   border-left: none;
-  color: #fff;
+  color: var(--color-text-primary);
   cursor: pointer;
   font-size: 8px;
   line-height: 1;
@@ -212,33 +233,34 @@ const handleDecrement = () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background-color 0.2s;
+  transition: background-color var(--transition-fast);
   flex: 1;
 }
 
-.number-btn:hover {
-  background: #666;
+.number-input-container .number-btn:hover {
+  background: var(--color-border-secondary);
 }
 
-.number-btn:active {
-  background: #777;
+.number-input-container .number-btn:active {
+  background: var(--color-border-hover);
 }
 
 .number-btn-up {
-  border-radius: 0 3px 0 0;
-  border-bottom: 0.5px solid #444;
+  border-radius: 0 var(--border-radius-small) 0 0;
+  border-bottom: 0.5px solid var(--color-bg-quaternary);
 }
 
 .number-btn-down {
-  border-radius: 0 0 3px 0;
-  border-top: 0.5px solid #444;
+  border-radius: 0 0 var(--border-radius-small) 0;
+  border-top: 0.5px solid var(--color-bg-quaternary);
 }
 
 /* 单位文本 */
-.number-unit {
-  font-size: 12px;
-  color: #999;
-  margin-left: 6px;
+.number-input-container .number-unit {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-hint);
+  margin-left: var(--spacing-xs);
+  flex-shrink: 0;
   white-space: nowrap;
   align-self: center;
 }

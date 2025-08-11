@@ -1,6 +1,6 @@
 /**
  * WebAV与Vue项目的旋转角度转换工具
- * 
+ *
  * WebAV使用弧度制 (radians)，范围：-π 到 π
  * Vue项目界面使用角度制 (degrees)，范围：-180° 到 180°
  */
@@ -96,7 +96,7 @@ export function debugRotationTransform(degrees?: number, radians?: number) {
       标准化角度: normalizedDegrees,
       转换弧度: convertedRadians,
       回转角度: backToDegrees,
-      精度损失: Math.abs(normalizedDegrees - backToDegrees)
+      精度损失: Math.abs(normalizedDegrees - backToDegrees),
     })
   }
 
@@ -107,7 +107,7 @@ export function debugRotationTransform(degrees?: number, radians?: number) {
       输入弧度: radians,
       转换角度: convertedDegrees,
       回转弧度: backToRadians,
-      精度损失: Math.abs(radians - backToRadians)
+      精度损失: Math.abs(radians - backToRadians),
     })
   }
 }
@@ -127,7 +127,7 @@ export function testAngleNormalization() {
     { input: -270, expected: 90 },
     { input: -360, expected: 0 },
     { input: 720, expected: 0 },
-    { input: -450, expected: -90 }
+    { input: -450, expected: -90 },
   ]
 
   console.log('🧪 角度标准化测试:')

@@ -5,7 +5,53 @@
     </div>
 
     <div class="panel-content">
-      <div v-if="!selectedTimelineItem" class="empty-state">
+      <!-- 多选状态 -->
+      <div v-if="multiSelectInfo" class="multi-select-state">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M9,20.42L2.79,14.21L5.62,11.38L9,14.77L18.88,4.88L21.71,7.71L9,20.42Z" />
+        </svg>
+        <p>已选择 {{ multiSelectInfo.count }} 个片段</p>
+        <p class="hint">批量操作功能开发中...</p>
+
+        <!-- 选中项目列表 -->
+        <div class="selected-items-list">
+          <div v-for="item in multiSelectInfo.items" :key="item?.id" class="selected-item">
+            <span class="item-name">
+              {{ item ? getItemDisplayName(item) : '未知素材' }}
+            </span>
+            <span class="item-type">{{ getItemTypeLabel(item?.mediaType) }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 单选状态 -->
+      <div v-else-if="selectedTimelineItem" class="properties-content">
+        <!-- 根据选中项目类型显示不同的属性组件 -->
+        <TimelineVideoClipProperties
+          v-if="
+            selectedTimelineItem.mediaType === 'video' || selectedTimelineItem.mediaType === 'image'
+          "
+          :selected-timeline-item="selectedTimelineItem as LocalTimelineItem<'video' | 'image'>"
+          :current-frame="currentFrame"
+        />
+
+        <!-- 文本项目属性组件 -->
+        <TimelineTextClipProperties
+          v-else-if="selectedTimelineItem.mediaType === 'text'"
+          :selected-timeline-item="selectedTimelineItem as LocalTimelineItem<'text'>"
+          :current-frame="currentFrame"
+        />
+
+        <!-- 音频项目属性组件 -->
+        <TimelineAudioClipProperties
+          v-else-if="selectedTimelineItem.mediaType === 'audio'"
+          :selected-timeline-item="selectedTimelineItem as LocalTimelineItem<'audio'>"
+          :current-frame="currentFrame"
+        />
+      </div>
+
+      <!-- 无选择状态 -->
+      <div v-else class="empty-state">
         <svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor">
           <path
             d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4M11,16.5L18,9.5L16.5,8L11,13.5L7.5,10L6,11.5L11,16.5Z"
@@ -14,930 +60,107 @@
         <p>选择片段查看属性</p>
         <p class="hint">在时间轴上点击视频片段</p>
       </div>
-
-      <div v-else class="properties-content">
-        <!-- 基本信息 -->
-        <div class="property-section">
-          <h4>基本信息</h4>
-          <div class="property-item">
-            <label>名称</label>
-            <input
-              v-model="clipName"
-              @blur="updateClipName"
-              @keyup.enter="updateClipName"
-              class="property-input"
-            />
-          </div>
-          <div class="property-item">
-            <label>时长</label>
-            <span class="property-value">{{ formatDuration(timelineDuration) }}</span>
-          </div>
-          <div class="property-item">
-            <label>位置</label>
-            <span class="property-value">{{ formatDuration((selectedTimelineItem?.timeRange.timelineStartTime || 0) / 1000000) }}</span>
-          </div>
-
-
-        </div>
-
-        <!-- 播放设置 -->
-        <div class="property-section">
-          <h4>播放设置</h4>
-
-          <!-- 精确时长控制 -->
-          <div class="property-item">
-            <label>目标时长</label>
-            <div class="duration-controls">
-              <NumberInput
-                :model-value="targetDuration"
-                @change="updateTargetDuration"
-                :min="0.1"
-                :step="0.1"
-                :precision="1"
-                :show-controls="false"
-                placeholder="秒"
-                :input-style="propertyInputStyle"
-              />
-              <span class="duration-unit">秒</span>
-            </div>
-          </div>
-
-          <!-- 倍速控制 -->
-          <div class="property-item">
-            <label>倍速</label>
-            <div class="speed-controls">
-              <!-- 分段倍速滑块 -->
-              <div class="segmented-speed-container">
-                <input
-                  :value="normalizedSpeed"
-                  @input="(e) => updateNormalizedSpeed((e.target as HTMLInputElement).valueAsNumber)"
-                  type="range"
-                  min="0"
-                  max="100"
-                  step="1"
-                  class="segmented-speed-slider"
-                />
-                <!-- 分段竖线 -->
-                <div class="speed-dividers">
-                  <div class="speed-divider" style="left: 20%"></div>
-                  <div class="speed-divider" style="left: 40%"></div>
-                  <div class="speed-divider" style="left: 60%"></div>
-                  <div class="speed-divider" style="left: 80%"></div>
-                </div>
-                <!-- 分段标签 -->
-                <div class="speed-labels">
-                  <span class="speed-label" style="left: 10%">0.1-1x</span>
-                  <span class="speed-label" style="left: 30%">1-2x</span>
-                  <span class="speed-label" style="left: 50%">2-5x</span>
-                  <span class="speed-label" style="left: 70%">5-10x</span>
-                  <span class="speed-label" style="left: 90%">10-100x</span>
-                </div>
-              </div>
-              <input
-                :value="speedInputValue"
-                @input="(e) => updateSpeedFromInput((e.target as HTMLInputElement).valueAsNumber)"
-                @blur="(e) => updateSpeedFromInput((e.target as HTMLInputElement).valueAsNumber)"
-                @keyup.enter="(e) => updateSpeedFromInput((e.target as HTMLInputElement).valueAsNumber)"
-                type="number"
-                step="0.1"
-                min="0.1"
-                max="100"
-                class="speed-input"
-              />
-            </div>
-          </div>
-        </div>
-
-        <!-- 位置大小 -->
-        <div class="property-section">
-          <h4>位置大小</h4>
-          <!-- 位置：XY在同一行 -->
-          <div class="property-item">
-            <label>位置</label>
-            <div class="position-controls">
-              <div class="position-input-group">
-                <span class="position-label">X</span>
-                <NumberInput
-                  :model-value="transformX"
-                  @change="(value) => updateTransform({ position: { x: value, y: transformY } })"
-                  :min="-videoStore.videoResolution.width"
-                  :max="videoStore.videoResolution.width"
-                  :step="1"
-                  :precision="0"
-                  placeholder="中心为0"
-                  :input-style="positionInputStyle"
-                />
-              </div>
-              <div class="position-input-group">
-                <span class="position-label">Y</span>
-                <NumberInput
-                  :model-value="transformY"
-                  @change="(value) => updateTransform({ position: { x: transformX, y: value } })"
-                  :min="-videoStore.videoResolution.height"
-                  :max="videoStore.videoResolution.height"
-                  :step="1"
-                  :precision="0"
-                  placeholder="中心为0"
-                  :input-style="positionInputStyle"
-                />
-              </div>
-            </div>
-          </div>
-
-          <!-- 等比缩放选项 -->
-          <div class="property-item">
-            <label>等比缩放</label>
-            <input
-              v-model="proportionalScale"
-              @change="toggleProportionalScale"
-              type="checkbox"
-              class="checkbox-input"
-            />
-          </div>
-
-          <!-- 等比缩放时的统一缩放控制 -->
-          <div v-if="proportionalScale" class="property-item">
-            <label>缩放</label>
-            <div class="scale-controls">
-              <input
-                :value="uniformScale"
-                @input="(e) => updateUniformScale((e.target as HTMLInputElement).valueAsNumber)"
-                type="range"
-                min="0.01"
-                max="5"
-                step="0.01"
-                class="scale-slider"
-              />
-              <NumberInput
-                :model-value="uniformScale"
-                @change="updateUniformScale"
-                :min="0.01"
-                :max="5"
-                :step="0.01"
-                :precision="2"
-                :input-style="scaleInputStyle"
-              />
-            </div>
-          </div>
-
-          <!-- 非等比缩放时的独立XY缩放控制 -->
-          <template v-else>
-            <div class="property-item">
-              <label>X缩放</label>
-              <div class="scale-controls">
-                <input
-                  :value="scaleX"
-                  @input="(e) => setScaleX((e.target as HTMLInputElement).valueAsNumber)"
-                  type="range"
-                  min="0.01"
-                  max="5"
-                  step="0.01"
-                  class="scale-slider"
-                />
-                <NumberInput
-                  :model-value="scaleX"
-                  @change="setScaleX"
-                  :min="0.01"
-                  :max="5"
-                  :step="0.01"
-                  :precision="2"
-                  :input-style="scaleInputStyle"
-                />
-              </div>
-            </div>
-            <div class="property-item">
-              <label>Y缩放</label>
-              <div class="scale-controls">
-                <input
-                  :value="scaleY"
-                  @input="(e) => setScaleY((e.target as HTMLInputElement).valueAsNumber)"
-                  type="range"
-                  min="0.01"
-                  max="5"
-                  step="0.01"
-                  class="scale-slider"
-                />
-                <NumberInput
-                  :model-value="scaleY"
-                  @change="setScaleY"
-                  :min="0.01"
-                  :max="5"
-                  :step="0.01"
-                  :precision="2"
-                  :input-style="scaleInputStyle"
-                />
-              </div>
-            </div>
-          </template>
-
-          <!-- 分辨率显示 -->
-          <div class="property-item">
-            <label>分辨率</label>
-            <div class="resolution-display">
-              {{ currentResolution.width }} × {{ currentResolution.height }}
-            </div>
-          </div>
-        </div>
-
-        <!-- 布局控制 -->
-        <div class="property-section">
-          <h4>布局控制</h4>
-
-          <!-- 水平对齐 -->
-          <div class="property-item">
-            <label>水平对齐</label>
-            <div class="alignment-controls">
-              <button
-                @click="alignHorizontal('left')"
-                class="align-btn"
-                title="左对齐"
-              >
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                  <rect x="2" y="4" width="8" height="2"/>
-                  <rect x="2" y="7" width="6" height="2"/>
-                  <rect x="2" y="10" width="10" height="2"/>
-                  <line x1="1" y1="2" x2="1" y2="14" stroke="currentColor" stroke-width="1"/>
-                </svg>
-              </button>
-              <button
-                @click="alignHorizontal('center')"
-                class="align-btn"
-                title="水平居中"
-              >
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                  <rect x="4" y="4" width="8" height="2"/>
-                  <rect x="5" y="7" width="6" height="2"/>
-                  <rect x="3" y="10" width="10" height="2"/>
-                  <line x1="8" y1="2" x2="8" y2="14" stroke="currentColor" stroke-width="1"/>
-                </svg>
-              </button>
-              <button
-                @click="alignHorizontal('right')"
-                class="align-btn"
-                title="右对齐"
-              >
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                  <rect x="6" y="4" width="8" height="2"/>
-                  <rect x="8" y="7" width="6" height="2"/>
-                  <rect x="4" y="10" width="10" height="2"/>
-                  <line x1="15" y1="2" x2="15" y2="14" stroke="currentColor" stroke-width="1"/>
-                </svg>
-              </button>
-            </div>
-          </div>
-
-          <!-- 垂直对齐 -->
-          <div class="property-item">
-            <label>垂直对齐</label>
-            <div class="alignment-controls">
-              <button
-                @click="alignVertical('top')"
-                class="align-btn"
-                title="顶对齐"
-              >
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                  <rect x="4" y="2" width="2" height="8"/>
-                  <rect x="7" y="2" width="2" height="6"/>
-                  <rect x="10" y="2" width="2" height="10"/>
-                  <line x1="2" y1="1" x2="14" y2="1" stroke="currentColor" stroke-width="1"/>
-                </svg>
-              </button>
-              <button
-                @click="alignVertical('middle')"
-                class="align-btn"
-                title="垂直居中"
-              >
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                  <rect x="4" y="4" width="2" height="8"/>
-                  <rect x="7" y="5" width="2" height="6"/>
-                  <rect x="10" y="3" width="2" height="10"/>
-                  <line x1="2" y1="8" x2="14" y2="8" stroke="currentColor" stroke-width="1"/>
-                </svg>
-              </button>
-              <button
-                @click="alignVertical('bottom')"
-                class="align-btn"
-                title="底对齐"
-              >
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                  <rect x="4" y="6" width="2" height="8"/>
-                  <rect x="7" y="8" width="2" height="6"/>
-                  <rect x="10" y="4" width="2" height="10"/>
-                  <line x1="2" y1="15" x2="14" y2="15" stroke="currentColor" stroke-width="1"/>
-                </svg>
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <!-- 变换属性 -->
-        <div class="property-section">
-          <h4>变换</h4>
-
-          <div class="property-item">
-            <label>旋转</label>
-            <div class="rotation-controls">
-              <input
-                :value="rotation"
-                @input="(e) => setRotation((e.target as HTMLInputElement).valueAsNumber)"
-                type="range"
-                min="-180"
-                max="180"
-                step="0.1"
-                class="rotation-slider"
-              />
-              <NumberInput
-                :model-value="rotation"
-                @change="setRotation"
-                :step="1"
-                :precision="1"
-                :input-style="scaleInputStyle"
-              />
-            </div>
-          </div>
-          <div class="property-item">
-            <label>透明度</label>
-            <div class="opacity-controls">
-              <input
-                :value="opacity"
-                @input="(e) => setOpacity((e.target as HTMLInputElement).valueAsNumber)"
-                type="range"
-                min="0"
-                max="1"
-                step="0.01"
-                class="opacity-slider"
-              />
-              <NumberInput
-                :model-value="opacity"
-                @change="setOpacity"
-                :min="0"
-                :max="1"
-                :step="0.01"
-                :precision="2"
-                :input-style="scaleInputStyle"
-              />
-            </div>
-          </div>
-          <div class="property-item">
-            <label>层级</label>
-            <NumberInput
-              :model-value="zIndex"
-              @change="(value) => updateTransform({ zIndex: value })"
-              :min="0"
-              :step="1"
-              :precision="0"
-              :input-style="scaleInputStyle"
-            />
-          </div>
-        </div>
-      </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useVideoStore } from '../stores/videostore'
-
-import { uiDegreesToWebAVRadians, webAVRadiansToUIDegrees } from '../utils/rotationTransform'
-import NumberInput from './NumberInput.vue'
+import { useVideoStore } from '../stores/videoStore'
+import TimelineVideoClipProperties from './TimelineVideoClipProperties.vue'
+import TimelineTextClipProperties from './TimelineTextClipProperties.vue'
+import TimelineAudioClipProperties from './TimelineAudioClipProperties.vue'
+import type { LocalTimelineItem } from '../types'
 
 const videoStore = useVideoStore()
 
 // 选中的时间轴项目
 const selectedTimelineItem = computed(() => {
+  // 多选模式时返回null，显示占位内容
+  if (videoStore.isMultiSelectMode) return null
+
+  // 单选模式时返回选中项
   if (!videoStore.selectedTimelineItemId) return null
   return videoStore.getTimelineItem(videoStore.selectedTimelineItemId) || null
 })
 
-// 选中项目对应的素材
-const selectedMediaItem = computed(() => {
-  if (!selectedTimelineItem.value) return null
-  return videoStore.getMediaItem(selectedTimelineItem.value.mediaItemId) || null
-})
+// 当前播放帧数
+const currentFrame = computed(() => videoStore.currentFrame)
 
-// 时间轴时长
-const timelineDuration = computed(() => {
-  if (!selectedTimelineItem.value) return 0
-  // 直接从timelineItem.timeRange获取，与videostore的同步机制保持一致
-  const timeRange = selectedTimelineItem.value.timeRange
-  return (timeRange.timelineEndTime - timeRange.timelineStartTime) / 1000000 // 转换为秒
-})
+// 多选状态信息
+const multiSelectInfo = computed(() => {
+  if (!videoStore.isMultiSelectMode) return null
 
-// 目标时长 - 与timelineDuration相同，直接使用timelineDuration
-const targetDuration = computed(() => timelineDuration.value)
-
-// 倍速分段配置
-const speedSegments = [
-  { min: 0.1, max: 1, normalizedStart: 0, normalizedEnd: 20 }, // 0-20%: 0.1-1x
-  { min: 1, max: 2, normalizedStart: 20, normalizedEnd: 40 }, // 20-40%: 1-2x
-  { min: 2, max: 5, normalizedStart: 40, normalizedEnd: 60 }, // 40-60%: 2-5x
-  { min: 5, max: 10, normalizedStart: 60, normalizedEnd: 80 }, // 60-80%: 5-10x
-  { min: 10, max: 100, normalizedStart: 80, normalizedEnd: 100 }, // 80-100%: 10-100x
-]
-
-// 变换属性 - 基于TimelineItem的响应式计算属性
-const transformX = computed(() => selectedTimelineItem.value?.position.x || 0)
-const transformY = computed(() => selectedTimelineItem.value?.position.y || 0)
-const scaleX = computed(() => {
-  if (!selectedTimelineItem.value || !selectedMediaItem.value) return 1
-  const originalResolution = videoStore.getVideoOriginalResolution(selectedMediaItem.value.id)
-  return selectedTimelineItem.value.size.width / originalResolution.width
-})
-const scaleY = computed(() => {
-  if (!selectedTimelineItem.value || !selectedMediaItem.value) return 1
-  const originalResolution = videoStore.getVideoOriginalResolution(selectedMediaItem.value.id)
-  return selectedTimelineItem.value.size.height / originalResolution.height
-})
-const rotation = computed(() => {
-  const radians = selectedTimelineItem.value?.rotation || 0
-  return webAVRadiansToUIDegrees(radians)
-})
-const opacity = computed(() => selectedTimelineItem.value?.opacity || 1)
-const zIndex = computed(() => selectedTimelineItem.value?.zIndex || 0)
-
-// 等比缩放相关
-const proportionalScale = computed({
-  get: () => videoStore.proportionalScale,
-  set: (value) => {
-    videoStore.proportionalScale = value
-  },
-})
-
-// 分辨率相关 - 显示当前选中视频缩放后的分辨率
-const currentResolution = computed(() => {
-  if (!selectedTimelineItem.value) {
-    return { width: 0, height: 0 }
-  }
-  // 直接使用TimelineItem中的size属性，这是缩放后的实际尺寸
   return {
-    width: Math.round(selectedTimelineItem.value.size.width),
-    height: Math.round(selectedTimelineItem.value.size.height)
+    count: videoStore.selectedTimelineItemIds.size,
+    items: Array.from(videoStore.selectedTimelineItemIds)
+      .map((id) => videoStore.getTimelineItem(id))
+      .filter(Boolean),
   }
 })
 
-// 等比缩放相关
-const uniformScale = computed(() => scaleX.value) // 使用X缩放值作为统一缩放值
+// 获取项目显示名称
+const getItemDisplayName = (item: any) => {
+  if (!item) return '未知素材'
 
-// 其他响应式属性
-const clipName = computed({
-  get: () => selectedMediaItem.value?.name || '',
-  set: (value) => {
-    if (selectedMediaItem.value && value.trim()) {
-      videoStore.updateMediaItemName(selectedMediaItem.value.id, value.trim())
-    }
-  }
-})
-
-const playbackRate = computed(() => {
-  if (!selectedTimelineItem.value) return 1
-
-  // 直接从TimeRange中获取播放速度属性
-  return selectedTimelineItem.value.timeRange.playbackRate
-})
-
-const normalizedSpeed = computed(() => {
-  return speedToNormalized(playbackRate.value)
-})
-
-const speedInputValue = computed(() => playbackRate.value)
-
-// NumberInput 样式定义
-const propertyInputStyle = {
-  maxWidth: '80px',
-  textAlign: 'right' as const
-}
-
-const positionInputStyle = {
-  maxWidth: '60px',
-  textAlign: 'center' as const,
-  flex: '1',
-  borderRadius: '0',
-  borderRight: 'none'
-}
-
-const scaleInputStyle = {
-  background: '#444',
-  border: '1px solid #666',
-  borderRadius: '0',
-  borderRight: 'none',
-  color: '#fff',
-  fontSize: '11px',
-  padding: '2px 4px',
-  width: '78px',
-  textAlign: 'center' as const,
-  flex: '0 0 auto'
-}
-
-// 更新片段名称
-const updateClipName = () => {
-  if (selectedMediaItem.value && clipName.value.trim()) {
-    videoStore.updateMediaItemName(selectedMediaItem.value.id, clipName.value.trim())
+  if (item.mediaType === 'text') {
+    // 文本项目显示文本内容
+    const text = item.config?.text || '空文本'
+    return text.length > 15 ? text.substring(0, 15) + '...' : text
+  } else {
+    // 其他类型显示素材名称
+    return videoStore.getLocalMediaItem(item.mediaItemId)?.name || '未知素材'
   }
 }
 
-// 更新播放速度
-const updatePlaybackRate = (newRate?: number) => {
-  if (selectedTimelineItem.value) {
-    const rate = newRate || playbackRate.value
-    videoStore.updateTimelineItemPlaybackRate(selectedTimelineItem.value.id, rate)
-    // targetDuration 现在是 computed 属性，会自动更新
+// 获取项目类型标签
+const getItemTypeLabel = (mediaType: string | undefined) => {
+  switch (mediaType) {
+    case 'video':
+      return '视频'
+    case 'image':
+      return '图片'
+    case 'audio':
+      return '音频'
+    case 'text':
+      return '文本'
+    default:
+      return '未知'
   }
 }
-
-// 更新目标时长
-const updateTargetDuration = (newTargetDuration: number) => {
-  if (!isNaN(newTargetDuration) && newTargetDuration > 0 && selectedTimelineItem.value && selectedMediaItem.value) {
-    const sprite = selectedTimelineItem.value.sprite
-    const timeRange = selectedTimelineItem.value.timeRange
-
-    // 计算新的播放速度：原始时长 / 目标时长
-    const newPlaybackRate = selectedMediaItem.value.duration / newTargetDuration
-    // 确保播放速度在合理范围内（0.1-100x）
-    const clampedRate = Math.max(0.1, Math.min(100, newPlaybackRate))
-
-    // 更新CustomVisibleSprite的时间范围
-    const newTimelineEndTime = timeRange.timelineStartTime + (newTargetDuration * 1000000)
-    sprite.setTimeRange({
-      clipStartTime: timeRange.clipStartTime,
-      clipEndTime: timeRange.clipEndTime,
-      timelineStartTime: timeRange.timelineStartTime,
-      timelineEndTime: newTimelineEndTime
-    })
-
-    // 从sprite获取更新后的完整timeRange（包含自动计算的effectiveDuration）
-    selectedTimelineItem.value.timeRange = sprite.getTimeRange()
-
-    console.log('🎯 目标时长更新:', {
-      inputValue: newTargetDuration,
-      newPlaybackRate: clampedRate,
-      updatedTimeRange: selectedTimelineItem.value.timeRange,
-      actualTargetDuration: targetDuration.value // computed 会自动计算新值
-    })
-  }
-}
-
-// 更新归一化速度
-const updateNormalizedSpeed = (newNormalizedSpeed: number) => {
-  const actualSpeed = normalizedToSpeed(newNormalizedSpeed)
-  updatePlaybackRate(actualSpeed)
-}
-
-// 从输入框更新倍速
-const updateSpeedFromInput = (newSpeed: number) => {
-  if (newSpeed && newSpeed > 0) {
-    // 确保倍速在合理范围内
-    const clampedSpeed = Math.max(0.1, Math.min(100, newSpeed))
-    updatePlaybackRate(clampedSpeed)
-  }
-}
-
-// 将归一化值(0-100)转换为实际播放速度
-const normalizedToSpeed = (normalized: number) => {
-  // 找到对应的段
-  for (const segment of speedSegments) {
-    if (normalized >= segment.normalizedStart && normalized <= segment.normalizedEnd) {
-      // 在段内进行线性插值
-      const segmentProgress =
-        (normalized - segment.normalizedStart) / (segment.normalizedEnd - segment.normalizedStart)
-      return segment.min + segmentProgress * (segment.max - segment.min)
-    }
-  }
-  return 1 // 默认值
-}
-
-// 将实际播放速度转换为归一化值(0-100)
-const speedToNormalized = (speed: number) => {
-  // 找到对应的段
-  for (const segment of speedSegments) {
-    if (speed >= segment.min && speed <= segment.max) {
-      // 在段内进行线性插值
-      const segmentProgress = (speed - segment.min) / (segment.max - segment.min)
-      return (
-        segment.normalizedStart +
-        segmentProgress * (segment.normalizedEnd - segment.normalizedStart)
-      )
-    }
-  }
-  return 20 // 默认值对应1x
-}
-
-// 更新变换属性 - 使用新的双向同步机制
-const updateTransform = (transform?: {
-  position?: { x: number; y: number }
-  size?: { width: number; height: number }
-  rotation?: number
-  opacity?: number
-  zIndex?: number
-}) => {
-  if (!selectedTimelineItem.value) return
-
-  try {
-    // 如果没有提供transform参数，使用当前的响应式值
-    const finalTransform = transform || {
-      position: { x: transformX.value, y: transformY.value },
-      size: {
-        width: selectedTimelineItem.value.size.width,
-        height: selectedTimelineItem.value.size.height
-      },
-      rotation: rotation.value,
-      opacity: opacity.value,
-      zIndex: zIndex.value
-    }
-
-    // 使用videoStore的updateTimelineItemTransform方法
-    // 这会触发propsChange事件，自动同步到TimelineItem，然后更新属性面板显示
-    videoStore.updateTimelineItemTransform(selectedTimelineItem.value.id, finalTransform)
-  } catch (error) {
-    console.error('更新变换属性失败:', error)
-  }
-}
-
-// 切换等比缩放
-const toggleProportionalScale = () => {
-  if (proportionalScale.value && selectedTimelineItem.value && selectedMediaItem.value) {
-    // 开启等比缩放时，使用当前X缩放值作为统一缩放值，同时更新Y缩放
-    const originalResolution = videoStore.getVideoOriginalResolution(selectedMediaItem.value.id)
-    const newSize = {
-      width: originalResolution.width * scaleX.value,
-      height: originalResolution.height * scaleX.value // 使用X缩放值保持等比
-    }
-    updateTransform({ size: newSize })
-  }
-}
-
-// 更新统一缩放
-const updateUniformScale = (newScale: number) => {
-  if (proportionalScale.value && selectedTimelineItem.value && selectedMediaItem.value) {
-    const originalResolution = videoStore.getVideoOriginalResolution(selectedMediaItem.value.id)
-    const newSize = {
-      width: originalResolution.width * newScale,
-      height: originalResolution.height * newScale
-    }
-    updateTransform({ size: newSize })
-  }
-}
-
-// 设置X缩放绝对值的方法
-const setScaleX = (value: number) => {
-  if (!selectedTimelineItem.value || !selectedMediaItem.value) return
-  const originalResolution = videoStore.getVideoOriginalResolution(selectedMediaItem.value.id)
-  const newScaleX = Math.max(0.01, Math.min(5, value))
-  const newSize = {
-    width: originalResolution.width * newScaleX,
-    height: selectedTimelineItem.value.size.height // 保持Y尺寸不变
-  }
-  updateTransform({ size: newSize })
-}
-
-// 设置Y缩放绝对值的方法
-const setScaleY = (value: number) => {
-  if (!selectedTimelineItem.value || !selectedMediaItem.value) return
-  const originalResolution = videoStore.getVideoOriginalResolution(selectedMediaItem.value.id)
-  const newScaleY = Math.max(0.01, Math.min(5, value))
-  const newSize = {
-    width: selectedTimelineItem.value.size.width, // 保持X尺寸不变
-    height: originalResolution.height * newScaleY
-  }
-  updateTransform({ size: newSize })
-}
-
-// 设置旋转绝对值的方法（输入角度，转换为弧度）
-const setRotation = (value: number) => {
-  const newRotationRadians = uiDegreesToWebAVRadians(value)
-  updateTransform({ rotation: newRotationRadians })
-}
-
-// 设置透明度绝对值的方法
-const setOpacity = (value: number) => {
-  const newOpacity = Math.max(0, Math.min(1, value))
-  updateTransform({ opacity: newOpacity })
-}
-
-// 格式化时长
-const formatDuration = (seconds: number): string => {
-  const mins = Math.floor(seconds / 60)
-  const secs = Math.floor(seconds % 60)
-  const ms = Math.floor((seconds % 1) * 1000)
-  return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}.${ms.toString().padStart(3, '0')}`
-}
-
-// 格式化分辨率
-const formatResolution = (clip: VideoClip): string => {
-  if (clip.originalWidth && clip.originalHeight) {
-    return `${clip.originalWidth} × ${clip.originalHeight}`
-  }
-  return '未知'
-}
-
-
-
-// 实现对齐功能（基于项目坐标系：中心为原点）
-const alignHorizontal = (alignment: 'left' | 'center' | 'right') => {
-  if (!selectedTimelineItem.value) return
-
-  const sprite = selectedTimelineItem.value.sprite
-  const canvasWidth = videoStore.videoResolution.width
-  const spriteWidth = sprite.rect.w || canvasWidth
-
-  try {
-    let newProjectX = 0
-    switch (alignment) {
-      case 'left':
-        // 左对齐：sprite左边缘贴画布左边缘
-        newProjectX = -canvasWidth / 2 + spriteWidth / 2
-        break
-      case 'center':
-        // 居中：sprite中心对齐画布中心
-        newProjectX = 0
-        break
-      case 'right':
-        // 右对齐：sprite右边缘贴画布右边缘
-        newProjectX = canvasWidth / 2 - spriteWidth / 2
-        break
-    }
-
-    const newPosition = {
-      x: Math.round(newProjectX),
-      y: transformY.value
-    }
-    updateTransform({ position: newPosition })
-
-    console.log('✅ 水平对齐完成:', alignment, '项目坐标X:', newPosition.x)
-  } catch (error) {
-    console.error('水平对齐失败:', error)
-  }
-}
-
-const alignVertical = (alignment: 'top' | 'middle' | 'bottom') => {
-  if (!selectedTimelineItem.value) return
-
-  const sprite = selectedTimelineItem.value.sprite
-  const canvasHeight = videoStore.videoResolution.height
-  const spriteHeight = sprite.rect.h || canvasHeight
-
-  try {
-    let newProjectY = 0
-    switch (alignment) {
-      case 'top':
-        // 顶对齐：sprite上边缘贴画布上边缘
-        newProjectY = -canvasHeight / 2 + spriteHeight / 2
-        break
-      case 'middle':
-        // 居中：sprite中心对齐画布中心
-        newProjectY = 0
-        break
-      case 'bottom':
-        // 底对齐：sprite下边缘贴画布下边缘
-        newProjectY = canvasHeight / 2 - spriteHeight / 2
-        break
-    }
-
-    const newPosition = {
-      x: transformX.value,
-      y: Math.round(newProjectY)
-    }
-    updateTransform({ position: newPosition })
-
-    console.log('✅ 垂直对齐完成:', alignment, '项目坐标Y:', newPosition.y)
-  } catch (error) {
-    console.error('垂直对齐失败:', error)
-  }
-}
-
-
 </script>
 
 <style scoped>
 .properties-panel {
   width: 100%;
   height: 100%;
-  background-color: #2a2a2a;
-  border-radius: 4px;
+  background-color: var(--color-bg-secondary);
+  border-radius: var(--border-radius-medium);
   display: flex;
   flex-direction: column;
   overflow: hidden;
 }
 
-.panel-header {
-  padding: 8px 12px;
-  background-color: #333;
-  border-bottom: 1px solid #555;
-  flex-shrink: 0;
-}
-
-.panel-header h3 {
-  margin: 0;
-  font-size: 14px;
-  color: #fff;
-}
-
-.panel-content {
-  flex: 1;
-  overflow-y: auto;
-}
-
-.empty-state {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  color: #888;
-  text-align: center;
-  padding: 20px;
-}
-
-.empty-state svg {
-  margin-bottom: 16px;
-  opacity: 0.6;
-}
-
-.empty-state p {
-  margin: 4px 0;
-}
-
-.hint {
-  font-size: 12px;
-  opacity: 0.7;
-}
+/* 使用通用的 panel-header, panel-content, empty-state, hint 样式 */
 
 .properties-content {
-  padding: 8px 12px;
+  padding: var(--spacing-md) var(--spacing-lg);
 }
 
-.property-section {
-  margin-bottom: 12px;
-}
-
-.property-section h4 {
-  margin: 0 0 8px 0;
-  font-size: 12px;
-  color: #ccc;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  border-bottom: 1px solid #444;
-  padding-bottom: 3px;
-}
-
-.property-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 6px;
-  gap: 6px;
-}
-
-.property-item label {
-  font-size: 12px;
-  color: #aaa;
-  flex-shrink: 0;
-  min-width: 60px;
-}
-
-.property-value {
-  font-size: 12px;
-  color: #fff;
-  text-align: right;
-  word-break: break-all;
-  flex: 1;
-}
-
-.property-input {
-  background: #444;
-  border: 1px solid #666;
-  border-radius: 3px;
-  color: #fff;
-  font-size: 12px;
-  padding: 4px 6px;
-  flex: 1;
-  min-width: 0;
-}
-
-.property-input:focus {
-  outline: none;
-  border-color: #4caf50;
-}
+/* 属性面板特定样式 - 通用属性样式已迁移到 styles/components/panels.css 和 styles/components/inputs.css */
 
 /* 时长控制样式 */
 .duration-controls {
   display: flex;
   align-items: center;
-  gap: 8px;
   flex: 1;
-}
-
-.duration-unit {
-  font-size: 12px;
-  color: #999;
-  min-width: 20px;
 }
 
 /* 倍速控制样式 */
 .speed-controls {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--spacing-md);
   flex: 1;
 }
 
@@ -953,28 +176,29 @@ const alignVertical = (alignment: 'top' | 'middle' | 'bottom') => {
 .segmented-speed-slider {
   width: 100%;
   height: 4px;
-  background: #444;
+  background: var(--color-bg-quaternary);
   border-radius: 2px;
   outline: none;
   cursor: pointer;
   -webkit-appearance: none;
+  appearance: none;
   position: relative;
   z-index: 2;
 }
 
 .segmented-speed-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
-  width: 16px;
-  height: 16px;
-  background: #ffffff;
+  width: 12px;
+  height: 12px;
+  background: var(--color-accent-secondary);
   border-radius: 50%;
   cursor: pointer;
 }
 
 .segmented-speed-slider::-moz-range-thumb {
-  width: 16px;
-  height: 16px;
-  background: #ffffff;
+  width: 12px;
+  height: 12px;
+  background: var(--color-accent-secondary);
   border-radius: 50%;
   border: none;
   cursor: pointer;
@@ -996,89 +220,121 @@ const alignVertical = (alignment: 'top' | 'middle' | 'bottom') => {
   position: absolute;
   width: 1px;
   height: 100%;
-  background: #666;
+  background: var(--color-border-secondary);
   transform: translateX(-50%);
 }
 
-/* 倍速输入框 */
-.speed-input {
-  background: #444;
-  border: 1px solid #666;
-  border-radius: 3px;
-  color: #fff;
-  font-size: 12px;
-  font-weight: 600;
-  padding: 4px 6px;
-  min-width: 50px;
-  max-width: 60px;
-  text-align: center;
+/* 音量控制样式 */
+.volume-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  flex: 1;
 }
 
-.speed-input:focus {
+.volume-slider {
+  flex: 1;
+  height: 4px;
+  background: var(--color-bg-quaternary);
+  border-radius: 2px;
   outline: none;
-  border-color: #ffffff;
-}
-
-.speed-input::-webkit-outer-spin-button,
-.speed-input::-webkit-inner-spin-button {
   -webkit-appearance: none;
-  margin: 0;
+  appearance: none;
 }
 
+.volume-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 12px;
+  height: 12px;
+  background: var(--color-accent-secondary);
+  border-radius: 50%;
+  cursor: pointer;
+}
 
+.volume-slider::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  background: var(--color-accent-secondary);
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+}
+
+.mute-btn {
+  background: var(--color-bg-quaternary);
+  border: 1px solid var(--color-border-secondary);
+  border-radius: var(--border-radius-small);
+  color: var(--color-text-primary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-xs);
+  transition: all 0.2s ease;
+  min-width: 32px;
+  height: 32px;
+}
+
+.mute-btn:hover {
+  background: var(--color-bg-tertiary);
+  border-color: var(--color-border-focus);
+}
+
+.mute-btn.muted {
+  background: var(--color-accent-secondary);
+  color: var(--color-bg-primary);
+}
 
 /* 位置控制样式 */
 .position-controls {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--spacing-md);
   flex: 1;
 }
 
 .position-input-group {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--spacing-xs);
   flex: 1;
 }
 
 .position-label {
-  font-size: 11px;
-  color: #999;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-hint);
   min-width: 12px;
   text-align: center;
 }
-
-
 
 /* 复选框样式 */
 .checkbox-input {
   width: 16px;
   height: 16px;
-  accent-color: #ffffff;
+  accent-color: var(--color-text-primary);
   cursor: pointer;
 }
-
-
 
 .scale-controls,
 .rotation-controls,
 .opacity-controls {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--spacing-sm);
   flex: 1;
 }
 
+/* 使用通用的 slider 样式 */
 .scale-slider,
 .rotation-slider,
 .opacity-slider {
   flex: 1;
   height: 4px;
-  background: #444;
+  background: var(--color-bg-quaternary);
   border-radius: 2px;
   outline: none;
   -webkit-appearance: none;
+  appearance: none;
 }
 
 .scale-slider::-webkit-slider-thumb,
@@ -1087,7 +343,7 @@ const alignVertical = (alignment: 'top' | 'middle' | 'bottom') => {
   -webkit-appearance: none;
   width: 12px;
   height: 12px;
-  background: #2196f3;
+  background: var(--color-accent-secondary);
   border-radius: 50%;
   cursor: pointer;
 }
@@ -1097,46 +353,248 @@ const alignVertical = (alignment: 'top' | 'middle' | 'bottom') => {
 .opacity-slider::-moz-range-thumb {
   width: 12px;
   height: 12px;
-  background: #2196f3;
+  background: var(--color-accent-secondary);
   border-radius: 50%;
   cursor: pointer;
   border: none;
 }
 
-/* 分辨率显示样式 */
-.resolution-display {
-  background: #444;
-  border: 1px solid #666;
-  border-radius: 4px;
-  color: #fff;
-  font-size: 12px;
-  padding: 6px 8px;
+/* 分辨率显示样式已迁移到 styles/components/inputs.css */
+
+/* 对齐控制样式 */
+.alignment-controls {
+  display: flex;
+  gap: var(--spacing-xs);
+  flex: 1;
+}
+
+/* 使用通用的 align-btn 样式 */
+
+/* 多选状态样式 */
+.multi-select-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 200px;
   text-align: center;
-  font-family: monospace;
+  color: var(--color-text-secondary);
+  padding: var(--spacing-lg);
 }
 
-/* 自定义滚动条样式 */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+.multi-select-state svg {
+  color: var(--color-success);
+  margin-bottom: var(--spacing-md);
 }
 
-::-webkit-scrollbar-track {
-  background: #1a1a1a;
+.multi-select-state p {
+  margin: var(--spacing-xs) 0;
+  font-size: var(--font-size-base);
+}
+
+.multi-select-state .hint {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-hint);
+}
+
+.selected-items-list {
+  margin-top: var(--spacing-lg);
+  width: 100%;
+  max-height: 150px;
+  overflow-y: auto;
+}
+
+.selected-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  margin-bottom: var(--spacing-xs);
+  background: var(--color-bg-quaternary);
+  border-radius: var(--border-radius-small);
+  font-size: var(--font-size-sm);
+}
+
+.selected-item .item-name {
+  flex: 1;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-right: var(--spacing-sm);
+}
+
+.selected-item .item-type {
+  color: var(--color-text-hint);
+  font-size: var(--font-size-xs);
+  flex-shrink: 0;
+}
+
+/* 统一关键帧按钮样式 */
+.unified-keyframe-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0px;
+  padding: 0px 12px;
+  border: 1px solid var(--color-border);
   border-radius: 4px;
+  background: var(--color-bg-secondary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--color-text-primary); /* 默认白色 */
+  height: 36px; /* 改为固定高度，与导航按钮一致 */
+  position: relative;
 }
 
-::-webkit-scrollbar-thumb {
-  background: #555;
+.unified-keyframe-toggle:hover {
+  background: var(--color-bg-tertiary);
+  border-color: var(--color-border-hover);
+  transform: translateY(-1px);
+}
+
+/* 状态样式 */
+.unified-keyframe-toggle.state-none {
+  color: var(--color-text-primary); /* 白色 */
+  border-color: var(--color-border);
+}
+
+.unified-keyframe-toggle.state-none:hover {
+  border-color: var(--color-border-hover);
+  background: var(--color-bg-tertiary);
+}
+
+.unified-keyframe-toggle.state-on-keyframe {
+  color: var(--color-text-primary); /* 白色字体 */
+  background: rgba(64, 158, 255, 0.2);
+  border-color: #409eff;
+  box-shadow: 0 0 8px rgba(64, 158, 255, 0.4);
+}
+
+.unified-keyframe-toggle.state-on-keyframe svg {
+  color: #409eff; /* 钻石图标保持更亮的蓝色 */
+}
+
+.unified-keyframe-toggle.state-on-keyframe:hover {
+  background: rgba(64, 158, 255, 0.3);
+  box-shadow: 0 0 12px rgba(64, 158, 255, 0.6);
+}
+
+.unified-keyframe-toggle.state-between-keyframes {
+  color: #ffd700; /* 金色 */
+  background: rgba(255, 215, 0, 0.15);
+  border-color: #ffd700;
+  box-shadow: 0 0 8px rgba(255, 215, 0, 0.3);
+}
+
+.unified-keyframe-toggle.state-between-keyframes:hover {
+  background: rgba(255, 215, 0, 0.25);
+  box-shadow: 0 0 12px rgba(255, 215, 0, 0.5);
+}
+
+/* 禁用状态样式 */
+.unified-keyframe-toggle:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  background: var(--color-bg-disabled);
+  color: var(--color-text-disabled);
+  border-color: var(--color-border-disabled);
+  box-shadow: none;
+}
+
+.unified-keyframe-toggle:disabled:hover {
+  background: var(--color-bg-disabled);
+  border-color: var(--color-border-disabled);
+  transform: none;
+  box-shadow: none;
+}
+
+/* 关键帧控制按钮行 */
+.keyframe-controls-row {
+  display: flex;
+  gap: 6px;
+  align-items: stretch; /* 让所有按钮高度一致 */
+  margin-bottom: 16px;
+  flex-wrap: wrap; /* 在小屏幕上允许换行 */
+}
+
+/* 主关键帧按钮 */
+.keyframe-controls-row .unified-keyframe-toggle {
+  flex: 1 1 auto; /* 主按钮占据更多空间 */
+  min-width: 90px;
+  max-width: 120px;
+  font-size: 14px; /* 与导航按钮保持一致 */
+  height: 36px; /* 确保与导航按钮高度一致 */
+}
+
+/* 导航和调试按钮 */
+.keyframe-controls-row .keyframe-nav-btn,
+.keyframe-controls-row .debug-btn {
+  flex: 0 0 auto;
+  padding: 8px 10px;
+  font-size: 11px;
+  min-width: 55px;
+  height: 36px; /* 与主按钮高度一致 */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
   border-radius: 4px;
-  border: 1px solid #333;
+  color: var(--color-text-primary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: #666;
+.keyframe-controls-row .keyframe-nav-btn:hover:not(:disabled),
+.keyframe-controls-row .debug-btn:hover {
+  background: var(--color-bg-tertiary);
+  border-color: var(--color-border-hover);
+  transform: translateY(-1px);
 }
 
-::-webkit-scrollbar-corner {
-  background: #1a1a1a;
+.keyframe-controls-row .keyframe-nav-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  background: var(--color-bg-disabled);
+  color: var(--color-text-disabled);
+}
+
+.keyframe-controls-row .keyframe-nav-btn span,
+.keyframe-controls-row .debug-btn span,
+.keyframe-controls-row .unified-keyframe-toggle span {
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+/* 响应式调整 */
+@media (max-width: 400px) {
+  .keyframe-controls-row {
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .keyframe-controls-row .unified-keyframe-toggle {
+    flex: 1 1 100%;
+    margin-bottom: 4px;
+  }
+
+  .keyframe-controls-row .keyframe-nav-btn,
+  .keyframe-controls-row .debug-btn {
+    flex: 1 1 calc(33.333% - 3px);
+    min-width: 0;
+  }
+}
+
+/* 属性项特定布局调整 */
+
+.property-item .position-controls,
+.property-item .scale-controls,
+.property-item .rotation-controls,
+.property-item .opacity-controls {
+  flex: 1;
 }
 </style>
