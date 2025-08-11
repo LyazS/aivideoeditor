@@ -29,6 +29,12 @@ let globalCanvasContainer: HTMLElement | null = null
 // 时间同步锁，防止循环调用
 let isUpdatingTime = false
 
+// 帧缓存，避免重复渲染相同帧
+let lastRenderedFrame: number | null = null
+
+// 防抖定时器
+let timeUpdateDebounceTimer: number | null = null
+
 /**
  * 统一WebAV集成管理模块
  * 负责管理WebAV相关的状态和方法
@@ -473,11 +479,32 @@ export function createUnifiedWebavModule() {
 
     // 时间更新事件
     globalAVCanvas.on('timeupdate', async (microseconds: number) => {
+      // 如果正在执行seekTo操作，跳过timeupdate事件以避免冲突
+      if (isUpdatingTime) {
+        console.log(`[setCurrentFrame] 跳过timeupdate（正在更新）: ${microseconds}ms`)
+        return
+      }
+
       // 将微秒转换为帧数
       const frames = microsecondsToFrames(microseconds)
       console.log(`[setCurrentFrame] timeupdate ${frames} ${microseconds}ms`)
-      const unifiedStore = await getUnifiedStore()
-      unifiedStore.setCurrentFrame(frames, false) // 传入帧数，不强制对齐保持流畅
+      
+      // 防抖机制，避免过于频繁的状态更新
+      if (timeUpdateDebounceTimer) {
+        clearTimeout(timeUpdateDebounceTimer)
+      }
+      
+      timeUpdateDebounceTimer = setTimeout(async () => {
+        try {
+          const unifiedStore = await getUnifiedStore()
+          unifiedStore.setCurrentFrame(frames, false) // 传入帧数，不强制对齐保持流畅
+          
+          // 更新渲染帧缓存
+          lastRenderedFrame = frames
+        } catch (error) {
+          console.error(`[setCurrentFrame] timeupdate处理失败:`, error)
+        }
+      }, 8) // 8ms防抖，约半帧时间
     })
 
     console.log('✅ [WebAV Events] Event listeners setup completed')
@@ -547,18 +574,46 @@ export function createUnifiedWebavModule() {
    */
   async function seekTo(frames: number): Promise<void> {
     if (!globalAVCanvas) return
+    
     // 使用时间同步锁防止循环调用
     if (isUpdatingTime) {
       // 静默跳过，避免日志污染
       return
     }
+
     const microseconds = framesToMicroseconds(frames)
-    
-    // 设置时间同步锁，防止循环调用
-    isUpdatingTime = true
-    await globalAVCanvas.previewFrame(microseconds)
     console.log(`[setCurrentFrame] skt ${frames} ${microseconds}ms`)
-    isUpdatingTime = false
+    
+    // 帧缓存检查，避免重复渲染相同帧
+    if (lastRenderedFrame === frames) {
+      console.log(`[setCurrentFrame] 跳过重复帧: ${frames}`)
+      return
+    }
+    
+    // 立即更新UI状态（预测性更新）
+    const unifiedStore = await getUnifiedStore()
+    unifiedStore.setCurrentFrame(frames, false)
+    
+    // 设置时间同步锁，但缩短锁定时间
+    isUpdatingTime = true
+    
+    try {
+      // 异步渲染，不等待完成
+      globalAVCanvas.previewFrame(microseconds).then(() => {
+        lastRenderedFrame = frames
+        console.log(`[setCurrentFrame] 渲染完成: ${frames}`)
+      }).catch((error) => {
+        console.error(`[setCurrentFrame] 渲染失败: ${frames}`, error)
+      }).finally(() => {
+        // 延迟释放锁，给WebAV一点处理时间
+        setTimeout(() => {
+          isUpdatingTime = false
+        }, 16) // 约一帧的时间
+      })
+    } catch (error) {
+      console.error(`[setCurrentFrame] previewFrame同步错误: ${frames}`, error)
+      isUpdatingTime = false
+    }
   }
 
   /**
@@ -632,8 +687,18 @@ export function createUnifiedWebavModule() {
       globalAVCanvas = null
     }
 
+    // 清理防抖定时器
+    if (timeUpdateDebounceTimer) {
+      clearTimeout(timeUpdateDebounceTimer)
+      timeUpdateDebounceTimer = null
+    }
+
     // 清理全局容器引用
     globalCanvasContainer = null
+    
+    // 重置缓存状态
+    lastRenderedFrame = null
+    isUpdatingTime = false
 
     // 清理错误状态
     setWebAVError(null)

@@ -68,6 +68,21 @@
       </span>
     </div>
 
+    <!-- 吸附点切换按钮 -->
+    <div class="toolbar-section">
+      <HoverButton
+        @click="toggleSnapPoints"
+        :title="showSnapPoints ? '隐藏吸附点' : '显示吸附点'"
+      >
+        <template #icon>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4M12,6A6,6 0 0,0 6,12A6,6 0 0,0 12,18A6,6 0 0,0 18,12A6,6 0 0,0 12,6M12,8A4,4 0 0,1 16,12A4,4 0 0,1 12,16A4,4 0 0,1 8,12A4,4 0 0,1 12,8Z" />
+          </svg>
+        </template>
+        吸附点
+      </HoverButton>
+    </div>
+
     <!-- 调试按钮放在最右边 - 暂时隐藏 -->
     <div class="toolbar-section debug-section">
       <HoverButton @click="debugTimeline" title="在控制台打印时间轴配置信息">
@@ -95,11 +110,23 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useUnifiedStore } from '../unifiedStore'
 import { formatFileSize, framesToSeconds } from '../utils/timeUtils'
 import { countOverlappingItems } from '../utils/timeOverlapUtils'
 import HoverButton from '@/components/HoverButton.vue'
+
+// 吸附点显示状态
+const showSnapPoints = ref(false)
+
+// 切换吸附点显示
+function toggleSnapPoints() {
+  showSnapPoints.value = !showSnapPoints.value
+  // 触发全局事件，通知其他组件吸附点显示状态已改变
+  window.dispatchEvent(new CustomEvent('snap-points-visibility-changed', {
+    detail: { visible: showSnapPoints.value }
+  }))
+}
 
 const unifiedStore = useUnifiedStore()
 

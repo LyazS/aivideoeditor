@@ -170,12 +170,12 @@
       :line-height="snapIndicatorManager.data.lineHeight"
     />
 
-    <!-- 吸附点调试器 - 可视化显示所有吸附点 -->
-    <UnifiedSnapPointsDebugger
+    <!-- 吸附点指示器 -->
+    <UnifiedSnapPointsIndicator
       :timeline-width="timelineWidth"
       :track-control-width="150"
-      :show-debugger="true"
     />
+
   </div>
 
   <!-- 统一右键菜单 -->
@@ -250,7 +250,7 @@ import type {
 
 import UnifiedPlayhead from './UnifiedPlayhead.vue'
 import UnifiedSnapIndicator from './UnifiedSnapIndicator.vue'
-import UnifiedSnapPointsDebugger from './UnifiedSnapPointsDebugger.vue'
+import UnifiedSnapPointsIndicator from './UnifiedSnapPointsIndicator.vue'
 import UnifiedTimelineClip from './UnifiedTimelineClip.vue'
 import UnifiedTimeScale from './UnifiedTimeScale.vue'
 import HoverButton from '@/components/HoverButton.vue'
