@@ -3,11 +3,7 @@ import { AVCanvas } from '@webav/av-canvas'
 import { MP4Clip, ImgClip, AudioClip } from '@webav/av-cliper'
 import type { VisibleSprite } from '@webav/av-cliper'
 import type { PlayOptions, CanvasBackup } from '../../types'
-import {
-  framesToMicroseconds,
-  microsecondsToFrames,
-  framesToTimecode,
-} from '../utils/timeUtils'
+import { framesToMicroseconds, microsecondsToFrames, framesToTimecode } from '../utils/timeUtils'
 import {
   logWebAVInitStart,
   logWebAVInitStep,
@@ -477,21 +473,11 @@ export function createUnifiedWebavModule() {
 
     // 时间更新事件
     globalAVCanvas.on('timeupdate', async (microseconds: number) => {
-      // 使用时间同步锁防止循环调用
-      if (isUpdatingTime) {
-        // 静默跳过，避免日志污染
-        return
-      }
-
-      isUpdatingTime = true
-      try {
-        // 将微秒转换为帧数
-        const frames = microsecondsToFrames(microseconds)
-        const unifiedStore = await getUnifiedStore()
-        unifiedStore.setCurrentFrame(frames, false) // 传入帧数，不强制对齐保持流畅
-      } finally {
-        isUpdatingTime = false
-      }
+      // 将微秒转换为帧数
+      const frames = microsecondsToFrames(microseconds)
+      console.log(`[setCurrentFrame] timeupdate ${frames} ${microseconds}ms`)
+      const unifiedStore = await getUnifiedStore()
+      unifiedStore.setCurrentFrame(frames, false) // 传入帧数，不强制对齐保持流畅
     })
 
     console.log('✅ [WebAV Events] Event listeners setup completed')
@@ -561,23 +547,18 @@ export function createUnifiedWebavModule() {
    */
   async function seekTo(frames: number): Promise<void> {
     if (!globalAVCanvas) return
-
+    // 使用时间同步锁防止循环调用
+    if (isUpdatingTime) {
+      // 静默跳过，避免日志污染
+      return
+    }
+    const microseconds = framesToMicroseconds(frames)
+    
     // 设置时间同步锁，防止循环调用
     isUpdatingTime = true
-
-    try {
-      const microseconds = framesToMicroseconds(frames)
-      globalAVCanvas.previewFrame(microseconds)
-
-      // 直接更新store状态，因为previewFrame可能不会触发timeupdate事件
-      const unifiedStore = await getUnifiedStore()
-      unifiedStore.setCurrentFrame(frames, false)
-    } finally {
-      // 延迟重置锁，确保任何可能的timeupdate事件被处理
-      setTimeout(() => {
-        isUpdatingTime = false
-      }, 10)
-    }
+    await globalAVCanvas.previewFrame(microseconds)
+    console.log(`[setCurrentFrame] skt ${frames} ${microseconds}ms`)
+    isUpdatingTime = false
   }
 
   /**
