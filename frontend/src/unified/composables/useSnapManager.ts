@@ -139,11 +139,10 @@ export function useSnapManager() {
       }
     }
 
-    // 构建吸附点收集选项 - 播放头拖动时排除播放头自身作为吸附点
+    // 构建吸附点收集选项 - 播放头拖动时不收集播放头位置
     const collectionOptions: SnapPointCollectionOptions = {
       includeClipBoundaries: snapConfig.isClipBoundariesEnabled.value,
       includeKeyframes: snapConfig.isKeyframesEnabled.value,
-      includePlayhead: false, // 关键修复：播放头拖动时不包含播放头自身
       includeTimelineStart: snapConfig.isTimelineStartEnabled.value,
       excludeClipIds: playheadOptions.excludeClipIds,
     }

@@ -59,8 +59,9 @@ const indicatorClass = computed(() => {
       return 'snap-indicator-clip'
     case 'keyframe':
       return 'snap-indicator-keyframe'
-    case 'playhead':
-      return 'snap-indicator-playhead'
+    // 播放头吸附点已移除，不再处理
+    // case 'playhead':
+    //   return 'snap-indicator-playhead'
     case 'timeline-start':
       return 'snap-indicator-timeline'
     default:
@@ -118,10 +119,11 @@ const snapInfo = computed(() => {
         positionLabel = `关键帧 - 帧: ${frame}`
       }
       break
-    case 'playhead':
-      typeLabel = '播放头'
-      positionLabel = `播放头位置`
-      break
+    // 播放头吸附点已移除，不再处理
+    // case 'playhead':
+    //   typeLabel = '播放头'
+    //   positionLabel = `播放头位置`
+    //   break
     case 'timeline-start':
       typeLabel = '时间轴起始'
       positionLabel = '起始位置'
@@ -206,10 +208,11 @@ defineExpose({
   box-shadow: 0 0 6px rgba(76, 175, 80, 0.6);
 }
 
-.snap-indicator-playhead {
-  background: #f44336; /* 红色：播放头吸附 */
+/* 播放头吸附点已移除，不再处理 */
+/* .snap-indicator-playhead {
+  background: #f44336;
   box-shadow: 0 0 6px rgba(244, 67, 54, 0.6);
-}
+} */
 
 .snap-indicator-timeline {
   background: #9e9e9e; /* 灰色：时间轴起始位置吸附 */

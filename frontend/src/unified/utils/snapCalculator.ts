@@ -42,12 +42,6 @@ export class UnifiedSnapCalculator {
       snapPoints.push(...keyframePoints)
     }
 
-    // 收集播放头位置
-    if (options.includePlayhead !== false) {
-      const playheadPoints = this.collectPlayheadPoint()
-      snapPoints.push(...playheadPoints)
-    }
-
     // 收集时间轴起始位置
     if (options.includeTimelineStart !== false) {
       const timelineStartPoints = this.collectTimelineStartPoint()
@@ -145,17 +139,11 @@ export class UnifiedSnapCalculator {
 
   /**
    * 收集播放头位置
+   * @deprecated 已弃用，不再收集播放头位置作为吸附点
    */
   private collectPlayheadPoint(): PlayheadSnapPoint[] {
-    const currentFrame = this.unifiedStore.currentFrame
-
-    return [
-      {
-        type: 'playhead',
-        frame: currentFrame,
-        priority: 1,
-      },
-    ]
+    // 不再收集播放头位置作为吸附点
+    return []
   }
 
   /**
