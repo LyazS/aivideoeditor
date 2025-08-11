@@ -113,15 +113,15 @@ function applySnapToClips(targetFrames: number): number {
   })
 
   // 调试信息：如果发生了吸附，输出日志
-  // if (snapResult.snapped && snapResult.snapPoint) {
-  //   console.log('🧲 播放头吸附:', {
-  //     原始帧数: targetFrames,
-  //     吸附到: snapResult.frame,
-  //     吸附类型: snapResult.snapPoint.type,
-  //     吸附距离: snapResult.distance,
-  //     微秒数: framesToMicroseconds(snapResult.frame),
-  //   })
-  // }
+  if (snapResult.snapped && snapResult.snapPoint) {
+    console.log('🧲 播放头吸附:', {
+      原始帧数: targetFrames,
+      吸附到: snapResult.frame,
+      吸附类型: snapResult.snapPoint.type,
+      吸附距离: snapResult.distance,
+      微秒数: framesToMicroseconds(snapResult.frame),
+    })
+  }
 
   return snapResult.frame
 }

@@ -32,22 +32,26 @@ export class UnifiedSnapCalculator {
 
     // 收集片段边界点
     if (options.includeClipBoundaries !== false) {
-      snapPoints.push(...this.collectClipBoundaryPoints(options.excludeClipIds || []))
+      const clipPoints = this.collectClipBoundaryPoints(options.excludeClipIds || [])
+      snapPoints.push(...clipPoints)
     }
 
     // 收集关键帧点
     if (options.includeKeyframes !== false) {
-      snapPoints.push(...this.collectKeyframePoints(options.excludeClipIds || []))
+      const keyframePoints = this.collectKeyframePoints(options.excludeClipIds || [])
+      snapPoints.push(...keyframePoints)
     }
 
     // 收集播放头位置
     if (options.includePlayhead !== false) {
-      snapPoints.push(...this.collectPlayheadPoint())
+      const playheadPoints = this.collectPlayheadPoint()
+      snapPoints.push(...playheadPoints)
     }
 
     // 收集时间轴起始位置
     if (options.includeTimelineStart !== false) {
-      snapPoints.push(...this.collectTimelineStartPoint())
+      const timelineStartPoints = this.collectTimelineStartPoint()
+      snapPoints.push(...timelineStartPoints)
     }
 
     // 应用帧数范围过滤
@@ -61,7 +65,9 @@ export class UnifiedSnapCalculator {
 
     // 去重并排序
     const uniquePoints = this.deduplicateSnapPoints(filteredPoints)
-    return uniquePoints.sort((a, b) => a.frame - b.frame)
+    const result = uniquePoints.sort((a, b) => a.frame - b.frame)
+    
+    return result
   }
 
   /**
