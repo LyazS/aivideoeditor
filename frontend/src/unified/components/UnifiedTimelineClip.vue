@@ -712,7 +712,7 @@ onUnmounted(() => {
   position: absolute;
   width: auto;
   height: auto;
-  max-width: 100%;
+  /* 移除max-width限制，允许clip在高缩放级别下正常拉伸 */
   max-height: 100%;
 }
 
