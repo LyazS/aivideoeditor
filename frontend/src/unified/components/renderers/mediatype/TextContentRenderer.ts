@@ -11,9 +11,9 @@
 
 import { h } from 'vue'
 import type { VNode } from 'vue'
-import type { ContentRenderer, ContentRenderContext } from '../../../types/clipRenderer'
-import type { UnifiedTimelineItemData } from '../../../timelineitem/TimelineItemData'
-import { getTimelineItemDisplayName } from '../../../utils/clipUtils'
+import type { ContentRenderer, ContentRenderContext } from '@/unified/types/clipRenderer'
+import type { UnifiedTimelineItemData } from '@/unified/timelineitem/TimelineItemData'
+import { getTimelineItemDisplayName } from '@/unified/utils/clipUtils'
 
 /**
  * 文本内容渲染器

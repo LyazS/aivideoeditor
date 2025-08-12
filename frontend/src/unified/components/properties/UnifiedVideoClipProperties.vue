@@ -162,18 +162,18 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useUnifiedStore } from '../../unifiedStore'
+import { useUnifiedStore } from '@/unified/unifiedStore'
 import {
   isVideoTimelineItem,
   isImageTimelineItem,
   hasVisualProperties,
   hasAudioProperties,
-} from '../../timelineitem/TimelineItemQueries'
-import type { UnifiedTimelineItemData } from '../../timelineitem/TimelineItemData'
-import { framesToTimecode, timecodeToFrames } from '../../utils/timeUtils'
-import { useUnifiedKeyframeTransformControls } from '../../composables'
-import NumberInput from '../../../components/NumberInput.vue'
-import SliderInput from '../../../components/SliderInput.vue'
+} from '@/unified/timelineitem/TimelineItemQueries'
+import type { UnifiedTimelineItemData } from '@/unified/timelineitem/TimelineItemData'
+import { framesToTimecode, timecodeToFrames } from '@/unified/utils/timeUtils'
+import { useUnifiedKeyframeTransformControls } from '@/unified/composables'
+import NumberInput from '@/components/NumberInput.vue'
+import SliderInput from '@/components/SliderInput.vue'
 import UnifiedKeyframeControls from './UnifiedKeyframeControls.vue'
 import UnifiedTransformControls from './UnifiedTransformControls.vue'
 
@@ -475,7 +475,7 @@ const updateTargetDurationFrames = async (newDurationFrames: number) => {
     props.selectedTimelineItem.animation &&
     props.selectedTimelineItem.animation.keyframes.length > 0
   ) {
-    const { adjustKeyframesForDurationChange } = await import('../../utils/unifiedKeyframeUtils')
+    const { adjustKeyframesForDurationChange } = await import('@/unified/utils/unifiedKeyframeUtils')
     adjustKeyframesForDurationChange(
       props.selectedTimelineItem,
       oldDurationFrames,
@@ -505,13 +505,13 @@ const updateTargetDurationFrames = async (newDurationFrames: number) => {
 
   // 更新timelineItem的timeRange（使用专用工具函数）
   if (props.selectedTimelineItem) {
-    const { syncTimeRange } = await import('../../utils/timeRangeUtils')
+    const { syncTimeRange } = await import('@/unified/utils/timeRangeUtils')
     syncTimeRange(props.selectedTimelineItem)
   }
 
   // 如果有动画，需要重新设置WebAV动画时长
   if (props.selectedTimelineItem.animation && props.selectedTimelineItem.animation.isEnabled) {
-    const { updateWebAVAnimation } = await import('../../utils/webavAnimationManager')
+    const { updateWebAVAnimation } = await import('@/unified/utils/webavAnimationManager')
     await updateWebAVAnimation(props.selectedTimelineItem)
     console.log('🎬 [Duration Update] Animation duration updated after clip duration change')
   }

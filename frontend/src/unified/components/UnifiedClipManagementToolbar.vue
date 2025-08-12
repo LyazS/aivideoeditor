@@ -96,9 +96,9 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useUnifiedStore } from '../unifiedStore'
-import { formatFileSize, framesToSeconds } from '../utils/timeUtils'
-import { countOverlappingItems } from '../utils/timeOverlapUtils'
+import { useUnifiedStore } from '@/unified/unifiedStore'
+import { formatFileSize, framesToSeconds } from '@/unified/utils/timeUtils'
+import { countOverlappingItems } from '@/unified/utils/timeOverlapUtils'
 import HoverButton from '@/components/HoverButton.vue'
 
 const unifiedStore = useUnifiedStore()

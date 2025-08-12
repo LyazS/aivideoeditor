@@ -3,13 +3,13 @@
  */
 
 // 导出渲染器工厂
-export { ContentRendererFactory } from './ContentRendererFactory'
+export { ContentRendererFactory } from '@/unified/components/renderers/ContentRendererFactory'
 
 // 导出状态渲染器
-export { LoadingContentRenderer, ErrorContentRenderer } from './status'
+export { LoadingContentRenderer, ErrorContentRenderer } from '@/unified/components/renderers/status'
 
 // 导出媒体类型渲染器
-export { VideoContentRenderer, AudioContentRenderer, TextContentRenderer } from './mediatype'
+export { VideoContentRenderer, AudioContentRenderer, TextContentRenderer } from '@/unified/components/renderers/mediatype'
 
 // 导出基础接口（从类型定义中重新导出）
 export type {
@@ -18,4 +18,4 @@ export type {
   StatusRendererType,
   MediaTypeRendererType,
   RendererType,
-} from '../../types/clipRenderer'
+} from '@/unified/types/clipRenderer'

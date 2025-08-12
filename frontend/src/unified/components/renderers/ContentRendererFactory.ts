@@ -14,15 +14,15 @@ import type { VNode } from 'vue'
 import type {
   ContentRenderer,
   ContentRenderContext,
-} from '../../types/clipRenderer'
-import type { UnifiedTimelineItemData } from '../../timelineitem/TimelineItemData'
-import type { MediaType } from '../../mediaitem/types'
-import type { TimelineItemStatus } from '../../timelineitem/TimelineItemData'
-import { getTimelineItemDisplayName } from '../../utils/clipUtils'
+} from '@/unified/types/clipRenderer'
+import type { UnifiedTimelineItemData } from '@/unified/timelineitem/TimelineItemData'
+import type { MediaType } from '@/unified/mediaitem/types'
+import type { TimelineItemStatus } from '@/unified/timelineitem/TimelineItemData'
+import { getTimelineItemDisplayName } from '@/unified/utils/clipUtils'
 
 // 导入具体的渲染器实现
-import { LoadingContentRenderer, ErrorContentRenderer } from './status'
-import { VideoContentRenderer, AudioContentRenderer, TextContentRenderer } from './mediatype'
+import { LoadingContentRenderer, ErrorContentRenderer } from '@/unified/components/renderers/status'
+import { VideoContentRenderer, AudioContentRenderer, TextContentRenderer } from '@/unified/components/renderers/mediatype'
 
 // ==================== 默认渲染器实现 ====================
 

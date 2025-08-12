@@ -11,10 +11,10 @@
 
 import { h } from 'vue'
 import type { VNode } from 'vue'
-import type { ContentRenderer, ContentRenderContext } from '../../../types/clipRenderer'
-import type { UnifiedTimelineItemData } from '../../../timelineitem/TimelineItemData'
-import type { MediaType } from '../../../mediaitem/types'
-import { getTimelineItemDisplayName } from '../../../utils/clipUtils'
+import type { ContentRenderer, ContentRenderContext } from '@/unified/types/clipRenderer'
+import type { UnifiedTimelineItemData } from '@/unified/timelineitem/TimelineItemData'
+import type { MediaType } from '@/unified/mediaitem/types'
+import { getTimelineItemDisplayName } from '@/unified/utils/clipUtils'
 
 /**
  * 错误状态内容渲染器

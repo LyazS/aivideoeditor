@@ -27,9 +27,9 @@
 
 <script setup lang="ts">
 import { ref, computed, onUnmounted } from 'vue'
-import { useUnifiedStore } from '../unifiedStore'
-import { usePlaybackControls } from '../composables'
-import { alignFramesToFrame } from '../utils/timeUtils'
+import { useUnifiedStore } from '@/unified/unifiedStore'
+import { usePlaybackControls } from '@/unified/composables'
+import { alignFramesToFrame } from '@/unified/utils/timeUtils'
 
 interface PlayheadProps {
   /** 时间轴容器宽度 */

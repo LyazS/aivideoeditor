@@ -211,17 +211,17 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, nextTick, h } from 'vue'
-import { useUnifiedStore } from '../unifiedStore'
-import { usePlaybackControls, getDragPreviewManager, useDragUtils, useDialogs } from '../composables'
-import { calculateVisibleFrameRange } from '../utils/coordinateUtils'
-import type { UnifiedTrackType } from '../track/TrackTypes'
-import type { MediaType } from '../mediaitem/types'
+import { useUnifiedStore } from '@/unified/unifiedStore'
+import { usePlaybackControls, getDragPreviewManager, useDragUtils, useDialogs } from '@/unified/composables'
+import { calculateVisibleFrameRange } from '@/unified/utils/coordinateUtils'
+import type { UnifiedTrackType } from '@/unified/track/TrackTypes'
+import type { MediaType } from '@/unified/mediaitem/types'
 import type {
   UnifiedTimelineItemData,
   GetTimelineItemConfig,
   TimelineItemStatus,
 } from '../timelineitem/TimelineItemData'
-import type { TimelineItemDragData, MediaItemDragData, ConflictInfo } from '../types'
+import type { TimelineItemDragData, MediaItemDragData, ConflictInfo } from '@/unified/types'
 import type {
   VideoMediaConfig,
   ImageMediaConfig,
@@ -239,7 +239,7 @@ import {
   ContextMenuSeparator,
   ContextMenuGroup,
 } from '@imengyu/vue3-context-menu'
-import { UnifiedMediaItemQueries } from '../mediaitem'
+import { UnifiedMediaItemQueries } from '@/unified/mediaitem'
 import { generateId } from '@/utils/idGenerator'
 // 菜单项类型定义
 type MenuItem =

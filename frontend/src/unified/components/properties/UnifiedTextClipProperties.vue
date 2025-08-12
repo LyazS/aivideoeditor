@@ -425,14 +425,14 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
-import { useUnifiedStore } from '../../unifiedStore'
-import { isTextTimelineItem } from '../../timelineitem/TimelineItemQueries'
-import type { UnifiedTimelineItemData } from '../../timelineitem/TimelineItemData'
-import type { TextStyleConfig } from '../../timelineitem/TimelineItemData'
-import { framesToTimecode, timecodeToFrames } from '../../utils/timeUtils'
-import { useUnifiedKeyframeTransformControls } from '../../composables'
-import NumberInput from '../../../components/NumberInput.vue'
-import SliderInput from '../../../components/SliderInput.vue'
+import { useUnifiedStore } from '@/unified/unifiedStore'
+import { isTextTimelineItem } from '@/unified/timelineitem/TimelineItemQueries'
+import type { UnifiedTimelineItemData } from '@/unified/timelineitem/TimelineItemData'
+import type { TextStyleConfig } from '@/unified/timelineitem/TimelineItemData'
+import { framesToTimecode, timecodeToFrames } from '@/unified/utils/timeUtils'
+import { useUnifiedKeyframeTransformControls } from '@/unified/composables'
+import NumberInput from '@/components/NumberInput.vue'
+import SliderInput from '@/components/SliderInput.vue'
 import UnifiedKeyframeControls from './UnifiedKeyframeControls.vue'
 import UnifiedTransformControls from './UnifiedTransformControls.vue'
 
@@ -646,7 +646,7 @@ const updateTextContent = async () => {
     )
 
     // 导入统一文本命令
-    const { UpdateTextCommand } = await import('../../modules/commands/UpdateTextCommand')
+    const { UpdateTextCommand } = await import('@/unified/modules/commands/UpdateTextCommand')
 
     // 创建更新命令
     const command = new UpdateTextCommand(
@@ -689,7 +689,7 @@ const updateTextStyle = async () => {
     console.log('🎨 [UnifiedTextClipProperties] 更新文本样式:', styleToUpdate)
 
     // 导入统一文本命令
-    const { UpdateTextCommand } = await import('../../modules/commands/UpdateTextCommand')
+    const { UpdateTextCommand } = await import('@/unified/modules/commands/UpdateTextCommand')
 
     // 创建更新命令
     const command = new UpdateTextCommand(
@@ -894,7 +894,7 @@ const updateTargetDurationFrames = async (newDurationFrames: number) => {
     props.selectedTimelineItem.animation &&
     props.selectedTimelineItem.animation.keyframes.length > 0
   ) {
-    const { adjustKeyframesForDurationChange } = await import('../../utils/unifiedKeyframeUtils')
+    const { adjustKeyframesForDurationChange } = await import('@/unified/utils/unifiedKeyframeUtils')
     adjustKeyframesForDurationChange(
       props.selectedTimelineItem,
       oldDurationFrames,
@@ -914,13 +914,13 @@ const updateTargetDurationFrames = async (newDurationFrames: number) => {
 
   // 更新timelineItem的timeRange（使用专用工具函数）
   if (props.selectedTimelineItem) {
-    const { syncTimeRange } = await import('../../utils/timeRangeUtils')
+    const { syncTimeRange } = await import('@/unified/utils/timeRangeUtils')
     syncTimeRange(props.selectedTimelineItem)
   }
 
   // 如果有动画，需要重新设置WebAV动画时长
   if (props.selectedTimelineItem.animation && props.selectedTimelineItem.animation.isEnabled) {
-    const { updateWebAVAnimation } = await import('../../utils/webavAnimationManager')
+    const { updateWebAVAnimation } = await import('@/unified/utils/webavAnimationManager')
     await updateWebAVAnimation(props.selectedTimelineItem)
     console.log('🎬 [UnifiedTextClipProperties] Animation duration updated after clip duration change')
   }

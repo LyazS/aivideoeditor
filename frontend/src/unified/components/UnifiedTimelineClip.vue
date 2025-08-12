@@ -79,14 +79,14 @@ import type {
   UnifiedTimelineClipProps,
   ContentRenderContext,
 } from '../types/clipRenderer'
-import type { UnifiedTimeRange } from '../types/timeRange'
+import type { UnifiedTimeRange } from '@/unified/types/timeRange'
 import { ContentRendererFactory } from './renderers/ContentRendererFactory'
-import { useUnifiedStore } from '../unifiedStore'
-import { useDragUtils, usePlaybackControls } from '../composables'
-import { alignFramesToFrame } from '../../stores/utils/timeUtils'
+import { useUnifiedStore } from '@/unified/unifiedStore'
+import { useDragUtils, usePlaybackControls } from '@/unified/composables'
+import { alignFramesToFrame } from '@/stores/utils/timeUtils'
 import UnifiedClipTooltip from './UnifiedClipTooltip.vue'
-import type { RemoteFileSourceData } from '../sources/RemoteFileSource'
-import { relativeFrameToAbsoluteFrame } from '../utils/unifiedKeyframeUtils'
+import type { RemoteFileSourceData } from '@/unified/sources/RemoteFileSource'
+import { relativeFrameToAbsoluteFrame } from '@/unified/utils/unifiedKeyframeUtils'
 
 // ==================== 组件定义 ====================
 

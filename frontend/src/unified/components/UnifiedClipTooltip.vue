@@ -28,7 +28,7 @@
 
 <script setup lang="ts">
 import { computed, type CSSProperties } from 'vue'
-import type { MediaTypeOrUnknown } from '../mediaitem/types'
+import type { MediaTypeOrUnknown } from '@/unified/mediaitem/types'
 
 interface ClipTooltipProps {
   /** 是否显示tooltip */
