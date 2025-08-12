@@ -43,6 +43,20 @@
       <div v-if="progressBar" class="progress-bar-container">
         <component :is="progressBar" />
       </div>
+
+      <!-- 关键帧标记容器 -->
+      <div v-if="hasKeyframes" class="keyframes-container">
+        <div
+          v-for="keyframe in visibleKeyframes"
+          :key="keyframe.framePosition"
+          class="keyframe-marker"
+          :style="getKeyframeMarkerStyles(keyframe.pixelPosition)"
+          :title="`关键帧 - 帧 ${keyframe.absoluteFrame} (点击跳转)`"
+          @click.stop="jumpToKeyframe(keyframe.absoluteFrame)"
+        >
+          <div class="keyframe-diamond"></div>
+        </div>
+      </div>
     </div>
 
     <!-- Tooltip 组件 -->
@@ -71,12 +85,11 @@ import type { UnifiedTimeRange } from '../types/timeRange'
 import { ContentRendererFactory } from './renderers/ContentRendererFactory'
 import { useUnifiedStore } from '../unifiedStore'
 import { useDragUtils } from '../composables/useDragUtils'
-import { getSnapIndicatorManager } from '../composables/useSnapIndicator'
 import { usePlaybackControls } from '../composables/usePlaybackControls'
-import { useSnapManager } from '../composables/useSnapManager'
 import { alignFramesToFrame } from '../../stores/utils/timeUtils'
 import UnifiedClipTooltip from './UnifiedClipTooltip.vue'
 import type { RemoteFileSourceData } from '../sources/RemoteFileSource'
+import { relativeFrameToAbsoluteFrame } from '../utils/unifiedKeyframeUtils'
 
 // ==================== 组件定义 ====================
 
@@ -94,8 +107,6 @@ const props = withDefaults(defineProps<UnifiedTimelineClipProps>(), {
 // 获取统一store实例
 const unifiedStore = useUnifiedStore()
 const dragUtils = useDragUtils()
-const snapIndicatorManager = getSnapIndicatorManager()
-const snapManager = useSnapManager()
 const { pauseForEditing } = usePlaybackControls()
 
 // 拖拽状态
@@ -318,6 +329,71 @@ const formattedPosition = computed(() => {
  */
 const clipTopPosition = ref(0)
 
+// ==================== 关键帧标记相关计算属性 ====================
+
+/**
+ * 检查是否有关键帧
+ */
+const hasKeyframes = computed(() => {
+  return !!(
+    props.data.animation &&
+    props.data.animation.isEnabled &&
+    props.data.animation.keyframes.length > 0
+  )
+})
+
+/**
+ * 计算可见的关键帧
+ */
+const visibleKeyframes = computed(() => {
+  if (!hasKeyframes.value) return []
+
+  const keyframes = props.data.animation!.keyframes
+  const timeRange = props.data.timeRange
+  const clipStartFrame = timeRange.timelineStartTime
+  const clipEndFrame = timeRange.timelineEndTime
+
+  // 计算clip在时间轴上的像素位置和宽度（使用统一store的坐标转换）
+  const clipLeft = unifiedStore.frameToPixel(clipStartFrame, props.timelineWidth)
+  const clipRight = unifiedStore.frameToPixel(clipEndFrame, props.timelineWidth)
+  const clipWidth = clipRight - clipLeft
+
+  return keyframes
+    .map((keyframe) => {
+      // 将相对帧数转换为绝对帧数
+      const absoluteFrame = relativeFrameToAbsoluteFrame(keyframe.framePosition, timeRange)
+
+      // 计算关键帧在整个时间轴上的像素位置（考虑缩放级别）
+      const absolutePixelPosition = unifiedStore.frameToPixel(absoluteFrame, props.timelineWidth)
+
+      // 关键帧标记应该使用相对于clip容器的位置
+      const relativePixelPosition = absolutePixelPosition - clipLeft
+
+      return {
+        framePosition: keyframe.framePosition,
+        absoluteFrame,
+        pixelPosition: relativePixelPosition,
+        isVisible: relativePixelPosition >= 0 && relativePixelPosition <= clipWidth,
+      }
+    })
+    .filter((kf) => kf.isVisible)
+})
+
+/**
+ * 获取关键帧标记样式
+ */
+function getKeyframeMarkerStyles(pixelPosition: number): Record<string, string> {
+  // 根据媒体类型使用不同的偏移量
+  let offset = -6.5 // 视频/图片/音频的默认偏移
+  if (props.data.mediaType === 'text') {
+    offset = -6.5 // 文本的偏移量与旧架构保持一致
+  }
+
+  return {
+    left: `${pixelPosition + offset}px`,
+  }
+}
+
 // ==================== 事件处理 ====================
 
 /**
@@ -396,8 +472,7 @@ function handleDragEnd(_event: DragEvent) {
   dragUtils.clearDragData()
   removeSimpleDragPreview()
 
-  // 隐藏吸附指示器
-  snapIndicatorManager.hide(true)
+  // 吸附指示器已禁用
 }
 
 /**
@@ -513,25 +588,7 @@ function handleResize(event: MouseEvent) {
     let newLeftFrames = unifiedStore.pixelToFrame(newLeftPixel, props.timelineWidth)
     newLeftFrames = Math.max(0, alignFramesToFrame(newLeftFrames))
 
-    // 应用吸附计算（左边界调整）
-    const snapResult = snapManager.calculateClipResizeSnap(
-      newLeftFrames,
-      props.timelineWidth,
-      props.data.id, // 排除当前片段
-    )
-
-    if (snapResult.snapped) {
-      newLeftFrames = snapResult.frame
-      // 显示吸附指示器
-      if (snapResult.snapPoint) {
-        snapIndicatorManager.show(snapResult.snapPoint, props.timelineWidth, {
-          timelineOffset: { x: 150, y: 0 },
-          lineHeight: 400,
-        })
-      }
-    } else {
-      snapIndicatorManager.hide(true) // 立即隐藏，不延迟
-    }
+    // 吸附功能已禁用，直接使用计算的帧数
 
     newTimelinePositionFrames = newLeftFrames
     newDurationFrames =
@@ -545,25 +602,7 @@ function handleResize(event: MouseEvent) {
     let newRightFrames = unifiedStore.pixelToFrame(newRightPixel, props.timelineWidth)
     newRightFrames = alignFramesToFrame(newRightFrames)
 
-    // 应用吸附计算（右边界调整）
-    const snapResult = snapManager.calculateClipResizeSnap(
-      newRightFrames,
-      props.timelineWidth,
-      props.data.id, // 排除当前片段
-    )
-
-    if (snapResult.snapped) {
-      newRightFrames = snapResult.frame
-      // 显示吸附指示器
-      if (snapResult.snapPoint) {
-        snapIndicatorManager.show(snapResult.snapPoint, props.timelineWidth, {
-          timelineOffset: { x: 150, y: 0 },
-          lineHeight: 400,
-        })
-      }
-    } else {
-      snapIndicatorManager.hide(true) // 立即隐藏，不延迟
-    }
+    // 吸附功能已禁用，直接使用计算的帧数
 
     newDurationFrames = newRightFrames - resizeStartPositionFrames.value
   }
@@ -642,7 +681,7 @@ function cleanupResize() {
   resizeDirection.value = null
   document.removeEventListener('mousemove', handleResize)
   document.removeEventListener('mouseup', stopResize)
-  snapIndicatorManager.hide(true)
+  // 吸附指示器已禁用
 
   if (direction) {
     // 这里可以发出resize-end事件，但新架构可能不需要
@@ -697,6 +736,27 @@ function updateTooltipPosition(event: MouseEvent) {
  */
 function hideTooltip() {
   showTooltipFlag.value = false
+}
+
+/**
+ * 跳转到指定关键帧
+ */
+function jumpToKeyframe(absoluteFrame: number) {
+  console.log('🎯 [UnifiedTimelineClip] 关键帧跳转:', {
+    itemId: props.data.id,
+    targetFrame: absoluteFrame,
+  })
+
+  // 暂停播放以便进行时间跳转
+  pauseForEditing('关键帧跳转')
+  
+  // 通过WebAV进行时间跳转，这会触发画布渲染更新
+  try {
+    // 使用webAVSeekTo方法，确保画布渲染得到更新
+    unifiedStore.webAVSeekTo(absoluteFrame)
+  } catch (error) {
+    console.error('❌ [UnifiedTimelineClip] 关键帧跳转失败:', error)
+  }
 }
 
 // ==================== 生命周期 ====================

@@ -29,7 +29,6 @@
 import { ref, computed, onUnmounted } from 'vue'
 import { useUnifiedStore } from '../unifiedStore'
 import { usePlaybackControls } from '../composables/usePlaybackControls'
-import { useSnapManager } from '../composables/useSnapManager'
 import { alignFramesToFrame, framesToMicroseconds } from '../utils/timeUtils'
 
 interface PlayheadProps {
@@ -57,7 +56,6 @@ const props = withDefaults(defineProps<PlayheadProps>(), {
 
 const unifiedStore = useUnifiedStore()
 const { pauseForEditing } = usePlaybackControls()
-const snapManager = useSnapManager()
 
 const playheadContainer = ref<HTMLElement>()
 const isDragging = ref(false)
@@ -99,31 +97,11 @@ const clipBoundaryFrames = computed(() => {
 })
 
 /**
- * 应用吸附逻辑到目标帧数（使用新的吸附管理器）
+ * 应用吸附逻辑到目标帧数（已禁用吸附功能，保留接口用于重构）
  */
 function applySnapToClips(targetFrames: number): number {
-  // 如果未启用吸附，直接返回原始帧数
-  if (!props.enableSnapping) {
-    return targetFrames
-  }
-
-  // 使用新的吸附管理器计算吸附结果
-  const snapResult = snapManager.calculatePlayheadSnap(targetFrames, props.timelineWidth, {
-    temporaryDisabled: !props.enableSnapping,
-  })
-
-  // 调试信息：如果发生了吸附，输出日志
-  // if (snapResult.snapped && snapResult.snapPoint) {
-  //   console.log('🧲 播放头吸附:', {
-  //     原始帧数: targetFrames,
-  //     吸附到: snapResult.frame,
-  //     吸附类型: snapResult.snapPoint.type,
-  //     吸附距离: snapResult.distance,
-  //     微秒数: framesToMicroseconds(snapResult.frame),
-  //   })
-  // }
-
-  return snapResult.frame
+  // 吸附功能已禁用，直接返回原始帧数
+  return targetFrames
 }
 
 // 播放头手柄位置（相对于时间刻度区域）
