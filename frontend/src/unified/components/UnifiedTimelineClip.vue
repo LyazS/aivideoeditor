@@ -77,10 +77,8 @@
 import { computed, ref, onUnmounted, h } from 'vue'
 import type {
   UnifiedTimelineClipProps,
-  UnifiedTimelineClipEvents,
   ContentRenderContext,
 } from '../types/clipRenderer'
-import type { VideoTimeRange, ImageTimeRange } from '../../types/index'
 import type { UnifiedTimeRange } from '../types/timeRange'
 import { ContentRendererFactory } from './renderers/ContentRendererFactory'
 import { useUnifiedStore } from '../unifiedStore'

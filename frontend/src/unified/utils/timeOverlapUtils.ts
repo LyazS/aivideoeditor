@@ -6,7 +6,6 @@
 import type {
   UnifiedTimelineItemData,
   KnownTimelineItem,
-  UnknownTimelineItem,
 } from '../timelineitem'
 
 import type { UnifiedTimeRange } from '../types/timeRange'

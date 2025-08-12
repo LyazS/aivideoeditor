@@ -14,11 +14,9 @@ import type { VNode } from 'vue'
 import type {
   ContentRenderer,
   ContentRenderContext,
-  StatusRendererType,
-  MediaTypeRendererType,
 } from '../../types/clipRenderer'
 import type { UnifiedTimelineItemData } from '../../timelineitem/TimelineItemData'
-import type { MediaType, MediaTypeOrUnknown } from '../../mediaitem/types'
+import type { MediaType } from '../../mediaitem/types'
 import type { TimelineItemStatus } from '../../timelineitem/TimelineItemData'
 import { getTimelineItemDisplayName } from '../../utils/clipUtils'
 

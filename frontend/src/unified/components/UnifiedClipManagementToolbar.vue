@@ -95,7 +95,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed } from 'vue'
 import { useUnifiedStore } from '../unifiedStore'
 import { formatFileSize, framesToSeconds } from '../utils/timeUtils'
 import { countOverlappingItems } from '../utils/timeOverlapUtils'

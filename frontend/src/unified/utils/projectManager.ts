@@ -3,9 +3,6 @@ import type { UnifiedProjectConfig } from '../project'
 import type {
   UnifiedMediaItemData,
   UnifiedTimelineItemData,
-  createUnifiedMediaItemData,
-  UnifiedMediaItemQueries,
-  UnifiedMediaItemActions,
 } from '..'
 import type { UnifiedTrackData } from '../track/TrackTypes'
 

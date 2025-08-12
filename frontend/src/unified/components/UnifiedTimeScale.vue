@@ -32,7 +32,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useUnifiedStore } from '../unifiedStore'
 import { calculateVisibleFrameRange } from '../utils/coordinateUtils'
-import { framesToTimecode, alignFramesToFrame } from '../utils/timeUtils'
+import { framesToTimecode } from '../utils/timeUtils'
 import type { TimeMark } from '@/types'
 import UnifiedPlayhead from './UnifiedPlayhead.vue'
 

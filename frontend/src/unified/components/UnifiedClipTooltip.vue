@@ -27,8 +27,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, type CSSProperties } from 'vue'
-import type { MediaType } from '../../types'
+import { computed, type CSSProperties } from 'vue'
 import type { MediaTypeOrUnknown } from '../mediaitem/types'
 
 interface ClipTooltipProps {

@@ -14,7 +14,7 @@
  * - 包含详细的错误信息和状态检查
  */
 
-import { markRaw, type Raw } from 'vue'
+import { markRaw } from 'vue'
 import type { UnifiedMediaItemData, MediaType } from '../mediaitem/types'
 import type { UnifiedSprite } from '../visiblesprite'
 import type {

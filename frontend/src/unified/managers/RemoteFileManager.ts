@@ -720,7 +720,7 @@ export class RemoteFileManager extends DataSourceManager<RemoteFileSourceData> {
 
     let totalBytesDownloaded = 0
     let totalDownloadTime = 0
-    let speedSamples: number[] = []
+    const speedSamples: number[] = []
 
     for (const task of completedTasks) {
       const source = task.source

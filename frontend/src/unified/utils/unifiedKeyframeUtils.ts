@@ -7,7 +7,6 @@
 import type {
   UnifiedTimelineItemData,
   Keyframe,
-  AnimationConfig,
   KeyframeButtonState,
   KeyframeUIState,
 } from '../timelineitem/TimelineItemData'

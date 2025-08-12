@@ -575,7 +575,7 @@ export function linearTimeFn(
     const p = prop as keyof TAnimateProps
     if (startFrame[p] == null) continue
     // @ts-expect-error
-    // eslint-disable-next-line
+     
     rs[p] = (nextFrame[p] - startFrame[p]) * stateProcess + startFrame[p]
   }
 

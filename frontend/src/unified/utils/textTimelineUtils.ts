@@ -1,4 +1,4 @@
-import { reactive, markRaw } from 'vue'
+import { reactive } from 'vue'
 import { TextVisibleSprite } from '../visiblesprite/TextVisibleSprite'
 import { webavToProjectCoords } from './coordinateTransform'
 import { generateUUID4 } from '../../utils/idGenerator'
