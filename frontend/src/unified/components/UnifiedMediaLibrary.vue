@@ -256,8 +256,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useUnifiedStore } from '@/unified/unifiedStore'
-import { useDialogs } from '@/composables/useDialogs'
-import { useDragUtils } from '@/composables/useDragUtils'
+import { useDialogs, useDragUtils } from '@/unified/composables'
 import { framesToTimecode, secondsToFrames } from '@/stores/utils/timeUtils'
 import type { UnifiedMediaItemData, MediaType } from '@/unified'
 import { DataSourceFactory } from '@/unified'

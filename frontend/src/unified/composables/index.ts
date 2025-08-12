@@ -24,3 +24,6 @@ export { useUnifiedKeyframeTransformControls } from './useKeyframeTransformContr
 
 // 重新导出 useUnifiedKeyframeUI 函数
 export { useUnifiedKeyframeUI } from './useUnifiedKeyframeUI'
+
+// 重新导出 useAutoSave 函数
+export { useAutoSave } from './useAutoSave'

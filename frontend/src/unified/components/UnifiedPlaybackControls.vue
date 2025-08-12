@@ -43,7 +43,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useUnifiedStore } from '../unifiedStore'
-import { usePlaybackControls } from '../composables/usePlaybackControls'
+import { usePlaybackControls } from '../composables'
 import HoverButton from '@/components/HoverButton.vue'
 
 const unifiedStore = useUnifiedStore()

@@ -123,7 +123,7 @@
 import { ref, computed, onBeforeMount, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useUnifiedStore } from '@/unified/unifiedStore'
-import { useAutoSave } from '../composables/useAutoSave'
+import { useAutoSave } from '@/unified/composables'
 import VideoPreviewEngine from '../components/VideoPreviewEngine.vue'
 import HoverButton from '../components/HoverButton.vue'
 import LoadingOverlay from '../components/LoadingOverlay.vue'

@@ -28,7 +28,7 @@
 <script setup lang="ts">
 import { ref, computed, onUnmounted } from 'vue'
 import { useUnifiedStore } from '../unifiedStore'
-import { usePlaybackControls } from '../composables/usePlaybackControls'
+import { usePlaybackControls } from '../composables'
 import { alignFramesToFrame, framesToMicroseconds } from '../utils/timeUtils'
 
 interface PlayheadProps {

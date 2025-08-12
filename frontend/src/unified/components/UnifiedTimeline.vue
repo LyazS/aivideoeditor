@@ -212,10 +212,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, nextTick, h } from 'vue'
 import { useUnifiedStore } from '../unifiedStore'
-import { usePlaybackControls } from '../composables/usePlaybackControls'
-import { getDragPreviewManager } from '../composables/useDragPreview'
-import { useDragUtils } from '../composables/useDragUtils'
-import { useDialogs } from '../composables/useDialogs'
+import { usePlaybackControls, getDragPreviewManager, useDragUtils, useDialogs } from '../composables'
 import { calculateVisibleFrameRange } from '../utils/coordinateUtils'
 import { framesToTimecode } from '../utils/timeUtils'
 import type { UnifiedTrackType } from '../track/TrackTypes'

@@ -171,7 +171,7 @@ import {
 } from '../../timelineitem/TimelineItemQueries'
 import type { UnifiedTimelineItemData } from '../../timelineitem/TimelineItemData'
 import { framesToTimecode, timecodeToFrames } from '../../utils/timeUtils'
-import { useUnifiedKeyframeTransformControls } from '../../composables/useKeyframeTransformControls'
+import { useUnifiedKeyframeTransformControls } from '../../composables'
 import { VideoVisibleSprite, AudioVisibleSprite } from '../../visiblesprite'
 import NumberInput from '../../../components/NumberInput.vue'
 import SliderInput from '../../../components/SliderInput.vue'
