@@ -260,17 +260,10 @@ export {
   trimTimelineItem,
   UnifiedTimeRangeUtils,
 
-  // 吸附计算器
-  UnifiedSnapCalculator,
 } from './utils'
 
 // ==================== 统一Composables ====================
 export {
-  // 吸附配置
-  useSnapConfig,
-
-  // 吸附管理器
-  useSnapManager,
 
   // 拖拽预览管理器
   getDragPreviewManager,

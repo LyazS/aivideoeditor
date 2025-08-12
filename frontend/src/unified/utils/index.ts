@@ -123,11 +123,6 @@ export {
   calculateTimeRangeOverlap,
 } from './timeOverlapUtils'
 
-// ==================== 统一吸附计算器 ====================
-export {
-  // 吸附计算器类
-  UnifiedSnapCalculator,
-} from './snapCalculator'
 
 // ==================== 统一缩略图生成器 ====================
 export {
