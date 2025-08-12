@@ -85,9 +85,7 @@ import type { UnifiedTimeRange } from '../types/timeRange'
 import { ContentRendererFactory } from './renderers/ContentRendererFactory'
 import { useUnifiedStore } from '../unifiedStore'
 import { useDragUtils } from '../composables/useDragUtils'
-import { getSnapIndicatorManager } from '../composables/useSnapIndicator'
 import { usePlaybackControls } from '../composables/usePlaybackControls'
-import { useSnapManager } from '../composables/useSnapManager'
 import { alignFramesToFrame } from '../../stores/utils/timeUtils'
 import UnifiedClipTooltip from './UnifiedClipTooltip.vue'
 import type { RemoteFileSourceData } from '../sources/RemoteFileSource'
@@ -109,8 +107,6 @@ const props = withDefaults(defineProps<UnifiedTimelineClipProps>(), {
 // 获取统一store实例
 const unifiedStore = useUnifiedStore()
 const dragUtils = useDragUtils()
-const snapIndicatorManager = getSnapIndicatorManager()
-const snapManager = useSnapManager()
 const { pauseForEditing } = usePlaybackControls()
 
 // 拖拽状态
@@ -476,8 +472,7 @@ function handleDragEnd(_event: DragEvent) {
   dragUtils.clearDragData()
   removeSimpleDragPreview()
 
-  // 隐藏吸附指示器
-  snapIndicatorManager.hide(true)
+  // 吸附指示器已禁用
 }
 
 /**
@@ -593,25 +588,7 @@ function handleResize(event: MouseEvent) {
     let newLeftFrames = unifiedStore.pixelToFrame(newLeftPixel, props.timelineWidth)
     newLeftFrames = Math.max(0, alignFramesToFrame(newLeftFrames))
 
-    // 应用吸附计算（左边界调整）
-    const snapResult = snapManager.calculateClipResizeSnap(
-      newLeftFrames,
-      props.timelineWidth,
-      props.data.id, // 排除当前片段
-    )
-
-    if (snapResult.snapped) {
-      newLeftFrames = snapResult.frame
-      // 显示吸附指示器
-      if (snapResult.snapPoint) {
-        snapIndicatorManager.show(snapResult.snapPoint, props.timelineWidth, {
-          timelineOffset: { x: 150, y: 0 },
-          lineHeight: 400,
-        })
-      }
-    } else {
-      snapIndicatorManager.hide(true) // 立即隐藏，不延迟
-    }
+    // 吸附功能已禁用，直接使用计算的帧数
 
     newTimelinePositionFrames = newLeftFrames
     newDurationFrames =
@@ -625,25 +602,7 @@ function handleResize(event: MouseEvent) {
     let newRightFrames = unifiedStore.pixelToFrame(newRightPixel, props.timelineWidth)
     newRightFrames = alignFramesToFrame(newRightFrames)
 
-    // 应用吸附计算（右边界调整）
-    const snapResult = snapManager.calculateClipResizeSnap(
-      newRightFrames,
-      props.timelineWidth,
-      props.data.id, // 排除当前片段
-    )
-
-    if (snapResult.snapped) {
-      newRightFrames = snapResult.frame
-      // 显示吸附指示器
-      if (snapResult.snapPoint) {
-        snapIndicatorManager.show(snapResult.snapPoint, props.timelineWidth, {
-          timelineOffset: { x: 150, y: 0 },
-          lineHeight: 400,
-        })
-      }
-    } else {
-      snapIndicatorManager.hide(true) // 立即隐藏，不延迟
-    }
+    // 吸附功能已禁用，直接使用计算的帧数
 
     newDurationFrames = newRightFrames - resizeStartPositionFrames.value
   }
@@ -722,7 +681,7 @@ function cleanupResize() {
   resizeDirection.value = null
   document.removeEventListener('mousemove', handleResize)
   document.removeEventListener('mouseup', stopResize)
-  snapIndicatorManager.hide(true)
+  // 吸附指示器已禁用
 
   if (direction) {
     // 这里可以发出resize-end事件，但新架构可能不需要

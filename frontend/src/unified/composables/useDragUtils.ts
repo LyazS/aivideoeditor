@@ -3,7 +3,6 @@ import type { TimelineItemDragData, MediaItemDragData } from '../types'
 import type { MediaType } from '../mediaitem'
 import type { UnifiedTrackType } from '../track/TrackTypes'
 import { alignFramesToFrame } from '../utils/timeUtils'
-import { useSnapManager } from './useSnapManager'
 
 /**
  * 拖拽工具函数集合
@@ -11,7 +10,6 @@ import { useSnapManager } from './useSnapManager'
  */
 export function useDragUtils() {
   const unifiedStore = useUnifiedStore()
-  const snapManager = useSnapManager()
 
   /**
    * 设置时间轴项目拖拽数据
@@ -231,7 +229,7 @@ export function useDragUtils() {
   }
 
   /**
-   * 计算拖拽目标位置（支持轨道类型兼容性检查和吸附）
+   * 计算拖拽目标位置（已禁用吸附功能，保留接口用于重构）
    */
   function calculateDropPosition(
     event: DragEvent,
@@ -318,7 +316,7 @@ export function useDragUtils() {
             const newRect = newTrackContent.getBoundingClientRect()
             // 重新计算mouseX相对于新轨道的位置
             const mouseXRelativeToNewTrack = event.clientX - newRect.left
-            // 使用新的相对位置计算时间（支持吸附）
+            // 使用新的相对位置计算时间（已禁用吸附）
             const dropResult = calculateDropFrames(
               mouseXRelativeToNewTrack,
               timelineWidth,
@@ -330,14 +328,14 @@ export function useDragUtils() {
               dropTime: dropResult.frame,
               targetTrackId,
               trackContent: newTrackContent,
-              snapResult: dropResult.snapResult,
+              snapResult: undefined, // 吸附功能已禁用
             }
           }
         }
       }
     }
 
-    // 使用原始逻辑计算时间（支持吸附）
+    // 使用原始逻辑计算时间（已禁用吸附）
     const dropResult = calculateDropFrames(
       mouseX,
       timelineWidth,
@@ -350,12 +348,12 @@ export function useDragUtils() {
       dropTime: dropResult.frame,
       targetTrackId,
       trackContent,
-      snapResult: dropResult.snapResult,
+      snapResult: undefined, // 吸附功能已禁用
     }
   }
 
   /**
-   * 计算拖拽帧数的辅助函数（支持吸附）
+   * 计算拖拽帧数的辅助函数（已禁用吸附功能，保留接口用于重构）
    */
   function calculateDropFrames(
     mouseX: number,
@@ -381,25 +379,8 @@ export function useDragUtils() {
     // 对齐到帧边界
     dropFrames = alignFramesToFrame(dropFrames)
 
-    // 应用吸附计算（如果启用）
-    let snapResult
-    if (enableSnapping) {
-      snapResult = snapManager.calculateClipDragSnap(
-        dropFrames,
-        timelineWidth,
-        excludeClipIds || [],
-        {
-          temporaryDisabled: false,
-        },
-      )
-
-      // 如果发生了吸附，使用吸附后的帧数
-      if (snapResult.snapped) {
-        dropFrames = snapResult.frame
-      }
-    }
-
-    return { frame: dropFrames, snapResult }
+    // 吸附功能已禁用，直接返回计算结果
+    return { frame: dropFrames, snapResult: undefined }
   }
 
   /**
