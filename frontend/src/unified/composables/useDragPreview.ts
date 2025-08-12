@@ -1,5 +1,5 @@
-import { useUnifiedStore } from '../unifiedStore'
-import type { DragPreviewData } from '../types/drag'
+import { useUnifiedStore } from '@/unified/unifiedStore'
+import type { DragPreviewData } from '@/unified/types/drag'
 
 // 统一拖拽预览管理器
 class DragPreviewManager {

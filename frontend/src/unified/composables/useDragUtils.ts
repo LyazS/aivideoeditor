@@ -1,8 +1,8 @@
-import { useUnifiedStore } from '../unifiedStore'
-import type { TimelineItemDragData, MediaItemDragData } from '../types'
-import type { MediaType } from '../mediaitem'
-import type { UnifiedTrackType } from '../track/TrackTypes'
-import { alignFramesToFrame } from '../utils/timeUtils'
+import { useUnifiedStore } from '@/unified/unifiedStore'
+import type { TimelineItemDragData, MediaItemDragData } from '@/unified/types'
+import type { MediaType } from '@/unified/mediaitem'
+import type { UnifiedTrackType } from '@/unified/track/TrackTypes'
+import { alignFramesToFrame } from '@/unified/utils/timeUtils'
 
 /**
  * 拖拽工具函数集合

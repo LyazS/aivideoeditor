@@ -1,5 +1,5 @@
 import { ref, watch, onUnmounted } from 'vue'
-import { useUnifiedStore } from '../unifiedStore'
+import { useUnifiedStore } from '@/unified/unifiedStore'
 import type { AutoSaveConfig, AutoSaveState } from '@/types'
 
 /**
