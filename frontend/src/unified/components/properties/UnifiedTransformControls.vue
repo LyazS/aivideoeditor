@@ -252,8 +252,8 @@
 </template>
 
 <script setup lang="ts">
-import NumberInput from '../../../components/NumberInput.vue'
-import SliderInput from '../../../components/SliderInput.vue'
+import NumberInput from '@/components/NumberInput.vue'
+import SliderInput from '@/components/SliderInput.vue'
 
 interface Props {
   // 变换属性

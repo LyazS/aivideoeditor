@@ -4,7 +4,6 @@
  */
 
 import { reactive } from 'vue'
-import type { Raw } from 'vue'
 import { generateUUID4 } from '@/utils/idGenerator'
 
 // ==================== 基础类型定义 ====================

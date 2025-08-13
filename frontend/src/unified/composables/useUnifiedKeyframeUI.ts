@@ -4,14 +4,14 @@
  */
 
 import { computed, readonly, type Ref } from 'vue'
-import type { UnifiedTimelineItemData } from '../timelineitem'
+import type { UnifiedTimelineItemData } from '@/unified/timelineitem'
 import type {
   KeyframeUIState,
   KeyframeButtonState,
   KeyframeProperties,
-} from '../timelineitem/TimelineItemData'
+} from '@/unified/timelineitem/TimelineItemData'
 // WebAV功能现在通过unifiedStore提供
-import { useUnifiedStore } from '../unifiedStore'
+import { useUnifiedStore } from '@/unified/unifiedStore'
 import {
   hasAnimation,
   isCurrentFrameOnKeyframe,
@@ -19,13 +19,13 @@ import {
   getKeyframeUIState,
   getPreviousKeyframeFrame,
   getNextKeyframeFrame,
-} from '../utils/unifiedKeyframeUtils'
+} from '@/unified/utils/unifiedKeyframeUtils'
 import {
   toggleKeyframe as toggleKeyframeWithCommand,
   updateProperty as updatePropertyWithCommand,
   clearAllKeyframes as clearAllKeyframesWithCommand,
-} from '../utils/keyframeCommandUtils'
-import { isPlayheadInTimelineItem } from '../utils/timelineSearchUtils'
+} from '@/unified/utils/keyframeCommandUtils'
+import { isPlayheadInTimelineItem } from '@/unified/utils/timelineSearchUtils'
 
 /**
  * 统一关键帧UI管理 Composable（新架构版本）
@@ -237,7 +237,7 @@ export function useUnifiedKeyframeUI(
     try {
       // 动态导入WebAV动画管理器
       const { updateWebAVAnimation: updateAnimation } = await import(
-        '../utils/webavAnimationManager'
+        '@/unified/utils/webavAnimationManager'
       )
       await updateAnimation(timelineItem.value)
     } catch (error) {
@@ -268,9 +268,9 @@ export function useUnifiedKeyframeUI(
 
     try {
       // 动态导入命令系统
-      const { UpdatePropertyCommand } = await import('../modules/commands/keyframes')
+      const { UpdatePropertyCommand } = await import('@/unified/modules/commands/keyframes')
       const { BatchUpdatePropertiesCommand } = await import(
-        '../modules/commands/batchCommands'
+        '@/unified/modules/commands/batchCommands'
       )
 
       // 创建多个属性更新命令
@@ -285,7 +285,7 @@ export function useUnifiedKeyframeUI(
           },
           {
             updateWebAVAnimation: async (item) => {
-              const { updateWebAVAnimation } = await import('../utils/webavAnimationManager')
+              const { updateWebAVAnimation } = await import('@/unified/utils/webavAnimationManager')
               await updateWebAVAnimation(item)
             },
           },

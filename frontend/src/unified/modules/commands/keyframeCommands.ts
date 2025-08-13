@@ -23,4 +23,4 @@ export {
 } from './keyframes'
 
 // 导出便捷工具函数
-export * from '../../utils/keyframeCommandUtils'
+export * from '@/unified/utils/keyframeCommandUtils'

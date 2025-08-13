@@ -66,9 +66,9 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useUnifiedStore } from '../unifiedStore'
+import { useUnifiedStore } from '@/unified/unifiedStore'
 import UnifiedVideoClipProperties from './properties/UnifiedVideoClipProperties.vue'
-import type { UnifiedTimelineItemData } from '../timelineitem/TimelineItemData'
+import type { UnifiedTimelineItemData } from '@/unified/timelineitem/TimelineItemData'
 
 // 导入文本和音频属性组件（待实现）
 import UnifiedTextClipProperties from './properties/UnifiedTextClipProperties.vue'

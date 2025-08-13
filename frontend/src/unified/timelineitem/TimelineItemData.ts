@@ -10,10 +10,21 @@
  */
 
 import type { Raw } from 'vue'
-import type { MediaType, MediaTypeOrUnknown } from '../mediaitem'
-import type { UnifiedTimeRange } from '../types/timeRange'
+import type { MediaType, MediaTypeOrUnknown } from '@/unified/mediaitem'
+import type { UnifiedTimeRange } from '@/unified/types/timeRange'
 // ==================== 从 types/index.ts 复制的类型定义 ====================
-
+/**
+ * 默认文本样式配置
+ */
+export const DEFAULT_TEXT_STYLE: TextStyleConfig = {
+  fontSize: 48,
+  fontFamily: 'Arial, sans-serif',
+  fontWeight: 'normal',
+  fontStyle: 'normal',
+  color: '#ffffff',
+  textAlign: 'center',
+  lineHeight: 1.2,
+}
 /**
  * 文本样式配置接口
  */
@@ -151,7 +162,7 @@ type MediaConfigMap = {
 export type GetMediaConfig<T extends MediaType> = MediaConfigMap[T]
 
 // 导入我们的自定义 Sprite 类
-import type { UnifiedSprite } from '../visiblesprite'
+import type { UnifiedSprite } from '@/unified/visiblesprite'
 
 // ==================== 基础类型定义 ====================
 

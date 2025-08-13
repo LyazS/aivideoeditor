@@ -4,8 +4,7 @@
  * 适配新架构的统一类型系统
  */
 
-import type { SimpleCommand } from '../types'
-import type { UnifiedTimelineItemData } from '../../../timelineitem/TimelineItemData'
+import type { SimpleCommand } from '@/unified/modules/commands/types'
 import {
   type KeyframeSnapshot,
   type TimelineModule,
@@ -50,7 +49,7 @@ export class ClearAllKeyframesCommand implements SimpleCommand {
 
     try {
       // 动态导入关键帧工具函数
-      const { clearAllKeyframes } = await import('../../../utils/unifiedKeyframeUtils')
+      const { clearAllKeyframes } = await import('@/unified/utils/unifiedKeyframeUtils')
 
       // 清除所有关键帧
       clearAllKeyframes(item)
@@ -93,7 +92,7 @@ export class ClearAllKeyframesCommand implements SimpleCommand {
         if (firstKeyframe && item.timeRange) {
           // 将帧位置转换为绝对帧数
           const { relativeFrameToAbsoluteFrame } = await import(
-            '../../../utils/unifiedKeyframeUtils'
+            '@/unified/utils/unifiedKeyframeUtils'
           )
           const absoluteFrame = relativeFrameToAbsoluteFrame(
             firstKeyframe.framePosition,

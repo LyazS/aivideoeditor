@@ -4,9 +4,9 @@
  * 适配新架构版本
  */
 
-import type { UnifiedTimelineItemData } from '../timelineitem/TimelineItemData'
-import { isValidAnimationConfig } from './animationConverter'
-import { hasAnimation } from './unifiedKeyframeUtils'
+import type { UnifiedTimelineItemData } from '@/unified/timelineitem/TimelineItemData'
+import { isValidAnimationConfig } from '@/unified/utils/animationConverter'
+import { hasAnimation } from '@/unified/utils/unifiedKeyframeUtils'
 
 // ==================== 调试函数 ====================
 
@@ -105,7 +105,7 @@ export function isKeyframeDebugEnabled(): boolean {
  */
 export async function debugCurrentItem(): Promise<void> {
   try {
-    const { useUnifiedStore } = await import('../unifiedStore')
+    const { useUnifiedStore } = await import('@/unified/unifiedStore')
     const unifiedStore = useUnifiedStore()
 
     // 获取选中的时间轴项目

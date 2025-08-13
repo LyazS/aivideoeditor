@@ -211,21 +211,17 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, nextTick, h } from 'vue'
-import { useUnifiedStore } from '../unifiedStore'
-import { usePlaybackControls } from '../composables/usePlaybackControls'
-import { getDragPreviewManager } from '../composables/useDragPreview'
-import { useDragUtils } from '../composables/useDragUtils'
-import { useDialogs } from '../composables/useDialogs'
-import { calculateVisibleFrameRange } from '../utils/coordinateUtils'
-import { framesToTimecode } from '../utils/timeUtils'
-import type { UnifiedTrackType } from '../track/TrackTypes'
-import type { MediaType, UnifiedMediaItemData } from '../mediaitem/types'
+import { useUnifiedStore } from '@/unified/unifiedStore'
+import { usePlaybackControls, getDragPreviewManager, useDragUtils, useDialogs } from '@/unified/composables'
+import { calculateVisibleFrameRange } from '@/unified/utils/coordinateUtils'
+import type { UnifiedTrackType } from '@/unified/track/TrackTypes'
+import type { MediaType } from '@/unified/mediaitem/types'
 import type {
   UnifiedTimelineItemData,
   GetTimelineItemConfig,
   TimelineItemStatus,
 } from '../timelineitem/TimelineItemData'
-import type { TimelineItemDragData, MediaItemDragData, ConflictInfo } from '../types'
+import type { TimelineItemDragData, MediaItemDragData, ConflictInfo } from '@/unified/types'
 import type {
   VideoMediaConfig,
   ImageMediaConfig,
@@ -243,10 +239,8 @@ import {
   ContextMenuSeparator,
   ContextMenuGroup,
 } from '@imengyu/vue3-context-menu'
-import { UnifiedMediaItemQueries, UnifiedMediaItemActions } from '../mediaitem'
+import { UnifiedMediaItemQueries } from '@/unified/mediaitem'
 import { generateId } from '@/utils/idGenerator'
-import { generateThumbnailForUnifiedMediaItem } from '../utils/thumbnailGenerator'
-import { TimelineItemQueries } from '../timelineitem/TimelineItemQueries'
 // 菜单项类型定义
 type MenuItem =
   | {
@@ -1498,7 +1492,6 @@ async function createMediaClipFromMediaItem(
     const config = createEnhancedDefaultConfig(
       knownMediaType,
       originalResolution,
-      unifiedStore.videoResolution,
     )
 
     // 创建时间轴项目数据
@@ -1541,11 +1534,10 @@ async function createMediaClipFromMediaItem(
   }
 }
 
-// 创建增强的默认配置 - 考虑原始分辨率和画布尺寸
+// 创建增强的默认配置 - 考虑原始分辨率
 function createEnhancedDefaultConfig(
   mediaType: MediaType,
   originalResolution: { width: number; height: number } | null,
-  canvasResolution: { width: number; height: number },
 ): GetTimelineItemConfig<MediaType> {
   // 根据媒体类型创建对应的默认配置
   switch (mediaType) {
@@ -1892,7 +1884,6 @@ function detectEnhancedConflicts(
       // 计算重叠区域
       const overlapStart = Math.max(startTime, itemStart)
       const overlapEnd = Math.min(endTime, itemEnd)
-      const overlapDuration = overlapEnd - overlapStart
 
       conflicts.push({
         itemId: item.id,

@@ -1,5 +1,5 @@
 import { ref, computed } from 'vue'
-import type { UnifiedProjectConfig } from '../project/types'
+import type { UnifiedProjectConfig } from '@/unified/project/types'
 
 /**
  * 统一项目管理模块

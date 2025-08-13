@@ -3,11 +3,10 @@
  * 适配自旧架构的 timelineSearchUtils，支持统一类型系统
  */
 
-import type { UnifiedTimelineItemData } from '../timelineitem/TimelineItemData'
-import type { UnifiedMediaItemData } from '@/unified'
-import type { MediaTypeOrUnknown } from '../mediaitem'
 import type { Raw } from 'vue'
-import type { UnifiedSprite } from '../visiblesprite'
+import type { UnifiedTimelineItemData } from '@/unified/timelineitem/TimelineItemData'
+import type { MediaTypeOrUnknown, UnifiedMediaItemData } from '@/unified/mediaitem'
+import type { UnifiedSprite } from '@/unified/visiblesprite'
 
 // ==================== 查找工具 ====================
 

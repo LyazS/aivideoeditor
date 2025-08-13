@@ -1,10 +1,10 @@
 import { ImgClip } from '@webav/av-cliper'
 import { debounce } from 'lodash'
-import type { UnifiedTimeRange } from '../types/timeRange'
-import type { TextStyleConfig } from '../timelineitem/TimelineItemData'
-import { framesToMicroseconds } from '../utils/timeUtils'
-import { BaseVisibleSprite } from './BaseVisibleSprite'
-import { TextHelper } from '../../utils/TextHelper'
+import type { UnifiedTimeRange } from '@/unified/types/timeRange'
+import type { TextStyleConfig } from '@/unified/timelineitem/TimelineItemData'
+import { framesToMicroseconds } from '@/unified/utils/timeUtils'
+import { BaseVisibleSprite } from '@/unified/visiblesprite/BaseVisibleSprite'
+import { TextHelper } from '@/unified/utils'
 
 /**
  * 文本可见精灵类，继承自BaseVisibleSprite

@@ -27,9 +27,9 @@
 
 <script setup lang="ts">
 import { ref, computed, onUnmounted } from 'vue'
-import { useUnifiedStore } from '../unifiedStore'
-import { usePlaybackControls } from '../composables/usePlaybackControls'
-import { alignFramesToFrame, framesToMicroseconds } from '../utils/timeUtils'
+import { useUnifiedStore } from '@/unified/unifiedStore'
+import { usePlaybackControls } from '@/unified/composables'
+import { alignFramesToFrame } from '@/unified/utils/timeUtils'
 
 interface PlayheadProps {
   /** 时间轴容器宽度 */
@@ -59,42 +59,6 @@ const { pauseForEditing } = usePlaybackControls()
 
 const playheadContainer = ref<HTMLElement>()
 const isDragging = ref(false)
-
-// 用于检测边界点变化的缓存
-let lastBoundariesString = ''
-
-/**
- * 计算所有clip的边界帧数（开始和结束帧）- 使用computed自动缓存
- */
-const clipBoundaryFrames = computed(() => {
-  const boundaries: number[] = []
-
-  // 添加时间轴开始位置（0帧）
-  boundaries.push(0)
-
-  // 遍历所有时间轴项目，收集开始和结束帧
-  unifiedStore.timelineItems.forEach((item) => {
-    const timeRange = item.timeRange
-    boundaries.push(timeRange.timelineStartTime)
-    boundaries.push(timeRange.timelineEndTime)
-  })
-
-  // 去重并排序
-  const result = [...new Set(boundaries)].sort((a, b) => a - b)
-
-  // 只在边界点发生变化时输出调试信息
-  const currentBoundariesString = result.join(',')
-  if (currentBoundariesString !== lastBoundariesString) {
-    console.log('🔄 更新clip边界点缓存:', {
-      边界点数量: result.length,
-      边界点: result,
-      时间轴项目数: unifiedStore.timelineItems.length,
-    })
-    lastBoundariesString = currentBoundariesString
-  }
-
-  return result
-})
 
 /**
  * 应用吸附逻辑到目标帧数（已禁用吸附功能，保留接口用于重构）

@@ -1,22 +1,21 @@
-import { generateCommandId } from '../../../utils/idGenerator'
-import { framesToTimecode } from '../../utils/timeUtils'
-import type { SimpleCommand } from './types'
+import { generateCommandId } from '@/utils/idGenerator'
+import { framesToTimecode } from '@/unified/utils/timeUtils'
+import type { SimpleCommand } from '@/unified/modules/commands/types'
 
 // 类型导入
-import type { UnifiedTimelineItemData } from '../../timelineitem/TimelineItemData'
+import type { UnifiedTimelineItemData } from '@/unified/timelineitem/TimelineItemData'
 
-import type { UnifiedMediaItemData, MediaType } from '../../mediaitem/types'
+import type { UnifiedMediaItemData, MediaType } from '@/unified/mediaitem/types'
 
-import type { UnifiedTimeRange } from '../../types/timeRange'
+import type { UnifiedTimeRange } from '@/unified/types/timeRange'
 
 import {
   isKnownTimelineItem,
-  isUnknownTimelineItem,
   isVideoTimelineItem,
   isImageTimelineItem,
   isAudioTimelineItem,
   isTextTimelineItem,
-} from '../../timelineitem'
+} from '@/unified/timelineitem'
 
 /**
  * 调整时间轴项目大小命令

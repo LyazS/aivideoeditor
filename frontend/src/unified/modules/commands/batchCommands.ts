@@ -10,25 +10,19 @@
  * 5. 保持与原有命令相同的API接口，便于迁移
  */
 
-import { generateCommandId } from '../../../utils/idGenerator'
-import { BaseBatchCommand } from '../UnifiedHistoryModule'
-import type { SimpleCommand } from './types'
-import { RemoveTimelineItemCommand, MoveTimelineItemCommand } from './timelineCommands'
+import { BaseBatchCommand } from '@/unified/modules/UnifiedHistoryModule'
+import type { SimpleCommand } from '@/unified/modules/commands/types'
+import { RemoveTimelineItemCommand, MoveTimelineItemCommand } from '@/unified/modules/commands/timelineCommands'
 import type { VisibleSprite } from '@webav/av-cliper'
 
 // ==================== 新架构类型导入 ====================
 import type {
   UnifiedTimelineItemData,
-  KnownTimelineItem,
-  UnknownTimelineItem,
-} from '../../timelineitem/TimelineItemData'
+} from '@/unified/timelineitem/TimelineItemData'
 
-import type { UnifiedMediaItemData, MediaType } from '../../mediaitem/types'
+import type { UnifiedMediaItemData, MediaType } from '@/unified/mediaitem/types'
 
-import type { UnifiedTrackData } from '../../track/TrackTypes'
-
-// ==================== 新架构工具导入 ====================
-import { isKnownTimelineItem, isUnknownTimelineItem } from '../../timelineitem'
+import type { UnifiedTrackData } from '@/unified/track/TrackTypes'
 
 /**
  * 批量删除时间轴项目命令

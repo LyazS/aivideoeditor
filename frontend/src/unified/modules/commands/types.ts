@@ -1,4 +1,4 @@
-import type { UnifiedMediaItemData } from '../../mediaitem/types'
+import type { UnifiedMediaItemData } from '@/unified/mediaitem/types'
 
 /**
  * 命令模式接口定义

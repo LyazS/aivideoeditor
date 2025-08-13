@@ -1,9 +1,9 @@
 import { ref, type Ref } from 'vue'
-import type { UnifiedTrackData, UnifiedTrackType } from '../track/TrackTypes'
-import { createUnifiedTrackData } from '../track/TrackTypes'
-import type { UnifiedTimelineItemData } from '../timelineitem/TimelineItemData'
-import { isReady } from '../timelineitem/TimelineItemQueries'
-import { hasAudioCapabilities } from '../utils/spriteTypeGuards'
+import type { UnifiedTrackData, UnifiedTrackType } from '@/unified/track/TrackTypes'
+import { createUnifiedTrackData } from '@/unified/track/TrackTypes'
+import type { UnifiedTimelineItemData } from '@/unified/timelineitem/TimelineItemData'
+import { isReady } from '@/unified/timelineitem/TimelineItemQueries'
+import { hasAudioCapabilities } from '@/unified/utils/spriteTypeGuards'
 
 /**
  * 统一轨道管理模块

@@ -4,51 +4,26 @@
  * 遵循"从源头重建"原则：保存完整的重建元数据，撤销时从原始素材重新创建
  */
 
-import { generateCommandId } from '../../../utils/idGenerator'
-import { reactive, markRaw } from 'vue'
+import { generateCommandId } from '@/utils/idGenerator'
 import type { VisibleSprite } from '@webav/av-cliper'
-import type { SimpleCommand } from './types'
-import { cloneTimelineItem } from '../../timelineitem/TimelineItemFactory'
+import type { SimpleCommand } from '@/unified/modules/commands/types'
 
 // ==================== 新架构类型导入 ====================
 import type {
   UnifiedTimelineItemData,
-  KnownTimelineItem,
-  UnknownTimelineItem,
-  TimelineItemStatus,
-} from '../../timelineitem/TimelineItemData'
+} from '@/unified/timelineitem/TimelineItemData'
 
-import type { UnifiedMediaItemData, MediaType } from '../../mediaitem/types'
-
-import type {
-  VideoMediaConfig,
-  ImageMediaConfig,
-  AudioMediaConfig,
-  TextMediaConfig,
-  BaseMediaProps,
-} from '../../../types'
-import type { UnifiedTimeRange } from '../../types/timeRange'
+import type { UnifiedMediaItemData, MediaType } from '@/unified/mediaitem/types'
 
 // ==================== 新架构工具导入 ====================
 import {
-  createSpriteFromUnifiedMediaItem,
-  createSpriteFromUnifiedTimelineItem,
-} from '../../utils/spriteFactory'
-import { regenerateThumbnailForUnifiedTimelineItem } from '../../utils/thumbnailGenerator'
-
-import {
-  isKnownTimelineItem,
-  isUnknownTimelineItem,
-  hasVisualProperties,
   TimelineItemFactory,
-} from '../../timelineitem'
-
-import { UnifiedMediaItemQueries } from '../../mediaitem'
+} from '@/unified/timelineitem'
 
 import {
   setupCommandMediaSync,
   cleanupCommandMediaSync,
-} from '../../composables/useCommandMediaSync'
+} from '@/unified/composables/useCommandMediaSync'
 
 /**
  * 移除时间轴项目命令

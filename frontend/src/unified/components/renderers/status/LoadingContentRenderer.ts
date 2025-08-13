@@ -11,13 +11,12 @@
 
 import { h } from 'vue'
 import type { VNode } from 'vue'
-import type { ContentRenderer, ContentRenderContext } from '../../../types/clipRenderer'
-import type { UnifiedTimelineItemData } from '../../../timelineitem/TimelineItemData'
-import type { MediaType } from '../../../mediaitem/types'
-import type { UnifiedMediaItemData } from '../../../mediaitem/types'
-import { getTimelineItemDisplayName } from '../../../utils/clipUtils'
-import { useUnifiedStore } from '../../../unifiedStore'
-import type { RemoteFileSourceData } from '../../../sources/RemoteFileSource'
+import type { ContentRenderer, ContentRenderContext } from '@/unified/types/clipRenderer'
+import type { UnifiedTimelineItemData } from '@/unified/timelineitem/TimelineItemData'
+import type { MediaType } from '@/unified/mediaitem/types'
+import { getTimelineItemDisplayName } from '@/unified/utils/clipUtils'
+import { useUnifiedStore } from '@/unified/unifiedStore'
+import type { RemoteFileSourceData } from '@/unified/sources/RemoteFileSource'
 
 /**
  * 加载状态内容渲染器

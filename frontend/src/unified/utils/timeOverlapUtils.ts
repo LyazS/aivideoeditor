@@ -6,12 +6,11 @@
 import type {
   UnifiedTimelineItemData,
   KnownTimelineItem,
-  UnknownTimelineItem,
-} from '../timelineitem'
+} from '@/unified/timelineitem'
 
-import type { UnifiedTimeRange } from '../types/timeRange'
+import type { UnifiedTimeRange } from '@/unified/types/timeRange'
 
-import type { OverlapTimeRange, OverlapResult, ConflictInfo } from '../types'
+import type { OverlapTimeRange, OverlapResult, ConflictInfo } from '@/unified/types'
 
 // ==================== 核心重叠检测函数 ====================
 

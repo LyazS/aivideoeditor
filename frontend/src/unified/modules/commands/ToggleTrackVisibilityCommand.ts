@@ -1,13 +1,13 @@
-import { generateCommandId } from '../../../utils/idGenerator'
+import { generateCommandId } from '@/utils/idGenerator'
 import { ref, type Ref } from 'vue'
-import type { SimpleCommand } from './types'
+import type { SimpleCommand } from '@/unified/modules/commands/types'
 
 // 类型导入
-import type { UnifiedTimelineItemData } from '../../timelineitem/TimelineItemData'
+import type { UnifiedTimelineItemData } from '@/unified/timelineitem/TimelineItemData'
 
-import type { MediaType, MediaTypeOrUnknown } from '../../mediaitem/types'
+import type { MediaType } from '@/unified/mediaitem/types'
 
-import type { UnifiedTrackData } from '../../track/TrackTypes'
+import type { UnifiedTrackData } from '@/unified/track/TrackTypes'
 
 /**
  * 切换轨道可见性命令

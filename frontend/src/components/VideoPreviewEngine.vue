@@ -183,7 +183,7 @@ import UnifiedPlaybackControls from '@/unified/components/UnifiedPlaybackControl
 import UnifiedClipManagementToolbar from '@/unified/components/UnifiedClipManagementToolbar.vue'
 import UnifiedPropertiesPanel from '@/unified/components/UnifiedPropertiesPanel.vue'
 import { useUnifiedStore } from '@/unified/unifiedStore'
-import { useKeyboardShortcuts } from '@/unified/composables/useKeyboardShortcuts'
+import { useKeyboardShortcuts } from '@/unified/composables'
 import { logWebAVReadyStateChange, logComponentLifecycle } from '../utils/webavDebug'
 import { framesToTimecode } from '../stores/utils/timeUtils'
 

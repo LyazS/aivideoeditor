@@ -3,8 +3,6 @@
  * 包含轨道类型、默认配置、UI常量等
  */
 
-import type { UnifiedTrackType, TrackStatus } from './TrackTypes'
-
 // ==================== 轨道类型常量 ====================
 
 /**

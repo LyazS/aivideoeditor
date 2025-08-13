@@ -8,8 +8,8 @@ import {
   DataSourceBusinessActions,
   DataSourceStateActions,
   DataSourceQueries,
-} from '../sources/BaseDataSource'
-import type { UnifiedDataSourceData } from '../sources/DataSourceTypes'
+} from '@/unified/sources/BaseDataSource'
+import type { UnifiedDataSourceData } from '@/unified/sources/DataSourceTypes'
 
 // ==================== 任务相关接口 ====================
 

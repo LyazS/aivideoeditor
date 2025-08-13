@@ -2,7 +2,7 @@
  * 统一时间轴项目常量定义
  */
 
-import type { TimelineItemStatus } from './TimelineItemData'
+import type { TimelineItemStatus } from '@/unified/timelineitem/TimelineItemData'
 
 // ==================== 状态相关常量 ====================
 

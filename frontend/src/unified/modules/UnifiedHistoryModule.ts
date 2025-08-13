@@ -1,6 +1,6 @@
 import { ref } from 'vue'
-import type { NotificationManager } from '../../types'
-import type { SimpleCommand } from './commands/types'
+import type { NotificationManager } from '@/types'
+import type { SimpleCommand } from '@/unified/modules/commands/types'
 /**
  * 批量命令基类
  * 支持将多个单个命令组合为一个批量操作，统一执行和撤销
