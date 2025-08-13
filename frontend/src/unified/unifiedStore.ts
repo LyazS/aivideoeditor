@@ -88,7 +88,10 @@ import {
   ResizeTimelineItemCommand,
 } from '@/unified/modules/commands/timelineCommands'
 
-import { BatchDeleteCommand, BatchAutoArrangeTrackCommand } from '@/unified/modules/commands/batchCommands'
+import {
+  BatchDeleteCommand,
+  BatchAutoArrangeTrackCommand,
+} from '@/unified/modules/commands/batchCommands'
 
 /**
  * 统一视频编辑器存储
@@ -126,7 +129,13 @@ export const useUnifiedStore = defineStore('unified', () => {
   const unifiedPlaybackModule = createUnifiedPlaybackModule(unifiedConfigModule.frameRate)
 
   // 创建WebAV集成模块
-  const unifiedWebavModule = createUnifiedWebavModule()
+  const unifiedWebavModule = createUnifiedWebavModule({
+    currentFrame: unifiedPlaybackModule.currentFrame,
+    currentWebAVFrame: unifiedPlaybackModule.currentWebAVFrame,
+    isPlaying: unifiedPlaybackModule.isPlaying,
+    setCurrentFrame: unifiedPlaybackModule.setCurrentFrame,
+    setPlaying: unifiedPlaybackModule.setPlaying,
+  })
 
   // 创建统一时间轴管理模块（需要依赖其他模块）
   const unifiedTimelineModule = createUnifiedTimelineModule(
@@ -1108,6 +1117,7 @@ export const useUnifiedStore = defineStore('unified', () => {
 
     // 播放控制状态
     currentFrame: unifiedPlaybackModule.currentFrame,
+    currentWebAVFrame: unifiedPlaybackModule.currentWebAVFrame,
     isPlaying: unifiedPlaybackModule.isPlaying,
     playbackRate: unifiedPlaybackModule.playbackRate,
 
