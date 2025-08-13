@@ -4,11 +4,11 @@
  */
 
 import { computed, type Ref } from 'vue'
-import { useUnifiedStore } from '../unifiedStore'
-import { uiDegreesToWebAVRadians, webAVRadiansToUIDegrees } from '../utils/rotationTransform'
-import { useUnifiedKeyframeUI } from './useUnifiedKeyframeUI'
-import type { UnifiedTimelineItemData } from '../timelineitem'
-import { hasVisualProperties } from '../timelineitem'
+import { useUnifiedStore } from '@/unified/unifiedStore'
+import { uiDegreesToWebAVRadians, webAVRadiansToUIDegrees } from '@/unified/utils/rotationTransform'
+import { useUnifiedKeyframeUI } from '@/unified/composables/useUnifiedKeyframeUI'
+import type { UnifiedTimelineItemData } from '@/unified/timelineitem'
+import { hasVisualProperties } from '@/unified/timelineitem'
 
 interface UnifiedKeyframeTransformControlsOptions {
   selectedTimelineItem: Ref<UnifiedTimelineItemData | null>

@@ -4,13 +4,13 @@
  * 包括时间位置移动和轨道间移动
  */
 
-import { generateCommandId } from '../../../utils/idGenerator'
-import type { SimpleCommand } from './types'
+import { generateCommandId } from '@/utils/idGenerator'
+import type { SimpleCommand } from '@/unified/modules/commands/types'
 
 // ==================== 新架构类型导入 ====================
-import type { UnifiedTimelineItemData } from '../../timelineitem/TimelineItemData'
+import type { UnifiedTimelineItemData } from '@/unified/timelineitem/TimelineItemData'
 
-import type { UnifiedMediaItemData, MediaType, MediaTypeOrUnknown } from '../../mediaitem/types'
+import type { UnifiedMediaItemData, MediaType } from '@/unified/mediaitem/types'
 
 /**
  * 移动时间轴项目命令

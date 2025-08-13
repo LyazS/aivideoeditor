@@ -1,63 +1,27 @@
-import { generateCommandId } from '../../../utils/idGenerator'
-import { reactive, markRaw, ref, type Ref } from 'vue'
+import { generateCommandId } from '@/utils/idGenerator'
+import { type Ref } from 'vue'
 import type { VisibleSprite } from '@webav/av-cliper'
-import type { SimpleCommand } from './types'
-import { cloneTimelineItem } from '../../timelineitem/TimelineItemFactory'
+import type { SimpleCommand } from '@/unified/modules/commands/types'
 
 // 类型导入
 import type {
   UnifiedTimelineItemData,
-  KnownTimelineItem,
-  UnknownTimelineItem,
-  TimelineItemStatus,
-  TransformData,
-} from '../../timelineitem/TimelineItemData'
+} from '@/unified/timelineitem/TimelineItemData'
 
 import type {
   UnifiedMediaItemData,
-  MediaStatus,
   MediaType,
-  MediaTypeOrUnknown,
-} from '../../mediaitem/types'
+} from '@/unified/mediaitem/types'
 
-import type { UnifiedTrackData, UnifiedTrackType } from '../../track/TrackTypes'
-
-import type {
-  VideoMediaConfig,
-  ImageMediaConfig,
-  AudioMediaConfig,
-  TextMediaConfig,
-  BaseMediaProps,
-} from '../../../types'
-
-// 工具导入
-import {
-  createSpriteFromUnifiedMediaItem,
-  canCreateSpriteFromUnifiedMediaItem,
-} from '../../utils/spriteFactory'
+import type { UnifiedTrackData, UnifiedTrackType } from '@/unified/track/TrackTypes'
 
 import {
-  isKnownTimelineItem,
-  isUnknownTimelineItem,
-  isVideoTimelineItem,
-  isImageTimelineItem,
-  isAudioTimelineItem,
-  isTextTimelineItem,
-  isReady,
-  isLoading,
-  hasError,
-  getDuration,
-  hasVisualProperties,
-  hasAudioProperties,
   TimelineItemFactory,
-} from '../../timelineitem'
-
-import { UnifiedMediaItemQueries } from '../../mediaitem'
+} from '@/unified/timelineitem'
 
 import {
   setupCommandMediaSync,
-  cleanupCommandMediaSync,
-} from '../../composables/useCommandMediaSync'
+} from '@/unified/composables/useCommandMediaSync'
 
 /**
  * 删除轨道命令

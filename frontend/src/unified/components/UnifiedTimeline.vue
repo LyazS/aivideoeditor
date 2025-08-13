@@ -211,21 +211,17 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, nextTick, h } from 'vue'
-import { useUnifiedStore } from '../unifiedStore'
-import { usePlaybackControls } from '../composables/usePlaybackControls'
-import { getDragPreviewManager } from '../composables/useDragPreview'
-import { useDragUtils } from '../composables/useDragUtils'
-import { useDialogs } from '../composables/useDialogs'
-import { calculateVisibleFrameRange } from '../utils/coordinateUtils'
-import { framesToTimecode } from '../utils/timeUtils'
-import type { UnifiedTrackType } from '../track/TrackTypes'
-import type { MediaType, UnifiedMediaItemData } from '../mediaitem/types'
+import { useUnifiedStore } from '@/unified/unifiedStore'
+import { usePlaybackControls, getDragPreviewManager, useDragUtils, useDialogs } from '@/unified/composables'
+import { calculateVisibleFrameRange } from '@/unified/utils/coordinateUtils'
+import type { UnifiedTrackType } from '@/unified/track/TrackTypes'
+import type { MediaType } from '@/unified/mediaitem/types'
 import type {
   UnifiedTimelineItemData,
   GetTimelineItemConfig,
   TimelineItemStatus,
 } from '../timelineitem/TimelineItemData'
-import type { TimelineItemDragData, MediaItemDragData, ConflictInfo } from '../types'
+import type { TimelineItemDragData, MediaItemDragData, ConflictInfo } from '@/unified/types'
 import type {
   VideoMediaConfig,
   ImageMediaConfig,
@@ -243,10 +239,8 @@ import {
   ContextMenuSeparator,
   ContextMenuGroup,
 } from '@imengyu/vue3-context-menu'
-import { UnifiedMediaItemQueries, UnifiedMediaItemActions } from '../mediaitem'
+import { UnifiedMediaItemQueries } from '@/unified/mediaitem'
 import { generateId } from '@/utils/idGenerator'
-import { generateThumbnailForUnifiedMediaItem } from '../utils/thumbnailGenerator'
-import { TimelineItemQueries } from '../timelineitem/TimelineItemQueries'
 // 菜单项类型定义
 type MenuItem =
   | {
@@ -1498,7 +1492,6 @@ async function createMediaClipFromMediaItem(
     const config = createEnhancedDefaultConfig(
       knownMediaType,
       originalResolution,
-      unifiedStore.videoResolution,
     )
 
     // 创建时间轴项目数据
@@ -1541,11 +1534,10 @@ async function createMediaClipFromMediaItem(
   }
 }
 
-// 创建增强的默认配置 - 考虑原始分辨率和画布尺寸
+// 创建增强的默认配置 - 考虑原始分辨率
 function createEnhancedDefaultConfig(
   mediaType: MediaType,
   originalResolution: { width: number; height: number } | null,
-  canvasResolution: { width: number; height: number },
 ): GetTimelineItemConfig<MediaType> {
   // 根据媒体类型创建对应的默认配置
   switch (mediaType) {
@@ -1867,150 +1859,6 @@ function handleDragLeave(event: DragEvent) {
   if (!timelineElement.contains(relatedTarget)) {
     dragPreviewManager.hidePreview()
   }
-}
-
-// 增强的冲突检测 - 支持更详细的冲突信息
-function detectEnhancedConflicts(
-  startTime: number,
-  endTime: number,
-  trackItems: any[],
-  excludeItems: string[] = [],
-): ConflictInfo[] {
-  const conflicts: ConflictInfo[] = []
-
-  for (const item of trackItems) {
-    // 跳过被排除的项目
-    if (excludeItems.includes(item.id)) {
-      continue
-    }
-
-    const itemStart = item.timeRange.timelineStartTime
-    const itemEnd = item.timeRange.timelineEndTime
-
-    // 检查时间重叠
-    if (startTime < itemEnd && endTime > itemStart) {
-      // 计算重叠区域
-      const overlapStart = Math.max(startTime, itemStart)
-      const overlapEnd = Math.min(endTime, itemEnd)
-      const overlapDuration = overlapEnd - overlapStart
-
-      conflicts.push({
-        itemId: item.id,
-        startTime: overlapStart,
-        endTime: overlapEnd,
-        overlapStart: overlapStart,
-        overlapEnd: overlapEnd,
-      } as ConflictInfo)
-    }
-  }
-
-  return conflicts
-}
-
-// 计算冲突严重程度
-function calculateConflictSeverity(
-  overlapDuration: number,
-  totalDuration: number,
-): 'low' | 'medium' | 'high' {
-  const overlapRatio = overlapDuration / totalDuration
-
-  if (overlapRatio < 0.2) return 'low'
-  if (overlapRatio < 0.6) return 'medium'
-  return 'high'
-}
-
-// 确定冲突类型
-function determineConflictType(
-  dragStart: number,
-  dragEnd: number,
-  itemStart: number,
-  itemEnd: number,
-): 'partial' | 'complete' | 'contains' | 'contained' {
-  if (dragStart <= itemStart && dragEnd >= itemEnd) {
-    return 'contains' // 拖拽项目完全包含现有项目
-  }
-  if (dragStart >= itemStart && dragEnd <= itemEnd) {
-    return 'contained' // 拖拽项目被现有项目完全包含
-  }
-  if (dragStart < itemEnd && dragEnd > itemEnd) {
-    return 'partial' // 部分重叠（拖拽项目延伸到现有项目之后）
-  }
-  return 'partial' // 其他部分重叠情况
-}
-
-// 可视化冲突反馈
-function showConflictFeedback(conflicts: ConflictInfo[], trackId: string) {
-  if (conflicts.length === 0) {
-    hideConflictFeedback()
-    return
-  }
-
-  // 在轨道上显示冲突指示器
-  conflicts.forEach((conflict) => {
-    const conflictElement = createConflictIndicator(conflict, trackId)
-    if (conflictElement) {
-      // 添加到DOM中显示冲突区域
-      const trackElement = document.querySelector(`[data-track-id="${trackId}"]`)
-      if (trackElement) {
-        trackElement.appendChild(conflictElement)
-      }
-    }
-  })
-}
-
-// 创建冲突指示器元素
-function createConflictIndicator(conflict: ConflictInfo, trackId: string): HTMLElement | null {
-  const indicator = document.createElement('div')
-  indicator.className = `conflict-indicator conflict-medium`
-  indicator.dataset.conflictId = conflict.itemId
-
-  // 计算位置和尺寸
-  const startPixel = unifiedStore.frameToPixel(conflict.startTime, timelineWidth.value)
-  const endPixel = unifiedStore.frameToPixel(conflict.endTime, timelineWidth.value)
-  const width = endPixel - startPixel
-
-  indicator.style.cssText = `
-    position: absolute;
-    left: ${150 + startPixel}px;
-    top: 0;
-    width: ${width}px;
-    height: 100%;
-    background: rgba(255, 107, 107, 0.3);
-    border: 2px solid #ff6b6b;
-    border-radius: 4px;
-    pointer-events: none;
-    z-index: 100;
-    animation: conflictPulse 1s ease-in-out infinite alternate;
-  `
-
-  // 添加冲突提示信息
-  const tooltip = document.createElement('div')
-  tooltip.className = 'conflict-tooltip'
-  tooltip.textContent = `冲突: ${Math.round(((conflict.endTime - conflict.startTime) / 30) * 100) / 100}秒`
-  tooltip.style.cssText = `
-    position: absolute;
-    top: -30px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: rgba(0, 0, 0, 0.8);
-    color: white;
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-size: 12px;
-    white-space: nowrap;
-    z-index: 101;
-  `
-
-  indicator.appendChild(tooltip)
-  return indicator
-}
-
-// 隐藏冲突反馈
-function hideConflictFeedback() {
-  const conflictIndicators = document.querySelectorAll('.conflict-indicator')
-  conflictIndicators.forEach((indicator) => {
-    indicator.remove()
-  })
 }
 
 // 生命周期钩子

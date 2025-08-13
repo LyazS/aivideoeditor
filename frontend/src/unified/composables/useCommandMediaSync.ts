@@ -4,15 +4,15 @@
  */
 
 import { watch } from 'vue'
-import type { UnifiedMediaItemData } from '../mediaitem/types'
-import type { UnifiedTimelineItemData } from '../timelineitem/TimelineItemData'
-import type { VideoMediaConfig, ImageMediaConfig } from '../timelineitem/TimelineItemData'
-import { UnifiedMediaItemQueries } from '../mediaitem'
-import { TimelineItemQueries } from '../timelineitem/TimelineItemQueries'
-import { SimplifiedMediaSyncManager } from '../timelineitem/SimplifiedMediaSyncManager'
-import { useUnifiedStore } from '../unifiedStore'
-import { createSpriteFromUnifiedMediaItem } from '../utils/spriteFactory'
-import { regenerateThumbnailForUnifiedTimelineItem } from '../utils/thumbnailGenerator'
+import type { UnifiedMediaItemData } from '@/unified/mediaitem/types'
+import type { UnifiedTimelineItemData } from '@/unified/timelineitem/TimelineItemData'
+import type { VideoMediaConfig, ImageMediaConfig } from '@/unified/timelineitem/TimelineItemData'
+import { UnifiedMediaItemQueries } from '@/unified/mediaitem'
+import { TimelineItemQueries } from '@/unified/timelineitem/TimelineItemQueries'
+import { SimplifiedMediaSyncManager } from '@/unified/timelineitem/SimplifiedMediaSyncManager'
+import { useUnifiedStore } from '@/unified/unifiedStore'
+import { createSpriteFromUnifiedMediaItem } from '@/unified/utils/spriteFactory'
+import { regenerateThumbnailForUnifiedTimelineItem } from '@/unified/utils/thumbnailGenerator'
 
 /**
  * 设置命令与媒体项目的直接同步

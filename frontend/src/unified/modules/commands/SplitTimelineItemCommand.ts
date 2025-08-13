@@ -4,44 +4,40 @@
  * 遵循"从源头重建"原则：保存完整的重建元数据，撤销时从原始素材重新创建
  */
 
-import { generateCommandId } from '../../../utils/idGenerator'
-import { framesToTimecode } from '../../utils/timeUtils'
+import { generateCommandId } from '@/utils/idGenerator'
+import { framesToTimecode } from '@/unified/utils/timeUtils'
 import { reactive, markRaw } from 'vue'
 import type { VisibleSprite } from '@webav/av-cliper'
-import type { SimpleCommand } from './types'
-import { cloneTimelineItem } from '../../timelineitem/TimelineItemFactory'
+import type { SimpleCommand } from '@/unified/modules/commands/types'
 
 // ==================== 新架构类型导入 ====================
 import type {
   UnifiedTimelineItemData,
   KnownTimelineItem,
-  UnknownTimelineItem,
   TimelineItemStatus,
-} from '../../timelineitem/TimelineItemData'
+} from '@/unified/timelineitem/TimelineItemData'
 
-import type { UnifiedMediaItemData, MediaType } from '../../mediaitem/types'
+import type { UnifiedMediaItemData, MediaType } from '@/unified/mediaitem/types'
 
 import type {
   VideoMediaConfig,
   ImageMediaConfig,
   TextMediaConfig,
   BaseMediaProps,
-} from '../../../types'
-import type { UnifiedTimeRange } from '../../types/timeRange'
+} from '@/types'
 
 // ==================== 新架构工具导入 ====================
-import { createSpriteFromUnifiedMediaItem } from '../../utils/spriteFactory'
+import { createSpriteFromUnifiedMediaItem } from '@/unified/utils/spriteFactory'
 
-import { regenerateThumbnailForUnifiedTimelineItem } from '../../utils/thumbnailGenerator'
+import { regenerateThumbnailForUnifiedTimelineItem } from '@/unified/utils/thumbnailGenerator'
 
 import {
   isKnownTimelineItem,
-  isUnknownTimelineItem,
   hasVisualProperties,
   TimelineItemFactory,
-} from '../../timelineitem'
+} from '@/unified/timelineitem'
 
-import { UnifiedMediaItemQueries } from '../../mediaitem'
+import { UnifiedMediaItemQueries } from '@/unified/mediaitem'
 
 /**
  * 分割时间轴项目命令

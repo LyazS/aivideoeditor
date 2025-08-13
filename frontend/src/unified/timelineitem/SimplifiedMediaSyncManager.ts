@@ -3,7 +3,6 @@
  * 只维护命令与媒体项目之间的同步关系，不涉及时间轴项目
  */
 
-import type { SimpleCommand } from '../modules/commands/types'
 import { generateUUID4 } from '@/utils/idGenerator'
 /**
  * 命令媒体同步信息

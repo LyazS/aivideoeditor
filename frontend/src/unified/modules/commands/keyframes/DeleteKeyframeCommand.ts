@@ -4,8 +4,7 @@
  * 适配新架构的统一类型系统
  */
 
-import type { SimpleCommand } from '../types'
-import type { UnifiedTimelineItemData } from '../../../timelineitem/TimelineItemData'
+import type { SimpleCommand } from '@/unified/modules/commands/types'
 import {
   type KeyframeSnapshot,
   type TimelineModule,
@@ -72,7 +71,7 @@ export class DeleteKeyframeCommand implements SimpleCommand {
     try {
       // 动态导入关键帧工具函数
       const { removeKeyframeAtFrame, disableAnimation } = await import(
-        '../../../utils/unifiedKeyframeUtils'
+        '@/unified/utils/unifiedKeyframeUtils'
       )
 
       // 1. 删除指定帧的关键帧

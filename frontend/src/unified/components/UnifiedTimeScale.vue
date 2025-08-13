@@ -30,9 +30,9 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { useUnifiedStore } from '../unifiedStore'
-import { calculateVisibleFrameRange } from '../utils/coordinateUtils'
-import { framesToTimecode, alignFramesToFrame } from '../utils/timeUtils'
+import { useUnifiedStore } from '@/unified/unifiedStore'
+import { calculateVisibleFrameRange } from '@/unified/utils/coordinateUtils'
+import { framesToTimecode } from '@/unified/utils/timeUtils'
 import type { TimeMark } from '@/types'
 import UnifiedPlayhead from './UnifiedPlayhead.vue'
 

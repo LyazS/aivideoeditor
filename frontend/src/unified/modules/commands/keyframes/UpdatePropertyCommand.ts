@@ -7,7 +7,7 @@
  * 适配新架构的统一类型系统
  */
 
-import type { SimpleCommand } from '../types'
+import type { SimpleCommand } from '@/unified/modules/commands/types'
 import {
   type KeyframeSnapshot,
   type TimelineModule,
@@ -77,7 +77,7 @@ export class UpdatePropertyCommand implements SimpleCommand {
 
     try {
       // 动态导入关键帧工具函数
-      const { handlePropertyChange } = await import('../../../utils/unifiedKeyframeUtils')
+      const { handlePropertyChange } = await import('@/unified/utils/unifiedKeyframeUtils')
 
       // 使用统一的属性修改处理逻辑
       // 注意：handlePropertyChange 内部已经包含了 updateWebAVAnimation 调用，无需重复调用

@@ -1,9 +1,14 @@
-import { ref, markRaw, watch, type Raw } from 'vue'
+import { ref, markRaw, watch, type Raw, type Ref } from 'vue'
+import { throttle } from 'lodash'
 import { AVCanvas } from '@webav/av-canvas'
 import { MP4Clip, ImgClip, AudioClip } from '@webav/av-cliper'
 import type { VisibleSprite } from '@webav/av-cliper'
-import type { PlayOptions, CanvasBackup } from '../../types'
-import { framesToMicroseconds, microsecondsToFrames, framesToTimecode } from '../utils/timeUtils'
+import type { PlayOptions, CanvasBackup } from '@/types'
+import {
+  framesToMicroseconds,
+  microsecondsToFrames,
+  framesToTimecode,
+} from '@/unified/utils/timeUtils'
 import {
   logWebAVInitStart,
   logWebAVInitStep,
@@ -20,20 +25,11 @@ import {
   logCanvasRecreateComplete,
   createPerformanceTimer,
   debugError,
-} from '../../utils/webavDebug'
+} from '@/utils/webavDebug'
 
 // 全局WebAV状态 - 确保单例模式
 let globalAVCanvas: AVCanvas | null = null
 let globalCanvasContainer: HTMLElement | null = null
-
-// 时间同步锁，防止循环调用
-let isUpdatingTime = false
-
-// 帧缓存，避免重复渲染相同帧
-let lastRenderedFrame: number | null = null
-
-// 防抖定时器
-let timeUpdateDebounceTimer: number | null = null
 
 /**
  * 统一WebAV集成管理模块
@@ -50,17 +46,13 @@ let timeUpdateDebounceTimer: number | null = null
  * 3. 使用时间同步锁防止循环调用
  * 4. timeupdate事件是Store状态更新的唯一入口
  */
-export function createUnifiedWebavModule() {
-  // 延迟导入unifiedStore以避免循环依赖
-  let unifiedStoreRef: any = null
-  const getUnifiedStore = async () => {
-    if (!unifiedStoreRef) {
-      const { useUnifiedStore } = await import('../unifiedStore')
-      unifiedStoreRef = useUnifiedStore()
-    }
-    return unifiedStoreRef
-  }
-
+export function createUnifiedWebavModule(playbackModule: {
+  currentFrame: Ref<number>
+  currentWebAVFrame: Ref<number>
+  isPlaying: Ref<boolean>
+  setCurrentFrame: (frames: number) => void
+  setPlaying: (playing: boolean) => void
+}) {
   // ==================== 状态定义 ====================
 
   // WebAV核心对象 - 使用markRaw避免Vue响应式包装
@@ -420,7 +412,7 @@ export function createUnifiedWebavModule() {
 
       logWebAVInitStep(6, 'Setting up event listeners')
       // 设置事件监听器
-      setupEventListeners()
+      await setupEventListeners()
       logWebAVInitStep(6, 'Event listeners setup completed')
 
       logWebAVInitStep(7, 'Clearing error state')
@@ -460,52 +452,49 @@ export function createUnifiedWebavModule() {
   /**
    * 设置WebAV事件监听器
    */
-  function setupEventListeners(): void {
+  async function setupEventListeners(): Promise<void> {
     if (!globalAVCanvas) {
       console.error('❌ [WebAV Events] Cannot setup listeners: globalAVCanvas is null')
       return
     }
 
     // 播放状态变化事件
-    globalAVCanvas.on('playing', async () => {
-      const unifiedStore = await getUnifiedStore()
-      unifiedStore.setPlaying(true)
+    globalAVCanvas.on('playing', () => {
+      playbackModule.setPlaying(true)
     })
 
-    globalAVCanvas.on('paused', async () => {
-      const unifiedStore = await getUnifiedStore()
-      unifiedStore.setPlaying(false)
+    globalAVCanvas.on('paused', () => {
+      playbackModule.setPlaying(false)
     })
 
     // 时间更新事件
-    globalAVCanvas.on('timeupdate', async (microseconds: number) => {
-      // 如果正在执行seekTo操作，跳过timeupdate事件以避免冲突
-      if (isUpdatingTime) {
-        console.log(`[setCurrentFrame] 跳过timeupdate（正在更新）: ${microseconds}ms`)
-        return
-      }
-
+    globalAVCanvas.on('timeupdate', (microseconds: number) => {
       // 将微秒转换为帧数
       const frames = microsecondsToFrames(microseconds)
-      console.log(`[setCurrentFrame] timeupdate ${frames} ${microseconds}ms`)
-      
-      // 防抖机制，避免过于频繁的状态更新
-      if (timeUpdateDebounceTimer) {
-        clearTimeout(timeUpdateDebounceTimer)
+      // console.log(`[setCurrentFrame] timeupdate ${frames} ${microseconds}ms`)
+      playbackModule.currentWebAVFrame.value = frames
+      if (playbackModule.isPlaying.value) {
+        playbackModule.setCurrentFrame(frames)
       }
-      
-      timeUpdateDebounceTimer = setTimeout(async () => {
-        try {
-          const unifiedStore = await getUnifiedStore()
-          unifiedStore.setCurrentFrame(frames, false) // 传入帧数，不强制对齐保持流畅
-          
-          // 更新渲染帧缓存
-          lastRenderedFrame = frames
-        } catch (error) {
-          console.error(`[setCurrentFrame] timeupdate处理失败:`, error)
-        }
-      }, 8) // 8ms防抖，约半帧时间
     })
+
+    // 创建节流函数，50ms内只执行一次
+    const throttledPreviewFrame = throttle(async (frame: number) => {
+      if (globalAVCanvas && !playbackModule.isPlaying.value) {
+        const microseconds2 = framesToMicroseconds(frame)
+        await globalAVCanvas.previewFrame(microseconds2)
+        // console.log(`[setCurrentFrame] watch previewFrame ${frame} ${microseconds2}ms`)
+      }
+    }, 50)
+
+    watch(
+      [playbackModule.currentFrame, playbackModule.currentWebAVFrame],
+      async ([new_cf, new_cwf]) => {
+        if (new_cf != new_cwf) {
+          throttledPreviewFrame(new_cf)
+        }
+      },
+    )
 
     console.log('✅ [WebAV Events] Event listeners setup completed')
   }
@@ -522,21 +511,20 @@ export function createUnifiedWebavModule() {
     startFrames?: number,
     endFrames?: number,
     playbackRate?: number,
+    contentEndTimeFrames?: number,
   ): Promise<void> {
     if (!globalAVCanvas) return
 
-    const unifiedStore = await getUnifiedStore()
-
     // 帧数转换为微秒
-    const start = framesToMicroseconds(startFrames || unifiedStore.currentFrame)
+    const start = framesToMicroseconds(startFrames || playbackModule.currentFrame.value)
 
     const playOptions: PlayOptions = {
       start,
-      playbackRate: playbackRate || unifiedStore.playbackRate,
+      playbackRate: playbackRate || 1, // 默认播放速率为1
     }
 
     // 如果没有提供结束时间，使用总时长作为默认结束时间
-    const finalEndFrames = endFrames !== undefined ? endFrames : unifiedStore.contentEndTimeFrames
+    const finalEndFrames = endFrames !== undefined ? endFrames : contentEndTimeFrames
 
     if (finalEndFrames !== undefined) {
       const end = framesToMicroseconds(finalEndFrames)
@@ -550,11 +538,11 @@ export function createUnifiedWebavModule() {
     globalAVCanvas.play(playOptions)
 
     console.log('▶️ 开始播放:', {
-      startFrames: startFrames || unifiedStore.currentFrame,
+      startFrames: startFrames || playbackModule.currentFrame.value,
       endFrames: finalEndFrames,
       originalEndFrames: endFrames,
       playbackRate: playOptions.playbackRate,
-      startTimecode: framesToTimecode(startFrames || unifiedStore.currentFrame),
+      startTimecode: framesToTimecode(startFrames || playbackModule.currentFrame.value),
       endTimecode: finalEndFrames ? framesToTimecode(finalEndFrames) : undefined,
     })
   }
@@ -574,46 +562,13 @@ export function createUnifiedWebavModule() {
    */
   async function seekTo(frames: number): Promise<void> {
     if (!globalAVCanvas) return
-    
-    // 使用时间同步锁防止循环调用
-    if (isUpdatingTime) {
-      // 静默跳过，避免日志污染
-      return
-    }
 
+    playbackModule.setCurrentFrame(frames)
     const microseconds = framesToMicroseconds(frames)
-    console.log(`[setCurrentFrame] skt ${frames} ${microseconds}ms`)
-    
-    // 帧缓存检查，避免重复渲染相同帧
-    if (lastRenderedFrame === frames) {
-      console.log(`[setCurrentFrame] 跳过重复帧: ${frames}`)
-      return
-    }
-    
-    // 立即更新UI状态（预测性更新）
-    const unifiedStore = await getUnifiedStore()
-    unifiedStore.setCurrentFrame(frames, false)
-    
-    // 设置时间同步锁，但缩短锁定时间
-    isUpdatingTime = true
-    
-    try {
-      // 异步渲染，不等待完成
-      globalAVCanvas.previewFrame(microseconds).then(() => {
-        lastRenderedFrame = frames
-        console.log(`[setCurrentFrame] 渲染完成: ${frames}`)
-      }).catch((error) => {
-        console.error(`[setCurrentFrame] 渲染失败: ${frames}`, error)
-      }).finally(() => {
-        // 延迟释放锁，给WebAV一点处理时间
-        setTimeout(() => {
-          isUpdatingTime = false
-        }, 16) // 约一帧的时间
-      })
-    } catch (error) {
-      console.error(`[setCurrentFrame] previewFrame同步错误: ${frames}`, error)
-      isUpdatingTime = false
-    }
+
+    // console.log(
+    //   `[setCurrentFrame] seekTo ${playbackModule.currentFrame.value}|${playbackModule.currentWebAVFrame.value} ${microseconds}ms`,
+    // )
   }
 
   /**
@@ -687,18 +642,8 @@ export function createUnifiedWebavModule() {
       globalAVCanvas = null
     }
 
-    // 清理防抖定时器
-    if (timeUpdateDebounceTimer) {
-      clearTimeout(timeUpdateDebounceTimer)
-      timeUpdateDebounceTimer = null
-    }
-
     // 清理全局容器引用
     globalCanvasContainer = null
-    
-    // 重置缓存状态
-    lastRenderedFrame = null
-    isUpdatingTime = false
 
     // 清理错误状态
     setWebAVError(null)
@@ -771,13 +716,13 @@ export function createUnifiedWebavModule() {
 
       if (globalAVCanvas) {
         // 获取当前时间轴项目作为备份
-        const unifiedStore = await getUnifiedStore()
-        const timelineItems = unifiedStore.getAllTimelineItems()
+        // 注意：这里需要从外部传入时间轴项目数据，暂时使用空数组
+        const timelineItems: any[] = []
 
         backup = {
           timelineItems: timelineItems.map((item: any) => ({ ...item })), // 深拷贝
-          currentFrame: unifiedStore.currentFrame,
-          isPlaying: unifiedStore.isPlaying,
+          currentFrame: playbackModule.currentFrame.value,
+          isPlaying: playbackModule.isPlaying.value,
         }
 
         logCanvasBackup(backup.timelineItems.length, {
@@ -836,24 +781,15 @@ export function createUnifiedWebavModule() {
         // 确保WebAV已经准备好
         await waitForWebAVReady()
 
-        const unifiedStore = await getUnifiedStore()
-
         // 恢复时间轴项目
         for (const timelineItem of backup.timelineItems) {
           try {
-            // 获取对应的媒体项目 - 使用正确的属性名
-            const mediaItem = unifiedStore.getMediaItem((timelineItem as any).mediaId)
-            if (!mediaItem) {
-              console.warn(`⚠️ [Canvas Recreate] 找不到媒体项目: ${(timelineItem as any).mediaId}`)
-              continue
-            }
-
             // 重新创建sprite - 简化调用，因为createSpriteFromMediaItem可能需要不同的参数
             // 这里需要根据实际的spriteFactory实现来调整
             console.log(`🔧 [Canvas Recreate] 恢复时间轴项目: ${timelineItem.id}`)
 
             // 记录sprite恢复 - 修正参数
-            logSpriteRestore(timelineItem.id, mediaItem.mediaType)
+            logSpriteRestore(timelineItem.id, 'unknown')
           } catch (error) {
             console.error(`❌ [Canvas Recreate] 恢复时间轴项目失败: ${timelineItem.id}`, error)
           }

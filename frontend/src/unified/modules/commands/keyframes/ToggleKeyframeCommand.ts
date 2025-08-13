@@ -5,8 +5,7 @@
  * 适配新架构的统一类型系统
  */
 
-import type { SimpleCommand } from '../types'
-import type { UnifiedTimelineItemData } from '../../../timelineitem/TimelineItemData'
+import type { SimpleCommand } from '@/unified/modules/commands/types'
 import {
   type KeyframeSnapshot,
   type TimelineModule,
@@ -72,7 +71,7 @@ export class ToggleKeyframeCommand implements SimpleCommand {
 
     try {
       // 动态导入关键帧工具函数
-      const { toggleKeyframe } = await import('../../../utils/unifiedKeyframeUtils')
+      const { toggleKeyframe } = await import('@/unified/utils/unifiedKeyframeUtils')
 
       // 使用统一的关键帧切换逻辑
       toggleKeyframe(item, this.frame)

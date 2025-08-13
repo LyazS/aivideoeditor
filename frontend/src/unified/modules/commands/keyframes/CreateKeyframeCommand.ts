@@ -4,7 +4,7 @@
  * 适配新架构的统一类型系统
  */
 
-import type { SimpleCommand } from '../types'
+import type { SimpleCommand } from '@/unified/modules/commands/types'
 import {
   type KeyframeSnapshot,
   type TimelineModule,
@@ -71,7 +71,7 @@ export class CreateKeyframeCommand implements SimpleCommand {
     try {
       // 动态导入关键帧工具函数
       const { createKeyframe, enableAnimation, initializeAnimation } = await import(
-        '../../../utils/unifiedKeyframeUtils'
+        '@/unified/utils/unifiedKeyframeUtils'
       )
 
       // 1. 确保动画已启用
@@ -85,7 +85,7 @@ export class CreateKeyframeCommand implements SimpleCommand {
       ;(item.animation!.keyframes as any[]).push(keyframe)
 
       // 3. 排序关键帧
-      const { sortKeyframes } = await import('../../../utils/unifiedKeyframeUtils')
+      const { sortKeyframes } = await import('@/unified/utils/unifiedKeyframeUtils')
       sortKeyframes(item)
 
       // 4. 更新WebAV动画

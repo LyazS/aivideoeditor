@@ -1,5 +1,5 @@
-import { useUnifiedStore } from '../unifiedStore'
-import type { DragPreviewData } from '../types/drag'
+import { useUnifiedStore } from '@/unified/unifiedStore'
+import type { DragPreviewData } from '@/unified/types/drag'
 
 // 统一拖拽预览管理器
 class DragPreviewManager {
@@ -132,25 +132,8 @@ class DragPreviewManager {
       preview.textContent = `${data.count} 个项目`
     } else {
       const displayName = data.name.length > 12 ? data.name.substring(0, 10) + '..' : data.name
-
-      // 如果有状态信息，添加状态指示器
-      if (data.statusInfo) {
-        const statusIcon = this.getStatusIcon(data.statusInfo)
-        preview.innerHTML = `<span>${displayName}</span><span style="margin-left: 4px;">${statusIcon}</span>`
-      } else {
-        preview.textContent = displayName
-      }
+      preview.textContent = displayName
     }
-  }
-
-  /**
-   * 获取状态图标
-   */
-  private getStatusIcon(statusInfo: { isReady: boolean; isLoading: boolean; hasError?: boolean }): string {
-    if (statusInfo.hasError) return '❌'      // 错误状态
-    else if (statusInfo.isLoading) return '⏳' // 加载中
-    else if (statusInfo.isReady) return '✅'   // 就绪状态
-    else return '⏸️'                          // 等待状态
   }
 
   /**
@@ -160,12 +143,8 @@ class DragPreviewManager {
     // 计算预览位置和尺寸（data.startTime 和 data.duration 已经是帧数）
     const startFrames = data.startTime
     const endFrames = data.startTime + data.duration
-
-    // 使用unifiedStore的zoomLevel和frameRate计算像素位置
-    const pixelsPerFrame =
-      (timelineWidth * this.unifiedStore.zoomLevel) / this.unifiedStore.totalDurationFrames
-    const left = startFrames * pixelsPerFrame
-    const right = endFrames * pixelsPerFrame
+    const left = this.unifiedStore.frameToPixel(startFrames, timelineWidth)
+    const right = this.unifiedStore.frameToPixel(endFrames, timelineWidth)
     const width = Math.max(right - left, 60) // 最小宽度60px
 
     // 获取目标轨道位置
@@ -176,14 +155,14 @@ class DragPreviewManager {
       const trackRect = trackElement.getBoundingClientRect()
 
       // 获取轨道信息以计算垂直居中位置
-      const track = this.unifiedStore.getTrack(data.trackId)
-      const trackHeight = track?.height || 80 // 默认轨道高度80px
+      const track = this.unifiedStore.tracks.find((t) => t.id === data.trackId)
+      const trackHeight = track?.height || 60 // 默认轨道高度60px
       const previewHeight = data.height || 60 // 预览高度
 
       // 计算垂直居中位置，与TimelineBaseClip的逻辑保持一致
       const topOffset = Math.max(5, (trackHeight - previewHeight) / 2) // 至少5px的上边距
 
-      const finalLeft = trackRect.left + left - this.unifiedStore.scrollOffset
+      const finalLeft = trackRect.left + left
       const finalTop = trackRect.top + topOffset
 
       // 使用 transform 而不是 left/top 来提高性能

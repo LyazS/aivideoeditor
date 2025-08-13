@@ -4,7 +4,6 @@
  * 适配新架构的统一类型系统
  */
 
-import type { UnifiedTimelineItemData } from '../timelineitem/TimelineItemData'
 import {
   CreateKeyframeCommand,
   DeleteKeyframeCommand,
@@ -14,7 +13,7 @@ import {
   type TimelineModule,
   type WebAVAnimationManager,
   type PlaybackControls,
-} from '../modules/commands/keyframeCommands'
+} from '@/unified/modules/commands/keyframeCommands'
 
 // ==================== 关键帧命令执行器接口 ====================
 
@@ -170,11 +169,11 @@ export async function toggleKeyframeWithCommand(
  */
 export async function createUnifiedKeyframeCommandExecutor(): Promise<UnifiedKeyframeCommandExecutor> {
   // 动态导入统一存储
-  const { useUnifiedStore } = await import('../unifiedStore')
+  const { useUnifiedStore } = await import('@/unified/unifiedStore')
   const store = useUnifiedStore()
 
   // 动态导入WebAV动画管理器
-  const { updateWebAVAnimation } = await import('./webavAnimationManager')
+  const { updateWebAVAnimation } = await import('@/unified/utils/webavAnimationManager')
 
   return {
     timelineModule: {

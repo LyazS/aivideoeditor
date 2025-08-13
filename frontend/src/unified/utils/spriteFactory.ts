@@ -14,22 +14,22 @@
  * - 包含详细的错误信息和状态检查
  */
 
-import { markRaw, type Raw } from 'vue'
-import type { UnifiedMediaItemData, MediaType } from '../mediaitem/types'
-import type { UnifiedSprite } from '../visiblesprite'
+import { markRaw } from 'vue'
+import type { UnifiedMediaItemData, MediaType } from '@/unified/mediaitem/types'
+import type { UnifiedSprite } from '@/unified/visiblesprite'
 import type {
   UnifiedTimelineItemData,
   VideoMediaConfig,
   ImageMediaConfig,
   TextMediaConfig,
   BaseMediaProps
-} from '../timelineitem/TimelineItemData'
-import { hasVisualProperties } from '../timelineitem/TimelineItemQueries'
+} from '@/unified/timelineitem/TimelineItemData'
+import { hasVisualProperties } from '@/unified/timelineitem/TimelineItemQueries'
 
 // 导入统一架构的 Sprite 类
-import { VideoVisibleSprite } from '../visiblesprite/VideoVisibleSprite'
-import { ImageVisibleSprite } from '../visiblesprite/ImageVisibleSprite'
-import { AudioVisibleSprite } from '../visiblesprite/AudioVisibleSprite'
+import { VideoVisibleSprite } from '@/unified/visiblesprite/VideoVisibleSprite'
+import { ImageVisibleSprite } from '@/unified/visiblesprite/ImageVisibleSprite'
+import { AudioVisibleSprite } from '@/unified/visiblesprite/AudioVisibleSprite'
 
 /**
  * 从统一媒体项目数据创建对应的 Sprite 实例
@@ -76,7 +76,7 @@ export async function createSpriteFromUnifiedMediaItem(
   }
 
   // 4. 动态导入 unifiedStore 以避免循环依赖
-  const { useUnifiedStore } = await import('../unifiedStore')
+  const { useUnifiedStore } = await import('@/unified/unifiedStore')
   const unifiedStore = useUnifiedStore()
 
   // 5. 根据媒体类型创建对应的 Sprite
@@ -296,7 +296,7 @@ export async function createSpriteFromUnifiedTimelineItem(
   timelineItemData: UnifiedTimelineItemData<MediaType>,
 ): Promise<UnifiedSprite> {
   // 1. 获取关联的媒体项目和画布大小
-  const { useUnifiedStore } = await import('../unifiedStore')
+  const { useUnifiedStore } = await import('@/unified/unifiedStore')
   const unifiedStore = useUnifiedStore()
   const mediaItem = unifiedStore.getMediaItem(timelineItemData.mediaItemId)
   
@@ -322,7 +322,7 @@ export async function createSpriteFromUnifiedTimelineItem(
       | TextMediaConfig
 
     // 导入坐标转换工具
-    const { projectToWebavCoords } = await import('./coordinateTransform')
+    const { projectToWebavCoords } = await import('@/unified/utils/coordinateTransform')
 
     // 使用坐标转换将项目坐标系转换为 WebAV 坐标系
     if (config.x !== undefined && config.y !== undefined && config.width !== undefined && config.height !== undefined) {

@@ -1,4 +1,4 @@
-import { useUnifiedStore } from '../unifiedStore'
+import { useUnifiedStore } from '@/unified/unifiedStore'
 
 /**
  * 统一的对话框工具（新架构版本）

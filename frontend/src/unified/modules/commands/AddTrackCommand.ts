@@ -4,14 +4,14 @@
  * 采用简单的添加/删除逻辑，不涉及WebAV对象重建
  */
 
-import { generateCommandId } from '../../../utils/idGenerator'
+import { generateCommandId } from '@/utils/idGenerator'
 import { ref, type Ref } from 'vue'
-import type { SimpleCommand } from './types'
+import type { SimpleCommand } from '@/unified/modules/commands/types'
 
 // ==================== 新架构类型导入 ====================
-import type { UnifiedTrackData, UnifiedTrackType } from '../../track/TrackTypes'
-import type { UnifiedTimelineItemData } from '../../timelineitem/TimelineItemData'
-import type { MediaType, MediaTypeOrUnknown } from '../../mediaitem/types'
+import type { UnifiedTrackData, UnifiedTrackType } from '@/unified/track/TrackTypes'
+import type { UnifiedTimelineItemData } from '@/unified/timelineitem/TimelineItemData'
+import type { MediaType } from '@/unified/mediaitem/types'
 
 /**
  * 添加轨道命令

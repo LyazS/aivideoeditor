@@ -5,4 +5,4 @@ export {
   // 坐标转换函数
   frameToPixel,
   pixelToFrame,
-} from '../../stores/utils/coordinateUtils'
+} from '@/stores/utils/coordinateUtils'

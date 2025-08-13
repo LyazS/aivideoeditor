@@ -1,6 +1,6 @@
 import { VisibleSprite } from '@webav/av-cliper'
 import { EventTool } from '@webav/internal-utils'
-import type { ExtendedSpriteEvents } from './types'
+import type { ExtendedSpriteEvents } from '@/unified/visiblesprite/types'
 
 /**
  * 基础的VisibleSprite类，继承自WebAV的VisibleSprite

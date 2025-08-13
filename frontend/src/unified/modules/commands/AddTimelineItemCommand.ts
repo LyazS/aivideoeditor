@@ -4,42 +4,26 @@
  * 采用统一重建逻辑：每次执行都从原始素材重新创建sprite（已知项目）或重建占位符（未知项目）
  */
 
-import { reactive, markRaw } from 'vue'
 import type { VisibleSprite } from '@webav/av-cliper'
-import { cloneTimelineItem } from '../../timelineitem/TimelineItemFactory'
 
 // ==================== 新架构类型导入 ====================
-import type { SimpleCommand } from './types'
+import type { SimpleCommand } from '@/unified/modules/commands/types'
 import type {
   UnifiedTimelineItemData,
-  KnownTimelineItem,
-  TimelineItemStatus,
-  VideoMediaConfig,
-  ImageMediaConfig,
-  AudioMediaConfig,
-  TextMediaConfig,
-} from '../../timelineitem/TimelineItemData'
+} from '@/unified/timelineitem/TimelineItemData'
 
-import type { UnifiedMediaItemData, MediaType, MediaTypeOrUnknown } from '../../mediaitem/types'
+import type { UnifiedMediaItemData, MediaType } from '@/unified/mediaitem/types'
 
 // ==================== 新架构工具导入 ====================
 import {
-  createSpriteFromUnifiedMediaItem,
-  createSpriteFromUnifiedTimelineItem,
-} from '../../utils/spriteFactory'
-import {
   setupCommandMediaSync,
   cleanupCommandMediaSync,
-} from '../../composables/useCommandMediaSync'
+} from '@/unified/composables/useCommandMediaSync'
 
-import { regenerateThumbnailForUnifiedTimelineItem } from '../../utils/thumbnailGenerator'
-
-import { isKnownTimelineItem, isUnknownTimelineItem, TimelineItemFactory } from '../../timelineitem'
-
-import { UnifiedMediaItemQueries } from '../../mediaitem'
+import { TimelineItemFactory } from '@/unified/timelineitem'
 
 // ==================== 旧架构类型工具导入 ====================
-import { generateCommandId } from '../../../utils/idGenerator'
+import { generateCommandId } from '@/utils/idGenerator'
 
 /**
  * 添加时间轴项目命令

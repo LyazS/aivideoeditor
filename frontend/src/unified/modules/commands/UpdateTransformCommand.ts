@@ -3,16 +3,14 @@
  * 支持变换属性（位置、大小、旋转、透明度、zIndex、时长、倍速）修改的撤销/重做操作
  */
 
-import { generateCommandId } from '../../../utils/idGenerator'
-import { framesToMicroseconds, framesToTimecode } from '../../utils/timeUtils'
-import type { SimpleCommand } from './types'
+import { generateCommandId } from '@/utils/idGenerator'
+import { framesToMicroseconds, framesToTimecode } from '@/unified/utils/timeUtils'
+import type { SimpleCommand } from '@/unified/modules/commands/types'
 
 // ==================== 新架构类型导入 ====================
-import type { UnifiedTimelineItemData, TransformData } from '../../timelineitem/TimelineItemData'
+import type { VideoMediaConfig, AudioMediaConfig, UnifiedTimelineItemData, TransformData } from '@/unified/timelineitem'
 
-import type { UnifiedMediaItemData, MediaType, MediaTypeOrUnknown } from '../../mediaitem/types'
-
-import type { VideoMediaConfig, AudioMediaConfig } from '../../../types'
+import type { UnifiedMediaItemData, MediaType } from '@/unified/mediaitem'
 
 // ==================== 新架构工具导入 ====================
 import {
@@ -21,16 +19,13 @@ import {
   isAudioTimelineItem,
   isTextTimelineItem,
   hasAudioProperties,
-} from '../../timelineitem'
+} from '@/unified/timelineitem'
 
-// ==================== 旧架构兼容性导入 ====================
-import { VideoVisibleSprite } from '../../../utils/VideoVisibleSprite'
-import { AudioVisibleSprite } from '../../../utils/AudioVisibleSprite'
 import {
   isUnifiedVideoVisibleSprite,
   isUnifiedAudioVisibleSprite,
   hasAudioCapabilities,
-} from '../../utils/spriteTypeGuards'
+} from '@/unified/utils/spriteTypeGuards'
 
 /**
  * 更新变换属性命令

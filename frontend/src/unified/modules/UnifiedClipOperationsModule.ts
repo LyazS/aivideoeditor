@@ -1,12 +1,14 @@
 import { reactive, markRaw, type Ref } from 'vue'
-import type { UnifiedTimelineItemData } from '../timelineitem/TimelineItemData'
-import type { UnifiedMediaItemData } from '../mediaitem/types'
-import { VideoVisibleSprite } from '../visiblesprite/VideoVisibleSprite'
-import { ImageVisibleSprite } from '../visiblesprite/ImageVisibleSprite'
-import { AudioVisibleSprite } from '../visiblesprite/AudioVisibleSprite'
-import { syncTimeRange } from '../utils/timeRangeUtils'
-import { isReady } from '../timelineitem/TimelineItemQueries'
-import { isVideoTimeRange } from '../../types'
+import type { UnifiedTimelineItemData } from '@/unified/timelineitem/TimelineItemData'
+import type { UnifiedMediaItemData } from '@/unified/mediaitem/types'
+import { VideoVisibleSprite } from '@/unified/visiblesprite/VideoVisibleSprite'
+import { ImageVisibleSprite } from '@/unified/visiblesprite/ImageVisibleSprite'
+import { AudioVisibleSprite } from '@/unified/visiblesprite/AudioVisibleSprite'
+import { syncTimeRange } from '@/unified/utils/timeRangeUtils'
+import { isReady, isVideoTimelineItem, isAudioTimelineItem } from '@/unified/timelineitem/TimelineItemQueries'
+import { adjustKeyframesForDurationChange } from '@/unified/utils/unifiedKeyframeUtils'
+import { updateWebAVAnimation } from '@/unified/utils/webavAnimationManager'
+import { framesToTimecode, microsecondsToFrames } from '@/unified/utils/timeUtils'
 
 /**
  * 统一片段操作模块
@@ -36,170 +38,86 @@ export function createUnifiedClipOperationsModule(
    */
   function updateTimelineItemPlaybackRate(timelineItemId: string, newRate: number) {
     const item = timelineModule.getTimelineItem(timelineItemId)
-    if (!item || !isReady(item)) {
-      console.warn('🎬 [UnifiedClipOperations] 时间轴项目不存在或未就绪:', timelineItemId)
-      return
-    }
+    if (item) {
+      // 确保播放速度在合理范围内（扩展到0.1-100倍）
+      const clampedRate = Math.max(0.1, Math.min(100, newRate))
 
-    // 确保播放速度在合理范围内（扩展到0.1-100倍）
-    const clampedRate = Math.max(0.1, Math.min(100, newRate))
+      // 🎯 关键帧位置调整：在更新播放速度之前计算时长变化
+      let oldDurationFrames = 0
+      let newDurationFrames = 0
 
-    // 🎯 关键帧位置调整：在更新播放速度之前计算时长变化
-    let oldDurationFrames = 0
-    let newDurationFrames = 0
+      if (isVideoTimelineItem(item)) {
+        const clipDurationFrames = item.timeRange.clipEndTime - item.timeRange.clipStartTime
+        oldDurationFrames = item.timeRange.timelineEndTime - item.timeRange.timelineStartTime
+        newDurationFrames = Math.round(clipDurationFrames / clampedRate)
 
-    if ((item.mediaType === 'video' || item.mediaType === 'audio') && item.runtime.sprite) {
-      const timeRange = item.timeRange
-
-      // 计算裁剪时长（对于视频/音频）
-      let clipDurationFrames = 0
-      if (isVideoTimeRange(timeRange)) {
-        clipDurationFrames = timeRange.clipEndTime - timeRange.clipStartTime
-      } else {
-        // 如果没有裁剪配置，使用当前时间轴时长
-        clipDurationFrames = timeRange.timelineEndTime - timeRange.timelineStartTime
+        // 如果有关键帧，先调整位置
+        if (item.animation && item.animation.keyframes.length > 0) {
+          adjustKeyframesForDurationChange(item, oldDurationFrames, newDurationFrames)
+          console.log('🎬 [Playback Rate] Keyframes adjusted for speed change:', {
+            oldRate: clampedRate,
+            newRate: clampedRate,
+            oldDuration: oldDurationFrames,
+            newDuration: newDurationFrames,
+          })
+        }
       }
 
-      oldDurationFrames = timeRange.timelineEndTime - timeRange.timelineStartTime
-      newDurationFrames = Math.round(clipDurationFrames / clampedRate)
+      // 更新sprite的播放速度（这会自动更新sprite内部的timeRange）
+      // 视频和音频sprite都有setPlaybackRate方法
+      if (isReady(item) && item.runtime.sprite) {
+        if (isVideoTimelineItem(item)) {
+          ;(item.runtime.sprite as VideoVisibleSprite).setPlaybackRate(clampedRate)
+        } else if (isAudioTimelineItem(item)) {
+          ;(item.runtime.sprite as AudioVisibleSprite).setPlaybackRate(clampedRate)
+        }
+      }
 
-      // 如果有关键帧，先调整位置
-      if (hasKeyframes(item)) {
-        adjustKeyframesForDurationChange(item, oldDurationFrames, newDurationFrames)
+      // 使用同步函数更新TimelineItem的timeRange
+      syncTimeRange(item)
+
+      // 如果有动画，需要重新设置WebAV动画时长
+      if (item.animation && item.animation.isEnabled) {
+        // 异步更新动画，不阻塞播放速度调整
+        updateWebAVAnimation(item)
           .then(() => {
-            console.log('🎬 [UnifiedClipOperations] Keyframes adjusted for speed change:', {
-              oldRate: getCurrentPlaybackRate(item),
-              newRate: clampedRate,
-              oldDuration: oldDurationFrames,
-              newDuration: newDurationFrames,
-            })
+            console.log(
+              '🎬 [Playback Rate] Animation duration updated after playback rate change',
+            )
           })
           .catch((error) => {
-            console.error('🎬 [UnifiedClipOperations] Failed to adjust keyframes:', error)
+            console.error('🎬 [Playback Rate] Failed to update animation duration:', error)
           })
       }
-    }
 
-    // 更新sprite的播放速度（这会自动更新sprite内部的timeRange）
-    if (item.runtime.sprite) {
-      if (item.mediaType === 'video' && item.runtime.sprite instanceof VideoVisibleSprite) {
-        item.runtime.sprite.setPlaybackRate(clampedRate)
-      } else if (item.mediaType === 'audio' && item.runtime.sprite instanceof AudioVisibleSprite) {
-        item.runtime.sprite.setPlaybackRate(clampedRate)
+      // 只有视频才记录详细的时间范围信息
+      if (isVideoTimelineItem(item)) {
+        const clipDurationFrames = microsecondsToFrames(
+          item.timeRange.clipEndTime - item.timeRange.clipStartTime,
+        )
+        const timelineDurationFrames = microsecondsToFrames(
+          item.timeRange.timelineEndTime - item.timeRange.timelineStartTime,
+        )
+
+        console.log('🎬 播放速度更新:', {
+          timelineItemId,
+          newRate: clampedRate,
+          timeRange: {
+            clipDuration: framesToTimecode(clipDurationFrames),
+            timelineDuration: framesToTimecode(timelineDurationFrames),
+          },
+        })
+      } else if (isAudioTimelineItem(item)) {
+        console.log('🎬 [ClipOperations] 音频播放速度调整:', {
+          timelineItemId,
+          newRate: clampedRate
+        })
+      } else {
+        console.log('🎬 [ClipOperations] 图片不支持播放速度调整:', { timelineItemId })
       }
-
-      // 使用统一的时间范围同步函数更新TimelineItem的timeRange
-      syncTimeRange(item)
-    }
-
-    // 更新时间范围中的播放速度（对于视频/音频）
-    if (isVideoTimeRange(item.timeRange)) {
-      item.timeRange.playbackRate = clampedRate
-    }
-
-    // 如果有动画，需要重新设置WebAV动画时长
-    if (hasAnimation(item)) {
-      // 异步更新动画，不阻塞播放速度调整
-      updateWebAVAnimation(item)
-        .then(() => {
-          console.log(
-            '🎬 [UnifiedClipOperations] Animation duration updated after playback rate change',
-          )
-        })
-        .catch((error) => {
-          console.error('🎬 [UnifiedClipOperations] Failed to update animation duration:', error)
-        })
-    }
-
-    // 记录播放速度更新信息
-    if (item.mediaType === 'video' || item.mediaType === 'audio') {
-      const timeRange = item.timeRange
-      const timelineDurationFrames = timeRange.timelineEndTime - timeRange.timelineStartTime
-
-      console.log('🎬 [UnifiedClipOperations] 播放速度更新:', {
-        timelineItemId,
-        mediaType: item.mediaType,
-        newRate: clampedRate,
-        timelineDurationFrames,
-        oldDurationFrames,
-        newDurationFrames,
-      })
-    } else {
-      console.log('🎬 [UnifiedClipOperations] 图片不支持播放速度调整:', { timelineItemId })
     }
   }
 
-  // ==================== 辅助函数 ====================
-
-  /**
-   * 获取当前播放速度
-   */
-  function getCurrentPlaybackRate(item: UnifiedTimelineItemData): number {
-    if (isVideoTimeRange(item.timeRange)) {
-      return item.timeRange.playbackRate || 1
-    }
-    return 1
-  }
-
-  /**
-   * 检查是否有关键帧
-   */
-  function hasKeyframes(item: UnifiedTimelineItemData): boolean {
-    // 在新架构中，关键帧信息可能存储在不同的地方
-    // 这里需要根据实际的关键帧存储结构来实现
-    return false // 暂时返回false，待实际关键帧系统实现后更新
-  }
-
-  /**
-   * 检查是否有动画
-   */
-  function hasAnimation(item: UnifiedTimelineItemData): boolean {
-    // 在新架构中，动画信息可能存储在不同的地方
-    // 这里需要根据实际的动画存储结构来实现
-    return false // 暂时返回false，待实际动画系统实现后更新
-  }
-
-  /**
-   * 调整关键帧位置（异步）
-   */
-  async function adjustKeyframesForDurationChange(
-    item: UnifiedTimelineItemData,
-    oldDurationFrames: number,
-    newDurationFrames: number,
-  ): Promise<void> {
-    try {
-      // 动态导入关键帧工具函数
-      const { adjustKeyframesForDurationChange } = await import('../../utils/unifiedKeyframeUtils')
-
-      // 注意：这里需要适配新架构的关键帧系统
-      // 暂时保留接口，待关键帧系统实现后更新
-      console.log('🎬 [UnifiedClipOperations] Keyframe adjustment placeholder:', {
-        itemId: item.id,
-        oldDuration: oldDurationFrames,
-        newDuration: newDurationFrames,
-      })
-    } catch (error) {
-      console.error('🎬 [UnifiedClipOperations] Failed to import keyframe utils:', error)
-    }
-  }
-
-  /**
-   * 更新WebAV动画（异步）
-   */
-  async function updateWebAVAnimation(item: UnifiedTimelineItemData): Promise<void> {
-    try {
-      // 动态导入WebAV动画管理器
-      const { updateWebAVAnimation } = await import('../../utils/webavAnimationManager')
-
-      // 注意：这里需要适配新架构的动画系统
-      // 暂时保留接口，待动画系统实现后更新
-      console.log('🎬 [UnifiedClipOperations] WebAV animation update placeholder:', {
-        itemId: item.id,
-      })
-    } catch (error) {
-      console.error('🎬 [UnifiedClipOperations] Failed to import animation manager:', error)
-    }
-  }
 
   // ==================== 导出接口 ====================
 

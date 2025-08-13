@@ -3,15 +3,10 @@
  * 基于"核心数据与行为分离"的重构方案 - 无状态纯函数
  */
 
-import type {
-  UnifiedTimelineItemData,
-  TimelineItemStatus,
-  UnknownTimelineItem,
-  GetTimelineItemConfig,
-} from './TimelineItemData'
-import type { UnifiedTimeRange } from '../types/timeRange'
-import { VALID_TIMELINE_TRANSITIONS } from './TimelineItemData'
-import type { MediaType } from '../../types'
+import type { UnifiedTimelineItemData, TimelineItemStatus } from '@/unified/timelineitem/TimelineItemData'
+import type { UnifiedTimeRange } from '@/unified/types/timeRange'
+import { VALID_TIMELINE_TRANSITIONS } from '@/unified/timelineitem/TimelineItemData'
+import type { MediaType } from '@/unified/mediaitem'
 
 // ==================== 状态转换行为函数 ====================
 // 注意：状态转换函数已被删除，因为未被使用
@@ -130,7 +125,7 @@ async function updateSpriteTimeRange(
   if (!data.runtime.sprite) return
 
   try {
-    const { updateSpriteTimeRange } = await import('./TimelineItemSpriteOperations')
+    const { updateSpriteTimeRange } = await import('@/unified/timelineitem/TimelineItemSpriteOperations')
     updateSpriteTimeRange(data.runtime.sprite, timeRange)
   } catch (error) {
     console.error('更新Sprite时间范围失败:', error)

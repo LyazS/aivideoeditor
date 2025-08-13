@@ -3,12 +3,12 @@ import {
   getMaxZoomLevelFrames,
   getMinZoomLevelFrames,
   getMaxScrollOffsetFrames,
-} from '../../stores/utils/zoomUtils'
+} from '@/stores/utils/zoomUtils'
 import {
   calculateContentEndTimeFrames,
   calculateMaxVisibleDurationFrames,
-} from '../utils/durationUtils'
-import type { UnifiedTimelineItemData } from '../timelineitem/TimelineItemData'
+} from '@/unified/utils/durationUtils'
+import type { UnifiedTimelineItemData } from '@/unified/timelineitem/TimelineItemData'
 
 /**
  * 统一缩放滚动管理模块

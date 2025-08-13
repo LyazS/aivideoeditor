@@ -1,6 +1,6 @@
 import { ref, computed, type Raw, type Ref } from 'vue'
-import type { UnifiedTimelineItemData } from '../timelineitem/TimelineItemData'
-import type { UnifiedMediaItemData } from '../mediaitem/types'
+import type { UnifiedTimelineItemData } from '@/unified/timelineitem/TimelineItemData'
+import type { UnifiedMediaItemData } from '@/unified/mediaitem/types'
 
 /**
  * 统一选择管理模块
@@ -128,7 +128,7 @@ export function createUnifiedSelectionModule(
     lastSelectionCommand = { itemIds: [...itemIds], mode, timestamp: now }
 
     // 动态导入命令类以避免循环依赖
-    const { SelectTimelineItemsCommand } = await import('./commands/timelineCommands')
+    const { SelectTimelineItemsCommand } = await import('@/unified/modules/commands/timelineCommands')
 
     // 创建选择命令
     const command = new SelectTimelineItemsCommand(

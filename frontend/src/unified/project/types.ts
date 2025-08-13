@@ -3,9 +3,9 @@
  * 基于新架构统一类型系统的项目配置接口，参考旧架构ProjectConfig设计
  */
 
-import type { UnifiedMediaItemData } from '../mediaitem/types'
-import type { UnifiedTrackData } from '../track/TrackTypes'
-import type { UnifiedTimelineItemData } from '../timelineitem/TimelineItemData'
+import type { UnifiedMediaItemData } from '@/unified/mediaitem'
+import type { UnifiedTrackData } from '@/unified/track'
+import type { UnifiedTimelineItemData } from '@/unified/timelineitem'
 
 /**
  * 统一项目配置接口（基于新架构统一类型）

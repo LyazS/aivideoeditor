@@ -1,5 +1,5 @@
 import { onMounted, onUnmounted } from 'vue'
-import { useUnifiedStore } from '../unifiedStore'
+import { useUnifiedStore } from '@/unified/unifiedStore'
 
 /**
  * 键盘快捷键处理组合式函数

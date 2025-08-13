@@ -3,14 +3,14 @@
  * 提供联合类型、工厂函数和类型查询的核心功能
  */
 
-import type { UserSelectedFileSourceData } from './UserSelectedFileSource'
-import type { RemoteFileSourceData } from './RemoteFileSource'
-import { UserSelectedFileSourceFactory } from './UserSelectedFileSource'
-import { RemoteFileSourceFactory } from './RemoteFileSource'
-import { UserSelectedFileTypeGuards } from './UserSelectedFileSource'
-import { RemoteFileTypeGuards } from './RemoteFileSource'
-import { DataSourceQueries as BaseDataSourceQueries } from './BaseDataSource'
-import type { RemoteFileConfig } from './RemoteFileSource'
+import type { UserSelectedFileSourceData } from '@/unified/sources/UserSelectedFileSource'
+import type { RemoteFileSourceData } from '@/unified/sources/RemoteFileSource'
+import { UserSelectedFileSourceFactory } from '@/unified/sources/UserSelectedFileSource'
+import { RemoteFileSourceFactory } from '@/unified/sources/RemoteFileSource'
+import { UserSelectedFileTypeGuards } from '@/unified/sources/UserSelectedFileSource'
+import { RemoteFileTypeGuards } from '@/unified/sources/RemoteFileSource'
+import { DataSourceQueries as BaseDataSourceQueries } from '@/unified/sources/BaseDataSource'
+import type { RemoteFileConfig } from '@/unified/sources/RemoteFileSource'
 
 // ==================== 联合类型定义 ====================
 

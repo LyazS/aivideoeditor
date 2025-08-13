@@ -186,6 +186,7 @@ export {
   createTextItemPreview,
 } from './textTimelineUtils'
 
+export { TextHelper } from './TextHelper'
 // ==================== 统一动画转换器 ====================
 export {
   // 转换核心函数

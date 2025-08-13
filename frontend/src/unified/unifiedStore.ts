@@ -1,33 +1,32 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
-import { createUnifiedMediaModule } from './modules/UnifiedMediaModule'
-import { createUnifiedTrackModule } from './modules/UnifiedTrackModule'
-import { createUnifiedTimelineModule } from './modules/UnifiedTimelineModule'
-import { createUnifiedProjectModule } from './modules/UnifiedProjectModule'
-import { createUnifiedViewportModule } from './modules/UnifiedViewportModule'
-import { createUnifiedSelectionModule } from './modules/UnifiedSelectionModule'
-import { createUnifiedClipOperationsModule } from './modules/UnifiedClipOperationsModule'
-import { createUnifiedConfigModule } from './modules/UnifiedConfigModule'
-import { createUnifiedPlaybackModule } from './modules/UnifiedPlaybackModule'
-import { createUnifiedWebavModule } from './modules/UnifiedWebavModule'
-import { createUnifiedNotificationModule } from './modules/UnifiedNotificationModule'
-import { createUnifiedHistoryModule } from './modules/UnifiedHistoryModule'
-import { calculateTotalDurationFrames } from './utils/durationUtils'
-import type { UnifiedMediaItemData, MediaType, MediaTypeOrUnknown } from '@/unified'
-import type { UnifiedTrackType } from './track/TrackTypes'
-import type { UnifiedTimelineItemData, TransformData } from './timelineitem/TimelineItemData'
-import type { PropertyType } from '../types'
-import type { TextMediaConfig } from './timelineitem/TimelineItemData'
-import type { UnifiedTimeRange } from './types/timeRange'
+import { createUnifiedMediaModule } from '@/unified/modules/UnifiedMediaModule'
+import { createUnifiedTrackModule } from '@/unified/modules/UnifiedTrackModule'
+import { createUnifiedTimelineModule } from '@/unified/modules/UnifiedTimelineModule'
+import { createUnifiedProjectModule } from '@/unified/modules/UnifiedProjectModule'
+import { createUnifiedViewportModule } from '@/unified/modules/UnifiedViewportModule'
+import { createUnifiedSelectionModule } from '@/unified/modules/UnifiedSelectionModule'
+import { createUnifiedClipOperationsModule } from '@/unified/modules/UnifiedClipOperationsModule'
+import { createUnifiedConfigModule } from '@/unified/modules/UnifiedConfigModule'
+import { createUnifiedPlaybackModule } from '@/unified/modules/UnifiedPlaybackModule'
+import { createUnifiedWebavModule } from '@/unified/modules/UnifiedWebavModule'
+import { createUnifiedNotificationModule } from '@/unified/modules/UnifiedNotificationModule'
+import { createUnifiedHistoryModule } from '@/unified/modules/UnifiedHistoryModule'
+import { calculateTotalDurationFrames } from '@/unified/utils/durationUtils'
+import type { MediaType, MediaTypeOrUnknown } from '@/unified'
+import type { UnifiedTrackType } from '@/unified/track/TrackTypes'
+import type { UnifiedTimelineItemData } from '@/unified/timelineitem/TimelineItemData'
+import type { PropertyType } from '@/types'
+import type { UnifiedTimeRange } from '@/unified/types/timeRange'
 
-import { frameToPixel, pixelToFrame } from './utils/coordinateUtils'
+import { frameToPixel, pixelToFrame } from '@/unified/utils/coordinateUtils'
 import {
   expandTimelineIfNeededFrames,
   smartExpandTimelineIfNeeded,
   batchExpandTimelineIfNeeded,
   predictiveExpandTimeline,
   getTimelineExpansionSuggestion,
-} from './utils/timeUtils'
+} from '@/unified/utils/timeUtils'
 import {
   getTimelineItemAtFrames,
   getTimelineItemsByTrack,
@@ -42,7 +41,7 @@ import {
   findOverlappingTimelineItems,
   findOverlappingTimelineItemsOnTrack,
   findOrphanedTimelineItems,
-} from './utils/timelineSearchUtils'
+} from '@/unified/utils/timelineSearchUtils'
 import {
   isVideoTimelineItem,
   isImageTimelineItem,
@@ -60,7 +59,7 @@ import {
   filterByStatus,
   filterByTrack,
   sortByTime,
-} from './timelineitem/TimelineItemQueries'
+} from '@/unified/timelineitem/TimelineItemQueries'
 
 // 从TimelineItemFactory导入工厂函数
 import {
@@ -70,7 +69,7 @@ import {
   createImageTimelineItem,
   cloneTimelineItem,
   duplicateTimelineItem,
-} from './timelineitem/TimelineItemFactory'
+} from '@/unified/timelineitem/TimelineItemFactory'
 
 // 从TimelineItemBehaviors导入行为函数
 // transitionTimelineStatus 已删除，因为未被使用
@@ -87,9 +86,12 @@ import {
   ToggleTrackVisibilityCommand,
   ToggleTrackMuteCommand,
   ResizeTimelineItemCommand,
-} from './modules/commands/timelineCommands'
+} from '@/unified/modules/commands/timelineCommands'
 
-import { BatchDeleteCommand, BatchAutoArrangeTrackCommand } from './modules/commands/batchCommands'
+import {
+  BatchDeleteCommand,
+  BatchAutoArrangeTrackCommand,
+} from '@/unified/modules/commands/batchCommands'
 
 /**
  * 统一视频编辑器存储
@@ -127,7 +129,13 @@ export const useUnifiedStore = defineStore('unified', () => {
   const unifiedPlaybackModule = createUnifiedPlaybackModule(unifiedConfigModule.frameRate)
 
   // 创建WebAV集成模块
-  const unifiedWebavModule = createUnifiedWebavModule()
+  const unifiedWebavModule = createUnifiedWebavModule({
+    currentFrame: unifiedPlaybackModule.currentFrame,
+    currentWebAVFrame: unifiedPlaybackModule.currentWebAVFrame,
+    isPlaying: unifiedPlaybackModule.isPlaying,
+    setCurrentFrame: unifiedPlaybackModule.setCurrentFrame,
+    setPlaying: unifiedPlaybackModule.setPlaying,
+  })
 
   // 创建统一时间轴管理模块（需要依赖其他模块）
   const unifiedTimelineModule = createUnifiedTimelineModule(
@@ -1109,6 +1117,7 @@ export const useUnifiedStore = defineStore('unified', () => {
 
     // 播放控制状态
     currentFrame: unifiedPlaybackModule.currentFrame,
+    currentWebAVFrame: unifiedPlaybackModule.currentWebAVFrame,
     isPlaying: unifiedPlaybackModule.isPlaying,
     playbackRate: unifiedPlaybackModule.playbackRate,
 

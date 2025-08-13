@@ -6,7 +6,7 @@
 import { reactive } from 'vue'
 import type { Raw } from 'vue'
 import type { MP4Clip, ImgClip, AudioClip } from '@webav/av-cliper'
-import type { UnifiedDataSourceData } from '../sources/DataSourceTypes'
+import type { UnifiedDataSourceData } from '@/unified/sources/DataSourceTypes'
 
 // ==================== 类型定义 ====================
 
