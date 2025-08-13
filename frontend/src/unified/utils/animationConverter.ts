@@ -124,7 +124,7 @@ export function convertToWebAVAnimation(
   const webavKeyframes: Record<string, Record<string, number>> = {}
 
   // 获取clip时长用于计算动画总时长
-  const clipDurationFrames = timeRange.clipEndTime - timeRange.clipStartTime
+  const clipDurationFrames = timeRange.timelineEndTime - timeRange.timelineStartTime
 
   // 验证时长
   if (clipDurationFrames <= 0) {
