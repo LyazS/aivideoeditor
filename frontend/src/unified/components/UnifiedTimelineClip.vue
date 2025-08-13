@@ -659,7 +659,14 @@ async function stopResize() {
       }
 
       // 调用统一store的resize方法，传入完整的newTimeRange对象
+      // 注意：adjustKeyframesForDurationChange 和 updateWebAVAnimation 现在已整合到 ResizeTimelineItemCommand 中
       const success = await unifiedStore.resizeTimelineItemWithHistory(props.data.id, newTimeRange)
+
+      if (success) {
+        console.log('✅ [UnifiedTimelineClip] 时间范围调整成功')
+      } else {
+        console.error('❌ [UnifiedTimelineClip] 时间范围调整失败')
+      }
     } catch (error) {
       console.error('❌ [UnifiedTimelineClip] 调整大小失败:', error)
     }
