@@ -3,10 +3,10 @@
  * 提供统一的管理器注册和获取接口
  */
 
-import { DataSourceManager } from './BaseDataSourceManager'
-import type { UnifiedDataSourceData } from '../sources/DataSourceTypes'
-import { UserSelectedFileManager } from './UserSelectedFileManager'
-import { RemoteFileManager } from './RemoteFileManager'
+import { DataSourceManager } from '@/unified/managers/BaseDataSourceManager'
+import type { UnifiedDataSourceData } from '@/unified/sources/DataSourceTypes'
+import { UserSelectedFileManager } from '@/unified/managers/UserSelectedFileManager'
+import { RemoteFileManager } from '@/unified/managers/RemoteFileManager'
 
 // ==================== 类型定义 ====================
 

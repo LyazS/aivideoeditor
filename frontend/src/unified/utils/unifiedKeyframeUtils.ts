@@ -9,8 +9,8 @@ import type {
   Keyframe,
   KeyframeButtonState,
   KeyframeUIState,
-} from '../timelineitem/TimelineItemData'
-import type { UnifiedTimeRange } from '../types/timeRange'
+} from '@/unified/timelineitem/TimelineItemData'
+import type { UnifiedTimeRange } from '@/unified/types/timeRange'
 import {
   hasVisualProperties,
   hasAudioProperties,
@@ -18,7 +18,7 @@ import {
   isImageTimelineItem,
   isTextTimelineItem,
   isAudioTimelineItem,
-} from '../timelineitem/TimelineItemQueries'
+} from '@/unified/timelineitem/TimelineItemQueries'
 
 // ==================== 关键帧位置转换工具函数 ====================
 
@@ -415,8 +415,8 @@ export async function updatePropertiesBatchViaWebAV(
 
     if (hasWidth && hasHeight && hasVisualProperties(item)) {
       // 🎯 批量处理尺寸更新：一次性计算位置，避免重复计算
-      const { projectToWebavCoords } = await import('./coordinateTransform')
-      const { useUnifiedStore } = await import('../unifiedStore')
+      const { projectToWebavCoords } = await import('@/unified/utils/coordinateTransform')
+      const { useUnifiedStore } = await import('@/unified/unifiedStore')
       const unifiedStore = useUnifiedStore()
 
       // 获取当前中心位置（项目坐标系）
@@ -467,7 +467,7 @@ export async function updatePropertiesBatchViaWebAV(
     }
 
     // 触发渲染更新
-    const { useUnifiedStore } = await import('../unifiedStore')
+    const { useUnifiedStore } = await import('@/unified/unifiedStore')
     const unifiedStore = useUnifiedStore()
     unifiedStore.seekToFrame(unifiedStore.currentFrame)
   } catch (error) {
@@ -492,8 +492,8 @@ async function updatePropertyViaWebAV(
   try {
     if (property === 'x' || property === 'y') {
       // 位置更新需要坐标转换
-      const { projectToWebavCoords } = await import('./coordinateTransform')
-      const { useUnifiedStore } = await import('../unifiedStore')
+      const { projectToWebavCoords } = await import('@/unified/utils/coordinateTransform')
+      const { useUnifiedStore } = await import('@/unified/unifiedStore')
       const unifiedStore = useUnifiedStore()
 
       // 类型安全的配置访问（使用类型守卫）
@@ -515,8 +515,8 @@ async function updatePropertyViaWebAV(
       sprite.rect.y = webavCoords.y
     } else if (property === 'width') {
       // 中心缩放：保持中心位置不变，更新宽度
-      const { projectToWebavCoords } = await import('./coordinateTransform')
-      const { useUnifiedStore } = await import('../unifiedStore')
+      const { projectToWebavCoords } = await import('@/unified/utils/coordinateTransform')
+      const { useUnifiedStore } = await import('@/unified/unifiedStore')
       const unifiedStore = useUnifiedStore()
 
       if (hasVisualProperties(item)) {
@@ -553,8 +553,8 @@ async function updatePropertyViaWebAV(
       }
     } else if (property === 'height') {
       // 中心缩放：保持中心位置不变，更新高度
-      const { projectToWebavCoords } = await import('./coordinateTransform')
-      const { useUnifiedStore } = await import('../unifiedStore')
+      const { projectToWebavCoords } = await import('@/unified/utils/coordinateTransform')
+      const { useUnifiedStore } = await import('@/unified/unifiedStore')
       const unifiedStore = useUnifiedStore()
 
       if (hasVisualProperties(item)) {
@@ -596,7 +596,7 @@ async function updatePropertyViaWebAV(
     }
 
     // 触发渲染更新
-    const { useUnifiedStore } = await import('../unifiedStore')
+    const { useUnifiedStore } = await import('@/unified/unifiedStore')
     const unifiedStore = useUnifiedStore()
     unifiedStore.seekToFrame(unifiedStore.currentFrame)
   } catch (error) {
@@ -653,7 +653,7 @@ async function handlePropertyChange_OnKeyframe(
   }
 
   // 2. 更新WebAV动画（使用新的关键帧数据）
-  const { updateWebAVAnimation } = await import('./webavAnimationManager')
+  const { updateWebAVAnimation } = await import('@/unified/utils/webavAnimationManager')
   await updateWebAVAnimation(item)
 
   // 3. 立即更新当前属性值到sprite（确保立即生效）
@@ -699,7 +699,7 @@ async function handlePropertyChange_BetweenKeyframes(
   })
 
   // 2. 更新WebAV动画（使用新的关键帧数据）
-  const { updateWebAVAnimation } = await import('./webavAnimationManager')
+  const { updateWebAVAnimation } = await import('@/unified/utils/webavAnimationManager')
   await updateWebAVAnimation(item)
 
   // 3. 立即更新当前属性值到sprite（确保立即生效）

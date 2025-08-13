@@ -10,10 +10,10 @@ import type {
   AudioMediaConfig,
   ImageMediaConfig,
   TextMediaConfig,
-} from '../../../timelineitem/TimelineItemData'
-import { hasVisualProperties } from '../../../timelineitem/TimelineItemQueries'
-import { generateCommandId as generateId } from '../../../../utils/idGenerator'
-import { isPlayheadInTimelineItem as checkPlayheadInTimelineItem } from '../../../utils/timelineSearchUtils'
+} from '@/unified/timelineitem/TimelineItemData'
+import { hasVisualProperties } from '@/unified/timelineitem/TimelineItemQueries'
+import { generateCommandId as generateId } from '@/utils/idGenerator'
+import { isPlayheadInTimelineItem as checkPlayheadInTimelineItem } from '@/unified/utils/timelineSearchUtils'
 import { cloneDeep } from 'lodash'
 
 // ==================== 关键帧数据快照接口 ====================
@@ -107,8 +107,8 @@ export async function applyKeyframeSnapshot(
 
         // 恢复位置和尺寸
         if ('x' in visualProps && (visualProps.x !== undefined || visualProps.y !== undefined)) {
-          const { projectToWebavCoords } = await import('../../../../utils/coordinateTransform')
-          const { useUnifiedStore } = await import('../../../unifiedStore')
+          const { projectToWebavCoords } = await import('@/utils/coordinateTransform')
+          const { useUnifiedStore } = await import('@/unified/unifiedStore')
           const store = useUnifiedStore()
 
           // 获取视频分辨率
@@ -148,7 +148,7 @@ export async function applyKeyframeSnapshot(
       }
 
       // 触发渲染更新
-      const { useUnifiedStore } = await import('../../../unifiedStore')
+      const { useUnifiedStore } = await import('@/unified/unifiedStore')
       const store = useUnifiedStore()
       store.seekToFrame(store.currentFrame)
     } catch (error) {
@@ -174,7 +174,7 @@ export function isPlayheadInTimelineItem(item: UnifiedTimelineItemData, frame: n
  */
 export async function showUserWarning(title: string, message: string): Promise<void> {
   try {
-    const { useUnifiedStore } = await import('../../../unifiedStore')
+    const { useUnifiedStore } = await import('@/unified/unifiedStore')
     const store = useUnifiedStore()
     // 假设新架构有类似的警告方法
     if (typeof store.showWarning === 'function') {

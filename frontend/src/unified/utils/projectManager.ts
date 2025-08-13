@@ -1,10 +1,10 @@
-import { directoryManager } from '../../utils/DirectoryManager'
-import type { UnifiedProjectConfig } from '../project'
+import { directoryManager } from '@/utils/DirectoryManager'
+import type { UnifiedProjectConfig } from '@/unified/project'
 import type {
   UnifiedMediaItemData,
   UnifiedTimelineItemData,
-} from '..'
-import type { UnifiedTrackData } from '../track/TrackTypes'
+} from '@/unified'
+import type { UnifiedTrackData } from '@/unified/track/TrackTypes'
 
 /**
  * 统一项目加载选项

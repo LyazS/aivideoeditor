@@ -4,19 +4,19 @@
  * 包含所有远程文件相关的业务逻辑和操作行为
  */
 
-import { DataSourceManager, type AcquisitionTask } from './BaseDataSourceManager'
+import { DataSourceManager, type AcquisitionTask } from '@/unified/managers/BaseDataSourceManager'
 import type {
   RemoteFileSourceData,
   RemoteFileConfig,
   DownloadProgress,
-} from '../sources/RemoteFileSource'
-import { RemoteFileQueries, DEFAULT_REMOTE_CONFIG } from '../sources/RemoteFileSource'
+} from '@/unified/sources/RemoteFileSource'
+import { RemoteFileQueries, DEFAULT_REMOTE_CONFIG } from '@/unified/sources/RemoteFileSource'
 import {
   DataSourceBusinessActions,
   DataSourceDataActions,
   DataSourceQueries,
-} from '../sources/BaseDataSource'
-import type { DetectedMediaType } from '../utils/mediaTypeDetector'
+} from '@/unified/sources/BaseDataSource'
+import type { DetectedMediaType } from '@/unified/utils/mediaTypeDetector'
 
 // ==================== 下载管理器配置 ====================
 
@@ -508,7 +508,7 @@ export class RemoteFileManager extends DataSourceManager<RemoteFileSourceData> {
       }
 
       // 使用 mediaTypeDetector 中的方法
-      const { getMediaTypeFromMimeType } = await import('../utils/mediaTypeDetector')
+      const { getMediaTypeFromMimeType } = await import('@/unified/utils/mediaTypeDetector')
       return getMediaTypeFromMimeType(contentType)
     } catch (error) {
       console.error('通过HEAD请求检测媒体类型失败:', error)
@@ -549,7 +549,7 @@ export class RemoteFileManager extends DataSourceManager<RemoteFileSourceData> {
   private async setPredictedMediaType(source: RemoteFileSourceData, mediaType: DetectedMediaType): Promise<void> {
     try {
       // 使用媒体模块方法查找对应的媒体项目
-      const { useUnifiedStore } = await import('../unifiedStore')
+      const { useUnifiedStore } = await import('@/unified/unifiedStore')
       const unifiedStore = useUnifiedStore()
       const mediaItem = unifiedStore.getMediaItemBySourceId(source.id)
 
@@ -575,11 +575,11 @@ export class RemoteFileManager extends DataSourceManager<RemoteFileSourceData> {
 
     try {
       // 使用工具函数检测媒体类型
-      const { detectFileMediaType } = await import('../utils/mediaTypeDetector')
+      const { detectFileMediaType } = await import('@/unified/utils/mediaTypeDetector')
       const detectedType = detectFileMediaType(source.file)
 
       // 使用媒体模块方法查找对应的媒体项目
-      const { useUnifiedStore } = await import('../unifiedStore')
+      const { useUnifiedStore } = await import('@/unified/unifiedStore')
       const unifiedStore = useUnifiedStore()
       const mediaItem = unifiedStore.getMediaItemBySourceId(source.id)
 
@@ -615,7 +615,7 @@ export class RemoteFileManager extends DataSourceManager<RemoteFileSourceData> {
   ): Promise<void> {
     try {
       // 使用媒体模块方法查找对应的媒体项目
-      const { useUnifiedStore } = await import('../unifiedStore')
+      const { useUnifiedStore } = await import('@/unified/unifiedStore')
       const unifiedStore = useUnifiedStore()
       const mediaItem = unifiedStore.getMediaItemBySourceId(source.id)
 
@@ -629,7 +629,7 @@ export class RemoteFileManager extends DataSourceManager<RemoteFileSourceData> {
           mediaItem.name === '远程文件' ||
           mediaItem.name.startsWith('remote_file_')
         ) {
-          const { UnifiedMediaItemActions } = await import('../mediaitem')
+          const { UnifiedMediaItemActions } = await import('@/unified/mediaitem')
           UnifiedMediaItemActions.updateName(mediaItem, fileName)
           console.log(
             `📝 [RemoteFileManager] 媒体项目名称已更新为更准确的文件名: ${mediaItem.name} -> ${fileName}`,
@@ -658,7 +658,7 @@ export class RemoteFileManager extends DataSourceManager<RemoteFileSourceData> {
     }
 
     // 为每个URL创建数据源
-    const { DataSourceFactory } = await import('../sources/DataSourceTypes')
+    const { DataSourceFactory } = await import('@/unified/sources/DataSourceTypes')
     const sources = urls.map((url) => {
       return DataSourceFactory.createRemoteSource(url, {
         timeout: this.config.defaultTimeout,

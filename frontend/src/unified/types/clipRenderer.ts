@@ -9,8 +9,8 @@
  */
 
 import type { VNode } from 'vue'
-import type { UnifiedTimelineItemData } from '../timelineitem/TimelineItemData'
-import type { MediaType } from '../mediaitem/types'
+import type { UnifiedTimelineItemData } from '@/unified/timelineitem/TimelineItemData'
+import type { MediaType } from '@/unified/mediaitem/types'
 
 // ==================== 渲染上下文接口 ====================
 

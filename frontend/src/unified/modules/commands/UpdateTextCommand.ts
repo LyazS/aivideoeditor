@@ -4,27 +4,23 @@
  * 遵循"从源头重建"原则：保存完整的重建元数据，撤销时从原始配置重新创建
  */
 
-import { generateCommandId } from '../../../utils/idGenerator'
-import { cloneDeep } from 'lodash'
+import { generateCommandId } from '@/utils/idGenerator'
 import { markRaw } from 'vue'
 import type { VisibleSprite } from '@webav/av-cliper'
-import type { SimpleCommand } from './types'
+import type { SimpleCommand } from '@/unified/modules/commands/types'
 
 // ==================== 新架构类型导入 ====================
 import type {
   UnifiedTimelineItemData,
-} from '../../timelineitem/TimelineItemData'
+} from '@/unified/timelineitem/TimelineItemData'
 
 // ==================== 新架构工具导入 ====================
-import { isTextTimelineItem, TimelineItemFactory } from '../../timelineitem'
+import { isTextTimelineItem, TimelineItemFactory } from '@/unified/timelineitem'
 import {
   createSpriteForTextTimelineItem,
-} from '../../utils/textTimelineUtils'
-
-// ==================== 旧架构兼容性导入 ====================
-import { TextVisibleSprite } from '../../visiblesprite/TextVisibleSprite'
-import type { TextStyleConfig } from '../../../types'
-import type { TextMediaConfig } from '../../timelineitem/TimelineItemData'
+} from '@/unified/utils/textTimelineUtils'
+import { TextVisibleSprite } from '@/unified/visiblesprite/TextVisibleSprite'
+import type { TextStyleConfig } from '@/unified/timelineitem'
 
 export class UpdateTextCommand implements SimpleCommand {
   public readonly id: string

@@ -7,23 +7,23 @@
 import type { VisibleSprite } from '@webav/av-cliper'
 
 // ==================== 新架构类型导入 ====================
-import type { SimpleCommand } from './types'
+import type { SimpleCommand } from '@/unified/modules/commands/types'
 import type {
   UnifiedTimelineItemData,
-} from '../../timelineitem/TimelineItemData'
+} from '@/unified/timelineitem/TimelineItemData'
 
-import type { UnifiedMediaItemData, MediaType } from '../../mediaitem/types'
+import type { UnifiedMediaItemData, MediaType } from '@/unified/mediaitem/types'
 
 // ==================== 新架构工具导入 ====================
 import {
   setupCommandMediaSync,
   cleanupCommandMediaSync,
-} from '../../composables/useCommandMediaSync'
+} from '@/unified/composables/useCommandMediaSync'
 
-import { TimelineItemFactory } from '../../timelineitem'
+import { TimelineItemFactory } from '@/unified/timelineitem'
 
 // ==================== 旧架构类型工具导入 ====================
-import { generateCommandId } from '../../../utils/idGenerator'
+import { generateCommandId } from '@/utils/idGenerator'
 
 /**
  * 添加时间轴项目命令

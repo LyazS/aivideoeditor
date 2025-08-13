@@ -6,32 +6,31 @@
 import { reactive, markRaw } from 'vue'
 import { cloneDeep } from 'lodash'
 import { generateUUID4 } from '@/utils/idGenerator'
-import type { MediaType, MediaTypeOrUnknown, UnifiedMediaItemData } from '../mediaitem'
+import type { MediaType, UnifiedMediaItemData } from '@/unified/mediaitem'
 import type {
   VideoMediaConfig,
   ImageMediaConfig,
   AudioMediaConfig,
   TextMediaConfig,
   GetMediaConfig,
-} from './TimelineItemData'
-import type { UnifiedTimeRange } from '../types/timeRange'
+} from '@/unified/timelineitem/TimelineItemData'
+import type { UnifiedTimeRange } from '@/unified/types/timeRange'
 import type {
   UnifiedTimelineItemData,
   KnownTimelineItem,
   UnknownMediaConfig,
   AnimationConfig,
-  Keyframe,
   TimelineItemStatus,
-} from './TimelineItemData'
-import { TimelineItemQueries } from './TimelineItemQueries'
-import { UnifiedMediaItemQueries } from '../mediaitem'
-import { regenerateThumbnailForUnifiedTimelineItem } from '../utils/thumbnailGenerator'
-import { createSpriteFromUnifiedTimelineItem } from '../utils/spriteFactory'
+} from '@/unified/timelineitem/TimelineItemData'
+import { TimelineItemQueries } from '@/unified/timelineitem/TimelineItemQueries'
+import { UnifiedMediaItemQueries } from '@/unified/mediaitem'
+import { regenerateThumbnailForUnifiedTimelineItem } from '@/unified/utils/thumbnailGenerator'
+import { createSpriteFromUnifiedTimelineItem } from '@/unified/utils/spriteFactory'
 import {
   createTextTimelineItem as createTextTimelineItemFromUtils,
   createSpriteForTextTimelineItem,
-} from '../utils/textTimelineUtils'
-import { projectToWebavCoords } from '../utils/coordinateTransform'
+} from '@/unified/utils/textTimelineUtils'
+import { projectToWebavCoords } from '@/unified/utils/coordinateTransform'
 
 // ==================== 基础工厂函数 ====================
 

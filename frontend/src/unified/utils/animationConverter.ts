@@ -8,10 +8,10 @@ import type {
   AnimationConfig,
   WebAVAnimationConfig,
   Keyframe,
-} from '../timelineitem/TimelineItemData'
-import type { UnifiedTimeRange } from '../types/timeRange'
-import { framesToMicroseconds } from './timeUtils'
-import { projectToWebavCoords } from './coordinateTransform'
+} from '@/unified/timelineitem/TimelineItemData'
+import type { UnifiedTimeRange } from '@/unified/types/timeRange'
+import { framesToMicroseconds } from '@/unified/utils/timeUtils'
+import { projectToWebavCoords } from '@/unified/utils/coordinateTransform'
 
 // ==================== 转换核心函数 ====================
 

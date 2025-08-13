@@ -1,7 +1,7 @@
 import { MP4Clip, ImgClip } from '@webav/av-cliper'
-import type { UnifiedMediaItemData } from '../mediaitem/types'
-import type { UnifiedTimelineItemData } from '../timelineitem/TimelineItemData'
-import { UnifiedMediaItemQueries } from '../mediaitem/actions'
+import type { UnifiedMediaItemData } from '@/unified/mediaitem'
+import type { UnifiedTimelineItemData } from '@/unified/timelineitem/TimelineItemData'
+import { UnifiedMediaItemQueries } from '@/unified/mediaitem'
 
 /**
  * 统一架构下的缩略图生成器

@@ -4,7 +4,7 @@
  * 行为函数已移动到 RemoteFileManager 中
  */
 
-import type { BaseDataSourceData } from './BaseDataSource'
+import type { BaseDataSourceData } from '@/unified/sources/BaseDataSource'
 import { reactive } from 'vue'
 import { generateUUID4 } from '@/utils/idGenerator'
 

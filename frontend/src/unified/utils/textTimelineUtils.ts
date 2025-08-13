@@ -1,12 +1,11 @@
 import { reactive } from 'vue'
-import { TextVisibleSprite } from '../visiblesprite/TextVisibleSprite'
-import { webavToProjectCoords } from './coordinateTransform'
-import { generateUUID4 } from '../../utils/idGenerator'
-import type { UnifiedTimelineItemData } from '../timelineitem/TimelineItemData'
-import type { TextStyleConfig } from '../../types'
-import type { TextMediaConfig } from '../timelineitem/TimelineItemData'
-import type { UnifiedTimeRange } from '../types/timeRange'
-import { DEFAULT_TEXT_STYLE } from '../../types'
+import { TextVisibleSprite } from '@/unified/visiblesprite/TextVisibleSprite'
+import { webavToProjectCoords } from '@/unified/utils/coordinateTransform'
+import { generateUUID4 } from '@/utils/idGenerator'
+import type { UnifiedTimelineItemData } from '@/unified/timelineitem/TimelineItemData'
+import type { TextMediaConfig, TextStyleConfig } from '@/unified/timelineitem/TimelineItemData'
+import type { UnifiedTimeRange } from '@/unified/types/timeRange'
+import { DEFAULT_TEXT_STYLE } from '@/unified/timelineitem/TimelineItemData'
 
 /**
  * 统一架构下的文本时间轴工具函数

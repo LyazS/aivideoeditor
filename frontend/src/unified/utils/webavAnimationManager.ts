@@ -4,10 +4,10 @@
  * 适配新架构版本
  */
 
-import type { UnifiedTimelineItemData } from '../timelineitem/TimelineItemData'
-import { convertToWebAVAnimation, isValidAnimationConfig } from './animationConverter'
-import { hasAnimation } from './unifiedKeyframeUtils'
-import { debugWebAVAnimationUpdate, isKeyframeDebugEnabled } from './keyframeDebugger'
+import type { UnifiedTimelineItemData } from '@/unified/timelineitem/TimelineItemData'
+import { convertToWebAVAnimation, isValidAnimationConfig } from '@/unified/utils/animationConverter'
+import { hasAnimation } from '@/unified/utils/unifiedKeyframeUtils'
+import { debugWebAVAnimationUpdate, isKeyframeDebugEnabled } from '@/unified/utils/keyframeDebugger'
 
 // ==================== WebAV动画管理器 ====================
 
@@ -59,7 +59,7 @@ export class WebAVAnimationManager {
 
       // 获取画布尺寸信息
       // 动态导入unifiedStore来获取画布尺寸
-      const { useUnifiedStore } = await import('../unifiedStore')
+      const { useUnifiedStore } = await import('@/unified/unifiedStore')
       const unifiedStore = useUnifiedStore()
       const canvasWidth = unifiedStore.videoResolution.width
       const canvasHeight = unifiedStore.videoResolution.height
@@ -91,7 +91,7 @@ export class WebAVAnimationManager {
       // 立即触发AVCanvas.previewFrame以确保动画效果立即生效
       try {
         // 动态导入unifiedStore来获取当前帧和AVCanvas
-        const { useUnifiedStore } = await import('../unifiedStore')
+        const { useUnifiedStore } = await import('@/unified/unifiedStore')
         const unifiedStore = useUnifiedStore()
 
         // 使用项目时间轴的绝对时间，通过unifiedStore统一管理

@@ -1,8 +1,8 @@
 import { AudioClip } from '@webav/av-cliper'
-import type { UnifiedTimeRange } from '../types/timeRange'
-import { framesToMicroseconds } from '../utils/timeUtils'
-import { BaseVisibleSprite } from './BaseVisibleSprite'
-import type { AudioState } from './types'
+import type { UnifiedTimeRange } from '@/unified/types/timeRange'
+import { framesToMicroseconds } from '@/unified/utils/timeUtils'
+import { BaseVisibleSprite } from '@/unified/visiblesprite/BaseVisibleSprite'
+import type { AudioState } from '@/unified/visiblesprite/types'
 
 /**
  * 自定义的音频VisibleSprite类，继承自BaseVisibleSprite

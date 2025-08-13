@@ -2,9 +2,8 @@
  * 统一Clip架构相关工具函数
  */
 
-import type { UnifiedTimelineItemData } from '../timelineitem/TimelineItemData'
-import type { MediaType } from '../mediaitem/types'
-import type { TimelineItemStatus } from '../timelineitem/TimelineItemData'
+import type { UnifiedTimelineItemData, TimelineItemStatus } from '@/unified/timelineitem/TimelineItemData'
+import type { MediaType } from '@/unified/mediaitem'
 
 // ==================== 状态判断工具 ====================
 

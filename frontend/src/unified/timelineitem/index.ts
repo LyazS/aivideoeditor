@@ -13,6 +13,9 @@ export type {
   UnknownMediaConfig,
   KnownTimelineItem,
   UnknownTimelineItem,
+  TextStyleConfig,
+  VideoMediaConfig,
+  AudioMediaConfig,
 } from './TimelineItemData'
 
 // 从mediaitem模块导入MediaType
@@ -234,7 +237,6 @@ export default {
     updateTimeRange,
     moveItem: moveTimelineItem,
     resizeItem: resizeTimelineItem,
-
   },
 
   // 查询函数
@@ -253,8 +255,7 @@ export default {
     isReady,
     isLoading,
     hasError,
-    canPlay: (data: UnifiedTimelineItemData<MediaType>) =>
-      isReady(data) && hasValidTimeRange(data),
+    canPlay: (data: UnifiedTimelineItemData<MediaType>) => isReady(data) && hasValidTimeRange(data),
     getDuration,
     getStatusText,
     getProgressInfo,
@@ -269,9 +270,4 @@ export default {
     Display: TimelineStatusDisplayUtils, // 状态显示工具
     createStatusComputeds: createStatusDisplayComputeds,
   },
-
-  // 管理器
-  // Managers: {
-  //   MediaSync: TimelineMediaSyncManager, // 已删除，因为未被使用
-  // },
 }

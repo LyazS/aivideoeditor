@@ -4,21 +4,21 @@
  * 包含所有用户选择文件相关的业务逻辑和操作行为
  */
 
-import { DataSourceManager, type AcquisitionTask } from './BaseDataSourceManager'
+import { DataSourceManager, type AcquisitionTask } from '@/unified/managers/BaseDataSourceManager'
 import type {
   UserSelectedFileSourceData,
   FileValidationResult,
-} from '../sources/UserSelectedFileSource'
+} from '@/unified/sources/UserSelectedFileSource'
 import {
   SUPPORTED_MEDIA_TYPES,
   FILE_SIZE_LIMITS,
   getMediaTypeFromMimeType,
-} from '../utils/mediaTypeDetector'
+} from '@/unified/utils/mediaTypeDetector'
 import {
   DataSourceBusinessActions,
   DataSourceDataActions,
   DataSourceQueries,
-} from '../sources/BaseDataSource'
+} from '@/unified/sources/BaseDataSource'
 import { nextTick } from 'vue'
 
 // ==================== 用户选择文件管理器 ====================
@@ -358,11 +358,11 @@ export class UserSelectedFileManager extends DataSourceManager<UserSelectedFileS
 
     try {
       // 使用工具函数检测媒体类型
-      const { detectFileMediaType } = await import('../utils/mediaTypeDetector')
+      const { detectFileMediaType } = await import('@/unified/utils/mediaTypeDetector')
       const detectedType = detectFileMediaType(source.file)
 
       // 使用媒体模块方法查找对应的媒体项目
-      const { useUnifiedStore } = await import('../unifiedStore')
+      const { useUnifiedStore } = await import('@/unified/unifiedStore')
       const unifiedStore = useUnifiedStore()
       const mediaItem = unifiedStore.getMediaItemBySourceId(source.id)
 
@@ -394,7 +394,7 @@ export class UserSelectedFileManager extends DataSourceManager<UserSelectedFileS
     }
 
     // 为每个文件创建数据源
-    const { DataSourceFactory } = await import('../sources/DataSourceTypes')
+    const { DataSourceFactory } = await import('@/unified/sources/DataSourceTypes')
     const sources = files.map((file) => {
       return DataSourceFactory.createUserSelectedSource(file)
     })

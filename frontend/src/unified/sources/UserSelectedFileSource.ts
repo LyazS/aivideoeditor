@@ -3,10 +3,10 @@
  * 基于"核心数据与行为分离"的重构方案
  * 行为函数已移动到 UserSelectedFileManager 中
  */
-import type { BaseDataSourceData } from './BaseDataSource'
+import type { BaseDataSourceData } from '@/unified/sources/BaseDataSource'
 import { reactive } from 'vue'
 import { generateUUID4 } from '@/utils/idGenerator'
-import { getMediaTypeFromMimeType } from '../utils/mediaTypeDetector'
+import { getMediaTypeFromMimeType } from '@/unified/utils/mediaTypeDetector'
 
 // ==================== 用户选择文件数据源类型定义 ====================
 

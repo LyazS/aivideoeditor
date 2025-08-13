@@ -1,8 +1,8 @@
-import { VideoVisibleSprite } from '../visiblesprite/VideoVisibleSprite'
-import { AudioVisibleSprite } from '../visiblesprite/AudioVisibleSprite'
-import { ImageVisibleSprite } from '../visiblesprite/ImageVisibleSprite'
-import { TextVisibleSprite } from '../visiblesprite/TextVisibleSprite'
-import type { UnifiedSprite } from '../visiblesprite'
+import { VideoVisibleSprite } from '@/unified/visiblesprite/VideoVisibleSprite'
+import { AudioVisibleSprite } from '@/unified/visiblesprite/AudioVisibleSprite'
+import { ImageVisibleSprite } from '@/unified/visiblesprite/ImageVisibleSprite'
+import { TextVisibleSprite } from '@/unified/visiblesprite/TextVisibleSprite'
+import type { UnifiedSprite } from '@/unified/visiblesprite'
 
 /**
  * 统一架构的Sprite类型守卫

@@ -1,7 +1,7 @@
 import { ImgClip } from '@webav/av-cliper'
-import type { UnifiedTimeRange } from '../types/timeRange'
-import { framesToMicroseconds } from '../utils/timeUtils'
-import { BaseVisibleSprite } from './BaseVisibleSprite'
+import type { UnifiedTimeRange } from '@/unified/types/timeRange'
+import { framesToMicroseconds } from '@/unified/utils/timeUtils'
+import { BaseVisibleSprite } from '@/unified/visiblesprite/BaseVisibleSprite'
 
 /**
  * 自定义的图片VisibleSprite类，继承自BaseVisibleSprite

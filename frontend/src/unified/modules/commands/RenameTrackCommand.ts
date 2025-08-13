@@ -1,6 +1,6 @@
-import { generateCommandId } from '../../../utils/idGenerator'
-import type { SimpleCommand } from './types'
-import type { UnifiedTrackData } from '../../track/TrackTypes'
+import { generateCommandId } from '@/utils/idGenerator'
+import type { SimpleCommand } from '@/unified/modules/commands/types'
+import type { UnifiedTrackData } from '@/unified/track/TrackTypes'
 
 /**
  * 重命名轨道命令

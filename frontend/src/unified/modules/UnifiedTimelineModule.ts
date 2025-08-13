@@ -1,11 +1,11 @@
 import { ref, type Raw, type Ref } from 'vue'
-import type { MediaTypeOrUnknown } from '../mediaitem'
+import type { MediaTypeOrUnknown } from '@/unified/mediaitem'
 import type {
   UnifiedTimelineItemData,
   KnownTimelineItem,
   UnknownTimelineItem,
   UnknownMediaConfig,
-} from '../timelineitem/TimelineItemData'
+} from '@/unified/timelineitem/TimelineItemData'
 import {
   isVideoTimelineItem,
   isImageTimelineItem,
@@ -18,23 +18,23 @@ import {
   isReady,
   isLoading,
   hasError,
-} from '../timelineitem/TimelineItemQueries'
-import { TimelineItemFactory } from '../timelineitem/TimelineItemFactory'
-import type { UnifiedMediaItemData } from '../mediaitem/types'
-import type { UnifiedTrackData } from '../track/TrackTypes'
-import type { MediaType } from '../../types'
-import type { UnifiedSprite } from '../visiblesprite'
+} from '@/unified/timelineitem/TimelineItemQueries'
+import { TimelineItemFactory } from '@/unified/timelineitem/TimelineItemFactory'
+import type { UnifiedMediaItemData } from '@/unified/mediaitem/types'
+import type { UnifiedTrackData } from '@/unified/track/TrackTypes'
+import type { MediaType } from '@/types'
+import type { UnifiedSprite } from '@/unified/visiblesprite'
 import type {
   VideoMediaConfig,
   ImageMediaConfig,
   TextMediaConfig,
-} from '../timelineitem/TimelineItemData'
-import { VideoVisibleSprite } from '../visiblesprite/VideoVisibleSprite'
-import { ImageVisibleSprite } from '../visiblesprite/ImageVisibleSprite'
-import { AudioVisibleSprite } from '../visiblesprite/AudioVisibleSprite'
-import { webavToProjectCoords, projectToWebavCoords } from '../../utils/coordinateTransform'
-import type { ExtendedPropsChangeEvent } from '../../types'
-// import { printDebugInfo } from '../../stores/utils/debugUtils' // 暂时注释，类型不兼容
+} from '@/unified/timelineitem/TimelineItemData'
+import { VideoVisibleSprite } from '@/unified/visiblesprite/VideoVisibleSprite'
+import { ImageVisibleSprite } from '@/unified/visiblesprite/ImageVisibleSprite'
+import { AudioVisibleSprite } from '@/unified/visiblesprite/AudioVisibleSprite'
+import { webavToProjectCoords, projectToWebavCoords } from '@/utils/coordinateTransform'
+import type { ExtendedPropsChangeEvent } from '@/types'
+// import { printDebugInfo } from '@/stores/utils/debugUtils' // 暂时注释，类型不兼容
 
 // 临时调试函数，适用于统一类型
 function unifiedDebugLog(operation: string, details: any) {
@@ -42,9 +42,9 @@ function unifiedDebugLog(operation: string, details: any) {
     console.log(`🎬 [UnifiedTimelineModule] ${operation}:`, details)
   }
 }
-import { syncTimeRange } from '../utils/timeRangeUtils'
-import { microsecondsToFrames } from '../utils/timeUtils'
-import { hasAudioCapabilities } from '../utils/spriteTypeGuards'
+import { syncTimeRange } from '@/unified/utils/timeRangeUtils'
+import { microsecondsToFrames } from '@/unified/utils/timeUtils'
+import { hasAudioCapabilities } from '@/unified/utils/spriteTypeGuards'
 
 /**
  * 统一时间轴核心管理模块

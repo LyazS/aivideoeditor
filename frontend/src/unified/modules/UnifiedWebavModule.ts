@@ -2,8 +2,8 @@ import { ref, markRaw, watch, type Raw } from 'vue'
 import { AVCanvas } from '@webav/av-canvas'
 import { MP4Clip, ImgClip, AudioClip } from '@webav/av-cliper'
 import type { VisibleSprite } from '@webav/av-cliper'
-import type { PlayOptions, CanvasBackup } from '../../types'
-import { framesToMicroseconds, microsecondsToFrames, framesToTimecode } from '../utils/timeUtils'
+import type { PlayOptions, CanvasBackup } from '@/types'
+import { framesToMicroseconds, microsecondsToFrames, framesToTimecode } from '@/unified/utils/timeUtils'
 import {
   logWebAVInitStart,
   logWebAVInitStep,
@@ -20,7 +20,7 @@ import {
   logCanvasRecreateComplete,
   createPerformanceTimer,
   debugError,
-} from '../../utils/webavDebug'
+} from '@/utils/webavDebug'
 
 // 全局WebAV状态 - 确保单例模式
 let globalAVCanvas: AVCanvas | null = null
@@ -55,7 +55,7 @@ export function createUnifiedWebavModule() {
   let unifiedStoreRef: any = null
   const getUnifiedStore = async () => {
     if (!unifiedStoreRef) {
-      const { useUnifiedStore } = await import('../unifiedStore')
+      const { useUnifiedStore } = await import('@/unified/unifiedStore')
       unifiedStoreRef = useUnifiedStore()
     }
     return unifiedStoreRef
