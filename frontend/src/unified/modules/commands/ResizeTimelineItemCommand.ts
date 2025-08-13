@@ -27,6 +27,9 @@ export class ResizeTimelineItemCommand implements SimpleCommand {
   public readonly description: string
   private originalTimeRange: UnifiedTimeRange
   private newTimeRange: UnifiedTimeRange
+  private oldDurationFrames: number
+  private newDurationFrames: number
+  private hasAnimation: boolean = false
 
   constructor(
     private timelineItemId: string,
@@ -45,6 +48,10 @@ export class ResizeTimelineItemCommand implements SimpleCommand {
     this.originalTimeRange = { ...originalTimeRange }
     this.newTimeRange = { ...newTimeRange }
 
+    // 计算时长变化
+    this.oldDurationFrames = this.originalTimeRange.timelineEndTime - this.originalTimeRange.timelineStartTime
+    this.newDurationFrames = this.newTimeRange.timelineEndTime - this.newTimeRange.timelineStartTime
+
     // 获取时间轴项目信息用于描述
     const timelineItem = this.timelineModule.getTimelineItem(timelineItemId)
     let itemName = '未知素材'
@@ -53,30 +60,29 @@ export class ResizeTimelineItemCommand implements SimpleCommand {
     if (timelineItem) {
       const mediaItem = this.mediaModule.getMediaItem(timelineItem.mediaItemId)
       itemName = mediaItem?.name || '未知素材'
+      
+      // 检查是否有动画
+      this.hasAnimation = !!(timelineItem.animation && timelineItem.animation.isEnabled && timelineItem.animation.keyframes.length > 0)
     }
 
-    // 使用帧数计算时长，提供更精确的显示
-    const originalDurationFrames =
-      this.originalTimeRange.timelineEndTime - this.originalTimeRange.timelineStartTime
-    const newDurationFrames =
-      this.newTimeRange.timelineEndTime - this.newTimeRange.timelineStartTime
     const originalStartFrames = this.originalTimeRange.timelineStartTime
     const newStartFrames = this.newTimeRange.timelineStartTime
 
-    this.description = `调整时间范围: ${itemName} (${framesToTimecode(originalDurationFrames)} → ${framesToTimecode(newDurationFrames)})`
+    this.description = `调整时间范围: ${itemName} (${framesToTimecode(this.oldDurationFrames)} → ${framesToTimecode(this.newDurationFrames)})`
 
     console.log(`📋 准备调整时间范围: ${itemName}`, {
-      原始时长: framesToTimecode(originalDurationFrames),
-      新时长: framesToTimecode(newDurationFrames),
+      原始时长: framesToTimecode(this.oldDurationFrames),
+      新时长: framesToTimecode(this.newDurationFrames),
       原始位置: framesToTimecode(originalStartFrames),
       新位置: framesToTimecode(newStartFrames),
+      hasAnimation: this.hasAnimation,
     })
   }
 
   /**
    * 应用时间范围到sprite和timelineItem
    */
-  private applyTimeRange(timeRange: UnifiedTimeRange): void {
+  private async applyTimeRange(timeRange: UnifiedTimeRange, isUndo: boolean = false): Promise<void> {
     const timelineItem = this.timelineModule.getTimelineItem(this.timelineItemId)
     if (!timelineItem) {
       throw new Error(`找不到时间轴项目: ${this.timelineItemId}`)
@@ -115,6 +121,28 @@ export class ResizeTimelineItemCommand implements SimpleCommand {
 
       // 同步timeRange到TimelineItem
       timelineItem.timeRange = sprite.getTimeRange()
+
+      // 如果时长有变化且有关键帧，调整关键帧位置
+      if (this.hasAnimation && this.oldDurationFrames !== this.newDurationFrames) {
+        const { adjustKeyframesForDurationChange } = await import('@/unified/utils/unifiedKeyframeUtils')
+        
+        // 根据是执行还是撤销操作，确定参数顺序
+        if (isUndo) {
+          // 撤销操作：从新时长恢复到原时长
+          adjustKeyframesForDurationChange(timelineItem, this.newDurationFrames, this.oldDurationFrames)
+        } else {
+          // 执行操作：从原时长调整到新时长
+          adjustKeyframesForDurationChange(timelineItem, this.oldDurationFrames, this.newDurationFrames)
+        }
+        console.log(`🎬 [ResizeTimelineItemCommand] Keyframes adjusted for duration change (${isUndo ? 'undo' : 'execute'})`)
+      }
+
+      // 如果有动画，更新WebAV动画时长
+      if (this.hasAnimation) {
+        const { updateWebAVAnimation } = await import('@/unified/utils/webavAnimationManager')
+        await updateWebAVAnimation(timelineItem)
+        console.log(`🎬 [ResizeTimelineItemCommand] Animation duration updated after clip resize (${isUndo ? 'undo' : 'execute'})`)
+      }
     } else {
       // 新架构不再支持未知类型的时间轴项目
       throw new Error('不支持的时间轴项目类型')
@@ -128,17 +156,15 @@ export class ResizeTimelineItemCommand implements SimpleCommand {
     try {
       console.log(`🔄 执行调整时间范围操作: ${this.timelineItemId}...`)
 
-      this.applyTimeRange(this.newTimeRange)
+      await this.applyTimeRange(this.newTimeRange, false)
 
       const timelineItem = this.timelineModule.getTimelineItem(this.timelineItemId)
       const mediaItem = timelineItem
         ? this.mediaModule.getMediaItem(timelineItem.mediaItemId)
         : null
-      const newDurationFrames =
-        this.newTimeRange.timelineEndTime - this.newTimeRange.timelineStartTime
 
       console.log(
-        `✅ 已调整时间范围: ${mediaItem?.name || '未知素材'} → ${framesToTimecode(newDurationFrames)}`,
+        `✅ 已调整时间范围: ${mediaItem?.name || '未知素材'} → ${framesToTimecode(this.newDurationFrames)}`,
       )
     } catch (error) {
       const timelineItem = this.timelineModule.getTimelineItem(this.timelineItemId)
@@ -157,17 +183,15 @@ export class ResizeTimelineItemCommand implements SimpleCommand {
     try {
       console.log(`🔄 撤销调整时间范围操作：恢复 ${this.timelineItemId} 的原始时间范围...`)
 
-      this.applyTimeRange(this.originalTimeRange)
+      await this.applyTimeRange(this.originalTimeRange, true)
 
       const timelineItem = this.timelineModule.getTimelineItem(this.timelineItemId)
       const mediaItem = timelineItem
         ? this.mediaModule.getMediaItem(timelineItem.mediaItemId)
         : null
-      const originalDurationFrames =
-        this.originalTimeRange.timelineEndTime - this.originalTimeRange.timelineStartTime
 
       console.log(
-        `↩️ 已撤销调整时间范围: ${mediaItem?.name || '未知素材'} → ${framesToTimecode(originalDurationFrames)}`,
+        `↩️ 已撤销调整时间范围: ${mediaItem?.name || '未知素材'} → ${framesToTimecode(this.oldDurationFrames)}`,
       )
     } catch (error) {
       const timelineItem = this.timelineModule.getTimelineItem(this.timelineItemId)

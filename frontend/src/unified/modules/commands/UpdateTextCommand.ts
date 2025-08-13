@@ -5,20 +5,17 @@
  */
 
 import { generateCommandId } from '@/utils/idGenerator'
-import { markRaw } from 'vue'
+import { markRaw, type Ref } from 'vue'
 import type { VisibleSprite } from '@webav/av-cliper'
 import type { SimpleCommand } from '@/unified/modules/commands/types'
 
 // ==================== 新架构类型导入 ====================
-import type {
-  UnifiedTimelineItemData,
-} from '@/unified/timelineitem/TimelineItemData'
-
+import type { VideoResolution } from '@/unified/types'
+import type { UnifiedTimelineItemData } from '@/unified/timelineitem/TimelineItemData'
+import type { MediaType } from '@/unified/mediaitem'
 // ==================== 新架构工具导入 ====================
 import { isTextTimelineItem, TimelineItemFactory } from '@/unified/timelineitem'
-import {
-  createSpriteForTextTimelineItem,
-} from '@/unified/utils/textTimelineUtils'
+import { createSpriteForTextTimelineItem } from '@/unified/utils/textTimelineUtils'
 import { TextVisibleSprite } from '@/unified/visiblesprite/TextVisibleSprite'
 import type { TextStyleConfig } from '@/unified/timelineitem'
 
@@ -35,94 +32,18 @@ export class UpdateTextCommand implements SimpleCommand {
     private newStyle: Partial<TextStyleConfig>,
     private timelineModule: {
       getTimelineItem: (id: string) => UnifiedTimelineItemData<'text'> | undefined
+      setupBidirectionalSync: (timelineItem: UnifiedTimelineItemData<MediaType>) => void
     },
     private webavModule: {
       addSprite: (sprite: VisibleSprite) => Promise<boolean>
       removeSprite: (sprite: VisibleSprite) => boolean
     },
+    private configModule: {
+      videoResolution: VideoResolution
+    },
   ) {
     this.id = generateCommandId()
     this.description = `更新文本: ${newText.substring(0, 10)}${newText.length > 10 ? '...' : ''}`
-  }
-
-  /**
-   * 从原始配置重建文本时间轴项目
-   * 遵循"从源头重建"原则，复用 textTimelineUtils 中的工具函数
-   */
-  private async rebuildTextTimelineItem(
-    item: UnifiedTimelineItemData<'text'>,
-    text: string,
-    style: Partial<TextStyleConfig>,
-  ): Promise<UnifiedTimelineItemData<'text'>> {
-    console.log('🔄 开始从源头重建文本时间轴项目...')
-
-    // 1. 保存旧精灵的状态和缩放信息
-    const oldSprite = item.runtime.sprite as TextVisibleSprite
-    const oldState = {
-      rect: {
-        x: oldSprite.rect.x,
-        y: oldSprite.rect.y,
-        w: oldSprite.rect.w,
-        h: oldSprite.rect.h,
-        angle: oldSprite.rect.angle,
-      },
-      opacity: oldSprite.opacity,
-      zIndex: oldSprite.zIndex,
-      timeRange: oldSprite.getTimeRange(),
-    }
-
-    // 2. 计算当前的缩放系数
-    const currentWidth = item.config.width
-    const currentHeight = item.config.height
-    const originalWidth = item.config.originalWidth
-    const originalHeight = item.config.originalHeight
-    const scaleX = originalWidth > 0 ? currentWidth / originalWidth : 1
-    const scaleY = originalHeight > 0 ? currentHeight / originalHeight : 1
-
-    // 3. 更新配置
-    const completeStyle = { ...item.config.style, ...style }
-    item.config.text = text
-    item.config.style = completeStyle
-
-    // 4. 使用 textTimelineUtils 中的工具函数重新创建精灵
-    const newSprite = await createSpriteForTextTimelineItem(item)
-
-    // 5. 更新原始尺寸信息
-    item.config.originalWidth = newSprite.rect.w
-    item.config.originalHeight = newSprite.rect.h
-
-    // 6. 应用缩放系数
-    const newWidth = item.config.originalWidth * scaleX
-    const newHeight = item.config.originalHeight * scaleY
-    item.config.width = newWidth
-    item.config.height = newHeight
-
-    // 7. 更新精灵的尺寸和位置
-    newSprite.rect.x = oldState.rect.x
-    newSprite.rect.y = oldState.rect.y
-    newSprite.rect.w = newWidth
-    newSprite.rect.h = newHeight
-    newSprite.rect.angle = oldState.rect.angle
-    newSprite.opacity = oldState.opacity
-    newSprite.zIndex = oldState.zIndex
-    newSprite.setTimeRange(oldState.timeRange)
-
-    // 8. 替换精灵引用
-    if (!item.runtime) {
-      item.runtime = {}
-    }
-    item.runtime.sprite = markRaw(newSprite)
-
-    // 9. 在WebAV画布中替换精灵
-    if (oldSprite) {
-      this.webavModule.removeSprite(oldSprite)
-    }
-    if (newSprite) {
-      await this.webavModule.addSprite(newSprite)
-    }
-
-    console.log('✅ 文本精灵重新创建完成')
-    return item
   }
 
   /**
@@ -162,13 +83,107 @@ export class UpdateTextCommand implements SimpleCommand {
    * 重新创建文本精灵
    * 遵循"从源头重建"原则，复用 rebuildTextTimelineItem 方法
    */
+  /**
+   * 重新创建文本精灵
+   * 遵循"从源头重建"原则，完全重新创建sprite实例
+   */
   private async rebuildTextSprite(
     item: UnifiedTimelineItemData<'text'>,
     newText: string,
     newStyle: Partial<TextStyleConfig>,
   ): Promise<void> {
-    // 直接复用 rebuildTextTimelineItem 方法，避免代码重复
-    await this.rebuildTextTimelineItem(item, newText, newStyle)
+    // 保存旧精灵的状态
+    const oldSprite = item.runtime.sprite as TextVisibleSprite
+    const oldState = {
+      rect: {
+        x: oldSprite.rect.x,
+        y: oldSprite.rect.y,
+        w: oldSprite.rect.w,
+        h: oldSprite.rect.h,
+        angle: oldSprite.rect.angle,
+      },
+      opacity: oldSprite.opacity,
+      zIndex: oldSprite.zIndex,
+      timeRange: oldSprite.getTimeRange(),
+    }
+
+    // 🎯 先保存TimelineItem的宽高和原始宽高，计算缩放系数
+    const currentWidth = item.config.width
+    const currentHeight = item.config.height
+    const originalWidth = item.config.originalWidth
+    const originalHeight = item.config.originalHeight
+
+    // 计算当前的缩放系数
+    const scaleX = originalWidth > 0 ? currentWidth / originalWidth : 1
+    const scaleY = originalHeight > 0 ? currentHeight / originalHeight : 1
+
+    console.log('🔄 [TextCommands] 保存缩放系数:', {
+      current: { width: currentWidth, height: currentHeight },
+      original: { width: originalWidth, height: originalHeight },
+      scale: { x: scaleX, y: scaleY },
+    })
+
+    // 合并新样式
+    const completeStyle = { ...item.config.style, ...newStyle }
+
+    // 创建新的文本精灵
+    const { TextVisibleSprite } = await import('@/unified/visiblesprite/TextVisibleSprite')
+    const newSprite = await TextVisibleSprite.create(newText, completeStyle)
+
+    // 🎯 更新TimelineItem的原始宽高为新sprite的尺寸
+    item.config.originalWidth = newSprite.rect.w
+    item.config.originalHeight = newSprite.rect.h
+
+    // 🎯 使用缩放系数重新计算TimelineItem的宽高
+    const newWidth = item.config.originalWidth * scaleX
+    const newHeight = item.config.originalHeight * scaleY
+    item.config.width = newWidth
+    item.config.height = newHeight
+
+    console.log('🔄 [TextCommands] 应用缩放系数:', {
+      newOriginal: { width: item.config.originalWidth, height: item.config.originalHeight },
+      newSize: { width: newWidth, height: newHeight },
+      appliedScale: { x: scaleX, y: scaleY },
+    })
+
+    // 🎯 通过TimelineItem的xywh转换为sprite的rect坐标
+    const { projectToWebavCoords } = await import('@/unified/utils')
+    const webavCoords = projectToWebavCoords(
+      item.config.x,
+      item.config.y,
+      newWidth,
+      newHeight,
+      this.configModule.videoResolution.width,
+      this.configModule.videoResolution.height,
+    )
+
+    // 设置新sprite的位置和尺寸
+    newSprite.rect.x = webavCoords.x
+    newSprite.rect.y = webavCoords.y
+    newSprite.rect.w = newWidth
+    newSprite.rect.h = newHeight
+    newSprite.rect.angle = oldState.rect.angle
+    newSprite.opacity = oldState.opacity
+    newSprite.zIndex = oldState.zIndex
+
+    // 恢复时间范围
+    newSprite.setTimeRange(oldState.timeRange)
+
+    // 更新配置
+    item.config.text = newText
+    item.config.style = completeStyle
+
+    // 替换精灵引用
+    item.runtime.sprite = markRaw(newSprite)
+
+    // 在WebAV画布中替换精灵
+    this.webavModule.removeSprite(oldSprite)
+    this.webavModule.addSprite(newSprite)
+
+    // 🔄 重新设置双向数据绑定 - 这是关键步骤！
+    this.timelineModule.setupBidirectionalSync(item)
+
+    console.log('✅ [UpdateTextCommand] 文本精灵重新创建完成，数据绑定已重新建立')
   }
 
   /**
@@ -186,7 +201,7 @@ export class UpdateTextCommand implements SimpleCommand {
         }
 
         // 重新创建文本精灵（恢复到旧状态）
-        await this.rebuildTextTimelineItem(item, this.oldText, this.oldStyle)
+        await this.rebuildTextSprite(item, this.oldText, this.oldStyle)
 
         console.log(`✅ 文本撤销成功: ${this.timelineItemId}`)
       }

@@ -635,7 +635,11 @@ watch(
 
 // 更新文本内容
 const updateTextContent = async () => {
-  if (!props.selectedTimelineItem || !isTextTimelineItem(props.selectedTimelineItem) || !localText.value.trim()) {
+  if (
+    !props.selectedTimelineItem ||
+    !isTextTimelineItem(props.selectedTimelineItem) ||
+    !localText.value.trim()
+  ) {
     return
   }
 
@@ -654,11 +658,16 @@ const updateTextContent = async () => {
       localText.value.trim(),
       {},
       {
-        getTimelineItem: (id: string) => unifiedStore.getTimelineItem(id) as UnifiedTimelineItemData<'text'> | undefined,
+        getTimelineItem: (id: string) =>
+          unifiedStore.getTimelineItem(id) as UnifiedTimelineItemData<'text'> | undefined,
+        setupBidirectionalSync: unifiedStore.setupBidirectionalSync,
       },
       {
-        addSprite: (sprite: any) => unifiedStore.addSpriteToCanvas(sprite),
-        removeSprite: (sprite: any) => unifiedStore.removeSpriteFromCanvas(sprite),
+        addSprite: unifiedStore.addSpriteToCanvas,
+        removeSprite: unifiedStore.removeSpriteFromCanvas,
+      },
+      {
+        videoResolution: unifiedStore.videoResolution,
       },
     )
 
@@ -697,11 +706,16 @@ const updateTextStyle = async () => {
       props.selectedTimelineItem.config.text, // 保持文本内容不变
       styleToUpdate,
       {
-        getTimelineItem: (id: string) => unifiedStore.getTimelineItem(id) as UnifiedTimelineItemData<'text'> | undefined,
+        getTimelineItem: (id: string) =>
+          unifiedStore.getTimelineItem(id) as UnifiedTimelineItemData<'text'> | undefined,
+        setupBidirectionalSync: unifiedStore.setupBidirectionalSync,
       },
       {
-        addSprite: (sprite: any) => unifiedStore.addSpriteToCanvas(sprite),
-        removeSprite: (sprite: any) => unifiedStore.removeSpriteFromCanvas(sprite),
+        addSprite: unifiedStore.addSpriteToCanvas,
+        removeSprite: unifiedStore.removeSpriteFromCanvas,
+      },
+      {
+        videoResolution: unifiedStore.videoResolution,
       },
     )
 
@@ -894,7 +908,9 @@ const updateTargetDurationFrames = async (newDurationFrames: number) => {
     props.selectedTimelineItem.animation &&
     props.selectedTimelineItem.animation.keyframes.length > 0
   ) {
-    const { adjustKeyframesForDurationChange } = await import('@/unified/utils/unifiedKeyframeUtils')
+    const { adjustKeyframesForDurationChange } = await import(
+      '@/unified/utils/unifiedKeyframeUtils'
+    )
     adjustKeyframesForDurationChange(
       props.selectedTimelineItem,
       oldDurationFrames,
@@ -922,7 +938,9 @@ const updateTargetDurationFrames = async (newDurationFrames: number) => {
   if (props.selectedTimelineItem.animation && props.selectedTimelineItem.animation.isEnabled) {
     const { updateWebAVAnimation } = await import('@/unified/utils/webavAnimationManager')
     await updateWebAVAnimation(props.selectedTimelineItem)
-    console.log('🎬 [UnifiedTextClipProperties] Animation duration updated after clip duration change')
+    console.log(
+      '🎬 [UnifiedTextClipProperties] Animation duration updated after clip duration change',
+    )
   }
 
   console.log('✅ [UnifiedTextClipProperties] 帧数时长更新成功:', {

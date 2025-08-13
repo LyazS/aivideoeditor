@@ -40,3 +40,14 @@ export {
   type UnifiedTimelineClipProps,
   type UnifiedTimelineClipEvents,
 } from './clipRenderer'
+
+/**
+ * 视频分辨率接口
+ */
+export interface VideoResolution {
+  name: string
+  width: number
+  height: number
+  aspectRatio: string
+  category?: string
+}
