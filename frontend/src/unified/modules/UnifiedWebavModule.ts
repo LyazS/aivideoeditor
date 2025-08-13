@@ -566,9 +566,9 @@ export function createUnifiedWebavModule(playbackModule: {
     playbackModule.setCurrentFrame(frames)
     const microseconds = framesToMicroseconds(frames)
 
-    console.log(
-      `[setCurrentFrame] seekTo ${playbackModule.currentFrame.value}|${playbackModule.currentWebAVFrame.value} ${microseconds}ms`,
-    )
+    // console.log(
+    //   `[setCurrentFrame] seekTo ${playbackModule.currentFrame.value}|${playbackModule.currentWebAVFrame.value} ${microseconds}ms`,
+    // )
   }
 
   /**
