@@ -19,7 +19,7 @@ app.add_middleware(
 )
 
 # 文件存储路径占位符 - 你可以修改这个路径
-MEDIA_FILES_PATH = "E:/Downloads"  # 修改为你想要的路径
+MEDIA_FILES_PATH = "D:/Downloads"  # 修改为你想要的路径
 
 # 网速限制配置（字节/秒）
 DOWNLOAD_SPEED_LIMIT = 10240 // 8 * 1024  # 1MB/s，可以调整这个值来模拟不同网速

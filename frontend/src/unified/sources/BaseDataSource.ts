@@ -263,57 +263,6 @@ export const DataSourceBusinessActions = {
   },
 }
 
-// ==================== 兼容性层：保持向后兼容 ====================
-
-/**
- * 统一数据源行为函数 - 保持向后兼容的API
- * @deprecated 建议使用分层的 DataSourceDataActions, DataSourceStateActions, DataSourceBusinessActions
- */
-export const UnifiedDataSourceActions = {
-  // 状态设置 - 委托给新的分层API
-  setStatus(source: BaseDataSourceData, status: DataSourceStatus): void {
-    DataSourceStateActions.transitionTo(source, status)
-  },
-
-  setProgress(source: BaseDataSourceData, progress: number): void {
-    DataSourceDataActions.setProgress(source, progress)
-  },
-
-  setError(source: BaseDataSourceData, errorMessage: string): void {
-    DataSourceBusinessActions.setError(source, errorMessage)
-  },
-
-  setAcquiring(source: BaseDataSourceData): void {
-    DataSourceBusinessActions.startAcquisition(source)
-  },
-
-  setAcquired(source: BaseDataSourceData, file: File, url: string): void {
-    DataSourceBusinessActions.completeAcquisition(source, file, url)
-  },
-
-  setCancelled(source: BaseDataSourceData): void {
-    DataSourceBusinessActions.cancel(source)
-  },
-
-  setMissing(source: BaseDataSourceData): void {
-    DataSourceBusinessActions.setMissing(source)
-  },
-
-  // 任务管理
-  setTaskId(source: BaseDataSourceData, taskId: string): void {
-    DataSourceDataActions.setTaskId(source, taskId)
-  },
-
-  clearTaskId(source: BaseDataSourceData): void {
-    DataSourceDataActions.clearTaskId(source)
-  },
-
-  // 资源清理
-  cleanup(source: BaseDataSourceData): void {
-    DataSourceBusinessActions.cleanup(source)
-  },
-}
-
 // ==================== 通用查询函数 ====================
 
 /**
