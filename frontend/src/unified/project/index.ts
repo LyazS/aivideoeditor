@@ -4,4 +4,8 @@
  */
 
 // 导出项目配置类型
-export type { UnifiedProjectConfig } from './types'
+export type {
+  UnifiedProjectConfig,
+  UnifiedMediaMetadata,
+  UnifiedMediaReference
+} from './types'
