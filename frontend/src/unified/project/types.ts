@@ -13,12 +13,12 @@ import type { UnifiedTimelineItemData } from '@/unified/timelineitem'
 export interface UnifiedProjectConfig {
   id: string
   name: string
-  description?: string
+  description: string
   createdAt: string
   updatedAt: string
   version: string
   thumbnail?: string
-  duration?: string
+  duration: number // 项目总时长（秒）
 
   // 项目设置
   settings: {
@@ -28,7 +28,7 @@ export interface UnifiedProjectConfig {
       height: number
       aspectRatio: string
     }
-    frameRate: number
+    frameRate: number // 固定30帧
     timelineDurationFrames: number
   }
 
@@ -38,7 +38,6 @@ export interface UnifiedProjectConfig {
     timelineItems: UnifiedTimelineItemData[]
     mediaItems: UnifiedMediaItemData[]
   }
-
-  // 导出历史
-  exports: any[]
+  // 媒体数据（使用统一类型）(根据不同数据源有不同的配置)
+  media: {}
 }

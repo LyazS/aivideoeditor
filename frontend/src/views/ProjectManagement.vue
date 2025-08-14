@@ -226,12 +226,12 @@
   </ContextMenu>
 
   <!-- 编辑项目对话框 -->
-  <EditProjectDialog
+  <!-- <EditProjectDialog
     v-model:show="showEditProjectDialog"
     :project="selectedProject"
     :is-saving="false"
     @save="handleSaveProjectEdit"
-  />
+  /> -->
 </template>
 
 <script setup lang="ts">

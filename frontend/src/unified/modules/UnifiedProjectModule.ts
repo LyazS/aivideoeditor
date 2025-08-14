@@ -1,19 +1,42 @@
-import { ref, computed } from 'vue'
+import { ref, computed, type Ref } from 'vue'
 import type { UnifiedProjectConfig } from '@/unified/project/types'
+import { unifiedProjectManager } from '@/unified/utils/'
+import type { VideoResolution } from '@/unified/types'
+import { TimelineItemFactory } from '@/unified/timelineitem'
 
 /**
  * 统一项目管理模块
  * 基于新架构统一类型系统的项目管理，参考原projectModule设计
  */
-export function createUnifiedProjectModule() {
+export function createUnifiedProjectModule(
+  configModule: {
+    projectId: Ref<string>
+    projectName: Ref<string>
+    projectDescription: Ref<string>
+    projectCreatedAt: Ref<string>
+    projectUpdatedAt: Ref<string>
+    projectVersion: Ref<string>
+    projectThumbnail: Ref<string | undefined | null>
+    projectDuration: Ref<number>
+    videoResolution: Ref<VideoResolution>
+    frameRate: Ref<number>
+    timelineDurationFrames: Ref<number>
+    restoreFromProjectSettings: (pid: string, pconifg: UnifiedProjectConfig) => void
+  },
+  timelineModule?: {
+    timelineItems: Ref<any[]>
+  },
+  trackModule?: {
+    tracks: Ref<any[]>
+  },
+  mediaModule?: {
+    mediaItems: Ref<any[]>
+  }
+) {
   // ==================== 状态定义 ====================
-
-  // 当前项目配置
-  const currentProject = ref<UnifiedProjectConfig | null>(null)
 
   // 项目保存状态
   const isSaving = ref(false)
-  const lastSaved = ref<Date | null>(null)
 
   // 项目加载状态
   const isLoading = ref(false)
@@ -30,44 +53,21 @@ export function createUnifiedProjectModule() {
   const loadingDetails = ref('') // 详细信息
 
   // ==================== 计算属性 ====================
-
-  /**
-   * 当前项目ID
-   */
-  const currentProjectId = computed(() => {
-    return currentProject.value?.id || null
-  })
-
-  /**
-   * 当前项目名称
-   */
-  const currentProjectName = computed(() => {
-    return currentProject.value?.name || '未命名项目'
-  })
-
   /**
    * 项目保存状态文本
    */
   const projectStatus = computed(() => {
     if (isSaving.value) return '保存中...'
-    if (lastSaved.value) {
-      // 格式化时间为 HH:MM:SS
-      const timeString = lastSaved.value.toLocaleTimeString('zh-CN', {
-        hour12: false,
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-      })
-      return `${timeString} 已保存`
-    }
-    return '未保存'
-  })
 
-  /**
-   * 是否有当前项目
-   */
-  const hasCurrentProject = computed(() => {
-    return currentProject.value !== null
+    // 格式化时间为 HH:MM:SS
+    const lastSaved = new Date(configModule.projectUpdatedAt.value)
+    const timeString = lastSaved.toLocaleTimeString('zh-CN', {
+      hour12: false,
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    })
+    return `${timeString} 已保存`
   })
 
   /**
@@ -115,88 +115,73 @@ export function createUnifiedProjectModule() {
   }
 
   /**
-   * 创建新项目
-   * @param name 项目名称
-   * @param template 项目模板（可选）
-   */
-  async function createProject(
-    name: string,
-    template?: Partial<UnifiedProjectConfig>,
-  ): Promise<UnifiedProjectConfig> {
-    try {
-      isLoading.value = true
-      updateLoadingProgress('创建项目...', 10)
-      console.log(`📁 创建新项目: ${name}`)
-
-      // 创建基础项目配置
-      const projectConfig: UnifiedProjectConfig = {
-        id: `project_${Date.now()}`,
-        name,
-        description: template?.description || '',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        version: '1.0.0',
-        thumbnail: template?.thumbnail,
-        duration: template?.duration,
-        settings: template?.settings || {
-          videoResolution: {
-            name: '1920x1080',
-            width: 1920,
-            height: 1080,
-            aspectRatio: '16:9',
-          },
-          frameRate: 30,
-          timelineDurationFrames: 3000,
-        },
-        timeline: template?.timeline || {
-          tracks: [],
-          timelineItems: [],
-          mediaItems: [],
-        },
-        exports: [],
-      }
-
-      currentProject.value = projectConfig
-      lastSaved.value = new Date()
-
-      updateLoadingProgress('项目创建完成', 100)
-      console.log(`✅ 项目创建成功: ${name} (ID: ${projectConfig.id})`)
-      return projectConfig
-    } catch (error) {
-      console.error('创建项目失败:', error)
-      throw error
-    } finally {
-      resetLoadingState()
-    }
-  }
-
-  /**
    * 保存当前项目
    * @param projectData 项目数据（可选，如果不提供则使用当前项目）
    */
-  async function saveCurrentProject(projectData?: Partial<UnifiedProjectConfig>): Promise<void> {
-    if (!currentProject.value) {
-      throw new Error('没有当前项目可保存')
-    }
-
+  async function saveCurrentProject(): Promise<void> {
     try {
       isSaving.value = true
-      console.log(`💾 保存项目: ${currentProject.value.name}`)
-
-      // 合并项目数据
+      console.log(`💾 保存项目: ${configModule.projectName.value}`)
+      configModule.projectUpdatedAt.value = new Date().toISOString()
+      
+      // 构建更新的项目配置
       const updatedProject: UnifiedProjectConfig = {
-        ...currentProject.value,
-        ...projectData,
-        updatedAt: new Date().toISOString(),
+        id: configModule.projectId.value,
+        name: configModule.projectName.value,
+        description: configModule.projectDescription.value,
+        createdAt: configModule.projectCreatedAt.value,
+        updatedAt: configModule.projectUpdatedAt.value,
+        version: configModule.projectVersion.value,
+        thumbnail: configModule.projectThumbnail.value || undefined,
+        duration: configModule.projectDuration.value,
+
+        // 项目设置
+        settings: {
+          videoResolution: configModule.videoResolution.value,
+          frameRate: configModule.frameRate.value,
+          timelineDurationFrames: configModule.timelineDurationFrames.value,
+        },
+
+        // 时间轴数据 - 从各个模块获取当前的时间轴数据，使用工厂函数克隆去掉运行时内容
+        timeline: {
+          // tracks 数据结构简单，没有运行时对象，可以直接使用
+          tracks: trackModule?.tracks.value || [],
+          // timelineItems 包含运行时数据，需要克隆并清理
+          timelineItems: (timelineModule?.timelineItems.value || []).map(item => {
+            // 使用工厂函数克隆时间轴项目，去掉运行时内容（如sprite等）
+            const clonedItem = TimelineItemFactory.clone(item)
+            // 确保克隆的项目没有运行时数据
+            if (clonedItem.runtime) {
+              clonedItem.runtime = {}
+            }
+            return clonedItem
+          }),
+          // mediaItems 包含 webav 运行时对象，需要清理
+          mediaItems: (mediaModule?.mediaItems.value || []).map(item => {
+            // 创建媒体项目的可持久化副本，去掉运行时的 webav 对象
+            const { webav, ...persistableItem } = item
+            return persistableItem
+          }),
+        },
+
+        // 媒体数据
+        media: {},
       }
 
-      // 这里应该调用实际的保存逻辑
-      // await projectManager.saveProject(updatedProject)
+      console.log(`📊 保存项目数据统计:`, {
+        项目ID: updatedProject.id,
+        项目名称: updatedProject.name,
+        轨道数量: updatedProject.timeline.tracks.length,
+        时间轴项目数量: updatedProject.timeline.timelineItems.length,
+        媒体项目数量: updatedProject.timeline.mediaItems.length,
+        视频分辨率: updatedProject.settings.videoResolution,
+        帧率: updatedProject.settings.frameRate,
+      })
 
-      currentProject.value = updatedProject
-      lastSaved.value = new Date()
+      // 调用实际的保存逻辑
+      await unifiedProjectManager.saveProject(updatedProject)
 
-      console.log(`✅ 项目保存成功: ${updatedProject.name}`)
+      console.log(`✅ 项目保存成功: ${configModule.projectName.value}`)
     } catch (error) {
       console.error('保存项目失败:', error)
       throw error
@@ -210,22 +195,17 @@ export function createUnifiedProjectModule() {
    * @param projectId 项目ID
    */
   async function preloadProjectSettings(projectId: string): Promise<void> {
-    if (!projectId || projectId === 'undefined') {
-      console.log('🔄 [LIFECYCLE] UnifiedProjectModule 新项目，使用默认设置')
-      isProjectSettingsReady.value = true
-      console.log('🔄 [LIFECYCLE] UnifiedProjectModule isProjectSettingsReady 设置为 true')
-      return
-    }
-
     try {
       console.log(`🔧 [Settings Preload] 开始预加载项目设置: ${projectId}`)
 
       // 这里应该调用实际的设置加载逻辑
-      // const settings = await projectManager.loadProjectSettings(projectId)
-
-      // 模拟加载
-      await new Promise((resolve) => setTimeout(resolve, 100))
-
+      const projConfig = await unifiedProjectManager.loadProjectConfig(projectId)
+      if (!projConfig) {
+        console.error('❌ [Settings Preload] 预加载项目设置失败：项目配置不存在')
+        throw new Error('项目配置不存在')
+      }
+      // 恢复配置到configModule
+      configModule.restoreFromProjectSettings(projectId, projConfig)
       console.log('🔄 [LIFECYCLE] UnifiedProjectModule 项目设置预加载成功')
       isProjectSettingsReady.value = true
       console.log('🔄 [LIFECYCLE] UnifiedProjectModule isProjectSettingsReady 设置为 true')
@@ -243,36 +223,41 @@ export function createUnifiedProjectModule() {
    * @param projectId 项目ID
    */
   async function loadProjectContent(projectId: string): Promise<void> {
-    if (!projectId || projectId === 'undefined') {
-      console.log('📂 [Content Load] 新项目，跳过内容加载')
-      currentProject.value = null
-      lastSaved.value = null
-      isProjectContentReady.value = true
-      return
-    }
-
     try {
       isLoading.value = true
       updateLoadingProgress('开始加载项目内容...', 5)
       console.log(`📂 [Content Load] 开始加载项目内容: ${projectId}`)
-
       // 这里应该调用实际的项目内容加载逻辑
-      // const result = await projectManager.loadProjectContent(projectId, ...)
+      const result = await unifiedProjectManager.loadProjectContent(projectId, {
+        loadMedia: true,
+        loadTimeline: true,
+        onProgress: (stage, progress) => {
+          updateLoadingProgress(stage, progress)
+        },
+      })
+      if (result?.projectConfig) {
+        const { projectConfig, mediaItems, timelineItems, tracks } = result
 
-      // 模拟加载过程
-      updateLoadingProgress('加载项目配置...', 20)
-      await new Promise((resolve) => setTimeout(resolve, 100))
+        // 设置项目配置
+        // currentProject.value = projectConfig
 
-      updateLoadingProgress('加载媒体文件...', 50)
-      await new Promise((resolve) => setTimeout(resolve, 100))
+        // 模拟加载过程
+        updateLoadingProgress('加载项目配置...', 20)
+        await new Promise((resolve) => setTimeout(resolve, 100))
 
-      updateLoadingProgress('加载时间轴数据...', 80)
-      await new Promise((resolve) => setTimeout(resolve, 100))
+        updateLoadingProgress('加载媒体文件...', 50)
+        await new Promise((resolve) => setTimeout(resolve, 100))
 
-      updateLoadingProgress('项目内容加载完成', 100)
-      console.log(`✅ [Content Load] 项目内容加载成功`)
+        updateLoadingProgress('加载时间轴数据...', 80)
+        await new Promise((resolve) => setTimeout(resolve, 100))
 
-      isProjectContentReady.value = true
+        updateLoadingProgress('项目内容加载完成', 100)
+        console.log(`✅ [Content Load] 项目内容加载成功`)
+
+        isProjectContentReady.value = true
+      } else {
+        console.warn(`❌ [Content Load] 项目不存在: ${projectId}`)
+      }
     } catch (error) {
       console.error('❌ [Content Load] 加载项目内容失败:', error)
       throw error
@@ -285,8 +270,6 @@ export function createUnifiedProjectModule() {
    * 清除当前项目
    */
   function clearCurrentProject(): void {
-    currentProject.value = null
-    lastSaved.value = null
     console.log('🧹 已清除当前项目')
   }
 
@@ -295,14 +278,9 @@ export function createUnifiedProjectModule() {
    */
   function getProjectSummary() {
     return {
-      currentProject: currentProject.value,
-      currentProjectId: currentProjectId.value,
-      currentProjectName: currentProjectName.value,
       projectStatus: projectStatus.value,
-      hasCurrentProject: hasCurrentProject.value,
       isSaving: isSaving.value,
       isLoading: isLoading.value,
-      lastSaved: lastSaved.value,
     }
   }
 
@@ -310,14 +288,9 @@ export function createUnifiedProjectModule() {
 
   return {
     // 状态
-    currentProject,
-    currentProjectId,
-    currentProjectName,
     projectStatus,
-    hasCurrentProject,
     isSaving,
     isLoading,
-    lastSaved,
 
     // 加载进度状态
     loadingProgress,
@@ -328,7 +301,6 @@ export function createUnifiedProjectModule() {
     isProjectContentReady,
 
     // 方法
-    createProject,
     saveCurrentProject,
     preloadProjectSettings,
     loadProjectContent,

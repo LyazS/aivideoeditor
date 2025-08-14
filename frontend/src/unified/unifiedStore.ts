@@ -146,7 +146,12 @@ export const useUnifiedStore = defineStore('unified', () => {
   )
 
   // 创建统一项目管理模块
-  const unifiedProjectModule = createUnifiedProjectModule()
+  const unifiedProjectModule = createUnifiedProjectModule(
+    unifiedConfigModule,
+    unifiedTimelineModule,
+    unifiedTrackModule,
+    unifiedMediaModule
+  )
 
   // ==================== 计算属性 ====================
 
@@ -1064,9 +1069,6 @@ export const useUnifiedStore = defineStore('unified', () => {
     cloneTimelineItemData: cloneTimelineItem,
     duplicateTimelineItem,
 
-    // 时间轴项目状态转换函数
-    // transitionTimelineStatus 已删除，因为未被使用
-
     // 时间轴项目查询函数
     isTimelineItemReady: isReady,
     isTimelineItemLoading: isLoading,
@@ -1084,14 +1086,9 @@ export const useUnifiedStore = defineStore('unified', () => {
     // ==================== 统一项目模块状态和方法 ====================
 
     // 项目状态
-    currentProject: unifiedProjectModule.currentProject,
-    currentProjectId: unifiedProjectModule.currentProjectId,
-    currentProjectName: unifiedProjectModule.currentProjectName,
     projectStatus: unifiedProjectModule.projectStatus,
-    hasCurrentProject: unifiedProjectModule.hasCurrentProject,
     isProjectSaving: unifiedProjectModule.isSaving,
     isProjectLoading: unifiedProjectModule.isLoading,
-    lastProjectSaved: unifiedProjectModule.lastSaved,
 
     // 项目加载进度状态
     projectLoadingProgress: unifiedProjectModule.loadingProgress,
@@ -1102,7 +1099,6 @@ export const useUnifiedStore = defineStore('unified', () => {
     isProjectContentReady: unifiedProjectModule.isProjectContentReady,
 
     // 项目管理方法
-    createProject: unifiedProjectModule.createProject,
     saveCurrentProject: unifiedProjectModule.saveCurrentProject,
     preloadProjectSettings: unifiedProjectModule.preloadProjectSettings,
     loadProjectContent: unifiedProjectModule.loadProjectContent,
@@ -1145,17 +1141,25 @@ export const useUnifiedStore = defineStore('unified', () => {
 
     // ==================== 配置模块状态和方法 ====================
 
+    // 配置
+    projectId: unifiedConfigModule.projectId,
+    projectName: unifiedConfigModule.projectName,
+    projectDescription: unifiedConfigModule.projectDescription,
+    projectCreatedAt: unifiedConfigModule.projectCreatedAt,
+    projectUpdatedAt: unifiedConfigModule.projectUpdatedAt,
+    projectVersion: unifiedConfigModule.projectVersion,
+    projectThumbnail: unifiedConfigModule.projectThumbnail,
+    projectDuration: unifiedConfigModule.projectDuration,
+
     // 配置状态
     videoResolution: unifiedConfigModule.videoResolution,
     frameRate: unifiedConfigModule.frameRate,
     timelineDurationFrames: unifiedConfigModule.timelineDurationFrames,
-    proportionalScale: unifiedConfigModule.proportionalScale,
 
     // 配置管理方法
     setVideoResolution: unifiedConfigModule.setVideoResolution,
     setFrameRate: unifiedConfigModule.setFrameRate,
     setTimelineDurationFrames: unifiedConfigModule.setTimelineDurationFrames,
-    setProportionalScale: unifiedConfigModule.setProportionalScale,
     getConfigSummary: unifiedConfigModule.getConfigSummary,
     resetConfigToDefaults: unifiedConfigModule.resetToDefaults,
     restoreFromProjectSettings: unifiedConfigModule.restoreFromProjectSettings,

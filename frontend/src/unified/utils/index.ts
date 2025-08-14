@@ -123,7 +123,6 @@ export {
   calculateTimeRangeOverlap,
 } from './timeOverlapUtils'
 
-
 // ==================== 统一缩略图生成器 ====================
 export {
   // 视频缩略图生成
@@ -193,7 +192,7 @@ export {
   framesToPercentage,
   convertKeyframeToWebAV,
   convertToWebAVAnimation,
-  
+
   // 验证和工具函数
   isValidAnimationConfig,
   isKeyframeInRange,
@@ -205,7 +204,7 @@ export {
   // 动画管理器类
   WebAVAnimationManager,
   globalWebAVAnimationManager,
-  
+
   // 便捷函数
   updateWebAVAnimation,
 } from './webavAnimationManager'
@@ -216,7 +215,7 @@ export {
   absoluteFrameToRelativeFrame,
   relativeFrameToAbsoluteFrame,
   getKeyframePositionTolerance,
-  
+
   // 关键帧基础操作
   initializeAnimation,
   createKeyframe,
@@ -224,32 +223,32 @@ export {
   isCurrentFrameOnKeyframe,
   getKeyframeButtonState,
   getKeyframeUIState,
-  
+
   // 关键帧操作
   enableAnimation,
   disableAnimation,
   removeKeyframeAtFrame,
-  
+
   // 关键帧时长变化处理
   adjustKeyframesForDurationChange,
   sortKeyframes,
-  
+
   // 统一关键帧交互逻辑
   toggleKeyframe,
-  
+
   // 属性修改处理
   updatePropertiesBatchViaWebAV,
   handlePropertyChange,
-  
+
   // 关键帧导航
   getPreviousKeyframeFrame,
   getNextKeyframeFrame,
-  
+
   // 清理和重置
   clearAllKeyframes,
   getKeyframeCount,
   getAllKeyframeFrames,
-  
+
   // 调试和验证
   validateKeyframes,
   debugKeyframes,
@@ -261,12 +260,15 @@ export {
   getKeyframeDebugInfo,
   logKeyframeDebugInfo,
   debugWebAVAnimationUpdate,
-  
+
   // 调试开关
   enableKeyframeDebug,
   disableKeyframeDebug,
   isKeyframeDebugEnabled,
-  
+
   // 快速调试
   debugCurrentItem,
 } from './keyframeDebugger'
+
+// ==================== 统一项目管理器 ==========
+export { unifiedProjectManager } from './projectManager'

@@ -51,11 +51,6 @@ export function useAutoSave(config: Partial<AutoSaveConfig> = {}) {
    * 执行保存操作
    */
   async function performSave(): Promise<boolean> {
-    if (!unifiedStore.hasCurrentProject) {
-      console.log('🔄 [AutoSave] 没有当前项目，跳过自动保存')
-      return false
-    }
-
     if (unifiedStore.isProjectSaving) {
       console.log('🔄 [AutoSave] 正在保存中，跳过此次自动保存')
       return false
@@ -64,66 +59,7 @@ export function useAutoSave(config: Partial<AutoSaveConfig> = {}) {
     try {
       console.log('💾 [AutoSave] 开始自动保存...')
 
-      // 清理媒体引用：只保留当前存在的媒体项目的引用
-      const currentMediaIds = new Set(unifiedStore.mediaItems.map((item) => item.id))
-      
-      // 构建项目数据
-      const projectData = {
-        timeline: {
-          tracks: unifiedStore.tracks,
-          timelineItems: unifiedStore.timelineItems.map((item) => {
-            // 根据项目类型获取媒体名称和动画配置
-            let mediaName = 'Unknown'
-            let animation = undefined
-
-            // 获取媒体名称
-            if (item.mediaType === 'text') {
-              mediaName =
-                `文本: ${'text' in item.config ? item.config.text?.substring(0, 10) || '未知' : '未知'}...`
-            } else {
-              mediaName = unifiedStore.getMediaItem(item.mediaItemId)?.name || 'Unknown'
-            }
-            
-            // 保存动画配置
-            animation = item.animation
-
-            return {
-              id: item.id,
-              mediaItemId: item.mediaItemId,
-              trackId: item.trackId,
-              timelineStatus: item.timelineStatus,
-              mediaType: item.mediaType,
-              timeRange: item.timeRange,
-              config: item.config,
-              animation, // 保存动画配置
-              // 添加空的运行时对象，因为这是必需的属性
-              runtime: {
-                // 不保存运行时数据，这些会在加载时重新生成
-              },
-              // 注意：mediaName 不是 UnifiedTimelineItemData 的属性，仅用于保存过程中的日志记录
-            }
-          }),
-          mediaItems: unifiedStore.mediaItems.map((item) => ({
-            id: item.id,
-            name: item.name,
-            createdAt: item.createdAt,
-            mediaStatus: item.mediaStatus,
-            mediaType: item.mediaType,
-            source: item.source,
-            duration: item.duration,
-            // 注意：不保存 webav 等运行时状态
-            // 这些状态在重新加载时会重新生成
-          })),
-        },
-        settings: {
-          videoResolution: unifiedStore.videoResolution,
-          frameRate: unifiedStore.frameRate,
-          timelineDurationFrames: unifiedStore.timelineDurationFrames,
-        },
-        // 新架构不需要单独的媒体引用，已包含在 mediaItems 中
-      }
-
-      await unifiedStore.saveCurrentProject(projectData)
+      await unifiedStore.saveCurrentProject()
 
       // 更新状态
       autoSaveState.value.lastSaveTime = new Date()

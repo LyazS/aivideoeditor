@@ -1,11 +1,22 @@
 import { ref, type Ref } from 'vue'
 import type { VideoResolution } from '@/unified/types'
+import type { UnifiedProjectConfig } from '@/unified/project'
 
 /**
  * 项目配置管理模块
  * 负责管理项目级别的配置和设置
  */
 export function createUnifiedConfigModule() {
+  // ==================== 配置定义 ====================
+  const projectId = ref('') // 项目ID
+  const projectName = ref('') // 项目名称
+  const projectDescription = ref('') // 项目描述
+  const projectCreatedAt = ref('') // 项目创建时间
+  const projectUpdatedAt = ref('') // 项目更新时间
+  const projectVersion = ref('') // 项目版本
+  const projectThumbnail = ref<string | undefined | null>(null) // 项目缩略图
+  const projectDuration = ref<number>(0) // 项目时长（秒）
+
   // ==================== 状态定义 ====================
 
   // 视频分辨率设置
@@ -22,9 +33,6 @@ export function createUnifiedConfigModule() {
   // 时间轴基础时长（帧数）
   const timelineDurationFrames = ref(1800) // 默认1800帧（60秒@30fps），确保有足够的刻度线空间
 
-  // 编辑设置
-  const proportionalScale = ref(true) // 等比缩放设置
-
   // ==================== 配置管理方法 ====================
 
   /**
@@ -37,28 +45,23 @@ export function createUnifiedConfigModule() {
   }
 
   /**
-   * 从项目设置中恢复配置
-   * @param settings 项目设置对象
+   * 从项目配置中恢复配置
+   * @param config 项目设置对象
    */
-  function restoreFromProjectSettings(settings: {
-    videoResolution: VideoResolution
-    frameRate: number
-    timelineDurationFrames: number
-  }) {
-    console.log('🔧 [Config] 开始从项目设置恢复配置:', settings)
+  function restoreFromProjectSettings(pid: string, pconfig: UnifiedProjectConfig) {
+    projectId.value = pid
+    projectName.value = pconfig.name
+    projectDescription.value = pconfig.description
+    projectCreatedAt.value = pconfig.createdAt
+    projectUpdatedAt.value = pconfig.updatedAt
+    projectVersion.value = pconfig.version
+    projectThumbnail.value = pconfig.thumbnail || null
+    projectDuration.value = pconfig.duration
 
-    // 恢复视频分辨率
-    videoResolution.value = settings.videoResolution
-    console.log('🎬 [Config] 视频分辨率已恢复:', settings.videoResolution)
-
-    // 恢复帧率
-    frameRate.value = settings.frameRate
-    console.log('🎞️ [Config] 帧率已恢复:', settings.frameRate)
-
-    // 恢复时间轴时长
-    timelineDurationFrames.value = settings.timelineDurationFrames
-    console.log('⏱️ [Config] 时间轴时长已恢复:', settings.timelineDurationFrames)
-
+    // 视频分辨率设置
+    setVideoResolution(pconfig.settings.videoResolution)
+    // 帧率设置
+    setFrameRate(pconfig.settings.frameRate)
     console.log('✅ [Config] 项目设置恢复完成')
   }
 
@@ -90,24 +93,22 @@ export function createUnifiedConfigModule() {
   }
 
   /**
-   * 设置等比缩放模式
-   * @param enabled 是否启用等比缩放
-   */
-  function setProportionalScale(enabled: boolean) {
-    proportionalScale.value = enabled
-    console.log('🎬 等比缩放已设置为:', enabled ? '启用' : '禁用')
-  }
-
-  /**
    * 获取当前配置的摘要信息
    * @returns 配置摘要对象
    */
   function getConfigSummary() {
     return {
+      projectId: projectId.value,
+      projectName: projectName.value,
+      projectDescription: projectDescription.value,
+      projectCreatedAt: projectCreatedAt.value,
+      projectUpdatedAt: projectUpdatedAt.value,
+      projectVersion: projectVersion.value,
+      projectThumbnail: projectThumbnail.value,
+      projectDuration: projectDuration.value,
       videoResolution: videoResolution.value,
       frameRate: frameRate.value,
       timelineDurationFrames: timelineDurationFrames.value,
-      proportionalScale: proportionalScale.value,
     }
   }
 
@@ -123,7 +124,6 @@ export function createUnifiedConfigModule() {
     }
     frameRate.value = 30
     timelineDurationFrames.value = 1800 // 60秒@30fps
-    proportionalScale.value = true
 
     console.log('🔄 配置已重置为默认值')
   }
@@ -131,17 +131,25 @@ export function createUnifiedConfigModule() {
   // ==================== 导出接口 ====================
 
   return {
+    // 配置
+    projectId,
+    projectName,
+    projectDescription,
+    projectCreatedAt,
+    projectUpdatedAt,
+    projectVersion,
+    projectThumbnail,
+    projectDuration,
+
     // 状态
     videoResolution,
     frameRate,
     timelineDurationFrames,
-    proportionalScale,
 
     // 方法
     setVideoResolution,
     setFrameRate,
     setTimelineDurationFrames,
-    setProportionalScale,
     getConfigSummary,
     resetToDefaults,
     restoreFromProjectSettings,
