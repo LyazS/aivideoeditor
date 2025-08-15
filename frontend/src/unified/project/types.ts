@@ -25,25 +25,19 @@ export interface UnifiedMediaMetadata {
 }
 
 /**
- * 媒体引用接口
+ * 媒体引用接口（仅用于页面级内存缓存，不保存到项目配置文件中）
  */
 export interface UnifiedMediaReference {
-  id: string                    // 媒体ID
-  originalFileName: string      // 原始文件名
+  id: string                   // 从metadata.id获取，保持持久化一致性
   storedPath: string           // 存储路径
   mediaType: MediaType         // 媒体类型
-  fileSize: number             // 文件大小
-  mimeType: string             // MIME类型
-  checksum: string             // 文件校验和
-  metadata?: UnifiedMediaMetadata // 媒体元数据
+  metadata: UnifiedMediaMetadata // 媒体元数据
   status?: 'ready' | 'error'   // 状态
-  errorType?: string           // 错误类型
-  errorMessage?: string        // 错误信息
-  errorTimestamp?: string      // 错误时间戳
 }
 
 /**
  * 统一项目配置接口（基于新架构统一类型）
+ * 采用Meta驱动策略，项目配置不包含媒体引用字段
  */
 export interface UnifiedProjectConfig {
   id: string
@@ -74,11 +68,6 @@ export interface UnifiedProjectConfig {
     mediaItems: UnifiedMediaItemData[]
   }
   
-  // 媒体引用映射
-  mediaReferences: {
-    [mediaId: string]: UnifiedMediaReference
-  }
-  
-  // 媒体数据（使用统一类型）(根据不同数据源有不同的配置)
-  media: {}
+  // 注意：采用完全Meta驱动策略后，项目配置不再包含媒体相关字段
+  // 所有媒体信息都通过扫描目录中的.meta文件获取
 }

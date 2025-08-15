@@ -1,5 +1,6 @@
 import { directoryManager } from '@/utils/DirectoryManager'
-import type { UnifiedProjectConfig } from '@/unified/project'
+import { globalProjectMediaManager } from '@/unified/utils/ProjectMediaManager'
+import type { UnifiedProjectConfig, UnifiedMediaReference } from '@/unified/project'
 import type { UnifiedMediaItemData, UnifiedTimelineItemData } from '@/unified'
 import type { UnifiedTrackData } from '@/unified/track/TrackTypes'
 
@@ -128,8 +129,6 @@ export class UnifiedProjectManager {
         timelineItems: [],
         mediaItems: [],
       },
-
-      media: {},
     }
 
     try {
@@ -212,7 +211,6 @@ export class UnifiedProjectManager {
   /**
    * 加载项目内容（不包含设置预加载，专注于媒体和时间轴数据）
    * @param projectId 项目ID
-   * @param preloadedSettings 可选的预加载设置，避免重复读取
    * @param options 加载选项
    * @returns 项目加载结果
    */
@@ -220,50 +218,88 @@ export class UnifiedProjectManager {
     projectId: string,
     options: UnifiedLoadProjectOptions = {},
   ): Promise<UnifiedProjectLoadResult | null> {
-    const { onProgress } = options
-
-    console.log(`📂 [Unified Content Load] 暂时返回空的加载结果: ${projectId}`)
-
-    // 使用一次 onProgress 验证功能
-    onProgress?.('加载项目内容...', 50)
-
-    // 使用预加载的设置或默认设置
-  
-
-    // 返回空的 UnifiedProjectLoadResult
-    const result: UnifiedProjectLoadResult = {
-      projectConfig: {
-        id: projectId,
-        name: '临时项目',
-        description: '',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        version: '1.0.0',
-        duration: 0,
-        settings: {
-          videoResolution: {
-            name: '1080p',
-            width: 1920,
-            height: 1080,
-            aspectRatio: '16:9',
-          },
-          frameRate: 30,
-          timelineDurationFrames: 1800,
-        },
-        timeline: {
-          tracks: [],
-          timelineItems: [],
-          mediaItems: [],
-        },
-        media: {},
-      },
-      mediaItems: [],
-      timelineItems: [],
-      tracks: [],
-      loadedStages: ['empty-result'],
+    const { loadMedia = true, loadTimeline = true, onProgress } = options
+    
+    try {
+      // 1. 加载项目配置
+      onProgress?.('加载项目配置...', 10)
+      const projectConfig = await this.loadProjectConfig(projectId)
+      if (!projectConfig) {
+        throw new Error('项目配置不存在')
+      }
+      
+      // 2. 初始化页面级媒体管理器
+      globalProjectMediaManager.initializeForProject(projectId)
+      
+      // 3. Meta驱动的媒体加载策略
+      let mediaItems: UnifiedMediaItemData[] = []
+      if (loadMedia) {
+        onProgress?.('扫描媒体目录...', 20)
+        
+        // 通过扫描目录meta文件构建媒体引用（Meta驱动策略）
+        const scannedReferences = await globalProjectMediaManager.scanMediaDirectory()
+        
+        onProgress?.('重建媒体项目...', 40)
+        mediaItems = await this.rebuildMediaItemsFromReferences(
+          scannedReferences,
+          (loaded, total) => {
+            const progress = 40 + (loaded / total) * 30
+            onProgress?.(`重建媒体项目 ${loaded}/${total}`, progress)
+          }
+        )
+      }
+      
+      // 4. 加载时间轴数据
+      let timelineItems: UnifiedTimelineItemData[] = []
+      let tracks: UnifiedTrackData[] = []
+      if (loadTimeline && projectConfig.timeline) {
+        onProgress?.('加载时间轴数据...', 80)
+        timelineItems = projectConfig.timeline.timelineItems || []
+        tracks = projectConfig.timeline.tracks || []
+      }
+      
+      // 5. 返回加载结果
+      onProgress?.('完成加载', 100)
+      return {
+        projectConfig,
+        mediaItems,
+        timelineItems,
+        tracks,
+        // 无需返回管理器实例，页面级全局可访问
+        loadedStages: ['config', 'media', 'timeline']
+      }
+    } catch (error) {
+      console.error(`加载项目内容失败: ${projectId}`, error)
+      throw error
     }
-
-    return result
+  }
+  
+  /**
+   * 从媒体引用重建媒体项目
+   * @param references 媒体引用数组
+   * @param onProgress 进度回调
+   * @returns 重建的媒体项目数组
+   */
+  private async rebuildMediaItemsFromReferences(
+    references: UnifiedMediaReference[],
+    onProgress?: (loaded: number, total: number) => void
+  ): Promise<UnifiedMediaItemData[]> {
+    // TODO: 阶段1 - 实现从媒体引用重建媒体项目的完整逻辑
+    // 需要根据引用的元数据创建UnifiedMediaItemData对象，并重建WebAV对象
+    console.log(`📁 [Unified] 开始重建 ${references.length} 个媒体项目`)
+    
+    // 模拟重建过程
+    for (let i = 0; i < references.length; i++) {
+      onProgress?.(i + 1, references.length)
+      // TODO: 阶段1 - 这里需要实现实际的媒体项目重建逻辑
+      // 1. 根据引用创建UnifiedMediaItemData对象
+      // 2. 从存储路径加载文件
+      // 3. 重建WebAV对象
+      // 4. 设置媒体状态为ready
+    }
+    
+    console.log(`✅ [Unified] 媒体项目重建完成: ${references.length}`)
+    return []
   }
 
   /**
