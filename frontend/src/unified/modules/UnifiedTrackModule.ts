@@ -18,11 +18,7 @@ export function createUnifiedTrackModule() {
   // ==================== 状态定义 ====================
 
   // 轨道列表 - 使用统一轨道类型
-  const tracks = ref<UnifiedTrackData[]>([
-    createUnifiedTrackData('video', '默认视频轨道'),
-    createUnifiedTrackData('audio', '默认音频轨道'),
-    createUnifiedTrackData('text', '默认文本轨道'),
-  ])
+  const tracks = ref<UnifiedTrackData[]>([])
 
   // ==================== 轨道管理方法 ====================
 
@@ -320,9 +316,14 @@ export function createUnifiedTrackModule() {
     // 添加恢复的轨道
     for (const track of restoredTracks) {
       // 创建新的响应式轨道对象
-      const restoredTrack = createUnifiedTrackData(track.type, track.name, {
-        ...track,
-      }, track.id)
+      const restoredTrack = createUnifiedTrackData(
+        track.type,
+        track.name,
+        {
+          ...track,
+        },
+        track.id,
+      )
 
       tracks.value.push(restoredTrack)
       console.log(`📋 恢复轨道: ${track.name} (${track.type})`)

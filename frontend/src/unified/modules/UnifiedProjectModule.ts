@@ -4,9 +4,11 @@ import { projectFileOperations } from '@/unified/utils/ProjectFileOperations'
 import type { VideoResolution } from '@/unified/types'
 import { TimelineItemFactory } from '@/unified/timelineitem'
 import type { UnifiedTimelineItemData } from '@/unified/timelineitem/TimelineItemData'
-import type { UnifiedTrackData } from '@/unified/track/TrackTypes'
+import type { UnifiedTrackData, UnifiedTrackType } from '@/unified/track/TrackTypes'
 import type { UnifiedMediaItemData } from '@/unified/mediaitem/types'
 import type { MediaType } from '@/unified/mediaitem/types'
+import { globalProjectMediaManager } from '@/unified/utils/ProjectMediaManager'
+import { DataSourceFactory } from '@/unified/sources/DataSourceTypes'
 
 /**
  * 统一项目管理模块
@@ -29,12 +31,17 @@ export function createUnifiedProjectModule(
   },
   timelineModule?: {
     timelineItems: Ref<UnifiedTimelineItemData<MediaType>[]>
+    addTimelineItem: (item: UnifiedTimelineItemData<MediaType>) => void
   },
   trackModule?: {
     tracks: Ref<UnifiedTrackData[]>
+    addTrack: (type: UnifiedTrackType, name?: string, position?: number, id?: string) => UnifiedTrackData
   },
   mediaModule?: {
     mediaItems: Ref<UnifiedMediaItemData[]>
+    createUnifiedMediaItemData: (id: string, name: string, source: any, options?: any) => UnifiedMediaItemData
+    addMediaItem: (item: UnifiedMediaItemData) => void
+    startMediaProcessing: (item: UnifiedMediaItemData) => void
   },
 ) {
   // ==================== 状态定义 ====================
@@ -229,46 +236,124 @@ export function createUnifiedProjectModule(
       isLoading.value = true
       updateLoadingProgress('开始加载项目内容...', 5)
       console.log(`📂 [Content Load] 开始加载项目内容: ${projectId}`)
-
-      // TODO：
-      // 这里应该先loadProjectConfig获取项目配置
-      // 然后初始化页面级媒体管理器，扫描meta文件构建文件索引
-      // 然后先构建媒体项目，启动数据源的获取；
-      // 接着恢复时间轴轨道，以及项目
-
-      // 使用项目文件操作工具加载内容
-      const result = await projectFileOperations.loadProjectContent(projectId, {
-        loadMedia: true,
-        loadTimeline: true,
-        onProgress: (stage, progress) => {
-          updateLoadingProgress(stage, progress)
-        },
-      })
-      if (result?.projectConfig) {
-        const { projectConfig, mediaItems, timelineItems, tracks } = result
-
-        // 模拟加载过程
-        updateLoadingProgress('加载项目配置...', 20)
-        await new Promise((resolve) => setTimeout(resolve, 100))
-
-        updateLoadingProgress('加载媒体文件...', 50)
-        await new Promise((resolve) => setTimeout(resolve, 100))
-
-        updateLoadingProgress('加载时间轴数据...', 80)
-        await new Promise((resolve) => setTimeout(resolve, 100))
-
-        updateLoadingProgress('项目内容加载完成', 100)
-        console.log(`✅ [Content Load] 项目内容加载成功`)
-
-        isProjectContentReady.value = true
-      } else {
-        console.warn(`❌ [Content Load] 项目不存在: ${projectId}`)
+      
+      // 1. 加载项目配置
+      updateLoadingProgress('加载项目配置...', 10)
+      const projectConfig = await projectFileOperations.loadProjectConfig(projectId)
+      if (!projectConfig) {
+        throw new Error('项目配置不存在')
       }
+      
+      // 2. 初始化页面级媒体管理器
+      updateLoadingProgress('初始化媒体管理器...', 20)
+      globalProjectMediaManager.initializeForProject(projectId)
+      
+      // 3. 扫描meta文件构建文件索引
+      updateLoadingProgress('扫描媒体文件索引...', 30)
+      const mediaReferences = await globalProjectMediaManager.scanMediaDirectory()
+      
+      // 4. 构建媒体项目，启动数据源获取
+      updateLoadingProgress('重建媒体项目...', 50)
+      await rebuildMediaItems(mediaReferences)
+      
+      // 5. 恢复时间轴轨道和项目状态
+      updateLoadingProgress('恢复时间轴数据...', 80)
+      await restoreTimelineAndTracks(projectId)
+      
+      updateLoadingProgress('项目内容加载完成', 100)
+      isProjectContentReady.value = true
+      
     } catch (error) {
       console.error('❌ [Content Load] 加载项目内容失败:', error)
       throw error
     } finally {
       resetLoadingState()
+    }
+  }
+
+  /**
+   * 重建媒体项目
+   * @param mediaReferences 媒体引用数组
+   */
+  async function rebuildMediaItems(mediaReferences: any[]): Promise<void> {
+    try {
+      // 检查是否有外部传入的媒体模块
+      if (!mediaModule) {
+        throw new Error('媒体模块未初始化，请在构造函数中传入 mediaModule 参数')
+      }
+      
+      // 数据源工厂已在文件顶部导入
+      
+      // 基于媒体引用重建媒体项目
+      for (const mediaRef of mediaReferences) {
+        try {
+          // 从磁盘加载媒体文件
+          const file = await globalProjectMediaManager.loadMediaFromProject(configModule.projectId.value, mediaRef.storedPath)
+          
+          // 创建数据源并设置媒体引用ID
+          const source = DataSourceFactory.createUserSelectedSource(file)
+          source.mediaReferenceId = mediaRef.id
+          
+          // 创建统一媒体项目
+          const mediaItem = mediaModule.createUnifiedMediaItemData(
+            mediaRef.id,
+            mediaRef.originalFileName,
+            source,
+            {
+              mediaType: mediaRef.mediaType,
+              mediaStatus: 'ready', // 从meta文件加载的项目默认为ready状态
+              duration: mediaRef.metadata?.duration
+            }
+          )
+          
+          // 添加到媒体模块并启动处理
+          mediaModule.addMediaItem(mediaItem)
+          mediaModule.startMediaProcessing(mediaItem)
+        } catch (error) {
+          console.error(`重建媒体项目失败: ${mediaRef.originalFileName}`, error)
+        }
+      }
+    } catch (error) {
+      console.error('重建媒体项目过程失败:', error)
+      throw error
+    }
+  }
+
+  /**
+   * 恢复时间轴轨道和项目状态
+   * @param projectId 项目ID
+   */
+  async function restoreTimelineAndTracks(projectId: string): Promise<void> {
+    try {
+      // 加载时间轴数据和轨道信息
+      const timelineResult = await projectFileOperations.loadProjectContent(projectId, {
+        loadMedia: false, // 媒体已在步骤4中处理
+        loadTimeline: true,
+        onProgress: (stage, progress) => {
+          updateLoadingProgress(stage, progress)
+        }
+      })
+
+      if (timelineResult?.timelineItems && timelineResult?.tracks) {
+        // 恢复时间轴项目
+        timelineResult.timelineItems.forEach(timelineItem => {
+          // 使用timelineModule添加时间轴项目
+          if (timelineModule) {
+            timelineModule.addTimelineItem(timelineItem)
+          }
+        })
+        
+        // 恢复轨道配置
+        timelineResult.tracks.forEach(track => {
+          // 使用trackModule恢复轨道状态
+          if (trackModule) {
+            trackModule.addTrack(track.type, track.name, undefined, track.id)
+          }
+        })
+      }
+    } catch (error) {
+      console.error('恢复时间轴轨道和项目状态失败:', error)
+      throw error
     }
   }
 
