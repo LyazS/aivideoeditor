@@ -270,5 +270,50 @@ export {
   debugCurrentItem,
 } from './keyframeDebugger'
 
-// ==================== 统一项目管理器 ==========
+// ==================== 统一项目管理器 ====================
 export { unifiedProjectManager } from './projectManager'
+
+// ==================== 项目文件操作工具 ====================
+export {
+  // 单项目文件操作类
+  ProjectFileOperations,
+  projectFileOperations,
+  
+  // 类型定义
+  type UnifiedLoadProjectOptions,
+  type UnifiedProjectLoadResult,
+} from './ProjectFileOperations'
+
+// ==================== 页面级项目媒体管理器 ====================
+export {
+  // 核心类和实例
+  ProjectMediaManager,
+  globalProjectMediaManager,
+
+  // 类型定义
+  type MediaSaveResult,
+
+  // 初始化和管理函数
+  initializeProjectMediaManager,
+  cleanupProjectMediaManager,
+  getCurrentProjectId,
+  isProjectMediaManagerInitialized,
+
+  // 媒体保存和加载函数
+  saveMediaToCurrentProject,
+  loadMediaFromCurrentProject,
+  scanCurrentProjectMedia,
+
+  // 媒体引用管理函数
+  getCurrentProjectMediaReference,
+  getAllCurrentProjectMediaReferences,
+  getCurrentProjectMediaStats,
+
+  // 文件完整性验证函数
+  verifyCurrentProjectMediaIntegrity,
+  verifyAllCurrentProjectMediaIntegrity,
+  calculateFileChecksum,
+
+  // 清理和维护函数
+  cleanupCurrentProjectOrphanedReferences,
+} from './ProjectMediaManager'

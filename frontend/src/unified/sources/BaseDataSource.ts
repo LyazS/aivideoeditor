@@ -45,6 +45,9 @@ export interface BaseDataSourceData {
   taskId?: string
   file: File | null
   url: string | null
+
+  // 🆕 新增：媒体管理器引用ID，指向ProjectMediaManager中的媒体引用
+  mediaReferenceId?: string
 }
 
 // 注意：UnifiedDataSourceData 类型在 DataSourceTypes.ts 中定义

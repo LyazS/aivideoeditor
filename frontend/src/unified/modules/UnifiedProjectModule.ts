@@ -1,8 +1,12 @@
 import { ref, computed, type Ref } from 'vue'
 import type { UnifiedProjectConfig } from '@/unified/project/types'
-import { unifiedProjectManager } from '@/unified/utils/'
+import { projectFileOperations } from '@/unified/utils/ProjectFileOperations'
 import type { VideoResolution } from '@/unified/types'
 import { TimelineItemFactory } from '@/unified/timelineitem'
+import type { UnifiedTimelineItemData } from '@/unified/timelineitem/TimelineItemData'
+import type { UnifiedTrackData } from '@/unified/track/TrackTypes'
+import type { UnifiedMediaItemData } from '@/unified/mediaitem/types'
+import type { MediaType } from '@/unified/mediaitem/types'
 
 /**
  * 统一项目管理模块
@@ -24,14 +28,14 @@ export function createUnifiedProjectModule(
     restoreFromProjectSettings: (pid: string, pconifg: UnifiedProjectConfig) => void
   },
   timelineModule?: {
-    timelineItems: Ref<any[]>
+    timelineItems: Ref<UnifiedTimelineItemData<MediaType>[]>
   },
   trackModule?: {
-    tracks: Ref<any[]>
+    tracks: Ref<UnifiedTrackData[]>
   },
   mediaModule?: {
-    mediaItems: Ref<any[]>
-  }
+    mediaItems: Ref<UnifiedMediaItemData[]>
+  },
 ) {
   // ==================== 状态定义 ====================
 
@@ -123,8 +127,9 @@ export function createUnifiedProjectModule(
       isSaving.value = true
       console.log(`💾 保存项目: ${configModule.projectName.value}`)
       configModule.projectUpdatedAt.value = new Date().toISOString()
-      
+
       // 构建更新的项目配置
+      // 注意：采用即时保存策略后，媒体文件已在WebAV解析时保存，这里只保存项目配置
       const updatedProject: UnifiedProjectConfig = {
         id: configModule.projectId.value,
         name: configModule.projectName.value,
@@ -147,7 +152,7 @@ export function createUnifiedProjectModule(
           // tracks 数据结构简单，没有运行时对象，可以直接使用
           tracks: trackModule?.tracks.value || [],
           // timelineItems 包含运行时数据，需要克隆并清理
-          timelineItems: (timelineModule?.timelineItems.value || []).map(item => {
+          timelineItems: (timelineModule?.timelineItems.value || []).map((item) => {
             // 使用工厂函数克隆时间轴项目，去掉运行时内容（如sprite等）
             const clonedItem = TimelineItemFactory.clone(item)
             // 确保克隆的项目没有运行时数据
@@ -157,15 +162,12 @@ export function createUnifiedProjectModule(
             return clonedItem
           }),
           // mediaItems 包含 webav 运行时对象，需要清理
-          mediaItems: (mediaModule?.mediaItems.value || []).map(item => {
+          mediaItems: (mediaModule?.mediaItems.value || []).map((item) => {
             // 创建媒体项目的可持久化副本，去掉运行时的 webav 对象
             const { webav, ...persistableItem } = item
             return persistableItem
           }),
         },
-
-        // 媒体数据
-        media: {},
       }
 
       console.log(`📊 保存项目数据统计:`, {
@@ -178,8 +180,8 @@ export function createUnifiedProjectModule(
         帧率: updatedProject.settings.frameRate,
       })
 
-      // 调用实际的保存逻辑
-      await unifiedProjectManager.saveProject(updatedProject)
+      // 调用项目文件操作工具进行保存
+      await projectFileOperations.saveProject(updatedProject)
 
       console.log(`✅ 项目保存成功: ${configModule.projectName.value}`)
     } catch (error) {
@@ -198,8 +200,8 @@ export function createUnifiedProjectModule(
     try {
       console.log(`🔧 [Settings Preload] 开始预加载项目设置: ${projectId}`)
 
-      // 这里应该调用实际的设置加载逻辑
-      const projConfig = await unifiedProjectManager.loadProjectConfig(projectId)
+      // 使用项目文件操作工具加载配置
+      const projConfig = await projectFileOperations.loadProjectConfig(projectId)
       if (!projConfig) {
         console.error('❌ [Settings Preload] 预加载项目设置失败：项目配置不存在')
         throw new Error('项目配置不存在')
@@ -227,8 +229,15 @@ export function createUnifiedProjectModule(
       isLoading.value = true
       updateLoadingProgress('开始加载项目内容...', 5)
       console.log(`📂 [Content Load] 开始加载项目内容: ${projectId}`)
-      // 这里应该调用实际的项目内容加载逻辑
-      const result = await unifiedProjectManager.loadProjectContent(projectId, {
+
+      // TODO：
+      // 这里应该先loadProjectConfig获取项目配置
+      // 然后初始化页面级媒体管理器，扫描meta文件构建文件索引
+      // 然后先构建媒体项目，启动数据源的获取；
+      // 接着恢复时间轴轨道，以及项目
+
+      // 使用项目文件操作工具加载内容
+      const result = await projectFileOperations.loadProjectContent(projectId, {
         loadMedia: true,
         loadTimeline: true,
         onProgress: (stage, progress) => {
@@ -237,9 +246,6 @@ export function createUnifiedProjectModule(
       })
       if (result?.projectConfig) {
         const { projectConfig, mediaItems, timelineItems, tracks } = result
-
-        // 设置项目配置
-        // currentProject.value = projectConfig
 
         // 模拟加载过程
         updateLoadingProgress('加载项目配置...', 20)

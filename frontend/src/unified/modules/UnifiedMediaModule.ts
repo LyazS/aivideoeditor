@@ -311,6 +311,33 @@ export function createUnifiedMediaModule() {
       // 等待clip准备完成
       const meta = await clip.ready
 
+      // ✨ 新增：解析成功后立即保存到磁盘，并在数据源中设置引用ID
+      if (mediaItem.source.file) {
+        try {
+          // 动态导入项目媒体管理器
+          const { globalProjectMediaManager } = await import('@/unified/utils/ProjectMediaManager')
+
+          // 保存媒体文件和元数据到当前项目页面
+          const saveResult = await globalProjectMediaManager.saveMediaToProject(
+            mediaItem.source.file,
+            mediaItem.mediaType,
+            clip  // 传入clip用于生成完整元数据
+          )
+
+          // 🆕 关键改进：在数据源中设置媒体管理器引用ID
+          if (saveResult.success && saveResult.mediaReference) {
+            mediaItem.source.mediaReferenceId = saveResult.mediaReference.id
+          }
+
+          console.log(`💾 媒体文件即时保存成功: ${mediaItem.name} -> ${saveResult.storagePath}`)
+          console.log(`🔗 媒体引用ID已设置: ${mediaItem.source.mediaReferenceId}`)
+        } catch (saveError) {
+          console.error(`❌ 媒体文件即时保存失败: ${mediaItem.name}`, saveError)
+          // 保存失败不影响WebAV解析流程，继续处理
+          console.warn(`媒体文件保存失败，但WebAV解析继续: ${mediaItem.name}`, saveError)
+        }
+      }
+
       // 创建WebAV对象
       const webavObjects: any = {
         thumbnailUrl,

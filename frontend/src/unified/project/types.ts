@@ -36,10 +36,6 @@ export interface UnifiedMediaReference {
   mimeType: string             // MIME类型
   checksum: string             // 文件校验和
   metadata?: UnifiedMediaMetadata // 媒体元数据
-  status?: 'ready' | 'error'   // 状态
-  errorType?: string           // 错误类型
-  errorMessage?: string        // 错误信息
-  errorTimestamp?: string      // 错误时间戳
 }
 
 /**
@@ -73,12 +69,5 @@ export interface UnifiedProjectConfig {
     timelineItems: UnifiedTimelineItemData[]
     mediaItems: UnifiedMediaItemData[]
   }
-  
-  // 媒体引用映射
-  mediaReferences: {
-    [mediaId: string]: UnifiedMediaReference
-  }
-  
-  // 媒体数据（使用统一类型）(根据不同数据源有不同的配置)
-  media: {}
+
 }
