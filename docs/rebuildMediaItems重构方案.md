@@ -43,46 +43,35 @@ await rebuildMediaItems(projectConfig.timeline.mediaItems, mediaReferences)
 
 #### 新增重建接口
 ```typescript
-// ==================== 重建方法接口 ====================
+// ==================== 工厂重建方法 ====================
 
 /**
- * 数据源重建函数接口
- * 每种数据源类型都需要实现自己的重建逻辑
+ * 数据源工厂重建方法的统一调度器
+ * 根据数据源类型调用对应工厂的重建方法
  */
-export interface DataSourceRebuildActions {
+export const DataSourceRebuildDispatcher = {
   /**
-   * 重建数据源
-   * @param mediaItem 媒体项目数据
-   * @param mediaReferences 媒体引用数组
-   * @param projectId 项目ID
-   * @returns 重建后的数据源
-   */
-  rebuildSource(
-    mediaItem: UnifiedMediaItemData,
-    mediaReferences: any[],
-    projectId: string
-  ): Promise<BaseDataSourceData>
-}
-
-/**
- * 基础数据源重建操作 - 提供通用的重建调用接口
- */
-export const DataSourceRebuildActions = {
-  /**
-   * 统一重建数据源方法 - 直接调用数据源自己的重建方法
-   * @param source 数据源对象（必须包含 rebuildSource 方法）
+   * 根据数据源类型调度到对应的重建方法
    * @param mediaItem 媒体项目数据
    * @param mediaReferences 媒体引用数组
    * @param projectId 项目ID
    * @returns 重建后的数据源
    */
   async rebuildDataSource(
-    source: BaseDataSourceData & { rebuildSource: DataSourceRebuildActions['rebuildSource'] },
     mediaItem: UnifiedMediaItemData,
     mediaReferences: any[],
     projectId: string
   ): Promise<BaseDataSourceData> {
-    return await source.rebuildSource(mediaItem, mediaReferences, projectId)
+    const sourceType = mediaItem.source.type
+    
+    switch (sourceType) {
+      case 'user-selected':
+        return await UserSelectedFileSourceFactory.rebuildSource(mediaItem, mediaReferences, projectId)
+      case 'remote':
+        return await RemoteFileSourceFactory.rebuildSource(mediaItem, mediaReferences, projectId)
+      default:
+        throw new Error(`Unsupported source type for rebuild: ${sourceType}`)
+    }
   }
 }
 ```
@@ -101,13 +90,6 @@ export const DataSourceRebuildActions = {
 export interface UserSelectedFileSourceData extends BaseDataSourceData {
   type: 'user-selected'
   selectedFile: File
-  
-  // 🆕 实现重建方法
-  rebuildSource(
-    mediaItem: UnifiedMediaItemData,
-    mediaReferences: any[],
-    projectId: string
-  ): Promise<UserSelectedFileSourceData>
 }
 ```
 
@@ -123,38 +105,38 @@ export const UserSelectedFileSourceFactory = {
       file: null,
       url: null,
       selectedFile: file,
-      
-      // 🆕 实现重建方法
-      async rebuildSource(
-        mediaItem: UnifiedMediaItemData,
-        mediaReferences: any[],
-        projectId: string
-      ): Promise<UserSelectedFileSourceData> {
-        // 1. 通过mediaReferenceId找到对应的媒体引用
-        const mediaRef = mediaReferences.find(ref => ref.id === mediaItem.source.mediaReferenceId)
-        if (!mediaRef) {
-          throw new Error(`找不到媒体引用: ${mediaItem.source.mediaReferenceId}`)
-        }
-        
-        // 2. 从项目媒体目录加载文件
-        const file = await globalProjectMediaManager.loadMediaFromProject(
-          projectId,
-          mediaRef.storedPath
-        )
-        
-        // 3. 创建新的数据源
-        const newSource = UserSelectedFileSourceFactory.createUserSelectedSource(file)
-        newSource.mediaReferenceId = mediaRef.id
-        
-        // 4. 直接设置为已获取状态
-        DataSourceBusinessActions.completeAcquisition(newSource, file, URL.createObjectURL(file))
-        
-        return newSource
-      }
     }) as UserSelectedFileSourceData
     
     return source
   },
+
+  // 🆕 静态重建方法
+  async rebuildSource(
+    mediaItem: UnifiedMediaItemData,
+    mediaReferences: any[],
+    projectId: string
+  ): Promise<UserSelectedFileSourceData> {
+    // 1. 通过mediaReferenceId找到对应的媒体引用
+    const mediaRef = mediaReferences.find(ref => ref.id === mediaItem.source.mediaReferenceId)
+    if (!mediaRef) {
+      throw new Error(`找不到媒体引用: ${mediaItem.source.mediaReferenceId}`)
+    }
+    
+    // 2. 从项目媒体目录加载文件
+    const file = await globalProjectMediaManager.loadMediaFromProject(
+      projectId,
+      mediaRef.storedPath
+    )
+    
+    // 3. 创建新的数据源
+    const newSource = UserSelectedFileSourceFactory.createUserSelectedSource(file)
+    newSource.mediaReferenceId = mediaRef.id
+    
+    // 4. 直接设置为已获取状态
+    DataSourceBusinessActions.completeAcquisition(newSource, file, URL.createObjectURL(file))
+    
+    return newSource
+  }
 }
 ```
 
@@ -175,13 +157,6 @@ export interface RemoteFileSourceData extends BaseDataSourceData {
   totalBytes: number
   downloadSpeed?: string
   startTime?: number
-  
-  // 🆕 实现重建方法
-  rebuildSource(
-    mediaItem: UnifiedMediaItemData,
-    mediaReferences: any[],
-    projectId: string
-  ): Promise<RemoteFileSourceData>
 }
 ```
 
@@ -200,56 +175,56 @@ export const RemoteFileSourceFactory = {
       config,
       downloadedBytes: 0,
       totalBytes: 0,
-      
-      // 🆕 实现重建方法
-      async rebuildSource(
-        mediaItem: UnifiedMediaItemData,
-        mediaReferences: any[],
-        projectId: string
-      ): Promise<RemoteFileSourceData> {
-        const remoteSource = mediaItem.source as RemoteFileSourceData
-        
-        // 1. 通过mediaReferenceId找到对应的媒体引用
-        const mediaRef = mediaReferences.find(ref => ref.id === remoteSource.mediaReferenceId)
-        if (!mediaRef) {
-          throw new Error(`找不到媒体引用: ${remoteSource.mediaReferenceId}`)
-        }
-        
-        // 2. 尝试从本地加载文件
-        try {
-          const file = await globalProjectMediaManager.loadMediaFromProject(
-            projectId,
-            mediaRef.storedPath
-          )
-          
-          // 本地文件存在，直接使用
-          const newSource = RemoteFileSourceFactory.createRemoteSource(
-            remoteSource.remoteUrl,
-            remoteSource.config
-          )
-          newSource.mediaReferenceId = mediaRef.id
-          
-          DataSourceBusinessActions.completeAcquisition(newSource, file, URL.createObjectURL(file))
-          return newSource
-          
-        } catch (error) {
-          // 3. 本地文件不存在，创建需要重新下载的数据源
-          const newSource = RemoteFileSourceFactory.createRemoteSource(
-            remoteSource.remoteUrl,
-            remoteSource.config
-          )
-          newSource.mediaReferenceId = mediaRef.id
-          
-          // 设置为缺失状态，等待重新下载
-          DataSourceBusinessActions.setMissing(newSource)
-          
-          return newSource
-        }
-      }
     }) as RemoteFileSourceData
     
     return source
   },
+
+  // 🆕 静态重建方法
+  async rebuildSource(
+    mediaItem: UnifiedMediaItemData,
+    mediaReferences: any[],
+    projectId: string
+  ): Promise<RemoteFileSourceData> {
+    const remoteSource = mediaItem.source as RemoteFileSourceData
+    
+    // 1. 通过mediaReferenceId找到对应的媒体引用
+    const mediaRef = mediaReferences.find(ref => ref.id === remoteSource.mediaReferenceId)
+    if (!mediaRef) {
+      throw new Error(`找不到媒体引用: ${remoteSource.mediaReferenceId}`)
+    }
+    
+    // 2. 尝试从本地加载文件
+    try {
+      const file = await globalProjectMediaManager.loadMediaFromProject(
+        projectId,
+        mediaRef.storedPath
+      )
+      
+      // 本地文件存在，直接使用
+      const newSource = RemoteFileSourceFactory.createRemoteSource(
+        remoteSource.remoteUrl,
+        remoteSource.config
+      )
+      newSource.mediaReferenceId = mediaRef.id
+      
+      DataSourceBusinessActions.completeAcquisition(newSource, file, URL.createObjectURL(file))
+      return newSource
+      
+    } catch (error) {
+      // 3. 本地文件不存在，创建需要重新下载的数据源
+      const newSource = RemoteFileSourceFactory.createRemoteSource(
+        remoteSource.remoteUrl,
+        remoteSource.config
+      )
+      newSource.mediaReferenceId = mediaRef.id
+      
+      // 设置为缺失状态，等待重新下载
+      DataSourceBusinessActions.setMissing(newSource)
+      
+      return newSource
+    }
+  }
 }
 ```
 
@@ -272,8 +247,8 @@ async function rebuildMediaItems(
     // 基于保存的媒体项目数据重建
     for (const savedMediaItem of savedMediaItems) {
       try {
-        // 🆕 直接调用数据源自己的重建方法，无需分支判断
-        const rebuiltSource = await savedMediaItem.source.rebuildSource(
+        // 🆕 使用调度器根据类型调用对应工厂的重建方法
+        const rebuiltSource = await DataSourceRebuildDispatcher.rebuildDataSource(
           savedMediaItem,
           mediaReferences,
           configModule.projectId.value
@@ -339,13 +314,13 @@ async function rebuildMediaItems(
 2. 定义统一的重建方法签名
 
 ### 第三步：为各数据源类型实现重建方法
-1. 在 `UserSelectedFileSource.ts` 中为接口添加 `rebuildSource` 方法
-2. 在 `RemoteFileSource.ts` 中为接口添加 `rebuildSource` 方法
-3. 在各自的工厂函数中实现具体的重建逻辑
+1. 在 `UserSelectedFileSourceFactory` 中添加静态 `rebuildSource` 方法
+2. 在 `RemoteFileSourceFactory` 中添加静态 `rebuildSource` 方法
+3. 在各自的工厂中实现具体的重建逻辑
 
 ### 第四步：简化主函数
-1. 修改 `rebuildMediaItems` 函数，直接调用 `savedMediaItem.source.rebuildSource()`
-2. 完全移除类型判断和分支逻辑
+1. 修改 `rebuildMediaItems` 函数，使用 `DataSourceRebuildDispatcher.rebuildDataSource()`
+2. 调度器根据数据源类型自动调用对应工厂的重建方法
 
 ### 第五步：测试验证
 1. 测试用户选择文件的重建
