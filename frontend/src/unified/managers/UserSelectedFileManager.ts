@@ -20,6 +20,7 @@ import {
   DataSourceQueries,
 } from '@/unified/sources/BaseDataSource'
 import { nextTick } from 'vue'
+import { globalProjectMediaManager } from '@/unified/utils/ProjectMediaManager'
 
 // ==================== 用户选择文件管理器 ====================
 
@@ -82,32 +83,61 @@ export class UserSelectedFileManager extends DataSourceManager<UserSelectedFileS
     try {
       // 设置为获取中状态
       DataSourceBusinessActions.startAcquisition(source)
-      // 针对这种瞬间就能完成异步获取的操作，需要nextTick来等待DOM更新
       await nextTick()
+
+      let file: File
+
+      // 检查是否有 mediaReferenceId，如果有则从 globalProjectMediaManager 获取文件
+      if (source.mediaReferenceId) {
+        // 从 globalProjectMediaManager 获取项目ID
+        const projectId = globalProjectMediaManager.currentProjectId
+        if (!projectId) {
+          throw new Error('ProjectMediaManager 未初始化，请先调用 initializeForProject')
+        }
+
+        // 从 globalProjectMediaManager 获取媒体引用
+        const mediaReference = globalProjectMediaManager.getMediaReference(source.mediaReferenceId)
+        if (!mediaReference) {
+          throw new Error(`找不到媒体引用: ${source.mediaReferenceId}`)
+        }
+
+        // 从项目目录加载文件
+        file = await globalProjectMediaManager.loadMediaFromProject(
+          projectId,
+          mediaReference.storedPath
+        )
+
+        // 更新 selectedFile
+        source.selectedFile = file
+      } else {
+        // 使用原始文件
+        file = source.selectedFile
+      }
+
       // 验证文件有效性
-      const validationResult = this.validateFile(source.selectedFile)
+      const validationResult = this.validateFile(file)
       if (!validationResult.isValid) {
         console.error(
-          `❌ [UserSelectedFile] 文件验证失败: ${source.selectedFile.name} - ${validationResult.errorMessage}`,
+          `❌ [UserSelectedFile] 文件验证失败: ${file.name} - ${validationResult.errorMessage}`,
         )
         DataSourceBusinessActions.setError(source, validationResult.errorMessage || '文件验证失败')
         return
       }
 
       // 创建URL
-      const url = URL.createObjectURL(source.selectedFile)
+      const url = URL.createObjectURL(file)
 
       // 使用新的业务协调层方法，包含媒体类型检测
       await DataSourceBusinessActions.completeAcquisitionWithTypeDetection(
         source,
-        source.selectedFile,
+        file,
         url,
         async (src) => await this.detectAndSetMediaType(src as UserSelectedFileSourceData),
       )
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : '文件处理失败'
       console.error(
-        `❌ [UserSelectedFile] 文件获取失败: ${source.selectedFile.name} - ${errorMessage}`,
+        `❌ [UserSelectedFile] 文件获取失败: ${source.selectedFile?.name || source.mediaReferenceId} - ${errorMessage}`,
       )
       DataSourceBusinessActions.setError(source, errorMessage)
     }
@@ -379,58 +409,6 @@ export class UserSelectedFileManager extends DataSourceManager<UserSelectedFileS
     } catch (error) {
       console.error('媒体类型检测失败:', error)
     }
-  }
-
-  /**
-   * 批量处理用户选择的文件
-   */
-  async processBatchFiles(files: File[]): Promise<{
-    successful: UserSelectedFileSourceData[]
-    failed: { file: File; error: string }[]
-  }> {
-    const results = {
-      successful: [] as UserSelectedFileSourceData[],
-      failed: [] as { file: File; error: string }[],
-    }
-
-    // 为每个文件创建数据源
-    const { DataSourceFactory } = await import('@/unified/sources/DataSourceTypes')
-    const sources = files.map((file) => {
-      return DataSourceFactory.createUserSelectedSource(file)
-    })
-
-    // 并发处理所有文件
-    const promises = sources.map(async (source, index) => {
-      const taskId = `batch_${Date.now()}_${index}`
-
-      return new Promise<void>((resolve) => {
-        // 监听状态变化
-        const checkStatus = () => {
-          if (source.status === 'acquired') {
-            results.successful.push(source)
-            resolve()
-          } else if (source.status === 'error') {
-            results.failed.push({
-              file: files[index],
-              error: source.errorMessage || '处理失败',
-            })
-            resolve()
-          } else {
-            // 继续等待状态变化
-            setTimeout(checkStatus, 10)
-          }
-        }
-
-        // 开始处理
-        this.startAcquisition(source, taskId)
-        checkStatus()
-      })
-    })
-
-    // 等待所有文件处理完成
-    await Promise.all(promises)
-
-    return results
   }
 
   /**

@@ -1,5 +1,5 @@
 import { ref, computed, type Ref } from 'vue'
-import type { UnifiedProjectConfig } from '@/unified/project/types'
+import type { UnifiedProjectConfig, UnifiedMediaReference } from '@/unified/project/types'
 import { projectFileOperations } from '@/unified/utils/ProjectFileOperations'
 import type { VideoResolution } from '@/unified/types'
 import { TimelineItemFactory } from '@/unified/timelineitem'
@@ -262,9 +262,9 @@ export function createUnifiedProjectModule(
       updateLoadingProgress('扫描媒体文件索引...', 30)
       const mediaReferences = await globalProjectMediaManager.scanMediaDirectory()
 
-      // 4. 构建媒体项目，启动数据源获取
+      // 4. 构建媒体项目，启动数据源获取 - 强制传入配置的媒体项目
       updateLoadingProgress('重建媒体项目...', 50)
-      await rebuildMediaItems(mediaReferences)
+      await rebuildMediaItems(mediaReferences, projectConfig.timeline.mediaItems)
 
       // 5. 恢复时间轴轨道和项目状态
       updateLoadingProgress('恢复时间轴数据...', 80)
@@ -283,46 +283,81 @@ export function createUnifiedProjectModule(
   /**
    * 重建媒体项目
    * @param mediaReferences 媒体引用数组
+   * @param timelineMediaItems 时间轴媒体项目数组（必需，用于强制使用配置媒体项目构建策略）
    */
-  async function rebuildMediaItems(mediaReferences: any[]): Promise<void> {
+  async function rebuildMediaItems(
+    mediaReferences: UnifiedMediaReference[],
+    timelineMediaItems: UnifiedMediaItemData[]
+  ): Promise<void> {
     try {
-      // 检查是否有外部传入的媒体模块
       if (!mediaModule) {
         throw new Error('媒体模块未初始化，请在构造函数中传入 mediaModule 参数')
       }
 
-      // 数据源工厂已在文件顶部导入
+      // 必须使用传入的配置媒体项目进行重建
+      // 注意：timelineMediaItems 是必需参数，但允许为空数组（表示项目没有媒体项目）
+      if (!timelineMediaItems) {
+        throw new Error('缺少必要的 timelineMediaItems 参数，重建必须基于配置的媒体项目')
+      }
 
-      // 基于媒体引用重建媒体项目
-      for (const mediaRef of mediaReferences) {
+      // 创建媒体引用映射表，便于快速查找
+      const mediaRefMap = new Map(
+        mediaReferences.map(ref => [ref.id, ref])
+      )
+
+      // 如果 timelineMediaItems 为空数组，说明项目没有媒体项目，直接返回
+      if (timelineMediaItems.length === 0) {
+        console.log('项目没有媒体项目，跳过重建')
+        return
+      }
+
+      // 使用项目配置中的媒体项目进行重建
+      for (const savedMediaItem of timelineMediaItems) {
         try {
-          // 从磁盘加载媒体文件
-          const file = await globalProjectMediaManager.loadMediaFromProject(
-            configModule.projectId.value,
-            mediaRef.storedPath,
-          )
+          // 查找对应的媒体引用
+          const mediaReferenceId = savedMediaItem.source.mediaReferenceId
+          if (!mediaReferenceId) {
+            console.warn(`媒体项目缺少 mediaReferenceId，跳过重建: ${savedMediaItem.name} (ID: ${savedMediaItem.id})`)
+            continue
+          }
+          
+          const mediaRef = mediaRefMap.get(mediaReferenceId)
+          
+          if (mediaRef) {
+            // 文件存在，恢复完整的媒体项目
+            // 从磁盘加载媒体文件
+            const file = await globalProjectMediaManager.loadMediaFromProject(
+              configModule.projectId.value,
+              mediaRef.storedPath,
+            )
 
-          // 创建数据源并设置媒体引用ID
-          const source = DataSourceFactory.createUserSelectedSource(file)
-          source.mediaReferenceId = mediaRef.id
+            // 创建数据源并设置媒体引用ID
+            const source = DataSourceFactory.createUserSelectedSource(mediaRef.id)
 
-          // 创建统一媒体项目
-          const mediaItem = mediaModule.createUnifiedMediaItemData(
-            mediaRef.id,
-            mediaRef.originalFileName,
-            source,
-            {
-              mediaType: mediaRef.mediaType,
-              mediaStatus: 'ready', // 从meta文件加载的项目默认为ready状态
-              duration: mediaRef.metadata?.duration,
-            },
-          )
+            // 使用保存的配置创建媒体项目
+            const mediaItem = mediaModule.createUnifiedMediaItemData(
+              savedMediaItem.id,
+              savedMediaItem.name,
+              source,
+              {
+                // 恢复保存的配置，排除 source 和 webav 属性
+                mediaType: savedMediaItem.mediaType,
+                duration: savedMediaItem.duration,
+              },
+            )
 
-          // 添加到媒体模块并启动处理
-          mediaModule.addMediaItem(mediaItem)
-          mediaModule.startMediaProcessing(mediaItem)
+            // 添加到媒体模块并启动处理
+            mediaModule.addMediaItem(mediaItem)
+            mediaModule.startMediaProcessing(mediaItem)
+          } else {
+            // 文件缺失，直接跳过，让数据源内部处理
+            console.warn(`媒体文件缺失，跳过重建: ${savedMediaItem.name} (ID: ${savedMediaItem.id})`)
+            continue
+          }
         } catch (error) {
-          console.error(`重建媒体项目失败: ${mediaRef.originalFileName}`, error)
+          console.error(`恢复媒体项目失败: ${savedMediaItem.name}`, error)
+          // 即使单个媒体项目恢复失败，也要继续处理其他项目
+          // 这样可以确保部分媒体项目能够正常恢复
         }
       }
     } catch (error) {

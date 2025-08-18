@@ -24,16 +24,31 @@ export interface UserSelectedFileSourceData extends BaseDataSourceData {
  * 用户选择文件数据源工厂函数
  */
 export const UserSelectedFileSourceFactory = {
-  createUserSelectedSource(file: File): UserSelectedFileSourceData {
-    return reactive({
+  // 统一创建方法，支持文件或媒体引用ID
+  createUserSelectedSource(param: File | string): UserSelectedFileSourceData {
+    const baseData = {
       id: generateUUID4(),
       type: 'user-selected',
       status: 'pending',
       progress: 0,
       file: null,
       url: null,
-      selectedFile: file,
-    }) as UserSelectedFileSourceData
+    }
+
+    if (param instanceof File) {
+      // 使用文件创建
+      return reactive({
+        ...baseData,
+        selectedFile: param,
+      }) as UserSelectedFileSourceData
+    } else {
+      // 使用媒体引用ID创建
+      return reactive({
+        ...baseData,
+        mediaReferenceId: param,
+        selectedFile: null as any, // 临时设置为null，将在executeAcquisition中加载
+      }) as UserSelectedFileSourceData
+    }
   },
 }
 

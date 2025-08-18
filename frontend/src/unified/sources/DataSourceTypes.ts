@@ -25,8 +25,9 @@ export type UnifiedDataSourceData = UserSelectedFileSourceData | RemoteFileSourc
  * 统一数据源工厂函数
  */
 export const DataSourceFactory = {
-  createUserSelectedSource(file: File): UserSelectedFileSourceData {
-    return UserSelectedFileSourceFactory.createUserSelectedSource(file)
+  // 统一创建方法，支持文件或媒体引用ID
+  createUserSelectedSource(param: File | string): UserSelectedFileSourceData {
+    return UserSelectedFileSourceFactory.createUserSelectedSource(param)
   },
 
   createRemoteSource(remoteUrl: string, config: RemoteFileConfig = {}): RemoteFileSourceData {
