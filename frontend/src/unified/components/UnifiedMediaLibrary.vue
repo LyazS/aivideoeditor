@@ -255,6 +255,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { generateUUID4 } from '@/utils/idGenerator'
 import { useUnifiedStore } from '@/unified/unifiedStore'
 import { useDialogs, useDragUtils } from '@/unified/composables'
 import { framesToTimecode } from '@/stores/utils/timeUtils'
@@ -521,7 +522,7 @@ const handleRemoteDownloadSubmit = async (config: any, expectedDuration: number,
 
     // 创建统一媒体项目
     const mediaItem = unifiedStore.createUnifiedMediaItemData(
-      Date.now().toString() + Math.random().toString(36).substring(2, 11),
+      generateUUID4(),
       mediaItemName,
       remoteSource,
       {
@@ -675,7 +676,7 @@ const addMediaItem = async (file: File): Promise<void> => {
 
     // 创建统一媒体项目
     const mediaItem = unifiedStore.createUnifiedMediaItemData(
-      Date.now().toString() + Math.random().toString(36).substring(2, 11),
+      generateUUID4(),
       file.name,
       userSelectedSource,
       {

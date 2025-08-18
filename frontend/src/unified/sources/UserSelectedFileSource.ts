@@ -203,3 +203,28 @@ export const UserSelectedFileQueries = {
     }
   },
 }
+
+// ==================== 数据源提取函数 ====================
+
+/**
+ * 提取用户选择文件数据源的持久化数据
+ */
+export function extractUserSelectedFileSourceData(source: UserSelectedFileSourceData) {
+  return {
+    // 基础字段
+    id: source.id,
+    type: source.type,
+    mediaReferenceId: source.mediaReferenceId,
+    
+    // 不需要保存运行时状态
+    // status: source.status, // 重新加载时会重置
+    // progress: source.progress, // 重新加载时会重置
+    // errorMessage: source.errorMessage, // 重新加载时会重置
+    // taskId: source.taskId, // 重新加载时会重新生成
+    // file: source.file, // 重新加载时会重新加载
+    // url: source.url, // 重新加载时会重新生成
+    
+    // 特定字段 - selectedFile 是 File 对象，不能直接序列化
+    // 但我们可以保存文件的基本信息，或者依赖 mediaReferenceId
+  }
+}

@@ -11,6 +11,8 @@ import { UserSelectedFileTypeGuards } from '@/unified/sources/UserSelectedFileSo
 import { RemoteFileTypeGuards } from '@/unified/sources/RemoteFileSource'
 import { DataSourceQueries as BaseDataSourceQueries } from '@/unified/sources/BaseDataSource'
 import type { RemoteFileConfig } from '@/unified/sources/RemoteFileSource'
+import { extractUserSelectedFileSourceData } from '@/unified/sources/UserSelectedFileSource'
+import { extractRemoteFileSourceData } from '@/unified/sources/RemoteFileSource'
 
 // ==================== 联合类型定义 ====================
 
@@ -33,6 +35,22 @@ export const DataSourceFactory = {
   createRemoteSource(remoteUrl: string, config: RemoteFileConfig = {}): RemoteFileSourceData {
     return RemoteFileSourceFactory.createRemoteSource(remoteUrl, config)
   },
+}
+
+// ==================== 数据源提取函数 ====================
+
+/**
+ * 根据数据源类型提取持久化数据
+ */
+export function extractSourceData(source: UnifiedDataSourceData) {
+  if (DataSourceQueries.isUserSelectedSource(source)) {
+    return extractUserSelectedFileSourceData(source)
+  } else if (DataSourceQueries.isRemoteSource(source)) {
+    return extractRemoteFileSourceData(source)
+  } else {
+    console.warn('未知的数据源类型:', source)
+    return null
+  }
 }
 
 // ==================== 统一查询函数 ====================

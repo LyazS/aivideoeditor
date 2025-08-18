@@ -8,7 +8,7 @@ import type { UnifiedTrackData, UnifiedTrackType } from '@/unified/track/TrackTy
 import type { UnifiedMediaItemData } from '@/unified/mediaitem/types'
 import type { MediaType } from '@/unified/mediaitem/types'
 import { globalProjectMediaManager } from '@/unified/utils/ProjectMediaManager'
-import { DataSourceFactory } from '@/unified/sources/DataSourceTypes'
+import { DataSourceFactory, DataSourceQueries, extractSourceData } from '@/unified/sources/DataSourceTypes'
 
 /**
  * 统一项目管理模块
@@ -180,10 +180,35 @@ export function createUnifiedProjectModule(
           }),
           // mediaItems 包含 webav 运行时对象，需要清理
           mediaItems: (mediaModule?.mediaItems.value || []).map((item) => {
-            // 创建媒体项目的可持久化副本，去掉运行时的 webav 对象
-            const { webav, ...persistableItem } = item
-            return persistableItem
-          }),
+            // 提取数据源的持久化数据
+            const extractedSource = extractSourceData(item.source)
+            
+            // 如果提取失败，跳过该媒体项目
+            if (!extractedSource) {
+              console.warn(`无法提取媒体项目 ${item.name} 的数据源，跳过保存`)
+              return null
+            }
+            
+            // 创建媒体项目的可持久化副本
+            return {
+              // 核心属性
+              id: item.id,
+              name: item.name,
+              createdAt: item.createdAt,
+              
+              // 状态信息 - 只保存媒体类型，不保存运行时状态
+              // mediaStatus: item.mediaStatus, // 重新加载时会重置
+              mediaType: item.mediaType,
+              
+              // 使用提取后的数据源
+              source: extractedSource,
+              
+              // 元数据
+              duration: item.duration,
+              
+              // 不保存 webav 对象
+            }
+          }).filter(Boolean) as UnifiedMediaItemData[], // 过滤掉提取失败的项目并断言类型
         },
       }
 
@@ -341,6 +366,7 @@ export function createUnifiedProjectModule(
               source,
               {
                 // 恢复保存的配置，排除 source 和 webav 属性
+                createdAt: savedMediaItem.createdAt,
                 mediaType: savedMediaItem.mediaType,
                 duration: savedMediaItem.duration,
               },

@@ -225,3 +225,33 @@ export const RemoteFileQueries = {
     return false
   },
 }
+
+// ==================== 数据源提取函数 ====================
+
+/**
+ * 提取远程文件数据源的持久化数据
+ */
+export function extractRemoteFileSourceData(source: RemoteFileSourceData) {
+  return {
+    // 基础字段
+    id: source.id,
+    type: source.type,
+    mediaReferenceId: source.mediaReferenceId,
+    
+    // 特定字段 - 保存配置和URL，但不保存运行时状态
+    remoteUrl: source.remoteUrl,
+    config: source.config,
+    
+    // 不需要保存运行时状态
+    // downloadedBytes: source.downloadedBytes, // 重新加载时会重新下载
+    // totalBytes: source.totalBytes, // 重新加载时会重新获取
+    // downloadSpeed: source.downloadSpeed, // 运行时状态
+    // startTime: source.startTime, // 运行时状态
+    // status: source.status, // 重新加载时会重置
+    // progress: source.progress, // 重新加载时会重置
+    // errorMessage: source.errorMessage, // 重新加载时会重置
+    // taskId: source.taskId, // 重新加载时会重新生成
+    // file: source.file, // 重新加载时会重新下载
+    // url: source.url, // 重新加载时会重新生成
+  }
+}
