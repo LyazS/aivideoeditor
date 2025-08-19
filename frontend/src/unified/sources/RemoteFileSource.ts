@@ -4,16 +4,16 @@
  * 行为函数已移动到 RemoteFileManager 中
  */
 
-import type { BaseDataSourceData } from '@/unified/sources/BaseDataSource'
+import type { BaseDataSourceData, DataSourceRuntimeState } from '@/unified/sources/BaseDataSource'
 import { reactive } from 'vue'
-import { generateUUID4 } from '@/utils/idGenerator'
+import { BaseDataSourceFactory, RuntimeStateFactory } from '@/unified/sources/BaseDataSource'
 
 // ==================== 远程文件数据源类型定义 ====================
 
 /**
  * 远程文件数据源
  */
-export interface RemoteFileSourceData extends BaseDataSourceData {
+export interface RemoteFileSourceData extends BaseDataSourceData, DataSourceRuntimeState {
   type: 'remote'
   remoteUrl: string
   // 内联的配置字段（原RemoteFileConfig）
@@ -46,12 +46,8 @@ export interface DownloadStats {
 export const RemoteFileSourceFactory = {
   createRemoteSource(remoteUrl: string, config: Partial<Pick<RemoteFileSourceData, 'headers' | 'timeout' | 'retryCount' | 'retryDelay'>> = {}): RemoteFileSourceData {
     return reactive({
-      id: generateUUID4(),
-      type: 'remote',
-      status: 'pending',
-      progress: 0,
-      file: null,
-      url: null,
+      ...BaseDataSourceFactory.createBase('remote'),
+      ...RuntimeStateFactory.createRuntimeState(),
       remoteUrl,
       // 内联配置字段 - 使用默认值或传入的配置
       headers: config.headers || DEFAULT_REMOTE_CONFIG.headers,

@@ -3,17 +3,17 @@
  * 基于"核心数据与行为分离"的重构方案
  * 行为函数已移动到 UserSelectedFileManager 中
  */
-import type { BaseDataSourceData } from '@/unified/sources/BaseDataSource'
+import type { BaseDataSourceData, DataSourceRuntimeState } from '@/unified/sources/BaseDataSource'
 import { reactive } from 'vue'
-import { generateUUID4 } from '@/utils/idGenerator'
 import { getMediaTypeFromMimeType } from '@/unified/utils/mediaTypeDetector'
+import { BaseDataSourceFactory, RuntimeStateFactory } from '@/unified/sources/BaseDataSource'
 
 // ==================== 用户选择文件数据源类型定义 ====================
 
 /**
  * 用户选择文件数据源
  */
-export interface UserSelectedFileSourceData extends BaseDataSourceData {
+export interface UserSelectedFileSourceData extends BaseDataSourceData, DataSourceRuntimeState {
   type: 'user-selected'
   selectedFile: File
 }
@@ -26,25 +26,18 @@ export interface UserSelectedFileSourceData extends BaseDataSourceData {
 export const UserSelectedFileSourceFactory = {
   // 统一创建方法，支持文件或媒体引用ID
   createUserSelectedSource(param: File | string): UserSelectedFileSourceData {
-    const baseData = {
-      id: generateUUID4(),
-      type: 'user-selected',
-      status: 'pending',
-      progress: 0,
-      file: null,
-      url: null,
-    }
-
     if (param instanceof File) {
       // 使用文件创建
       return reactive({
-        ...baseData,
+        ...BaseDataSourceFactory.createBase('user-selected'),
+        ...RuntimeStateFactory.createRuntimeState(),
         selectedFile: param,
       }) as UserSelectedFileSourceData
     } else {
       // 使用媒体引用ID创建
       return reactive({
-        ...baseData,
+        ...BaseDataSourceFactory.createBase('user-selected'),
+        ...RuntimeStateFactory.createRuntimeState(),
         mediaReferenceId: param,
         selectedFile: null as any, // 临时设置为null，将在executeAcquisition中加载
       }) as UserSelectedFileSourceData

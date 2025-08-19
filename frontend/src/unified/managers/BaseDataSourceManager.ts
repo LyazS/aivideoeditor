@@ -4,10 +4,10 @@
  */
 
 import {
-  DataSourceDataActions,
-  DataSourceBusinessActions,
-  DataSourceStateActions,
-  DataSourceQueries,
+  RuntimeStateActions,
+  RuntimeStateBusinessActions,
+  RuntimeStateManager,
+  RuntimeStateQueries,
 } from '@/unified/sources/BaseDataSource'
 import type { UnifiedDataSourceData } from '@/unified/sources/DataSourceTypes'
 
@@ -75,7 +75,7 @@ export abstract class DataSourceManager<T extends UnifiedDataSourceData> {
     this.taskQueue.push(taskId)
 
     // 设置数据源的任务ID
-    DataSourceDataActions.setTaskId(source, taskId)
+    RuntimeStateActions.setTaskId(source, taskId)
 
     this.processQueue()
   }
@@ -95,8 +95,8 @@ export abstract class DataSourceManager<T extends UnifiedDataSourceData> {
     task.completedAt = Date.now()
 
     // 更新数据源状态
-    DataSourceBusinessActions.cancel(task.source)
-    DataSourceDataActions.clearTaskId(task.source)
+    RuntimeStateBusinessActions.cancel(task.source)
+    RuntimeStateActions.clearTaskId(task.source)
 
     // 从队列中移除
     const queueIndex = this.taskQueue.indexOf(taskId)
@@ -135,7 +135,7 @@ export abstract class DataSourceManager<T extends UnifiedDataSourceData> {
     this.taskQueue.push(taskId)
 
     // 重置数据源状态
-    DataSourceStateActions.setPending(task.source)
+    RuntimeStateManager.setPending(task.source)
 
     this.processQueue()
 
@@ -167,7 +167,7 @@ export abstract class DataSourceManager<T extends UnifiedDataSourceData> {
     for (const [taskId, task] of completedTasks) {
       // 清理数据源资源
       if (task.status === 'cancelled') {
-        DataSourceBusinessActions.cleanup(task.source)
+        RuntimeStateBusinessActions.cleanup(task.source)
       }
 
       this.tasks.delete(taskId)
@@ -251,7 +251,7 @@ export abstract class DataSourceManager<T extends UnifiedDataSourceData> {
       }
 
       // 清理任务ID
-      DataSourceDataActions.clearTaskId(task.source)
+      RuntimeStateActions.clearTaskId(task.source)
     } catch (error) {
       // 任务执行失败
       const errorMessage = error instanceof Error ? error.message : '未知错误'
@@ -270,7 +270,7 @@ export abstract class DataSourceManager<T extends UnifiedDataSourceData> {
         }, this.getRetryDelay(task.retryCount))
       } else {
         // 重试次数用尽，清理任务ID
-        DataSourceDataActions.clearTaskId(task.source)
+        RuntimeStateActions.clearTaskId(task.source)
       }
     } finally {
       this.currentRunningTasks--

@@ -9,7 +9,7 @@ import { UserSelectedFileSourceFactory } from '@/unified/sources/UserSelectedFil
 import { RemoteFileSourceFactory } from '@/unified/sources/RemoteFileSource'
 import { UserSelectedFileTypeGuards } from '@/unified/sources/UserSelectedFileSource'
 import { RemoteFileTypeGuards } from '@/unified/sources/RemoteFileSource'
-import { DataSourceQueries as BaseDataSourceQueries } from '@/unified/sources/BaseDataSource'
+import { RuntimeStateQueries as BaseDataSourceQueries } from '@/unified/sources/BaseDataSource'
 import { extractUserSelectedFileSourceData } from '@/unified/sources/UserSelectedFileSource'
 import { extractRemoteFileSourceData } from '@/unified/sources/RemoteFileSource'
 

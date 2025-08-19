@@ -13,7 +13,7 @@ export {
   DATA_SOURCE_TO_MEDIA_STATUS_MAP,
 
   // 基础查询函数
-  DataSourceQueries as BaseDataSourceQueries,
+  RuntimeStateQueries,
 } from './sources/BaseDataSource'
 
 // ==================== 统一数据源类型系统 ====================

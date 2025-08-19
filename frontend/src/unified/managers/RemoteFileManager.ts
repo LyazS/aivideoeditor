@@ -11,9 +11,9 @@ import type {
 } from '@/unified/sources/RemoteFileSource'
 import { RemoteFileQueries, DEFAULT_REMOTE_CONFIG } from '@/unified/sources/RemoteFileSource'
 import {
-  DataSourceBusinessActions,
-  DataSourceDataActions,
-  DataSourceQueries,
+  RuntimeStateBusinessActions,
+  RuntimeStateActions,
+  RuntimeStateQueries,
 } from '@/unified/sources/BaseDataSource'
 import type { DetectedMediaType } from '@/unified/utils/mediaTypeDetector'
 
@@ -110,11 +110,11 @@ export class RemoteFileManager extends DataSourceManager<RemoteFileSourceData> {
   private async executeAcquisition(source: RemoteFileSourceData): Promise<void> {
     try {
       // 设置为获取中状态
-      DataSourceBusinessActions.startAcquisition(source)
+      RuntimeStateBusinessActions.startAcquisition(source)
 
       // 验证URL
       if (!this.isValidUrl(source.remoteUrl)) {
-        DataSourceBusinessActions.setError(source, '无效的URL地址')
+        RuntimeStateBusinessActions.setError(source, '无效的URL地址')
         return
       }
 
@@ -141,7 +141,7 @@ export class RemoteFileManager extends DataSourceManager<RemoteFileSourceData> {
       await this.downloadFile(source, config)
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : '下载失败'
-      DataSourceBusinessActions.setError(source, errorMessage)
+      RuntimeStateBusinessActions.setError(source, errorMessage)
     }
   }
 
@@ -207,7 +207,7 @@ export class RemoteFileManager extends DataSourceManager<RemoteFileSourceData> {
       const url = URL.createObjectURL(file)
 
       // 使用新的业务协调层方法，包含媒体类型检测
-      await DataSourceBusinessActions.completeAcquisitionWithTypeDetection(
+      await RuntimeStateBusinessActions.completeAcquisitionWithTypeDetection(
         source,
         file,
         url,
@@ -241,7 +241,7 @@ export class RemoteFileManager extends DataSourceManager<RemoteFileSourceData> {
 
     // 计算进度百分比
     const progress = totalBytes > 0 ? (downloadedBytes / totalBytes) * 100 : 0
-    DataSourceDataActions.setProgress(source, progress)
+    RuntimeStateActions.setProgress(source, progress)
 
     // 计算下载速度
     if (source.startTime) {
@@ -402,12 +402,12 @@ export class RemoteFileManager extends DataSourceManager<RemoteFileSourceData> {
    * 重试获取
    */
   async retryAcquisition(source: RemoteFileSourceData): Promise<void> {
-    if (!DataSourceQueries.canRetry(source)) {
+    if (!RuntimeStateQueries.canRetry(source)) {
       return
     }
 
     // 清理之前的状态
-    DataSourceBusinessActions.cleanup(source)
+    RuntimeStateBusinessActions.cleanup(source)
 
     // 重置下载统计
     source.downloadedBytes = 0
@@ -423,12 +423,12 @@ export class RemoteFileManager extends DataSourceManager<RemoteFileSourceData> {
    * 取消获取
    */
   cancelAcquisition(source: RemoteFileSourceData): void {
-    if (!DataSourceQueries.canCancel(source)) {
+    if (!RuntimeStateQueries.canCancel(source)) {
       return
     }
 
     // 清理资源
-    DataSourceBusinessActions.cleanup(source)
+    RuntimeStateBusinessActions.cleanup(source)
 
     // 重置下载统计
     source.downloadedBytes = 0
@@ -437,7 +437,7 @@ export class RemoteFileManager extends DataSourceManager<RemoteFileSourceData> {
     source.startTime = undefined
 
     // 设置为取消状态
-    DataSourceBusinessActions.cancel(source)
+    RuntimeStateBusinessActions.cancel(source)
   }
 
   /**

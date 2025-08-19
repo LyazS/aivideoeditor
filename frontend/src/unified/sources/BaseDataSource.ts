@@ -34,20 +34,24 @@ export const DATA_SOURCE_TO_MEDIA_STATUS_MAP = {
 // ==================== 核心数据结构 ====================
 
 /**
- * 基础数据源数据接口 - 纯响应式状态对象
+ * 基础数据源数据接口 - 只包含持久化数据
  */
 export interface BaseDataSourceData {
   readonly id: string
   readonly type: string
+  mediaReferenceId?: string
+}
+
+/**
+ * 数据源运行时状态接口 - 包含所有运行时状态字段
+ */
+export interface DataSourceRuntimeState {
   status: DataSourceStatus
   progress: number
   errorMessage?: string
   taskId?: string
   file: File | null
   url: string | null
-
-  // 🆕 新增：媒体管理器引用ID，指向ProjectMediaManager中的媒体引用
-  mediaReferenceId?: string
 }
 
 // 注意：UnifiedDataSourceData 类型在 DataSourceTypes.ts 中定义
@@ -56,13 +60,23 @@ export interface BaseDataSourceData {
 // ==================== 基础工厂函数 ====================
 
 /**
- * 基础数据源工厂函数 - 创建基础响应式数据源对象
+ * 基础数据源工厂函数 - 创建基础数据对象（不包含运行时状态）
  */
 export const BaseDataSourceFactory = {
   createBase(type: string): BaseDataSourceData {
-    return reactive({
+    return {
       id: generateUUID4(),
       type,
+    }
+  },
+}
+
+/**
+ * 运行时状态工厂函数 - 创建运行时状态对象
+ */
+export const RuntimeStateFactory = {
+  createRuntimeState(): DataSourceRuntimeState {
+    return reactive({
       status: 'pending' as DataSourceStatus,
       progress: 0,
       file: null,
@@ -82,7 +96,14 @@ export const BaseDataSourceTypeGuards = {
       typeof source === 'object' &&
       source !== null &&
       typeof (source as Record<string, unknown>).id === 'string' &&
-      typeof (source as Record<string, unknown>).type === 'string' &&
+      typeof (source as Record<string, unknown>).type === 'string'
+    )
+  },
+
+  isRuntimeState(source: unknown): source is DataSourceRuntimeState {
+    return (
+      typeof source === 'object' &&
+      source !== null &&
       typeof (source as Record<string, unknown>).status === 'string' &&
       typeof (source as Record<string, unknown>).progress === 'number'
     )
@@ -94,225 +115,225 @@ export const BaseDataSourceTypeGuards = {
 // ==================== 第一层：纯数据操作层（无副作用） ====================
 
 /**
- * 数据源数据操作函数 - 纯数据设置，无状态变化，无副作用
+ * 运行时状态操作函数 - 纯数据设置，无状态变化，无副作用
  */
-export const DataSourceDataActions = {
+export const RuntimeStateActions = {
   // 文件和URL设置
-  setFile(source: BaseDataSourceData, file: File): void {
-    source.file = file
+  setFile(state: DataSourceRuntimeState, file: File): void {
+    state.file = file
   },
 
-  setUrl(source: BaseDataSourceData, url: string): void {
-    source.url = url
+  setUrl(state: DataSourceRuntimeState, url: string): void {
+    state.url = url
   },
 
-  clearFile(source: BaseDataSourceData): void {
-    source.file = null
+  clearFile(state: DataSourceRuntimeState): void {
+    state.file = null
   },
 
-  clearUrl(source: BaseDataSourceData): void {
-    if (source.url) {
-      URL.revokeObjectURL(source.url)
-      source.url = null
+  clearUrl(state: DataSourceRuntimeState): void {
+    if (state.url) {
+      URL.revokeObjectURL(state.url)
+      state.url = null
     }
   },
 
   // 进度管理
-  setProgress(source: BaseDataSourceData, progress: number): void {
-    source.progress = Math.max(0, Math.min(100, progress))
+  setProgress(state: DataSourceRuntimeState, progress: number): void {
+    state.progress = Math.max(0, Math.min(100, progress))
   },
 
-  resetProgress(source: BaseDataSourceData): void {
-    source.progress = 0
+  resetProgress(state: DataSourceRuntimeState): void {
+    state.progress = 0
   },
 
   // 错误信息管理
-  setErrorMessage(source: BaseDataSourceData, errorMessage: string): void {
-    source.errorMessage = errorMessage
+  setErrorMessage(state: DataSourceRuntimeState, errorMessage: string): void {
+    state.errorMessage = errorMessage
   },
 
-  clearError(source: BaseDataSourceData): void {
-    source.errorMessage = undefined
+  clearError(state: DataSourceRuntimeState): void {
+    state.errorMessage = undefined
   },
 
   // 任务管理
-  setTaskId(source: BaseDataSourceData, taskId: string): void {
-    source.taskId = taskId
+  setTaskId(state: DataSourceRuntimeState, taskId: string): void {
+    state.taskId = taskId
   },
 
-  clearTaskId(source: BaseDataSourceData): void {
-    source.taskId = undefined
+  clearTaskId(state: DataSourceRuntimeState): void {
+    state.taskId = undefined
   },
 }
 
 // ==================== 第二层：状态管理层（管理状态转换） ====================
 
 /**
- * 数据源状态管理函数 - 只负责状态转换，不处理业务逻辑
+ * 运行时状态管理函数 - 只负责状态转换，不处理业务逻辑
  */
-export const DataSourceStateActions = {
+export const RuntimeStateManager = {
   // 状态转换
-  transitionTo(source: BaseDataSourceData, status: DataSourceStatus): boolean {
-    const currentStatus = source.status
+  transitionTo(state: DataSourceRuntimeState, status: DataSourceStatus): boolean {
+    const currentStatus = state.status
 
     // 这里可以添加状态转换验证逻辑
     if (currentStatus === status) {
       return true // 已经是目标状态
     }
 
-    source.status = status
+    state.status = status
     console.log(`🔄 [DataSource] 状态转换: ${currentStatus} → ${status}`)
     return true
   },
 
   // 便捷的状态设置方法
-  setPending(source: BaseDataSourceData): boolean {
-    return this.transitionTo(source, 'pending')
+  setPending(state: DataSourceRuntimeState): boolean {
+    return this.transitionTo(state, 'pending')
   },
 
-  setAcquiring(source: BaseDataSourceData): boolean {
-    return this.transitionTo(source, 'acquiring')
+  setAcquiring(state: DataSourceRuntimeState): boolean {
+    return this.transitionTo(state, 'acquiring')
   },
 
-  setAcquired(source: BaseDataSourceData): boolean {
-    return this.transitionTo(source, 'acquired')
+  setAcquired(state: DataSourceRuntimeState): boolean {
+    return this.transitionTo(state, 'acquired')
   },
 
-  setError(source: BaseDataSourceData): boolean {
-    return this.transitionTo(source, 'error')
+  setError(state: DataSourceRuntimeState): boolean {
+    return this.transitionTo(state, 'error')
   },
 
-  setCancelled(source: BaseDataSourceData): boolean {
-    return this.transitionTo(source, 'cancelled')
+  setCancelled(state: DataSourceRuntimeState): boolean {
+    return this.transitionTo(state, 'cancelled')
   },
 
-  setMissing(source: BaseDataSourceData): boolean {
-    return this.transitionTo(source, 'missing')
+  setMissing(state: DataSourceRuntimeState): boolean {
+    return this.transitionTo(state, 'missing')
   },
 }
 
 // ==================== 第三层：业务协调层（协调完整的业务操作） ====================
 
 /**
- * 数据源业务协调函数 - 协调数据操作和状态转换，处理完整的业务流程
+ * 运行时状态业务协调函数 - 协调数据操作和状态转换，处理完整的业务流程
  */
-export const DataSourceBusinessActions = {
+export const RuntimeStateBusinessActions = {
   // 开始获取流程
-  startAcquisition(source: BaseDataSourceData): void {
-    DataSourceDataActions.clearError(source)
-    DataSourceStateActions.setAcquiring(source)
+  startAcquisition(state: DataSourceRuntimeState): void {
+    RuntimeStateActions.clearError(state)
+    RuntimeStateManager.setAcquiring(state)
   },
 
   // 完成获取流程（不包含媒体类型检测）
-  completeAcquisition(source: BaseDataSourceData, file: File, url: string): void {
+  completeAcquisition(state: DataSourceRuntimeState, file: File, url: string): void {
     // 设置数据
-    DataSourceDataActions.setFile(source, file)
-    DataSourceDataActions.setUrl(source, url)
-    DataSourceDataActions.setProgress(source, 100)
-    DataSourceDataActions.clearError(source)
+    RuntimeStateActions.setFile(state, file)
+    RuntimeStateActions.setUrl(state, url)
+    RuntimeStateActions.setProgress(state, 100)
+    RuntimeStateActions.clearError(state)
 
     // 设置状态（这会触发响应式更新）
-    DataSourceStateActions.setAcquired(source)
+    RuntimeStateManager.setAcquired(state)
   },
 
   // 完成获取流程（包含媒体类型检测的异步版本）
   async completeAcquisitionWithTypeDetection(
-    source: BaseDataSourceData,
+    state: DataSourceRuntimeState,
     file: File,
     url: string,
-    typeDetector?: (source: BaseDataSourceData) => Promise<void>,
+    typeDetector?: (state: DataSourceRuntimeState) => Promise<void>,
   ): Promise<void> {
     // 设置基础数据（但不改变状态）
-    DataSourceDataActions.setFile(source, file)
-    DataSourceDataActions.setUrl(source, url)
-    DataSourceDataActions.setProgress(source, 100)
-    DataSourceDataActions.clearError(source)
+    RuntimeStateActions.setFile(state, file)
+    RuntimeStateActions.setUrl(state, url)
+    RuntimeStateActions.setProgress(state, 100)
+    RuntimeStateActions.clearError(state)
 
     // 如果提供了类型检测器，先执行类型检测
     if (typeDetector) {
-      await typeDetector(source)
+      await typeDetector(state)
     }
 
     // 最后设置状态（触发后续处理）
-    DataSourceStateActions.setAcquired(source)
+    RuntimeStateManager.setAcquired(state)
   },
 
   // 设置错误状态
-  setError(source: BaseDataSourceData, errorMessage: string): void {
-    DataSourceDataActions.setErrorMessage(source, errorMessage)
-    DataSourceDataActions.resetProgress(source)
-    DataSourceStateActions.setError(source)
+  setError(state: DataSourceRuntimeState, errorMessage: string): void {
+    RuntimeStateActions.setErrorMessage(state, errorMessage)
+    RuntimeStateActions.resetProgress(state)
+    RuntimeStateManager.setError(state)
   },
 
   // 取消获取
-  cancel(source: BaseDataSourceData): void {
-    DataSourceDataActions.resetProgress(source)
-    DataSourceDataActions.clearError(source)
-    DataSourceStateActions.setCancelled(source)
+  cancel(state: DataSourceRuntimeState): void {
+    RuntimeStateActions.resetProgress(state)
+    RuntimeStateActions.clearError(state)
+    RuntimeStateManager.setCancelled(state)
   },
 
   // 设置缺失状态
-  setMissing(source: BaseDataSourceData): void {
-    DataSourceDataActions.resetProgress(source)
-    DataSourceDataActions.setErrorMessage(source, '文件缺失')
-    DataSourceStateActions.setMissing(source)
+  setMissing(state: DataSourceRuntimeState): void {
+    RuntimeStateActions.resetProgress(state)
+    RuntimeStateActions.setErrorMessage(state, '文件缺失')
+    RuntimeStateManager.setMissing(state)
   },
 
   // 资源清理
-  cleanup(source: BaseDataSourceData): void {
-    DataSourceDataActions.clearUrl(source)
-    DataSourceDataActions.clearFile(source)
-    DataSourceDataActions.clearTaskId(source)
+  cleanup(state: DataSourceRuntimeState): void {
+    RuntimeStateActions.clearUrl(state)
+    RuntimeStateActions.clearFile(state)
+    RuntimeStateActions.clearTaskId(state)
   },
 }
 
 // ==================== 通用查询函数 ====================
 
 /**
- * 基础数据源查询函数 - 纯函数，用于状态查询和计算
+ * 运行时状态查询函数 - 纯函数，用于状态查询和计算
  */
-export const DataSourceQueries = {
+export const RuntimeStateQueries = {
   // 状态查询
-  isPending(source: BaseDataSourceData): boolean {
-    return source.status === 'pending'
+  isPending(state: DataSourceRuntimeState): boolean {
+    return state.status === 'pending'
   },
 
-  isAcquiring(source: BaseDataSourceData): boolean {
-    return source.status === 'acquiring'
+  isAcquiring(state: DataSourceRuntimeState): boolean {
+    return state.status === 'acquiring'
   },
 
-  isAcquired(source: BaseDataSourceData): boolean {
-    return source.status === 'acquired'
+  isAcquired(state: DataSourceRuntimeState): boolean {
+    return state.status === 'acquired'
   },
 
-  isError(source: BaseDataSourceData): boolean {
-    return source.status === 'error'
+  isError(state: DataSourceRuntimeState): boolean {
+    return state.status === 'error'
   },
 
-  isCancelled(source: BaseDataSourceData): boolean {
-    return source.status === 'cancelled'
+  isCancelled(state: DataSourceRuntimeState): boolean {
+    return state.status === 'cancelled'
   },
 
-  isMissing(source: BaseDataSourceData): boolean {
-    return source.status === 'missing'
+  isMissing(state: DataSourceRuntimeState): boolean {
+    return state.status === 'missing'
   },
 
   // 基础类型查询
-  isBaseDataSource(source: unknown): source is BaseDataSourceData {
-    return BaseDataSourceTypeGuards.isBaseDataSource(source)
+  isRuntimeState(source: unknown): source is DataSourceRuntimeState {
+    return BaseDataSourceTypeGuards.isRuntimeState(source)
   },
 
   // 业务查询
-  canRetry(source: BaseDataSourceData): boolean {
-    return source.status === 'error' || source.status === 'cancelled'
+  canRetry(state: DataSourceRuntimeState): boolean {
+    return state.status === 'error' || state.status === 'cancelled'
   },
 
-  canCancel(source: BaseDataSourceData): boolean {
-    return source.status === 'acquiring'
+  canCancel(state: DataSourceRuntimeState): boolean {
+    return state.status === 'acquiring'
   },
 
   // 获取媒体状态映射
-  getMediaStatus(source: BaseDataSourceData): string {
-    return DATA_SOURCE_TO_MEDIA_STATUS_MAP[source.status]
+  getMediaStatus(state: DataSourceRuntimeState): string {
+    return DATA_SOURCE_TO_MEDIA_STATUS_MAP[state.status]
   },
 }

@@ -15,9 +15,9 @@ import {
   getMediaTypeFromMimeType,
 } from '@/unified/utils/mediaTypeDetector'
 import {
-  DataSourceBusinessActions,
-  DataSourceDataActions,
-  DataSourceQueries,
+  RuntimeStateBusinessActions,
+  RuntimeStateActions,
+  RuntimeStateQueries,
 } from '@/unified/sources/BaseDataSource'
 import { nextTick } from 'vue'
 import { globalProjectMediaManager } from '@/unified/utils/ProjectMediaManager'
@@ -82,7 +82,7 @@ export class UserSelectedFileManager extends DataSourceManager<UserSelectedFileS
   private async executeAcquisition(source: UserSelectedFileSourceData): Promise<void> {
     try {
       // 设置为获取中状态
-      DataSourceBusinessActions.startAcquisition(source)
+      RuntimeStateBusinessActions.startAcquisition(source)
       await nextTick()
 
       let file: File
@@ -120,7 +120,7 @@ export class UserSelectedFileManager extends DataSourceManager<UserSelectedFileS
         console.error(
           `❌ [UserSelectedFile] 文件验证失败: ${file.name} - ${validationResult.errorMessage}`,
         )
-        DataSourceBusinessActions.setError(source, validationResult.errorMessage || '文件验证失败')
+        RuntimeStateBusinessActions.setError(source, validationResult.errorMessage || '文件验证失败')
         return
       }
 
@@ -128,7 +128,7 @@ export class UserSelectedFileManager extends DataSourceManager<UserSelectedFileS
       const url = URL.createObjectURL(file)
 
       // 使用新的业务协调层方法，包含媒体类型检测
-      await DataSourceBusinessActions.completeAcquisitionWithTypeDetection(
+      await RuntimeStateBusinessActions.completeAcquisitionWithTypeDetection(
         source,
         file,
         url,
@@ -139,7 +139,7 @@ export class UserSelectedFileManager extends DataSourceManager<UserSelectedFileS
       console.error(
         `❌ [UserSelectedFile] 文件获取失败: ${source.selectedFile?.name || source.mediaReferenceId} - ${errorMessage}`,
       )
-      DataSourceBusinessActions.setError(source, errorMessage)
+      RuntimeStateBusinessActions.setError(source, errorMessage)
     }
   }
 
@@ -334,12 +334,12 @@ export class UserSelectedFileManager extends DataSourceManager<UserSelectedFileS
    * 重试获取
    */
   async retryAcquisition(source: UserSelectedFileSourceData): Promise<void> {
-    if (!DataSourceQueries.canRetry(source)) {
+    if (!RuntimeStateQueries.canRetry(source)) {
       return
     }
 
     // 清理之前的状态
-    DataSourceBusinessActions.cleanup(source)
+    RuntimeStateBusinessActions.cleanup(source)
 
     // 重新执行获取
     await this.executeAcquisition(source)
@@ -349,15 +349,15 @@ export class UserSelectedFileManager extends DataSourceManager<UserSelectedFileS
    * 取消获取
    */
   cancelAcquisition(source: UserSelectedFileSourceData): void {
-    if (!DataSourceQueries.canCancel(source)) {
+    if (!RuntimeStateQueries.canCancel(source)) {
       return
     }
 
     // 清理资源
-    DataSourceBusinessActions.cleanup(source)
+    RuntimeStateBusinessActions.cleanup(source)
 
     // 设置为取消状态
-    DataSourceBusinessActions.cancel(source)
+    RuntimeStateBusinessActions.cancel(source)
   }
 
   /**
