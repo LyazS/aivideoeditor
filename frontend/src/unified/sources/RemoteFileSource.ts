@@ -11,22 +11,17 @@ import { generateUUID4 } from '@/utils/idGenerator'
 // ==================== 远程文件数据源类型定义 ====================
 
 /**
- * 远程文件配置接口
- */
-export interface RemoteFileConfig {
-  headers?: Record<string, string>
-  timeout?: number
-  retryCount?: number
-  retryDelay?: number
-}
-
-/**
  * 远程文件数据源
  */
 export interface RemoteFileSourceData extends BaseDataSourceData {
   type: 'remote'
   remoteUrl: string
-  config: RemoteFileConfig
+  // 内联的配置字段（原RemoteFileConfig）
+  headers?: Record<string, string>
+  timeout?: number
+  retryCount?: number
+  retryDelay?: number
+  // 下载状态字段
   downloadedBytes: number
   totalBytes: number
   downloadSpeed?: string
@@ -49,7 +44,7 @@ export interface DownloadStats {
  * 远程文件数据源工厂函数
  */
 export const RemoteFileSourceFactory = {
-  createRemoteSource(remoteUrl: string, config: RemoteFileConfig = {}): RemoteFileSourceData {
+  createRemoteSource(remoteUrl: string, config: Partial<Pick<RemoteFileSourceData, 'headers' | 'timeout' | 'retryCount' | 'retryDelay'>> = {}): RemoteFileSourceData {
     return reactive({
       id: generateUUID4(),
       type: 'remote',
@@ -58,7 +53,11 @@ export const RemoteFileSourceFactory = {
       file: null,
       url: null,
       remoteUrl,
-      config,
+      // 内联配置字段 - 使用默认值或传入的配置
+      headers: config.headers || DEFAULT_REMOTE_CONFIG.headers,
+      timeout: config.timeout || DEFAULT_REMOTE_CONFIG.timeout,
+      retryCount: config.retryCount || DEFAULT_REMOTE_CONFIG.retryCount,
+      retryDelay: config.retryDelay || DEFAULT_REMOTE_CONFIG.retryDelay,
       downloadedBytes: 0,
       totalBytes: 0,
     }) as RemoteFileSourceData
@@ -81,7 +80,7 @@ export const RemoteFileTypeGuards = {
 /**
  * 默认下载配置
  */
-export const DEFAULT_REMOTE_CONFIG: Required<RemoteFileConfig> = {
+export const DEFAULT_REMOTE_CONFIG: Required<Pick<RemoteFileSourceData, 'headers' | 'timeout' | 'retryCount' | 'retryDelay'>> = {
   headers: {},
   timeout: 30000, // 30秒超时
   retryCount: 3, // 重试3次
@@ -212,8 +211,13 @@ export const RemoteFileQueries = {
   /**
    * 获取下载配置
    */
-  getConfig(source: RemoteFileSourceData): RemoteFileConfig {
-    return source.config
+  getConfig(source: RemoteFileSourceData): Pick<RemoteFileSourceData, 'headers' | 'timeout' | 'retryCount' | 'retryDelay'> {
+    return {
+      headers: source.headers,
+      timeout: source.timeout,
+      retryCount: source.retryCount,
+      retryDelay: source.retryDelay,
+    }
   },
 
   /**
@@ -240,7 +244,10 @@ export function extractRemoteFileSourceData(source: RemoteFileSourceData) {
     
     // 特定字段 - 保存配置和URL，但不保存运行时状态
     remoteUrl: source.remoteUrl,
-    config: source.config,
+    headers: source.headers,
+    timeout: source.timeout,
+    retryCount: source.retryCount,
+    retryDelay: source.retryDelay,
     
     // 不需要保存运行时状态
     // downloadedBytes: source.downloadedBytes, // 重新加载时会重新下载

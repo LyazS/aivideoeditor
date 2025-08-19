@@ -7,7 +7,6 @@
 import { DataSourceManager, type AcquisitionTask } from '@/unified/managers/BaseDataSourceManager'
 import type {
   RemoteFileSourceData,
-  RemoteFileConfig,
   DownloadProgress,
 } from '@/unified/sources/RemoteFileSource'
 import { RemoteFileQueries, DEFAULT_REMOTE_CONFIG } from '@/unified/sources/RemoteFileSource'
@@ -130,7 +129,13 @@ export class RemoteFileManager extends DataSourceManager<RemoteFileSourceData> {
       }
 
       // 合并配置
-      const config = { ...DEFAULT_REMOTE_CONFIG, ...source.config }
+      const config = {
+        ...DEFAULT_REMOTE_CONFIG,
+        headers: source.headers || DEFAULT_REMOTE_CONFIG.headers,
+        timeout: source.timeout || DEFAULT_REMOTE_CONFIG.timeout,
+        retryCount: source.retryCount || DEFAULT_REMOTE_CONFIG.retryCount,
+        retryDelay: source.retryDelay || DEFAULT_REMOTE_CONFIG.retryDelay,
+      }
 
       // 开始下载
       await this.downloadFile(source, config)
@@ -145,7 +150,7 @@ export class RemoteFileManager extends DataSourceManager<RemoteFileSourceData> {
    */
   private async downloadFile(
     source: RemoteFileSourceData,
-    config: Required<RemoteFileConfig>,
+    config: Required<Pick<RemoteFileSourceData, 'headers' | 'timeout' | 'retryCount' | 'retryDelay'>>,
   ): Promise<void> {
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), config.timeout)
@@ -446,7 +451,7 @@ export class RemoteFileManager extends DataSourceManager<RemoteFileSourceData> {
    * 获取最大重试次数
    */
   protected getMaxRetries(source: RemoteFileSourceData): number {
-    return source.config.retryCount || this.config.defaultRetryCount
+    return source.retryCount || this.config.defaultRetryCount
   }
 
   // ==================== 重写父类方法 ====================

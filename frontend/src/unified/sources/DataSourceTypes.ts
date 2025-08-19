@@ -10,7 +10,6 @@ import { RemoteFileSourceFactory } from '@/unified/sources/RemoteFileSource'
 import { UserSelectedFileTypeGuards } from '@/unified/sources/UserSelectedFileSource'
 import { RemoteFileTypeGuards } from '@/unified/sources/RemoteFileSource'
 import { DataSourceQueries as BaseDataSourceQueries } from '@/unified/sources/BaseDataSource'
-import type { RemoteFileConfig } from '@/unified/sources/RemoteFileSource'
 import { extractUserSelectedFileSourceData } from '@/unified/sources/UserSelectedFileSource'
 import { extractRemoteFileSourceData } from '@/unified/sources/RemoteFileSource'
 
@@ -32,7 +31,7 @@ export const DataSourceFactory = {
     return UserSelectedFileSourceFactory.createUserSelectedSource(param)
   },
 
-  createRemoteSource(remoteUrl: string, config: RemoteFileConfig = {}): RemoteFileSourceData {
+  createRemoteSource(remoteUrl: string, config: Partial<Pick<RemoteFileSourceData, 'headers' | 'timeout' | 'retryCount' | 'retryDelay'>> = {}): RemoteFileSourceData {
     return RemoteFileSourceFactory.createRemoteSource(remoteUrl, config)
   },
 }

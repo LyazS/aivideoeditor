@@ -48,7 +48,6 @@ export {
 export {
   // 类型定义
   type RemoteFileSourceData,
-  type RemoteFileConfig,
   type DownloadStats,
   type DownloadProgress,
 
