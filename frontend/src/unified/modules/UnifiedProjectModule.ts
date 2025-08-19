@@ -356,25 +356,32 @@ export function createUnifiedProjectModule(
               mediaRef.storedPath,
             )
 
-            // 创建数据源并设置媒体引用ID
-            const source = DataSourceFactory.createUserSelectedSource(mediaRef.id)
+            // 使用保存的配置数据重建数据源
+            // 只有用户选择的文件数据源才能使用此方法重建
+            if (DataSourceQueries.isUserSelectedSource(savedMediaItem.source)) {
+              const source = DataSourceFactory.createUserSelectedSource(savedMediaItem.source)
 
-            // 使用保存的配置创建媒体项目
-            const mediaItem = mediaModule.createUnifiedMediaItemData(
-              savedMediaItem.id,
-              savedMediaItem.name,
-              source,
-              {
-                // 恢复保存的配置，排除 source 和 webav 属性
-                createdAt: savedMediaItem.createdAt,
-                mediaType: savedMediaItem.mediaType,
-                duration: savedMediaItem.duration,
-              },
-            )
+              // 使用保存的配置创建媒体项目
+              const mediaItem = mediaModule.createUnifiedMediaItemData(
+                savedMediaItem.id,
+                savedMediaItem.name,
+                source,
+                {
+                  // 恢复保存的配置，排除 source 和 webav 属性
+                  createdAt: savedMediaItem.createdAt,
+                  mediaType: savedMediaItem.mediaType,
+                  duration: savedMediaItem.duration,
+                },
+              )
 
-            // 添加到媒体模块并启动处理
-            mediaModule.addMediaItem(mediaItem)
-            mediaModule.startMediaProcessing(mediaItem)
+              // 添加到媒体模块并启动处理
+              mediaModule.addMediaItem(mediaItem)
+              mediaModule.startMediaProcessing(mediaItem)
+            } else {
+              // 对于其他类型的数据源（如远程文件），需要不同的处理方式
+              console.warn(`不支持的数据源类型，跳过重建: ${savedMediaItem.name} (ID: ${savedMediaItem.id})`)
+              continue
+            }
           } else {
             // 文件缺失，直接跳过，让数据源内部处理
             console.warn(`媒体文件缺失，跳过重建: ${savedMediaItem.name} (ID: ${savedMediaItem.id})`)

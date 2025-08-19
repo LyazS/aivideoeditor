@@ -6,14 +6,14 @@
 
 import type { BaseDataSourceData, DataSourceRuntimeState } from '@/unified/sources/BaseDataSource'
 import { reactive } from 'vue'
-import { BaseDataSourceFactory, RuntimeStateFactory } from '@/unified/sources/BaseDataSource'
+import { RuntimeStateFactory } from '@/unified/sources/BaseDataSource'
 
 // ==================== 远程文件数据源类型定义 ====================
 
 /**
- * 远程文件数据源
+ * 远程文件数据源基类型 - 只包含持久化数据
  */
-export interface RemoteFileSourceData extends BaseDataSourceData, DataSourceRuntimeState {
+export interface BaseRemoteFileSourceData extends BaseDataSourceData {
   type: 'remote'
   remoteUrl: string
   // 内联的配置字段（原RemoteFileConfig）
@@ -21,6 +21,12 @@ export interface RemoteFileSourceData extends BaseDataSourceData, DataSourceRunt
   timeout?: number
   retryCount?: number
   retryDelay?: number
+}
+
+/**
+ * 远程文件数据源 - 继承基类型和运行时状态
+ */
+export interface RemoteFileSourceData extends BaseRemoteFileSourceData, DataSourceRuntimeState {
   // 下载状态字段
   downloadedBytes: number
   totalBytes: number
@@ -44,18 +50,16 @@ export interface DownloadStats {
  * 远程文件数据源工厂函数
  */
 export const RemoteFileSourceFactory = {
-  createRemoteSource(remoteUrl: string, config: Partial<Pick<RemoteFileSourceData, 'headers' | 'timeout' | 'retryCount' | 'retryDelay'>> = {}): RemoteFileSourceData {
+  // 统一创建方法，支持创建和重建
+  createRemoteSource(param: BaseRemoteFileSourceData): RemoteFileSourceData {
     return reactive({
-      ...BaseDataSourceFactory.createBase('remote'),
-      ...RuntimeStateFactory.createRuntimeState(),
-      remoteUrl,
-      // 内联配置字段 - 使用默认值或传入的配置
-      headers: config.headers || DEFAULT_REMOTE_CONFIG.headers,
-      timeout: config.timeout || DEFAULT_REMOTE_CONFIG.timeout,
-      retryCount: config.retryCount || DEFAULT_REMOTE_CONFIG.retryCount,
-      retryDelay: config.retryDelay || DEFAULT_REMOTE_CONFIG.retryDelay,
+      ...param, // 保留基础数据
+      ...RuntimeStateFactory.createRuntimeState(), // 添加运行时状态
+      // 重置运行时特定字段
       downloadedBytes: 0,
       totalBytes: 0,
+      downloadSpeed: undefined,
+      startTime: undefined,
     }) as RemoteFileSourceData
   },
 }
@@ -231,7 +235,7 @@ export const RemoteFileQueries = {
 /**
  * 提取远程文件数据源的持久化数据
  */
-export function extractRemoteFileSourceData(source: RemoteFileSourceData) {
+export function extractRemoteFileSourceData(source: RemoteFileSourceData): BaseRemoteFileSourceData {
   return {
     // 基础字段
     id: source.id,

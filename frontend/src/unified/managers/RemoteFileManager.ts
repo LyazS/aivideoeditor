@@ -5,10 +5,7 @@
  */
 
 import { DataSourceManager, type AcquisitionTask } from '@/unified/managers/BaseDataSourceManager'
-import type {
-  RemoteFileSourceData,
-  DownloadProgress,
-} from '@/unified/sources/RemoteFileSource'
+import type { RemoteFileSourceData, DownloadProgress } from '@/unified/sources/RemoteFileSource'
 import { RemoteFileQueries, DEFAULT_REMOTE_CONFIG } from '@/unified/sources/RemoteFileSource'
 import {
   RuntimeStateBusinessActions,
@@ -150,7 +147,9 @@ export class RemoteFileManager extends DataSourceManager<RemoteFileSourceData> {
    */
   private async downloadFile(
     source: RemoteFileSourceData,
-    config: Required<Pick<RemoteFileSourceData, 'headers' | 'timeout' | 'retryCount' | 'retryDelay'>>,
+    config: Required<
+      Pick<RemoteFileSourceData, 'headers' | 'timeout' | 'retryCount' | 'retryDelay'>
+    >,
   ): Promise<void> {
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), config.timeout)
@@ -551,7 +550,10 @@ export class RemoteFileManager extends DataSourceManager<RemoteFileSourceData> {
   /**
    * 设置预测的媒体类型
    */
-  private async setPredictedMediaType(source: RemoteFileSourceData, mediaType: DetectedMediaType): Promise<void> {
+  private async setPredictedMediaType(
+    source: RemoteFileSourceData,
+    mediaType: DetectedMediaType,
+  ): Promise<void> {
     try {
       // 使用媒体模块方法查找对应的媒体项目
       const { useUnifiedStore } = await import('@/unified/unifiedStore')
@@ -648,62 +650,6 @@ export class RemoteFileManager extends DataSourceManager<RemoteFileSourceData> {
     } catch (error) {
       console.error('更新媒体项目名称失败:', error)
     }
-  }
-
-  /**
-   * 批量下载远程文件
-   */
-  async downloadBatchFiles(urls: string[]): Promise<{
-    successful: RemoteFileSourceData[]
-    failed: { url: string; error: string }[]
-  }> {
-    const results = {
-      successful: [] as RemoteFileSourceData[],
-      failed: [] as { url: string; error: string }[],
-    }
-
-    // 为每个URL创建数据源
-    const { DataSourceFactory } = await import('@/unified/sources/DataSourceTypes')
-    const sources = urls.map((url) => {
-      return DataSourceFactory.createRemoteSource(url, {
-        timeout: this.config.defaultTimeout,
-        retryCount: this.config.defaultRetryCount,
-        retryDelay: this.config.defaultRetryDelay,
-      })
-    })
-
-    // 并发处理所有下载
-    const promises = sources.map(async (source, index) => {
-      const taskId = `batch_${Date.now()}_${index}`
-
-      return new Promise<void>((resolve) => {
-        // 监听状态变化
-        const checkStatus = () => {
-          if (source.status === 'acquired') {
-            results.successful.push(source)
-            resolve()
-          } else if (source.status === 'error' || source.status === 'cancelled') {
-            results.failed.push({
-              url: urls[index],
-              error: source.errorMessage || '下载失败',
-            })
-            resolve()
-          } else {
-            // 继续等待状态变化
-            setTimeout(checkStatus, 100)
-          }
-        }
-
-        // 开始下载
-        this.startAcquisition(source, taskId)
-        checkStatus()
-      })
-    })
-
-    // 等待所有下载完成
-    await Promise.all(promises)
-
-    return results
   }
 
   /**

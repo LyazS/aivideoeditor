@@ -6,15 +6,22 @@
 import type { BaseDataSourceData, DataSourceRuntimeState } from '@/unified/sources/BaseDataSource'
 import { reactive } from 'vue'
 import { getMediaTypeFromMimeType } from '@/unified/utils/mediaTypeDetector'
-import { BaseDataSourceFactory, RuntimeStateFactory } from '@/unified/sources/BaseDataSource'
+import { RuntimeStateFactory } from '@/unified/sources/BaseDataSource'
+import { generateUUID4 } from '@/utils/idGenerator'
 
 // ==================== 用户选择文件数据源类型定义 ====================
 
 /**
- * 用户选择文件数据源
+ * 用户选择文件数据源基类型 - 只包含持久化数据
  */
-export interface UserSelectedFileSourceData extends BaseDataSourceData, DataSourceRuntimeState {
+export interface BaseUserSelectedFileSourceData extends BaseDataSourceData {
   type: 'user-selected'
+}
+
+/**
+ * 用户选择文件数据源 - 继承基类型和运行时状态
+ */
+export interface UserSelectedFileSourceData extends BaseUserSelectedFileSourceData, DataSourceRuntimeState {
   selectedFile: File
 }
 
@@ -25,20 +32,20 @@ export interface UserSelectedFileSourceData extends BaseDataSourceData, DataSour
  */
 export const UserSelectedFileSourceFactory = {
   // 统一创建方法，支持文件或媒体引用ID
-  createUserSelectedSource(param: File | string): UserSelectedFileSourceData {
+  createUserSelectedSource(param: File | BaseUserSelectedFileSourceData): UserSelectedFileSourceData {
     if (param instanceof File) {
       // 使用文件创建
       return reactive({
-        ...BaseDataSourceFactory.createBase('user-selected'),
+        id: generateUUID4(),
+        type: 'user-selected' as const,
         ...RuntimeStateFactory.createRuntimeState(),
         selectedFile: param,
       }) as UserSelectedFileSourceData
     } else {
-      // 使用媒体引用ID创建
+      // 使用保存的配置数据重建
       return reactive({
-        ...BaseDataSourceFactory.createBase('user-selected'),
-        ...RuntimeStateFactory.createRuntimeState(),
-        mediaReferenceId: param,
+        ...param, // 保留原有的基础数据
+        ...RuntimeStateFactory.createRuntimeState(), // 添加运行时状态
         selectedFile: null as any, // 临时设置为null，将在executeAcquisition中加载
       }) as UserSelectedFileSourceData
     }
@@ -202,7 +209,7 @@ export const UserSelectedFileQueries = {
 /**
  * 提取用户选择文件数据源的持久化数据
  */
-export function extractUserSelectedFileSourceData(source: UserSelectedFileSourceData) {
+export function extractUserSelectedFileSourceData(source: UserSelectedFileSourceData): BaseUserSelectedFileSourceData {
   return {
     // 基础字段
     id: source.id,
@@ -216,8 +223,7 @@ export function extractUserSelectedFileSourceData(source: UserSelectedFileSource
     // taskId: source.taskId, // 重新加载时会重新生成
     // file: source.file, // 重新加载时会重新加载
     // url: source.url, // 重新加载时会重新生成
-    
-    // 特定字段 - selectedFile 是 File 对象，不能直接序列化
+    // selectedFile 是 File 对象，不能直接序列化
     // 但我们可以保存文件的基本信息，或者依赖 mediaReferenceId
   }
 }

@@ -261,6 +261,7 @@ import { useDialogs, useDragUtils } from '@/unified/composables'
 import { framesToTimecode } from '@/stores/utils/timeUtils'
 import type { UnifiedMediaItemData, MediaType } from '@/unified'
 import { DataSourceFactory } from '@/unified'
+import { DEFAULT_REMOTE_CONFIG } from '@/unified/sources/RemoteFileSource'
 import { UnifiedMediaItemQueries } from '@/unified/mediaitem/actions'
 
 import HoverButton from '@/components/HoverButton.vue'
@@ -511,7 +512,15 @@ const handleRemoteDownloadSubmit = async (config: any, expectedDuration: number,
 
   try {
     // 创建远程数据源
-    const remoteSource = DataSourceFactory.createRemoteSource(config.url, config)
+    const remoteSource = DataSourceFactory.createRemoteSource({
+      id: generateUUID4(),
+      type: 'remote' as const, // 明确指定类型为 'remote'
+      remoteUrl: config.url,
+      headers: config.headers || DEFAULT_REMOTE_CONFIG.headers,
+      timeout: config.timeout || DEFAULT_REMOTE_CONFIG.timeout,
+      retryCount: config.retryCount || DEFAULT_REMOTE_CONFIG.retryCount,
+      retryDelay: config.retryDelay || DEFAULT_REMOTE_CONFIG.retryDelay,
+    })
 
     // 如果用户没有提供名称，从URL中提取文件名
     let mediaItemName = name

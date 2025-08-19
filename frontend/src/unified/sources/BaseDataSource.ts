@@ -63,12 +63,7 @@ export interface DataSourceRuntimeState {
  * 基础数据源工厂函数 - 创建基础数据对象（不包含运行时状态）
  */
 export const BaseDataSourceFactory = {
-  createBase(type: string): BaseDataSourceData {
-    return {
-      id: generateUUID4(),
-      type,
-    }
-  },
+  // createBase 方法已删除，因为使用它仍然需要明确指定类型，没有简化代码
 }
 
 /**
