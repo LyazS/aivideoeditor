@@ -1,4 +1,5 @@
-import { ref, watch } from 'vue'
+import { ref, watch, type Raw } from 'vue'
+import { MP4Clip, ImgClip, AudioClip } from '@webav/av-cliper'
 import {
   type UnifiedMediaItemData,
   type MediaStatus,
@@ -68,7 +69,11 @@ function printUnifiedDebugInfo(
  * 统一媒体管理模块
  * 负责管理素材库中的统一媒体项目
  */
-export function createUnifiedMediaModule() {
+export function createUnifiedMediaModule(webavModule: {
+  createMP4Clip: (file: File) => Promise<Raw<MP4Clip>>
+  createImgClip: (file: File) => Promise<Raw<ImgClip>>
+  createAudioClip: (file: File) => Promise<Raw<AudioClip>>
+}) {
   // ==================== 状态定义 ====================
 
   // 统一媒体项目列表
@@ -114,15 +119,15 @@ export function createUnifiedMediaModule() {
 
       // 1. 清理相关的时间轴项目
       cleanupRelatedTimelineItems(mediaItemId)
-      
+
       // 2. 清理命令同步
       cleanupCommandMediaSyncForMediaItem(mediaItemId)
-      
+
       // 3. 调用外部清理回调
       if (cleanupCallback) {
         cleanupCallback(mediaItem)
       }
-      
+
       // 4. 从数组中移除
       mediaItems.value.splice(index, 1)
 
@@ -284,10 +289,6 @@ export function createUnifiedMediaModule() {
         throw new Error('数据源未准备好')
       }
 
-      // 动态导入webavModule
-      const { createWebAVModule } = await import('@/stores/modules/webavModule')
-      const webavModule = createWebAVModule()
-
       // 根据媒体类型创建对应的WebAV Clip
       let clip: any
       let thumbnailUrl: string | undefined
@@ -321,7 +322,7 @@ export function createUnifiedMediaModule() {
           const saveResult = await globalProjectMediaManager.saveMediaToProject(
             mediaItem.source.file,
             mediaItem.mediaType,
-            clip  // 传入clip用于生成完整元数据
+            clip, // 传入clip用于生成完整元数据
           )
 
           // 🆕 关键改进：在数据源中设置媒体管理器引用ID
@@ -615,21 +616,19 @@ export function createUnifiedMediaModule() {
     try {
       // 获取统一存储实例
       const unifiedStore = useUnifiedStore()
-      
+
       // 获取所有时间轴项目
       const timelineItems = unifiedStore.timelineItems
-      
+
       // 找出使用该素材的所有时间轴项目
-      const relatedTimelineItems = timelineItems.filter(
-        (item) => item.mediaItemId === mediaItemId
-      )
-      
+      const relatedTimelineItems = timelineItems.filter((item) => item.mediaItemId === mediaItemId)
+
       // 清理每个相关的时间轴项目
       relatedTimelineItems.forEach((timelineItem) => {
         console.log(`🧹 清理时间轴项目: ${timelineItem.id}`)
         unifiedStore.removeTimelineItem(timelineItem.id)
       })
-      
+
       console.log(`✅ 已清理 ${relatedTimelineItems.length} 个相关时间轴项目`)
     } catch (error) {
       console.error(`❌ 清理相关时间轴项目失败: ${mediaItemId}`, error)
@@ -644,7 +643,7 @@ export function createUnifiedMediaModule() {
     try {
       const syncManager = SimplifiedMediaSyncManager.getInstance()
       syncManager.cleanupMediaItemSync(mediaItemId)
-      
+
       console.log(`✅ 已清理媒体项目相关的命令同步: ${mediaItemId}`)
     } catch (error) {
       console.error(`❌ 清理媒体项目命令同步失败: ${mediaItemId}`, error)

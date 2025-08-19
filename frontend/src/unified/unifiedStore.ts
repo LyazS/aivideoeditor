@@ -116,12 +116,6 @@ import {
 export const useUnifiedStore = defineStore('unified', () => {
   // ==================== 核心模块初始化 ====================
 
-  // 创建统一媒体管理模块（替代原有的mediaModule）
-  const unifiedMediaModule = createUnifiedMediaModule()
-
-  // 创建统一轨道管理模块
-  const unifiedTrackModule = createUnifiedTrackModule()
-
   // 创建配置管理模块
   const unifiedConfigModule = createUnifiedConfigModule()
 
@@ -136,6 +130,11 @@ export const useUnifiedStore = defineStore('unified', () => {
     setCurrentFrame: unifiedPlaybackModule.setCurrentFrame,
     setPlaying: unifiedPlaybackModule.setPlaying,
   })
+  // 创建统一媒体管理模块（替代原有的mediaModule）
+  const unifiedMediaModule = createUnifiedMediaModule(unifiedWebavModule)
+
+  // 创建统一轨道管理模块
+  const unifiedTrackModule = createUnifiedTrackModule()
 
   // 创建统一时间轴管理模块（需要依赖其他模块）
   const unifiedTimelineModule = createUnifiedTimelineModule(
@@ -150,7 +149,7 @@ export const useUnifiedStore = defineStore('unified', () => {
     unifiedConfigModule,
     unifiedTimelineModule,
     unifiedTrackModule,
-    unifiedMediaModule
+    unifiedMediaModule,
   )
 
   // ==================== 计算属性 ====================
