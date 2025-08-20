@@ -56,10 +56,15 @@ export class ProjectMediaManager {
    * 初始化项目媒体管理器
    * @param projectId 项目ID
    */
-  initializeForProject(projectId: string): void {
+  async initializeForProject(projectId: string): Promise<void> {
     this.projectId = projectId
     this.mediaReferences.clear()
     console.log(`🔧 初始化页面级媒体管理器: ${projectId}`)
+    
+    // 扫描媒体目录构建文件索引
+    console.log(`🔍 开始扫描项目媒体目录: ${projectId}`)
+    await this.scanMediaDirectory()
+    console.log(`✅ 项目媒体管理器初始化完成: ${projectId}`)
   }
 
   /**
@@ -771,130 +776,3 @@ export class ProjectMediaManager {
 // 导出页面级实例，每个项目页面维护一个独立的管理器实例
 export const globalProjectMediaManager = new ProjectMediaManager()
 
-// ==================== 便捷函数 ====================
-
-/**
- * 初始化页面级项目媒体管理器
- * 在项目页面加载时调用，设置当前管理器服务的项目ID
- */
-export function initializeProjectMediaManager(projectId: string): void {
-  globalProjectMediaManager.initializeForProject(projectId)
-}
-
-/**
- * 保存媒体文件到当前项目页面
- */
-export async function saveMediaToCurrentProject(
-  file: File,
-  mediaType: MediaType,
-  clip?: any
-): Promise<MediaSaveResult> {
-  return await globalProjectMediaManager.saveMediaToProject(file, mediaType, clip)
-}
-
-/**
- * 扫描当前项目页面的媒体目录
- */
-export async function scanCurrentProjectMedia(): Promise<UnifiedMediaReference[]> {
-  return await globalProjectMediaManager.scanMediaDirectory()
-}
-
-/**
- * 获取当前项目的媒体引用
- */
-export function getCurrentProjectMediaReference(mediaReferenceId: string): UnifiedMediaReference | undefined {
-  return globalProjectMediaManager.getMediaReference(mediaReferenceId)
-}
-
-/**
- * 获取当前项目的所有媒体引用
- */
-export function getAllCurrentProjectMediaReferences(): UnifiedMediaReference[] {
-  return globalProjectMediaManager.getAllMediaReferences()
-}
-
-/**
- * 验证当前项目媒体文件完整性
- */
-export async function verifyCurrentProjectMediaIntegrity(
-  storedPath: string,
-  expectedChecksum: string
-): Promise<boolean> {
-  return await globalProjectMediaManager.verifyMediaIntegrity(
-    storedPath,
-    expectedChecksum
-  )
-}
-
-/**
- * 从当前项目加载媒体文件
- */
-export async function loadMediaFromCurrentProject(storedPath: string): Promise<File> {
-  return await globalProjectMediaManager.loadMediaFromProject(storedPath)
-}
-
-/**
- * 批量验证当前项目所有媒体文件完整性
- */
-export async function verifyAllCurrentProjectMediaIntegrity() {
-  return await globalProjectMediaManager.verifyAllMediaIntegrity()
-}
-
-/**
- * 计算文件校验和
- */
-export async function calculateFileChecksum(file: File): Promise<string> {
-  return await globalProjectMediaManager.calculateChecksum(file)
-}
-
-/**
- * 清理当前项目的孤立媒体引用
- */
-export async function cleanupCurrentProjectOrphanedReferences() {
-  return await globalProjectMediaManager.cleanupOrphanedReferences()
-}
-
-/**
- * 获取当前项目ID
- */
-export function getCurrentProjectId(): string {
-  return globalProjectMediaManager.currentProjectId
-}
-
-/**
- * 检查媒体管理器是否已初始化
- */
-export function isProjectMediaManagerInitialized(): boolean {
-  return globalProjectMediaManager.currentProjectId !== ''
-}
-
-/**
- * 获取当前项目媒体统计信息
- */
-export function getCurrentProjectMediaStats(): {
-  totalReferences: number
-  mediaTypes: Record<string, number>
-} {
-  const allReferences = globalProjectMediaManager.getAllMediaReferences()
-  const mediaTypes: Record<string, number> = {}
-
-  allReferences.forEach(ref => {
-    mediaTypes[ref.mediaType] = (mediaTypes[ref.mediaType] || 0) + 1
-  })
-
-  return {
-    totalReferences: allReferences.length,
-    mediaTypes
-  }
-}
-
-/**
- * 清理页面级媒体管理器（页面卸载时调用）
- * 注意：由于采用页面级架构，页面跳转时会自动清理所有状态
- */
-export function cleanupProjectMediaManager(): void {
-  // 页面级架构下，页面跳转会自动清理所有状态
-  // 这个函数主要用于显式清理或测试场景
-  globalProjectMediaManager.initializeForProject('')
-  console.log('🧹 页面级媒体管理器已清理')
-}

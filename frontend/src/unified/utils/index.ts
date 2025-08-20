@@ -292,30 +292,6 @@ export {
 
   // 类型定义
   type MediaSaveResult,
-
-  // 初始化和管理函数
-  initializeProjectMediaManager,
-  cleanupProjectMediaManager,
-  getCurrentProjectId,
-  isProjectMediaManagerInitialized,
-
-  // 媒体保存和加载函数
-  saveMediaToCurrentProject,
-  loadMediaFromCurrentProject,
-  scanCurrentProjectMedia,
-
-  // 媒体引用管理函数
-  getCurrentProjectMediaReference,
-  getAllCurrentProjectMediaReferences,
-  getCurrentProjectMediaStats,
-
-  // 文件完整性验证函数
-  verifyCurrentProjectMediaIntegrity,
-  verifyAllCurrentProjectMediaIntegrity,
-  calculateFileChecksum,
-
-  // 清理和维护函数
-  cleanupCurrentProjectOrphanedReferences,
 } from './ProjectMediaManager'
 // ==================== WebAV Clip工具 ====================
 export {

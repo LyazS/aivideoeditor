@@ -8,7 +8,11 @@ import type { UnifiedTrackData, UnifiedTrackType } from '@/unified/track/TrackTy
 import type { UnifiedMediaItemData } from '@/unified/mediaitem/types'
 import type { MediaType } from '@/unified/mediaitem/types'
 import { globalProjectMediaManager } from '@/unified/utils/ProjectMediaManager'
-import { DataSourceFactory, DataSourceQueries, extractSourceData } from '@/unified/sources/DataSourceTypes'
+import {
+  DataSourceFactory,
+  DataSourceQueries,
+  extractSourceData,
+} from '@/unified/sources/DataSourceTypes'
 
 /**
  * 统一项目管理模块
@@ -179,36 +183,38 @@ export function createUnifiedProjectModule(
             return clonedItem
           }),
           // mediaItems 包含 webav 运行时对象，需要清理
-          mediaItems: (mediaModule?.mediaItems.value || []).map((item) => {
-            // 提取数据源的持久化数据
-            const extractedSource = extractSourceData(item.source)
-            
-            // 如果提取失败，跳过该媒体项目
-            if (!extractedSource) {
-              console.warn(`无法提取媒体项目 ${item.name} 的数据源，跳过保存`)
-              return null
-            }
-            
-            // 创建媒体项目的可持久化副本
-            return {
-              // 核心属性
-              id: item.id,
-              name: item.name,
-              createdAt: item.createdAt,
-              
-              // 状态信息 - 只保存媒体类型，不保存运行时状态
-              // mediaStatus: item.mediaStatus, // 重新加载时会重置
-              mediaType: item.mediaType,
-              
-              // 使用提取后的数据源
-              source: extractedSource,
-              
-              // 元数据
-              duration: item.duration,
-              
-              // 不保存 webav 对象
-            }
-          }).filter(Boolean) as UnifiedMediaItemData[], // 过滤掉提取失败的项目并断言类型
+          mediaItems: (mediaModule?.mediaItems.value || [])
+            .map((item) => {
+              // 提取数据源的持久化数据
+              const extractedSource = extractSourceData(item.source)
+
+              // 如果提取失败，跳过该媒体项目
+              if (!extractedSource) {
+                console.warn(`无法提取媒体项目 ${item.name} 的数据源，跳过保存`)
+                return null
+              }
+
+              // 创建媒体项目的可持久化副本
+              return {
+                // 核心属性
+                id: item.id,
+                name: item.name,
+                createdAt: item.createdAt,
+
+                // 状态信息 - 只保存媒体类型，不保存运行时状态
+                // mediaStatus: item.mediaStatus, // 重新加载时会重置
+                mediaType: item.mediaType,
+
+                // 使用提取后的数据源
+                source: extractedSource,
+
+                // 元数据
+                duration: item.duration,
+
+                // 不保存 webav 对象
+              }
+            })
+            .filter(Boolean) as UnifiedMediaItemData[], // 过滤掉提取失败的项目并断言类型
         },
       }
 
@@ -279,17 +285,13 @@ export function createUnifiedProjectModule(
         throw new Error('项目配置不存在')
       }
 
-      // 2. 初始化页面级媒体管理器
+      // 2. 初始化页面级媒体管理器（内部包含扫描媒体目录逻辑）
       updateLoadingProgress('初始化媒体管理器...', 20)
-      globalProjectMediaManager.initializeForProject(projectId)
-
-      // 3. 扫描meta文件构建文件索引
-      updateLoadingProgress('扫描媒体文件索引...', 30)
-      const mediaReferences = await globalProjectMediaManager.scanMediaDirectory()
+      await globalProjectMediaManager.initializeForProject(projectId)
 
       // 4. 构建媒体项目，启动数据源获取 - 强制传入配置的媒体项目
       updateLoadingProgress('重建媒体项目...', 50)
-      await rebuildMediaItems(mediaReferences, projectConfig.timeline.mediaItems)
+      await rebuildMediaItems(projectConfig.timeline.mediaItems)
 
       // 5. 恢复时间轴轨道和项目状态
       updateLoadingProgress('恢复时间轴数据...', 80)
@@ -310,10 +312,7 @@ export function createUnifiedProjectModule(
    * @param mediaReferences 媒体引用数组
    * @param timelineMediaItems 时间轴媒体项目数组（必需，用于强制使用配置媒体项目构建策略）
    */
-  async function rebuildMediaItems(
-    mediaReferences: UnifiedMediaReference[],
-    timelineMediaItems: UnifiedMediaItemData[]
-  ): Promise<void> {
+  async function rebuildMediaItems(timelineMediaItems: UnifiedMediaItemData[]): Promise<void> {
     try {
       if (!mediaModule) {
         throw new Error('媒体模块未初始化，请在构造函数中传入 mediaModule 参数')
@@ -337,8 +336,10 @@ export function createUnifiedProjectModule(
           // 根据数据源类型创建相应的数据源，原原本本传递 mediaReferenceId
           // 让数据源管理器内部处理缓存恢复或重新获取的逻辑
           if (DataSourceQueries.isUserSelectedSource(savedMediaItem.source)) {
-            console.log(`📁 重建用户选择文件数据源: ${savedMediaItem.name} (ID: ${savedMediaItem.id})`)
-            
+            console.log(
+              `📁 重建用户选择文件数据源: ${savedMediaItem.name} (ID: ${savedMediaItem.id})`,
+            )
+
             const source = DataSourceFactory.createUserSelectedSource(savedMediaItem.source)
 
             // 使用保存的配置创建媒体项目
@@ -360,9 +361,9 @@ export function createUnifiedProjectModule(
           } else if (DataSourceQueries.isRemoteSource(savedMediaItem.source)) {
             // 远程文件数据源重建
             console.log(`🌐 重建远程文件数据源: ${savedMediaItem.name} (ID: ${savedMediaItem.id})`)
-            
+
             const source = DataSourceFactory.createRemoteSource(savedMediaItem.source)
-            
+
             // 创建媒体项目
             const mediaItem = mediaModule.createUnifiedMediaItemData(
               savedMediaItem.id,
@@ -381,7 +382,9 @@ export function createUnifiedProjectModule(
             mediaModule.startMediaProcessing(mediaItem)
           } else {
             // 对于其他未支持的数据源类型
-            console.warn(`不支持的数据源类型，跳过重建: ${savedMediaItem.name} (ID: ${savedMediaItem.id})`)
+            console.warn(
+              `不支持的数据源类型，跳过重建: ${savedMediaItem.name} (ID: ${savedMediaItem.id})`,
+            )
             continue
           }
         } catch (error) {
