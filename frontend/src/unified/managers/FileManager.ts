@@ -80,7 +80,7 @@ export class FileManager {
     try {
       console.log(`📂 [FileManager] 从项目加载媒体文件: ${storedPath}`)
 
-      const file = await globalProjectMediaManager.loadMediaFromProject(projectId, storedPath)
+      const file = await globalProjectMediaManager.loadMediaFromProject(storedPath)
 
       console.log(`✅ [FileManager] 媒体文件加载成功: ${file.name}`)
       return file

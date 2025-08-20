@@ -215,7 +215,7 @@ export class ProjectMediaManager {
       this.mediaReferences.set(mediaReference.id, mediaReference)
 
       // 8. 保存元数据到.meta文件
-      await this.saveMediaMetadata(this.projectId, storagePath, metadata)
+      await this.saveMediaMetadata(storagePath, metadata)
 
       console.log(`✅ 媒体文件保存成功: ${file.name} -> ${storagePath}`)
 
@@ -316,12 +316,10 @@ export class ProjectMediaManager {
 
   /**
    * 保存媒体元数据文件
-   * @param projectId 项目ID
    * @param storedPath 存储路径
    * @param metadata 媒体元数据
    */
   async saveMediaMetadata(
-    projectId: string,
     storedPath: string,
     metadata: UnifiedMediaMetadata,
   ): Promise<void> {
@@ -330,7 +328,7 @@ export class ProjectMediaManager {
       if (!workspaceHandle) throw new Error('未设置工作目录')
 
       const projectsHandle = await workspaceHandle.getDirectoryHandle('projects')
-      const projectHandle = await projectsHandle.getDirectoryHandle(projectId)
+      const projectHandle = await projectsHandle.getDirectoryHandle(this.projectId)
 
       // 构建元数据文件路径
       const metaFilePath = `${storedPath}.meta`
@@ -529,17 +527,16 @@ export class ProjectMediaManager {
 
   /**
    * 从项目目录加载媒体文件
-   * @param projectId 项目ID
    * @param storedPath 存储路径
    * @returns 媒体文件
    */
-  async loadMediaFromProject(projectId: string, storedPath: string): Promise<File> {
+  async loadMediaFromProject(storedPath: string): Promise<File> {
     try {
       const workspaceHandle = await directoryManager.getWorkspaceHandle()
       if (!workspaceHandle) throw new Error('未设置工作目录')
 
       const projectsHandle = await workspaceHandle.getDirectoryHandle('projects')
-      const projectHandle = await projectsHandle.getDirectoryHandle(projectId)
+      const projectHandle = await projectsHandle.getDirectoryHandle(this.projectId)
 
       // 解析路径并获取文件
       const pathParts = storedPath.split('/')
@@ -567,18 +564,16 @@ export class ProjectMediaManager {
 
   /**
    * 验证媒体文件完整性
-   * @param projectId 项目ID
    * @param storedPath 存储路径
    * @param expectedChecksum 预期校验和
    * @returns 是否验证通过
    */
   async verifyMediaIntegrity(
-    projectId: string,
     storedPath: string,
     expectedChecksum: string,
   ): Promise<boolean> {
     try {
-      const file = await this.loadMediaFromProject(projectId, storedPath)
+      const file = await this.loadMediaFromProject(storedPath)
       const actualChecksum = await this.calculateChecksum(file)
       return actualChecksum === expectedChecksum
     } catch (error) {
@@ -622,7 +617,6 @@ export class ProjectMediaManager {
     for (const mediaRef of allReferences) {
       try {
         const isValid = await this.verifyMediaIntegrity(
-          this.projectId,
           mediaRef.storedPath,
           mediaRef.checksum
         )
@@ -827,7 +821,6 @@ export async function verifyCurrentProjectMediaIntegrity(
   expectedChecksum: string
 ): Promise<boolean> {
   return await globalProjectMediaManager.verifyMediaIntegrity(
-    globalProjectMediaManager.currentProjectId,
     storedPath,
     expectedChecksum
   )
@@ -837,10 +830,7 @@ export async function verifyCurrentProjectMediaIntegrity(
  * 从当前项目加载媒体文件
  */
 export async function loadMediaFromCurrentProject(storedPath: string): Promise<File> {
-  return await globalProjectMediaManager.loadMediaFromProject(
-    globalProjectMediaManager.currentProjectId,
-    storedPath
-  )
+  return await globalProjectMediaManager.loadMediaFromProject(storedPath)
 }
 
 /**

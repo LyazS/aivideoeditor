@@ -297,6 +297,12 @@ export abstract class DataSourceManager<T extends UnifiedDataSourceData> {
     mediaItem: UnifiedMediaItemData,
     status: MediaStatus
   ): void {
+    // 避免重复转换到相同状态
+    if (mediaItem.mediaStatus === status) {
+      console.log(`🔄 [${this.getManagerType()}] 媒体状态已经是 ${status}，跳过转换: ${mediaItem.name}`)
+      return
+    }
+    
     this.mediaStatusManager.transitionTo(mediaItem, status, { manager: this.getManagerType() })
   }
 

@@ -175,7 +175,6 @@ export class RemoteFileManager extends DataSourceManager<RemoteFileSourceData> {
 
       // 从项目目录加载文件
       const file = await globalProjectMediaManager.loadMediaFromProject(
-        projectId,
         mediaReference.storedPath
       )
 

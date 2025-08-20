@@ -106,7 +106,6 @@ export class UserSelectedFileManager extends DataSourceManager<UserSelectedFileS
 
         // 从项目目录加载文件
         file = await globalProjectMediaManager.loadMediaFromProject(
-          projectId,
           mediaReference.storedPath
         )
 
@@ -475,7 +474,6 @@ export class UserSelectedFileManager extends DataSourceManager<UserSelectedFileS
 
         // 从项目目录加载文件
         file = await globalProjectMediaManager.loadMediaFromProject(
-          projectId,
           mediaReference.storedPath
         )
 
