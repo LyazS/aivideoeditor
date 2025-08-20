@@ -7,10 +7,6 @@
 export {
   // 基础类型定义
   type BaseDataSourceData,
-  type DataSourceStatus,
-
-  // 常量
-  DATA_SOURCE_TO_MEDIA_STATUS_MAP,
 
   // 基础查询函数
   RuntimeStateQueries,
@@ -95,9 +91,6 @@ export {
 
   // 便捷函数
   getManagerRegistry,
-  startDataSourceAcquisition,
-  cancelDataSourceAcquisition,
-  retryDataSourceAcquisition,
 } from './managers/DataSourceManagerRegistry'
 
 // ==================== 统一媒体项目 ====================

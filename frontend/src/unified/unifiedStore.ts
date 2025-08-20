@@ -1005,7 +1005,6 @@ export const useUnifiedStore = defineStore('unified', () => {
     waitForMediaItemReady: unifiedMediaModule.waitForMediaItemReady,
 
     // 数据源处理方法
-    handleSourceStatusChange: unifiedMediaModule.handleSourceStatusChange,
     startMediaProcessing: unifiedMediaModule.startMediaProcessing,
 
     // 便捷查询方法

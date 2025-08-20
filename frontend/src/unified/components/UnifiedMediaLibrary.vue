@@ -832,7 +832,7 @@ const debugMediaItems = () => {
     allItems.map((item) => ({
       名称: item.name,
       数据源类型: item.source.type,
-      数据源状态: item.source.status,
+      媒体状态: item.mediaStatus,
       进度: item.source.progress.toFixed(2) + '%',
       错误信息: item.source.errorMessage || '无',
       任务ID: item.source.taskId || '无',
@@ -870,7 +870,6 @@ const debugMediaItems = () => {
       时长: item.duration ? `${item.duration}帧 (${framesToTimecode(item.duration)})` : '未知',
       数据源: {
         类型: item.source.type,
-        状态: item.source.status,
         进度: item.source.progress.toFixed(2) + '%',
         文件: item.source.file?.name || '无',
         URL: item.source.url || '无',

@@ -133,56 +133,7 @@ export class DataSourceManagerRegistry {
     return this.getManager(source.type)
   }
 
-  /**
-   * 开始数据源获取任务
-   */
-  startAcquisition(source: UnifiedDataSourceData, taskId?: string): boolean {
-    const manager = this.getManagerForSource(source)
-    if (!manager) {
-      console.error(`未找到类型为 "${source.type}" 的管理器`)
-      return false
-    }
-
-    const finalTaskId = taskId || `${source.type}_${source.id}_${Date.now()}`
-    manager.startAcquisition(source, finalTaskId)
-    return true
-  }
-
-  /**
-   * 取消数据源获取任务
-   */
-  cancelAcquisition(source: UnifiedDataSourceData): boolean {
-    if (!source.taskId) {
-      console.warn('数据源没有关联的任务ID')
-      return false
-    }
-
-    const manager = this.getManagerForSource(source)
-    if (!manager) {
-      console.error(`未找到类型为 "${source.type}" 的管理器`)
-      return false
-    }
-
-    return manager.cancelTask(source.taskId)
-  }
-
-  /**
-   * 重试数据源获取任务
-   */
-  retryAcquisition(source: UnifiedDataSourceData): boolean {
-    if (!source.taskId) {
-      console.warn('数据源没有关联的任务ID')
-      return false
-    }
-
-    const manager = this.getManagerForSource(source)
-    if (!manager) {
-      console.error(`未找到类型为 "${source.type}" 的管理器`)
-      return false
-    }
-
-    return manager.retryTask(source.taskId)
-  }
+  // 数据源获取任务相关方法已移除，任务处理现在统一由管理器的processMediaItem方法处理
 
   // ==================== 统计和监控 ====================
 
@@ -360,26 +311,4 @@ export function getManagerRegistry(): DataSourceManagerRegistry {
   return DataSourceManagerRegistry.getInstance()
 }
 
-/**
- * 快速开始数据源获取
- */
-export function startDataSourceAcquisition(
-  source: UnifiedDataSourceData,
-  taskId?: string,
-): boolean {
-  return getManagerRegistry().startAcquisition(source, taskId)
-}
-
-/**
- * 快速取消数据源获取
- */
-export function cancelDataSourceAcquisition(source: UnifiedDataSourceData): boolean {
-  return getManagerRegistry().cancelAcquisition(source)
-}
-
-/**
- * 快速重试数据源获取
- */
-export function retryDataSourceAcquisition(source: UnifiedDataSourceData): boolean {
-  return getManagerRegistry().retryAcquisition(source)
-}
+// 数据源获取任务相关方法已移除，任务处理现在统一由管理器的processMediaItem方法处理

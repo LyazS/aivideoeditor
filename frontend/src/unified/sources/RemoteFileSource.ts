@@ -254,7 +254,6 @@ export function extractRemoteFileSourceData(source: RemoteFileSourceData): BaseR
     // totalBytes: source.totalBytes, // 重新加载时会重新获取
     // downloadSpeed: source.downloadSpeed, // 运行时状态
     // startTime: source.startTime, // 运行时状态
-    // status: source.status, // 重新加载时会重置
     // progress: source.progress, // 重新加载时会重置
     // errorMessage: source.errorMessage, // 重新加载时会重置
     // taskId: source.taskId, // 重新加载时会重新生成

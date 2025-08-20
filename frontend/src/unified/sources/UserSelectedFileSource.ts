@@ -217,7 +217,6 @@ export function extractUserSelectedFileSourceData(source: UserSelectedFileSource
     mediaReferenceId: source.mediaReferenceId,
     
     // 不需要保存运行时状态
-    // status: source.status, // 重新加载时会重置
     // progress: source.progress, // 重新加载时会重置
     // errorMessage: source.errorMessage, // 重新加载时会重置
     // taskId: source.taskId, // 重新加载时会重新生成

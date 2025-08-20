@@ -13,6 +13,7 @@ import {
   RuntimeStateQueries,
 } from '@/unified/sources/BaseDataSource'
 import type { DetectedMediaType } from '@/unified/utils/mediaTypeDetector'
+import type { UnifiedMediaItemData, MediaStatus } from '@/unified/mediaitem/types'
 
 // ==================== 下载管理器配置 ====================
 
@@ -82,14 +83,12 @@ export class RemoteFileManager extends DataSourceManager<RemoteFileSourceData> {
       // 直接执行下载逻辑
       await this.executeAcquisition(task.source)
 
-      // 检查执行结果
-      if (task.source.status === 'acquired') {
+      // 检查执行结果 - 通过检查文件和错误信息来判断状态
+      if (task.source.file && task.source.url && !task.source.errorMessage) {
         // 下载成功（媒体类型检测已在下载过程中完成）
         return
-      } else if (task.source.status === 'error') {
-        throw new Error(task.source.errorMessage || '下载失败')
-      } else if (task.source.status === 'cancelled') {
-        throw new Error('下载被取消')
+      } else if (task.source.errorMessage) {
+        throw new Error(task.source.errorMessage)
       } else {
         throw new Error('下载状态异常')
       }
@@ -401,7 +400,8 @@ export class RemoteFileManager extends DataSourceManager<RemoteFileSourceData> {
    * 重试获取
    */
   async retryAcquisition(source: RemoteFileSourceData): Promise<void> {
-    if (!RuntimeStateQueries.canRetry(source)) {
+    // 检查是否可以重试 - 通过检查错误信息和是否有文件来判断
+    if (!source.errorMessage || (source.file && source.url)) {
       return
     }
 
@@ -422,7 +422,8 @@ export class RemoteFileManager extends DataSourceManager<RemoteFileSourceData> {
    * 取消获取
    */
   cancelAcquisition(source: RemoteFileSourceData): void {
-    if (!RuntimeStateQueries.canCancel(source)) {
+    // 检查是否可以取消 - 通过检查是否正在下载中（有进度但未完成）
+    if (source.progress > 0 && source.progress < 100 && !source.file) {
       return
     }
 
@@ -445,6 +446,126 @@ export class RemoteFileManager extends DataSourceManager<RemoteFileSourceData> {
   getManagerType(): string {
     return 'remote'
   }
+
+  // ==================== 新增：实现统一媒体项目处理 ====================
+
+  /**
+   * 处理完整的媒体项目生命周期
+   * @param mediaItem 媒体项目
+   */
+  async processMediaItem(mediaItem: UnifiedMediaItemData): Promise<void> {
+    try {
+      console.log(`🚀 [RemoteFileManager] 开始处理媒体项目: ${mediaItem.name}`)
+
+      // 1. 设置为处理中状态
+      this.transitionMediaStatus(mediaItem, 'asyncprocessing')
+
+      // 2. 执行下载
+      await this.downloadFileForMediaItem(mediaItem)
+
+      // 3. 确保数据源已获取
+      if (!mediaItem.source.file || !mediaItem.source.url) {
+        throw new Error('数据源未准备好')
+      }
+
+      // 4. 设置为WebAV解析状态
+      this.transitionMediaStatus(mediaItem, 'webavdecoding')
+
+      // 5. WebAV处理器负责具体处理
+      const webavResult = await this.webavProcessor.processMedia(mediaItem)
+
+      // 6. 文件管理器负责保存文件和设置引用
+      if (mediaItem.source.file) {
+        try {
+          // 检查媒体类型是否有效
+          if (mediaItem.mediaType === 'unknown') {
+            throw new Error(`无法保存未知类型的媒体: ${mediaItem.name}`)
+          }
+
+          const saveResult = await this.fileManager.saveMediaToProject(
+            mediaItem.source.file,
+            mediaItem.mediaType,
+            // 注意：这里需要传递clip对象，但由于WebAVProcessor内部处理，我们需要调整
+            // 暂时先不传递clip，后续可以优化
+          )
+
+          if (saveResult.success && saveResult.mediaReference) {
+            this.fileManager.setMediaReferenceId(mediaItem, saveResult.mediaReference.id)
+          }
+
+          console.log(`💾 [RemoteFileManager] 媒体文件保存成功: ${mediaItem.name}`)
+        } catch (saveError) {
+          console.error(`❌ [RemoteFileManager] 媒体文件保存失败: ${mediaItem.name}`, saveError)
+          console.warn(`媒体文件保存失败，但WebAV解析继续: ${mediaItem.name}`, saveError)
+        }
+      }
+
+      // 7. 元数据管理器负责设置元数据
+      const metadataResult = this.metadataManager.batchSetMetadata(mediaItem, webavResult)
+      if (!metadataResult.success) {
+        throw new Error(metadataResult.error || '设置元数据失败')
+      }
+
+      // 8. 设置为就绪状态
+      this.transitionMediaStatus(mediaItem, 'ready')
+
+      console.log(`✅ [RemoteFileManager] 媒体项目处理完成: ${mediaItem.name}`)
+    } catch (error) {
+      console.error(`❌ [RemoteFileManager] 媒体项目处理失败: ${mediaItem.name}`, {
+        mediaType: mediaItem.mediaType,
+        sourceType: mediaItem.source.type,
+        errorMessage: error instanceof Error ? error.message : String(error),
+      })
+      this.transitionMediaStatus(mediaItem, 'error')
+      mediaItem.source.errorMessage = error instanceof Error ? error.message : '处理失败'
+    }
+  }
+
+  /**
+   * 为媒体项目下载文件
+   * @param mediaItem 媒体项目
+   */
+  private async downloadFileForMediaItem(mediaItem: UnifiedMediaItemData): Promise<void> {
+    const source = mediaItem.source as RemoteFileSourceData
+    
+    try {
+      // 设置为获取中状态
+      RuntimeStateBusinessActions.startAcquisition(source)
+
+      // 验证URL
+      if (!this.isValidUrl(source.remoteUrl)) {
+        RuntimeStateBusinessActions.setError(source, '无效的URL地址')
+        throw new Error('无效的URL地址')
+      }
+
+      // 预先检测媒体类型
+      const predictedType = await this.detectMediaTypeFromUrl(source.remoteUrl)
+      if (predictedType === 'unknown') {
+        // 如果通过HEAD请求无法确定，尝试通过文件扩展名
+        const extensionType = this.detectMediaTypeFromUrlExtension(source.remoteUrl)
+        await this.setPredictedMediaType(source, extensionType)
+      } else {
+        await this.setPredictedMediaType(source, predictedType)
+      }
+
+      // 合并配置
+      const config = {
+        ...DEFAULT_REMOTE_CONFIG,
+        headers: source.headers || DEFAULT_REMOTE_CONFIG.headers,
+        timeout: source.timeout || DEFAULT_REMOTE_CONFIG.timeout,
+        retryCount: source.retryCount || DEFAULT_REMOTE_CONFIG.retryCount,
+        retryDelay: source.retryDelay || DEFAULT_REMOTE_CONFIG.retryDelay,
+      }
+
+      // 开始下载
+      await this.downloadFile(source, config)
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : '下载失败'
+      RuntimeStateBusinessActions.setError(source, errorMessage)
+      throw error
+    }
+  }
+
 
   /**
    * 获取最大重试次数

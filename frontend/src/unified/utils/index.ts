@@ -317,3 +317,15 @@ export {
   // 清理和维护函数
   cleanupCurrentProjectOrphanedReferences,
 } from './ProjectMediaManager'
+// ==================== WebAV Clip工具 ====================
+export {
+  // Clip创建函数
+  createMP4Clip,
+  createImgClip,
+  createAudioClip,
+  
+  // 克隆函数
+  cloneMP4Clip,
+  cloneImgClip,
+  cloneAudioClip,
+} from './webavClipUtils'
