@@ -123,7 +123,7 @@
 import { ref, computed, onBeforeMount, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useUnifiedStore } from '@/unified/unifiedStore'
-import { useAutoSave } from '@/unified/composables'
+// 移除已删除的 useAutoSave 导入，现在使用模块化的自动保存功能
 import VideoPreviewEngine from '../components/VideoPreviewEngine.vue'
 import HoverButton from '../components/HoverButton.vue'
 import LoadingOverlay from '../components/LoadingOverlay.vue'
@@ -133,12 +133,7 @@ import EditProjectDialog from '../components/EditProjectDialog.vue'
 const route = useRoute()
 const unifiedStore = useUnifiedStore()
 
-// 初始化自动保存
-const autoSave = useAutoSave({
-  debounceTime: 2000, // 2秒防抖
-  throttleTime: 30000, // 30秒强制保存
-  enabled: true,
-})
+// 自动保存功能现在通过 unifiedStore 提供，无需单独初始化
 
 // 响应式数据
 const projectTitle = ref('未命名项目')
@@ -161,7 +156,7 @@ async function saveProject() {
   if (isSaving.value) return
 
   try {
-    const success = await autoSave.manualSave()
+    const success = await unifiedStore.manualSave()
     if (success) {
       console.log('项目已手动保存')
       // 可以添加成功提示
@@ -264,8 +259,8 @@ onMounted(async () => {
     await unifiedStore.loadProjectContent(projectId)
 
     console.log('✅ [VideoEditor] 项目内容加载完成:', unifiedStore.projectName)
-    // 启用自动保存
-    autoSave.enableAutoSave()
+    // 启用自动保存（模块化版本）
+    unifiedStore.enableAutoSave()
     console.log('✅ [VideoEditor] 自动保存已启用')
   } catch (error) {
     console.error('❌ [VideoEditor] 加载项目内容失败:', error)
@@ -279,8 +274,8 @@ onMounted(async () => {
 })
 
 onUnmounted(() => {
-  // 禁用自动保存
-  autoSave.disableAutoSave()
+  // 禁用自动保存（模块化版本）
+  unifiedStore.disableAutoSave()
   // 清理键盘快捷键
   window.removeEventListener('keydown', handleKeydown)
 })

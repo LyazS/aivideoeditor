@@ -12,6 +12,7 @@ import { createUnifiedPlaybackModule } from '@/unified/modules/UnifiedPlaybackMo
 import { createUnifiedWebavModule } from '@/unified/modules/UnifiedWebavModule'
 import { createUnifiedNotificationModule } from '@/unified/modules/UnifiedNotificationModule'
 import { createUnifiedHistoryModule } from '@/unified/modules/UnifiedHistoryModule'
+import { createUnifiedAutoSaveModule } from '@/unified/modules/UnifiedAutoSaveModule'
 import { calculateTotalDurationFrames } from '@/unified/utils/durationUtils'
 import type { MediaType, MediaTypeOrUnknown } from '@/unified'
 import type { UnifiedTrackType } from '@/unified/track/TrackTypes'
@@ -199,6 +200,33 @@ export const useUnifiedStore = defineStore('unified', () => {
     unifiedMediaModule,
   )
 
+  // 创建统一自动保存模块（需要在项目模块之后创建）
+  const unifiedAutoSaveModule = createUnifiedAutoSaveModule(
+    {
+      projectModule: {
+        saveCurrentProject: unifiedProjectModule.saveCurrentProject,
+        isSaving: unifiedProjectModule.isSaving,
+      },
+      dataWatchers: {
+        timelineItems: unifiedTimelineModule.timelineItems,
+        tracks: unifiedTrackModule.tracks,
+        mediaItems: unifiedMediaModule.mediaItems,
+        projectConfig: computed(() => ({
+          videoResolution: unifiedConfigModule.videoResolution.value,
+          frameRate: unifiedConfigModule.frameRate.value,
+          timelineDurationFrames: unifiedConfigModule.timelineDurationFrames.value,
+        })),
+      },
+    },
+    {
+      // 可以在这里传入自定义配置
+      enabled: true,
+      debounceTime: 2000,
+      throttleTime: 30000,
+      maxRetries: 3,
+    }
+  )
+
   /**
    * 媒体项目统计信息
    */
@@ -279,7 +307,16 @@ export const useUnifiedStore = defineStore('unified', () => {
     unifiedSelectionModule.resetToDefaults() // 重置选择状态
     // 注意：UnifiedMediaModule、UnifiedTimelineModule和UnifiedClipOperationsModule没有resetToDefaults方法
     // 这些统一模块的状态通过清空数组或重置内部状态来实现重置功能
+    unifiedAutoSaveModule.resetAutoSaveState() // 重置自动保存状态
     console.log('🔄 [UnifiedStore] 重置所有模块到默认状态')
+  }
+
+  /**
+   * 销毁所有模块资源
+   */
+  function destroyAllModules() {
+    unifiedAutoSaveModule.destroy() // 销毁自动保存模块
+    console.log('🧹 [UnifiedStore] 销毁所有模块资源')
   }
 
   // ==================== 历史记录包装方法 ====================
@@ -1411,5 +1448,22 @@ export const useUnifiedStore = defineStore('unified', () => {
         unifiedTimelineModule.timelineItems.value,
         unifiedMediaModule.mediaItems.value,
       ),
+
+    // ==================== 统一自动保存模块状态和方法 ====================
+
+    // 自动保存状态
+    autoSaveState: unifiedAutoSaveModule.autoSaveState,
+    autoSaveConfig: unifiedAutoSaveModule.config,
+
+    // 自动保存方法
+    enableAutoSave: unifiedAutoSaveModule.enableAutoSave,
+    disableAutoSave: unifiedAutoSaveModule.disableAutoSave,
+    manualSave: unifiedAutoSaveModule.manualSave,
+    triggerAutoSave: unifiedAutoSaveModule.triggerAutoSave,
+    resetAutoSaveState: unifiedAutoSaveModule.resetAutoSaveState,
+
+    // ==================== 模块生命周期管理 ====================
+
+    destroyAllModules, // 新增：销毁所有模块资源的方法
   }
 })
