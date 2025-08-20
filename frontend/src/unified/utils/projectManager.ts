@@ -107,12 +107,11 @@ export class UnifiedProjectManager {
 
       // 创建子文件夹结构
       await projectHandle.getDirectoryHandle('media', { create: true })
-      await projectHandle.getDirectoryHandle('exports', { create: true })
 
       const mediaHandle = await projectHandle.getDirectoryHandle('media')
       await mediaHandle.getDirectoryHandle('videos', { create: true })
       await mediaHandle.getDirectoryHandle('images', { create: true })
-      await mediaHandle.getDirectoryHandle('audio', { create: true })
+      await mediaHandle.getDirectoryHandle('audios', { create: true })
       await mediaHandle.getDirectoryHandle('thumbnails', { create: true })
 
       // 保存项目配置文件

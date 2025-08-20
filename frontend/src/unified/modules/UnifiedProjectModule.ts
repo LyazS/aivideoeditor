@@ -293,9 +293,13 @@ export function createUnifiedProjectModule(
       updateLoadingProgress('重建媒体项目...', 50)
       await rebuildMediaItems(projectConfig.timeline.mediaItems)
 
-      // 5. 恢复时间轴轨道和项目状态
-      updateLoadingProgress('恢复时间轴数据...', 80)
-      await restoreTimelineAndTracks(projectId)
+      // 5. 恢复轨道状态
+      updateLoadingProgress('恢复轨道数据...', 70)
+      await restoreTracks()
+
+      // 6. 恢复时间轴项目状态
+      updateLoadingProgress('恢复时间轴项目...', 90)
+      await restoreTimelineItems()
 
       updateLoadingProgress('项目内容加载完成', 100)
       isProjectContentReady.value = true
@@ -400,10 +404,156 @@ export function createUnifiedProjectModule(
   }
 
   /**
-   * 恢复时间轴轨道和项目状态
-   * @param projectId 项目ID
+   * 恢复轨道状态（用于项目加载）
    */
-  async function restoreTimelineAndTracks(projectId: string): Promise<void> {}
+  async function restoreTracks(): Promise<void> {
+    try {
+      console.log('🛤️ 开始恢复轨道状态...')
+      
+      // 获取项目配置
+      const projectConfig = await projectFileOperations.loadProjectConfig(configModule.projectId.value)
+      if (!projectConfig) {
+        throw new Error('项目配置不存在，无法恢复轨道')
+      }
+
+      // 检查轨道模块是否可用
+      if (!trackModule) {
+        console.warn('⚠️ 轨道模块未初始化，跳过轨道恢复')
+        return
+      }
+
+      // 清空现有轨道
+      trackModule.tracks.value = []
+
+      // 恢复轨道数据
+      const savedTracks = projectConfig.timeline.tracks
+      if (savedTracks && savedTracks.length > 0) {
+        for (const trackData of savedTracks) {
+          // 使用轨道模块的 addTrack 方法创建轨道
+          trackModule.addTrack(
+            trackData.type,
+            trackData.name,
+            undefined, // position 参数，使用默认值
+            trackData.id // 使用保存的轨道ID
+          )
+          
+          // 恢复轨道属性
+          const restoredTrack = trackModule.tracks.value.find(t => t.id === trackData.id)
+          if (restoredTrack) {
+            // 在统一架构中，轨道数据是响应式的，直接修改属性
+            restoredTrack.isVisible = trackData.isVisible
+            restoredTrack.isMuted = trackData.isMuted
+            restoredTrack.height = trackData.height
+          }
+          
+          console.log(`🛤️ 恢复轨道: ${trackData.name} (${trackData.type})`)
+        }
+      } else {
+        // 如果没有保存的轨道，创建默认轨道
+        console.log('🛤️ 没有保存的轨道数据，创建默认轨道')
+        trackModule.addTrack('video', '视频轨道')
+      }
+
+      console.log(`✅ 轨道恢复完成: ${trackModule.tracks.value.length}个轨道`)
+    } catch (error) {
+      console.error('❌ 恢复轨道失败:', error)
+      throw error
+    }
+  }
+
+  /**
+   * 恢复时间轴项目状态（用于项目加载）
+   */
+  async function restoreTimelineItems(): Promise<void> {
+    try {
+      console.log('🎬 开始恢复时间轴项目状态...')
+      
+      // 获取项目配置
+      const projectConfig = await projectFileOperations.loadProjectConfig(configModule.projectId.value)
+      if (!projectConfig) {
+        throw new Error('项目配置不存在，无法恢复时间轴项目')
+      }
+
+      // 检查时间轴模块是否可用
+      if (!timelineModule) {
+        console.warn('⚠️ 时间轴模块未初始化，跳过时间轴项目恢复')
+        return
+      }
+
+      // 清空现有时间轴项目
+      timelineModule.timelineItems.value = []
+
+      // 恢复时间轴项目数据
+      const savedTimelineItems = projectConfig.timeline.timelineItems
+      if (savedTimelineItems && savedTimelineItems.length > 0) {
+        for (const itemData of savedTimelineItems) {
+          // 基本验证：必须有ID
+          if (!itemData.id) {
+            console.warn('⚠️ 跳过无效的时间轴项目数据（缺少ID）:', itemData)
+            continue
+          }
+
+          // 验证轨道是否存在
+          if (itemData.trackId && !trackModule?.tracks.value.some(t => t.id === itemData.trackId)) {
+            console.warn(`⚠️ 跳过时间轴项目，对应的轨道不存在: ${itemData.trackId}`)
+            continue
+          }
+
+          // 文本类型特殊处理（文本类型没有对应的媒体项目，mediaItemId可以为空）
+          if (itemData.mediaType !== 'text' && !itemData.mediaItemId) {
+            console.warn('⚠️ 跳过无效的时间轴项目数据（缺少mediaItemId）:', itemData)
+            continue
+          }
+
+          // 非文本类型：验证对应的媒体项目是否存在
+          if (itemData.mediaType !== 'text' && itemData.mediaItemId) {
+            const mediaItem = mediaModule?.mediaItems.value.find(m => m.id === itemData.mediaItemId)
+            if (!mediaItem) {
+              console.warn(`⚠️ 跳过时间轴项目，对应的媒体项目不存在: ${itemData.mediaItemId}`)
+              continue
+            }
+          }
+
+          // 使用 TimelineItemFactory 克隆时间轴项目，确保数据结构正确
+          const clonedItem = TimelineItemFactory.clone(itemData)
+          
+          // 清理运行时数据
+          if (clonedItem.runtime) {
+            clonedItem.runtime = {}
+          }
+          
+          // 添加到时间轴模块
+          timelineModule.addTimelineItem(clonedItem)
+          
+          console.log(`🎬 恢复时间轴项目: ${itemData.id} (${itemData.mediaType})`)
+        }
+      }
+
+      console.log(`✅ 时间轴项目恢复完成: ${timelineModule.timelineItems.value.length}个项目`)
+    } catch (error) {
+      console.error('❌ 恢复时间轴项目失败:', error)
+      throw error
+    }
+  }
+
+  /**
+   * 恢复时间轴轨道和项目状态（保持向后兼容）
+   * @deprecated 请使用 restoreTracks 和 restoreTimelineItems 分别调用
+   */
+  async function restoreTimelineAndTracks(): Promise<void> {
+    try {
+      // 先恢复轨道
+      await restoreTracks()
+      
+      // 然后恢复时间轴项目
+      await restoreTimelineItems()
+      
+      console.log('✅ 时间轴轨道和项目状态恢复完成')
+    } catch (error) {
+      console.error('❌ 恢复时间轴轨道和项目状态失败:', error)
+      throw error
+    }
+  }
 
   /**
    * 清除当前项目
@@ -445,6 +595,11 @@ export function createUnifiedProjectModule(
     loadProjectContent,
     clearCurrentProject,
     getProjectSummary,
+    
+    // 恢复方法（拆分后的独立函数）
+    restoreTracks,
+    restoreTimelineItems,
+    restoreTimelineAndTracks, // 保持向后兼容
 
     // 加载进度方法
     updateLoadingProgress,

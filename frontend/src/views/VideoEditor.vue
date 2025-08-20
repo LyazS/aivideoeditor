@@ -255,6 +255,7 @@ onMounted(async () => {
 
   // 加载项目内容
   try {
+    unifiedStore.disableAutoSave()
     console.log('📂 [VideoEditor] 开始加载项目内容...')
     await unifiedStore.loadProjectContent(projectId)
 
