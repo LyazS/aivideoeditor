@@ -325,11 +325,6 @@ export function createUnifiedProjectModule(
         throw new Error('缺少必要的 timelineMediaItems 参数，重建必须基于配置的媒体项目')
       }
 
-      // 创建媒体引用映射表，便于快速查找
-      const mediaRefMap = new Map(
-        mediaReferences.map(ref => [ref.id, ref])
-      )
-
       // 如果 timelineMediaItems 为空数组，说明项目没有媒体项目，直接返回
       if (timelineMediaItems.length === 0) {
         console.log('项目没有媒体项目，跳过重建')
@@ -339,52 +334,54 @@ export function createUnifiedProjectModule(
       // 使用项目配置中的媒体项目进行重建
       for (const savedMediaItem of timelineMediaItems) {
         try {
-          // 查找对应的媒体引用
-          const mediaReferenceId = savedMediaItem.source.mediaReferenceId
-          if (!mediaReferenceId) {
-            console.warn(`媒体项目缺少 mediaReferenceId，跳过重建: ${savedMediaItem.name} (ID: ${savedMediaItem.id})`)
-            continue
-          }
-          
-          const mediaRef = mediaRefMap.get(mediaReferenceId)
-          
-          if (mediaRef) {
-            // 文件存在，恢复完整的媒体项目
-            // 从磁盘加载媒体文件
-            const file = await globalProjectMediaManager.loadMediaFromProject(
-              configModule.projectId.value,
-              mediaRef.storedPath,
+          // 根据数据源类型创建相应的数据源，原原本本传递 mediaReferenceId
+          // 让数据源管理器内部处理缓存恢复或重新获取的逻辑
+          if (DataSourceQueries.isUserSelectedSource(savedMediaItem.source)) {
+            console.log(`📁 重建用户选择文件数据源: ${savedMediaItem.name} (ID: ${savedMediaItem.id})`)
+            
+            const source = DataSourceFactory.createUserSelectedSource(savedMediaItem.source)
+
+            // 使用保存的配置创建媒体项目
+            const mediaItem = mediaModule.createUnifiedMediaItemData(
+              savedMediaItem.id,
+              savedMediaItem.name,
+              source,
+              {
+                // 恢复保存的配置，排除 source 和 webav 属性
+                createdAt: savedMediaItem.createdAt,
+                mediaType: savedMediaItem.mediaType,
+                duration: savedMediaItem.duration,
+              },
             )
 
-            // 使用保存的配置数据重建数据源
-            // 只有用户选择的文件数据源才能使用此方法重建
-            if (DataSourceQueries.isUserSelectedSource(savedMediaItem.source)) {
-              const source = DataSourceFactory.createUserSelectedSource(savedMediaItem.source)
+            // 添加到媒体模块并启动处理
+            mediaModule.addMediaItem(mediaItem)
+            mediaModule.startMediaProcessing(mediaItem)
+          } else if (DataSourceQueries.isRemoteSource(savedMediaItem.source)) {
+            // 远程文件数据源重建
+            console.log(`🌐 重建远程文件数据源: ${savedMediaItem.name} (ID: ${savedMediaItem.id})`)
+            
+            const source = DataSourceFactory.createRemoteSource(savedMediaItem.source)
+            
+            // 创建媒体项目
+            const mediaItem = mediaModule.createUnifiedMediaItemData(
+              savedMediaItem.id,
+              savedMediaItem.name,
+              source,
+              {
+                // 恢复保存的配置，排除 source 和 webav 属性
+                createdAt: savedMediaItem.createdAt,
+                mediaType: savedMediaItem.mediaType,
+                duration: savedMediaItem.duration,
+              },
+            )
 
-              // 使用保存的配置创建媒体项目
-              const mediaItem = mediaModule.createUnifiedMediaItemData(
-                savedMediaItem.id,
-                savedMediaItem.name,
-                source,
-                {
-                  // 恢复保存的配置，排除 source 和 webav 属性
-                  createdAt: savedMediaItem.createdAt,
-                  mediaType: savedMediaItem.mediaType,
-                  duration: savedMediaItem.duration,
-                },
-              )
-
-              // 添加到媒体模块并启动处理
-              mediaModule.addMediaItem(mediaItem)
-              mediaModule.startMediaProcessing(mediaItem)
-            } else {
-              // 对于其他类型的数据源（如远程文件），需要不同的处理方式
-              console.warn(`不支持的数据源类型，跳过重建: ${savedMediaItem.name} (ID: ${savedMediaItem.id})`)
-              continue
-            }
+            // 添加到媒体模块并启动处理（使用智能缓存处理）
+            mediaModule.addMediaItem(mediaItem)
+            mediaModule.startMediaProcessing(mediaItem)
           } else {
-            // 文件缺失，直接跳过，让数据源内部处理
-            console.warn(`媒体文件缺失，跳过重建: ${savedMediaItem.name} (ID: ${savedMediaItem.id})`)
+            // 对于其他未支持的数据源类型
+            console.warn(`不支持的数据源类型，跳过重建: ${savedMediaItem.name} (ID: ${savedMediaItem.id})`)
             continue
           }
         } catch (error) {
