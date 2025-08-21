@@ -13,6 +13,12 @@ import {
   DataSourceQueries,
   extractSourceData,
 } from '@/unified/sources/DataSourceTypes'
+import type { VisibleSprite } from '@webav/av-cliper'
+import {
+  setupCommandMediaSync,
+  cleanupCommandMediaSync,
+} from '@/unified/composables/useCommandMediaSync'
+import { generateCommandId } from '@/utils/idGenerator'
 
 /**
  * 统一项目管理模块
@@ -56,6 +62,10 @@ export function createUnifiedProjectModule(
     ) => UnifiedMediaItemData
     addMediaItem: (item: UnifiedMediaItemData) => void
     startMediaProcessing: (item: UnifiedMediaItemData) => void
+  },
+  webavModule?: {
+    addSprite: (sprite: VisibleSprite) => Promise<boolean>
+    removeSprite: (sprite: VisibleSprite) => boolean
   },
 ) {
   // ==================== 状态定义 ====================
@@ -474,9 +484,14 @@ export function createUnifiedProjectModule(
         throw new Error('项目配置不存在，无法恢复时间轴项目')
       }
 
-      // 检查时间轴模块是否可用
+      // 检查必要模块是否可用
       if (!timelineModule) {
         console.warn('⚠️ 时间轴模块未初始化，跳过时间轴项目恢复')
+        return
+      }
+      
+      if (!mediaModule) {
+        console.warn('⚠️ 媒体模块未初始化，跳过时间轴项目恢复')
         return
       }
 
@@ -487,45 +502,74 @@ export function createUnifiedProjectModule(
       const savedTimelineItems = projectConfig.timeline.timelineItems
       if (savedTimelineItems && savedTimelineItems.length > 0) {
         for (const itemData of savedTimelineItems) {
-          // 基本验证：必须有ID
-          if (!itemData.id) {
-            console.warn('⚠️ 跳过无效的时间轴项目数据（缺少ID）:', itemData)
-            continue
-          }
-
-          // 验证轨道是否存在
-          if (itemData.trackId && !trackModule?.tracks.value.some(t => t.id === itemData.trackId)) {
-            console.warn(`⚠️ 跳过时间轴项目，对应的轨道不存在: ${itemData.trackId}`)
-            continue
-          }
-
-          // 文本类型特殊处理（文本类型没有对应的媒体项目，mediaItemId可以为空）
-          if (itemData.mediaType !== 'text' && !itemData.mediaItemId) {
-            console.warn('⚠️ 跳过无效的时间轴项目数据（缺少mediaItemId）:', itemData)
-            continue
-          }
-
-          // 非文本类型：验证对应的媒体项目是否存在
-          if (itemData.mediaType !== 'text' && itemData.mediaItemId) {
-            const mediaItem = mediaModule?.mediaItems.value.find(m => m.id === itemData.mediaItemId)
-            if (!mediaItem) {
-              console.warn(`⚠️ 跳过时间轴项目，对应的媒体项目不存在: ${itemData.mediaItemId}`)
+          try {
+            // 基本验证：必须有ID
+            if (!itemData.id) {
+              console.warn('⚠️ 跳过无效的时间轴项目数据（缺少ID）:', itemData)
               continue
             }
-          }
 
-          // 使用 TimelineItemFactory 克隆时间轴项目，确保数据结构正确
-          const clonedItem = TimelineItemFactory.clone(itemData)
-          
-          // 清理运行时数据
-          if (clonedItem.runtime) {
-            clonedItem.runtime = {}
+            // 验证轨道是否存在
+            if (itemData.trackId && !trackModule?.tracks.value.some(t => t.id === itemData.trackId)) {
+              console.warn(`⚠️ 跳过时间轴项目，对应的轨道不存在: ${itemData.trackId}`)
+              continue
+            }
+
+            // 文本类型特殊处理（文本类型没有对应的媒体项目，mediaItemId可以为空）
+            if (itemData.mediaType !== 'text' && !itemData.mediaItemId) {
+              console.warn('⚠️ 跳过无效的时间轴项目数据（缺少mediaItemId）:', itemData)
+              continue
+            }
+
+            // 非文本类型：验证对应的媒体项目是否存在
+            if (itemData.mediaType !== 'text' && itemData.mediaItemId) {
+              const mediaItem = mediaModule.mediaItems.value.find(m => m.id === itemData.mediaItemId)
+              if (!mediaItem) {
+                console.warn(`⚠️ 跳过时间轴项目，对应的媒体项目不存在: ${itemData.mediaItemId}`)
+                continue
+              }
+            }
+
+            console.log(`🔄 恢复时间轴项目：从源头重建 ${itemData.id}...`)
+
+            // 使用 TimelineItemFactory.rebuildKnown 重建时间轴项目
+            const rebuildResult = await TimelineItemFactory.rebuildKnown({
+              originalTimelineItemData: itemData,
+              getMediaItem: (id: string) => mediaModule.mediaItems.value.find(m => m.id === id),
+              logIdentifier: 'restoreTimelineItems',
+            })
+
+            if (!rebuildResult.success) {
+              console.error(`❌ 重建时间轴项目失败: ${itemData.id} - ${rebuildResult.error}`)
+              continue
+            }
+
+            const newTimelineItem = rebuildResult.timelineItem
+
+            // 1. 添加到时间轴
+            timelineModule.addTimelineItem(newTimelineItem)
+
+            // 2. 添加sprite到WebAV画布
+            if (newTimelineItem.runtime.sprite && webavModule) {
+              await webavModule.addSprite(newTimelineItem.runtime.sprite)
+            }
+
+            // 3. 针对loading状态的项目设置状态同步
+            if (newTimelineItem.timelineStatus === 'loading') {
+              const commandId = generateCommandId()
+              setupCommandMediaSync(
+                commandId,
+                newTimelineItem.mediaItemId,
+                newTimelineItem.id,
+                `restoreTimelineItems ${newTimelineItem.id}`,
+              )
+            }
+
+            console.log(`✅ 已恢复时间轴项目: ${itemData.id} (${itemData.mediaType})`)
+          } catch (error) {
+            console.error(`❌ 恢复时间轴项目失败: ${itemData.id}`, error)
+            // 即使单个时间轴项目恢复失败，也要继续处理其他项目
           }
-          
-          // 添加到时间轴模块
-          timelineModule.addTimelineItem(clonedItem)
-          
-          console.log(`🎬 恢复时间轴项目: ${itemData.id} (${itemData.mediaType})`)
         }
       }
 
