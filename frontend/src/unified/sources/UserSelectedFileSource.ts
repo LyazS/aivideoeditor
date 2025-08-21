@@ -3,18 +3,25 @@
  * 基于"核心数据与行为分离"的重构方案
  * 行为函数已移动到 UserSelectedFileManager 中
  */
-import type { BaseDataSourceData } from '@/unified/sources/BaseDataSource'
+import type { BaseDataSourceData, DataSourceRuntimeState } from '@/unified/sources/BaseDataSource'
 import { reactive } from 'vue'
-import { generateUUID4 } from '@/utils/idGenerator'
 import { getMediaTypeFromMimeType } from '@/unified/utils/mediaTypeDetector'
+import { RuntimeStateFactory } from '@/unified/sources/BaseDataSource'
+import { generateUUID4 } from '@/utils/idGenerator'
 
 // ==================== 用户选择文件数据源类型定义 ====================
 
 /**
- * 用户选择文件数据源
+ * 用户选择文件数据源基类型 - 只包含持久化数据
  */
-export interface UserSelectedFileSourceData extends BaseDataSourceData {
+export interface BaseUserSelectedFileSourceData extends BaseDataSourceData {
   type: 'user-selected'
+}
+
+/**
+ * 用户选择文件数据源 - 继承基类型和运行时状态
+ */
+export interface UserSelectedFileSourceData extends BaseUserSelectedFileSourceData, DataSourceRuntimeState {
   selectedFile: File
 }
 
@@ -24,16 +31,24 @@ export interface UserSelectedFileSourceData extends BaseDataSourceData {
  * 用户选择文件数据源工厂函数
  */
 export const UserSelectedFileSourceFactory = {
-  createUserSelectedSource(file: File): UserSelectedFileSourceData {
-    return reactive({
-      id: generateUUID4(),
-      type: 'user-selected',
-      status: 'pending',
-      progress: 0,
-      file: null,
-      url: null,
-      selectedFile: file,
-    }) as UserSelectedFileSourceData
+  // 统一创建方法，支持文件或媒体引用ID
+  createUserSelectedSource(param: File | BaseUserSelectedFileSourceData): UserSelectedFileSourceData {
+    if (param instanceof File) {
+      // 使用文件创建
+      return reactive({
+        id: generateUUID4(),
+        type: 'user-selected' as const,
+        ...RuntimeStateFactory.createRuntimeState(),
+        selectedFile: param,
+      }) as UserSelectedFileSourceData
+    } else {
+      // 使用保存的配置数据重建
+      return reactive({
+        ...param, // 保留原有的基础数据
+        ...RuntimeStateFactory.createRuntimeState(), // 添加运行时状态
+        selectedFile: null as any, // 临时设置为null，将在executeAcquisition中加载
+      }) as UserSelectedFileSourceData
+    }
   },
 }
 
@@ -187,4 +202,27 @@ export const UserSelectedFileQueries = {
       fileSize: file.size,
     }
   },
+}
+
+// ==================== 数据源提取函数 ====================
+
+/**
+ * 提取用户选择文件数据源的持久化数据
+ */
+export function extractUserSelectedFileSourceData(source: UserSelectedFileSourceData): BaseUserSelectedFileSourceData {
+  return {
+    // 基础字段
+    id: source.id,
+    type: source.type,
+    mediaReferenceId: source.mediaReferenceId,
+    
+    // 不需要保存运行时状态
+    // progress: source.progress, // 重新加载时会重置
+    // errorMessage: source.errorMessage, // 重新加载时会重置
+    // taskId: source.taskId, // 重新加载时会重新生成
+    // file: source.file, // 重新加载时会重新加载
+    // url: source.url, // 重新加载时会重新生成
+    // selectedFile 是 File 对象，不能直接序列化
+    // 但我们可以保存文件的基本信息，或者依赖 mediaReferenceId
+  }
 }

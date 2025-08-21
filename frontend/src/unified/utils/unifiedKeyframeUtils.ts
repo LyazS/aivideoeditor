@@ -19,6 +19,7 @@ import {
   isTextTimelineItem,
   isAudioTimelineItem,
 } from '@/unified/timelineitem/TimelineItemQueries'
+import { updateWebAVAnimation } from '@/unified/utils/webavAnimationManager'
 
 // ==================== 关键帧位置转换工具函数 ====================
 
@@ -653,7 +654,6 @@ async function handlePropertyChange_OnKeyframe(
   }
 
   // 2. 更新WebAV动画（使用新的关键帧数据）
-  const { updateWebAVAnimation } = await import('@/unified/utils/webavAnimationManager')
   await updateWebAVAnimation(item)
 
   // 3. 立即更新当前属性值到sprite（确保立即生效）
@@ -699,7 +699,6 @@ async function handlePropertyChange_BetweenKeyframes(
   })
 
   // 2. 更新WebAV动画（使用新的关键帧数据）
-  const { updateWebAVAnimation } = await import('@/unified/utils/webavAnimationManager')
   await updateWebAVAnimation(item)
 
   // 3. 立即更新当前属性值到sprite（确保立即生效）

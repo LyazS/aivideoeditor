@@ -56,7 +56,7 @@ export class SplitTimelineItemCommand implements SimpleCommand {
     originalTimelineItem: UnifiedTimelineItemData<MediaType>, // 要分割的原始时间轴项目
     private splitTimeFrames: number, // 分割时间点（帧数）
     private timelineModule: {
-      addTimelineItem: (item: UnifiedTimelineItemData<MediaType>) => void
+      addTimelineItem: (item: UnifiedTimelineItemData<MediaType>) => Promise<void>
       removeTimelineItem: (id: string) => void
       getTimelineItem: (id: string) => UnifiedTimelineItemData<MediaType> | undefined
     },
@@ -321,8 +321,8 @@ export class SplitTimelineItemCommand implements SimpleCommand {
       this.timelineModule.removeTimelineItem(this.originalTimelineItemId)
 
       // 2. 添加分割后的两个项目
-      this.timelineModule.addTimelineItem(firstItem)
-      this.timelineModule.addTimelineItem(secondItem)
+      await this.timelineModule.addTimelineItem(firstItem)
+      await this.timelineModule.addTimelineItem(secondItem)
 
       // 3. 添加sprite到WebAV画布
       if (isKnownTimelineItem(firstItem) && firstItem.runtime.sprite) {
@@ -359,7 +359,7 @@ export class SplitTimelineItemCommand implements SimpleCommand {
       const originalItem = await this.rebuildOriginalItem()
 
       // 3. 添加原始项目到时间轴
-      this.timelineModule.addTimelineItem(originalItem)
+      await this.timelineModule.addTimelineItem(originalItem)
 
       // 4. 添加sprite到WebAV画布
       if (isKnownTimelineItem(originalItem) && originalItem.runtime.sprite) {

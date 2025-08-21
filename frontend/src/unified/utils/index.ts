@@ -270,5 +270,38 @@ export {
   debugCurrentItem,
 } from './keyframeDebugger'
 
-// ==================== 统一项目管理器 ==========
+// ==================== 统一项目管理器 ====================
 export { unifiedProjectManager } from './projectManager'
+
+// ==================== 项目文件操作工具 ====================
+export {
+  // 单项目文件操作类
+  ProjectFileOperations,
+  projectFileOperations,
+  
+  // 类型定义
+  type UnifiedLoadProjectOptions,
+  type UnifiedProjectLoadResult,
+} from './ProjectFileOperations'
+
+// ==================== 页面级项目媒体管理器 ====================
+export {
+  // 核心类和实例
+  ProjectMediaManager,
+  globalProjectMediaManager,
+
+  // 类型定义
+  type MediaSaveResult,
+} from './ProjectMediaManager'
+// ==================== WebAV Clip工具 ====================
+export {
+  // Clip创建函数
+  createMP4Clip,
+  createImgClip,
+  createAudioClip,
+  
+  // 克隆函数
+  cloneMP4Clip,
+  cloneImgClip,
+  cloneAudioClip,
+} from './webavClipUtils'

@@ -58,14 +58,15 @@ export class TimelineStatusDisplayUtils {
       case 'pending':
         return '等待处理'
       case 'asyncprocessing':
-        if (mediaData.source?.status === 'acquiring') {
+        // 检查是否正在获取数据源（通过进度和文件状态判断）
+        if (mediaData.source.progress > 0 && mediaData.source.progress < 100 && !mediaData.source.file) {
           const progress = mediaData.source.progress || 0
           // 只有远程文件源才有 downloadSpeed 属性
           const speed =
             mediaData.source.type === 'remote' && 'downloadSpeed' in mediaData.source
               ? mediaData.source.downloadSpeed
               : undefined
-          return speed ? `获取中... ${progress}% (${speed})` : `获取中... ${progress}%`
+          return speed ? `获取中... ${progress.toFixed(2)}% (${speed})` : `获取中... ${progress.toFixed(2)}%`
         }
         return '解析中...'
       case 'webavdecoding':
@@ -93,7 +94,8 @@ export class TimelineStatusDisplayUtils {
   } {
     switch (mediaData.mediaStatus) {
       case 'asyncprocessing':
-        if (mediaData.source?.status === 'acquiring') {
+        // 检查是否正在获取数据源（通过进度和文件状态判断）
+        if (mediaData.source.progress > 0 && mediaData.source.progress < 100 && !mediaData.source.file) {
           // 只有远程文件源才有 downloadSpeed 属性
           const speed =
             mediaData.source.type === 'remote' && 'downloadSpeed' in mediaData.source
@@ -199,8 +201,8 @@ export const createStatusDisplayComputeds = (getMediaData: () => UnifiedMediaIte
       if (!progressInfo.hasProgress) return ''
 
       return progressInfo.speed
-        ? `${progressInfo.percent}% (${progressInfo.speed})`
-        : `${progressInfo.percent}%`
+        ? `${progressInfo.percent.toFixed(2)}% (${progressInfo.speed})`
+        : `${progressInfo.percent.toFixed(2)}%`
     },
 
     hasError: () => {

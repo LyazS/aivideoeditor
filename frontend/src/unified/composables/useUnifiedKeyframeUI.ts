@@ -26,6 +26,7 @@ import {
   clearAllKeyframes as clearAllKeyframesWithCommand,
 } from '@/unified/utils/keyframeCommandUtils'
 import { isPlayheadInTimelineItem } from '@/unified/utils/timelineSearchUtils'
+import { updateWebAVAnimation } from '@/unified/utils/webavAnimationManager'
 
 /**
  * 统一关键帧UI管理 Composable（新架构版本）
@@ -231,15 +232,12 @@ export function useUnifiedKeyframeUI(
   /**
    * 更新WebAV动画
    */
-  const updateWebAVAnimation = async () => {
+  const updateWebAVAnimationWrapper = async () => {
     if (!timelineItem.value) return
 
     try {
-      // 动态导入WebAV动画管理器
-      const { updateWebAVAnimation: updateAnimation } = await import(
-        '@/unified/utils/webavAnimationManager'
-      )
-      await updateAnimation(timelineItem.value)
+      // 使用WebAV动画管理器
+      await updateWebAVAnimation(timelineItem.value)
     } catch (error) {
       console.error('🎬 [Unified Keyframe UI] Failed to update WebAV animation:', error)
     }
@@ -285,7 +283,6 @@ export function useUnifiedKeyframeUI(
           },
           {
             updateWebAVAnimation: async (item) => {
-              const { updateWebAVAnimation } = await import('@/unified/utils/webavAnimationManager')
               await updateWebAVAnimation(item)
             },
           },
@@ -338,6 +335,6 @@ export function useUnifiedKeyframeUI(
     seekToFrame,
 
     // 工具方法
-    updateWebAVAnimation,
+    updateWebAVAnimation: updateWebAVAnimationWrapper,
   }
 }

@@ -4,16 +4,19 @@
  * 行为函数已移动到 RemoteFileManager 中
  */
 
-import type { BaseDataSourceData } from '@/unified/sources/BaseDataSource'
+import type { BaseDataSourceData, DataSourceRuntimeState } from '@/unified/sources/BaseDataSource'
 import { reactive } from 'vue'
-import { generateUUID4 } from '@/utils/idGenerator'
+import { RuntimeStateFactory } from '@/unified/sources/BaseDataSource'
 
 // ==================== 远程文件数据源类型定义 ====================
 
 /**
- * 远程文件配置接口
+ * 远程文件数据源基类型 - 只包含持久化数据
  */
-export interface RemoteFileConfig {
+export interface BaseRemoteFileSourceData extends BaseDataSourceData {
+  type: 'remote'
+  remoteUrl: string
+  // 内联的配置字段（原RemoteFileConfig）
   headers?: Record<string, string>
   timeout?: number
   retryCount?: number
@@ -21,12 +24,10 @@ export interface RemoteFileConfig {
 }
 
 /**
- * 远程文件数据源
+ * 远程文件数据源 - 继承基类型和运行时状态
  */
-export interface RemoteFileSourceData extends BaseDataSourceData {
-  type: 'remote'
-  remoteUrl: string
-  config: RemoteFileConfig
+export interface RemoteFileSourceData extends BaseRemoteFileSourceData, DataSourceRuntimeState {
+  // 下载状态字段
   downloadedBytes: number
   totalBytes: number
   downloadSpeed?: string
@@ -49,18 +50,16 @@ export interface DownloadStats {
  * 远程文件数据源工厂函数
  */
 export const RemoteFileSourceFactory = {
-  createRemoteSource(remoteUrl: string, config: RemoteFileConfig = {}): RemoteFileSourceData {
+  // 统一创建方法，支持创建和重建
+  createRemoteSource(param: BaseRemoteFileSourceData): RemoteFileSourceData {
     return reactive({
-      id: generateUUID4(),
-      type: 'remote',
-      status: 'pending',
-      progress: 0,
-      file: null,
-      url: null,
-      remoteUrl,
-      config,
+      ...param, // 保留基础数据
+      ...RuntimeStateFactory.createRuntimeState(), // 添加运行时状态
+      // 重置运行时特定字段
       downloadedBytes: 0,
       totalBytes: 0,
+      downloadSpeed: undefined,
+      startTime: undefined,
     }) as RemoteFileSourceData
   },
 }
@@ -81,7 +80,7 @@ export const RemoteFileTypeGuards = {
 /**
  * 默认下载配置
  */
-export const DEFAULT_REMOTE_CONFIG: Required<RemoteFileConfig> = {
+export const DEFAULT_REMOTE_CONFIG: Required<Pick<RemoteFileSourceData, 'headers' | 'timeout' | 'retryCount' | 'retryDelay'>> = {
   headers: {},
   timeout: 30000, // 30秒超时
   retryCount: 3, // 重试3次
@@ -212,8 +211,13 @@ export const RemoteFileQueries = {
   /**
    * 获取下载配置
    */
-  getConfig(source: RemoteFileSourceData): RemoteFileConfig {
-    return source.config
+  getConfig(source: RemoteFileSourceData): Pick<RemoteFileSourceData, 'headers' | 'timeout' | 'retryCount' | 'retryDelay'> {
+    return {
+      headers: source.headers,
+      timeout: source.timeout,
+      retryCount: source.retryCount,
+      retryDelay: source.retryDelay,
+    }
   },
 
   /**
@@ -224,4 +228,36 @@ export const RemoteFileQueries = {
     // 目前简单返回false，后续可以扩展
     return false
   },
+}
+
+// ==================== 数据源提取函数 ====================
+
+/**
+ * 提取远程文件数据源的持久化数据
+ */
+export function extractRemoteFileSourceData(source: RemoteFileSourceData): BaseRemoteFileSourceData {
+  return {
+    // 基础字段
+    id: source.id,
+    type: source.type,
+    mediaReferenceId: source.mediaReferenceId,
+    
+    // 特定字段 - 保存配置和URL，但不保存运行时状态
+    remoteUrl: source.remoteUrl,
+    headers: source.headers,
+    timeout: source.timeout,
+    retryCount: source.retryCount,
+    retryDelay: source.retryDelay,
+    
+    // 不需要保存运行时状态
+    // downloadedBytes: source.downloadedBytes, // 重新加载时会重新下载
+    // totalBytes: source.totalBytes, // 重新加载时会重新获取
+    // downloadSpeed: source.downloadSpeed, // 运行时状态
+    // startTime: source.startTime, // 运行时状态
+    // progress: source.progress, // 重新加载时会重置
+    // errorMessage: source.errorMessage, // 重新加载时会重置
+    // taskId: source.taskId, // 重新加载时会重新生成
+    // file: source.file, // 重新加载时会重新下载
+    // url: source.url, // 重新加载时会重新生成
+  }
 }

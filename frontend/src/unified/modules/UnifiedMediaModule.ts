@@ -1,4 +1,5 @@
-import { ref, watch } from 'vue'
+import { ref, watch, type Raw } from 'vue'
+import { MP4Clip, ImgClip, AudioClip } from '@webav/av-cliper'
 import {
   type UnifiedMediaItemData,
   type MediaStatus,
@@ -40,7 +41,6 @@ function printUnifiedDebugInfo(
       mediaType: item.mediaType,
       mediaStatus: item.mediaStatus,
       sourceType: item.source.type,
-      sourceStatus: item.source.status,
       sourceProgress: `${item.source.progress}%`,
       hasWebAV: !!item.webav,
       createdAt: new Date(item.createdAt).toLocaleTimeString(),
@@ -68,7 +68,11 @@ function printUnifiedDebugInfo(
  * 统一媒体管理模块
  * 负责管理素材库中的统一媒体项目
  */
-export function createUnifiedMediaModule() {
+export function createUnifiedMediaModule(webavModule: {
+  createMP4Clip: (file: File) => Promise<Raw<MP4Clip>>
+  createImgClip: (file: File) => Promise<Raw<ImgClip>>
+  createAudioClip: (file: File) => Promise<Raw<AudioClip>>
+}) {
   // ==================== 状态定义 ====================
 
   // 统一媒体项目列表
@@ -91,7 +95,6 @@ export function createUnifiedMediaModule() {
         mediaType: mediaItem.mediaType,
         mediaStatus: mediaItem.mediaStatus,
         sourceType: mediaItem.source.type,
-        sourceStatus: mediaItem.source.status,
       },
       getAllMediaItems(),
     )
@@ -114,15 +117,15 @@ export function createUnifiedMediaModule() {
 
       // 1. 清理相关的时间轴项目
       cleanupRelatedTimelineItems(mediaItemId)
-      
+
       // 2. 清理命令同步
       cleanupCommandMediaSyncForMediaItem(mediaItemId)
-      
+
       // 3. 调用外部清理回调
       if (cleanupCallback) {
         cleanupCallback(mediaItem)
       }
-      
+
       // 4. 从数组中移除
       mediaItems.value.splice(index, 1)
 
@@ -267,94 +270,7 @@ export function createUnifiedMediaModule() {
 
   // ==================== WebAV处理方法 ====================
 
-  /**
-   * 启动WebAV解析处理
-   * @param mediaItem 媒体项目
-   */
-  async function startWebAVProcessing(mediaItem: UnifiedMediaItemData): Promise<void> {
-    console.log(`🎬 [UnifiedMediaModule] 开始WebAV解析: ${mediaItem.name}`)
-
-    try {
-      // 确保数据源已获取
-      if (
-        mediaItem.source.status !== 'acquired' ||
-        !mediaItem.source.file ||
-        !mediaItem.source.url
-      ) {
-        throw new Error('数据源未准备好')
-      }
-
-      // 动态导入webavModule
-      const { createWebAVModule } = await import('@/stores/modules/webavModule')
-      const webavModule = createWebAVModule()
-
-      // 根据媒体类型创建对应的WebAV Clip
-      let clip: any
-      let thumbnailUrl: string | undefined
-
-      if (UnifiedMediaItemQueries.isVideo(mediaItem)) {
-        clip = await webavModule.createMP4Clip(mediaItem.source.file)
-        // 生成缩略图
-        thumbnailUrl = await generateVideoThumbnail(mediaItem.source.file)
-      } else if (UnifiedMediaItemQueries.isImage(mediaItem)) {
-        clip = await webavModule.createImgClip(mediaItem.source.file)
-        thumbnailUrl = mediaItem.source.url
-      } else if (UnifiedMediaItemQueries.isAudio(mediaItem)) {
-        clip = await webavModule.createAudioClip(mediaItem.source.file)
-        // 音频使用全局默认图标
-        const { AUDIO_DEFAULT_THUMBNAIL_URL } = await import('@/unified/constants/audioIcon')
-        thumbnailUrl = AUDIO_DEFAULT_THUMBNAIL_URL
-      } else {
-        throw new Error(`不支持的媒体类型: ${mediaItem.mediaType}`)
-      }
-
-      // 等待clip准备完成
-      const meta = await clip.ready
-
-      // 创建WebAV对象
-      const webavObjects: any = {
-        thumbnailUrl,
-        originalWidth: meta.width,
-        originalHeight: meta.height,
-      }
-
-      // 根据媒体类型设置对应的clip
-      if (UnifiedMediaItemQueries.isVideo(mediaItem)) {
-        webavObjects.mp4Clip = clip
-      } else if (UnifiedMediaItemQueries.isImage(mediaItem)) {
-        webavObjects.imgClip = clip
-      } else if (UnifiedMediaItemQueries.isAudio(mediaItem)) {
-        webavObjects.audioClip = clip
-      }
-
-      // 设置WebAV对象
-      UnifiedMediaItemActions.setWebAVObjects(mediaItem, webavObjects)
-
-      // 设置时长（帧数）
-      if (UnifiedMediaItemQueries.isAudioCapableMedia(mediaItem)) {
-        // 视频和音频：从clip元数据获取时长并转换为帧数
-        const durationFrames = microsecondsToFrames(meta.duration)
-        UnifiedMediaItemActions.setDuration(mediaItem, durationFrames)
-      } else if (UnifiedMediaItemQueries.isImage(mediaItem)) {
-        // 图片：固定5秒
-        UnifiedMediaItemActions.setDuration(mediaItem, secondsToFrames(5))
-      }
-
-      // 转换到ready状态
-      UnifiedMediaItemActions.transitionTo(mediaItem, 'ready')
-
-      console.log(`✅ [UnifiedMediaModule] WebAV解析完成: ${mediaItem.name}`)
-    } catch (error) {
-      console.error(`❌ [UnifiedMediaModule] WebAV解析失败: ${mediaItem.name}`, {
-        mediaType: mediaItem.mediaType,
-        sourceType: mediaItem.source.type,
-        sourceStatus: mediaItem.source.status,
-        errorMessage: error instanceof Error ? error.message : String(error),
-      })
-
-      UnifiedMediaItemActions.transitionTo(mediaItem, 'error')
-    }
-  }
+  // 注意：startWebAVProcessing方法已移除，现在由各个管理器直接处理WebAV解析
 
   /**
    * 生成视频缩略图
@@ -397,103 +313,39 @@ export function createUnifiedMediaModule() {
   }
 
   // ==================== 数据源状态同步方法 ====================
-
-  /**
-   * 处理数据源状态变化，自动同步到媒体状态
-   * @param mediaItem 媒体项目
-   * @param newSourceStatus 新的数据源状态
-   * @param oldSourceStatus 旧的数据源状态
-   */
-  function handleSourceStatusChange(
-    mediaItem: UnifiedMediaItemData,
-    newSourceStatus: string,
-    oldSourceStatus?: string,
-  ) {
-    const currentMediaStatus = mediaItem.mediaStatus
-
-    console.log(
-      `🔄 [UnifiedMediaModule] 数据源状态变化: ${mediaItem.name} - 数据源: ${oldSourceStatus || 'unknown'} → ${newSourceStatus}, 媒体: ${currentMediaStatus}`,
-    )
-
-    // 数据源状态到媒体状态的映射
-    const statusMap: Record<string, MediaStatus> = {
-      pending: 'pending',
-      acquiring: 'asyncprocessing',
-      acquired: 'webavdecoding',
-      error: 'error',
-      cancelled: 'cancelled',
-      missing: 'missing',
-    }
-
-    const targetMediaStatus = statusMap[newSourceStatus]
-    if (!targetMediaStatus) {
-      console.warn(
-        `🚨 [UnifiedMediaModule] 未知的数据源状态: ${newSourceStatus} (${mediaItem.name})`,
-      )
-      return
-    }
-
-    if (currentMediaStatus === targetMediaStatus) {
-      console.log(`⏭️ [UnifiedMediaModule] 媒体状态已是目标状态: ${targetMediaStatus}`)
-      return
-    }
-
-    // 执行状态转换
-    const success = UnifiedMediaItemActions.transitionTo(mediaItem, targetMediaStatus)
-    if (success) {
-      console.log(
-        `✅ [UnifiedMediaModule] 媒体状态转换成功: ${currentMediaStatus} → ${targetMediaStatus}`,
-      )
-
-      // 如果转换到webavdecoding状态，启动WebAV解析
-      if (targetMediaStatus === 'webavdecoding') {
-        startWebAVProcessing(mediaItem)
-      }
-    } else {
-      console.error(
-        `❌ [UnifiedMediaModule] 媒体状态转换失败: ${currentMediaStatus} → ${targetMediaStatus} (${mediaItem.name})`,
-      )
-    }
-  }
+  // 注意：handleSourceStatusChange方法已移除，现在由各个管理器直接处理媒体状态
 
   /**
    * 开始媒体项目处理流程
    * @param mediaItem 媒体项目
    */
   function startMediaProcessing(mediaItem: UnifiedMediaItemData) {
-    // 监听数据源状态变化
-    const unwatch = watch(
-      () => mediaItem.source.status,
-      (newStatus, oldStatus) => {
-        handleSourceStatusChange(mediaItem, newStatus, oldStatus)
-
-        // 当状态变为终态时，自动清理watcher
-        if (['acquired', 'error', 'cancelled', 'missing'].includes(newStatus)) {
-          unwatch()
-          console.log(
-            `🧹 [UnifiedMediaModule] 已清理数据源状态watcher: ${mediaItem.name} (${newStatus})`,
-          )
-        }
-      },
-      { immediate: true },
-    )
-
-    // 开始数据源获取
     console.log(`🚀 [UnifiedMediaModule] 开始处理媒体项目: ${mediaItem.name}`)
 
     // 导入并使用数据源管理器注册中心
     import('@/unified/managers/DataSourceManagerRegistry')
-      .then(({ startDataSourceAcquisition }) => {
-        const success = startDataSourceAcquisition(mediaItem.source)
-        if (success) {
-          console.log(`✅ [UnifiedMediaModule] 数据源获取任务已启动: ${mediaItem.name}`)
+      .then(({ getManagerRegistry }) => {
+        // 获取管理器注册中心实例
+        const registry = getManagerRegistry()
+        // 获取对应的数据源管理器
+        const manager = registry.getManager(mediaItem.source.type)
+        if (manager) {
+          // 调用管理器的processMediaItem方法处理完整的媒体项目生命周期
+          manager.processMediaItem(mediaItem)
+            .then(() => {
+              console.log(`✅ [UnifiedMediaModule] 媒体项目处理完成: ${mediaItem.name}`)
+            })
+            .catch((error: any) => {
+              console.error(`❌ [UnifiedMediaModule] 媒体项目处理失败: ${mediaItem.name}`, error)
+              // 设置媒体项目为错误状态
+              UnifiedMediaItemActions.transitionTo(mediaItem, 'error')
+            })
         } else {
-          console.error(`❌ [UnifiedMediaModule] 数据源获取任务启动失败: ${mediaItem.name}`)
-          // 设置媒体项目为错误状态
+          console.error(`❌ [UnifiedMediaModule] 找不到对应的数据源管理器: ${mediaItem.source.type}`)
           UnifiedMediaItemActions.transitionTo(mediaItem, 'error')
         }
       })
-      .catch((error) => {
+      .catch((error: any) => {
         console.error(`❌ [UnifiedMediaModule] 导入数据源管理器失败: ${mediaItem.name}`, error)
         UnifiedMediaItemActions.transitionTo(mediaItem, 'error')
       })
@@ -588,21 +440,19 @@ export function createUnifiedMediaModule() {
     try {
       // 获取统一存储实例
       const unifiedStore = useUnifiedStore()
-      
+
       // 获取所有时间轴项目
       const timelineItems = unifiedStore.timelineItems
-      
+
       // 找出使用该素材的所有时间轴项目
-      const relatedTimelineItems = timelineItems.filter(
-        (item) => item.mediaItemId === mediaItemId
-      )
-      
+      const relatedTimelineItems = timelineItems.filter((item: any) => item.mediaItemId === mediaItemId)
+
       // 清理每个相关的时间轴项目
-      relatedTimelineItems.forEach((timelineItem) => {
+      relatedTimelineItems.forEach((timelineItem: any) => {
         console.log(`🧹 清理时间轴项目: ${timelineItem.id}`)
         unifiedStore.removeTimelineItem(timelineItem.id)
       })
-      
+
       console.log(`✅ 已清理 ${relatedTimelineItems.length} 个相关时间轴项目`)
     } catch (error) {
       console.error(`❌ 清理相关时间轴项目失败: ${mediaItemId}`, error)
@@ -617,7 +467,7 @@ export function createUnifiedMediaModule() {
     try {
       const syncManager = SimplifiedMediaSyncManager.getInstance()
       syncManager.cleanupMediaItemSync(mediaItemId)
-      
+
       console.log(`✅ 已清理媒体项目相关的命令同步: ${mediaItemId}`)
     } catch (error) {
       console.error(`❌ 清理媒体项目命令同步失败: ${mediaItemId}`, error)
@@ -645,7 +495,6 @@ export function createUnifiedMediaModule() {
     waitForMediaItemReady,
 
     // 数据源处理方法
-    handleSourceStatusChange,
     startMediaProcessing,
 
     // 便捷查询方法

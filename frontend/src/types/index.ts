@@ -1219,8 +1219,6 @@ export interface ProjectConfig {
     [mediaId: string]: AsyncProcessingMediaReference
   }
 
-  // 导出历史
-  exports: any[]
 }
 
 /**

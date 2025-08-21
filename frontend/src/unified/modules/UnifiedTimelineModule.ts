@@ -45,7 +45,7 @@ function unifiedDebugLog(operation: string, details: any) {
 import { syncTimeRange } from '@/unified/utils/timeRangeUtils'
 import { microsecondsToFrames } from '@/unified/utils/timeUtils'
 import { hasAudioCapabilities } from '@/unified/utils/spriteTypeGuards'
-import { globalWebAVAnimationManager } from '@/unified/utils/webavAnimationManager'
+import { globalWebAVAnimationManager, updateWebAVAnimation } from '@/unified/utils/webavAnimationManager'
 
 /**
  * 统一时间轴核心管理模块
@@ -162,7 +162,7 @@ export function createUnifiedTimelineModule(
    * 添加时间轴项目
    * @param timelineItem 要添加的时间轴项目
    */
-  function addTimelineItem(timelineItem: UnifiedTimelineItemData<MediaType>) {
+  async function addTimelineItem(timelineItem: UnifiedTimelineItemData<MediaType>) {
     // 如果没有指定轨道，默认分配到第一个轨道
     if (!timelineItem.trackId && trackModule) {
       const firstTrack = trackModule.tracks.value[0]
@@ -192,6 +192,24 @@ export function createUnifiedTimelineModule(
           ) {
             timelineItem.runtime.sprite.setTrackMuted(track.isMuted)
           }
+        }
+      }
+
+      // 应用动画配置到sprite（如果有）
+      if (timelineItem.animation && timelineItem.animation.isEnabled && timelineItem.animation.keyframes.length > 0 && timelineItem.runtime.sprite) {
+        try {
+          console.log(`🎬 [UnifiedTimelineModule] 应用动画配置到sprite: ${timelineItem.id}`, {
+            keyframeCount: timelineItem.animation.keyframes.length,
+            isEnabled: timelineItem.animation.isEnabled,
+          })
+          
+          // 使用WebAVAnimationManager来应用动画
+          await updateWebAVAnimation(timelineItem)
+          
+          console.log(`✅ [UnifiedTimelineModule] 动画配置应用成功: ${timelineItem.id}`)
+        } catch (animationError) {
+          console.error(`❌ [UnifiedTimelineModule] 应用动画配置失败: ${timelineItem.id}`, animationError)
+          // 动画应用失败不影响后续操作
         }
       }
 

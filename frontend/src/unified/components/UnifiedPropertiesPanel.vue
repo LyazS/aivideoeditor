@@ -26,28 +26,42 @@
 
       <!-- 单选状态 -->
       <div v-else-if="selectedTimelineItem" class="properties-content">
-        <!-- 根据选中项目类型显示不同的属性组件 -->
-        <UnifiedVideoClipProperties
-          v-if="
-            selectedTimelineItem.mediaType === 'video' || selectedTimelineItem.mediaType === 'image'
-          "
-          :selected-timeline-item="selectedTimelineItem as UnifiedTimelineItemData<'video' | 'image'>"
-          :current-frame="currentFrame"
-        />
+        <!-- 只在ready状态时显示完整属性面板 -->
+        <template v-if="selectedTimelineItem.timelineStatus === 'ready'">
+          <!-- 根据选中项目类型显示不同的属性组件 -->
+          <UnifiedVideoClipProperties
+            v-if="
+              selectedTimelineItem.mediaType === 'video' || selectedTimelineItem.mediaType === 'image'
+            "
+            :selected-timeline-item="selectedTimelineItem as UnifiedTimelineItemData<'video' | 'image'>"
+            :current-frame="currentFrame"
+          />
 
-        <!-- 文本项目属性组件 -->
-        <UnifiedTextClipProperties
-          v-else-if="selectedTimelineItem.mediaType === 'text'"
-          :selected-timeline-item="selectedTimelineItem as UnifiedTimelineItemData<'text'>"
-          :current-frame="currentFrame"
-        />
+          <!-- 文本项目属性组件 -->
+          <UnifiedTextClipProperties
+            v-else-if="selectedTimelineItem.mediaType === 'text'"
+            :selected-timeline-item="selectedTimelineItem as UnifiedTimelineItemData<'text'>"
+            :current-frame="currentFrame"
+          />
 
-        <!-- 音频项目属性组件 -->
-        <UnifiedAudioClipProperties
-          v-else-if="selectedTimelineItem.mediaType === 'audio'"
-          :selected-timeline-item="selectedTimelineItem as UnifiedTimelineItemData<'audio'>"
-          :current-frame="currentFrame"
-        />
+          <!-- 音频项目属性组件 -->
+          <UnifiedAudioClipProperties
+            v-else-if="selectedTimelineItem.mediaType === 'audio'"
+            :selected-timeline-item="selectedTimelineItem as UnifiedTimelineItemData<'audio'>"
+            :current-frame="currentFrame"
+          />
+        </template>
+        
+        <!-- 非ready状态时显示加载状态或简化属性 -->
+        <div v-else class="loading-properties">
+          <div class="loading-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12,4V2A10,10 0 0,0 2,12H4A8,8 0 0,1 12,4Z" />
+            </svg>
+          </div>
+          <p class="loading-text">素材加载中，请稍候...</p>
+          <p class="loading-status">状态: {{ getStatusText(selectedTimelineItem) }}</p>
+        </div>
       </div>
 
       <!-- 无选择状态 -->
@@ -69,6 +83,7 @@ import { computed } from 'vue'
 import { useUnifiedStore } from '@/unified/unifiedStore'
 import UnifiedVideoClipProperties from './properties/UnifiedVideoClipProperties.vue'
 import type { UnifiedTimelineItemData } from '@/unified/timelineitem/TimelineItemData'
+import { getStatusText } from '@/unified/timelineitem/TimelineItemQueries'
 
 // 导入文本和音频属性组件（待实现）
 import UnifiedTextClipProperties from './properties/UnifiedTextClipProperties.vue'
@@ -603,5 +618,44 @@ const getItemTypeLabel = (mediaType: string | undefined) => {
 .property-item .rotation-controls,
 .property-item .opacity-controls {
   flex: 1;
+}
+
+/* 加载状态样式 */
+.loading-properties {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-lg);
+  text-align: center;
+  color: var(--color-text-secondary);
+}
+
+.loading-icon {
+  margin-bottom: var(--spacing-md);
+  animation: spin 1s linear infinite;
+}
+
+.loading-icon svg {
+  color: var(--color-accent-secondary);
+}
+
+.loading-text {
+  font-size: var(--font-size-base);
+  margin-bottom: var(--spacing-sm);
+}
+
+.loading-status {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-hint);
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 </style>

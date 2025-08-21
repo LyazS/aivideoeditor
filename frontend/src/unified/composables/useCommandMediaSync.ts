@@ -13,6 +13,7 @@ import { SimplifiedMediaSyncManager } from '@/unified/timelineitem/SimplifiedMed
 import { useUnifiedStore } from '@/unified/unifiedStore'
 import { createSpriteFromUnifiedMediaItem } from '@/unified/utils/spriteFactory'
 import { regenerateThumbnailForUnifiedTimelineItem } from '@/unified/utils/thumbnailGenerator'
+import { globalWebAVAnimationManager, updateWebAVAnimation } from '@/unified/utils/webavAnimationManager'
 
 /**
  * 设置命令与媒体项目的直接同步
@@ -218,6 +219,24 @@ async function transitionTimelineItemToReady(
       timelineItem.runtime.sprite.setTimeRange({ ...timelineItem.timeRange })
       await unifiedStore.addSpriteToCanvas(timelineItem.runtime.sprite)
       console.log(`✅ [TimelineMediaSync] Sprite创建成功并存储到runtime: ${timelineItemId}`)
+      
+      // 应用动画配置到sprite（如果有）
+      if (timelineItem.animation && timelineItem.animation.isEnabled && timelineItem.animation.keyframes.length > 0) {
+        try {
+          console.log(`🎬 [TimelineMediaSync] 应用动画配置到sprite: ${timelineItemId}`, {
+            keyframeCount: timelineItem.animation.keyframes.length,
+            isEnabled: timelineItem.animation.isEnabled,
+          })
+          
+          // 使用WebAVAnimationManager来应用动画
+          await updateWebAVAnimation(timelineItem)
+          
+          console.log(`✅ [TimelineMediaSync] 动画配置应用成功: ${timelineItemId}`)
+        } catch (animationError) {
+          console.error(`❌ [TimelineMediaSync] 应用动画配置失败: ${timelineItemId}`, animationError)
+          // 动画应用失败不影响后续操作
+        }
+      }
     } catch (spriteError) {
       console.error(`❌ [TimelineMediaSync] 创建Sprite失败: ${timelineItemId}`, spriteError)
       // Sprite创建失败不影响后续操作
@@ -251,6 +270,12 @@ async function transitionTimelineItemToReady(
     }
 
     timelineItem.timelineStatus = 'ready'
+    
+    // 3. 设置双向数据同步（仅就绪状态的已知类型时间轴项目）
+    unifiedStore.setupBidirectionalSync(timelineItem)
+    
+    // 4. 初始化动画管理器（仅就绪状态的已知类型时间轴项目）
+    globalWebAVAnimationManager.addManager(timelineItem)
 
     console.log(`🎉 [TimelineMediaSync] 时间轴项目运行时内容创建完成: ${timelineItemId}`)
   } catch (error) {

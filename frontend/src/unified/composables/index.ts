@@ -25,5 +25,4 @@ export { useUnifiedKeyframeTransformControls } from './useKeyframeTransformContr
 // 重新导出 useUnifiedKeyframeUI 函数
 export { useUnifiedKeyframeUI } from './useUnifiedKeyframeUI'
 
-// 重新导出 useAutoSave 函数
-export { useAutoSave } from './useAutoSave'
+// useAutoSave 已迁移到模块化架构，现在通过 UnifiedAutoSaveModule 提供

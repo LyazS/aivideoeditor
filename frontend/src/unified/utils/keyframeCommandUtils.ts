@@ -14,6 +14,7 @@ import {
   type WebAVAnimationManager,
   type PlaybackControls,
 } from '@/unified/modules/commands/keyframeCommands'
+import { updateWebAVAnimation } from '@/unified/utils/webavAnimationManager'
 
 // ==================== 关键帧命令执行器接口 ====================
 
@@ -172,8 +173,6 @@ export async function createUnifiedKeyframeCommandExecutor(): Promise<UnifiedKey
   const { useUnifiedStore } = await import('@/unified/unifiedStore')
   const store = useUnifiedStore()
 
-  // 动态导入WebAV动画管理器
-  const { updateWebAVAnimation } = await import('@/unified/utils/webavAnimationManager')
 
   return {
     timelineModule: {
