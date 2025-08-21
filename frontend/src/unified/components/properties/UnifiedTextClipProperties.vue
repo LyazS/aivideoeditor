@@ -431,6 +431,7 @@ import type { UnifiedTimelineItemData } from '@/unified/timelineitem/TimelineIte
 import type { TextStyleConfig } from '@/unified/timelineitem/TimelineItemData'
 import { framesToTimecode, timecodeToFrames } from '@/unified/utils/timeUtils'
 import { useUnifiedKeyframeTransformControls } from '@/unified/composables'
+import { updateWebAVAnimation } from '@/unified/utils/webavAnimationManager'
 import NumberInput from '@/components/NumberInput.vue'
 import SliderInput from '@/components/SliderInput.vue'
 import UnifiedKeyframeControls from './UnifiedKeyframeControls.vue'
@@ -936,7 +937,6 @@ const updateTargetDurationFrames = async (newDurationFrames: number) => {
 
   // 如果有动画，需要重新设置WebAV动画时长
   if (props.selectedTimelineItem.animation && props.selectedTimelineItem.animation.isEnabled) {
-    const { updateWebAVAnimation } = await import('@/unified/utils/webavAnimationManager')
     await updateWebAVAnimation(props.selectedTimelineItem)
     console.log(
       '🎬 [UnifiedTextClipProperties] Animation duration updated after clip duration change',

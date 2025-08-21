@@ -18,6 +18,7 @@ import {
   setupCommandMediaSync,
   cleanupCommandMediaSync,
 } from '@/unified/composables/useCommandMediaSync'
+import { setupProjectLoadMediaSync, cleanupProjectLoadMediaSync } from '@/unified/composables/useProjectLoadMediaSync'
 import { generateCommandId } from '@/utils/idGenerator'
 
 /**
@@ -41,7 +42,7 @@ export function createUnifiedProjectModule(
   },
   timelineModule?: {
     timelineItems: Ref<UnifiedTimelineItemData<MediaType>[]>
-    addTimelineItem: (item: UnifiedTimelineItemData<MediaType>) => void
+    addTimelineItem: (item: UnifiedTimelineItemData<MediaType>) => Promise<void>
   },
   trackModule?: {
     tracks: Ref<UnifiedTrackData[]>
@@ -547,7 +548,7 @@ export function createUnifiedProjectModule(
             const newTimelineItem = rebuildResult.timelineItem
 
             // 1. 添加到时间轴
-            timelineModule.addTimelineItem(newTimelineItem)
+            await timelineModule.addTimelineItem(newTimelineItem)
 
             // 2. 添加sprite到WebAV画布
             if (newTimelineItem.runtime.sprite && webavModule) {
@@ -556,9 +557,7 @@ export function createUnifiedProjectModule(
 
             // 3. 针对loading状态的项目设置状态同步
             if (newTimelineItem.timelineStatus === 'loading') {
-              const commandId = generateCommandId()
-              setupCommandMediaSync(
-                commandId,
+              setupProjectLoadMediaSync(
                 newTimelineItem.mediaItemId,
                 newTimelineItem.id,
                 `restoreTimelineItems ${newTimelineItem.id}`,
@@ -607,6 +606,13 @@ export function createUnifiedProjectModule(
   }
 
   /**
+   * 清理项目加载时的媒体同步
+   */
+  function cleanupProjectMediaSync(): void {
+    cleanupProjectLoadMediaSync()
+  }
+
+  /**
    * 获取项目摘要信息
    */
   function getProjectSummary() {
@@ -648,6 +654,9 @@ export function createUnifiedProjectModule(
     // 加载进度方法
     updateLoadingProgress,
     resetLoadingState,
+
+    // 清理方法
+    cleanupProjectMediaSync,
   }
 }
 

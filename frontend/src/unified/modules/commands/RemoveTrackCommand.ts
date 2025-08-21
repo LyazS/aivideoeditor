@@ -47,7 +47,7 @@ export class RemoveTrackCommand implements SimpleCommand {
       tracks: { value: UnifiedTrackData[] }
     },
     private timelineModule: {
-      addTimelineItem: (item: UnifiedTimelineItemData<MediaType>) => void
+      addTimelineItem: (item: UnifiedTimelineItemData<MediaType>) => Promise<void>
       removeTimelineItem: (id: string) => void
       getTimelineItem: (id: string) => UnifiedTimelineItemData<MediaType> | undefined
       timelineItems: Ref<UnifiedTimelineItemData<MediaType>[]>
@@ -171,7 +171,7 @@ export class RemoveTrackCommand implements SimpleCommand {
         const newTimelineItem = rebuildResult.timelineItem
 
         // 1. 添加到时间轴
-        this.timelineModule.addTimelineItem(newTimelineItem)
+        await this.timelineModule.addTimelineItem(newTimelineItem)
 
         // 2. 添加sprite到WebAV画布
         if (newTimelineItem.runtime.sprite) {

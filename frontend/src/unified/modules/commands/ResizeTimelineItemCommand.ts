@@ -1,6 +1,7 @@
 import { generateCommandId } from '@/utils/idGenerator'
 import { framesToTimecode } from '@/unified/utils/timeUtils'
 import type { SimpleCommand } from '@/unified/modules/commands/types'
+import { updateWebAVAnimation } from '@/unified/utils/webavAnimationManager'
 
 // 类型导入
 import type { UnifiedTimelineItemData } from '@/unified/timelineitem/TimelineItemData'
@@ -139,7 +140,6 @@ export class ResizeTimelineItemCommand implements SimpleCommand {
 
       // 如果有动画，更新WebAV动画时长
       if (this.hasAnimation) {
-        const { updateWebAVAnimation } = await import('@/unified/utils/webavAnimationManager')
         await updateWebAVAnimation(timelineItem)
         console.log(`🎬 [ResizeTimelineItemCommand] Animation duration updated after clip resize (${isUndo ? 'undo' : 'execute'})`)
       }
