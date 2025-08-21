@@ -1,5 +1,7 @@
 import { directoryManager } from '@/unified/utils/DirectoryManager'
 import type { UnifiedProjectConfig } from '@/unified/project'
+import { createUnifiedTrackData } from '@/unified/track'
+import type { UnifiedTrackData } from '@/unified/track'
 
 /**
  * 统一项目管理器
@@ -58,6 +60,17 @@ export class UnifiedProjectManager {
   }
 
   /**
+   * 创建默认轨道
+   */
+  private createDefaultTracks(): UnifiedTrackData[] {
+    const videoTrack = createUnifiedTrackData('video', '视频轨道 1')
+    const audioTrack = createUnifiedTrackData('audio', '音频轨道 1')
+    const textTrack = createUnifiedTrackData('text', '文本轨道 1')
+
+    return [videoTrack, audioTrack, textTrack]
+  }
+
+  /**
    * 创建新项目
    */
   async createProject(
@@ -71,6 +84,9 @@ export class UnifiedProjectManager {
 
     const projectId = 'project_' + Date.now()
     const now = new Date().toISOString()
+
+    // 创建默认轨道
+    const defaultTracks = this.createDefaultTracks()
 
     const projectConfig: UnifiedProjectConfig = {
       id: projectId,
@@ -94,7 +110,7 @@ export class UnifiedProjectManager {
       },
 
       timeline: template?.timeline || {
-        tracks: [],
+        tracks: defaultTracks,
         timelineItems: [],
         mediaItems: [],
       },
