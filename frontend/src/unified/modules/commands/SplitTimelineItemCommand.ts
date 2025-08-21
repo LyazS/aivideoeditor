@@ -24,7 +24,7 @@ import type {
   ImageMediaConfig,
   TextMediaConfig,
   BaseMediaProps,
-} from '@/types'
+} from '@/unified/timelineitem/TimelineItemData'
 
 // ==================== 新架构工具导入 ====================
 import { createSpriteFromUnifiedMediaItem } from '@/unified/utils/spriteFactory'

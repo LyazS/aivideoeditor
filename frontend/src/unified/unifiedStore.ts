@@ -17,7 +17,24 @@ import { calculateTotalDurationFrames } from '@/unified/utils/durationUtils'
 import type { MediaType, MediaTypeOrUnknown } from '@/unified'
 import type { UnifiedTrackType } from '@/unified/track/TrackTypes'
 import type { UnifiedTimelineItemData } from '@/unified/timelineitem/TimelineItemData'
-import type { PropertyType } from '@/types'
+// PropertyType 已经在本地定义，不再需要从外部导入
+/**
+ * 属性类型枚举
+ * 用于标识可修改的时间轴项目属性类型
+ */
+export type PropertyType =
+  | 'position'
+  | 'size'
+  | 'rotation'
+  | 'opacity'
+  | 'zIndex'
+  | 'duration'
+  | 'playbackRate'
+  | 'volume'
+  | 'audioState'
+  | 'gain'
+  | 'multiple'
+
 import type { UnifiedTimeRange } from '@/unified/types/timeRange'
 
 import { frameToPixel, pixelToFrame } from '@/unified/utils/coordinateUtils'

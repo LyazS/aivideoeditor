@@ -33,8 +33,18 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useUnifiedStore } from '@/unified/unifiedStore'
 import { calculateVisibleFrameRange } from '@/unified/utils/coordinateUtils'
 import { framesToTimecode } from '@/unified/utils/timeUtils'
-import type { TimeMark } from '@/types'
 import UnifiedPlayhead from './UnifiedPlayhead.vue'
+
+/**
+ * 时间刻度标记接口
+ * 用于时间轴刻度显示
+ */
+interface TimeMark {
+  time: number // 时间值（帧数）- 内部使用帧数进行精确计算
+  position: number
+  isMajor: boolean
+  isFrame?: boolean // 标记是否为帧级别的刻度
+}
 
 const unifiedStore = useUnifiedStore()
 const scaleContainer = ref<HTMLElement>()
