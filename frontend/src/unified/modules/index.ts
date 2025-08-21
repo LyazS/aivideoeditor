@@ -49,3 +49,6 @@ export { createUnifiedPlaybackModule, type UnifiedPlaybackModule } from './Unifi
 
 // ==================== 统一WebAV模块 ====================
 export { createUnifiedWebavModule, type UnifiedWebavModule } from './UnifiedWebavModule'
+
+// ==================== 统一自动保存模块 ====================
+export { createUnifiedAutoSaveModule, type UnifiedAutoSaveModule } from './UnifiedAutoSaveModule'

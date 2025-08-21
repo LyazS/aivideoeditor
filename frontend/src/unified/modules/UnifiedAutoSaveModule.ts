@@ -1,13 +1,39 @@
-import { ref, watch, onUnmounted } from 'vue'
-import { useUnifiedStore } from '@/unified/unifiedStore'
+import { ref, watch, type Ref } from 'vue'
 import type { AutoSaveConfig, AutoSaveState } from '@/types'
 
 /**
- * 自动保存 Composable（适配新架构）
- * 提供防抖+节流的自动保存策略
+ * 自动保存模块依赖接口
  */
-export function useAutoSave(config: Partial<AutoSaveConfig> = {}) {
-  const unifiedStore = useUnifiedStore()
+interface AutoSaveDependencies {
+  /** 项目模块 */
+  projectModule: {
+    saveCurrentProject: () => Promise<void>
+    isSaving: Ref<boolean>
+  }
+  /** 需要监听的数据源 */
+  dataWatchers: {
+    timelineItems: Ref<any[]>
+    tracks: Ref<any[]>
+    mediaItems: Ref<any[]>
+    projectConfig: Ref<{
+      videoResolution: any
+      frameRate: number
+      timelineDurationFrames: number
+    }>
+  }
+}
+
+/**
+ * 统一自动保存模块
+ * 提供防抖+节流的自动保存策略，适配新架构的模块化设计
+ */
+export function createUnifiedAutoSaveModule(
+  dependencies: AutoSaveDependencies,
+  config: Partial<AutoSaveConfig> = {}
+) {
+  const { projectModule, dataWatchers } = dependencies
+
+  // ==================== 配置管理 ====================
 
   // 默认配置
   const defaultConfig: AutoSaveConfig = {
@@ -18,6 +44,8 @@ export function useAutoSave(config: Partial<AutoSaveConfig> = {}) {
   }
 
   const finalConfig = { ...defaultConfig, ...config }
+
+  // ==================== 状态管理 ====================
 
   // 自动保存状态
   const autoSaveState = ref<AutoSaveState>({
@@ -32,6 +60,11 @@ export function useAutoSave(config: Partial<AutoSaveConfig> = {}) {
   let debounceTimer: number | null = null
   let throttleTimer: number | null = null
   let retryCount = 0
+
+  // 监听器清理函数数组
+  const unwatchFunctions: (() => void)[] = []
+
+  // ==================== 内部方法 ====================
 
   /**
    * 清除所有定时器
@@ -51,12 +84,7 @@ export function useAutoSave(config: Partial<AutoSaveConfig> = {}) {
    * 执行保存操作
    */
   async function performSave(): Promise<boolean> {
-    if (!unifiedStore.hasCurrentProject) {
-      console.log('🔄 [AutoSave] 没有当前项目，跳过自动保存')
-      return false
-    }
-
-    if (unifiedStore.isProjectSaving) {
+    if (projectModule.isSaving.value) {
       console.log('🔄 [AutoSave] 正在保存中，跳过此次自动保存')
       return false
     }
@@ -64,66 +92,7 @@ export function useAutoSave(config: Partial<AutoSaveConfig> = {}) {
     try {
       console.log('💾 [AutoSave] 开始自动保存...')
 
-      // 清理媒体引用：只保留当前存在的媒体项目的引用
-      const currentMediaIds = new Set(unifiedStore.mediaItems.map((item) => item.id))
-      
-      // 构建项目数据
-      const projectData = {
-        timeline: {
-          tracks: unifiedStore.tracks,
-          timelineItems: unifiedStore.timelineItems.map((item) => {
-            // 根据项目类型获取媒体名称和动画配置
-            let mediaName = 'Unknown'
-            let animation = undefined
-
-            // 获取媒体名称
-            if (item.mediaType === 'text') {
-              mediaName =
-                `文本: ${'text' in item.config ? item.config.text?.substring(0, 10) || '未知' : '未知'}...`
-            } else {
-              mediaName = unifiedStore.getMediaItem(item.mediaItemId)?.name || 'Unknown'
-            }
-            
-            // 保存动画配置
-            animation = item.animation
-
-            return {
-              id: item.id,
-              mediaItemId: item.mediaItemId,
-              trackId: item.trackId,
-              timelineStatus: item.timelineStatus,
-              mediaType: item.mediaType,
-              timeRange: item.timeRange,
-              config: item.config,
-              animation, // 保存动画配置
-              // 添加空的运行时对象，因为这是必需的属性
-              runtime: {
-                // 不保存运行时数据，这些会在加载时重新生成
-              },
-              // 注意：mediaName 不是 UnifiedTimelineItemData 的属性，仅用于保存过程中的日志记录
-            }
-          }),
-          mediaItems: unifiedStore.mediaItems.map((item) => ({
-            id: item.id,
-            name: item.name,
-            createdAt: item.createdAt,
-            mediaStatus: item.mediaStatus,
-            mediaType: item.mediaType,
-            source: item.source,
-            duration: item.duration,
-            // 注意：不保存 webav 等运行时状态
-            // 这些状态在重新加载时会重新生成
-          })),
-        },
-        settings: {
-          videoResolution: unifiedStore.videoResolution,
-          frameRate: unifiedStore.frameRate,
-          timelineDurationFrames: unifiedStore.timelineDurationFrames,
-        },
-        // 新架构不需要单独的媒体引用，已包含在 mediaItems 中
-      }
-
-      await unifiedStore.saveCurrentProject(projectData)
+      await projectModule.saveCurrentProject()
 
       // 更新状态
       autoSaveState.value.lastSaveTime = new Date()
@@ -189,11 +158,14 @@ export function useAutoSave(config: Partial<AutoSaveConfig> = {}) {
     }
   }
 
+  // ==================== 公共方法 ====================
+
   /**
    * 启用自动保存
    */
   function enableAutoSave() {
     autoSaveState.value.isEnabled = true
+    setupWatchers() // 重新设置监听器
     console.log('✅ [AutoSave] 自动保存已启用')
   }
 
@@ -203,6 +175,7 @@ export function useAutoSave(config: Partial<AutoSaveConfig> = {}) {
   function disableAutoSave() {
     autoSaveState.value.isEnabled = false
     clearTimers()
+    clearWatchers() // 清除监听器
     console.log('⏸️ [AutoSave] 自动保存已禁用')
   }
 
@@ -229,61 +202,94 @@ export function useAutoSave(config: Partial<AutoSaveConfig> = {}) {
     clearTimers()
   }
 
-  // 监听关键状态变化
-  if (finalConfig.enabled) {
+  /**
+   * 销毁模块，清理所有资源
+   */
+  function destroy() {
+    clearTimers()
+    clearWatchers()
+    console.log('🧹 [AutoSave] 模块已销毁')
+  }
+
+  // ==================== 数据监听设置 ====================
+
+  /**
+   * 设置数据监听器
+   */
+  function setupWatchers() {
+    if (!finalConfig.enabled || !autoSaveState.value.isEnabled) {
+      return
+    }
+
+    // 清除现有监听器
+    clearWatchers()
+
     // 监听时间轴项目变化
-    watch(
-      () => unifiedStore.timelineItems,
+    const unwatchTimelineItems = watch(
+      () => dataWatchers.timelineItems.value,
       () => {
         console.log('🔄 [AutoSave] 检测到时间轴项目变化')
         triggerAutoSave()
       },
-      { deep: true },
+      { deep: true }
     )
+    unwatchFunctions.push(unwatchTimelineItems)
 
     // 监听轨道变化
-    watch(
-      () => unifiedStore.tracks,
+    const unwatchTracks = watch(
+      () => dataWatchers.tracks.value,
       () => {
         console.log('🔄 [AutoSave] 检测到轨道变化')
         triggerAutoSave()
       },
-      { deep: true },
+      { deep: true }
     )
+    unwatchFunctions.push(unwatchTracks)
 
     // 监听媒体项目变化
-    watch(
-      () => unifiedStore.mediaItems,
+    const unwatchMediaItems = watch(
+      () => dataWatchers.mediaItems.value,
       () => {
         console.log('🔄 [AutoSave] 检测到媒体项目变化')
         triggerAutoSave()
       },
-      { deep: true },
+      { deep: true }
     )
+    unwatchFunctions.push(unwatchMediaItems)
 
     // 监听项目配置变化
-    watch(
-      () => ({
-        videoResolution: unifiedStore.videoResolution,
-        frameRate: unifiedStore.frameRate,
-        timelineDurationFrames: unifiedStore.timelineDurationFrames,
-      }),
+    const unwatchProjectConfig = watch(
+      () => dataWatchers.projectConfig.value,
       () => {
         console.log('🔄 [AutoSave] 检测到项目配置变化')
         triggerAutoSave()
       },
-      { deep: true },
+      { deep: true }
     )
+    unwatchFunctions.push(unwatchProjectConfig)
   }
 
-  // 清理函数
-  onUnmounted(() => {
-    clearTimers()
-  })
+  /**
+   * 清除所有监听器
+   */
+  function clearWatchers() {
+    unwatchFunctions.forEach(unwatch => unwatch())
+    unwatchFunctions.length = 0
+  }
+
+  // ==================== 初始化 ====================
+
+  // 初始化监听器
+  setupWatchers()
+
+  // ==================== 导出接口 ====================
 
   return {
     // 状态
     autoSaveState,
+
+    // 配置
+    config: finalConfig,
 
     // 方法
     enableAutoSave,
@@ -291,8 +297,9 @@ export function useAutoSave(config: Partial<AutoSaveConfig> = {}) {
     manualSave,
     triggerAutoSave,
     resetAutoSaveState,
-
-    // 配置
-    config: finalConfig,
+    destroy,
   }
 }
+
+// 导出类型定义
+export type UnifiedAutoSaveModule = ReturnType<typeof createUnifiedAutoSaveModule>

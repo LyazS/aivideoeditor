@@ -110,12 +110,12 @@
     />
 
     <!-- 编辑项目对话框 -->
-    <EditProjectDialog
+    <!-- <EditProjectDialog
       v-model:show="showEditDialog"
       :project="currentProject"
       :is-saving="isSaving"
       @save="handleSaveProject"
-    />
+    /> -->
   </div>
 </template>
 
@@ -123,7 +123,7 @@
 import { ref, computed, onBeforeMount, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useUnifiedStore } from '@/unified/unifiedStore'
-import { useAutoSave } from '@/unified/composables'
+// 移除已删除的 useAutoSave 导入，现在使用模块化的自动保存功能
 import VideoPreviewEngine from '../components/VideoPreviewEngine.vue'
 import HoverButton from '../components/HoverButton.vue'
 import LoadingOverlay from '../components/LoadingOverlay.vue'
@@ -133,12 +133,7 @@ import EditProjectDialog from '../components/EditProjectDialog.vue'
 const route = useRoute()
 const unifiedStore = useUnifiedStore()
 
-// 初始化自动保存
-const autoSave = useAutoSave({
-  debounceTime: 2000, // 2秒防抖
-  throttleTime: 30000, // 30秒强制保存
-  enabled: true,
-})
+// 自动保存功能现在通过 unifiedStore 提供，无需单独初始化
 
 // 响应式数据
 const projectTitle = ref('未命名项目')
@@ -147,7 +142,6 @@ const showEditDialog = ref(false)
 // 计算属性 - 使用store中的项目状态（适配新的API）
 const projectStatus = computed(() => unifiedStore.projectStatus)
 const isSaving = computed(() => unifiedStore.isProjectSaving) // 新API：isSaving → isProjectSaving
-const currentProject = computed(() => unifiedStore.currentProject)
 
 // 方法
 function goBack() {
@@ -162,7 +156,7 @@ async function saveProject() {
   if (isSaving.value) return
 
   try {
-    const success = await autoSave.manualSave()
+    const success = await unifiedStore.manualSave()
     if (success) {
       console.log('项目已手动保存')
       // 可以添加成功提示
@@ -187,184 +181,20 @@ function showEditProjectDialog() {
 }
 
 // 处理保存项目编辑
-async function handleSaveProject(data: { name: string; description: string }) {
-  if (!currentProject.value) {
-    console.error('没有当前项目可编辑')
-    return
-  }
-
+async function handleSaveProject() {
   try {
     // 更新项目信息
-    await unifiedStore.saveCurrentProject({
-      name: data.name,
-      description: data.description,
-    })
-
-    // 更新标题显示
-    projectTitle.value = data.name
-
+    await unifiedStore.saveCurrentProject()
     // 关闭对话框
     showEditDialog.value = false
-
-    console.log('项目信息更新成功:', data.name)
+    console.log('项目信息更新成功:', unifiedStore.projectName)
   } catch (error) {
     console.error('更新项目信息失败:', error)
     // 可以添加错误提示
   }
 }
 
-function debugProject() {
-  console.log('🔍 [调试] 开始打印项目JSON数据...')
-
-  try {
-    // 构建完整的项目数据（适配新的 useUnifiedStore API）
-    const projectData = {
-      // 基本信息（使用新的属性名）
-      projectInfo: {
-        currentProject: unifiedStore.currentProject,
-        currentProjectId: unifiedStore.currentProjectId,
-        currentProjectName: unifiedStore.currentProjectName,
-        projectStatus: unifiedStore.projectStatus,
-        hasCurrentProject: unifiedStore.hasCurrentProject,
-        isSaving: unifiedStore.isProjectSaving, // 新API：isSaving → isProjectSaving
-        lastSaved: unifiedStore.lastProjectSaved, // 新API：lastSaved → lastProjectSaved
-      },
-
-      // 项目设置
-      settings: {
-        videoResolution: unifiedStore.videoResolution,
-        frameRate: unifiedStore.frameRate,
-        timelineDurationFrames: unifiedStore.timelineDurationFrames,
-      },
-
-      // 轨道数据
-      tracks: unifiedStore.tracks,
-
-      // 统一媒体项目数据（适配 UnifiedMediaItemData 结构）
-      mediaItems: unifiedStore.mediaItems.map((item) => ({
-        id: item.id,
-        name: item.name,
-        createdAt: item.createdAt,
-        mediaStatus: item.mediaStatus, // 新结构：status → mediaStatus
-        mediaType: item.mediaType,
-        duration: item.duration,
-
-        // 数据源信息（新结构）
-        source: {
-          type: item.source.type,
-          status: item.source.status,
-          progress: item.source.progress,
-          file: item.source.file
-            ? {
-                name: item.source.file.name,
-                size: item.source.file.size,
-                type: item.source.file.type,
-                lastModified: item.source.file.lastModified,
-              }
-            : null,
-          url: item.source.url || null,
-        },
-
-        // WebAV对象信息（新结构）
-        webav: item.webav
-          ? {
-              hasMP4Clip: !!item.webav.mp4Clip,
-              hasImgClip: !!item.webav.imgClip,
-              hasAudioClip: !!item.webav.audioClip,
-              thumbnailUrl: item.webav.thumbnailUrl ? 'blob URL存在' : null,
-              originalWidth: item.webav.originalWidth,
-              originalHeight: item.webav.originalHeight,
-            }
-          : null,
-      })),
-
-      // 统一时间轴项目数据（适配 UnifiedTimelineItemData 结构）
-      timelineItems: unifiedStore.timelineItems.map((item: any) => {
-        // 使用新的统一媒体项目查询方法
-        const mediaItem = unifiedStore.getMediaItem(item.mediaItemId)
-        const mediaName = mediaItem?.name || 'Unknown'
-
-        return {
-          id: item.id,
-          mediaItemId: item.mediaItemId,
-          trackId: item.trackId,
-          mediaType: item.mediaType,
-          timelineStatus: item.timelineStatus, // 新结构：3状态系统
-          timeRange: item.timeRange,
-          config: item.config,
-          hasSprite: !!item.sprite,
-          mediaName,
-        }
-      }),
-
-      // 统计信息（使用新的查询方法）
-      statistics: {
-        totalMediaItems: unifiedStore.mediaItems.length,
-        totalTimelineItems: unifiedStore.timelineItems.length,
-        totalTracks: unifiedStore.tracks.length,
-        readyMediaItems: unifiedStore.getReadyMediaItems().length, // 使用新的查询方法
-        processingMediaItems: unifiedStore.getProcessingMediaItems().length,
-        errorMediaItems: unifiedStore.getErrorMediaItems().length,
-        mediaStats: unifiedStore.getMediaItemsStats(), // 新的统计方法
-      },
-    }
-
-    // 打印到控制台
-    console.log('📊 [调试] 完整项目数据:', projectData)
-
-    // 打印格式化的JSON
-    console.log('� [调试] 项目JSON (格式化):')
-    console.log(JSON.stringify(projectData, null, 2))
-
-    // 打印持久化数据（不包含运行时状态）
-    const persistenceData = {
-      timeline: {
-        tracks: unifiedStore.tracks,
-        timelineItems: unifiedStore.timelineItems.map((item: any) => {
-          // 使用新的统一媒体项目查询方法
-          const mediaItem = unifiedStore.getMediaItem(item.mediaItemId)
-          const mediaName = mediaItem?.name || 'Unknown'
-
-          return {
-            id: item.id,
-            mediaItemId: item.mediaItemId,
-            trackId: item.trackId,
-            mediaType: item.mediaType,
-            timelineStatus: item.timelineStatus,
-            timeRange: item.timeRange,
-            config: item.config,
-            mediaName,
-          }
-        }),
-        mediaItems: unifiedStore.mediaItems.map((item) => ({
-          id: item.id,
-          name: item.name,
-          createdAt: item.createdAt,
-          mediaType: item.mediaType,
-          duration: item.duration,
-          sourceType: item.source.type,
-        })),
-      },
-      settings: {
-        videoResolution: unifiedStore.videoResolution,
-        frameRate: unifiedStore.frameRate,
-        timelineDurationFrames: unifiedStore.timelineDurationFrames,
-      },
-    }
-
-    console.log('💾 [调试] 持久化数据 (将保存到project.json):')
-    console.log(JSON.stringify(persistenceData, null, 2))
-
-    // 在浏览器中显示通知
-    console.log('✅ [调试] 项目JSON数据已打印到控制台，请查看开发者工具')
-
-    // 将unifiedStore暴露到全局，方便调试
-    ;(window as any).unifiedStore = unifiedStore
-  } catch (error) {
-    console.error('❌ [调试] 打印项目数据失败:', error)
-  }
-}
-
+function debugProject() {}
 // 键盘快捷键
 function handleKeydown(event: KeyboardEvent) {
   // Ctrl+S 保存
@@ -393,23 +223,22 @@ onBeforeMount(async () => {
 
   // 从路由参数获取项目ID
   const projectId = route.params.projectId as string
+  if (!projectId) {
+    console.error('❌ [LIFECYCLE] VideoEditor 缺少项目ID参数')
+    // 返回根目录
+    window.location.href = '/'
+  }
 
   try {
     console.log('� [LIFECYCLE] VideoEditor 开始预加载项目设置')
     await unifiedStore.preloadProjectSettings(projectId)
     console.log('🔄 [LIFECYCLE] VideoEditor 项目设置预加载完成')
   } catch (error) {
-    console.error('🔄 [LIFECYCLE] VideoEditor 预加载项目设置失败:', error)
     // 对于现有项目，预加载失败是严重错误，需要通知用户
-    if (projectId && projectId !== 'undefined') {
-      projectTitle.value = '项目设置加载失败'
-      // 这里可以显示错误提示给用户
-      throw new Error(`项目设置加载失败: ${error}`)
-    }
-    // 对于新项目，可以使用默认设置继续
-    console.log('🔄 [LIFECYCLE] VideoEditor 新项目使用默认设置')
+    console.error('🔄 [LIFECYCLE] VideoEditor 预加载项目设置失败:', error)
+    // 跳转到项目管理页面
+    window.location.href = '/'
   }
-
   console.log('🔄 [LIFECYCLE] VideoEditor.onBeforeMount 完成')
 })
 
@@ -418,43 +247,36 @@ onMounted(async () => {
 
   // 从路由参数获取项目ID
   const projectId = route.params.projectId as string
+  if (!projectId) {
+    console.error('❌ [LIFECYCLE] VideoEditor 缺少项目ID参数')
+    // 返回根目录
+    window.location.href = '/'
+  }
 
   // 加载项目内容
-
   try {
+    unifiedStore.disableAutoSave()
     console.log('📂 [VideoEditor] 开始加载项目内容...')
     await unifiedStore.loadProjectContent(projectId)
 
-    if (unifiedStore.hasCurrentProject) {
-      projectTitle.value = unifiedStore.currentProjectName
-      console.log('✅ [VideoEditor] 项目内容加载完成:', unifiedStore.currentProjectName)
-
-      // 启用自动保存
-      autoSave.enableAutoSave()
-      console.log('✅ [VideoEditor] 自动保存已启用')
-    } else {
-      projectTitle.value = '新建项目'
-      console.log('📝 [VideoEditor] 准备创建新项目')
-
-      // 对于新项目，暂时禁用自动保存，直到项目被创建
-      autoSave.disableAutoSave()
-    }
+    console.log('✅ [VideoEditor] 项目内容加载完成:', unifiedStore.projectName)
+    // 启用自动保存（模块化版本）
+    unifiedStore.enableAutoSave()
+    console.log('✅ [VideoEditor] 自动保存已启用')
   } catch (error) {
     console.error('❌ [VideoEditor] 加载项目内容失败:', error)
-    projectTitle.value = '加载失败'
-    autoSave.disableAutoSave()
+    // 跳转到项目管理页面
+    window.location.href = '/'
   }
 
   // 注册键盘快捷键
   window.addEventListener('keydown', handleKeydown)
-
   console.log('🔄 [LIFECYCLE] VideoEditor.onMounted 完成')
 })
 
 onUnmounted(() => {
-  // 禁用自动保存
-  autoSave.disableAutoSave()
-
+  // 禁用自动保存（模块化版本）
+  unifiedStore.disableAutoSave()
   // 清理键盘快捷键
   window.removeEventListener('keydown', handleKeydown)
 })

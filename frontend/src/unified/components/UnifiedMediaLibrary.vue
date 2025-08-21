@@ -255,11 +255,13 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { generateUUID4 } from '@/utils/idGenerator'
 import { useUnifiedStore } from '@/unified/unifiedStore'
 import { useDialogs, useDragUtils } from '@/unified/composables'
 import { framesToTimecode } from '@/stores/utils/timeUtils'
 import type { UnifiedMediaItemData, MediaType } from '@/unified'
 import { DataSourceFactory } from '@/unified'
+import { DEFAULT_REMOTE_CONFIG } from '@/unified/sources/RemoteFileSource'
 import { UnifiedMediaItemQueries } from '@/unified/mediaitem/actions'
 
 import HoverButton from '@/components/HoverButton.vue'
@@ -510,7 +512,15 @@ const handleRemoteDownloadSubmit = async (config: any, expectedDuration: number,
 
   try {
     // 创建远程数据源
-    const remoteSource = DataSourceFactory.createRemoteSource(config.url, config)
+    const remoteSource = DataSourceFactory.createRemoteSource({
+      id: generateUUID4(),
+      type: 'remote' as const, // 明确指定类型为 'remote'
+      remoteUrl: config.url,
+      headers: config.headers || DEFAULT_REMOTE_CONFIG.headers,
+      timeout: config.timeout || DEFAULT_REMOTE_CONFIG.timeout,
+      retryCount: config.retryCount || DEFAULT_REMOTE_CONFIG.retryCount,
+      retryDelay: config.retryDelay || DEFAULT_REMOTE_CONFIG.retryDelay,
+    })
 
     // 如果用户没有提供名称，从URL中提取文件名
     let mediaItemName = name
@@ -521,7 +531,7 @@ const handleRemoteDownloadSubmit = async (config: any, expectedDuration: number,
 
     // 创建统一媒体项目
     const mediaItem = unifiedStore.createUnifiedMediaItemData(
-      Date.now().toString() + Math.random().toString(36).substring(2, 11),
+      generateUUID4(),
       mediaItemName,
       remoteSource,
       {
@@ -675,7 +685,7 @@ const addMediaItem = async (file: File): Promise<void> => {
 
     // 创建统一媒体项目
     const mediaItem = unifiedStore.createUnifiedMediaItemData(
-      Date.now().toString() + Math.random().toString(36).substring(2, 11),
+      generateUUID4(),
       file.name,
       userSelectedSource,
       {
@@ -822,7 +832,7 @@ const debugMediaItems = () => {
     allItems.map((item) => ({
       名称: item.name,
       数据源类型: item.source.type,
-      数据源状态: item.source.status,
+      媒体状态: item.mediaStatus,
       进度: item.source.progress.toFixed(2) + '%',
       错误信息: item.source.errorMessage || '无',
       任务ID: item.source.taskId || '无',
@@ -860,7 +870,6 @@ const debugMediaItems = () => {
       时长: item.duration ? `${item.duration}帧 (${framesToTimecode(item.duration)})` : '未知',
       数据源: {
         类型: item.source.type,
-        状态: item.source.status,
         进度: item.source.progress.toFixed(2) + '%',
         文件: item.source.file?.name || '无',
         URL: item.source.url || '无',

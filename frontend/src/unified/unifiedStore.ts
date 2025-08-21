@@ -12,6 +12,7 @@ import { createUnifiedPlaybackModule } from '@/unified/modules/UnifiedPlaybackMo
 import { createUnifiedWebavModule } from '@/unified/modules/UnifiedWebavModule'
 import { createUnifiedNotificationModule } from '@/unified/modules/UnifiedNotificationModule'
 import { createUnifiedHistoryModule } from '@/unified/modules/UnifiedHistoryModule'
+import { createUnifiedAutoSaveModule } from '@/unified/modules/UnifiedAutoSaveModule'
 import { calculateTotalDurationFrames } from '@/unified/utils/durationUtils'
 import type { MediaType, MediaTypeOrUnknown } from '@/unified'
 import type { UnifiedTrackType } from '@/unified/track/TrackTypes'
@@ -116,12 +117,6 @@ import {
 export const useUnifiedStore = defineStore('unified', () => {
   // ==================== 核心模块初始化 ====================
 
-  // 创建统一媒体管理模块（替代原有的mediaModule）
-  const unifiedMediaModule = createUnifiedMediaModule()
-
-  // 创建统一轨道管理模块
-  const unifiedTrackModule = createUnifiedTrackModule()
-
   // 创建配置管理模块
   const unifiedConfigModule = createUnifiedConfigModule()
 
@@ -136,6 +131,11 @@ export const useUnifiedStore = defineStore('unified', () => {
     setCurrentFrame: unifiedPlaybackModule.setCurrentFrame,
     setPlaying: unifiedPlaybackModule.setPlaying,
   })
+  // 创建统一媒体管理模块（替代原有的mediaModule）
+  const unifiedMediaModule = createUnifiedMediaModule(unifiedWebavModule)
+
+  // 创建统一轨道管理模块
+  const unifiedTrackModule = createUnifiedTrackModule()
 
   // 创建统一时间轴管理模块（需要依赖其他模块）
   const unifiedTimelineModule = createUnifiedTimelineModule(
@@ -146,7 +146,12 @@ export const useUnifiedStore = defineStore('unified', () => {
   )
 
   // 创建统一项目管理模块
-  const unifiedProjectModule = createUnifiedProjectModule()
+  const unifiedProjectModule = createUnifiedProjectModule(
+    unifiedConfigModule,
+    unifiedTimelineModule,
+    unifiedTrackModule,
+    unifiedMediaModule,
+  )
 
   // ==================== 计算属性 ====================
 
@@ -193,6 +198,33 @@ export const useUnifiedStore = defineStore('unified', () => {
       },
     },
     unifiedMediaModule,
+  )
+
+  // 创建统一自动保存模块（需要在项目模块之后创建）
+  const unifiedAutoSaveModule = createUnifiedAutoSaveModule(
+    {
+      projectModule: {
+        saveCurrentProject: unifiedProjectModule.saveCurrentProject,
+        isSaving: unifiedProjectModule.isSaving,
+      },
+      dataWatchers: {
+        timelineItems: unifiedTimelineModule.timelineItems,
+        tracks: unifiedTrackModule.tracks,
+        mediaItems: unifiedMediaModule.mediaItems,
+        projectConfig: computed(() => ({
+          videoResolution: unifiedConfigModule.videoResolution.value,
+          frameRate: unifiedConfigModule.frameRate.value,
+          timelineDurationFrames: unifiedConfigModule.timelineDurationFrames.value,
+        })),
+      },
+    },
+    {
+      // 可以在这里传入自定义配置
+      enabled: true,
+      debounceTime: 2000,
+      throttleTime: 30000,
+      maxRetries: 3,
+    }
   )
 
   /**
@@ -275,7 +307,16 @@ export const useUnifiedStore = defineStore('unified', () => {
     unifiedSelectionModule.resetToDefaults() // 重置选择状态
     // 注意：UnifiedMediaModule、UnifiedTimelineModule和UnifiedClipOperationsModule没有resetToDefaults方法
     // 这些统一模块的状态通过清空数组或重置内部状态来实现重置功能
+    unifiedAutoSaveModule.resetAutoSaveState() // 重置自动保存状态
     console.log('🔄 [UnifiedStore] 重置所有模块到默认状态')
+  }
+
+  /**
+   * 销毁所有模块资源
+   */
+  function destroyAllModules() {
+    unifiedAutoSaveModule.destroy() // 销毁自动保存模块
+    console.log('🧹 [UnifiedStore] 销毁所有模块资源')
   }
 
   // ==================== 历史记录包装方法 ====================
@@ -1001,7 +1042,6 @@ export const useUnifiedStore = defineStore('unified', () => {
     waitForMediaItemReady: unifiedMediaModule.waitForMediaItemReady,
 
     // 数据源处理方法
-    handleSourceStatusChange: unifiedMediaModule.handleSourceStatusChange,
     startMediaProcessing: unifiedMediaModule.startMediaProcessing,
 
     // 便捷查询方法
@@ -1064,9 +1104,6 @@ export const useUnifiedStore = defineStore('unified', () => {
     cloneTimelineItemData: cloneTimelineItem,
     duplicateTimelineItem,
 
-    // 时间轴项目状态转换函数
-    // transitionTimelineStatus 已删除，因为未被使用
-
     // 时间轴项目查询函数
     isTimelineItemReady: isReady,
     isTimelineItemLoading: isLoading,
@@ -1084,14 +1121,9 @@ export const useUnifiedStore = defineStore('unified', () => {
     // ==================== 统一项目模块状态和方法 ====================
 
     // 项目状态
-    currentProject: unifiedProjectModule.currentProject,
-    currentProjectId: unifiedProjectModule.currentProjectId,
-    currentProjectName: unifiedProjectModule.currentProjectName,
     projectStatus: unifiedProjectModule.projectStatus,
-    hasCurrentProject: unifiedProjectModule.hasCurrentProject,
     isProjectSaving: unifiedProjectModule.isSaving,
     isProjectLoading: unifiedProjectModule.isLoading,
-    lastProjectSaved: unifiedProjectModule.lastSaved,
 
     // 项目加载进度状态
     projectLoadingProgress: unifiedProjectModule.loadingProgress,
@@ -1102,7 +1134,6 @@ export const useUnifiedStore = defineStore('unified', () => {
     isProjectContentReady: unifiedProjectModule.isProjectContentReady,
 
     // 项目管理方法
-    createProject: unifiedProjectModule.createProject,
     saveCurrentProject: unifiedProjectModule.saveCurrentProject,
     preloadProjectSettings: unifiedProjectModule.preloadProjectSettings,
     loadProjectContent: unifiedProjectModule.loadProjectContent,
@@ -1145,17 +1176,25 @@ export const useUnifiedStore = defineStore('unified', () => {
 
     // ==================== 配置模块状态和方法 ====================
 
+    // 配置
+    projectId: unifiedConfigModule.projectId,
+    projectName: unifiedConfigModule.projectName,
+    projectDescription: unifiedConfigModule.projectDescription,
+    projectCreatedAt: unifiedConfigModule.projectCreatedAt,
+    projectUpdatedAt: unifiedConfigModule.projectUpdatedAt,
+    projectVersion: unifiedConfigModule.projectVersion,
+    projectThumbnail: unifiedConfigModule.projectThumbnail,
+    projectDuration: unifiedConfigModule.projectDuration,
+
     // 配置状态
     videoResolution: unifiedConfigModule.videoResolution,
     frameRate: unifiedConfigModule.frameRate,
     timelineDurationFrames: unifiedConfigModule.timelineDurationFrames,
-    proportionalScale: unifiedConfigModule.proportionalScale,
 
     // 配置管理方法
     setVideoResolution: unifiedConfigModule.setVideoResolution,
     setFrameRate: unifiedConfigModule.setFrameRate,
     setTimelineDurationFrames: unifiedConfigModule.setTimelineDurationFrames,
-    setProportionalScale: unifiedConfigModule.setProportionalScale,
     getConfigSummary: unifiedConfigModule.getConfigSummary,
     resetConfigToDefaults: unifiedConfigModule.resetToDefaults,
     restoreFromProjectSettings: unifiedConfigModule.restoreFromProjectSettings,
@@ -1409,5 +1448,22 @@ export const useUnifiedStore = defineStore('unified', () => {
         unifiedTimelineModule.timelineItems.value,
         unifiedMediaModule.mediaItems.value,
       ),
+
+    // ==================== 统一自动保存模块状态和方法 ====================
+
+    // 自动保存状态
+    autoSaveState: unifiedAutoSaveModule.autoSaveState,
+    autoSaveConfig: unifiedAutoSaveModule.config,
+
+    // 自动保存方法
+    enableAutoSave: unifiedAutoSaveModule.enableAutoSave,
+    disableAutoSave: unifiedAutoSaveModule.disableAutoSave,
+    manualSave: unifiedAutoSaveModule.manualSave,
+    triggerAutoSave: unifiedAutoSaveModule.triggerAutoSave,
+    resetAutoSaveState: unifiedAutoSaveModule.resetAutoSaveState,
+
+    // ==================== 模块生命周期管理 ====================
+
+    destroyAllModules, // 新增：销毁所有模块资源的方法
   }
 })

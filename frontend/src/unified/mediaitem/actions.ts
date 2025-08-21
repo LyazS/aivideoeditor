@@ -194,8 +194,7 @@ export const UnifiedMediaItemActions = {
     if (UnifiedMediaItemQueries.hasAnyError(item)) {
       UnifiedMediaItemActions.transitionTo(item, 'pending')
       // 重置数据源状态
-      if (item.source.status === 'error' || item.source.status === 'cancelled') {
-        item.source.status = 'pending'
+      if (item.source.errorMessage) {
         item.source.progress = 0
         item.source.errorMessage = undefined
       }
@@ -206,9 +205,9 @@ export const UnifiedMediaItemActions = {
   cancel(item: UnifiedMediaItemData): void {
     if (UnifiedMediaItemQueries.isProcessing(item)) {
       UnifiedMediaItemActions.transitionTo(item, 'cancelled')
-      // 取消数据源获取
-      if (item.source.status === 'acquiring') {
-        item.source.status = 'cancelled'
+      // 取消数据源获取 - 通过检查进度和错误信息来判断状态
+      if (item.source.progress > 0 && item.source.progress < 100 && !item.source.file) {
+        item.source.errorMessage = '已取消'
       }
     }
   },

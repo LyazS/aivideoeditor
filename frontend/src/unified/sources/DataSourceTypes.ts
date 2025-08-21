@@ -3,14 +3,15 @@
  * 提供联合类型、工厂函数和类型查询的核心功能
  */
 
-import type { UserSelectedFileSourceData } from '@/unified/sources/UserSelectedFileSource'
-import type { RemoteFileSourceData } from '@/unified/sources/RemoteFileSource'
+import type { UserSelectedFileSourceData, BaseUserSelectedFileSourceData } from '@/unified/sources/UserSelectedFileSource'
+import type { RemoteFileSourceData, BaseRemoteFileSourceData } from '@/unified/sources/RemoteFileSource'
 import { UserSelectedFileSourceFactory } from '@/unified/sources/UserSelectedFileSource'
 import { RemoteFileSourceFactory } from '@/unified/sources/RemoteFileSource'
 import { UserSelectedFileTypeGuards } from '@/unified/sources/UserSelectedFileSource'
 import { RemoteFileTypeGuards } from '@/unified/sources/RemoteFileSource'
-import { DataSourceQueries as BaseDataSourceQueries } from '@/unified/sources/BaseDataSource'
-import type { RemoteFileConfig } from '@/unified/sources/RemoteFileSource'
+import { RuntimeStateQueries as BaseDataSourceQueries } from '@/unified/sources/BaseDataSource'
+import { extractUserSelectedFileSourceData } from '@/unified/sources/UserSelectedFileSource'
+import { extractRemoteFileSourceData } from '@/unified/sources/RemoteFileSource'
 
 // ==================== 联合类型定义 ====================
 
@@ -19,19 +20,43 @@ import type { RemoteFileConfig } from '@/unified/sources/RemoteFileSource'
  */
 export type UnifiedDataSourceData = UserSelectedFileSourceData | RemoteFileSourceData
 
+/**
+ * 数据源基类型联合类型 - 用于持久化
+ */
+export type BaseDataSourcePersistedData =
+  | BaseUserSelectedFileSourceData
+  | BaseRemoteFileSourceData
+
 // ==================== 统一工厂函数 ====================
 
 /**
  * 统一数据源工厂函数
  */
 export const DataSourceFactory = {
-  createUserSelectedSource(file: File): UserSelectedFileSourceData {
-    return UserSelectedFileSourceFactory.createUserSelectedSource(file)
+  // 统一创建方法，支持文件或媒体引用ID
+  createUserSelectedSource(param: File | BaseUserSelectedFileSourceData): UserSelectedFileSourceData {
+    return UserSelectedFileSourceFactory.createUserSelectedSource(param)
   },
 
-  createRemoteSource(remoteUrl: string, config: RemoteFileConfig = {}): RemoteFileSourceData {
-    return RemoteFileSourceFactory.createRemoteSource(remoteUrl, config)
+  createRemoteSource(param: BaseRemoteFileSourceData): RemoteFileSourceData {
+    return RemoteFileSourceFactory.createRemoteSource(param)
   },
+}
+
+// ==================== 数据源提取函数 ====================
+
+/**
+ * 根据数据源类型提取持久化数据
+ */
+export function extractSourceData(source: UnifiedDataSourceData): BaseDataSourcePersistedData {
+  if (DataSourceQueries.isUserSelectedSource(source)) {
+    return extractUserSelectedFileSourceData(source)
+  } else if (DataSourceQueries.isRemoteSource(source)) {
+    return extractRemoteFileSourceData(source)
+  } else {
+    console.warn('未知的数据源类型:', source)
+    throw new Error('未知的数据源类型')
+  }
 }
 
 // ==================== 统一查询函数 ====================

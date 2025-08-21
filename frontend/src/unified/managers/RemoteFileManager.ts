@@ -5,18 +5,16 @@
  */
 
 import { DataSourceManager, type AcquisitionTask } from '@/unified/managers/BaseDataSourceManager'
-import type {
-  RemoteFileSourceData,
-  RemoteFileConfig,
-  DownloadProgress,
-} from '@/unified/sources/RemoteFileSource'
+import type { RemoteFileSourceData, DownloadProgress } from '@/unified/sources/RemoteFileSource'
 import { RemoteFileQueries, DEFAULT_REMOTE_CONFIG } from '@/unified/sources/RemoteFileSource'
 import {
-  DataSourceBusinessActions,
-  DataSourceDataActions,
-  DataSourceQueries,
+  RuntimeStateBusinessActions,
+  RuntimeStateActions,
+  RuntimeStateQueries,
 } from '@/unified/sources/BaseDataSource'
 import type { DetectedMediaType } from '@/unified/utils/mediaTypeDetector'
+import { globalProjectMediaManager } from '@/unified/utils/ProjectMediaManager'
+import type { UnifiedMediaItemData, MediaStatus } from '@/unified/mediaitem/types'
 
 // ==================== 下载管理器配置 ====================
 
@@ -86,14 +84,12 @@ export class RemoteFileManager extends DataSourceManager<RemoteFileSourceData> {
       // 直接执行下载逻辑
       await this.executeAcquisition(task.source)
 
-      // 检查执行结果
-      if (task.source.status === 'acquired') {
+      // 检查执行结果 - 通过检查文件和错误信息来判断状态
+      if (task.source.file && task.source.url && !task.source.errorMessage) {
         // 下载成功（媒体类型检测已在下载过程中完成）
         return
-      } else if (task.source.status === 'error') {
-        throw new Error(task.source.errorMessage || '下载失败')
-      } else if (task.source.status === 'cancelled') {
-        throw new Error('下载被取消')
+      } else if (task.source.errorMessage) {
+        throw new Error(task.source.errorMessage)
       } else {
         throw new Error('下载状态异常')
       }
@@ -111,11 +107,21 @@ export class RemoteFileManager extends DataSourceManager<RemoteFileSourceData> {
   private async executeAcquisition(source: RemoteFileSourceData): Promise<void> {
     try {
       // 设置为获取中状态
-      DataSourceBusinessActions.startAcquisition(source)
+      RuntimeStateBusinessActions.startAcquisition(source)
+
+      // 检查是否有 mediaReferenceId，如果有则尝试从本地缓存恢复
+      if (source.mediaReferenceId) {
+        const cacheRestored = await this.tryRestoreFromCache(source)
+        if (cacheRestored) {
+          console.log(`✅ [RemoteFileManager] 从本地缓存恢复远程文件: ${source.remoteUrl}`)
+          return
+        }
+        console.log(`⚠️ [RemoteFileManager] 本地缓存不可用，将重新下载: ${source.remoteUrl}`)
+      }
 
       // 验证URL
       if (!this.isValidUrl(source.remoteUrl)) {
-        DataSourceBusinessActions.setError(source, '无效的URL地址')
+        RuntimeStateBusinessActions.setError(source, '无效的URL地址')
         return
       }
 
@@ -130,13 +136,66 @@ export class RemoteFileManager extends DataSourceManager<RemoteFileSourceData> {
       }
 
       // 合并配置
-      const config = { ...DEFAULT_REMOTE_CONFIG, ...source.config }
+      const config = {
+        ...DEFAULT_REMOTE_CONFIG,
+        headers: source.headers || DEFAULT_REMOTE_CONFIG.headers,
+        timeout: source.timeout || DEFAULT_REMOTE_CONFIG.timeout,
+        retryCount: source.retryCount || DEFAULT_REMOTE_CONFIG.retryCount,
+        retryDelay: source.retryDelay || DEFAULT_REMOTE_CONFIG.retryDelay,
+      }
 
       // 开始下载
       await this.downloadFile(source, config)
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : '下载失败'
-      DataSourceBusinessActions.setError(source, errorMessage)
+      RuntimeStateBusinessActions.setError(source, errorMessage)
+    }
+  }
+
+  /**
+   * 尝试从本地缓存恢复远程文件
+   * @param source 远程文件数据源
+   * @returns 是否成功从缓存恢复
+   */
+  private async tryRestoreFromCache(source: RemoteFileSourceData): Promise<boolean> {
+    try {
+      // 从 globalProjectMediaManager 获取项目ID
+      const projectId = globalProjectMediaManager.currentProjectId
+      if (!projectId) {
+        console.warn('ProjectMediaManager 未初始化，无法从缓存恢复')
+        return false
+      }
+
+      // 从 globalProjectMediaManager 获取媒体引用
+      const mediaReference = globalProjectMediaManager.getMediaReference(source.mediaReferenceId!)
+      if (!mediaReference) {
+        console.warn(`找不到媒体引用: ${source.mediaReferenceId}`)
+        return false
+      }
+
+      // 从项目目录加载文件
+      const file = await globalProjectMediaManager.loadMediaFromProject(
+        mediaReference.storedPath
+      )
+
+      // 创建URL
+      const url = URL.createObjectURL(file)
+
+      // 使用业务协调层方法完成获取，包含媒体类型检测
+      await RuntimeStateBusinessActions.completeAcquisitionWithTypeDetection(
+        source,
+        file,
+        url,
+        async (src) => await this.detectAndSetMediaType(src as RemoteFileSourceData),
+      )
+
+      // 更新媒体项目名称为实际的文件名
+      await this.updateMediaItemNameWithFileName(source, file.name)
+
+      return true
+    } catch (error) {
+      console.warn(`从本地缓存恢复失败: ${source.mediaReferenceId}`, error)
+      return false
     }
   }
 
@@ -145,7 +204,9 @@ export class RemoteFileManager extends DataSourceManager<RemoteFileSourceData> {
    */
   private async downloadFile(
     source: RemoteFileSourceData,
-    config: Required<RemoteFileConfig>,
+    config: Required<
+      Pick<RemoteFileSourceData, 'headers' | 'timeout' | 'retryCount' | 'retryDelay'>
+    >,
   ): Promise<void> {
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), config.timeout)
@@ -202,7 +263,7 @@ export class RemoteFileManager extends DataSourceManager<RemoteFileSourceData> {
       const url = URL.createObjectURL(file)
 
       // 使用新的业务协调层方法，包含媒体类型检测
-      await DataSourceBusinessActions.completeAcquisitionWithTypeDetection(
+      await RuntimeStateBusinessActions.completeAcquisitionWithTypeDetection(
         source,
         file,
         url,
@@ -236,7 +297,7 @@ export class RemoteFileManager extends DataSourceManager<RemoteFileSourceData> {
 
     // 计算进度百分比
     const progress = totalBytes > 0 ? (downloadedBytes / totalBytes) * 100 : 0
-    DataSourceDataActions.setProgress(source, progress)
+    RuntimeStateActions.setProgress(source, progress)
 
     // 计算下载速度
     if (source.startTime) {
@@ -397,12 +458,13 @@ export class RemoteFileManager extends DataSourceManager<RemoteFileSourceData> {
    * 重试获取
    */
   async retryAcquisition(source: RemoteFileSourceData): Promise<void> {
-    if (!DataSourceQueries.canRetry(source)) {
+    // 检查是否可以重试 - 通过检查错误信息和是否有文件来判断
+    if (!source.errorMessage || (source.file && source.url)) {
       return
     }
 
     // 清理之前的状态
-    DataSourceBusinessActions.cleanup(source)
+    RuntimeStateBusinessActions.cleanup(source)
 
     // 重置下载统计
     source.downloadedBytes = 0
@@ -418,12 +480,13 @@ export class RemoteFileManager extends DataSourceManager<RemoteFileSourceData> {
    * 取消获取
    */
   cancelAcquisition(source: RemoteFileSourceData): void {
-    if (!DataSourceQueries.canCancel(source)) {
+    // 检查是否可以取消 - 通过检查是否正在下载中（有进度但未完成）
+    if (source.progress > 0 && source.progress < 100 && !source.file) {
       return
     }
 
     // 清理资源
-    DataSourceBusinessActions.cleanup(source)
+    RuntimeStateBusinessActions.cleanup(source)
 
     // 重置下载统计
     source.downloadedBytes = 0
@@ -432,7 +495,7 @@ export class RemoteFileManager extends DataSourceManager<RemoteFileSourceData> {
     source.startTime = undefined
 
     // 设置为取消状态
-    DataSourceBusinessActions.cancel(source)
+    RuntimeStateBusinessActions.cancel(source)
   }
 
   /**
@@ -442,11 +505,236 @@ export class RemoteFileManager extends DataSourceManager<RemoteFileSourceData> {
     return 'remote'
   }
 
+  // ==================== 新增：实现统一媒体项目处理 ====================
+
+  /**
+   * 处理完整的媒体项目生命周期
+   * @param mediaItem 媒体项目
+   */
+  async processMediaItem(mediaItem: UnifiedMediaItemData): Promise<void> {
+    // 优先使用智能缓存处理
+    return this.processMediaItemWithCache(mediaItem)
+  }
+
+  /**
+   * 处理完整的媒体项目生命周期（强制下载，不使用缓存）
+   * @param mediaItem 媒体项目
+   */
+  async processMediaItemWithoutCache(mediaItem: UnifiedMediaItemData): Promise<void> {
+    try {
+      console.log(`🚀 [RemoteFileManager] 开始处理媒体项目（强制下载）: ${mediaItem.name}`)
+
+      // 1. 设置为处理中状态
+      this.transitionMediaStatus(mediaItem, 'asyncprocessing')
+
+      // 2. 执行下载
+      await this.downloadFileForMediaItem(mediaItem)
+
+      // 3. 确保数据源已获取
+      if (!mediaItem.source.file || !mediaItem.source.url) {
+        throw new Error('数据源未准备好')
+      }
+
+      // 4. 设置为WebAV解析状态
+      this.transitionMediaStatus(mediaItem, 'webavdecoding')
+
+      // 5. WebAV处理器负责具体处理
+      const webavResult = await this.webavProcessor.processMedia(mediaItem)
+
+      // 6. 文件管理器负责保存文件和设置引用
+      if (mediaItem.source.file) {
+        try {
+          // 检查媒体类型是否有效
+          if (mediaItem.mediaType === 'unknown') {
+            throw new Error(`无法保存未知类型的媒体: ${mediaItem.name}`)
+          }
+
+          const saveResult = await this.fileManager.saveMediaToProject(
+            mediaItem.source.file,
+            mediaItem.mediaType,
+            // 注意：这里需要传递clip对象，但由于WebAVProcessor内部处理，我们需要调整
+            // 暂时先不传递clip，后续可以优化
+          )
+
+          if (saveResult.success && saveResult.mediaReference) {
+            this.fileManager.setMediaReferenceId(mediaItem, saveResult.mediaReference.id)
+          }
+
+          console.log(`💾 [RemoteFileManager] 媒体文件保存成功: ${mediaItem.name}`)
+        } catch (saveError) {
+          console.error(`❌ [RemoteFileManager] 媒体文件保存失败: ${mediaItem.name}`, saveError)
+          console.warn(`媒体文件保存失败，但WebAV解析继续: ${mediaItem.name}`, saveError)
+        }
+      }
+
+      // 7. 元数据管理器负责设置元数据
+      const metadataResult = this.metadataManager.batchSetMetadata(mediaItem, webavResult)
+      if (!metadataResult.success) {
+        throw new Error(metadataResult.error || '设置元数据失败')
+      }
+
+      // 8. 设置为就绪状态
+      this.transitionMediaStatus(mediaItem, 'ready')
+
+      console.log(`✅ [RemoteFileManager] 媒体项目处理完成: ${mediaItem.name}`)
+    } catch (error) {
+      console.error(`❌ [RemoteFileManager] 媒体项目处理失败: ${mediaItem.name}`, {
+        mediaType: mediaItem.mediaType,
+        sourceType: mediaItem.source.type,
+        errorMessage: error instanceof Error ? error.message : String(error),
+      })
+      this.transitionMediaStatus(mediaItem, 'error')
+      mediaItem.source.errorMessage = error instanceof Error ? error.message : '处理失败'
+    }
+  }
+
+  /**
+   * 为媒体项目下载文件（支持缓存恢复）
+   * @param mediaItem 媒体项目
+   */
+  private async downloadFileForMediaItem(mediaItem: UnifiedMediaItemData): Promise<void> {
+    const source = mediaItem.source as RemoteFileSourceData
+    
+    try {
+      // 设置为获取中状态
+      RuntimeStateBusinessActions.startAcquisition(source)
+
+      // 检查是否有 mediaReferenceId，如果有则尝试从本地缓存恢复
+      if (source.mediaReferenceId) {
+        const cacheRestored = await this.tryRestoreFromCache(source)
+        if (cacheRestored) {
+          console.log(`✅ [RemoteFileManager] 媒体项目从本地缓存恢复: ${mediaItem.name}`)
+          return
+        }
+        console.log(`⚠️ [RemoteFileManager] 媒体项目本地缓存不可用，将重新下载: ${mediaItem.name}`)
+      }
+
+      // 验证URL
+      if (!this.isValidUrl(source.remoteUrl)) {
+        RuntimeStateBusinessActions.setError(source, '无效的URL地址')
+        throw new Error('无效的URL地址')
+      }
+
+      // 预先检测媒体类型
+      const predictedType = await this.detectMediaTypeFromUrl(source.remoteUrl)
+      if (predictedType === 'unknown') {
+        // 如果通过HEAD请求无法确定，尝试通过文件扩展名
+        const extensionType = this.detectMediaTypeFromUrlExtension(source.remoteUrl)
+        await this.setPredictedMediaType(source, extensionType)
+      } else {
+        await this.setPredictedMediaType(source, predictedType)
+      }
+
+      // 合并配置
+      const config = {
+        ...DEFAULT_REMOTE_CONFIG,
+        headers: source.headers || DEFAULT_REMOTE_CONFIG.headers,
+        timeout: source.timeout || DEFAULT_REMOTE_CONFIG.timeout,
+        retryCount: source.retryCount || DEFAULT_REMOTE_CONFIG.retryCount,
+        retryDelay: source.retryDelay || DEFAULT_REMOTE_CONFIG.retryDelay,
+      }
+
+      // 开始下载
+      await this.downloadFile(source, config)
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : '下载失败'
+      RuntimeStateBusinessActions.setError(source, errorMessage)
+      throw error
+    }
+  }
+
+  /**
+   * 智能处理媒体项目（优先使用本地缓存）
+   * @param mediaItem 媒体项目
+   */
+  async processMediaItemWithCache(mediaItem: UnifiedMediaItemData): Promise<void> {
+    const source = mediaItem.source as RemoteFileSourceData
+    
+    try {
+      console.log(`🚀 [RemoteFileManager] 开始智能处理媒体项目: ${mediaItem.name}`)
+
+      // 1. 设置为处理中状态
+      this.transitionMediaStatus(mediaItem, 'asyncprocessing')
+
+      // 2. 如果有 mediaReferenceId，尝试使用本地缓存
+      if (source.mediaReferenceId) {
+        console.log(`🔄 [RemoteFileManager] 尝试从本地缓存恢复: ${mediaItem.name}`)
+        const cacheSuccess = await this.tryLoadFromCacheForMediaItem(mediaItem)
+        if (cacheSuccess) {
+          console.log(`✅ [RemoteFileManager] 从本地缓存完整恢复媒体项目: ${mediaItem.name}`)
+          return
+        }
+        
+        // 缓存恢复失败（可能是文件损坏或WebAV解析失败），重新下载
+        console.warn(`⚠️ [RemoteFileManager] 本地缓存不可用或解析失败，将重新下载: ${mediaItem.name}`)
+      }
+
+      // 3. 本地缓存不可用或解析失败，执行重新下载流程
+      console.log(`🌐 [RemoteFileManager] 开始重新下载远程文件: ${mediaItem.name}`)
+      await this.processMediaItemWithoutCache(mediaItem)
+      
+      console.log(`✅ [RemoteFileManager] 重新下载并处理完成: ${mediaItem.name}`)
+    } catch (error) {
+      console.error(`❌ [RemoteFileManager] 智能处理媒体项目失败: ${mediaItem.name}`, error)
+      this.transitionMediaStatus(mediaItem, 'error')
+      mediaItem.source.errorMessage = error instanceof Error ? error.message : '处理失败'
+    }
+  }
+
+  /**
+   * 尝试从本地缓存为媒体项目加载文件
+   * @param mediaItem 媒体项目
+   * @returns 是否成功从缓存加载
+   */
+  private async tryLoadFromCacheForMediaItem(mediaItem: UnifiedMediaItemData): Promise<boolean> {
+    const source = mediaItem.source as RemoteFileSourceData
+    
+    try {
+      // 尝试从缓存恢复数据源
+      const cacheRestored = await this.tryRestoreFromCache(source)
+      if (!cacheRestored) {
+        return false
+      }
+
+      // 确保数据源已获取
+      if (!source.file || !source.url) {
+        console.warn('缓存恢复后数据源未准备好')
+        return false
+      }
+
+      // 设置为WebAV解析状态
+      this.transitionMediaStatus(mediaItem, 'webavdecoding')
+
+      // WebAV处理器负责具体处理
+      const webavResult = await this.webavProcessor.processMedia(mediaItem)
+
+      // 元数据管理器负责设置元数据
+      const metadataResult = this.metadataManager.batchSetMetadata(mediaItem, webavResult)
+      if (!metadataResult.success) {
+        throw new Error(metadataResult.error || '设置元数据失败')
+      }
+
+      // 设置为就绪状态
+      this.transitionMediaStatus(mediaItem, 'ready')
+
+      return true
+    } catch (error) {
+      console.warn(`从缓存加载媒体项目失败，可能是缓存文件损坏: ${mediaItem.name}`, error)
+      
+      // 清理损坏的缓存数据源状态
+      RuntimeStateBusinessActions.cleanup(source)
+      
+      // 返回 false，让上层重新下载
+      return false
+    }
+  }
+
+
   /**
    * 获取最大重试次数
    */
   protected getMaxRetries(source: RemoteFileSourceData): number {
-    return source.config.retryCount || this.config.defaultRetryCount
+    return source.retryCount || this.config.defaultRetryCount
   }
 
   // ==================== 重写父类方法 ====================
@@ -546,7 +834,10 @@ export class RemoteFileManager extends DataSourceManager<RemoteFileSourceData> {
   /**
    * 设置预测的媒体类型
    */
-  private async setPredictedMediaType(source: RemoteFileSourceData, mediaType: DetectedMediaType): Promise<void> {
+  private async setPredictedMediaType(
+    source: RemoteFileSourceData,
+    mediaType: DetectedMediaType,
+  ): Promise<void> {
     try {
       // 使用媒体模块方法查找对应的媒体项目
       const { useUnifiedStore } = await import('@/unified/unifiedStore')
@@ -643,62 +934,6 @@ export class RemoteFileManager extends DataSourceManager<RemoteFileSourceData> {
     } catch (error) {
       console.error('更新媒体项目名称失败:', error)
     }
-  }
-
-  /**
-   * 批量下载远程文件
-   */
-  async downloadBatchFiles(urls: string[]): Promise<{
-    successful: RemoteFileSourceData[]
-    failed: { url: string; error: string }[]
-  }> {
-    const results = {
-      successful: [] as RemoteFileSourceData[],
-      failed: [] as { url: string; error: string }[],
-    }
-
-    // 为每个URL创建数据源
-    const { DataSourceFactory } = await import('@/unified/sources/DataSourceTypes')
-    const sources = urls.map((url) => {
-      return DataSourceFactory.createRemoteSource(url, {
-        timeout: this.config.defaultTimeout,
-        retryCount: this.config.defaultRetryCount,
-        retryDelay: this.config.defaultRetryDelay,
-      })
-    })
-
-    // 并发处理所有下载
-    const promises = sources.map(async (source, index) => {
-      const taskId = `batch_${Date.now()}_${index}`
-
-      return new Promise<void>((resolve) => {
-        // 监听状态变化
-        const checkStatus = () => {
-          if (source.status === 'acquired') {
-            results.successful.push(source)
-            resolve()
-          } else if (source.status === 'error' || source.status === 'cancelled') {
-            results.failed.push({
-              url: urls[index],
-              error: source.errorMessage || '下载失败',
-            })
-            resolve()
-          } else {
-            // 继续等待状态变化
-            setTimeout(checkStatus, 100)
-          }
-        }
-
-        // 开始下载
-        this.startAcquisition(source, taskId)
-        checkStatus()
-      })
-    })
-
-    // 等待所有下载完成
-    await Promise.all(promises)
-
-    return results
   }
 
   /**

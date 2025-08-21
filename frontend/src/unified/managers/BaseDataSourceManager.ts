@@ -4,12 +4,15 @@
  */
 
 import {
-  DataSourceDataActions,
-  DataSourceBusinessActions,
-  DataSourceStateActions,
-  DataSourceQueries,
+  RuntimeStateActions,
 } from '@/unified/sources/BaseDataSource'
 import type { UnifiedDataSourceData } from '@/unified/sources/DataSourceTypes'
+import type { UnifiedMediaItemData, MediaStatus } from '@/unified/mediaitem/types'
+import { UnifiedMediaItemActions } from '@/unified/mediaitem/actions'
+import { MediaStatusManager } from '@/unified/managers/MediaStatusManager'
+import { WebAVProcessor } from '@/unified/managers/WebAVProcessor'
+import { FileManager } from '@/unified/managers/FileManager'
+import { MetadataManager } from '@/unified/managers/MetadataManager'
 
 // ==================== 任务相关接口 ====================
 
@@ -56,91 +59,19 @@ export abstract class DataSourceManager<T extends UnifiedDataSourceData> {
   protected currentRunningTasks: number = 0
   protected taskQueue: string[] = []
   protected processingTimes: number[] = []
+  
+  // 新增：直接管理UnifiedMediaItemData
+  protected mediaItems: Map<string, UnifiedMediaItemData> = new Map()
+  
+  // 新增：专门的管理器实例
+  protected mediaStatusManager: MediaStatusManager = new MediaStatusManager()
+  protected webavProcessor: WebAVProcessor = new WebAVProcessor()
+  protected fileManager: FileManager = new FileManager()
+  protected metadataManager: MetadataManager = new MetadataManager()
 
   // ==================== 公共接口 ====================
 
-  /**
-   * 开始获取任务
-   */
-  startAcquisition(source: T, taskId: string): void {
-    const task: AcquisitionTask<T> = {
-      id: taskId,
-      source,
-      status: 'pending',
-      createdAt: Date.now(),
-      retryCount: 0,
-    }
-
-    this.tasks.set(taskId, task)
-    this.taskQueue.push(taskId)
-
-    // 设置数据源的任务ID
-    DataSourceDataActions.setTaskId(source, taskId)
-
-    this.processQueue()
-  }
-
-  /**
-   * 取消任务
-   */
-  cancelTask(taskId: string): boolean {
-    const task = this.tasks.get(taskId)
-    if (!task) return false
-
-    // 如果任务正在运行，减少运行计数
-    const wasRunning = task.status === 'running'
-
-    // 更新任务状态
-    task.status = 'cancelled'
-    task.completedAt = Date.now()
-
-    // 更新数据源状态
-    DataSourceBusinessActions.cancel(task.source)
-    DataSourceDataActions.clearTaskId(task.source)
-
-    // 从队列中移除
-    const queueIndex = this.taskQueue.indexOf(taskId)
-    if (queueIndex !== -1) {
-      this.taskQueue.splice(queueIndex, 1)
-    }
-
-    // 如果任务之前正在运行，减少运行计数
-    if (wasRunning) {
-      this.currentRunningTasks--
-    }
-
-    // 处理下一个任务
-    this.processQueue()
-
-    return true
-  }
-
-  /**
-   * 重试任务
-   */
-  retryTask(taskId: string): boolean {
-    const task = this.tasks.get(taskId)
-    if (!task || task.status !== 'failed') return false
-
-    // 检查重试次数
-    const maxRetries = this.getMaxRetries(task.source)
-    if (task.retryCount >= maxRetries) return false
-
-    // 重置任务状态
-    task.status = 'pending'
-    task.retryCount++
-    task.error = undefined
-
-    // 重新加入队列
-    this.taskQueue.push(taskId)
-
-    // 重置数据源状态
-    DataSourceStateActions.setPending(task.source)
-
-    this.processQueue()
-
-    return true
-  }
+  // 数据源获取任务相关方法已移除，任务处理现在统一由processMediaItem方法处理
 
   /**
    * 获取任务信息
@@ -165,11 +96,6 @@ export abstract class DataSourceManager<T extends UnifiedDataSourceData> {
     )
 
     for (const [taskId, task] of completedTasks) {
-      // 清理数据源资源
-      if (task.status === 'cancelled') {
-        DataSourceBusinessActions.cleanup(task.source)
-      }
-
       this.tasks.delete(taskId)
     }
   }
@@ -191,6 +117,40 @@ export abstract class DataSourceManager<T extends UnifiedDataSourceData> {
     }
 
     return stats
+  }
+
+  /**
+   * 取消任务
+   * @param taskId 任务ID
+   * @returns 是否成功取消
+   */
+  cancelTask(taskId: string): boolean {
+    const task = this.tasks.get(taskId)
+    if (!task) {
+      return false
+    }
+
+    // 如果任务正在运行，标记为取消状态
+    if (task.status === 'running') {
+      task.status = 'cancelled'
+      task.completedAt = Date.now()
+      this.currentRunningTasks--
+      this.processQueue()
+      return true
+    }
+
+    // 如果任务在队列中，直接移除
+    if (task.status === 'pending') {
+      const queueIndex = this.taskQueue.indexOf(taskId)
+      if (queueIndex !== -1) {
+        this.taskQueue.splice(queueIndex, 1)
+      }
+      task.status = 'cancelled'
+      task.completedAt = Date.now()
+      return true
+    }
+
+    return false
   }
 
   /**
@@ -250,8 +210,6 @@ export abstract class DataSourceManager<T extends UnifiedDataSourceData> {
         }
       }
 
-      // 清理任务ID
-      DataSourceDataActions.clearTaskId(task.source)
     } catch (error) {
       // 任务执行失败
       const errorMessage = error instanceof Error ? error.message : '未知错误'
@@ -265,12 +223,18 @@ export abstract class DataSourceManager<T extends UnifiedDataSourceData> {
         // 延迟后重试
         setTimeout(() => {
           if (this.tasks.has(task.id) && task.status === 'failed') {
-            this.retryTask(task.id)
+            // 重置任务状态
+            task.status = 'pending'
+            task.retryCount++
+            task.error = undefined
+            
+            // 重新加入队列
+            this.taskQueue.push(task.id)
+            
+            // 处理队列
+            this.processQueue()
           }
         }, this.getRetryDelay(task.retryCount))
-      } else {
-        // 重试次数用尽，清理任务ID
-        DataSourceDataActions.clearTaskId(task.source)
       }
     } finally {
       this.currentRunningTasks--
@@ -313,4 +277,34 @@ export abstract class DataSourceManager<T extends UnifiedDataSourceData> {
   protected getMaxRetries(_source: T): number {
     return 3
   }
+
+  // ==================== 新增抽象方法 ====================
+
+  /**
+   * 处理完整的媒体项目生命周期 - 子类必须实现
+   * @param mediaItem 媒体项目
+   */
+  abstract processMediaItem(mediaItem: UnifiedMediaItemData): Promise<void>
+
+  // ==================== 新增统一状态机方法 ====================
+
+  /**
+   * 统一状态机转换方法
+   * @param mediaItem 媒体项目
+   * @param status 目标状态
+   */
+  protected transitionMediaStatus(
+    mediaItem: UnifiedMediaItemData,
+    status: MediaStatus
+  ): void {
+    // 避免重复转换到相同状态
+    if (mediaItem.mediaStatus === status) {
+      console.log(`🔄 [${this.getManagerType()}] 媒体状态已经是 ${status}，跳过转换: ${mediaItem.name}`)
+      return
+    }
+    
+    this.mediaStatusManager.transitionTo(mediaItem, status, { manager: this.getManagerType() })
+  }
+
+
 }

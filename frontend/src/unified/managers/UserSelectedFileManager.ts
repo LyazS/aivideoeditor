@@ -15,11 +15,15 @@ import {
   getMediaTypeFromMimeType,
 } from '@/unified/utils/mediaTypeDetector'
 import {
-  DataSourceBusinessActions,
-  DataSourceDataActions,
-  DataSourceQueries,
+  RuntimeStateBusinessActions,
+  RuntimeStateActions,
+  RuntimeStateQueries,
 } from '@/unified/sources/BaseDataSource'
 import { nextTick } from 'vue'
+import { globalProjectMediaManager } from '@/unified/utils/ProjectMediaManager'
+import type { UnifiedMediaItemData, MediaStatus } from '@/unified/mediaitem/types'
+import { microsecondsToFrames, secondsToFrames } from '@/stores/utils/timeUtils'
+import { UnifiedMediaItemActions } from '@/unified/mediaitem'
 
 // ==================== 用户选择文件管理器 ====================
 
@@ -58,12 +62,12 @@ export class UserSelectedFileManager extends DataSourceManager<UserSelectedFileS
       // 直接执行获取逻辑
       await this.executeAcquisition(task.source)
 
-      // 检查执行结果
-      if (task.source.status === 'acquired') {
+      // 检查执行结果 - 通过检查文件和错误信息来判断状态
+      if (task.source.file && task.source.url && !task.source.errorMessage) {
         // 成功完成（媒体类型检测已在获取过程中完成）
         return
-      } else if (task.source.status === 'error') {
-        throw new Error(task.source.errorMessage || '文件处理失败')
+      } else if (task.source.errorMessage) {
+        throw new Error(task.source.errorMessage)
       } else {
         throw new Error('文件处理状态异常')
       }
@@ -81,35 +85,63 @@ export class UserSelectedFileManager extends DataSourceManager<UserSelectedFileS
   private async executeAcquisition(source: UserSelectedFileSourceData): Promise<void> {
     try {
       // 设置为获取中状态
-      DataSourceBusinessActions.startAcquisition(source)
-      // 针对这种瞬间就能完成异步获取的操作，需要nextTick来等待DOM更新
+      RuntimeStateBusinessActions.startAcquisition(source)
       await nextTick()
+
+      let file: File
+
+      // 检查是否有 mediaReferenceId，如果有则从 globalProjectMediaManager 获取文件
+      if (source.mediaReferenceId) {
+        // 从 globalProjectMediaManager 获取项目ID
+        const projectId = globalProjectMediaManager.currentProjectId
+        if (!projectId) {
+          throw new Error('ProjectMediaManager 未初始化，请先调用 initializeForProject')
+        }
+
+        // 从 globalProjectMediaManager 获取媒体引用
+        const mediaReference = globalProjectMediaManager.getMediaReference(source.mediaReferenceId)
+        if (!mediaReference) {
+          throw new Error(`找不到媒体引用: ${source.mediaReferenceId}`)
+        }
+
+        // 从项目目录加载文件
+        file = await globalProjectMediaManager.loadMediaFromProject(
+          mediaReference.storedPath
+        )
+
+        // 更新 selectedFile
+        source.selectedFile = file
+      } else {
+        // 使用原始文件
+        file = source.selectedFile
+      }
+
       // 验证文件有效性
-      const validationResult = this.validateFile(source.selectedFile)
+      const validationResult = this.validateFile(file)
       if (!validationResult.isValid) {
         console.error(
-          `❌ [UserSelectedFile] 文件验证失败: ${source.selectedFile.name} - ${validationResult.errorMessage}`,
+          `❌ [UserSelectedFile] 文件验证失败: ${file.name} - ${validationResult.errorMessage}`,
         )
-        DataSourceBusinessActions.setError(source, validationResult.errorMessage || '文件验证失败')
+        RuntimeStateBusinessActions.setError(source, validationResult.errorMessage || '文件验证失败')
         return
       }
 
       // 创建URL
-      const url = URL.createObjectURL(source.selectedFile)
+      const url = URL.createObjectURL(file)
 
       // 使用新的业务协调层方法，包含媒体类型检测
-      await DataSourceBusinessActions.completeAcquisitionWithTypeDetection(
+      await RuntimeStateBusinessActions.completeAcquisitionWithTypeDetection(
         source,
-        source.selectedFile,
+        file,
         url,
         async (src) => await this.detectAndSetMediaType(src as UserSelectedFileSourceData),
       )
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : '文件处理失败'
       console.error(
-        `❌ [UserSelectedFile] 文件获取失败: ${source.selectedFile.name} - ${errorMessage}`,
+        `❌ [UserSelectedFile] 文件获取失败: ${source.selectedFile?.name || source.mediaReferenceId} - ${errorMessage}`,
       )
-      DataSourceBusinessActions.setError(source, errorMessage)
+      RuntimeStateBusinessActions.setError(source, errorMessage)
     }
   }
 
@@ -304,12 +336,13 @@ export class UserSelectedFileManager extends DataSourceManager<UserSelectedFileS
    * 重试获取
    */
   async retryAcquisition(source: UserSelectedFileSourceData): Promise<void> {
-    if (!DataSourceQueries.canRetry(source)) {
+    // 检查是否可以重试 - 通过检查错误信息和是否有文件来判断
+    if (!source.errorMessage || (source.file && source.url)) {
       return
     }
 
     // 清理之前的状态
-    DataSourceBusinessActions.cleanup(source)
+    RuntimeStateBusinessActions.cleanup(source)
 
     // 重新执行获取
     await this.executeAcquisition(source)
@@ -319,15 +352,16 @@ export class UserSelectedFileManager extends DataSourceManager<UserSelectedFileS
    * 取消获取
    */
   cancelAcquisition(source: UserSelectedFileSourceData): void {
-    if (!DataSourceQueries.canCancel(source)) {
+    // 检查是否可以取消 - 通过检查是否正在处理中（有进度但未完成）
+    if (source.progress > 0 && source.progress < 100 && !source.file) {
       return
     }
 
     // 清理资源
-    DataSourceBusinessActions.cleanup(source)
+    RuntimeStateBusinessActions.cleanup(source)
 
     // 设置为取消状态
-    DataSourceBusinessActions.cancel(source)
+    RuntimeStateBusinessActions.cancel(source)
   }
 
   /**
@@ -336,6 +370,147 @@ export class UserSelectedFileManager extends DataSourceManager<UserSelectedFileS
   getManagerType(): string {
     return 'user-selected'
   }
+
+  // ==================== 新增：实现统一媒体项目处理 ====================
+
+  /**
+   * 处理完整的媒体项目生命周期
+   * @param mediaItem 媒体项目
+   */
+  async processMediaItem(mediaItem: UnifiedMediaItemData): Promise<void> {
+    try {
+      console.log(`🚀 [UserSelectedFileManager] 开始处理媒体项目: ${mediaItem.name}`)
+
+      // 1. 设置为处理中状态
+      this.transitionMediaStatus(mediaItem, 'asyncprocessing')
+
+      // 2. 执行文件验证和准备
+      await this.prepareFileForMediaItem(mediaItem)
+
+      // 3. 确保数据源已获取
+      if (!mediaItem.source.file || !mediaItem.source.url) {
+        throw new Error('数据源未准备好')
+      }
+
+      // 4. 设置为WebAV解析状态
+      this.transitionMediaStatus(mediaItem, 'webavdecoding')
+
+      // 5. WebAV处理器负责具体处理
+      const webavResult = await this.webavProcessor.processMedia(mediaItem)
+
+      // 6. 文件管理器负责保存文件和设置引用
+      if (mediaItem.source.file) {
+        try {
+          // 检查媒体类型是否有效
+          if (mediaItem.mediaType === 'unknown') {
+            throw new Error(`无法保存未知类型的媒体: ${mediaItem.name}`)
+          }
+
+          const saveResult = await this.fileManager.saveMediaToProject(
+            mediaItem.source.file,
+            mediaItem.mediaType,
+            // 注意：这里需要传递clip对象，但由于WebAVProcessor内部处理，我们需要调整
+            // 暂时先不传递clip，后续可以优化
+          )
+
+          if (saveResult.success && saveResult.mediaReference) {
+            this.fileManager.setMediaReferenceId(mediaItem, saveResult.mediaReference.id)
+          }
+
+          console.log(`💾 [UserSelectedFileManager] 媒体文件保存成功: ${mediaItem.name}`)
+        } catch (saveError) {
+          console.error(`❌ [UserSelectedFileManager] 媒体文件保存失败: ${mediaItem.name}`, saveError)
+          console.warn(`媒体文件保存失败，但WebAV解析继续: ${mediaItem.name}`, saveError)
+        }
+      }
+
+      // 7. 元数据管理器负责设置元数据
+      const metadataResult = this.metadataManager.batchSetMetadata(mediaItem, webavResult)
+      if (!metadataResult.success) {
+        throw new Error(metadataResult.error || '设置元数据失败')
+      }
+
+      // 8. 设置为就绪状态
+      this.transitionMediaStatus(mediaItem, 'ready')
+
+      console.log(`✅ [UserSelectedFileManager] 媒体项目处理完成: ${mediaItem.name}`)
+    } catch (error) {
+      console.error(`❌ [UserSelectedFileManager] 媒体项目处理失败: ${mediaItem.name}`, {
+        mediaType: mediaItem.mediaType,
+        sourceType: mediaItem.source.type,
+        errorMessage: error instanceof Error ? error.message : String(error),
+      })
+      this.transitionMediaStatus(mediaItem, 'error')
+      mediaItem.source.errorMessage = error instanceof Error ? error.message : '处理失败'
+    }
+  }
+
+  /**
+   * 为媒体项目准备文件
+   * @param mediaItem 媒体项目
+   */
+  private async prepareFileForMediaItem(mediaItem: UnifiedMediaItemData): Promise<void> {
+    const source = mediaItem.source as UserSelectedFileSourceData
+    
+    try {
+      // 设置为获取中状态
+      RuntimeStateBusinessActions.startAcquisition(source)
+
+      let file: File
+
+      // 检查是否有 mediaReferenceId，如果有则从 globalProjectMediaManager 获取文件
+      if (source.mediaReferenceId) {
+        // 从 globalProjectMediaManager 获取项目ID
+        const projectId = globalProjectMediaManager.currentProjectId
+        if (!projectId) {
+          throw new Error('ProjectMediaManager 未初始化，请先调用 initializeForProject')
+        }
+
+        // 从 globalProjectMediaManager 获取媒体引用
+        const mediaReference = globalProjectMediaManager.getMediaReference(source.mediaReferenceId)
+        if (!mediaReference) {
+          throw new Error(`找不到媒体引用: ${source.mediaReferenceId}`)
+        }
+
+        // 从项目目录加载文件
+        file = await globalProjectMediaManager.loadMediaFromProject(
+          mediaReference.storedPath
+        )
+
+        // 更新 selectedFile
+        source.selectedFile = file
+      } else {
+        // 使用原始文件
+        file = source.selectedFile
+      }
+
+      // 验证文件有效性
+      const validationResult = this.validateFile(file)
+      if (!validationResult.isValid) {
+        console.error(
+          `❌ [UserSelectedFile] 文件验证失败: ${file.name} - ${validationResult.errorMessage}`,
+        )
+        RuntimeStateBusinessActions.setError(source, validationResult.errorMessage || '文件验证失败')
+        throw new Error(validationResult.errorMessage)
+      }
+
+      // 创建URL
+      const url = URL.createObjectURL(file)
+
+      // 使用新的业务协调层方法，包含媒体类型检测
+      await RuntimeStateBusinessActions.completeAcquisitionWithTypeDetection(
+        source,
+        file,
+        url,
+        async (src) => await this.detectAndSetMediaType(src as UserSelectedFileSourceData),
+      )
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : '文件处理失败'
+      RuntimeStateBusinessActions.setError(source, errorMessage)
+      throw error
+    }
+  }
+
 
   /**
    * 获取最大重试次数
@@ -379,58 +554,6 @@ export class UserSelectedFileManager extends DataSourceManager<UserSelectedFileS
     } catch (error) {
       console.error('媒体类型检测失败:', error)
     }
-  }
-
-  /**
-   * 批量处理用户选择的文件
-   */
-  async processBatchFiles(files: File[]): Promise<{
-    successful: UserSelectedFileSourceData[]
-    failed: { file: File; error: string }[]
-  }> {
-    const results = {
-      successful: [] as UserSelectedFileSourceData[],
-      failed: [] as { file: File; error: string }[],
-    }
-
-    // 为每个文件创建数据源
-    const { DataSourceFactory } = await import('@/unified/sources/DataSourceTypes')
-    const sources = files.map((file) => {
-      return DataSourceFactory.createUserSelectedSource(file)
-    })
-
-    // 并发处理所有文件
-    const promises = sources.map(async (source, index) => {
-      const taskId = `batch_${Date.now()}_${index}`
-
-      return new Promise<void>((resolve) => {
-        // 监听状态变化
-        const checkStatus = () => {
-          if (source.status === 'acquired') {
-            results.successful.push(source)
-            resolve()
-          } else if (source.status === 'error') {
-            results.failed.push({
-              file: files[index],
-              error: source.errorMessage || '处理失败',
-            })
-            resolve()
-          } else {
-            // 继续等待状态变化
-            setTimeout(checkStatus, 10)
-          }
-        }
-
-        // 开始处理
-        this.startAcquisition(source, taskId)
-        checkStatus()
-      })
-    })
-
-    // 等待所有文件处理完成
-    await Promise.all(promises)
-
-    return results
   }
 
   /**

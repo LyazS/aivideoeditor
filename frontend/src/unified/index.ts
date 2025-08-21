@@ -7,16 +7,9 @@
 export {
   // 基础类型定义
   type BaseDataSourceData,
-  type DataSourceStatus,
-
-  // 常量
-  DATA_SOURCE_TO_MEDIA_STATUS_MAP,
-
-  // 通用行为函数
-  UnifiedDataSourceActions,
 
   // 基础查询函数
-  DataSourceQueries as BaseDataSourceQueries,
+  RuntimeStateQueries,
 } from './sources/BaseDataSource'
 
 // ==================== 统一数据源类型系统 ====================
@@ -51,7 +44,6 @@ export {
 export {
   // 类型定义
   type RemoteFileSourceData,
-  type RemoteFileConfig,
   type DownloadStats,
   type DownloadProgress,
 
@@ -99,9 +91,6 @@ export {
 
   // 便捷函数
   getManagerRegistry,
-  startDataSourceAcquisition,
-  cancelDataSourceAcquisition,
-  retryDataSourceAcquisition,
 } from './managers/DataSourceManagerRegistry'
 
 // ==================== 统一媒体项目 ====================
@@ -259,12 +248,10 @@ export {
   resizeTimelineItem,
   trimTimelineItem,
   UnifiedTimeRangeUtils,
-
 } from './utils'
 
 // ==================== 统一Composables ====================
 export {
-
   // 拖拽预览管理器
   getDragPreviewManager,
 
