@@ -32,7 +32,7 @@ import type {
 import { VideoVisibleSprite } from '@/unified/visiblesprite/VideoVisibleSprite'
 import { ImageVisibleSprite } from '@/unified/visiblesprite/ImageVisibleSprite'
 import { AudioVisibleSprite } from '@/unified/visiblesprite/AudioVisibleSprite'
-import { webavToProjectCoords, projectToWebavCoords } from '@/utils/coordinateTransform'
+import { webavToProjectCoords, projectToWebavCoords } from '@/unified/utils/coordinateTransform'
 import type { ExtendedPropsChangeEvent } from '@/types'
 // import { printDebugInfo } from '@/stores/utils/debugUtils' // 暂时注释，类型不兼容
 

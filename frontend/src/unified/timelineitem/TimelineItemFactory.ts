@@ -5,7 +5,7 @@
 
 import { reactive, markRaw } from 'vue'
 import { cloneDeep } from 'lodash'
-import { generateUUID4 } from '@/utils/idGenerator'
+import { generateUUID4 } from '@/unified/utils/idGenerator'
 import type { MediaType, UnifiedMediaItemData } from '@/unified/mediaitem'
 import type {
   VideoMediaConfig,

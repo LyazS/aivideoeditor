@@ -4,7 +4,7 @@
  */
 
 // 从统一类型文件导入调试分组常量
-import { DEBUG_GROUPS } from '../types'
+import { DEBUG_GROUPS } from '@/types'
 export { DEBUG_GROUPS }
 
 // ==================== 🚀 初始化相关调试函数 ====================

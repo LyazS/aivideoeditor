@@ -12,24 +12,6 @@ export function getMaxZoomLevelFrames(timelineWidth: number, totalDurationFrames
   const calculatedMaxZoom = (targetFrameWidth * totalDurationFrames) / timelineWidth
   const maxZoom = Math.max(calculatedMaxZoom, 100) // 确保至少有100倍缩放
 
-  if (window.DEBUG_TIMELINE_ZOOM) {
-    console.group('🔬 [缩放计算] 计算最大缩放级别（帧数版本）')
-
-    console.log('📐 最大缩放计算参数:', {
-      timelineWidth,
-      totalDurationFrames,
-      targetFrameWidth: targetFrameWidth.toFixed(2),
-    })
-
-    console.log('📊 最大缩放计算结果:', {
-      calculatedMaxZoom: calculatedMaxZoom.toFixed(3),
-      finalMaxZoom: maxZoom.toFixed(3),
-      limitedByMinimum: maxZoom === 100,
-    })
-
-    console.groupEnd()
-  }
-
   return maxZoom
 }
 
@@ -45,22 +27,6 @@ export function getMinZoomLevelFrames(
 ): number {
   // 基于最大可见范围计算最小缩放级别
   const minZoom = totalDurationFrames / maxVisibleDurationFrames
-
-  if (window.DEBUG_TIMELINE_ZOOM) {
-    console.group('🔍 [缩放计算] 计算最小缩放级别（帧数版本）')
-
-    console.log('📐 最小缩放计算参数:', {
-      totalDurationFrames,
-      maxVisibleDurationFrames,
-    })
-
-    console.log('📊 最小缩放计算结果:', {
-      minZoom: minZoom.toFixed(3),
-      ratio: (totalDurationFrames / maxVisibleDurationFrames).toFixed(3),
-    })
-
-    console.groupEnd()
-  }
 
   return minZoom
 }

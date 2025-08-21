@@ -25,7 +25,7 @@ import {
   logComponentLifecycle,
   createPerformanceTimer,
   debugError,
-} from '../utils/webavDebug'
+} from '@/unified/utils/webavDebug'
 
 // 扩展HTMLElement类型以包含自定义属性
 interface ExtendedHTMLElement extends HTMLElement {

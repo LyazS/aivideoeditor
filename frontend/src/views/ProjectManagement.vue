@@ -226,20 +226,20 @@
   </ContextMenu>
 
   <!-- 编辑项目对话框 -->
-  <!-- <EditProjectDialog
+  <EditProjectDialog
     v-model:show="showEditProjectDialog"
     :project="selectedProject"
     :is-saving="false"
     @save="handleSaveProjectEdit"
-  /> -->
+  />
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { directoryManager } from '../utils/DirectoryManager'
-import { projectManager } from '../utils/ProjectManager'
-import type { ProjectConfig } from '../types'
+import { directoryManager } from '@/unified/utils/DirectoryManager'
+import { unifiedProjectManager } from '@/unified/utils/projectManager'
+import type { UnifiedProjectConfig } from '@/unified/project'
 import { ContextMenu, ContextMenuItem } from '@imengyu/vue3-context-menu'
 import EditProjectDialog from '../components/EditProjectDialog.vue'
 
@@ -247,14 +247,14 @@ const router = useRouter()
 
 // 响应式数据
 const viewMode = ref<'grid' | 'list'>('grid')
-const projects = ref<ProjectConfig[]>([])
+const projects = ref<UnifiedProjectConfig[]>([])
 const isLoading = ref(false)
 const hasWorkspaceAccess = ref(false)
 const workspaceInfo = ref<{ name: string; path?: string } | null>(null)
 
 // 上下文菜单相关
 const showContextMenu = ref(false)
-const selectedProject = ref<ProjectConfig | null>(null)
+const selectedProject = ref<UnifiedProjectConfig | null>(null)
 const contextMenuOptions = ref({
   x: 0,
   y: 0,
@@ -338,7 +338,7 @@ async function loadProjects() {
 
   try {
     isLoading.value = true
-    projects.value = await projectManager.listProjects()
+    projects.value = await unifiedProjectManager.listProjects()
   } catch (error) {
     console.error('加载项目列表失败:', error)
     // 可以添加错误提示
@@ -353,7 +353,7 @@ async function createNewProject() {
   try {
     // 生成项目名称
     const projectName = `新项目 ${new Date().toLocaleDateString()}`
-    const project = await projectManager.createProject(projectName)
+    const project = await unifiedProjectManager.createProject(projectName)
 
     // 跳转到编辑器页面
     router.push(`/editor/${project.id}`)
@@ -370,7 +370,7 @@ function openProjectById(projectId: string) {
   window.location.href = `/editor/${projectId}`
 }
 
-function confirmDeleteProject(project: ProjectConfig) {
+function confirmDeleteProject(project: UnifiedProjectConfig) {
   if (confirm(`确定要删除项目"${project.name}"吗？此操作无法撤销。`)) {
     deleteProject(project.id)
   }
@@ -378,7 +378,7 @@ function confirmDeleteProject(project: ProjectConfig) {
 
 async function deleteProject(projectId: string) {
   try {
-    await projectManager.deleteProject(projectId)
+    await unifiedProjectManager.deleteProject(projectId)
     await loadProjects() // 刷新项目列表
     console.log('项目删除成功')
   } catch (error) {
@@ -387,7 +387,7 @@ async function deleteProject(projectId: string) {
 }
 
 // 显示项目设置菜单
-function showProjectMenu(event: MouseEvent, project: ProjectConfig) {
+function showProjectMenu(event: MouseEvent, project: UnifiedProjectConfig) {
   event.preventDefault()
   event.stopPropagation()
 
@@ -398,7 +398,7 @@ function showProjectMenu(event: MouseEvent, project: ProjectConfig) {
 }
 
 // 显示编辑项目对话框
-function showEditDialog(project: ProjectConfig) {
+function showEditDialog(project: UnifiedProjectConfig) {
   selectedProject.value = project
   showEditProjectDialog.value = true
   showContextMenu.value = false
@@ -412,7 +412,7 @@ async function handleSaveProjectEdit(data: { name: string; description: string }
 
   try {
     // 更新项目配置
-    const updatedProject: ProjectConfig = {
+    const updatedProject: UnifiedProjectConfig = {
       ...selectedProject.value,
       name: data.name,
       description: data.description,
@@ -420,7 +420,7 @@ async function handleSaveProjectEdit(data: { name: string; description: string }
     }
 
     // 保存项目
-    await projectManager.saveProject(updatedProject)
+    await unifiedProjectManager.saveProject(updatedProject)
 
     // 刷新项目列表
     await loadProjects()

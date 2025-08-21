@@ -4,7 +4,7 @@
  * 遵循"从源头重建"原则：保存完整的重建元数据，撤销时从原始配置重新创建
  */
 
-import { generateCommandId } from '@/utils/idGenerator'
+import { generateCommandId } from '@/unified/utils/idGenerator'
 import { markRaw, type Ref } from 'vue'
 import type { VisibleSprite } from '@webav/av-cliper'
 import type { SimpleCommand } from '@/unified/modules/commands/types'

@@ -1,4 +1,4 @@
-import { generateCommandId } from '@/utils/idGenerator'
+import { generateCommandId } from '@/unified/utils/idGenerator'
 import { framesToTimecode } from '@/unified/utils/timeUtils'
 import type { SimpleCommand } from '@/unified/modules/commands/types'
 import { updateWebAVAnimation } from '@/unified/utils/webavAnimationManager'

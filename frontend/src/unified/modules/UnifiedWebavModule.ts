@@ -25,7 +25,7 @@ import {
   logCanvasRecreateComplete,
   createPerformanceTimer,
   debugError,
-} from '@/utils/webavDebug'
+} from '@/unified/utils/webavDebug'
 
 // 全局WebAV状态 - 确保单例模式
 let globalAVCanvas: AVCanvas | null = null

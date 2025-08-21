@@ -1,4 +1,4 @@
-import { directoryManager } from '@/utils/DirectoryManager'
+import { directoryManager } from '@/unified/utils/DirectoryManager'
 import type { UnifiedProjectConfig } from '@/unified/project'
 
 /**
@@ -140,6 +140,30 @@ export class UnifiedProjectManager {
       console.log('统一项目删除成功:', projectId)
     } catch (error) {
       console.error('删除统一项目失败:', error)
+      throw error
+    }
+  }
+
+  /**
+   * 保存项目
+   */
+  async saveProject(projectConfig: UnifiedProjectConfig): Promise<void> {
+    const workspaceHandle = await directoryManager.getWorkspaceHandle()
+    if (!workspaceHandle) {
+      throw new Error('未设置工作目录')
+    }
+
+    try {
+      const projectsHandle = await workspaceHandle.getDirectoryHandle(this.PROJECTS_FOLDER)
+      const projectHandle = await projectsHandle.getDirectoryHandle(projectConfig.id)
+
+      // 更新时间戳
+      projectConfig.updatedAt = new Date().toISOString()
+
+      await this.saveProjectConfig(projectHandle, projectConfig)
+      console.log('统一项目保存成功:', projectConfig.name)
+    } catch (error) {
+      console.error('保存统一项目失败:', error)
       throw error
     }
   }

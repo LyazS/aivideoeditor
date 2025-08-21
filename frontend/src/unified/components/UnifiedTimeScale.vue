@@ -175,9 +175,9 @@ function handleWheel(event: WheelEvent) {
     const zoomFactor = 1.2 // 增加缩放因子，让缩放更快
     const rect = scaleContainer.value?.getBoundingClientRect()
     if (!rect) {
-      if (window.DEBUG_TIMELINE_ZOOM) {
-        console.error('❌ 无法获取时间刻度容器边界')
-      }
+      // if (window.DEBUG_TIMELINE_ZOOM) {
+      //   console.error('❌ 无法获取时间刻度容器边界')
+      // }
       return
     }
 

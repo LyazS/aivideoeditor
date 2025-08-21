@@ -240,7 +240,7 @@ import {
   ContextMenuGroup,
 } from '@imengyu/vue3-context-menu'
 import { UnifiedMediaItemQueries } from '@/unified/mediaitem'
-import { generateId } from '@/utils/idGenerator'
+import { generateId } from '@/unified/utils/idGenerator'
 // 菜单项类型定义
 type MenuItem =
   | {

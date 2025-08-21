@@ -4,7 +4,7 @@
  * 采用简单的添加/删除逻辑，不涉及WebAV对象重建
  */
 
-import { generateCommandId } from '@/utils/idGenerator'
+import { generateCommandId } from '@/unified/utils/idGenerator'
 import { ref, type Ref } from 'vue'
 import type { SimpleCommand } from '@/unified/modules/commands/types'
 

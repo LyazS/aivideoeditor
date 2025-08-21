@@ -19,7 +19,7 @@ import {
   cleanupCommandMediaSync,
 } from '@/unified/composables/useCommandMediaSync'
 import { setupProjectLoadMediaSync, cleanupProjectLoadMediaSync } from '@/unified/composables/useProjectLoadMediaSync'
-import { generateCommandId } from '@/utils/idGenerator'
+import { generateCommandId } from '@/unified/utils/idGenerator'
 
 /**
  * 统一项目管理模块

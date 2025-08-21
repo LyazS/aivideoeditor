@@ -22,8 +22,6 @@ import {
 import { nextTick } from 'vue'
 import { globalProjectMediaManager } from '@/unified/utils/ProjectMediaManager'
 import type { UnifiedMediaItemData, MediaStatus } from '@/unified/mediaitem/types'
-import { microsecondsToFrames, secondsToFrames } from '@/stores/utils/timeUtils'
-import { UnifiedMediaItemActions } from '@/unified/mediaitem'
 
 // ==================== 用户选择文件管理器 ====================
 

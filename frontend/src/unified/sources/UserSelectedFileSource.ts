@@ -7,7 +7,7 @@ import type { BaseDataSourceData, DataSourceRuntimeState } from '@/unified/sourc
 import { reactive } from 'vue'
 import { getMediaTypeFromMimeType } from '@/unified/utils/mediaTypeDetector'
 import { RuntimeStateFactory } from '@/unified/sources/BaseDataSource'
-import { generateUUID4 } from '@/utils/idGenerator'
+import { generateUUID4 } from '@/unified/utils/idGenerator'
 
 // ==================== 用户选择文件数据源类型定义 ====================
 

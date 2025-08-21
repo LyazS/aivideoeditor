@@ -123,17 +123,13 @@
 import { ref, computed, onBeforeMount, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useUnifiedStore } from '@/unified/unifiedStore'
-// 移除已删除的 useAutoSave 导入，现在使用模块化的自动保存功能
 import VideoPreviewEngine from '../components/VideoPreviewEngine.vue'
 import HoverButton from '../components/HoverButton.vue'
 import LoadingOverlay from '../components/LoadingOverlay.vue'
 import EditProjectDialog from '../components/EditProjectDialog.vue'
-// 移除不再使用的类型检查导入，新架构使用统一类型
 
 const route = useRoute()
 const unifiedStore = useUnifiedStore()
-
-// 自动保存功能现在通过 unifiedStore 提供，无需单独初始化
 
 // 响应式数据
 const projectTitle = ref('未命名项目')
@@ -141,7 +137,7 @@ const showEditDialog = ref(false)
 
 // 计算属性 - 使用store中的项目状态（适配新的API）
 const projectStatus = computed(() => unifiedStore.projectStatus)
-const isSaving = computed(() => unifiedStore.isProjectSaving) // 新API：isSaving → isProjectSaving
+const isSaving = computed(() => unifiedStore.isProjectSaving)
 
 // 方法
 function goBack() {

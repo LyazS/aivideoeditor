@@ -298,33 +298,6 @@ export type GetMediaConfig<T extends MediaType> = MediaConfigMap[T]
 export type VisualMediaConfig = VideoMediaConfig | ImageMediaConfig | TextMediaConfig
 
 /**
- * 类型守卫函数（激进重构后直接使用联合类型）
- */
-export function isLocalTimelineItem(
-  item: LocalTimelineItem<MediaType> | AsyncProcessingTimelineItem | undefined,
-): item is LocalTimelineItem<MediaType> {
-  return item != null && item.isAsyncProcessingPlaceholder !== true
-}
-
-export function isAsyncProcessingTimelineItem(
-  item: LocalTimelineItem<MediaType> | AsyncProcessingTimelineItem | undefined,
-): item is AsyncProcessingTimelineItem {
-  return item != null && item.isAsyncProcessingPlaceholder === true
-}
-
-export function isLocalMediaItem(
-  item: LocalMediaItem | AsyncProcessingMediaItem | undefined,
-): item is LocalMediaItem {
-  return item != null && item.isAsyncProcessing !== true
-}
-
-export function isAsyncProcessingMediaItem(
-  item: LocalMediaItem | AsyncProcessingMediaItem | undefined,
-): item is AsyncProcessingMediaItem {
-  return item != null && item.isAsyncProcessing === true
-}
-
-/**
  * 轨道接口
  */
 export interface Track {
@@ -388,7 +361,7 @@ export interface PlayOptions {
  * 画布重新创建时的内容备份 - 只备份元数据，不备份WebAV对象
  */
 export interface CanvasBackup {
-  timelineItems: LocalTimelineItemData[]
+  timelineItems: any[]
   currentFrame: number // 当前播放帧数
   isPlaying: boolean
 }
@@ -474,81 +447,6 @@ export interface NotificationManager {
   showWarning(title: string, message?: string, duration?: number): string
   showInfo(title: string, message?: string, duration?: number): string
 }
-
-// ==================== 时间轴项目接口（基于继承关系的激进重构） ====================
-
-/**
- * 基础时间轴项目接口 - 所有时间轴项目的共同基础
- */
-export interface BaseTimelineItem {
-  id: string
-  mediaItemId: string
-  trackId: string
-  mediaType: MediaTypeOrUnknown
-}
-
-/**
- * 本地时间轴项目数据接口（持久化数据）
- * 继承基础属性，添加本地时间轴项目的持久化数据
- */
-export interface LocalTimelineItemData<T extends MediaType = MediaType> extends BaseTimelineItem {
-  mediaType: T
-  timeRange: T extends 'video'
-    ? VideoTimeRange
-    : T extends 'audio'
-      ? VideoTimeRange
-      : ImageTimeRange
-  config: GetMediaConfig<T>
-  animation?: AnimationConfig<T>
-  mediaName: string
-}
-
-/**
- * 本地时间轴项目接口 - 继承 LocalTimelineItemData，添加运行时属性
- */
-export interface LocalTimelineItem<T extends MediaType = MediaType>
-  extends LocalTimelineItemData<T> {
-  sprite: Raw<CustomSprite>
-  thumbnailUrl?: string
-  isAsyncProcessingPlaceholder?: false
-}
-
-/**
- * 异步处理时间轴项目接口 - 继承基础接口，添加异步处理相关属性
- *
- * 注意：异步处理状态相关字段（processingType、processingStatus、processingProgress、errorMessage）
- * 不在此接口中定义，应该通过 mediaItemId 从对应的 AsyncProcessingMediaItem 实时获取
- */
-export interface AsyncProcessingTimelineItem extends BaseTimelineItem {
-  mediaType: MediaTypeOrUnknown // 处理前为'unknown'，处理后为实际类型
-  mediaItemId: string // 指向 AsyncProcessingMediaItem.id，通过此ID获取实时状态
-
-  // 时间范围 - 使用基础时间范围接口
-  timeRange: AsyncProcessingTimeRange
-
-  // 占位符配置
-  config: {
-    name: string // 显示名称
-    expectedDuration: number // 预计时长（帧数）
-  }
-
-  // 标识字段
-  isAsyncProcessingPlaceholder: true
-  sprite: null // 异步处理占位符不创建sprite
-}
-
-/**
- * 激进重构：删除旧的类型别名，强制使用新的命名约定
- *
- * ❌ 删除的类型别名：
- * - TimelineItem<T> = LocalTimelineItem<T> （强制使用 LocalTimelineItem）
- * - TimelineItemData<T> = LocalTimelineItemData<T> （强制使用 LocalTimelineItemData）
- *
- * ✅ 新的类型架构：
- * BaseTimelineItem
- *   ├── LocalTimelineItemData<T> → LocalTimelineItem<T>
- *   └── AsyncProcessingTimelineItem
- */
 
 /**
  * 变换数据接口
@@ -694,65 +592,6 @@ export function isImageTimeRange(
   return 'displayDuration' in timeRange && !('clipStartTime' in timeRange)
 }
 
-// ===== 激进重构：删除旧的辅助函数，使用新的类型守卫 =====
-
-/**
- * 从 LocalTimelineItem 创建 LocalTimelineItemData（类型安全版本）
- * 用于去除运行时属性（sprite, thumbnailUrl），保留持久化数据（包括 animation）
- */
-export function createLocalTimelineItemData<T extends MediaType>(
-  item: LocalTimelineItem<T>,
-): LocalTimelineItemData<T> {
-  return {
-    id: item.id,
-    mediaItemId: item.mediaItemId,
-    trackId: item.trackId,
-    mediaType: item.mediaType,
-    timeRange: { ...item.timeRange }, // 深拷贝 timeRange 对象，避免引用共享
-    config: { ...item.config },
-    animation: item.animation ? { ...item.animation } : undefined,
-    mediaName: item.mediaName,
-  }
-}
-
-/**
- * 从 LocalTimelineItemData 获取视觉属性（如果存在）
- */
-export function getVisualPropsFromData(data: LocalTimelineItemData): any {
-  // 使用类型守卫进行检查
-  if (hasVisualPropsData(data)) {
-    const config = data.config
-    return {
-      x: config.x,
-      y: config.y,
-      width: config.width,
-      height: config.height,
-      rotation: config.rotation,
-      opacity: config.opacity,
-      zIndex: config.zIndex,
-    }
-  }
-  return null
-}
-
-/**
- * 从 LocalTimelineItemData 获取音频属性（如果存在）
- */
-export function getAudioPropsFromData(data: LocalTimelineItemData): any {
-  if (data.mediaType === 'video' || data.mediaType === 'audio') {
-    // 类型安全的配置访问
-    if (!hasAudioProperties(data.config)) {
-      return null
-    }
-    const config = data.config
-    return {
-      volume: config.volume,
-      isMuted: config.isMuted,
-    }
-  }
-  return null
-}
-
 // ==================== 文本样式配置 ====================
 
 /**
@@ -808,23 +647,6 @@ export const DEFAULT_TEXT_STYLE: TextStyleConfig = {
   lineHeight: 1.2,
 }
 
-// ==================== 自定义 Sprite 类型 ====================
-
-// 导入我们的自定义 Sprite 类
-import type { VideoVisibleSprite } from '../utils/VideoVisibleSprite'
-import type { ImageVisibleSprite } from '../utils/ImageVisibleSprite'
-import type { TextVisibleSprite } from '../utils/TextVisibleSprite'
-import type { AudioVisibleSprite } from '../utils/AudioVisibleSprite'
-
-/**
- * 原有的 CustomSprite 类型别名（更新以包含文本精灵）
- */
-export type CustomSprite =
-  | VideoVisibleSprite
-  | ImageVisibleSprite
-  | TextVisibleSprite
-  | AudioVisibleSprite
-
 // ==================== 媒体类型分类系统 ====================
 
 /**
@@ -873,58 +695,6 @@ export function getMediaTypeCategory(mediaType: MediaType): 'FILE_BASED' | 'GENE
 }
 
 /**
- * 检查时间轴项目是否具有视觉属性（类型守卫版本）
- * @param item 时间轴项目
- * @returns 是否具有视觉属性，同时进行类型守卫
- */
-export function hasVisualProps(
-  item: LocalTimelineItem,
-): item is LocalTimelineItem<'video' | 'image' | 'text'> {
-  const hasVisual =
-    item.mediaType === 'video' || item.mediaType === 'image' || item.mediaType === 'text'
-  if (hasVisual) {
-    // 额外的运行时检查，确保配置确实具有视觉属性
-    return hasVisualProperties(item.config)
-  }
-  return false
-}
-
-/**
- * 检查时间轴项目是否具有音频属性（类型守卫版本）
- * @param item 时间轴项目
- * @returns 是否具有音频属性，同时进行类型守卫
- */
-export function hasAudioProps(
-  item: LocalTimelineItem,
-): item is LocalTimelineItem<'video' | 'audio'> {
-  const hasAudio = item.mediaType === 'video' || item.mediaType === 'audio'
-  if (hasAudio) {
-    // 额外的运行时检查，确保配置确实具有音频属性
-    return hasAudioProperties(item.config)
-  }
-  return false
-}
-
-/**
- * 检查时间轴项目数据是否具有视觉属性（类型守卫版本）
- * @param itemData 时间轴项目数据
- * @returns 是否具有视觉属性，同时进行类型守卫
- */
-export function hasVisualPropsData(
-  itemData: LocalTimelineItemData,
-): itemData is LocalTimelineItemData<'video' | 'image' | 'text'> {
-  const hasVisual =
-    itemData.mediaType === 'video' ||
-    itemData.mediaType === 'image' ||
-    itemData.mediaType === 'text'
-  if (hasVisual) {
-    // 额外的运行时检查，确保配置确实具有视觉属性
-    return hasVisualProperties(itemData.config)
-  }
-  return false
-}
-
-/**
  * 类型守卫函数：检查配置是否具有视觉属性
  * @param config 媒体配置对象
  * @returns 是否具有视觉属性
@@ -951,29 +721,6 @@ export function hasAudioProperties(
   config: GetMediaConfig<MediaType>,
 ): config is VideoMediaConfig | AudioMediaConfig {
   return 'volume' in config && 'isMuted' in config
-}
-
-/**
- * 类型安全的配置属性访问器
- * 根据媒体类型安全地访问配置属性
- */
-export function getConfigProperty<T extends MediaType, K extends keyof GetMediaConfig<T>>(
-  item: LocalTimelineItem<T>,
-  property: K,
-): GetMediaConfig<T>[K] {
-  return (item.config as GetMediaConfig<T>)[property]
-}
-
-/**
- * 类型安全的配置属性设置器
- * 根据媒体类型安全地设置配置属性
- */
-export function setConfigProperty<T extends MediaType, K extends keyof GetMediaConfig<T>>(
-  item: LocalTimelineItem<T>,
-  property: K,
-  value: GetMediaConfig<T>[K],
-): void {
-  ;(item.config as GetMediaConfig<T>)[property] = value
 }
 
 /**
@@ -1218,7 +965,6 @@ export interface ProjectConfig {
   asyncProcessingMediaReferences: {
     [mediaId: string]: AsyncProcessingMediaReference
   }
-
 }
 
 /**
@@ -1279,29 +1025,6 @@ export interface ConflictInfo {
 }
 
 // ==================== 关键帧命令相关接口 ====================
-
-/**
- * 关键帧命令执行器接口（激进重构后使用新类型）
- * 定义执行关键帧命令所需的模块依赖
- */
-export interface KeyframeCommandExecutor {
-  /** 时间轴模块 */
-  timelineModule: {
-    getTimelineItem: (id: string) => LocalTimelineItem | undefined
-  }
-  /** WebAV动画管理器 */
-  webavAnimationManager: {
-    updateWebAVAnimation: (item: LocalTimelineItem) => Promise<void>
-  }
-  /** 历史记录模块 */
-  historyModule: {
-    executeCommand: (command: any) => Promise<void>
-  }
-  /** 播放头控制器 */
-  playbackControls: {
-    seekTo: (frame: number) => void
-  }
-}
 
 /**
  * 批量关键帧操作
