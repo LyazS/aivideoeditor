@@ -23,7 +23,7 @@ import {
 import { TimelineItemFactory } from '@/unified/timelineitem'
 
 // ==================== 旧架构类型工具导入 ====================
-import { generateCommandId } from '@/utils/idGenerator'
+import { generateCommandId } from '@/unified/utils/idGenerator'
 
 /**
  * 添加时间轴项目命令

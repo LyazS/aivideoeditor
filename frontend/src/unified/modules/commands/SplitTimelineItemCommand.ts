@@ -4,7 +4,7 @@
  * 遵循"从源头重建"原则：保存完整的重建元数据，撤销时从原始素材重新创建
  */
 
-import { generateCommandId } from '@/utils/idGenerator'
+import { generateCommandId } from '@/unified/utils/idGenerator'
 import { framesToTimecode } from '@/unified/utils/timeUtils'
 import { reactive, markRaw } from 'vue'
 import type { VisibleSprite } from '@webav/av-cliper'
@@ -24,7 +24,7 @@ import type {
   ImageMediaConfig,
   TextMediaConfig,
   BaseMediaProps,
-} from '@/types'
+} from '@/unified/timelineitem/TimelineItemData'
 
 // ==================== 新架构工具导入 ====================
 import { createSpriteFromUnifiedMediaItem } from '@/unified/utils/spriteFactory'

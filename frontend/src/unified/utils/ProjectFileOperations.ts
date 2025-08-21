@@ -1,4 +1,4 @@
-import { directoryManager } from '@/utils/DirectoryManager'
+import { directoryManager } from '@/unified/utils/DirectoryManager'
 import type { UnifiedProjectConfig } from '@/unified/project'
 import type { UnifiedMediaItemData, UnifiedTimelineItemData } from '@/unified'
 import type { UnifiedTrackData } from '@/unified/track/TrackTypes'

@@ -1,6 +1,16 @@
 import { ref } from 'vue'
-import type { NotificationManager } from '@/types'
 import type { SimpleCommand } from '@/unified/modules/commands/types'
+
+/**
+ * 通知管理器接口
+ * 定义历史管理器需要的通知功能
+ */
+interface NotificationManager {
+  showSuccess(title: string, message?: string, duration?: number): string
+  showError(title: string, message?: string, duration?: number): string
+  showWarning(title: string, message?: string, duration?: number): string
+  showInfo(title: string, message?: string, duration?: number): string
+}
 /**
  * 批量命令基类
  * 支持将多个单个命令组合为一个批量操作，统一执行和撤销

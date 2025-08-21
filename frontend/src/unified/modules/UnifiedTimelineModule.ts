@@ -22,7 +22,7 @@ import {
 import { TimelineItemFactory } from '@/unified/timelineitem/TimelineItemFactory'
 import type { UnifiedMediaItemData } from '@/unified/mediaitem/types'
 import type { UnifiedTrackData } from '@/unified/track/TrackTypes'
-import type { MediaType } from '@/types'
+import type { MediaType } from '@/unified/mediaitem/types'
 import type { UnifiedSprite } from '@/unified/visiblesprite'
 import type {
   VideoMediaConfig,
@@ -32,9 +32,31 @@ import type {
 import { VideoVisibleSprite } from '@/unified/visiblesprite/VideoVisibleSprite'
 import { ImageVisibleSprite } from '@/unified/visiblesprite/ImageVisibleSprite'
 import { AudioVisibleSprite } from '@/unified/visiblesprite/AudioVisibleSprite'
-import { webavToProjectCoords, projectToWebavCoords } from '@/utils/coordinateTransform'
-import type { ExtendedPropsChangeEvent } from '@/types'
+import { webavToProjectCoords, projectToWebavCoords } from '@/unified/utils/coordinateTransform'
 // import { printDebugInfo } from '@/stores/utils/debugUtils' // 暂时注释，类型不兼容
+
+/**
+ * 扩展的WebAV属性变化事件类型
+ * 在原有PropsChangeEvent基础上添加opacity属性支持
+ */
+interface ExtendedPropsChangeEvent {
+  rect?: {
+    x?: number
+    y?: number
+    w?: number
+    h?: number
+    angle?: number
+  }
+  zIndex?: number
+  opacity?: number
+  // 文本更新事件数据
+  textUpdate?: {
+    text: string
+    style: any
+    needsRecreation: boolean
+  }
+  // 未来可扩展其他属性
+}
 
 // 临时调试函数，适用于统一类型
 function unifiedDebugLog(operation: string, details: any) {

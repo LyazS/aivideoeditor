@@ -9,8 +9,8 @@
  * - 页面级隔离：通过href跳转重新加载页面，每个项目都是独立的页面实例
  */
 
-import { directoryManager } from '@/utils/DirectoryManager'
-import { generateUUID4 } from '@/utils/idGenerator'
+import { directoryManager } from '@/unified/utils/DirectoryManager'
+import { generateUUID4 } from '@/unified/utils/idGenerator'
 import type { UnifiedMediaMetadata, UnifiedMediaReference } from '@/unified/project/types'
 import type { MediaType } from '@/unified/mediaitem/types'
 

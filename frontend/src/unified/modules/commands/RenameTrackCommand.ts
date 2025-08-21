@@ -1,4 +1,4 @@
-import { generateCommandId } from '@/utils/idGenerator'
+import { generateCommandId } from '@/unified/utils/idGenerator'
 import type { SimpleCommand } from '@/unified/modules/commands/types'
 import type { UnifiedTrackData } from '@/unified/track/TrackTypes'
 

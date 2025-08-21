@@ -1,4 +1,4 @@
-import { generateCommandId } from '@/utils/idGenerator'
+import { generateCommandId } from '@/unified/utils/idGenerator'
 import { type Ref } from 'vue'
 import type { VisibleSprite } from '@webav/av-cliper'
 import type { SimpleCommand } from '@/unified/modules/commands/types'

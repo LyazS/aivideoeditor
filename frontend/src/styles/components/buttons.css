@@ -37,26 +37,3 @@
   border-color: var(--color-accent-primary-hover);
 }
 
-.btn.btn-danger {
-  background: var(--color-accent-error);
-  border-color: var(--color-accent-error);
-  color: var(--color-text-primary);
-}
-
-.btn.btn-danger:hover {
-  background: var(--color-accent-error-hover);
-  border-color: var(--color-accent-error-hover);
-}
-
-.btn.btn-small {
-  padding: var(--spacing-xs);
-  font-size: var(--font-size-sm);
-  width: 24px;
-  height: 24px;
-}
-
-.btn.btn-icon {
-  padding: var(--spacing-xs);
-  min-width: 24px;
-  height: 24px;
-}

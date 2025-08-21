@@ -255,10 +255,10 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { generateUUID4 } from '@/utils/idGenerator'
+import { generateUUID4 } from '@/unified/utils/idGenerator'
 import { useUnifiedStore } from '@/unified/unifiedStore'
 import { useDialogs, useDragUtils } from '@/unified/composables'
-import { framesToTimecode } from '@/stores/utils/timeUtils'
+import { framesToTimecode } from '@/unified/utils/timeUtils'
 import type { UnifiedMediaItemData, MediaType } from '@/unified'
 import { DataSourceFactory } from '@/unified'
 import { DEFAULT_REMOTE_CONFIG } from '@/unified/sources/RemoteFileSource'

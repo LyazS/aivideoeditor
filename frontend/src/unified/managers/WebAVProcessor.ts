@@ -4,7 +4,7 @@
  */
 
 import type { UnifiedMediaItemData, MediaType, WebAVObjects } from '@/unified/mediaitem/types'
-import { microsecondsToFrames, secondsToFrames } from '@/stores/utils/timeUtils'
+import { microsecondsToFrames, secondsToFrames } from '@/unified/utils/timeUtils'
 
 /**
  * WebAV处理结果

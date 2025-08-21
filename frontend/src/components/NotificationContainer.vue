@@ -25,24 +25,24 @@
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted } from 'vue'
-import { useVideoStore } from '../stores/videoStore'
+import { useUnifiedStore } from '@/unified/unifiedStore'
 import NotificationIcons from './icons/NotificationIcons.vue'
 
-const videoStore = useVideoStore()
+const unifiedStore = useUnifiedStore()
 
 // 获取通知列表
-const notifications = computed(() => videoStore.notifications)
+const notifications = computed(() => unifiedStore.notifications)
 
 // 移除通知
 function removeNotification(id: string) {
-  videoStore.removeNotification(id)
+  unifiedStore.removeNotification(id)
 }
 
 // 键盘快捷键支持
 function handleKeydown(event: KeyboardEvent) {
   // ESC键清除所有通知
   if (event.key === 'Escape' && notifications.value.length > 0) {
-    videoStore.clearNotifications()
+    unifiedStore.clearNotifications()
     event.preventDefault()
   }
 }

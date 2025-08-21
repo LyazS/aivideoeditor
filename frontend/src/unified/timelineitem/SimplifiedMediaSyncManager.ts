@@ -3,7 +3,7 @@
  * 只维护命令与媒体项目之间的同步关系，不涉及时间轴项目
  */
 
-import { generateUUID4 } from '@/utils/idGenerator'
+import { generateUUID4 } from '@/unified/utils/idGenerator'
 /**
  * 命令媒体同步信息
  */

@@ -4,7 +4,7 @@
  * 包括时间位置移动和轨道间移动
  */
 
-import { generateCommandId } from '@/utils/idGenerator'
+import { generateCommandId } from '@/unified/utils/idGenerator'
 import type { SimpleCommand } from '@/unified/modules/commands/types'
 
 // ==================== 新架构类型导入 ====================

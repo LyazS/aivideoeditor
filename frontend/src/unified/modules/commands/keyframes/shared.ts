@@ -12,7 +12,7 @@ import type {
   TextMediaConfig,
 } from '@/unified/timelineitem/TimelineItemData'
 import { hasVisualProperties } from '@/unified/timelineitem/TimelineItemQueries'
-import { generateCommandId as generateId } from '@/utils/idGenerator'
+import { generateCommandId as generateId } from '@/unified/utils/idGenerator'
 import { isPlayheadInTimelineItem as checkPlayheadInTimelineItem } from '@/unified/utils/timelineSearchUtils'
 import { cloneDeep } from 'lodash'
 
@@ -107,7 +107,7 @@ export async function applyKeyframeSnapshot(
 
         // 恢复位置和尺寸
         if ('x' in visualProps && (visualProps.x !== undefined || visualProps.y !== undefined)) {
-          const { projectToWebavCoords } = await import('@/utils/coordinateTransform')
+          const { projectToWebavCoords } = await import('@/unified/utils/coordinateTransform')
           const { useUnifiedStore } = await import('@/unified/unifiedStore')
           const store = useUnifiedStore()
 

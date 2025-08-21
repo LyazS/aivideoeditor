@@ -184,8 +184,8 @@ import UnifiedClipManagementToolbar from '@/unified/components/UnifiedClipManage
 import UnifiedPropertiesPanel from '@/unified/components/UnifiedPropertiesPanel.vue'
 import { useUnifiedStore } from '@/unified/unifiedStore'
 import { useKeyboardShortcuts } from '@/unified/composables'
-import { logWebAVReadyStateChange, logComponentLifecycle } from '../utils/webavDebug'
-import { framesToTimecode } from '../stores/utils/timeUtils'
+import { logWebAVReadyStateChange, logComponentLifecycle } from '@/unified/utils/webavDebug'
+import { framesToTimecode } from '@/unified/utils/timeUtils'
 
 const unifiedStore = useUnifiedStore()
 

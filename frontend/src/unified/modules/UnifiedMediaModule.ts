@@ -8,7 +8,6 @@ import {
   UnifiedMediaItemQueries,
   UnifiedMediaItemActions,
 } from '@/unified'
-import { microsecondsToFrames, secondsToFrames } from '@/stores/utils/timeUtils'
 import { SimplifiedMediaSyncManager } from '@/unified/timelineitem/SimplifiedMediaSyncManager'
 import { useUnifiedStore } from '@/unified/unifiedStore'
 

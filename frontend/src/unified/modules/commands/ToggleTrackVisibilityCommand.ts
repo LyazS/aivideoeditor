@@ -1,4 +1,4 @@
-import { generateCommandId } from '@/utils/idGenerator'
+import { generateCommandId } from '@/unified/utils/idGenerator'
 import { ref, type Ref } from 'vue'
 import type { SimpleCommand } from '@/unified/modules/commands/types'
 

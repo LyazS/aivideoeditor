@@ -19,13 +19,23 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { useUnifiedStore } from '@/unified/unifiedStore'
-import type { VideoResolution } from '../types'
 import {
   logRendererState,
   logComponentLifecycle,
   createPerformanceTimer,
   debugError,
-} from '../utils/webavDebug'
+} from '@/unified/utils/webavDebug'
+
+/**
+ * 视频分辨率接口
+ */
+interface VideoResolution {
+  name: string
+  width: number
+  height: number
+  aspectRatio: string
+  category?: string
+}
 
 // 扩展HTMLElement类型以包含自定义属性
 interface ExtendedHTMLElement extends HTMLElement {

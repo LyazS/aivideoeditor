@@ -3,7 +3,6 @@ import { throttle } from 'lodash'
 import { AVCanvas } from '@webav/av-canvas'
 import { MP4Clip, ImgClip, AudioClip } from '@webav/av-cliper'
 import type { VisibleSprite } from '@webav/av-cliper'
-import type { PlayOptions, CanvasBackup } from '@/types'
 import {
   framesToMicroseconds,
   microsecondsToFrames,
@@ -25,7 +24,26 @@ import {
   logCanvasRecreateComplete,
   createPerformanceTimer,
   debugError,
-} from '@/utils/webavDebug'
+} from '@/unified/utils/webavDebug'
+
+/**
+ * 播放选项接口
+ */
+interface PlayOptions {
+  start: number // 开始时间（帧数）
+  playbackRate: number
+  end?: number // 结束时间（帧数）
+}
+
+/**
+ * 类型安全的画布备份接口
+ * 画布重新创建时的内容备份 - 只备份元数据，不备份WebAV对象
+ */
+interface CanvasBackup {
+  timelineItems: any[]
+  currentFrame: number // 当前播放帧数
+  isPlaying: boolean
+}
 
 // 全局WebAV状态 - 确保单例模式
 let globalAVCanvas: AVCanvas | null = null

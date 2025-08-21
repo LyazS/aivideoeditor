@@ -108,7 +108,16 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
-import type { RemoteDownloadConfig } from '../types'
+
+/**
+ * 远程下载配置
+ */
+interface RemoteDownloadConfig {
+  type: 'remote-download'
+  url: string // 远程URL
+  headers?: Record<string, string> // 自定义请求头
+  timeout?: number // 超时时间（毫秒）
+}
 
 interface Props {
   show: boolean

@@ -1,5 +1,25 @@
 import { ref, watch, type Ref } from 'vue'
-import type { AutoSaveConfig, AutoSaveState } from '@/types'
+
+/**
+ * 自动保存配置
+ */
+interface AutoSaveConfig {
+  debounceTime: number // 防抖时间（毫秒）
+  throttleTime: number // 节流时间（毫秒）
+  maxRetries: number // 最大重试次数
+  enabled: boolean // 是否启用自动保存
+}
+
+/**
+ * 自动保存状态
+ */
+interface AutoSaveState {
+  isEnabled: boolean
+  lastSaveTime: Date | null
+  saveCount: number
+  errorCount: number
+  isDirty: boolean // 是否有未保存的更改
+}
 
 /**
  * 自动保存模块依赖接口

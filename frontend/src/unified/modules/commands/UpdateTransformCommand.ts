@@ -3,7 +3,7 @@
  * 支持变换属性（位置、大小、旋转、透明度、zIndex、时长、倍速）修改的撤销/重做操作
  */
 
-import { generateCommandId } from '@/utils/idGenerator'
+import { generateCommandId } from '@/unified/utils/idGenerator'
 import { framesToMicroseconds, framesToTimecode } from '@/unified/utils/timeUtils'
 import type { SimpleCommand } from '@/unified/modules/commands/types'
 

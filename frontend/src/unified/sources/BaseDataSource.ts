@@ -4,7 +4,7 @@
  */
 
 import { reactive } from 'vue'
-import { generateUUID4 } from '@/utils/idGenerator'
+import { generateUUID4 } from '@/unified/utils/idGenerator'
 
 // ==================== 类型定义 ====================
 
