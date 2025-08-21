@@ -168,6 +168,7 @@ export const useUnifiedStore = defineStore('unified', () => {
     unifiedTimelineModule,
     unifiedTrackModule,
     unifiedMediaModule,
+    unifiedWebavModule,
   )
 
   // ==================== 计算属性 ====================

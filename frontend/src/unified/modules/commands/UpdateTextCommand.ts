@@ -15,7 +15,6 @@ import type { UnifiedTimelineItemData } from '@/unified/timelineitem/TimelineIte
 import type { MediaType } from '@/unified/mediaitem'
 // ==================== 新架构工具导入 ====================
 import { isTextTimelineItem, TimelineItemFactory } from '@/unified/timelineitem'
-import { createSpriteForTextTimelineItem } from '@/unified/utils/textTimelineUtils'
 import { TextVisibleSprite } from '@/unified/visiblesprite/TextVisibleSprite'
 import type { TextStyleConfig } from '@/unified/timelineitem'
 

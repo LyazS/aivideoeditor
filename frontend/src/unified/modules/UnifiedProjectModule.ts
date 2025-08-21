@@ -40,11 +40,11 @@ export function createUnifiedProjectModule(
     timelineDurationFrames: Ref<number>
     restoreFromProjectSettings: (pid: string, pconifg: UnifiedProjectConfig) => void
   },
-  timelineModule?: {
+  timelineModule: {
     timelineItems: Ref<UnifiedTimelineItemData<MediaType>[]>
     addTimelineItem: (item: UnifiedTimelineItemData<MediaType>) => Promise<void>
   },
-  trackModule?: {
+  trackModule: {
     tracks: Ref<UnifiedTrackData[]>
     addTrack: (
       type: UnifiedTrackType,
@@ -53,7 +53,7 @@ export function createUnifiedProjectModule(
       id?: string,
     ) => UnifiedTrackData
   },
-  mediaModule?: {
+  mediaModule: {
     mediaItems: Ref<UnifiedMediaItemData[]>
     createUnifiedMediaItemData: (
       id: string,
@@ -64,7 +64,7 @@ export function createUnifiedProjectModule(
     addMediaItem: (item: UnifiedMediaItemData) => void
     startMediaProcessing: (item: UnifiedMediaItemData) => void
   },
-  webavModule?: {
+  webavModule: {
     addSprite: (sprite: VisibleSprite) => Promise<boolean>
     removeSprite: (sprite: VisibleSprite) => boolean
   },
@@ -182,9 +182,9 @@ export function createUnifiedProjectModule(
         // 时间轴数据 - 从各个模块获取当前的时间轴数据，使用工厂函数克隆去掉运行时内容
         timeline: {
           // tracks 数据结构简单，没有运行时对象，可以直接使用
-          tracks: trackModule?.tracks.value || [],
+          tracks: trackModule.tracks.value,
           // timelineItems 包含运行时数据，需要克隆并清理
-          timelineItems: (timelineModule?.timelineItems.value || []).map((item) => {
+          timelineItems: timelineModule.timelineItems.value.map((item) => {
             // 使用工厂函数克隆时间轴项目，去掉运行时内容（如sprite等）
             const clonedItem = TimelineItemFactory.clone(item)
             // 确保克隆的项目没有运行时数据
@@ -194,7 +194,7 @@ export function createUnifiedProjectModule(
             return clonedItem
           }),
           // mediaItems 包含 webav 运行时对象，需要清理
-          mediaItems: (mediaModule?.mediaItems.value || [])
+          mediaItems: mediaModule.mediaItems.value
             .map((item) => {
               // 提取数据源的持久化数据
               const extractedSource = extractSourceData(item.source)
@@ -511,7 +511,7 @@ export function createUnifiedProjectModule(
             }
 
             // 验证轨道是否存在
-            if (itemData.trackId && !trackModule?.tracks.value.some(t => t.id === itemData.trackId)) {
+            if (itemData.trackId && !trackModule.tracks.value.some(t => t.id === itemData.trackId)) {
               console.warn(`⚠️ 跳过时间轴项目，对应的轨道不存在: ${itemData.trackId}`)
               continue
             }
@@ -551,7 +551,7 @@ export function createUnifiedProjectModule(
             await timelineModule.addTimelineItem(newTimelineItem)
 
             // 2. 添加sprite到WebAV画布
-            if (newTimelineItem.runtime.sprite && webavModule) {
+            if (newTimelineItem.runtime.sprite) {
               await webavModule.addSprite(newTimelineItem.runtime.sprite)
             }
 
