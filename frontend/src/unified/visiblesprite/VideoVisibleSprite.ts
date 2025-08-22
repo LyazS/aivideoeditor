@@ -75,9 +75,6 @@ export class VideoVisibleSprite extends BaseVisibleSprite {
   constructor(clip: MP4Clip) {
     // 调用父类构造函数
     super(clip)
-
-    // 设置音频拦截器来控制音量
-    this.#setupVolumeInterceptor()
   }
 
   /**
@@ -104,7 +101,30 @@ export class VideoVisibleSprite extends BaseVisibleSprite {
     // 将startOffset（帧数）转换为微秒后应用到时间上，传递给父类
     const startOffsetMicroseconds = framesToMicroseconds(this.#startOffset)
     const adjustedTime = time + startOffsetMicroseconds
-    return super.render(ctx, adjustedTime)
+    
+    // 调用父类的render方法获取音频数据
+    const renderResult = super.render(ctx, adjustedTime)
+    
+    // 如果有音频数据，根据静音状态和音量调整
+    if (renderResult.audio && renderResult.audio.length > 0) {
+      // 计算实际音量：轨道静音或片段静音时为0，否则使用当前音量
+      const effectiveVolume =
+        this.#audioState.isMuted || this.#isTrackMuted ? 0 : this.#audioState.volume
+
+      if (effectiveVolume !== 1) {
+        // 对每个声道的PCM数据进行音量调整
+        renderResult.audio = renderResult.audio.map((channelData: Float32Array) => {
+          // 创建新的Float32Array避免修改原数据
+          const adjustedData = new Float32Array(channelData.length)
+          for (let i = 0; i < channelData.length; i++) {
+            adjustedData[i] = channelData[i] * effectiveVolume
+          }
+          return adjustedData
+        })
+      }
+    }
+
+    return renderResult
   }
 
   // ==================== 时间轴接口 ====================
@@ -346,42 +366,6 @@ export class VideoVisibleSprite extends BaseVisibleSprite {
   }
 
   // ==================== 音量控制接口 ====================
-
-  /**
-   * 设置音频拦截器来控制音量
-   */
-  #setupVolumeInterceptor(): void {
-    const clip = this.getClip() as MP4Clip
-    if (clip && 'tickInterceptor' in clip) {
-      // 设置tickInterceptor来拦截音频数据
-      // 使用正确的类型：接受和返回 MP4Clip.tick 方法的返回类型
-      clip.tickInterceptor = async <T extends Awaited<ReturnType<MP4Clip['tick']>>>(
-        _time: number,
-        tickRet: T,
-      ): Promise<T> => {
-        // 如果有音频数据，根据静音状态和音量调整
-        if (tickRet.audio && tickRet.audio.length > 0) {
-          // 计算实际音量：轨道静音或片段静音时为0，否则使用当前音量
-          const effectiveVolume =
-            this.#audioState.isMuted || this.#isTrackMuted ? 0 : this.#audioState.volume
-
-          if (effectiveVolume !== 1) {
-            // 对每个声道的PCM数据进行音量调整
-            tickRet.audio = tickRet.audio.map((channelData: Float32Array) => {
-              // 创建新的Float32Array避免修改原数据
-              const adjustedData = new Float32Array(channelData.length)
-              for (let i = 0; i < channelData.length; i++) {
-                adjustedData[i] = channelData[i] * effectiveVolume
-              }
-              return adjustedData
-            })
-          }
-        }
-
-        return tickRet
-      }
-    }
-  }
 
   /**
    * 动态设置音量
