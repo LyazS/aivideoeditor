@@ -597,6 +597,8 @@ export interface RebuildKnownTimelineItemOptions {
   getMediaItem: (id: string) => UnifiedMediaItemData | undefined
   /** 日志标识符，用于区分不同调用方的日志 */
   logIdentifier: string
+  /** 是否原地重建，默认为false（克隆创建新实例） */
+  inPlace?: boolean
 }
 
 /**
@@ -645,7 +647,7 @@ export interface RebuildTextTimelineItemResult {
 export async function rebuildKnownTimelineItem(
   options: RebuildKnownTimelineItemOptions,
 ): Promise<RebuildKnownTimelineItemResult> {
-  const { originalTimelineItemData, getMediaItem, logIdentifier } = options
+  const { originalTimelineItemData, getMediaItem, logIdentifier, inPlace = false } = options
 
   try {
     if (!originalTimelineItemData) {
@@ -654,8 +656,16 @@ export async function rebuildKnownTimelineItem(
 
     console.log(`🔄 [${logIdentifier}] 开始从源头重建已知时间轴项目...`)
     if (TimelineItemQueries.isTextTimelineItem(originalTimelineItemData)) {
-      // 1. 使用 TimelineItemFactory.clone 创建新的 TimelineItem（确保独立性和正确的 runtime 处理）
-      const newTimelineItem = cloneTimelineItem(originalTimelineItemData)
+      let newTimelineItem: UnifiedTimelineItemData<'text'>
+      
+      if (!inPlace) {
+        // 1. 使用 TimelineItemFactory.clone 创建新的 TimelineItem（确保独立性和正确的 runtime 处理）
+        newTimelineItem = cloneTimelineItem(originalTimelineItemData)
+      } else {
+        // 原地重建：直接使用原始对象，只重置runtime
+        newTimelineItem = originalTimelineItemData as UnifiedTimelineItemData<'text'>
+        newTimelineItem.runtime = {}
+      }
 
       // 2. 使用 textTimelineUtils 中的工具函数创建精灵
       const newSprite = await createSpriteForTextTimelineItem(newTimelineItem)
@@ -696,11 +706,20 @@ export async function rebuildKnownTimelineItem(
         // 2. 使用新的统一函数从时间轴项目数据创建sprite
         const newSprite = await createSpriteFromUnifiedTimelineItem(originalTimelineItemData)
 
-        // 3. 使用TimelineItemFactory.clone创建新的TimelineItem（先不设置缩略图）
-        const newTimelineItem = cloneTimelineItem(originalTimelineItemData, {
-          timeRange: newSprite.getTimeRange(),
-          timelineStatus: timelineStatus,
-        }) as KnownTimelineItem
+        let newTimelineItem: KnownTimelineItem
+        
+        if (!inPlace) {
+          // 3. 使用TimelineItemFactory.clone创建新的TimelineItem（先不设置缩略图）
+          newTimelineItem = cloneTimelineItem(originalTimelineItemData, {
+            timeRange: newSprite.getTimeRange(),
+            timelineStatus: timelineStatus,
+          }) as KnownTimelineItem
+        } else {
+          // 原地重建：直接使用原始对象，更新timeRange和timelineStatus
+          newTimelineItem = originalTimelineItemData as KnownTimelineItem
+          newTimelineItem.timeRange = newSprite.getTimeRange()
+          newTimelineItem.timelineStatus = timelineStatus
+        }
 
         // 4. 设置runtime和sprite
         newTimelineItem.runtime = {
@@ -726,20 +745,29 @@ export async function rebuildKnownTimelineItem(
         // 未Ready素材：创建loading状态的时间轴项目
         console.log(`🔄 [${logIdentifier}] 重建loading状态时间轴项目`)
 
-        // 创建loading状态的时间轴项目
-        const newTimelineItem = reactive({
-          id: originalTimelineItemData.id,
-          mediaItemId: originalTimelineItemData.mediaItemId,
-          trackId: originalTimelineItemData.trackId,
-          mediaType: originalTimelineItemData.mediaType,
-          timeRange: { ...originalTimelineItemData.timeRange },
-          config: { ...originalTimelineItemData.config },
-          animation: originalTimelineItemData.animation
-            ? { ...originalTimelineItemData.animation }
-            : undefined,
-          timelineStatus: timelineStatus,
-          runtime: {}, // loading状态暂时没有sprite
-        }) as KnownTimelineItem
+        let newTimelineItem: KnownTimelineItem
+        
+        if (!inPlace) {
+          // 创建loading状态的时间轴项目（克隆）
+          newTimelineItem = reactive({
+            id: originalTimelineItemData.id,
+            mediaItemId: originalTimelineItemData.mediaItemId,
+            trackId: originalTimelineItemData.trackId,
+            mediaType: originalTimelineItemData.mediaType,
+            timeRange: { ...originalTimelineItemData.timeRange },
+            config: { ...originalTimelineItemData.config },
+            animation: originalTimelineItemData.animation
+              ? { ...originalTimelineItemData.animation }
+              : undefined,
+            timelineStatus: timelineStatus,
+            runtime: {}, // loading状态暂时没有sprite
+          }) as KnownTimelineItem
+        } else {
+          // 原地重建：直接使用原始对象，更新timelineStatus和重置runtime
+          newTimelineItem = originalTimelineItemData as KnownTimelineItem
+          newTimelineItem.timelineStatus = timelineStatus
+          newTimelineItem.runtime = {}
+        }
 
         // 注意：状态同步监听将在调用方设置，确保时间轴项目已添加到store
 

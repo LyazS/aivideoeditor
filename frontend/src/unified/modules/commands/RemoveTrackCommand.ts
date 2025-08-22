@@ -1,5 +1,6 @@
+import type { Ref } from 'vue'
+import type { VideoResolution } from '@/unified/types'
 import { generateCommandId } from '@/unified/utils/idGenerator'
-import { type Ref } from 'vue'
 import type { VisibleSprite } from '@webav/av-cliper'
 import type { SimpleCommand } from '@/unified/modules/commands/types'
 
@@ -60,7 +61,7 @@ export class RemoveTrackCommand implements SimpleCommand {
       getMediaItem: (id: string) => UnifiedMediaItemData | undefined
     },
     private configModule: {
-      videoResolution: { value: { width: number; height: number } }
+      videoResolution: Ref<VideoResolution>
     },
   ) {
     this.id = generateCommandId()

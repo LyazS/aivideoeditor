@@ -1,9 +1,7 @@
 import { ref, type Raw, type Ref } from 'vue'
-import type { MediaTypeOrUnknown } from '@/unified/mediaitem'
 import type {
   UnifiedTimelineItemData,
   KnownTimelineItem,
-  UnknownTimelineItem,
   UnknownMediaConfig,
 } from '@/unified/timelineitem/TimelineItemData'
 import {
@@ -19,11 +17,9 @@ import {
   isLoading,
   hasError,
 } from '@/unified/timelineitem/TimelineItemQueries'
-import { TimelineItemFactory } from '@/unified/timelineitem/TimelineItemFactory'
 import type { UnifiedMediaItemData } from '@/unified/mediaitem/types'
 import type { UnifiedTrackData } from '@/unified/track/TrackTypes'
 import type { MediaType } from '@/unified/mediaitem/types'
-import type { UnifiedSprite } from '@/unified/visiblesprite'
 import type {
   VideoMediaConfig,
   ImageMediaConfig,
@@ -33,7 +29,7 @@ import { VideoVisibleSprite } from '@/unified/visiblesprite/VideoVisibleSprite'
 import { ImageVisibleSprite } from '@/unified/visiblesprite/ImageVisibleSprite'
 import { AudioVisibleSprite } from '@/unified/visiblesprite/AudioVisibleSprite'
 import { webavToProjectCoords, projectToWebavCoords } from '@/unified/utils/coordinateTransform'
-// import { printDebugInfo } from '@/stores/utils/debugUtils' // 暂时注释，类型不兼容
+import type { VideoResolution } from '@/unified/types'
 
 /**
  * 扩展的WebAV属性变化事件类型
@@ -67,7 +63,10 @@ function unifiedDebugLog(operation: string, details: any) {
 import { syncTimeRange } from '@/unified/utils/timeRangeUtils'
 import { microsecondsToFrames } from '@/unified/utils/timeUtils'
 import { hasAudioCapabilities } from '@/unified/utils/spriteTypeGuards'
-import { globalWebAVAnimationManager, updateWebAVAnimation } from '@/unified/utils/webavAnimationManager'
+import {
+  globalWebAVAnimationManager,
+  updateWebAVAnimation,
+} from '@/unified/utils/webavAnimationManager'
 
 /**
  * 统一时间轴核心管理模块
@@ -80,7 +79,7 @@ import { globalWebAVAnimationManager, updateWebAVAnimation } from '@/unified/uti
  * 4. 支持更丰富的时间轴项目状态和属性管理
  */
 export function createUnifiedTimelineModule(
-  configModule: { videoResolution: { value: { width: number; height: number } } },
+  configModule: { videoResolution: Ref<VideoResolution> },
   webavModule: {
     removeSprite: (sprite: any) => boolean
   },
@@ -208,29 +207,34 @@ export function createUnifiedTimelineModule(
           timelineItem.runtime.sprite.visible = track.isVisible
 
           // 为具有音频功能的片段设置静音状态
-          if (
-            timelineItem.runtime.sprite &&
-            hasAudioCapabilities(timelineItem.runtime.sprite)
-          ) {
+          if (timelineItem.runtime.sprite && hasAudioCapabilities(timelineItem.runtime.sprite)) {
             timelineItem.runtime.sprite.setTrackMuted(track.isMuted)
           }
         }
       }
 
       // 应用动画配置到sprite（如果有）
-      if (timelineItem.animation && timelineItem.animation.isEnabled && timelineItem.animation.keyframes.length > 0 && timelineItem.runtime.sprite) {
+      if (
+        timelineItem.animation &&
+        timelineItem.animation.isEnabled &&
+        timelineItem.animation.keyframes.length > 0 &&
+        timelineItem.runtime.sprite
+      ) {
         try {
           console.log(`🎬 [UnifiedTimelineModule] 应用动画配置到sprite: ${timelineItem.id}`, {
             keyframeCount: timelineItem.animation.keyframes.length,
             isEnabled: timelineItem.animation.isEnabled,
           })
-          
+
           // 使用WebAVAnimationManager来应用动画
           await updateWebAVAnimation(timelineItem)
-          
+
           console.log(`✅ [UnifiedTimelineModule] 动画配置应用成功: ${timelineItem.id}`)
         } catch (animationError) {
-          console.error(`❌ [UnifiedTimelineModule] 应用动画配置失败: ${timelineItem.id}`, animationError)
+          console.error(
+            `❌ [UnifiedTimelineModule] 应用动画配置失败: ${timelineItem.id}`,
+            animationError,
+          )
           // 动画应用失败不影响后续操作
         }
       }
@@ -270,7 +274,6 @@ export function createUnifiedTimelineModule(
     if (index > -1) {
       const item = timelineItems.value[index]
       const mediaItem = mediaModule.getMediaItem(item.mediaItemId)
-
 
       // 🆕 增强的清理逻辑：无论状态如何，都检查并清理sprite
       if (item.runtime.sprite) {
@@ -326,9 +329,7 @@ export function createUnifiedTimelineModule(
    * @param timelineItemId 时间轴项目ID
    * @returns 时间轴项目或undefined
    */
-  function getTimelineItem(
-    timelineItemId: string,
-  ): UnifiedTimelineItemData<MediaType> | undefined {
+  function getTimelineItem(timelineItemId: string): UnifiedTimelineItemData<MediaType> | undefined {
     return timelineItems.value.find(
       (item: UnifiedTimelineItemData<MediaType>) => item.id === timelineItemId,
     )

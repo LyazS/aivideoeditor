@@ -3,7 +3,7 @@
  * 支持移除已知和未知时间轴项目的撤销/重做操作
  * 遵循"从源头重建"原则：保存完整的重建元数据，撤销时从原始素材重新创建
  */
-
+import type { Ref } from 'vue'
 import { generateCommandId } from '@/unified/utils/idGenerator'
 import type { VisibleSprite } from '@webav/av-cliper'
 import type { SimpleCommand } from '@/unified/modules/commands/types'
@@ -12,8 +12,8 @@ import type { SimpleCommand } from '@/unified/modules/commands/types'
 import type {
   UnifiedTimelineItemData,
 } from '@/unified/timelineitem/TimelineItemData'
-
 import type { UnifiedMediaItemData, MediaType } from '@/unified/mediaitem/types'
+import type { VideoResolution } from '@/unified/types'
 
 // ==================== 新架构工具导入 ====================
 import {
@@ -51,7 +51,7 @@ export class RemoveTimelineItemCommand implements SimpleCommand {
       getMediaItem: (id: string) => UnifiedMediaItemData | undefined
     },
     private configModule: {
-      videoResolution: { value: { width: number; height: number } }
+      videoResolution: Ref<VideoResolution>
     },
   ) {
     this.id = generateCommandId()

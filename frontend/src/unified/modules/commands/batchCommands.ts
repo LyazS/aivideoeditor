@@ -9,11 +9,12 @@
  * 4. 使用统一的状态管理系统（3状态：ready|loading|error）
  * 5. 保持与原有命令相同的API接口，便于迁移
  */
-
+import type { VisibleSprite } from '@webav/av-cliper'
+import type { Ref } from 'vue'
+import type { VideoResolution } from '@/unified/types'
 import { BaseBatchCommand } from '@/unified/modules/UnifiedHistoryModule'
 import type { SimpleCommand } from '@/unified/modules/commands/types'
 import { RemoveTimelineItemCommand, MoveTimelineItemCommand } from '@/unified/modules/commands/timelineCommands'
-import type { VisibleSprite } from '@webav/av-cliper'
 
 // ==================== 新架构类型导入 ====================
 import type {
@@ -44,7 +45,7 @@ export class BatchDeleteCommand extends BaseBatchCommand {
       getMediaItem: (id: string) => UnifiedMediaItemData | undefined
     },
     private configModule: {
-      videoResolution: { value: { width: number; height: number } }
+      videoResolution: Ref<VideoResolution>
     },
   ) {
     super(`批量删除 ${timelineItemIds.length} 个时间轴项目`)

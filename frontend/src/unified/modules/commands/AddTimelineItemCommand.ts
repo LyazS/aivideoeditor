@@ -5,14 +5,12 @@
  */
 
 import type { VisibleSprite } from '@webav/av-cliper'
-
+import type { Ref } from 'vue'
 // ==================== 新架构类型导入 ====================
 import type { SimpleCommand } from '@/unified/modules/commands/types'
-import type {
-  UnifiedTimelineItemData,
-} from '@/unified/timelineitem/TimelineItemData'
-
+import type { UnifiedTimelineItemData } from '@/unified/timelineitem/TimelineItemData'
 import type { UnifiedMediaItemData, MediaType } from '@/unified/mediaitem/types'
+import type { VideoResolution } from '@/unified/types'
 
 // ==================== 新架构工具导入 ====================
 import {
@@ -51,7 +49,7 @@ export class AddTimelineItemCommand implements SimpleCommand {
       getMediaItem: (id: string) => UnifiedMediaItemData | undefined
     },
     private configModule: {
-      videoResolution: { value: { width: number; height: number } }
+      videoResolution: Ref<VideoResolution>
     },
   ) {
     this.id = generateCommandId()
