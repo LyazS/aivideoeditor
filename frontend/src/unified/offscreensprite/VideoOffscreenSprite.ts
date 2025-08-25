@@ -1,7 +1,6 @@
-import { MP4Clip } from '@webav/av-cliper'
+import { OffscreenSprite, MP4Clip } from '@webav/av-cliper'
 import type { UnifiedTimeRange } from '@/unified/types/timeRange'
 import { framesToMicroseconds } from '@/unified/utils/timeUtils'
-import { BaseOffscreenSprite } from '@/unified/offscreensprite/BaseOffscreenSprite'
 import type { AudioState } from '@/unified/visiblesprite/types'
 
 // 从 BaseSprite 复制的类型定义（简化版，去掉 iterCount）
@@ -24,11 +23,15 @@ export type TAnimationKeyFrame = Array<[number, Partial<TAnimateProps>]>
 type TKeyFrameOpts = Partial<Record<`${number}%` | 'from' | 'to', Partial<TAnimateProps>>>
 
 /**
- * 自定义的VideoOffscreenSprite类，继承自BaseOffscreenSprite
- * 专门用于处理视频素材，添加了startOffset属性和音量控制功能
- * 专注于视频合成功能，移除了事件监听
+ * 自定义的OffscreenSprite类，继承自OffscreenSprite
+ * 添加了startOffset属性用于自定义起始偏移和音量控制功能
  */
-export class VideoOffscreenSprite extends BaseOffscreenSprite {
+export class VideoOffscreenSprite extends OffscreenSprite {
+  /**
+   * 起始偏移时间（帧数）
+   */
+  #startOffset: number = 0
+
   /**
    * 音频状态
    */
@@ -41,6 +44,16 @@ export class VideoOffscreenSprite extends BaseOffscreenSprite {
    * 轨道静音状态
    */
   #isTrackMuted: boolean = false
+
+  /**
+   * 时间范围信息（帧数版本）
+   */
+  #timeRange: UnifiedTimeRange = {
+    clipStartTime: 0, // 帧数
+    clipEndTime: 0, // 帧数
+    timelineStartTime: 0, // 帧数
+    timelineEndTime: 0, // 帧数
+  }
 
   // ==================== 动画相关私有字段 ====================
 
@@ -63,53 +76,23 @@ export class VideoOffscreenSprite extends BaseOffscreenSprite {
     super(clip)
   }
 
-  // ==================== 变速接口 ====================
-
   /**
-   * 设置播放速度
-   * @param speed 播放速度倍率（1.0为正常速度，2.0为2倍速，0.5为0.5倍速）
-   */
-  public setPlaybackRate(speed: number): void {
-    if (speed <= 0) {
-      throw new Error('播放速度必须大于0')
-    }
-
-    const timeRange = this.getTimeRange()
-    const { clipStartTime, clipEndTime, timelineStartTime } = timeRange
-    const clipDuration = clipEndTime - clipStartTime
-
-    if (clipDuration > 0) {
-      // 根据新的播放速度计算时间轴结束时间
-      // 时间轴时长 = 素材时长 / 播放速度
-      const newTimelineDuration = clipDuration / speed
-
-      // 🔧 确保时间轴结束时间是整数帧数（避免小数点时长显示）
-      const newTimelineEndTime = timelineStartTime + Math.round(newTimelineDuration)
-
-      // 通过设置时间范围来实现播放速度调整
-      // playbackRate 会在 updateOffscreenSpriteTime() 中根据时间范围自动计算
-      this.setTimeRange({
-        timelineEndTime: newTimelineEndTime
-      })
-    }
-  }
-
-
-  // ==================== 渲染方法 ====================
-
-  /**
-   * 覆写offscreenRender方法，应用音量控制
+   * 覆写render方法，应用startOffset
    * @param ctx 渲染上下文
    * @param time 当前时间（微秒）
-   * @returns 音频数据和完成状态
+   * @returns 音频数据
    */
-  public async offscreenRender(
+  async offscreenRender(
     ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
     time: number,
   ): Promise<{ audio: Float32Array[]; done: boolean }> {
-    // 调用父类的offscreenRender方法获取音频数据
-    const renderResult = await super.offscreenRender(ctx, time)
-    
+    // 将startOffset（帧数）转换为微秒后应用到时间上，传递给父类
+    const startOffsetMicroseconds = framesToMicroseconds(this.#startOffset)
+    const adjustedTime = time + startOffsetMicroseconds
+
+    // 调用父类的render方法获取音频数据
+    const renderResult = await super.offscreenRender(ctx, adjustedTime)
+
     // 如果有音频数据，根据静音状态和音量调整
     if (renderResult.audio && renderResult.audio.length > 0) {
       // 计算实际音量：轨道静音或片段静音时为0，否则使用当前音量
@@ -118,15 +101,109 @@ export class VideoOffscreenSprite extends BaseOffscreenSprite {
 
       if (effectiveVolume !== 1) {
         // 对每个声道的PCM数据进行音量调整
-        for (const channel of renderResult.audio) {
-          for (let i = 0; i < channel.length; i++) {
-            channel[i] *= effectiveVolume
+        renderResult.audio = renderResult.audio.map((channelData: Float32Array) => {
+          // 创建新的Float32Array避免修改原数据
+          const adjustedData = new Float32Array(channelData.length)
+          for (let i = 0; i < channelData.length; i++) {
+            adjustedData[i] = channelData[i] * effectiveVolume
           }
-        }
+          return adjustedData
+        })
       }
     }
 
     return renderResult
+  }
+
+  // ==================== 时间轴接口 ====================
+
+  /**
+   * 同时设置内部素材和时间轴的时间范围
+   * @param options 时间范围配置（所有时间参数都是帧数）
+   */
+  public setTimeRange(options: {
+    clipStartTime?: number
+    clipEndTime?: number
+    timelineStartTime?: number
+    timelineEndTime?: number
+  }): void {
+    if (options.clipStartTime !== undefined) {
+      this.#timeRange.clipStartTime = options.clipStartTime
+    }
+    if (options.clipEndTime !== undefined) {
+      this.#timeRange.clipEndTime = options.clipEndTime
+    }
+    if (options.timelineStartTime !== undefined) {
+      this.#timeRange.timelineStartTime = options.timelineStartTime
+    }
+    if (options.timelineEndTime !== undefined) {
+      this.#timeRange.timelineEndTime = options.timelineEndTime
+    }
+    this.#updateOffscreenSpriteTime()
+  }
+
+  // ==================== 变速接口 ====================
+
+  /**
+   * 获取当前播放速度
+   * @returns 播放速度倍率
+   */
+  public getPlaybackRate(): number {
+    const { clipStartTime, clipEndTime, timelineStartTime, timelineEndTime } = this.#timeRange
+
+    const clipDurationFrames = clipEndTime - clipStartTime // 素材内部要播放的帧数
+    const timelineDurationFrames = timelineEndTime - timelineStartTime // 在时间轴上占用的帧数
+
+    if (clipDurationFrames > 0 && timelineDurationFrames > 0) {
+      // playbackRate = 素材内部时长 / 时间轴时长
+      let playbackRate = clipDurationFrames / timelineDurationFrames
+
+      // 修正浮点数精度问题，避免出现1.00000001这样的值
+      // 如果非常接近整数，则四舍五入到最近的0.1
+      const rounded = Math.round(playbackRate * 10) / 10
+      if (Math.abs(playbackRate - rounded) < 0.001) {
+        playbackRate = rounded
+      }
+
+      return playbackRate
+    }
+
+    return 1 // 默认正常速度
+  }
+
+  // ==================== 私有方法 ====================
+
+  /**
+   * 更新 OffscreenSprite 的 time 属性
+   * 根据当前的时间范围设置同步更新父类的时间属性
+   * 内部使用帧数计算，设置WebAV时转换为微秒
+   */
+  #updateOffscreenSpriteTime(): void {
+    const { clipStartTime, clipEndTime, timelineStartTime, timelineEndTime } = this.#timeRange
+
+    // 计算时长参数（使用帧数）
+    let durationFrames = 0
+
+    const clipDurationFrames = clipEndTime - clipStartTime // 素材内部要播放的帧数
+    const timelineDurationFrames = timelineEndTime - timelineStartTime // 在时间轴上占用的帧数
+
+    if (clipDurationFrames > 0 && timelineDurationFrames > 0) {
+      // duration 是在时间轴上占用的帧数
+      durationFrames = timelineDurationFrames
+
+      // 更新 #startOffset 为素材内部的开始位置（帧数）
+      this.#startOffset = clipStartTime
+    }
+
+    // 设置 OffscreenSprite.time 属性（转换为微秒给WebAV）
+    // offset: 在时间轴上的播放开始位置（微秒）
+    // duration: 在时间轴上占用的时长（微秒）
+    // playbackRate: 素材播放的速度（通过getPlaybackRate()方法获取）
+    this.time = {
+      offset: framesToMicroseconds(timelineStartTime),
+      duration: framesToMicroseconds(durationFrames),
+      playbackRate: this.getPlaybackRate(),
+    }
   }
 
   // ==================== 音量控制接口 ====================
@@ -146,15 +223,6 @@ export class VideoOffscreenSprite extends BaseOffscreenSprite {
    */
   public setMuted(muted: boolean): void {
     this.#audioState.isMuted = muted
-  }
-
-  /**
-   * 静音/取消静音切换
-   * @returns 切换后的静音状态（true为静音，false为有声音）
-   */
-  public toggleMute(): boolean {
-    this.#audioState.isMuted = !this.#audioState.isMuted
-    return this.#audioState.isMuted
   }
 
   /**
@@ -215,6 +283,7 @@ export class VideoOffscreenSprite extends BaseOffscreenSprite {
    * 如果当前 sprite 已被设置动画，将 sprite 的动画属性设定到指定时间的状态
    */
   public animate(time: number): void {
+    time -= framesToMicroseconds(this.#startOffset)
     if (this.#animatKeyFrame == null || this.#animatOpts == null || time < this.#animatOpts.delay)
       return
     // console.log('animate', time, this.#animatKeyFrame, this.#animatOpts)
@@ -235,48 +304,9 @@ export class VideoOffscreenSprite extends BaseOffscreenSprite {
     }
   }
 
-  // ==================== 保护方法 ====================
-
-  /**
-   * 更新 OffscreenSprite 的 time 属性
-   * 视频素材的定制化实现，支持视频特有的播放速度计算
-   */
-  protected updateOffscreenSpriteTime(): void {
-    const timeRange = this.getTimeRange()
-    const { clipStartTime, clipEndTime, timelineStartTime, timelineEndTime } = timeRange
-
-    // 计算时长参数（使用帧数）
-    let durationFrames = 0
-    let playbackRate = 1 // 默认正常速度
-
-    const clipDurationFrames = clipEndTime - clipStartTime // 素材内部要播放的帧数
-    const timelineDurationFrames = timelineEndTime - timelineStartTime // 在时间轴上占用的帧数
-
-    if (clipDurationFrames > 0 && timelineDurationFrames > 0) {
-      // duration 是在时间轴上占用的帧数
-      durationFrames = timelineDurationFrames
-      
-      // 计算播放速度
-      // playbackRate = 素材内部时长 / 时间轴时长
-      playbackRate = clipDurationFrames / timelineDurationFrames
-
-      // 修正浮点数精度问题，避免出现1.00000001这样的值
-      // 如果非常接近整数，则四舍五入到最近的0.1
-      const rounded = Math.round(playbackRate * 10) / 10
-      if (Math.abs(playbackRate - rounded) < 0.001) {
-        playbackRate = rounded
-      }
-    }
-
-    // 设置 OffscreenSprite.time 属性（转换为微秒给WebAV）
-    // offset: 在时间轴上的播放开始位置（微秒）
-    // duration: 在时间轴上占用的时长（微秒）
-    // playbackRate: 视频素材播放的速度
-    this.time = {
-      offset: framesToMicroseconds(timelineStartTime),
-      duration: framesToMicroseconds(durationFrames),
-      playbackRate: playbackRate,
-    }
+  // combinator会clone offscreenSprite，但是clone用到了内部的IClip，而这里继承的offscreenSprite拿不到父类的私有遍历IClip，所以直接返回自身好了，最后combinator会销毁这个offscreenSprite的
+  async clone() {
+    return this
   }
 }
 
@@ -317,7 +347,6 @@ export function linearTimeFn(
     const p = prop as keyof TAnimateProps
     if (startFrame[p] == null) continue
     // @ts-expect-error
-      
     rs[p] = (nextFrame[p] - startFrame[p]) * stateProcess + startFrame[p]
   }
 

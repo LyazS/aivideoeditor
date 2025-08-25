@@ -1,14 +1,12 @@
-import { ImgClip } from '@webav/av-cliper'
+import { OffscreenSprite, ImgClip } from '@webav/av-cliper'
 import type { UnifiedTimeRange } from '@/unified/types/timeRange'
 import { framesToMicroseconds } from '@/unified/utils/timeUtils'
-import { BaseOffscreenSprite } from '@/unified/offscreensprite/BaseOffscreenSprite'
 
 /**
  * 自定义的图片OffscreenSprite类，继承自BaseOffscreenSprite
  * 专门用于处理图片素材，不包含视频特有的倍速功能
- * 专注于视频合成功能，移除了事件监听
  */
-export class ImageOffscreenSprite extends BaseOffscreenSprite {
+export class ImageOffscreenSprite extends OffscreenSprite {
   /**
    * 时间范围信息（帧数版本）
    * 对于图片，clipStartTime 和 clipEndTime 都设置为 -1，不使用
@@ -35,13 +33,11 @@ export class ImageOffscreenSprite extends BaseOffscreenSprite {
     super(clip)
 
     // 初始化时间设置
-    this.updateOffscreenSpriteTime()
+    this.#updateOffscreenSpriteTime()
   }
 
-  // ==================== 时间轴接口 ====================
-
   /**
-   * 设置时间范围
+   * 同时设置时间轴的时间范围
    * @param options 时间范围配置
    */
   public setTimeRange(options: {
@@ -58,9 +54,8 @@ export class ImageOffscreenSprite extends BaseOffscreenSprite {
     }
     // 对于图片，忽略 clipStartTime 和 clipEndTime 参数，保持为 -1
 
-    this.updateOffscreenSpriteTime()
+    this.#updateOffscreenSpriteTime()
   }
-
 
   // ==================== 私有方法 ====================
 
@@ -69,7 +64,7 @@ export class ImageOffscreenSprite extends BaseOffscreenSprite {
    * 根据当前的时间范围设置同步更新父类的时间属性
    * 内部使用帧数计算，设置WebAV时转换为微秒
    */
-  protected updateOffscreenSpriteTime(): void {
+  #updateOffscreenSpriteTime(): void {
     const { timelineStartTime, timelineEndTime } = this.#timeRange
     const timelineDuration = timelineEndTime - timelineStartTime
 
@@ -82,5 +77,9 @@ export class ImageOffscreenSprite extends BaseOffscreenSprite {
       duration: framesToMicroseconds(timelineDuration),
       playbackRate: 1.0, // 图片固定为1.0，没有倍速概念
     }
+  }
+  
+  async clone() {
+    return this
   }
 }

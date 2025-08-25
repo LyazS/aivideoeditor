@@ -127,6 +127,7 @@ import VideoPreviewEngine from '../components/VideoPreviewEngine.vue'
 import HoverButton from '../components/HoverButton.vue'
 import LoadingOverlay from '../components/LoadingOverlay.vue'
 import EditProjectDialog from '../components/EditProjectDialog.vue'
+import { exportProject as exportProjectUtil } from '@/unified/utils/projectExporter'
 
 const route = useRoute()
 const unifiedStore = useUnifiedStore()
@@ -166,9 +167,18 @@ async function saveProject() {
   }
 }
 
-function exportProject() {
-  // TODO: 实现项目导出逻辑
-  console.log('导出项目')
+async function exportProject() {
+  try {
+    await exportProjectUtil({
+      videoWidth: unifiedStore.videoResolution.width,
+      videoHeight: unifiedStore.videoResolution.height,
+      projectName: unifiedStore.projectName,
+      timelineItems: unifiedStore.timelineItems,
+      tracks: unifiedStore.tracks
+    })
+  } catch (error) {
+    console.error('导出项目失败:', error)
+  }
 }
 
 // 显示编辑项目对话框

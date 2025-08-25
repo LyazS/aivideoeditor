@@ -305,3 +305,11 @@ export {
   cloneImgClip,
   cloneAudioClip,
 } from './webavClipUtils'
+
+// ==================== 项目导出工具 ====================
+export {
+  // 项目导出函数
+  exportProject,
+  // 导出项目参数接口
+  type ExportProjectOptions,
+} from './projectExporter'

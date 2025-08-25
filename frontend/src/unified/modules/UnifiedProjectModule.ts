@@ -2,7 +2,11 @@ import { ref, computed, type Ref } from 'vue'
 import type { UnifiedProjectConfig, UnifiedMediaReference } from '@/unified/project/types'
 import { projectFileOperations } from '@/unified/utils/ProjectFileOperations'
 import type { VideoResolution } from '@/unified/types'
-import { TimelineItemFactory } from '@/unified/timelineitem'
+import {
+  TimelineItemFactory,
+  hasAudioProperties,
+  TimelineItemQueries,
+} from '@/unified/timelineitem'
 import type { UnifiedTimelineItemData } from '@/unified/timelineitem/TimelineItemData'
 import type { UnifiedTrackData, UnifiedTrackType } from '@/unified/track/TrackTypes'
 import type { UnifiedMediaItemData } from '@/unified/mediaitem/types'
@@ -14,11 +18,15 @@ import {
   extractSourceData,
 } from '@/unified/sources/DataSourceTypes'
 import type { VisibleSprite } from '@webav/av-cliper'
+import { VideoVisibleSprite, AudioVisibleSprite } from '@/unified/visiblesprite'
 import {
   setupCommandMediaSync,
   cleanupCommandMediaSync,
 } from '@/unified/composables/useCommandMediaSync'
-import { setupProjectLoadMediaSync, cleanupProjectLoadMediaSync } from '@/unified/composables/useProjectLoadMediaSync'
+import {
+  setupProjectLoadMediaSync,
+  cleanupProjectLoadMediaSync,
+} from '@/unified/composables/useProjectLoadMediaSync'
 import { generateCommandId } from '@/unified/utils/idGenerator'
 
 /**
@@ -420,9 +428,11 @@ export function createUnifiedProjectModule(
   async function restoreTracks(): Promise<void> {
     try {
       console.log('🛤️ 开始恢复轨道状态...')
-      
+
       // 获取项目配置
-      const projectConfig = await projectFileOperations.loadProjectConfig(configModule.projectId.value)
+      const projectConfig = await projectFileOperations.loadProjectConfig(
+        configModule.projectId.value,
+      )
       if (!projectConfig) {
         throw new Error('项目配置不存在，无法恢复轨道')
       }
@@ -445,18 +455,18 @@ export function createUnifiedProjectModule(
             trackData.type,
             trackData.name,
             undefined, // position 参数，使用默认值
-            trackData.id // 使用保存的轨道ID
+            trackData.id, // 使用保存的轨道ID
           )
-          
+
           // 恢复轨道属性
-          const restoredTrack = trackModule.tracks.value.find(t => t.id === trackData.id)
+          const restoredTrack = trackModule.tracks.value.find((t) => t.id === trackData.id)
           if (restoredTrack) {
             // 在统一架构中，轨道数据是响应式的，直接修改属性
             restoredTrack.isVisible = trackData.isVisible
             restoredTrack.isMuted = trackData.isMuted
             restoredTrack.height = trackData.height
           }
-          
+
           console.log(`🛤️ 恢复轨道: ${trackData.name} (${trackData.type})`)
         }
       } else {
@@ -478,9 +488,11 @@ export function createUnifiedProjectModule(
   async function restoreTimelineItems(): Promise<void> {
     try {
       console.log('🎬 开始恢复时间轴项目状态...')
-      
+
       // 获取项目配置
-      const projectConfig = await projectFileOperations.loadProjectConfig(configModule.projectId.value)
+      const projectConfig = await projectFileOperations.loadProjectConfig(
+        configModule.projectId.value,
+      )
       if (!projectConfig) {
         throw new Error('项目配置不存在，无法恢复时间轴项目')
       }
@@ -490,7 +502,7 @@ export function createUnifiedProjectModule(
         console.warn('⚠️ 时间轴模块未初始化，跳过时间轴项目恢复')
         return
       }
-      
+
       if (!mediaModule) {
         console.warn('⚠️ 媒体模块未初始化，跳过时间轴项目恢复')
         return
@@ -511,7 +523,10 @@ export function createUnifiedProjectModule(
             }
 
             // 验证轨道是否存在
-            if (itemData.trackId && !trackModule.tracks.value.some(t => t.id === itemData.trackId)) {
+            if (
+              itemData.trackId &&
+              !trackModule.tracks.value.some((t) => t.id === itemData.trackId)
+            ) {
               console.warn(`⚠️ 跳过时间轴项目，对应的轨道不存在: ${itemData.trackId}`)
               continue
             }
@@ -524,7 +539,9 @@ export function createUnifiedProjectModule(
 
             // 非文本类型：验证对应的媒体项目是否存在
             if (itemData.mediaType !== 'text' && itemData.mediaItemId) {
-              const mediaItem = mediaModule.mediaItems.value.find(m => m.id === itemData.mediaItemId)
+              const mediaItem = mediaModule.mediaItems.value.find(
+                (m) => m.id === itemData.mediaItemId,
+              )
               if (!mediaItem) {
                 console.warn(`⚠️ 跳过时间轴项目，对应的媒体项目不存在: ${itemData.mediaItemId}`)
                 continue
@@ -536,7 +553,7 @@ export function createUnifiedProjectModule(
             // 使用 TimelineItemFactory.rebuildKnown 重建时间轴项目
             const rebuildResult = await TimelineItemFactory.rebuildKnown({
               originalTimelineItemData: itemData,
-              getMediaItem: (id: string) => mediaModule.mediaItems.value.find(m => m.id === id),
+              getMediaItem: (id: string) => mediaModule.mediaItems.value.find((m) => m.id === id),
               logIdentifier: 'restoreTimelineItems',
             })
 
@@ -553,6 +570,18 @@ export function createUnifiedProjectModule(
             // 2. 添加sprite到WebAV画布
             if (newTimelineItem.runtime.sprite) {
               await webavModule.addSprite(newTimelineItem.runtime.sprite)
+
+              // 2.1 设置轨道的可见性和是否静音给sprite
+              const track = trackModule.tracks.value.find((t) => t.id === newTimelineItem.trackId)
+              if (track) {
+                newTimelineItem.runtime.sprite.visible = track.isVisible
+                if (hasAudioProperties(newTimelineItem)) {
+                  const audioCapableSprite = newTimelineItem.runtime.sprite as
+                    | VideoVisibleSprite
+                    | AudioVisibleSprite
+                  audioCapableSprite.setTrackMuted(track.isMuted)
+                }
+              }
             }
 
             // 3. 针对loading状态的项目设置状态同步
@@ -587,10 +616,10 @@ export function createUnifiedProjectModule(
     try {
       // 先恢复轨道
       await restoreTracks()
-      
+
       // 然后恢复时间轴项目
       await restoreTimelineItems()
-      
+
       console.log('✅ 时间轴轨道和项目状态恢复完成')
     } catch (error) {
       console.error('❌ 恢复时间轴轨道和项目状态失败:', error)
@@ -645,7 +674,7 @@ export function createUnifiedProjectModule(
     loadProjectContent,
     clearCurrentProject,
     getProjectSummary,
-    
+
     // 恢复方法（拆分后的独立函数）
     restoreTracks,
     restoreTimelineItems,
