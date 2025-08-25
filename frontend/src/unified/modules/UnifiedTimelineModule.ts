@@ -179,6 +179,61 @@ export function createUnifiedTimelineModule(
   // ==================== 时间轴管理方法 ====================
 
   /**
+   * 设置时间轴项目的Sprite属性
+   * 提取自addTimelineItem函数，专门处理timelineItem.runtime.sprite的设置
+   * @param timelineItem 要设置的时间轴项目
+   */
+  async function setupTimelineItemSprite(timelineItem: UnifiedTimelineItemData<MediaType>) {
+    // 根据轨道的可见性和静音状态设置sprite属性
+    if (timelineItem.runtime.sprite) {
+      const track = trackModule.tracks.value.find((t) => t.id === timelineItem.trackId)
+      if (track) {
+        // 设置可见性
+        timelineItem.runtime.sprite.visible = track.isVisible
+
+        // 为具有音频功能的片段设置静音状态
+        if (timelineItem.runtime.sprite && hasAudioCapabilities(timelineItem.runtime.sprite)) {
+          timelineItem.runtime.sprite.setTrackMuted(track.isMuted)
+        }
+      }
+    }
+
+    // 应用动画配置到sprite（如果有）
+    if (
+      timelineItem.animation &&
+      timelineItem.animation.isEnabled &&
+      timelineItem.animation.keyframes.length > 0 &&
+      timelineItem.runtime.sprite
+    ) {
+      try {
+        console.log(`🎬 [UnifiedTimelineModule] 应用动画配置到sprite: ${timelineItem.id}`, {
+          keyframeCount: timelineItem.animation.keyframes.length,
+          isEnabled: timelineItem.animation.isEnabled,
+        })
+
+        // 使用WebAVAnimationManager来应用动画
+        await updateWebAVAnimation(timelineItem)
+
+        console.log(`✅ [UnifiedTimelineModule] 动画配置应用成功: ${timelineItem.id}`)
+      } catch (animationError) {
+        console.error(
+          `❌ [UnifiedTimelineModule] 应用动画配置失败: ${timelineItem.id}`,
+          animationError,
+        )
+        // 动画应用失败不影响后续操作
+      }
+    }
+
+    // 设置双向数据同步（仅就绪状态的已知类型时间轴项目）
+    setupBidirectionalSync(timelineItem)
+
+    // 添加sprite到WebAV画布
+    if (timelineItem.runtime.sprite) {
+      await webavModule.addSprite(timelineItem.runtime.sprite)
+    }
+  }
+
+  /**
    * 添加时间轴项目
    * @param timelineItem 要添加的时间轴项目
    */
@@ -196,58 +251,11 @@ export function createUnifiedTimelineModule(
       // 加载中的时间轴项目不需要sprite相关的设置
       unifiedDebugLog('添加加载中的时间轴项目', { timelineItemId: timelineItem.id })
     } else if (isReady(timelineItem)) {
-      // 就绪的已知类型时间轴项目处理逻辑
-
-      // 根据轨道的可见性和静音状态设置sprite属性
-      if (timelineItem.runtime.sprite) {
-        const track = trackModule.tracks.value.find((t) => t.id === timelineItem.trackId)
-        if (track) {
-          // 设置可见性
-          timelineItem.runtime.sprite.visible = track.isVisible
-
-          // 为具有音频功能的片段设置静音状态
-          if (timelineItem.runtime.sprite && hasAudioCapabilities(timelineItem.runtime.sprite)) {
-            timelineItem.runtime.sprite.setTrackMuted(track.isMuted)
-          }
-        }
-      }
-
-      // 应用动画配置到sprite（如果有）
-      if (
-        timelineItem.animation &&
-        timelineItem.animation.isEnabled &&
-        timelineItem.animation.keyframes.length > 0 &&
-        timelineItem.runtime.sprite
-      ) {
-        try {
-          console.log(`🎬 [UnifiedTimelineModule] 应用动画配置到sprite: ${timelineItem.id}`, {
-            keyframeCount: timelineItem.animation.keyframes.length,
-            isEnabled: timelineItem.animation.isEnabled,
-          })
-
-          // 使用WebAVAnimationManager来应用动画
-          await updateWebAVAnimation(timelineItem)
-
-          console.log(`✅ [UnifiedTimelineModule] 动画配置应用成功: ${timelineItem.id}`)
-        } catch (animationError) {
-          console.error(
-            `❌ [UnifiedTimelineModule] 应用动画配置失败: ${timelineItem.id}`,
-            animationError,
-          )
-          // 动画应用失败不影响后续操作
-        }
-      }
-
-      // 设置双向数据同步（仅就绪状态的已知类型时间轴项目）
-      setupBidirectionalSync(timelineItem)
+      // 设置sprite属性
+      await setupTimelineItemSprite(timelineItem)
 
       // 初始化动画管理器（仅就绪状态的已知类型时间轴项目）
       globalWebAVAnimationManager.addManager(timelineItem)
-
-      // 2. 添加sprite到WebAV画布
-      if (timelineItem.runtime.sprite) {
-        await webavModule.addSprite(timelineItem.runtime.sprite)
-      }
 
       const mediaItem = mediaModule.getMediaItem(timelineItem.mediaItemId)
       unifiedDebugLog('添加素材到时间轴', {
@@ -535,6 +543,7 @@ export function createUnifiedTimelineModule(
     removeTimelineItem,
     getTimelineItem,
     setupBidirectionalSync,
+    setupTimelineItemSprite,
     getReadyTimelineItem,
     updateTimelineItemPosition,
     updateTimelineItemTransform,

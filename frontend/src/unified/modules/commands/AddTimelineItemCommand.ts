@@ -16,7 +16,7 @@ import type { VideoResolution } from '@/unified/types'
 import {
   setupCommandMediaSync,
   cleanupCommandMediaSync,
-} from '@/unified/composables/useCommandMediaSync'
+} from '@/unified/utils/commandMediaSyncUtils'
 
 import { TimelineItemFactory } from '@/unified/timelineitem'
 import { TimelineItemQueries } from '@/unified/timelineitem/TimelineItemQueries'

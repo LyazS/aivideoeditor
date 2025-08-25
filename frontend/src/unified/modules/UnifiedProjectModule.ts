@@ -21,11 +21,11 @@ import { VideoVisibleSprite, AudioVisibleSprite } from '@/unified/visiblesprite'
 import {
   setupCommandMediaSync,
   cleanupCommandMediaSync,
-} from '@/unified/composables/useCommandMediaSync'
+} from '@/unified/utils/commandMediaSyncUtils'
 import {
   setupProjectLoadMediaSync,
   cleanupProjectLoadMediaSync,
-} from '@/unified/composables/useProjectLoadMediaSync'
+} from '@/unified/utils/projectLoadMediaSyncManager'
 import { generateCommandId } from '@/unified/utils/idGenerator'
 
 /**

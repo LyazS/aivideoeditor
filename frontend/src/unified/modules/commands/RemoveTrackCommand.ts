@@ -22,7 +22,7 @@ import {
 
 import {
   setupCommandMediaSync,
-} from '@/unified/composables/useCommandMediaSync'
+} from '@/unified/utils/commandMediaSyncUtils'
 
 import { TimelineItemQueries } from '@/unified/timelineitem/TimelineItemQueries'
 
