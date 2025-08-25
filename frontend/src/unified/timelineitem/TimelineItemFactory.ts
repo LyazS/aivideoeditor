@@ -17,7 +17,6 @@ import type {
 import type { UnifiedTimeRange } from '@/unified/types/timeRange'
 import type {
   UnifiedTimelineItemData,
-  KnownTimelineItem,
   UnknownMediaConfig,
   AnimationConfig,
   TimelineItemStatus,
@@ -527,7 +526,7 @@ export function validateTimelineItem<T extends MediaType>(
 
   // 检查媒体类型特定的配置
   // 已知媒体类型的额外验证
-  const knownItem = item as KnownTimelineItem
+  const knownItem = item as UnifiedTimelineItemData<MediaType>
 
   if (knownItem.mediaType === 'video' || knownItem.mediaType === 'audio') {
     const timeRange = knownItem.timeRange
@@ -606,7 +605,7 @@ export interface RebuildKnownTimelineItemOptions {
  */
 export interface RebuildKnownTimelineItemResult {
   /** 重建后的时间轴项目 */
-  timelineItem: KnownTimelineItem
+  timelineItem: UnifiedTimelineItemData<MediaType>
   /** 是否成功 */
   success: boolean
   /** 错误信息（如果有） */
@@ -706,17 +705,17 @@ export async function rebuildKnownTimelineItem(
         // 2. 使用新的统一函数从时间轴项目数据创建sprite
         const newSprite = await createSpriteFromUnifiedTimelineItem(originalTimelineItemData)
 
-        let newTimelineItem: KnownTimelineItem
+        let newTimelineItem: UnifiedTimelineItemData<MediaType>
         
         if (!inPlace) {
           // 3. 使用TimelineItemFactory.clone创建新的TimelineItem（先不设置缩略图）
           newTimelineItem = cloneTimelineItem(originalTimelineItemData, {
             timeRange: newSprite.getTimeRange(),
             timelineStatus: timelineStatus,
-          }) as KnownTimelineItem
+          }) as UnifiedTimelineItemData<MediaType>
         } else {
           // 原地重建：直接使用原始对象，更新timeRange和timelineStatus
-          newTimelineItem = originalTimelineItemData as KnownTimelineItem
+          newTimelineItem = originalTimelineItemData as UnifiedTimelineItemData<MediaType>
           newTimelineItem.timeRange = newSprite.getTimeRange()
           newTimelineItem.timelineStatus = timelineStatus
         }
@@ -745,7 +744,7 @@ export async function rebuildKnownTimelineItem(
         // 未Ready素材：创建loading状态的时间轴项目
         console.log(`🔄 [${logIdentifier}] 重建loading状态时间轴项目`)
 
-        let newTimelineItem: KnownTimelineItem
+        let newTimelineItem: UnifiedTimelineItemData<MediaType>
         
         if (!inPlace) {
           // 创建loading状态的时间轴项目（克隆）
@@ -761,10 +760,10 @@ export async function rebuildKnownTimelineItem(
               : undefined,
             timelineStatus: timelineStatus,
             runtime: {}, // loading状态暂时没有sprite
-          }) as KnownTimelineItem
+          }) as UnifiedTimelineItemData<MediaType>
         } else {
           // 原地重建：直接使用原始对象，更新timelineStatus和重置runtime
-          newTimelineItem = originalTimelineItemData as KnownTimelineItem
+          newTimelineItem = originalTimelineItemData as UnifiedTimelineItemData<MediaType>
           newTimelineItem.timelineStatus = timelineStatus
           newTimelineItem.runtime = {}
         }
@@ -789,7 +788,7 @@ export async function rebuildKnownTimelineItem(
     console.error(`❌ [${logIdentifier}] 重建时间轴项目失败:`, errorMessage)
 
     return {
-      timelineItem: originalTimelineItemData as KnownTimelineItem,
+      timelineItem: originalTimelineItemData as UnifiedTimelineItemData<MediaType>,
       success: false,
       error: errorMessage,
     }
@@ -803,7 +802,7 @@ export async function rebuildKnownTimelineItem(
  * @param logger 日志工具
  */
 async function regenerateThumbnailForAddedItem(
-  timelineItem: KnownTimelineItem,
+  timelineItem: UnifiedTimelineItemData<MediaType>,
   mediaItem: UnifiedMediaItemData,
   logIdentifier: string,
 ) {

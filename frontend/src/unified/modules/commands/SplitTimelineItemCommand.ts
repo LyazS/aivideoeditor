@@ -13,7 +13,6 @@ import type { SimpleCommand } from '@/unified/modules/commands/types'
 // ==================== 新架构类型导入 ====================
 import type {
   UnifiedTimelineItemData,
-  KnownTimelineItem,
   TimelineItemStatus,
 } from '@/unified/timelineitem/TimelineItemData'
 
@@ -31,11 +30,7 @@ import { createSpriteFromUnifiedMediaItem } from '@/unified/utils/spriteFactory'
 
 import { regenerateThumbnailForUnifiedTimelineItem } from '@/unified/utils/thumbnailGenerator'
 
-import {
-  isKnownTimelineItem,
-  hasVisualProperties,
-  TimelineItemFactory,
-} from '@/unified/timelineitem'
+import { hasVisualProperties, TimelineItemFactory } from '@/unified/timelineitem'
 
 import { UnifiedMediaItemQueries } from '@/unified/mediaitem'
 
@@ -70,18 +65,12 @@ export class SplitTimelineItemCommand implements SimpleCommand {
   ) {
     this.id = generateCommandId()
 
-    // 使用类型守卫来区分已知和未知项目
-    if (isKnownTimelineItem(originalTimelineItem)) {
-      // 已知项目处理逻辑
-      const mediaItem = this.mediaModule.getMediaItem(originalTimelineItem.mediaItemId)
-      this.description = `分割时间轴项目: ${mediaItem?.name || '未知素材'} (在 ${framesToTimecode(splitTimeFrames)})`
+    // 已知项目处理逻辑
+    const mediaItem = this.mediaModule.getMediaItem(originalTimelineItem.mediaItemId)
+    this.description = `分割时间轴项目: ${mediaItem?.name || '未知素材'} (在 ${framesToTimecode(splitTimeFrames)})`
 
-      // 保存原始项目的完整重建元数据
-      this.originalTimelineItemData = TimelineItemFactory.clone(originalTimelineItem)
-    // 注意：移除了对 isUnknownTimelineItem 的处理，因为不再支持 unknown 类型
-    } else {
-      throw new Error('不支持的时间轴项目类型')
-    }
+    // 保存原始项目的完整重建元数据
+    this.originalTimelineItemData = TimelineItemFactory.clone(originalTimelineItem)
 
     // 生成分割后项目的ID
     this.firstItemId = `timeline_item_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`
@@ -199,7 +188,7 @@ export class SplitTimelineItemCommand implements SimpleCommand {
       runtime: {
         sprite: markRaw(firstSprite),
       },
-    }) as KnownTimelineItem
+    }) as UnifiedTimelineItemData<MediaType>
 
     const secondItem = reactive({
       id: this.secondItemId,
@@ -215,7 +204,7 @@ export class SplitTimelineItemCommand implements SimpleCommand {
       runtime: {
         sprite: markRaw(secondSprite),
       },
-    }) as KnownTimelineItem
+    }) as UnifiedTimelineItemData<MediaType>
 
     // 7. 重新生成缩略图（异步执行，不阻塞重建过程）
     this.regenerateThumbnailsForSplitItems(firstItem, secondItem, mediaItem)
@@ -288,7 +277,7 @@ export class SplitTimelineItemCommand implements SimpleCommand {
       runtime: {
         sprite: markRaw(newSprite),
       },
-    }) as KnownTimelineItem
+    }) as UnifiedTimelineItemData<MediaType>
 
     // 6. 重新生成缩略图（异步执行，不阻塞重建过程）
     this.regenerateThumbnailForOriginalItem(newTimelineItem, mediaItem)
@@ -325,10 +314,10 @@ export class SplitTimelineItemCommand implements SimpleCommand {
       await this.timelineModule.addTimelineItem(secondItem)
 
       // 3. 添加sprite到WebAV画布
-      if (isKnownTimelineItem(firstItem) && firstItem.runtime.sprite) {
+      if (firstItem.runtime.sprite) {
         await this.webavModule.addSprite(firstItem.runtime.sprite)
       }
-      if (isKnownTimelineItem(secondItem) && secondItem.runtime.sprite) {
+      if (secondItem.runtime.sprite) {
         await this.webavModule.addSprite(secondItem.runtime.sprite)
       }
 
@@ -362,7 +351,7 @@ export class SplitTimelineItemCommand implements SimpleCommand {
       await this.timelineModule.addTimelineItem(originalItem)
 
       // 4. 添加sprite到WebAV画布
-      if (isKnownTimelineItem(originalItem) && originalItem.runtime.sprite) {
+      if (originalItem.runtime.sprite) {
         await this.webavModule.addSprite(originalItem.runtime.sprite)
       }
 
@@ -381,7 +370,7 @@ export class SplitTimelineItemCommand implements SimpleCommand {
    * @param mediaItem 对应的媒体项目
    */
   private async regenerateThumbnailForOriginalItem(
-    timelineItem: KnownTimelineItem,
+    timelineItem: UnifiedTimelineItemData<MediaType>,
     mediaItem: UnifiedMediaItemData,
   ) {
     // 音频不需要缩略图
@@ -412,8 +401,8 @@ export class SplitTimelineItemCommand implements SimpleCommand {
    * @param mediaItem 对应的媒体项目
    */
   private async regenerateThumbnailsForSplitItems(
-    firstItem: KnownTimelineItem,
-    secondItem: KnownTimelineItem,
+    firstItem: UnifiedTimelineItemData<MediaType>,
+    secondItem: UnifiedTimelineItemData<MediaType>,
     mediaItem: UnifiedMediaItemData,
   ) {
     // 音频不需要缩略图

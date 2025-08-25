@@ -7,33 +7,11 @@ import type { MediaType } from '../mediaitem'
 import type {
   UnifiedTimelineItemData,
   TimelineItemStatus,
-  KnownTimelineItem,
-  UnknownTimelineItem,
 } from './TimelineItemData'
 import { TimelineStatusDisplayUtils } from './TimelineStatusDisplayUtils'
 import { useUnifiedStore } from '../unifiedStore'
 
 // ==================== 类型守卫函数 ====================
-
-/**
- * 检查是否为已知媒体类型的时间轴项目
- */
-export function isKnownTimelineItem(
-  item: UnifiedTimelineItemData<MediaType>,
-): item is KnownTimelineItem {
-  return true // 新架构只支持已知类型，所以总是返回 true
-}
-
-/**
- * 检查是否为未知媒体类型的时间轴项目
- */
-// 注意：新架构不再支持未知类型的时间轴项目
-// 此函数保留用于向后兼容，但总是返回 false
-export function isUnknownTimelineItem(
-  item: UnifiedTimelineItemData<MediaType>,
-): item is never {
-  return false // 新架构不支持未知类型
-}
 
 /**
  * 媒体类型特定的类型守卫
@@ -466,8 +444,6 @@ export function getTrackTimeStats(
 
 export const TimelineItemQueries = {
   // 类型守卫
-  isKnownTimelineItem,
-  isUnknownTimelineItem,
   isVideoTimelineItem,
   isImageTimelineItem,
   isAudioTimelineItem,

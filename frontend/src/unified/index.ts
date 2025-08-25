@@ -173,12 +173,7 @@ export {
   // 工厂函数集合
   TimelineItemFactory,
 
-  // 状态转换函数
-  // transitionTimelineStatus 已删除，因为未被使用
-
   // 类型守卫函数
-  isKnownTimelineItem,
-  isUnknownTimelineItem,
   isVideoTimelineItem,
   isImageTimelineItem,
   isAudioTimelineItem,

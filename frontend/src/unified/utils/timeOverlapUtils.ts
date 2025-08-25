@@ -2,14 +2,9 @@
  * 时间重叠检测工具
  * 统一处理所有时间范围重叠检测的逻辑，避免代码重复
  */
-
-import type {
-  UnifiedTimelineItemData,
-  KnownTimelineItem,
-} from '@/unified/timelineitem'
-
+import type { MediaType } from '@/unified/mediaitem'
+import type { UnifiedTimelineItemData } from '@/unified/timelineitem'
 import type { UnifiedTimeRange } from '@/unified/types/timeRange'
-
 import type { OverlapTimeRange, OverlapResult, ConflictInfo } from '@/unified/types'
 
 // ==================== 核心重叠检测函数 ====================
@@ -217,8 +212,8 @@ export function countOverlappingItems(timelineItems: UnifiedTimelineItemData[]):
  * @returns 重叠项目对的信息
  */
 export function getAllOverlappingPairs(
-  timelineItems: KnownTimelineItem[],
-  getItemName: (item: KnownTimelineItem) => string = (item) => `Item ${item.id}`,
+  timelineItems: UnifiedTimelineItemData<MediaType>[],
+  getItemName: (item: UnifiedTimelineItemData<MediaType>) => string = (item) => `Item ${item.id}`,
 ): Array<{
   trackId: string
   item1: { id: string; name: string; range: OverlapTimeRange }
@@ -232,7 +227,7 @@ export function getAllOverlappingPairs(
     overlap: OverlapResult
   }> = []
 
-  const tracks = new Map<string, KnownTimelineItem[]>()
+  const tracks = new Map<string, UnifiedTimelineItemData<MediaType>[]>()
 
   // 按轨道分组
   timelineItems.forEach((item) => {

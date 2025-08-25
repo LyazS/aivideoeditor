@@ -11,8 +11,6 @@ export type {
   TransformData,
   CreateTimelineItemOptions,
   UnknownMediaConfig,
-  KnownTimelineItem,
-  UnknownTimelineItem,
   TextStyleConfig,
   VideoMediaConfig,
   AudioMediaConfig,
@@ -65,8 +63,6 @@ export {
 // ==================== 查询工具导出 ====================
 export {
   // 类型守卫函数
-  isKnownTimelineItem,
-  isUnknownTimelineItem,
   isVideoTimelineItem,
   isImageTimelineItem,
   isAudioTimelineItem,
@@ -186,8 +182,6 @@ import {
 } from './TimelineItemBehaviors'
 
 import {
-  isKnownTimelineItem,
-  isUnknownTimelineItem,
   isVideoTimelineItem,
   isImageTimelineItem,
   isAudioTimelineItem,
@@ -242,8 +236,6 @@ export default {
   // 查询函数
   Queries: {
     // 类型守卫
-    isKnownTimelineItem,
-    isUnknownTimelineItem,
     isVideoTimelineItem,
     isImageTimelineItem,
     isAudioTimelineItem,

@@ -406,24 +406,6 @@ export interface UnifiedTimelineItemData<T extends MediaType = MediaType> {
   runtime: UnifiedTimelineItemRuntime
 }
 
-// ==================== 联合类型定义 ====================
-
-/**
- * 已知媒体类型的时间轴项目（类型安全）
- */
-export type KnownTimelineItem =
-  | UnifiedTimelineItemData<'video'>
-  | UnifiedTimelineItemData<'image'>
-  | UnifiedTimelineItemData<'audio'>
-  | UnifiedTimelineItemData<'text'>
-
-/**
- * 未知媒体类型的时间轴项目（已弃用）
- * 新架构不再支持未知类型的时间轴项目
- * @deprecated 新架构不再支持未知类型，此类型仅用于向后兼容
- */
-export type UnknownTimelineItem = never
-
 // ==================== 工厂函数选项类型 ====================
 
 /**

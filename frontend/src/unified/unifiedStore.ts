@@ -65,8 +65,6 @@ import {
   isImageTimelineItem,
   isAudioTimelineItem,
   isTextTimelineItem,
-  isUnknownTimelineItem,
-  isKnownTimelineItem,
   hasVisualProperties,
   hasAudioProperties,
   isReady,
