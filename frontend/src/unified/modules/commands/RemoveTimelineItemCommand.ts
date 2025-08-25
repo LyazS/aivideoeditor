@@ -25,6 +25,8 @@ import {
   cleanupCommandMediaSync,
 } from '@/unified/composables/useCommandMediaSync'
 
+import { TimelineItemQueries } from '@/unified/timelineitem/TimelineItemQueries'
+
 /**
  * 移除时间轴项目命令
  * 支持移除已知和未知时间轴项目的撤销/重做操作
@@ -84,7 +86,7 @@ export class RemoveTimelineItemCommand implements SimpleCommand {
       }
 
       // 设置媒体同步（只针对loading状态的项目）
-      if (existingItem.timelineStatus === 'loading') {
+      if (TimelineItemQueries.isLoading(existingItem)) {
         const mediaItem = this.mediaModule.getMediaItem(existingItem.mediaItemId)
         if (mediaItem) {
           setupCommandMediaSync(this.id, mediaItem.id, undefined, `execute ${this.description}`)
@@ -127,13 +129,8 @@ export class RemoveTimelineItemCommand implements SimpleCommand {
       // 1. 添加到时间轴
       await this.timelineModule.addTimelineItem(newTimelineItem)
 
-      // 2. 添加sprite到WebAV画布
-      if (newTimelineItem.runtime.sprite) {
-        await this.webavModule.addSprite(newTimelineItem.runtime.sprite)
-      }
-
-      // 3. 针对loading状态的项目设置状态同步（确保时间轴项目已添加到store）
-      if (newTimelineItem.timelineStatus === 'loading') {
+      // 2. 针对loading状态的项目设置状态同步（确保时间轴项目已添加到store）
+      if (TimelineItemQueries.isLoading(newTimelineItem)) {
         setupCommandMediaSync(
           this.id,
           newTimelineItem.mediaItemId,

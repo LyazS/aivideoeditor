@@ -87,8 +87,6 @@ import {
   duplicateTimelineItem,
 } from '@/unified/timelineitem/TimelineItemFactory'
 
-// 从TimelineItemBehaviors导入行为函数
-// transitionTimelineStatus 已删除，因为未被使用
 // ==================== 命令类导入 ====================
 import {
   AddTimelineItemCommand,
@@ -1109,7 +1107,6 @@ export const useUnifiedStore = defineStore('unified', () => {
     getReadyTimelineItem: unifiedTimelineModule.getReadyTimelineItem,
     setupBidirectionalSync: unifiedTimelineModule.setupBidirectionalSync,
     updateTimelineItemPosition: unifiedTimelineModule.updateTimelineItemPosition,
-    updateTimelineItemSprite: unifiedTimelineModule.updateTimelineItemSprite,
     updateTimelineItemTransform: unifiedTimelineModule.updateTimelineItemTransform,
 
     // 时间轴项目工厂函数

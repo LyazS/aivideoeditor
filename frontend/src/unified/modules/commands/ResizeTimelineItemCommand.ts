@@ -10,12 +10,7 @@ import type { UnifiedMediaItemData, MediaType } from '@/unified/mediaitem/types'
 
 import type { UnifiedTimeRange } from '@/unified/types/timeRange'
 
-import {
-  isVideoTimelineItem,
-  isImageTimelineItem,
-  isAudioTimelineItem,
-  isTextTimelineItem,
-} from '@/unified/timelineitem'
+import { TimelineItemQueries } from '@/unified/timelineitem'
 
 /**
  * 调整时间轴项目大小命令
@@ -102,7 +97,7 @@ export class ResizeTimelineItemCommand implements SimpleCommand {
     }
 
     // 根据媒体类型设置时间范围
-    if (isVideoTimelineItem(timelineItem) || isAudioTimelineItem(timelineItem)) {
+    if (TimelineItemQueries.isVideoTimelineItem(timelineItem) || TimelineItemQueries.isAudioTimelineItem(timelineItem)) {
       // 视频和音频类型：保持clipStartTime和clipEndTime，更新timeline时间
       const clipStartTime = timeRange.clipStartTime
       const clipEndTime = timeRange.clipEndTime
@@ -113,7 +108,7 @@ export class ResizeTimelineItemCommand implements SimpleCommand {
         timelineStartTime: timeRange.timelineStartTime,
         timelineEndTime: timeRange.timelineEndTime,
       })
-    } else if (isImageTimelineItem(timelineItem) || isTextTimelineItem(timelineItem)) {
+    } else if (TimelineItemQueries.isImageTimelineItem(timelineItem) || TimelineItemQueries.isTextTimelineItem(timelineItem)) {
       // 图片和文本类型：只设置时间轴时间，clipStartTime和clipEndTime保持为-1
       sprite.setTimeRange({
         timelineStartTime: timeRange.timelineStartTime,

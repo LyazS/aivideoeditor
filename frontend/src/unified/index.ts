@@ -173,23 +173,8 @@ export {
   // 工厂函数集合
   TimelineItemFactory,
 
-  // 类型守卫函数
-  isVideoTimelineItem,
-  isImageTimelineItem,
-  isAudioTimelineItem,
-  isTextTimelineItem,
-  hasVisualProperties,
-  hasAudioProperties,
-
-  // 查询函数
-  isReady,
-  isLoading,
-  hasError,
-  getDuration,
-  getStatusText,
-
-  // 管理器
-  // TimelineMediaSyncManager 已删除，因为未被使用
+  // 查询工具集合
+  TimelineItemQueries,
 } from './timelineitem'
 
 // ==================== 统一模块系统 ====================

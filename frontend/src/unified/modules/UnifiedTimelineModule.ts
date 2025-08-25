@@ -1,4 +1,5 @@
 import { ref, type Raw, type Ref } from 'vue'
+import type { VisibleSprite } from '@webav/av-cliper'
 import type {
   UnifiedTimelineItemData,
   UnknownMediaConfig,
@@ -78,7 +79,8 @@ import {
 export function createUnifiedTimelineModule(
   configModule: { videoResolution: Ref<VideoResolution> },
   webavModule: {
-    removeSprite: (sprite: any) => boolean
+    addSprite: (sprite: VisibleSprite) => Promise<boolean>
+    removeSprite: (sprite: VisibleSprite) => boolean
   },
   mediaModule: {
     getMediaItem: (id: string) => UnifiedMediaItemData | undefined
@@ -242,6 +244,11 @@ export function createUnifiedTimelineModule(
       // 初始化动画管理器（仅就绪状态的已知类型时间轴项目）
       globalWebAVAnimationManager.addManager(timelineItem)
 
+      // 2. 添加sprite到WebAV画布
+      if (timelineItem.runtime.sprite) {
+        await webavModule.addSprite(timelineItem.runtime.sprite)
+      }
+
       const mediaItem = mediaModule.getMediaItem(timelineItem.mediaItemId)
       unifiedDebugLog('添加素材到时间轴', {
         timelineItemId: timelineItem.id,
@@ -337,7 +344,9 @@ export function createUnifiedTimelineModule(
    * @param timelineItemId 时间轴项目ID
    * @returns 就绪状态的时间轴项目或undefined
    */
-  function getReadyTimelineItem(timelineItemId: string):  UnifiedTimelineItemData<MediaType> | undefined {
+  function getReadyTimelineItem(
+    timelineItemId: string,
+  ): UnifiedTimelineItemData<MediaType> | undefined {
     const item = getTimelineItem(timelineItemId)
     return item && item.timelineStatus === 'ready' ? item : undefined
   }
@@ -367,7 +376,7 @@ export function createUnifiedTimelineModule(
         item.trackId = newTrackId
 
         // 根据新轨道的可见性设置sprite的visible属性（仅就绪状态的已知类型时间轴项目）
-        if (isReady(item) ) {
+        if (isReady(item)) {
           const newTrack = trackModule.tracks.value.find((t) => t.id === newTrackId)
           if (newTrack && item.runtime.sprite) {
             item.runtime.sprite.visible = newTrack.isVisible
@@ -415,43 +424,6 @@ export function createUnifiedTimelineModule(
         positionClamped: newPositionFrames !== clampedNewPositionFrames,
         status: item.timelineStatus,
         mediaType: item.mediaType,
-      })
-    }
-  }
-
-  /**
-   * 更新时间轴项目的sprite
-   * @param timelineItemId 时间轴项目ID
-   * @param newSprite 新的sprite实例
-   */
-  function updateTimelineItemSprite(
-    timelineItemId: string,
-    newSprite: Raw<VideoVisibleSprite | ImageVisibleSprite | AudioVisibleSprite>,
-  ) {
-    const item = getReadyTimelineItem(timelineItemId)
-    if (item) {
-      const mediaItem = mediaModule.getMediaItem(item.mediaItemId)
-
-      // 清理旧的sprite资源
-      try {
-        if (item.runtime.sprite && typeof item.runtime.sprite.destroy === 'function') {
-          item.runtime.sprite.destroy()
-        }
-      } catch (error) {
-        console.warn('清理旧sprite资源时出错:', error)
-      }
-
-      // 更新sprite引用
-      if (!item.runtime) {
-        item.runtime = {}
-      }
-      item.runtime.sprite = newSprite
-
-      unifiedDebugLog('更新时间轴项目sprite', {
-        timelineItemId,
-        mediaItemName: mediaItem?.name || '未知',
-        trackId: item.trackId,
-        position: microsecondsToFrames(item.timeRange.timelineStartTime),
       })
     }
   }
@@ -509,10 +481,7 @@ export function createUnifiedTimelineModule(
       }
 
       // 更新位置（需要坐标系转换）- 仅对视觉媒体有效
-      if (
-        (transform.x !== undefined || transform.y !== undefined) &&
-        hasVisualProperties(item)
-      ) {
+      if ((transform.x !== undefined || transform.y !== undefined) && hasVisualProperties(item)) {
         // hasVisualProperties 类型守卫确保了 config 具有视觉属性
         const config = item.config as VideoMediaConfig | ImageMediaConfig | TextMediaConfig
         const newX = transform.x !== undefined ? transform.x : config.x
@@ -568,7 +537,6 @@ export function createUnifiedTimelineModule(
     setupBidirectionalSync,
     getReadyTimelineItem,
     updateTimelineItemPosition,
-    updateTimelineItemSprite,
     updateTimelineItemTransform,
   }
 }

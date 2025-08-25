@@ -19,6 +19,7 @@ import {
 } from '@/unified/composables/useCommandMediaSync'
 
 import { TimelineItemFactory } from '@/unified/timelineitem'
+import { TimelineItemQueries } from '@/unified/timelineitem/TimelineItemQueries'
 
 // ==================== 旧架构类型工具导入 ====================
 import { generateCommandId } from '@/unified/utils/idGenerator'
@@ -88,13 +89,8 @@ export class AddTimelineItemCommand implements SimpleCommand {
       // 1. 添加到时间轴
       await this.timelineModule.addTimelineItem(newTimelineItem)
 
-      // 2. 添加sprite到WebAV画布
-      if (newTimelineItem.runtime.sprite) {
-        await this.webavModule.addSprite(newTimelineItem.runtime.sprite)
-      }
-
-      // 3. 针对loading状态的项目设置状态同步（确保时间轴项目已添加到store）
-      if (newTimelineItem.timelineStatus === 'loading') {
+      // 2. 针对loading状态的项目设置状态同步（确保时间轴项目已添加到store）
+      if (TimelineItemQueries.isLoading(newTimelineItem)) {
         setupCommandMediaSync(
           this.id,
           newTimelineItem.mediaItemId,

@@ -30,7 +30,7 @@ import { createSpriteFromUnifiedMediaItem } from '@/unified/utils/spriteFactory'
 
 import { regenerateThumbnailForUnifiedTimelineItem } from '@/unified/utils/thumbnailGenerator'
 
-import { hasVisualProperties, TimelineItemFactory } from '@/unified/timelineitem'
+import { TimelineItemQueries, TimelineItemFactory } from '@/unified/timelineitem'
 
 import { UnifiedMediaItemQueries } from '@/unified/mediaitem'
 
@@ -145,7 +145,7 @@ export class SplitTimelineItemCommand implements SimpleCommand {
     })
 
     // 5. 应用变换属性
-    if (hasVisualProperties(this.originalTimelineItemData)) {
+    if (TimelineItemQueries.hasVisualProperties(this.originalTimelineItemData)) {
       const config = this.originalTimelineItemData.config as
         | VideoMediaConfig
         | ImageMediaConfig
@@ -245,7 +245,7 @@ export class SplitTimelineItemCommand implements SimpleCommand {
     newSprite.setTimeRange(this.originalTimelineItemData.timeRange)
 
     // 4. 应用变换属性
-    if (hasVisualProperties(this.originalTimelineItemData)) {
+    if (TimelineItemQueries.hasVisualProperties(this.originalTimelineItemData)) {
       const config = this.originalTimelineItemData.config as
         | VideoMediaConfig
         | ImageMediaConfig
@@ -313,14 +313,6 @@ export class SplitTimelineItemCommand implements SimpleCommand {
       await this.timelineModule.addTimelineItem(firstItem)
       await this.timelineModule.addTimelineItem(secondItem)
 
-      // 3. 添加sprite到WebAV画布
-      if (firstItem.runtime.sprite) {
-        await this.webavModule.addSprite(firstItem.runtime.sprite)
-      }
-      if (secondItem.runtime.sprite) {
-        await this.webavModule.addSprite(secondItem.runtime.sprite)
-      }
-
       const mediaItem = this.mediaModule.getMediaItem(this.originalTimelineItemData.mediaItemId)
       console.log(
         `🔪 已分割时间轴项目: ${mediaItem?.name || '未知素材'} 在 ${framesToTimecode(this.splitTimeFrames)}`,
@@ -349,11 +341,6 @@ export class SplitTimelineItemCommand implements SimpleCommand {
 
       // 3. 添加原始项目到时间轴
       await this.timelineModule.addTimelineItem(originalItem)
-
-      // 4. 添加sprite到WebAV画布
-      if (originalItem.runtime.sprite) {
-        await this.webavModule.addSprite(originalItem.runtime.sprite)
-      }
 
       const mediaItem = this.mediaModule.getMediaItem(this.originalTimelineItemData.mediaItemId)
       console.log(`↩️ 已撤销分割时间轴项目: ${mediaItem?.name || '未知素材'}`)

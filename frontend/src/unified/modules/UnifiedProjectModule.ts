@@ -4,7 +4,6 @@ import { projectFileOperations } from '@/unified/utils/ProjectFileOperations'
 import type { VideoResolution } from '@/unified/types'
 import {
   TimelineItemFactory,
-  hasAudioProperties,
   TimelineItemQueries,
 } from '@/unified/timelineitem'
 import type { UnifiedTimelineItemData } from '@/unified/timelineitem/TimelineItemData'
@@ -567,24 +566,7 @@ export function createUnifiedProjectModule(
             // 1. 添加到时间轴
             await timelineModule.addTimelineItem(newTimelineItem)
 
-            // 2. 添加sprite到WebAV画布
-            if (newTimelineItem.runtime.sprite) {
-              await webavModule.addSprite(newTimelineItem.runtime.sprite)
-
-              // 2.1 设置轨道的可见性和是否静音给sprite
-              const track = trackModule.tracks.value.find((t) => t.id === newTimelineItem.trackId)
-              if (track) {
-                newTimelineItem.runtime.sprite.visible = track.isVisible
-                if (hasAudioProperties(newTimelineItem)) {
-                  const audioCapableSprite = newTimelineItem.runtime.sprite as
-                    | VideoVisibleSprite
-                    | AudioVisibleSprite
-                  audioCapableSprite.setTrackMuted(track.isMuted)
-                }
-              }
-            }
-
-            // 3. 针对loading状态的项目设置状态同步
+            // 2. 针对loading状态的项目设置状态同步
             if (newTimelineItem.timelineStatus === 'loading') {
               setupProjectLoadMediaSync(
                 newTimelineItem.mediaItemId,

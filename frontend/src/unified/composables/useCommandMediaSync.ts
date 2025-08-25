@@ -13,7 +13,10 @@ import { SimplifiedMediaSyncManager } from '@/unified/timelineitem/SimplifiedMed
 import { useUnifiedStore } from '@/unified/unifiedStore'
 import { createSpriteFromUnifiedMediaItem } from '@/unified/utils/spriteFactory'
 import { regenerateThumbnailForUnifiedTimelineItem } from '@/unified/utils/thumbnailGenerator'
-import { globalWebAVAnimationManager, updateWebAVAnimation } from '@/unified/utils/webavAnimationManager'
+import {
+  globalWebAVAnimationManager,
+  updateWebAVAnimation,
+} from '@/unified/utils/webavAnimationManager'
 
 /**
  * 设置命令与媒体项目的直接同步
@@ -25,7 +28,7 @@ export function setupCommandMediaSync(
   mediaItemId: string,
   timelineItemId?: string,
   description?: string,
-): boolean {
+) {
   try {
     // 设置媒体状态同步
     const unwatch = setupDirectMediaSync(commandId, mediaItemId, timelineItemId, description)
@@ -43,12 +46,12 @@ export function setupCommandMediaSync(
         `💾 [TimelineMediaSync] 已注册监听器到简化媒体同步管理器: ${description} ${commandId}`,
       )
 
-      return true
+      return
     } else {
       console.warn(
         `⚠️ [TimelineMediaSync] 无法为命令设置直接状态同步: ${description} ${commandId} <-> ${mediaItemId}`,
       )
-      return false
+      return
     }
   } catch (error) {
     console.error(`❌ [TimelineMediaSync] 为命令设置直接状态同步失败:`, {
@@ -56,7 +59,7 @@ export function setupCommandMediaSync(
       mediaItemId: mediaItemId,
       error: error instanceof Error ? error.message : String(error),
     })
-    return false
+    return
   }
 }
 
@@ -106,10 +109,13 @@ function setupDirectMediaSync(
         const command = unifiedStore.getCommand(commandId)
         if (command && !command.isDisposed && command.updateMediaData) {
           command.updateMediaData(mediaItem, timelineItemId)
-          console.log(`🔄 [TimelineMediaSync] 已更新命令媒体数据: ${description} ${commandId} <- ${mediaItemId}`, {
-            mediaName: mediaItem.name,
-            mediaStatus: mediaItem.mediaStatus,
-          })
+          console.log(
+            `🔄 [TimelineMediaSync] 已更新命令媒体数据: ${description} ${commandId} <- ${mediaItemId}`,
+            {
+              mediaName: mediaItem.name,
+              mediaStatus: mediaItem.mediaStatus,
+            },
+          )
           if (timelineItemId) {
             // 为时间轴项目创建运行时内容（sprite和缩略图）
             transitionTimelineItemToReady(timelineItemId, mediaItem, commandId)
@@ -120,11 +126,15 @@ function setupDirectMediaSync(
           if (!command) {
             console.warn(`⚠️ [TimelineMediaSync] 找不到命令实例: ${description} ${commandId}`)
           } else if (command.isDisposed) {
-            console.warn(`⚠️ [TimelineMediaSync] 命令已被清理，跳过更新: ${description} ${commandId}`)
+            console.warn(
+              `⚠️ [TimelineMediaSync] 命令已被清理，跳过更新: ${description} ${commandId}`,
+            )
             // 命令已被清理，标记为需要清理
             shouldCleanup = true
           } else if (!command.updateMediaData) {
-            console.warn(`⚠️ [TimelineMediaSync] 命令不支持媒体数据更新: ${description} ${commandId}`)
+            console.warn(
+              `⚠️ [TimelineMediaSync] 命令不支持媒体数据更新: ${description} ${commandId}`,
+            )
             // 命令不支持更新，标记为需要清理
             shouldCleanup = true
           }
@@ -158,7 +168,9 @@ function setupDirectMediaSync(
         const syncManager = SimplifiedMediaSyncManager.getInstance()
         syncManager.cleanupCommandMediaSync(commandId)
 
-        console.log(`✅ [TimelineMediaSync] 监听器清理完成: ${description} ${commandId} <-> ${mediaItemId}`)
+        console.log(
+          `✅ [TimelineMediaSync] 监听器清理完成: ${description} ${commandId} <-> ${mediaItemId}`,
+        )
       }
     },
     { immediate: true },
@@ -219,21 +231,28 @@ async function transitionTimelineItemToReady(
       timelineItem.runtime.sprite.setTimeRange({ ...timelineItem.timeRange })
       await unifiedStore.addSpriteToCanvas(timelineItem.runtime.sprite)
       console.log(`✅ [TimelineMediaSync] Sprite创建成功并存储到runtime: ${timelineItemId}`)
-      
+
       // 应用动画配置到sprite（如果有）
-      if (timelineItem.animation && timelineItem.animation.isEnabled && timelineItem.animation.keyframes.length > 0) {
+      if (
+        timelineItem.animation &&
+        timelineItem.animation.isEnabled &&
+        timelineItem.animation.keyframes.length > 0
+      ) {
         try {
           console.log(`🎬 [TimelineMediaSync] 应用动画配置到sprite: ${timelineItemId}`, {
             keyframeCount: timelineItem.animation.keyframes.length,
             isEnabled: timelineItem.animation.isEnabled,
           })
-          
+
           // 使用WebAVAnimationManager来应用动画
           await updateWebAVAnimation(timelineItem)
-          
+
           console.log(`✅ [TimelineMediaSync] 动画配置应用成功: ${timelineItemId}`)
         } catch (animationError) {
-          console.error(`❌ [TimelineMediaSync] 应用动画配置失败: ${timelineItemId}`, animationError)
+          console.error(
+            `❌ [TimelineMediaSync] 应用动画配置失败: ${timelineItemId}`,
+            animationError,
+          )
           // 动画应用失败不影响后续操作
         }
       }
@@ -270,10 +289,10 @@ async function transitionTimelineItemToReady(
     }
 
     timelineItem.timelineStatus = 'ready'
-    
+
     // 3. 设置双向数据同步（仅就绪状态的已知类型时间轴项目）
     unifiedStore.setupBidirectionalSync(timelineItem)
-    
+
     // 4. 初始化动画管理器（仅就绪状态的已知类型时间轴项目）
     globalWebAVAnimationManager.addManager(timelineItem)
 
@@ -292,7 +311,7 @@ async function transitionTimelineItemToReady(
    * @param mediaItem 媒体项目
    */
   function updateTimelineItemDimensions(
-    timelineItem: UnifiedTimelineItemData<any>,
+    timelineItem: UnifiedTimelineItemData,
     mediaItem: UnifiedMediaItemData,
   ): void {
     try {

@@ -26,5 +26,8 @@ export type {
 
 export { createUnifiedMediaItemData } from './types'
 
+// 导出查询函数
+export { UnifiedMediaItemQueries } from './queries'
+
 // 导出行为函数
-export { UnifiedMediaItemQueries, UnifiedMediaItemActions } from './actions'
+export { UnifiedMediaItemActions } from './actions'
