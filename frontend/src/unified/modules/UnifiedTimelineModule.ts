@@ -163,7 +163,7 @@ export function createUnifiedTimelineModule(
 
       // 同步zIndex属性
       if (changedProps.zIndex !== undefined) {
-        ;(timelineItem.config as any).zIndex = changedProps.zIndex
+        ; (timelineItem.config as any).zIndex = changedProps.zIndex
       }
 
       // 同步opacity属性（使用新的事件系统）
@@ -184,6 +184,8 @@ export function createUnifiedTimelineModule(
    * @param timelineItem 要设置的时间轴项目
    */
   async function setupTimelineItemSprite(timelineItem: UnifiedTimelineItemData<MediaType>) {
+    // TODO：缺少将时间范围、变换属性等同步到sprite的逻辑
+
     // 根据轨道的可见性和静音状态设置sprite属性
     if (timelineItem.runtime.sprite) {
       const track = trackModule.tracks.value.find((t) => t.id === timelineItem.trackId)
