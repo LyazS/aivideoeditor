@@ -8,7 +8,7 @@ import {
   globalWebAVAnimationManager,
   updateWebAVAnimation,
 } from '@/unified/utils/webavAnimationManager'
-
+import { projectToWebavCoords } from '@/unified/utils/coordinateTransform'
 /**
  * 项目加载媒体同步管理器
  * 完全独立于 SimplifiedMediaSyncManager
@@ -118,7 +118,7 @@ export function setupProjectLoadMediaSync(
       mediaItemId: mediaItem.id,
     })
     // 如果媒体已经ready，直接转换时间轴项目状态
-    transitionTimelineItemToReady(timelineItemId, mediaItem, description)
+    // transitionTimelineItemToReady(timelineItemId, mediaItem, description)
     return
   }
 
@@ -280,7 +280,7 @@ async function transitionTimelineItemToReady(
 async function applyTimelineItemConfigToSprite(timelineItem: any): Promise<void> {
   try {
     // 检查sprite是否存在
-    if (!timelineItem.runtime?.sprite) {
+    if (!timelineItem.runtime.sprite) {
       console.warn(`⚠️ [ProjectLoadMediaSync] Sprite不存在，无法应用配置: ${timelineItem.id}`)
       return
     }
@@ -299,9 +299,9 @@ async function applyTimelineItemConfigToSprite(timelineItem: any): Promise<void>
 
     // 设置sprite的基本属性
     // 注意：位置属性需要使用坐标转换系统，将项目坐标转换为WebAV坐标
-    if (config.width !== undefined) sprite.width = config.width
-    if (config.height !== undefined) sprite.height = config.height
-    if (config.rotation !== undefined) sprite.rotation = config.rotation
+    if (config.width !== undefined) sprite.rect.w = config.width
+    if (config.height !== undefined) sprite.rect.h = config.height
+    if (config.rotation !== undefined) sprite.rect.angle = config.rotation
     if (config.opacity !== undefined) sprite.opacity = config.opacity
     if (config.zIndex !== undefined) sprite.zIndex = config.zIndex
 
@@ -315,8 +315,6 @@ async function applyTimelineItemConfigToSprite(timelineItem: any): Promise<void>
     if (config.x !== undefined || config.y !== undefined) {
       try {
         // 导入坐标转换工具
-        const { projectToWebavCoords } = await import('@/unified/utils/coordinateTransform')
-        const { useUnifiedStore } = await import('@/unified/unifiedStore')
         const unifiedStore = useUnifiedStore()
 
         // 获取当前配置值，如果未定义则使用sprite的当前值
@@ -357,9 +355,9 @@ async function applyTimelineItemConfigToSprite(timelineItem: any): Promise<void>
     }
 
     console.log(`✅ [ProjectLoadMediaSync] 基本配置已应用到sprite: ${timelineItem.id}`, {
-      width: sprite.width,
-      height: sprite.height,
-      rotation: sprite.rotation,
+      width: sprite.rect.w,
+      height: sprite.rect.h,
+      rotation: sprite.rect.angle,
       opacity: sprite.opacity,
       zIndex: sprite.zIndex,
       volume: sprite.volume,
