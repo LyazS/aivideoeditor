@@ -5,24 +5,15 @@ import type { VisibleSprite } from '@webav/av-cliper'
 import type { SimpleCommand } from '@/unified/modules/commands/types'
 
 // 类型导入
-import type {
-  UnifiedTimelineItemData,
-} from '@/unified/timelineitem/TimelineItemData'
+import type { UnifiedTimelineItemData } from '@/unified/timelineitem/TimelineItemData'
 
-import type {
-  UnifiedMediaItemData,
-  MediaType,
-} from '@/unified/mediaitem/types'
+import type { UnifiedMediaItemData, MediaType } from '@/unified/mediaitem/types'
 
 import type { UnifiedTrackData, UnifiedTrackType } from '@/unified/track/TrackTypes'
 
-import {
-  TimelineItemFactory,
-} from '@/unified/timelineitem'
+import { TimelineItemFactory } from '@/unified/timelineitem'
 
-import {
-  setupCommandMediaSync,
-} from '@/unified/utils/commandMediaSyncUtils'
+import { setupCommandMediaSync } from '@/unified/utils/commandMediaSyncUtils'
 
 import { TimelineItemQueries } from '@/unified/timelineitem/TimelineItemQueries'
 
@@ -53,6 +44,7 @@ export class RemoveTrackCommand implements SimpleCommand {
       addTimelineItem: (item: UnifiedTimelineItemData<MediaType>) => Promise<void>
       removeTimelineItem: (id: string) => void
       getTimelineItem: (id: string) => UnifiedTimelineItemData<MediaType> | undefined
+      setupTimelineItemSprite: (item: UnifiedTimelineItemData<MediaType>) => Promise<void>
       timelineItems: Ref<UnifiedTimelineItemData<MediaType>[]>
     },
     private webavModule: {
@@ -161,9 +153,10 @@ export class RemoveTrackCommand implements SimpleCommand {
         console.log(`🔄 执行撤销删除轨道操作：从源头重建时间轴项目...`)
 
         // 从原始素材重新创建TimelineItem和sprite
-        const rebuildResult = await TimelineItemFactory.rebuildKnown({
+        const rebuildResult = await TimelineItemFactory.rebuildForCmd({
           originalTimelineItemData: itemData,
-          getMediaItem: (id: string) => this.mediaModule.getMediaItem(id),
+          getMediaItem: this.mediaModule.getMediaItem,
+          setupTimelineItemSprite: this.timelineModule.setupTimelineItemSprite,
           logIdentifier: 'RemoveTrackCommand',
         })
 
@@ -209,7 +202,7 @@ export class RemoveTrackCommand implements SimpleCommand {
       if (timelineItemId && timelineItem.id !== timelineItemId) {
         continue
       }
-      
+
       // 如果没有指定timelineItemId或者项目ID匹配，则更新该项目
       const config = timelineItem.config as any
 
@@ -240,7 +233,7 @@ export class RemoveTrackCommand implements SimpleCommand {
         height: config.height,
         duration: mediaData.duration,
       })
-      
+
       // 如果指定了timelineItemId且已找到并更新了对应项目，则退出循环
       if (timelineItemId && timelineItem.id === timelineItemId) {
         break

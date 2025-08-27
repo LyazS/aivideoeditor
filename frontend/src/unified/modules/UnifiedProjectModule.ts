@@ -2,10 +2,7 @@ import { ref, computed, type Ref } from 'vue'
 import type { UnifiedProjectConfig, UnifiedMediaReference } from '@/unified/project/types'
 import { projectFileOperations } from '@/unified/utils/ProjectFileOperations'
 import type { VideoResolution } from '@/unified/types'
-import {
-  TimelineItemFactory,
-  TimelineItemQueries,
-} from '@/unified/timelineitem'
+import { TimelineItemFactory, TimelineItemQueries } from '@/unified/timelineitem'
 import type { UnifiedTimelineItemData } from '@/unified/timelineitem/TimelineItemData'
 import type { UnifiedTrackData, UnifiedTrackType } from '@/unified/track/TrackTypes'
 import type { UnifiedMediaItemData } from '@/unified/mediaitem/types'
@@ -50,6 +47,7 @@ export function createUnifiedProjectModule(
   timelineModule: {
     timelineItems: Ref<UnifiedTimelineItemData<MediaType>[]>
     addTimelineItem: (item: UnifiedTimelineItemData<MediaType>) => Promise<void>
+    setupTimelineItemSprite: (item: UnifiedTimelineItemData<MediaType>) => Promise<void>
   },
   trackModule: {
     tracks: Ref<UnifiedTrackData[]>
@@ -68,6 +66,7 @@ export function createUnifiedProjectModule(
       source: any,
       options?: any,
     ) => UnifiedMediaItemData
+    getMediaItem: (id: string) => UnifiedMediaItemData | undefined
     addMediaItem: (item: UnifiedMediaItemData) => void
     startMediaProcessing: (item: UnifiedMediaItemData) => void
   },
@@ -549,10 +548,11 @@ export function createUnifiedProjectModule(
 
             console.log(`🔄 恢复时间轴项目：从源头重建 ${itemData.id}...`)
 
-            // 使用 TimelineItemFactory.rebuildKnown 重建时间轴项目
-            const rebuildResult = await TimelineItemFactory.rebuildKnown({
+            // 从原始素材重新创建TimelineItem和sprite
+            const rebuildResult = await TimelineItemFactory.rebuildForCmd({
               originalTimelineItemData: itemData,
-              getMediaItem: (id: string) => mediaModule.mediaItems.value.find((m) => m.id === id),
+              getMediaItem: mediaModule.getMediaItem,
+              setupTimelineItemSprite: timelineModule.setupTimelineItemSprite,
               logIdentifier: 'restoreTimelineItems',
             })
 

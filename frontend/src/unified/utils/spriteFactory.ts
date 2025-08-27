@@ -14,7 +14,7 @@
  * - 包含详细的错误信息和状态检查
  */
 
-import { markRaw } from 'vue'
+import { markRaw, type Raw } from 'vue'
 import type { UnifiedMediaItemData, MediaType } from '@/unified/mediaitem/types'
 import type { UnifiedSprite } from '@/unified/visiblesprite'
 import type {
@@ -22,7 +22,7 @@ import type {
   VideoMediaConfig,
   ImageMediaConfig,
   TextMediaConfig,
-  BaseMediaProps
+  BaseMediaProps,
 } from '@/unified/timelineitem/TimelineItemData'
 import { hasVisualProperties } from '@/unified/timelineitem/TimelineItemQueries'
 
@@ -57,7 +57,7 @@ import { AudioVisibleSprite } from '@/unified/visiblesprite/AudioVisibleSprite'
  */
 export async function createSpriteFromUnifiedMediaItem(
   mediaData: UnifiedMediaItemData,
-): Promise<UnifiedSprite> {
+): Promise<Raw<UnifiedSprite>> {
   // 1. 验证媒体项目状态
   if (mediaData.mediaStatus !== 'ready') {
     throw new Error(
@@ -222,7 +222,6 @@ export function canCreateSpriteFromUnifiedMediaItem(mediaData: UnifiedMediaItemD
   return { canCreate: true }
 }
 
-
 /**
  * 从统一时间轴项目数据创建对应的 Sprite 实例
  *
@@ -257,7 +256,7 @@ export async function createSpriteFromUnifiedTimelineItem(
   const { useUnifiedStore } = await import('@/unified/unifiedStore')
   const unifiedStore = useUnifiedStore()
   const mediaItem = unifiedStore.getMediaItem(timelineItemData.mediaItemId)
-  
+
   if (!mediaItem) {
     throw new Error(`找不到关联的媒体项目: ${timelineItemData.mediaItemId}`)
   }
@@ -274,16 +273,18 @@ export async function createSpriteFromUnifiedTimelineItem(
 
   // 4. 应用变换属性（使用坐标转换）
   if (hasVisualProperties(timelineItemData)) {
-    const config = timelineItemData.config as
-      | VideoMediaConfig
-      | ImageMediaConfig
-      | TextMediaConfig
+    const config = timelineItemData.config as VideoMediaConfig | ImageMediaConfig | TextMediaConfig
 
     // 导入坐标转换工具
     const { projectToWebavCoords } = await import('@/unified/utils/coordinateTransform')
 
     // 使用坐标转换将项目坐标系转换为 WebAV 坐标系
-    if (config.x !== undefined && config.y !== undefined && config.width !== undefined && config.height !== undefined) {
+    if (
+      config.x !== undefined &&
+      config.y !== undefined &&
+      config.width !== undefined &&
+      config.height !== undefined
+    ) {
       const webavCoords = projectToWebavCoords(
         config.x,
         config.y,
@@ -309,4 +310,3 @@ export async function createSpriteFromUnifiedTimelineItem(
 
   return newSprite
 }
-

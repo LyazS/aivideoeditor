@@ -44,6 +44,7 @@ export class RemoveTimelineItemCommand implements SimpleCommand {
       addTimelineItem: (item: UnifiedTimelineItemData<MediaType>) => Promise<void>
       removeTimelineItem: (id: string) => void
       getTimelineItem: (id: string) => UnifiedTimelineItemData<MediaType> | undefined
+      setupTimelineItemSprite: (item: UnifiedTimelineItemData<MediaType>) => Promise<void>
     },
     private webavModule: {
       addSprite: (sprite: VisibleSprite) => Promise<boolean>
@@ -114,9 +115,10 @@ export class RemoveTimelineItemCommand implements SimpleCommand {
       console.log(`🔄 执行撤销删除操作：从源头重建时间轴项目...`)
 
       // 从原始素材重新创建TimelineItem和sprite
-      const rebuildResult = await TimelineItemFactory.rebuildKnown({
+      const rebuildResult = await TimelineItemFactory.rebuildForCmd({
         originalTimelineItemData: this.originalTimelineItemData,
-        getMediaItem: (id: string) => this.mediaModule.getMediaItem(id),
+        getMediaItem: this.mediaModule.getMediaItem,
+        setupTimelineItemSprite: this.timelineModule.setupTimelineItemSprite,
         logIdentifier: 'RemoveTimelineItemCommand undo',
       })
 

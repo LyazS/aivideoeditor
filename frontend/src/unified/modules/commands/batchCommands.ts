@@ -36,6 +36,7 @@ export class BatchDeleteCommand extends BaseBatchCommand {
       getTimelineItem: (id: string) => UnifiedTimelineItemData<MediaType> | undefined
       addTimelineItem: (item: UnifiedTimelineItemData<MediaType>) => Promise<void>
       removeTimelineItem: (id: string) => void
+      setupTimelineItemSprite: (item: UnifiedTimelineItemData<MediaType>) => Promise<void>
     },
     private webavModule: {
       addSprite: (sprite: VisibleSprite) => Promise<boolean>

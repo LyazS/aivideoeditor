@@ -212,6 +212,7 @@ const recreateCanvasWithNewSize = async (newResolution: VideoResolution): Promis
       },
       {
         timelineItems: unifiedStore.timelineItems,
+        setupTimelineItemSprite: unifiedStore.setupTimelineItemSprite,
       },
       {
         getMediaItem: unifiedStore.getMediaItem,

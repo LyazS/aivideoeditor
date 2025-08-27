@@ -644,7 +644,7 @@ export function createUnifiedWebavModule(playbackModule: {
       if (globalAVCanvas) {
         // 只重置runtime字段，sprite会被画布自动销毁
         timelineItems.forEach((item) => {
-          item.runtime = {}
+          item.runtime.sprite = undefined
         })
 
         // 销毁AVCanvas
@@ -677,6 +677,7 @@ export function createUnifiedWebavModule(playbackModule: {
     },
     timelineModule: {
       timelineItems: UnifiedTimelineItemData<MediaType>[]
+      setupTimelineItemSprite: (item: UnifiedTimelineItemData<MediaType>) => Promise<void>
     },
     mediaModule: {
       getMediaItem: (id: string) => UnifiedMediaItemData | undefined
@@ -704,11 +705,11 @@ export function createUnifiedWebavModule(playbackModule: {
           console.log(`🔧 [Canvas Recreate] 重建时间轴项目runtime字段: ${timelineItem.id}`)
 
           // 使用TimelineItemFactory.rebuildKnown重建runtime字段
-          const rebuildResult = await TimelineItemFactory.rebuildKnown({
+          const rebuildResult = await TimelineItemFactory.rebuildInplace({
             originalTimelineItemData: timelineItem,
             getMediaItem: mediaModule.getMediaItem,
+            setupTimelineItemSprite: timelineModule.setupTimelineItemSprite,
             logIdentifier: 'Canvas Recreate',
-            inPlace: true, // 原地重建，不创建新实例
           })
 
           if (!rebuildResult.success) {

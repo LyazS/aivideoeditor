@@ -64,10 +64,6 @@ import { TimelineItemQueries } from '@/unified/timelineitem/'
 
 // 从TimelineItemFactory导入工厂函数
 import {
-  createUnknownTimelineItem,
-  createVideoTimelineItem,
-  createAudioTimelineItem,
-  createImageTimelineItem,
   cloneTimelineItem,
   duplicateTimelineItem,
 } from '@/unified/timelineitem/TimelineItemFactory'
@@ -325,19 +321,13 @@ export const useUnifiedStore = defineStore('unified', () => {
    * @param timelineItem 要添加的时间轴项目
    */
   async function addTimelineItemWithHistory(timelineItem: UnifiedTimelineItemData<MediaType>) {
-    // 检查是否是文本项目，使用专门的文本命令
-    // if (timelineItem.mediaType === 'text') {
-    //   // 类型检查确保这是文本项目
-    //   await addTextItemWithHistory(timelineItem as UnifiedTimelineItemData<'text'>)
-    //   return
-    // }
-
     const command = new AddTimelineItemCommand(
       timelineItem,
       {
         addTimelineItem: unifiedTimelineModule.addTimelineItem,
         removeTimelineItem: unifiedTimelineModule.removeTimelineItem,
         getTimelineItem: unifiedTimelineModule.getTimelineItem,
+        setupTimelineItemSprite: unifiedTimelineModule.setupTimelineItemSprite,
       },
       {
         addSprite: unifiedWebavModule.addSprite,
@@ -364,6 +354,7 @@ export const useUnifiedStore = defineStore('unified', () => {
         addTimelineItem: unifiedTimelineModule.addTimelineItem,
         removeTimelineItem: unifiedTimelineModule.removeTimelineItem,
         getTimelineItem: unifiedTimelineModule.getTimelineItem,
+        setupTimelineItemSprite: unifiedTimelineModule.setupTimelineItemSprite,
       },
       {
         addSprite: unifiedWebavModule.addSprite,
@@ -740,6 +731,7 @@ export const useUnifiedStore = defineStore('unified', () => {
         addTimelineItem: unifiedTimelineModule.addTimelineItem,
         removeTimelineItem: unifiedTimelineModule.removeTimelineItem,
         getTimelineItem: unifiedTimelineModule.getTimelineItem,
+        setupTimelineItemSprite: unifiedTimelineModule.setupTimelineItemSprite,
       },
       {
         addSprite: unifiedWebavModule.addSprite,
@@ -798,6 +790,7 @@ export const useUnifiedStore = defineStore('unified', () => {
         addTimelineItem: unifiedTimelineModule.addTimelineItem,
         removeTimelineItem: unifiedTimelineModule.removeTimelineItem,
         getTimelineItem: unifiedTimelineModule.getTimelineItem,
+        setupTimelineItemSprite: unifiedTimelineModule.setupTimelineItemSprite,
         timelineItems: unifiedTimelineModule.timelineItems,
       },
       {
@@ -1093,11 +1086,9 @@ export const useUnifiedStore = defineStore('unified', () => {
     setupBidirectionalSync: unifiedTimelineModule.setupBidirectionalSync,
     updateTimelineItemPosition: unifiedTimelineModule.updateTimelineItemPosition,
     updateTimelineItemTransform: unifiedTimelineModule.updateTimelineItemTransform,
+    setupTimelineItemSprite: unifiedTimelineModule.setupTimelineItemSprite,
 
     // 时间轴项目工厂函数
-    createVideoTimelineItem,
-    createAudioTimelineItem,
-    createImageTimelineItem,
     cloneTimelineItemData: cloneTimelineItem,
     duplicateTimelineItem,
 
