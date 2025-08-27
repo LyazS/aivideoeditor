@@ -14,9 +14,9 @@ import type { VideoResolution } from '@/unified/types'
 
 // ==================== 新架构工具导入 ====================
 import {
-  setupCommandMediaSync,
+  setupMediaSync,
   cleanupCommandMediaSync,
-} from '@/unified/utils/commandMediaSyncUtils'
+} from '@/unified/utils/unifiedMediaSyncManager'
 
 import { TimelineItemFactory } from '@/unified/timelineitem'
 import { TimelineItemQueries } from '@/unified/timelineitem/TimelineItemQueries'
@@ -92,12 +92,13 @@ export class AddTimelineItemCommand implements SimpleCommand {
 
       // 2. 针对loading状态的项目设置状态同步（确保时间轴项目已添加到store）
       if (TimelineItemQueries.isLoading(newTimelineItem)) {
-        setupCommandMediaSync(
-          this.id,
-          newTimelineItem.mediaItemId,
-          newTimelineItem.id,
-          `execute ${this.description}`,
-        )
+        setupMediaSync({
+          commandId: this.id,
+          mediaItemId: newTimelineItem.mediaItemId,
+          timelineItemId: newTimelineItem.id,
+          description: `execute ${this.description}`,
+          scenario: 'command',
+        })
       }
       console.log(`✅ 已添加时间轴项目: ${this.originalTimelineItemData.id}`)
     } catch (error) {

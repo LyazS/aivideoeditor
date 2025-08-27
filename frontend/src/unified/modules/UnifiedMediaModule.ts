@@ -8,7 +8,7 @@ import {
   UnifiedMediaItemQueries,
   UnifiedMediaItemActions,
 } from '@/unified'
-import { SimplifiedMediaSyncManager } from '@/unified/timelineitem/SimplifiedMediaSyncManager'
+import { UnifiedMediaSyncManager } from '@/unified/utils/unifiedMediaSyncManager'
 import { useUnifiedStore } from '@/unified/unifiedStore'
 
 // ==================== 统一媒体项目调试工具 ====================
@@ -464,10 +464,23 @@ export function createUnifiedMediaModule(webavModule: {
    */
   function cleanupCommandMediaSyncForMediaItem(mediaItemId: string): void {
     try {
-      const syncManager = SimplifiedMediaSyncManager.getInstance()
-      syncManager.cleanupMediaItemSync(mediaItemId)
+      const syncManager = UnifiedMediaSyncManager.getInstance()
+      
+      // 清理所有与该媒体项目相关的同步
+      const syncInfoList = syncManager.getSyncInfo()
+      const relatedSyncs = syncInfoList.filter(sync => sync.mediaItemId === mediaItemId)
+      
+      relatedSyncs.forEach(sync => {
+        if (sync.commandId) {
+          syncManager.cleanupByCommandId(sync.commandId)
+        } else if (sync.timelineItemId) {
+          syncManager.cleanupByTimelineItemId(sync.timelineItemId)
+        } else {
+          syncManager.cleanup(sync.id)
+        }
+      })
 
-      console.log(`✅ 已清理媒体项目相关的命令同步: ${mediaItemId}`)
+      console.log(`✅ 已清理媒体项目相关的命令同步: ${mediaItemId} (清理了 ${relatedSyncs.length} 个同步)`)
     } catch (error) {
       console.error(`❌ 清理媒体项目命令同步失败: ${mediaItemId}`, error)
     }

@@ -281,22 +281,18 @@ export {
   type ExportProjectOptions,
 } from './projectExporter'
 
-// ==================== 项目加载媒体同步管理器 ====================
+// ==================== 统一媒体同步管理器 ====================
 export {
   // 核心类
-  ProjectLoadMediaSyncManager,
+  UnifiedMediaSyncManager,
   
   // 主要功能函数
-  setupProjectLoadMediaSync,
-  cleanupProjectLoadMediaSync,
-  getProjectLoadMediaSyncInfo,
-} from './projectLoadMediaSyncManager'
-
-// ==================== 命令媒体同步工具 ====================
-export {
-  // 设置命令与媒体项目的直接同步
-  setupCommandMediaSync,
+  setupMediaSync,
   
-  // 清理命令的所有媒体同步
+  // 清理函数
   cleanupCommandMediaSync,
-} from './commandMediaSyncUtils'
+  cleanupProjectLoadMediaSync,
+  
+  // 调试信息函数
+  getUnifiedMediaSyncInfo as getProjectLoadMediaSyncInfo,
+} from './unifiedMediaSyncManager'

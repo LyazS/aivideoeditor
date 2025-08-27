@@ -16,13 +16,10 @@ import {
 import type { VisibleSprite } from '@webav/av-cliper'
 import { VideoVisibleSprite, AudioVisibleSprite } from '@/unified/visiblesprite'
 import {
-  setupCommandMediaSync,
+  setupMediaSync,
   cleanupCommandMediaSync,
-} from '@/unified/utils/commandMediaSyncUtils'
-import {
-  setupProjectLoadMediaSync,
   cleanupProjectLoadMediaSync,
-} from '@/unified/utils/projectLoadMediaSyncManager'
+} from '@/unified/utils/unifiedMediaSyncManager'
 import { generateCommandId } from '@/unified/utils/idGenerator'
 
 /**
@@ -568,11 +565,12 @@ export function createUnifiedProjectModule(
 
             // 2. 针对loading状态的项目设置状态同步
             if (newTimelineItem.timelineStatus === 'loading') {
-              setupProjectLoadMediaSync(
-                newTimelineItem.mediaItemId,
-                newTimelineItem.id,
-                `restoreTimelineItems ${newTimelineItem.id}`,
-              )
+              setupMediaSync({
+                mediaItemId: newTimelineItem.mediaItemId,
+                timelineItemId: newTimelineItem.id,
+                description: `restoreTimelineItems ${newTimelineItem.id}`,
+                scenario: 'projectLoad',
+              })
             }
 
             console.log(`✅ 已恢复时间轴项目: ${itemData.id} (${itemData.mediaType})`)
