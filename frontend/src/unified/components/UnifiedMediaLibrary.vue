@@ -20,7 +20,7 @@
         </div>
       </div>
       <div class="header-buttons">
-        <HoverButton @click="debugMediaItems" title="调试统一媒体">
+        <!-- <HoverButton @click="debugMediaItems" title="调试统一媒体">
           <template #icon>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
               <path
@@ -28,7 +28,7 @@
               />
             </svg>
           </template>
-        </HoverButton>
+        </HoverButton> -->
         <HoverButton @click="showImportMenu" title="导入文件">
           <template #icon>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">

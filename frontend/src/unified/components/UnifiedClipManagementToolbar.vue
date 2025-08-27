@@ -70,7 +70,7 @@
 
     <!-- 调试按钮放在最右边 -->
     <div class="toolbar-section debug-section">
-      <HoverButton @click="debugTimeline" title="在控制台打印时间轴配置信息">
+      <!-- <HoverButton @click="debugTimeline" title="在控制台打印时间轴配置信息">
          <template #icon>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
               <path
@@ -89,7 +89,7 @@
           </svg>
         </template>
         历史
-      </HoverButton>
+      </HoverButton> -->
     </div>
   </div>
 </template>

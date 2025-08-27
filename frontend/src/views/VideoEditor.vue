@@ -78,7 +78,7 @@
               导出
             </HoverButton>
 
-            <HoverButton @click="debugProject" title="调试：打印项目JSON">
+            <!-- <HoverButton @click="debugProject" title="调试：打印项目JSON">
               <template #icon>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                   <path
@@ -87,7 +87,7 @@
                 </svg>
               </template>
               调试
-            </HoverButton>
+            </HoverButton> -->
           </div>
         </div>
       </div>
