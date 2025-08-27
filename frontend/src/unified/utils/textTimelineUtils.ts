@@ -313,7 +313,7 @@ export async function createSpriteForTextTimelineItem(
  * @param trackType 轨道类型
  * @returns 是否兼容文本项目
  */
-export function isTextTrackCompatible(trackType: string): boolean {
+function isTextTrackCompatible(trackType: string): boolean {
   return trackType === 'text'
 }
 
@@ -322,7 +322,7 @@ export function isTextTrackCompatible(trackType: string): boolean {
  * @param overrides 样式覆盖选项
  * @returns 完整的文本样式配置
  */
-export function createDefaultTextStyle(overrides: Partial<TextStyleConfig> = {}): TextStyleConfig {
+function createDefaultTextStyle(overrides: Partial<TextStyleConfig> = {}): TextStyleConfig {
   return {
     ...DEFAULT_TEXT_STYLE,
     ...overrides,
@@ -335,7 +335,7 @@ export function createDefaultTextStyle(overrides: Partial<TextStyleConfig> = {})
  * @param maxLength 最大显示长度
  * @returns 显示名称
  */
-export function getTextItemDisplayName(
+function getTextItemDisplayName(
   textItem: UnifiedTimelineItemData<'text'>,
   maxLength: number = 20,
 ): string {
@@ -348,7 +348,7 @@ export function getTextItemDisplayName(
  * @param text 文本内容
  * @returns 是否有效
  */
-export function isValidTextContent(text: string): boolean {
+function isValidTextContent(text: string): boolean {
   return typeof text === 'string' && text.trim().length > 0
 }
 
@@ -357,7 +357,7 @@ export function isValidTextContent(text: string): boolean {
  * @param textItem 文本时间轴项目
  * @returns 预览信息对象
  */
-export function createTextItemPreview(textItem: UnifiedTimelineItemData<'text'>) {
+function createTextItemPreview(textItem: UnifiedTimelineItemData<'text'>) {
   return {
     id: textItem.id,
     text: getTextItemDisplayName(textItem),

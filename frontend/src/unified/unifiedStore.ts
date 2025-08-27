@@ -16,7 +16,7 @@ import { createUnifiedAutoSaveModule } from '@/unified/modules/UnifiedAutoSaveMo
 import { calculateTotalDurationFrames } from '@/unified/utils/durationUtils'
 import type { MediaType, MediaTypeOrUnknown } from '@/unified'
 import type { UnifiedTrackType } from '@/unified/track/TrackTypes'
-import type { UnifiedTimelineItemData } from '@/unified/timelineitem/TimelineItemData'
+import type { UnifiedTimelineItemData } from '@/unified/timelineitem'
 // PropertyType 已经在本地定义，不再需要从外部导入
 /**
  * 属性类型枚举
@@ -60,22 +60,7 @@ import {
   findOverlappingTimelineItemsOnTrack,
   findOrphanedTimelineItems,
 } from '@/unified/utils/timelineSearchUtils'
-import {
-  isVideoTimelineItem,
-  isImageTimelineItem,
-  isAudioTimelineItem,
-  isTextTimelineItem,
-  hasVisualProperties,
-  hasAudioProperties,
-  isReady,
-  isLoading,
-  hasError,
-  getDuration,
-  getStatusText,
-  filterByStatus,
-  filterByTrack,
-  sortByTime,
-} from '@/unified/timelineitem/TimelineItemQueries'
+import { TimelineItemQueries } from '@/unified/timelineitem/'
 
 // 从TimelineItemFactory导入工厂函数
 import {
@@ -238,7 +223,7 @@ export const useUnifiedStore = defineStore('unified', () => {
       debounceTime: 2000,
       throttleTime: 30000,
       maxRetries: 3,
-    }
+    },
   )
 
   /**
@@ -476,7 +461,7 @@ export const useUnifiedStore = defineStore('unified', () => {
     const oldTransform: typeof newTransform = {}
 
     // 检查是否具有视觉属性
-    if (hasVisualProperties(timelineItem)) {
+    if (TimelineItemQueries.hasVisualProperties(timelineItem)) {
       const config = timelineItem.config as any
       if (newTransform.x !== undefined) {
         oldTransform.x = config.x
@@ -523,7 +508,7 @@ export const useUnifiedStore = defineStore('unified', () => {
     }
 
     // 检查是否具有音频属性
-    if (hasAudioProperties(timelineItem)) {
+    if (TimelineItemQueries.hasAudioProperties(timelineItem)) {
       const config = timelineItem.config as any
       if (newTransform.volume !== undefined) {
         oldTransform.volume = config.volume ?? 1
@@ -1110,26 +1095,11 @@ export const useUnifiedStore = defineStore('unified', () => {
     updateTimelineItemTransform: unifiedTimelineModule.updateTimelineItemTransform,
 
     // 时间轴项目工厂函数
-    createTimelineItemData: createUnknownTimelineItem,
     createVideoTimelineItem,
     createAudioTimelineItem,
     createImageTimelineItem,
     cloneTimelineItemData: cloneTimelineItem,
     duplicateTimelineItem,
-
-    // 时间轴项目查询函数
-    isTimelineItemReady: isReady,
-    isTimelineItemLoading: isLoading,
-    hasTimelineItemError: hasError,
-    getTimelineItemDuration: getDuration,
-    getTimelineItemStatusText: getStatusText,
-    filterTimelineItemsByStatus: filterByStatus,
-    filterTimelineItemsByTrack: filterByTrack,
-    sortTimelineItemsByTime: sortByTime,
-
-    // 时间轴项目辅助函数
-    timelineItemHasVisualProps: hasVisualProperties,
-    timelineItemHasAudioProps: hasAudioProperties,
 
     // ==================== 统一项目模块状态和方法 ====================
 

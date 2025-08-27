@@ -163,7 +163,7 @@ export function createUnifiedTimelineModule(
 
       // 同步zIndex属性
       if (changedProps.zIndex !== undefined) {
-        ; (timelineItem.config as any).zIndex = changedProps.zIndex
+        ;(timelineItem.config as any).zIndex = changedProps.zIndex
       }
 
       // 同步opacity属性（使用新的事件系统）
@@ -185,18 +185,17 @@ export function createUnifiedTimelineModule(
    */
   async function setupTimelineItemSprite(timelineItem: UnifiedTimelineItemData<MediaType>) {
     // TODO：缺少将时间范围、变换属性等同步到sprite的逻辑
-
+    if (!timelineItem.runtime.sprite) return
+    timelineItem.runtime.sprite.setTimeRange(timelineItem.timeRange)
     // 根据轨道的可见性和静音状态设置sprite属性
-    if (timelineItem.runtime.sprite) {
-      const track = trackModule.tracks.value.find((t) => t.id === timelineItem.trackId)
-      if (track) {
-        // 设置可见性
-        timelineItem.runtime.sprite.visible = track.isVisible
+    const track = trackModule.tracks.value.find((t) => t.id === timelineItem.trackId)
+    if (track) {
+      // 设置可见性
+      timelineItem.runtime.sprite.visible = track.isVisible
 
-        // 为具有音频功能的片段设置静音状态
-        if (timelineItem.runtime.sprite && hasAudioCapabilities(timelineItem.runtime.sprite)) {
-          timelineItem.runtime.sprite.setTrackMuted(track.isMuted)
-        }
+      // 为具有音频功能的片段设置静音状态
+      if (timelineItem.runtime.sprite && hasAudioCapabilities(timelineItem.runtime.sprite)) {
+        timelineItem.runtime.sprite.setTrackMuted(track.isMuted)
       }
     }
 
@@ -204,8 +203,7 @@ export function createUnifiedTimelineModule(
     if (
       timelineItem.animation &&
       timelineItem.animation.isEnabled &&
-      timelineItem.animation.keyframes.length > 0 &&
-      timelineItem.runtime.sprite
+      timelineItem.animation.keyframes.length > 0
     ) {
       try {
         console.log(`🎬 [UnifiedTimelineModule] 应用动画配置到sprite: ${timelineItem.id}`, {

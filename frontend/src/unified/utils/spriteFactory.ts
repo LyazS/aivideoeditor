@@ -222,48 +222,6 @@ export function canCreateSpriteFromUnifiedMediaItem(mediaData: UnifiedMediaItemD
   return { canCreate: true }
 }
 
-/**
- * 获取媒体项目支持的 Sprite 类型
- *
- * 根据统一媒体项目数据返回对应的 Sprite 类型名称，
- * 用于调试和日志记录。
- *
- * @param mediaData 统一媒体项目数据
- * @returns Sprite 类型名称
- */
-export function getSpriteTypeFromUnifiedMediaItem(mediaData: UnifiedMediaItemData): string {
-  switch (mediaData.mediaType) {
-    case 'video':
-      return 'VideoVisibleSprite'
-    case 'image':
-      return 'ImageVisibleSprite'
-    case 'audio':
-      return 'AudioVisibleSprite'
-    case 'text':
-      return 'TextVisibleSprite'
-    case 'unknown':
-      return 'UnknownSprite'
-    default:
-      return 'UnsupportedSprite'
-  }
-}
-
-/**
- * 批量检查多个媒体项目是否可以创建 Sprite
- *
- * 用于批量操作场景，可以快速筛选出可以创建 Sprite 的媒体项目。
- *
- * @param mediaItems 统一媒体项目数据数组
- * @returns 检查结果数组
- */
-export function batchCheckCanCreateSprite(
-  mediaItems: UnifiedMediaItemData[],
-): Array<{ mediaData: UnifiedMediaItemData; canCreate: boolean; reason?: string }> {
-  return mediaItems.map((mediaData) => ({
-    mediaData,
-    ...canCreateSpriteFromUnifiedMediaItem(mediaData),
-  }))
-}
 
 /**
  * 从统一时间轴项目数据创建对应的 Sprite 实例

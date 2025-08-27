@@ -218,16 +218,7 @@ export {
 export {
   // 时间范围工具
   syncTimeRange,
-  validateBaseTimeRange,
-  validateTimelineItemTimeRange,
   calculateDuration,
-  containsFrame,
-  isTimeRangeOverlapping,
-  calculateOverlapDuration,
-  moveTimelineItem,
-  resizeTimelineItem,
-  trimTimelineItem,
-  UnifiedTimeRangeUtils,
 } from './utils'
 
 // ==================== 统一Composables ====================

@@ -26,23 +26,8 @@ export {
   // 同步工具
   syncTimeRange,
 
-  // 验证工具
-  validateBaseTimeRange,
-  validateTimelineItemTimeRange,
-
   // 计算工具
   calculateDuration,
-  containsFrame,
-  isTimeRangeOverlapping,
-  calculateOverlapDuration,
-
-  // 操作工具
-  moveTimelineItem,
-  resizeTimelineItem,
-  trimTimelineItem,
-
-  // 工具集合
-  UnifiedTimeRangeUtils,
 } from './timeRangeUtils'
 
 // ==================== 统一Sprite工厂 ====================
@@ -52,8 +37,6 @@ export {
 
   // 辅助函数
   canCreateSpriteFromUnifiedMediaItem,
-  getSpriteTypeFromUnifiedMediaItem,
-  batchCheckCanCreateSprite,
 } from './spriteFactory'
 
 // ==================== 坐标转换工具 ====================
@@ -105,22 +88,17 @@ export {
 export {
   // 核心重叠检测函数
   detectTimeRangeOverlap,
+  isTimeRangeOverlapping,
 
   // TimelineItem 专用函数
   extractTimeRange,
   isTimelineItemsOverlapping,
-  detectTimelineItemOverlap,
 
-  // 轨道级别的重叠检测
-  hasOverlapInTrack,
-  detectTrackConflicts,
+  // 重叠计算函数
+  calculateOverlapDuration,
 
   // 批量重叠检测
   countOverlappingItems,
-  getAllOverlappingPairs,
-
-  // 兼容性函数
-  calculateTimeRangeOverlap,
 } from './timeOverlapUtils'
 
 // ==================== 统一缩略图生成器 ====================
@@ -172,17 +150,6 @@ export {
 
   // 文本时间轴项目创建
   createTextTimelineItem,
-
-  // 轨道兼容性检查
-  isTextTrackCompatible,
-
-  // 样式工具
-  createDefaultTextStyle,
-
-  // 显示和验证工具
-  getTextItemDisplayName,
-  isValidTextContent,
-  createTextItemPreview,
 } from './textTimelineUtils'
 
 export { TextHelper } from './TextHelper'
