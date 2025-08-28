@@ -15,7 +15,6 @@ export function createUnifiedConfigModule() {
   const projectUpdatedAt = ref('') // 项目更新时间
   const projectVersion = ref('') // 项目版本
   const projectThumbnail = ref<string | undefined | null>(null) // 项目缩略图
-  const projectDuration = ref<number>(0) // 项目时长（秒）
 
   // ==================== 状态定义 ====================
 
@@ -56,7 +55,6 @@ export function createUnifiedConfigModule() {
     projectUpdatedAt.value = pconfig.updatedAt
     projectVersion.value = pconfig.version
     projectThumbnail.value = pconfig.thumbnail || null
-    projectDuration.value = pconfig.duration
 
     // 视频分辨率设置
     setVideoResolution(pconfig.settings.videoResolution)
@@ -80,19 +78,6 @@ export function createUnifiedConfigModule() {
   }
 
   /**
-   * 设置时间轴基础时长
-   * @param durationFrames 新的时间轴时长（帧数）
-   */
-  function setTimelineDurationFrames(durationFrames: number) {
-    if (durationFrames > 0) {
-      timelineDurationFrames.value = durationFrames
-      console.log('🎬 时间轴时长已设置为:', durationFrames, '帧')
-    } else {
-      console.warn('⚠️ 无效的时间轴时长:', durationFrames)
-    }
-  }
-
-  /**
    * 获取当前配置的摘要信息
    * @returns 配置摘要对象
    */
@@ -105,7 +90,6 @@ export function createUnifiedConfigModule() {
       projectUpdatedAt: projectUpdatedAt.value,
       projectVersion: projectVersion.value,
       projectThumbnail: projectThumbnail.value,
-      projectDuration: projectDuration.value,
       videoResolution: videoResolution.value,
       frameRate: frameRate.value,
       timelineDurationFrames: timelineDurationFrames.value,
@@ -139,7 +123,6 @@ export function createUnifiedConfigModule() {
     projectUpdatedAt,
     projectVersion,
     projectThumbnail,
-    projectDuration,
 
     // 状态
     videoResolution,
@@ -149,7 +132,6 @@ export function createUnifiedConfigModule() {
     // 方法
     setVideoResolution,
     setFrameRate,
-    setTimelineDurationFrames,
     getConfigSummary,
     resetToDefaults,
     restoreFromProjectSettings,

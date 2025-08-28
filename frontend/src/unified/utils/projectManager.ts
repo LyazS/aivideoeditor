@@ -165,7 +165,7 @@ export class UnifiedProjectManager {
   /**
    * 保存项目配置（只保存project.json）
    */
-  async saveProjectConfig(projectConfig: UnifiedProjectConfig): Promise<void> {
+  async saveProjectConfig(projectConfig: UnifiedProjectConfig, updatedAt?: string): Promise<void> {
     const workspaceHandle = await directoryManager.getWorkspaceHandle()
     if (!workspaceHandle) {
       throw new Error('未设置工作目录')
@@ -175,8 +175,8 @@ export class UnifiedProjectManager {
       const projectsHandle = await workspaceHandle.getDirectoryHandle(this.PROJECTS_FOLDER)
       const projectHandle = await projectsHandle.getDirectoryHandle(projectConfig.id)
 
-      // 更新时间戳
-      projectConfig.updatedAt = new Date().toISOString()
+      // 使用外部传入的时间戳，或者生成新的时间戳
+      projectConfig.updatedAt = updatedAt || new Date().toISOString()
 
       await this.saveProjectConfigFile(projectHandle, projectConfig)
       console.log('统一项目配置保存成功:', projectConfig.name)

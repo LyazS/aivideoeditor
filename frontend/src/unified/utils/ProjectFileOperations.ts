@@ -180,12 +180,12 @@ export class ProjectFileOperations {
 
   /**
    * 智能保存项目（根据修改内容决定保存哪个文件）
-   * @param projectConfig 项目配置
+   * @param projectConfig 项目配置（可选，当configChanged为false时可以为undefined）
    * @param projectContent 项目内容（可选）
    * @param options 保存选项
    */
   async saveProject(
-    projectConfig: UnifiedProjectConfig,
+    projectConfig?: UnifiedProjectConfig,
     projectContent?: UnifiedProjectContent,
     options?: {
       configChanged?: boolean
@@ -197,16 +197,16 @@ export class ProjectFileOperations {
     try {
       const promises: Promise<void>[] = []
 
-      if (configChanged) {
+      if (configChanged && projectConfig) {
         promises.push(this.saveProjectConfig(projectConfig))
       }
 
-      if (contentChanged && projectContent) {
+      if (contentChanged && projectContent && projectConfig) {
         promises.push(this.saveProjectContent(projectConfig.id, projectContent))
       }
 
       await Promise.all(promises)
-      console.log('项目保存成功:', projectConfig.name)
+      console.log('项目保存成功:', projectConfig?.name || '未知项目')
     } catch (error) {
       console.error('保存项目失败:', error)
       throw error

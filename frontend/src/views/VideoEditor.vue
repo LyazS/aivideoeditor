@@ -29,7 +29,7 @@
               @click="showEditProjectDialog"
               title="点击编辑项目信息"
             >
-              <span class="project-title">{{ projectTitle }}</span>
+              <span class="project-title">{{ unifiedStore.projectName || '未命名项目' }}</span>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" class="edit-icon">
                 <path
                   d="M20.71,7.04C21.1,6.65 21.1,6 20.71,5.63L18.37,3.29C18,2.9 17.35,2.9 16.96,3.29L15.12,5.12L18.87,8.87M3,17.25V21H6.75L17.81,9.93L14.06,6.18L3,17.25Z"
@@ -110,12 +110,12 @@
     />
 
     <!-- 编辑项目对话框 -->
-    <!-- <EditProjectDialog
+    <EditProjectDialog
       v-model:show="showEditDialog"
       :project="currentProject"
       :is-saving="isSaving"
       @save="handleSaveProject"
-    /> -->
+    />
   </div>
 </template>
 
@@ -133,12 +133,30 @@ const route = useRoute()
 const unifiedStore = useUnifiedStore()
 
 // 响应式数据
-const projectTitle = ref('未命名项目')
 const showEditDialog = ref(false)
 
 // 计算属性 - 使用store中的项目状态（适配新的API）
 const projectStatus = computed(() => unifiedStore.projectStatus)
 const isSaving = computed(() => unifiedStore.isProjectSaving)
+
+// 当前项目配置对象（用于编辑对话框）
+const currentProject = computed(() => {
+  return {
+    id: unifiedStore.projectId,
+    name: unifiedStore.projectName,
+    description: unifiedStore.projectDescription,
+    createdAt: unifiedStore.projectCreatedAt,
+    updatedAt: unifiedStore.projectUpdatedAt,
+    version: unifiedStore.projectVersion,
+    thumbnail: unifiedStore.projectThumbnail || undefined,
+    duration: 0,// 未使用
+    settings: {
+      videoResolution: unifiedStore.videoResolution,
+      frameRate: unifiedStore.frameRate,
+      timelineDurationFrames: unifiedStore.timelineDurationFrames,
+    },
+  }
+})
 
 // 方法
 function goBack() {
@@ -187,13 +205,23 @@ function showEditProjectDialog() {
 }
 
 // 处理保存项目编辑
-async function handleSaveProject() {
+async function handleSaveProject(data: { name: string; description: string }) {
   try {
-    // 更新项目信息
-    await unifiedStore.saveCurrentProject()
-    // 关闭对话框
+    // 更新 store 中的项目信息
+    unifiedStore.projectName = data.name
+    unifiedStore.projectDescription = data.description
+    
+    // 先关闭对话框，提升用户体验
     showEditDialog.value = false
-    console.log('项目信息更新成功:', unifiedStore.projectName)
+    console.log('项目信息已更新:', data.name)
+    
+    // 异步保存项目配置（只保存元信息，不涉及timeline内容）
+    unifiedStore.saveCurrentProject({ configChanged: true }).then(() => {
+      console.log('项目配置保存成功:', data.name)
+    }).catch((error) => {
+      console.error('保存项目配置失败:', error)
+      // 可以添加错误提示，但不影响对话框关闭
+    })
   } catch (error) {
     console.error('更新项目信息失败:', error)
     // 可以添加错误提示

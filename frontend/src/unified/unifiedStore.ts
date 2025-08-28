@@ -1158,7 +1158,6 @@ export const useUnifiedStore = defineStore('unified', () => {
     projectUpdatedAt: unifiedConfigModule.projectUpdatedAt,
     projectVersion: unifiedConfigModule.projectVersion,
     projectThumbnail: unifiedConfigModule.projectThumbnail,
-    projectDuration: unifiedConfigModule.projectDuration,
 
     // 配置状态
     videoResolution: unifiedConfigModule.videoResolution,
@@ -1168,7 +1167,6 @@ export const useUnifiedStore = defineStore('unified', () => {
     // 配置管理方法
     setVideoResolution: unifiedConfigModule.setVideoResolution,
     setFrameRate: unifiedConfigModule.setFrameRate,
-    setTimelineDurationFrames: unifiedConfigModule.setTimelineDurationFrames,
     getConfigSummary: unifiedConfigModule.getConfigSummary,
     resetConfigToDefaults: unifiedConfigModule.resetToDefaults,
     restoreFromProjectSettings: unifiedConfigModule.restoreFromProjectSettings,

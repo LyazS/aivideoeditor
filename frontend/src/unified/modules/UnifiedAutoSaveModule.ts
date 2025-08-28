@@ -27,7 +27,10 @@ interface AutoSaveState {
 interface AutoSaveDependencies {
   /** 项目模块 */
   projectModule: {
-    saveCurrentProject: () => Promise<void>
+    saveCurrentProject: (options?: {
+      configChanged?: boolean
+      contentChanged?: boolean
+    }) => Promise<void>
     isSaving: Ref<boolean>
   }
   /** 需要监听的数据源 */
@@ -49,7 +52,7 @@ interface AutoSaveDependencies {
  */
 export function createUnifiedAutoSaveModule(
   dependencies: AutoSaveDependencies,
-  config: Partial<AutoSaveConfig> = {}
+  config: Partial<AutoSaveConfig> = {},
 ) {
   const { projectModule, dataWatchers } = dependencies
 
@@ -102,17 +105,21 @@ export function createUnifiedAutoSaveModule(
 
   /**
    * 执行保存操作
+   * @param options 保存选项，用于区分保存配置还是内容
    */
-  async function performSave(): Promise<boolean> {
+  async function performSave(options?: {
+    configChanged?: boolean
+    contentChanged?: boolean
+  }): Promise<boolean> {
     if (projectModule.isSaving.value) {
       console.log('🔄 [AutoSave] 正在保存中，跳过此次自动保存')
       return false
     }
 
     try {
-      console.log('💾 [AutoSave] 开始自动保存...')
+      console.log('💾 [AutoSave] 开始自动保存...', options)
 
-      await projectModule.saveCurrentProject()
+      await projectModule.saveCurrentProject(options)
 
       // 更新状态
       autoSaveState.value.lastSaveTime = new Date()
@@ -133,7 +140,7 @@ export function createUnifiedAutoSaveModule(
 
         // 延迟重试
         setTimeout(() => {
-          performSave()
+          performSave(options)
         }, 5000 * retryCount) // 递增延迟
       } else {
         console.error('❌ [AutoSave] 达到最大重试次数，停止自动保存')
@@ -146,8 +153,9 @@ export function createUnifiedAutoSaveModule(
 
   /**
    * 触发自动保存（防抖+节流）
+   * @param options 保存选项，用于区分保存配置还是内容
    */
-  function triggerAutoSave() {
+  function triggerAutoSave(options?: { configChanged?: boolean; contentChanged?: boolean }) {
     if (!autoSaveState.value.isEnabled) {
       return
     }
@@ -162,7 +170,7 @@ export function createUnifiedAutoSaveModule(
 
     // 设置防抖定时器
     debounceTimer = setTimeout(() => {
-      performSave()
+      performSave(options)
     }, finalConfig.debounceTime)
 
     // 如果没有节流定时器，设置一个
@@ -171,7 +179,7 @@ export function createUnifiedAutoSaveModule(
         // 强制保存（节流）
         if (autoSaveState.value.isDirty) {
           console.log('⏰ [AutoSave] 节流触发强制保存')
-          performSave()
+          performSave(options)
         }
         throttleTimer = null
       }, finalConfig.throttleTime)
@@ -204,7 +212,10 @@ export function createUnifiedAutoSaveModule(
    */
   async function manualSave(): Promise<boolean> {
     clearTimers() // 清除自动保存定时器
-    return await performSave()
+    return await performSave({
+      configChanged: true,
+      contentChanged: true,
+    })
   }
 
   /**
@@ -244,47 +255,47 @@ export function createUnifiedAutoSaveModule(
     // 清除现有监听器
     clearWatchers()
 
-    // 监听时间轴项目变化
+    // 监听时间轴项目变化 - 内容变化
     const unwatchTimelineItems = watch(
       () => dataWatchers.timelineItems.value,
       () => {
         console.log('🔄 [AutoSave] 检测到时间轴项目变化')
-        triggerAutoSave()
+        triggerAutoSave({ contentChanged: true })
       },
-      { deep: true }
+      { deep: true },
     )
     unwatchFunctions.push(unwatchTimelineItems)
 
-    // 监听轨道变化
+    // 监听轨道变化 - 内容变化
     const unwatchTracks = watch(
       () => dataWatchers.tracks.value,
       () => {
         console.log('🔄 [AutoSave] 检测到轨道变化')
-        triggerAutoSave()
+        triggerAutoSave({ contentChanged: true })
       },
-      { deep: true }
+      { deep: true },
     )
     unwatchFunctions.push(unwatchTracks)
 
-    // 监听媒体项目变化
+    // 监听媒体项目变化 - 内容变化
     const unwatchMediaItems = watch(
       () => dataWatchers.mediaItems.value,
       () => {
         console.log('🔄 [AutoSave] 检测到媒体项目变化')
-        triggerAutoSave()
+        triggerAutoSave({ contentChanged: true })
       },
-      { deep: true }
+      { deep: true },
     )
     unwatchFunctions.push(unwatchMediaItems)
 
-    // 监听项目配置变化
+    // 监听项目配置变化 - 配置变化
     const unwatchProjectConfig = watch(
       () => dataWatchers.projectConfig.value,
       () => {
         console.log('🔄 [AutoSave] 检测到项目配置变化')
-        triggerAutoSave()
+        triggerAutoSave({ configChanged: true })
       },
-      { deep: true }
+      { deep: true },
     )
     unwatchFunctions.push(unwatchProjectConfig)
   }
@@ -293,7 +304,7 @@ export function createUnifiedAutoSaveModule(
    * 清除所有监听器
    */
   function clearWatchers() {
-    unwatchFunctions.forEach(unwatch => unwatch())
+    unwatchFunctions.forEach((unwatch) => unwatch())
     unwatchFunctions.length = 0
   }
 

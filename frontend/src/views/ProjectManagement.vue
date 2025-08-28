@@ -183,7 +183,7 @@
                 <p class="project-description">{{ project.description || '无描述' }}</p>
                 <div class="project-meta">
                   <span class="project-date">{{ formatDate(project.updatedAt) }}</span>
-                  <span class="project-duration">{{ project.duration || '00:00' }}</span>
+                  <span class="project-duration">{{ formatDuration(project.duration) }}</span>
                 </div>
               </div>
             </div>
@@ -436,24 +436,37 @@ async function handleSaveProjectEdit(data: { name: string; description: string }
   }
 
   try {
+    // 生成统一的更新时间戳
+    const updatedAt = new Date().toISOString()
+    
     // 更新项目配置
     const updatedProject: UnifiedProjectConfig = {
       ...selectedProject.value,
       name: data.name,
       description: data.description,
-      updatedAt: new Date().toISOString(),
+      updatedAt: updatedAt,
     }
 
-    // 保存项目配置（只保存元信息，不涉及timeline内容）
-    await unifiedProjectManager.saveProjectConfig(updatedProject)
-
-    // 刷新项目列表
-    await loadProjects()
-
-    // 关闭对话框
+    // 先关闭对话框，提升用户体验
     showEditProjectDialog.value = false
+    console.log('项目信息已更新:', updatedProject.name)
 
-    console.log('项目信息更新成功:', updatedProject.name)
+    // 立即更新本地内存中的项目数据
+    const projectIndex = projects.value.findIndex(p => p.id === selectedProject.value!.id)
+    if (projectIndex !== -1) {
+      projects.value[projectIndex] = updatedProject
+      // 重新排序项目列表（按更新时间排序）
+      projects.value.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+    }
+
+    // 异步保存项目配置到文件系统（传入相同的updatedAt确保一致性）
+    unifiedProjectManager.saveProjectConfig(updatedProject, updatedAt).then(() => {
+      console.log('项目配置保存成功:', updatedProject.name)
+    }).catch((error) => {
+      console.error('保存项目配置失败:', error)
+      // 保存失败时重新加载项目列表以恢复正确状态
+      loadProjects()
+    })
   } catch (error) {
     console.error('更新项目信息失败:', error)
     // 可以添加错误提示
@@ -467,6 +480,17 @@ function formatDate(dateString: string) {
     month: 'short',
     day: 'numeric',
   })
+}
+
+function formatDuration(seconds: number): string {
+  if (!seconds || seconds === 0) {
+    return '00:00'
+  }
+  
+  const minutes = Math.floor(seconds / 60)
+  const remainingSeconds = Math.floor(seconds % 60)
+  
+  return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`
 }
 
 // 生命周期

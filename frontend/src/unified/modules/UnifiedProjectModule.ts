@@ -21,6 +21,7 @@ import {
   cleanupProjectLoadMediaSync,
 } from '@/unified/utils/unifiedMediaSyncManager'
 import { generateCommandId } from '@/unified/utils/idGenerator'
+import { framesToSeconds } from '@/unified/utils/timeUtils'
 
 /**
  * 统一项目管理模块
@@ -35,7 +36,6 @@ export function createUnifiedProjectModule(
     projectUpdatedAt: Ref<string>
     projectVersion: Ref<string>
     projectThumbnail: Ref<string | undefined | null>
-    projectDuration: Ref<number>
     videoResolution: Ref<VideoResolution>
     frameRate: Ref<number>
     timelineDurationFrames: Ref<number>
@@ -166,86 +166,115 @@ export function createUnifiedProjectModule(
       console.log(`💾 保存项目: ${configModule.projectName.value}`)
       configModule.projectUpdatedAt.value = new Date().toISOString()
 
-      // 构建项目配置（不包含timeline数据）
-      const updatedProjectConfig: UnifiedProjectConfig = {
-        id: configModule.projectId.value,
-        name: configModule.projectName.value,
-        description: configModule.projectDescription.value,
-        createdAt: configModule.projectCreatedAt.value,
-        updatedAt: configModule.projectUpdatedAt.value,
-        version: configModule.projectVersion.value,
-        thumbnail: configModule.projectThumbnail.value || undefined,
-        duration: configModule.projectDuration.value,
+      // 解构保存选项，默认都为 false
+      const { configChanged = false, contentChanged = false } = options || {}
 
-        // 项目设置
-        settings: {
-          videoResolution: configModule.videoResolution.value,
-          frameRate: configModule.frameRate.value,
-          timelineDurationFrames: configModule.timelineDurationFrames.value,
-        },
+      // 根据选项决定是否构建项目配置
+      let updatedProjectConfig: UnifiedProjectConfig | undefined
+      if (configChanged) {
+        // 计算项目时长：从timelineItems中统计时间范围
+        let calculatedDuration = 0
+        if (timelineModule.timelineItems.value.length > 0) {
+          // 找到所有时间轴项目中的最大结束时间
+          const maxEndTime = Math.max(
+            ...timelineModule.timelineItems.value.map(item => item.timeRange.timelineEndTime)
+          )
+          // 将帧数转换为秒
+          calculatedDuration = framesToSeconds(maxEndTime)
+        }
+
+        updatedProjectConfig = {
+          id: configModule.projectId.value,
+          name: configModule.projectName.value,
+          description: configModule.projectDescription.value,
+          createdAt: configModule.projectCreatedAt.value,
+          updatedAt: configModule.projectUpdatedAt.value,
+          version: configModule.projectVersion.value,
+          thumbnail: configModule.projectThumbnail.value || undefined,
+          duration: calculatedDuration,
+
+          // 项目设置
+          settings: {
+            videoResolution: configModule.videoResolution.value,
+            frameRate: configModule.frameRate.value,
+            timelineDurationFrames: configModule.timelineDurationFrames.value,
+          },
+        }
       }
 
-      // 构建项目内容（timeline数据）
-      const updatedProjectContent: UnifiedProjectContent = {
-        // tracks 数据结构简单，没有运行时对象，可以直接使用
-        tracks: trackModule.tracks.value,
-        // timelineItems 包含运行时数据，需要克隆并清理
-        timelineItems: timelineModule.timelineItems.value.map((item) => {
-          // 使用工厂函数克隆时间轴项目，去掉运行时内容（如sprite等）
-          const clonedItem = TimelineItemFactory.clone(item)
-          // 确保克隆的项目没有运行时数据
-          if (clonedItem.runtime) {
-            clonedItem.runtime = {}
-          }
-          return clonedItem
-        }),
-        // mediaItems 包含 webav 运行时对象，需要清理
-        mediaItems: mediaModule.mediaItems.value
-          .map((item) => {
-            // 提取数据源的持久化数据
-            const extractedSource = extractSourceData(item.source)
-
-            // 如果提取失败，跳过该媒体项目
-            if (!extractedSource) {
-              console.warn(`无法提取媒体项目 ${item.name} 的数据源，跳过保存`)
-              return null
+      // 根据选项决定是否构建项目内容
+      let updatedProjectContent: UnifiedProjectContent | undefined
+      if (contentChanged) {
+        updatedProjectContent = {
+          // tracks 数据结构简单，没有运行时对象，可以直接使用
+          tracks: trackModule.tracks.value,
+          // timelineItems 包含运行时数据，需要克隆并清理
+          timelineItems: timelineModule.timelineItems.value.map((item) => {
+            // 使用工厂函数克隆时间轴项目，去掉运行时内容（如sprite等）
+            const clonedItem = TimelineItemFactory.clone(item)
+            // 确保克隆的项目没有运行时数据
+            if (clonedItem.runtime) {
+              clonedItem.runtime = {}
             }
+            return clonedItem
+          }),
+          // mediaItems 包含 webav 运行时对象，需要清理
+          mediaItems: mediaModule.mediaItems.value
+            .map((item) => {
+              // 提取数据源的持久化数据
+              const extractedSource = extractSourceData(item.source)
 
-            // 创建媒体项目的可持久化副本
-            return {
-              // 核心属性
-              id: item.id,
-              name: item.name,
-              createdAt: item.createdAt,
+              // 如果提取失败，跳过该媒体项目
+              if (!extractedSource) {
+                console.warn(`无法提取媒体项目 ${item.name} 的数据源，跳过保存`)
+                return null
+              }
 
-              // 状态信息 - 只保存媒体类型，不保存运行时状态
-              // mediaStatus: item.mediaStatus, // 重新加载时会重置
-              mediaType: item.mediaType,
+              // 创建媒体项目的可持久化副本
+              return {
+                // 核心属性
+                id: item.id,
+                name: item.name,
+                createdAt: item.createdAt,
 
-              // 使用提取后的数据源
-              source: extractedSource,
+                // 状态信息 - 只保存媒体类型，不保存运行时状态
+                // mediaStatus: item.mediaStatus, // 重新加载时会重置
+                mediaType: item.mediaType,
 
-              // 元数据
-              duration: item.duration,
+                // 使用提取后的数据源
+                source: extractedSource,
 
-              // 不保存 webav 对象
-            }
-          })
-          .filter(Boolean) as UnifiedMediaItemData[], // 过滤掉提取失败的项目并断言类型
+                // 元数据
+                duration: item.duration,
+
+                // 不保存 webav 对象
+              }
+            })
+            .filter(Boolean) as UnifiedMediaItemData[], // 过滤掉提取失败的项目并断言类型
+        }
       }
 
-      console.log(`📊 保存项目数据统计:`, {
-        项目ID: updatedProjectConfig.id,
-        项目名称: updatedProjectConfig.name,
-        轨道数量: updatedProjectContent.tracks.length,
-        时间轴项目数量: updatedProjectContent.timelineItems.length,
-        媒体项目数量: updatedProjectContent.mediaItems.length,
-        视频分辨率: updatedProjectConfig.settings.videoResolution,
-        帧率: updatedProjectConfig.settings.frameRate,
-      })
+      // 记录保存的数据统计（只在有数据时记录）
+      if (configChanged || contentChanged) {
+        console.log(`📊 保存项目数据统计:`, {
+          项目ID: updatedProjectConfig?.id || configModule.projectId.value,
+          项目名称: updatedProjectConfig?.name || configModule.projectName.value,
+          轨道数量: updatedProjectContent?.tracks.length || 0,
+          时间轴项目数量: updatedProjectContent?.timelineItems.length || 0,
+          媒体项目数量: updatedProjectContent?.mediaItems.length || 0,
+          视频分辨率: updatedProjectConfig?.settings.videoResolution || '未保存',
+          帧率: updatedProjectConfig?.settings.frameRate || '未保存',
+          保存配置: configChanged ? '是' : '否',
+          保存内容: contentChanged ? '是' : '否',
+        })
+      }
 
       // 调用项目文件操作工具进行智能保存
-      await projectFileOperations.saveProject(updatedProjectConfig, updatedProjectContent, options)
+      await projectFileOperations.saveProject(
+        updatedProjectConfig,
+        updatedProjectContent,
+        options
+      )
 
       console.log(`✅ 项目保存成功: ${configModule.projectName.value}`)
     } catch (error) {
