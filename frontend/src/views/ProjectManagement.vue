@@ -444,8 +444,8 @@ async function handleSaveProjectEdit(data: { name: string; description: string }
       updatedAt: new Date().toISOString(),
     }
 
-    // 保存项目
-    await unifiedProjectManager.saveProject(updatedProject)
+    // 保存项目配置（只保存元信息，不涉及timeline内容）
+    await unifiedProjectManager.saveProjectConfig(updatedProject)
 
     // 刷新项目列表
     await loadProjects()

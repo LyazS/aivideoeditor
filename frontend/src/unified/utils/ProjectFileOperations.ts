@@ -1,5 +1,5 @@
 import { directoryManager } from '@/unified/utils/DirectoryManager'
-import type { UnifiedProjectConfig } from '@/unified/project'
+import type { UnifiedProjectConfig, UnifiedProjectContent } from '@/unified/project'
 import type { UnifiedMediaItemData, UnifiedTimelineItemData } from '@/unified'
 import type { UnifiedTrackData } from '@/unified/track/TrackTypes'
 
@@ -91,9 +91,53 @@ export class ProjectFileOperations {
   }
 
   /**
-   * 保存项目配置
+   * 加载项目内容数据
+   * @param projectId 项目ID
+   * @returns 项目内容数据或null（仅当文件不存在时）
+   * @throws 当文件存在但读取失败时抛出错误
    */
-  async saveProject(projectConfig: UnifiedProjectConfig): Promise<void> {
+  async loadProjectContent(projectId: string): Promise<UnifiedProjectContent | null> {
+    const workspaceHandle = await directoryManager.getWorkspaceHandle()
+    if (!workspaceHandle) {
+      throw new Error('未设置工作目录')
+    }
+
+    try {
+      console.log(`📂 [Project Content Load] 开始加载项目内容: ${projectId}`)
+
+      const projectsHandle = await workspaceHandle.getDirectoryHandle(this.PROJECTS_FOLDER)
+      const projectHandle = await projectsHandle.getDirectoryHandle(projectId)
+      const projectContent = await this.loadContentJson(projectHandle)
+
+      if (!projectContent) {
+        throw new Error(`项目内容文件读取失败或格式错误`)
+      }
+
+      console.log(`✅ [Project Content Load] 项目内容加载成功:`, {
+        轨道数量: projectContent.tracks?.length || 0,
+        时间轴项目数量: projectContent.timelineItems?.length || 0,
+        媒体项目数量: projectContent.mediaItems?.length || 0,
+      })
+
+      return projectContent
+    } catch (error) {
+      // 如果是文件不存在的错误，返回null（用于新项目）
+      if (error instanceof Error && error.name === 'NotFoundError') {
+        console.error(`📝 [Project Content Load] 内容文件不存在，返回null: ${projectId}`)
+        return null
+      }
+
+      // 其他错误（文件损坏、格式错误等）抛出异常
+      console.error(`❌ [Project Content Load] 加载项目内容失败: ${projectId}`, error)
+      return null
+    }
+  }
+
+  /**
+   * 保存项目配置（只保存project.json）
+   * @param projectConfig 项目配置
+   */
+  async saveProjectConfig(projectConfig: UnifiedProjectConfig): Promise<void> {
     const workspaceHandle = await directoryManager.getWorkspaceHandle()
     if (!workspaceHandle) {
       throw new Error('未设置工作目录')
@@ -103,7 +147,65 @@ export class ProjectFileOperations {
       const projectsHandle = await workspaceHandle.getDirectoryHandle(this.PROJECTS_FOLDER)
       const projectHandle = await projectsHandle.getDirectoryHandle(projectConfig.id)
 
-      await this.saveProjectConfig(projectHandle, projectConfig)
+      await this.saveProjectConfigFile(projectHandle, projectConfig)
+      console.log('项目配置保存成功:', projectConfig.name)
+    } catch (error) {
+      console.error('保存项目配置失败:', error)
+      throw error
+    }
+  }
+
+  /**
+   * 保存项目内容（只保存content.json）
+   * @param projectId 项目ID
+   * @param projectContent 项目内容数据
+   */
+  async saveProjectContent(projectId: string, projectContent: UnifiedProjectContent): Promise<void> {
+    const workspaceHandle = await directoryManager.getWorkspaceHandle()
+    if (!workspaceHandle) {
+      throw new Error('未设置工作目录')
+    }
+
+    try {
+      const projectsHandle = await workspaceHandle.getDirectoryHandle(this.PROJECTS_FOLDER)
+      const projectHandle = await projectsHandle.getDirectoryHandle(projectId)
+
+      await this.saveContentJson(projectHandle, projectContent)
+      console.log('项目内容保存成功:', projectId)
+    } catch (error) {
+      console.error('保存项目内容失败:', error)
+      throw error
+    }
+  }
+
+  /**
+   * 智能保存项目（根据修改内容决定保存哪个文件）
+   * @param projectConfig 项目配置
+   * @param projectContent 项目内容（可选）
+   * @param options 保存选项
+   */
+  async saveProject(
+    projectConfig: UnifiedProjectConfig,
+    projectContent?: UnifiedProjectContent,
+    options?: {
+      configChanged?: boolean
+      contentChanged?: boolean
+    }
+  ): Promise<void> {
+    const { configChanged = true, contentChanged = true } = options || {}
+
+    try {
+      const promises: Promise<void>[] = []
+
+      if (configChanged) {
+        promises.push(this.saveProjectConfig(projectConfig))
+      }
+
+      if (contentChanged && projectContent) {
+        promises.push(this.saveProjectContent(projectConfig.id, projectContent))
+      }
+
+      await Promise.all(promises)
       console.log('项目保存成功:', projectConfig.name)
     } catch (error) {
       console.error('保存项目失败:', error)
@@ -130,9 +232,27 @@ export class ProjectFileOperations {
   }
 
   /**
+   * 从项目文件夹加载内容
+   */
+  private async loadContentJson(
+    projectHandle: FileSystemDirectoryHandle,
+  ): Promise<UnifiedProjectContent | null> {
+    try {
+      const contentFileHandle = await projectHandle.getFileHandle('content.json')
+      const contentFile = await contentFileHandle.getFile()
+      const contentText = await contentFile.text()
+
+      return JSON.parse(contentText) as UnifiedProjectContent
+    } catch (error) {
+      console.warn('加载项目内容失败:', error)
+      return null
+    }
+  }
+
+  /**
    * 保存项目配置到文件
    */
-  private async saveProjectConfig(
+  private async saveProjectConfigFile(
     projectHandle: FileSystemDirectoryHandle,
     config: UnifiedProjectConfig,
   ): Promise<void> {
@@ -140,6 +260,20 @@ export class ProjectFileOperations {
     const writable = await configFileHandle.createWritable()
 
     await writable.write(JSON.stringify(config, null, 2))
+    await writable.close()
+  }
+
+  /**
+   * 保存项目内容到文件
+   */
+  private async saveContentJson(
+    projectHandle: FileSystemDirectoryHandle,
+    content: UnifiedProjectContent,
+  ): Promise<void> {
+    const contentFileHandle = await projectHandle.getFileHandle('content.json', { create: true })
+    const writable = await contentFileHandle.createWritable()
+
+    await writable.write(JSON.stringify(content, null, 2))
     await writable.close()
   }
 }

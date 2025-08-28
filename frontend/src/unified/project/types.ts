@@ -39,7 +39,16 @@ export interface UnifiedMediaReference {
 }
 
 /**
- * 统一项目配置接口（基于新架构统一类型）
+ * 项目内容数据（从UnifiedProjectConfig中拆分出来）
+ */
+export interface UnifiedProjectContent {
+  tracks: UnifiedTrackData[]
+  timelineItems: UnifiedTimelineItemData[]
+  mediaItems: UnifiedMediaItemData[]
+}
+
+/**
+ * 统一项目配置接口（移除timeline字段）
  */
 export interface UnifiedProjectConfig {
   id: string
@@ -63,11 +72,5 @@ export interface UnifiedProjectConfig {
     timelineDurationFrames: number
   }
 
-  // 时间轴数据（使用统一类型）
-  timeline: {
-    tracks: UnifiedTrackData[]
-    timelineItems: UnifiedTimelineItemData[]
-    mediaItems: UnifiedMediaItemData[]
-  }
-
+  // timeline字段被移除，单独保存到content.json
 }

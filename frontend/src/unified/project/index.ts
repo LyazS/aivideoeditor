@@ -6,6 +6,7 @@
 // 导出项目配置类型
 export type {
   UnifiedProjectConfig,
+  UnifiedProjectContent,
   UnifiedMediaMetadata,
   UnifiedMediaReference
 } from './types'
