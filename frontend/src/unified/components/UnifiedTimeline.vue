@@ -14,7 +14,7 @@
         <HoverButton variant="small" @click="showAddTrackMenu($event)" title="添加新轨道">
           <template #icon>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z" />
+              <path :d="CONTROL_ICONS.add" />
             </svg>
           </template>
         </HoverButton>
@@ -83,14 +83,7 @@
               >
                 <template #icon>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                    <path
-                      v-if="track.isVisible"
-                      d="M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 12,9M12,17A5,5 0 0,1 7,12A5,5 0 0,1 12,7A5,5 0 0,1 17,12A5,5 0 0,1 12,17M12,4.5C7,4.5 2.73,7.61 1,12C2.73,16.39 7,19.5 12,19.5C17,19.5 21.27,16.39 23,12C21.27,7.61 17,4.5 12,4.5Z"
-                    />
-                    <path
-                      v-else
-                      d="M11.83,9L15,12.16C15,12.11 15,12.05 15,12A3,3 0 0,0 12,9C11.94,9 11.89,9 11.83,9M7.53,9.8L9.08,11.35C9.03,11.56 9,11.77 9,12A3,3 0 0,0 12,15C12.22,15 12.44,14.97 12.65,14.92L14.2,16.47C13.53,16.8 12.79,17 12,17A5,5 0 0,1 7,12C7,11.21 7.2,10.47 7.53,9.8M2,4.27L4.28,6.55L4.73,7C3.08,8.3 1.78,10 1,12C2.73,16.39 7,19.5 12,19.5C13.55,19.5 15.03,19.2 16.38,18.66L16.81,19.09L19.73,22L21,20.73L3.27,3M12,7A5,5 0 0,1 17,12C17,12.64 16.87,13.26 16.64,13.82L19.57,16.75C21.07,15.5 22.27,13.86 23,12C21.27,7.61 17,4.5 12,4.5C10.6,4.5 9.26,4.75 8,5.2L10.17,7.35C10.76,7.13 11.37,7 12,7Z"
-                    />
+                    <path :d="getVisibilityIcon(track.isVisible)" />
                   </svg>
                 </template>
               </HoverButton>
@@ -105,14 +98,7 @@
               >
                 <template #icon>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                    <path
-                      v-if="!track.isMuted"
-                      d="M14,3.23V5.29C16.89,6.15 19,8.83 19,12C19,15.17 16.89,17.85 14,18.71V20.77C18,19.86 21,16.28 21,12C21,7.72 18,4.14 14,3.23M16.5,12C16.5,10.23 15.5,8.71 14,7.97V16C15.5,15.29 16.5,13.76 16.5,12M3,9V15H7L12,20V4L7,9H3Z"
-                    />
-                    <path
-                      v-else
-                      d="M12,4L9.91,6.09L12,8.18M4.27,3L3,4.27L7.73,9H3V15H7L12,20V13.27L16.25,17.53C15.58,18.04 14.83,18.46 14,18.7V20.77C15.38,20.45 16.63,19.82 17.68,18.96L19.73,21L21,19.73L12,10.73M19,12C19,12.94 18.8,13.82 18.46,14.64L19.97,16.15C20.62,14.91 21,13.5 21,12C21,7.72 18,4.14 14,3.23V5.29C16.89,6.15 19,8.83 19,12M16.5,12C16.5,10.23 15.5,8.71 14,7.97V10.18L16.45,12.63C16.5,12.43 16.5,12.21 16.5,12Z"
-                    />
+                    <path :d="getMuteIcon(track.isMuted)" />
                   </svg>
                 </template>
               </HoverButton>
@@ -241,6 +227,14 @@ import {
 } from '@imengyu/vue3-context-menu'
 import { UnifiedMediaItemQueries } from '@/unified/mediaitem'
 import { generateId } from '@/unified/utils/idGenerator'
+import {
+  getTrackTypeIcon,
+  getTrackTypeLabel,
+  getVisibilityIcon,
+  getMuteIcon,
+  CONTROL_ICONS,
+  MENU_ICONS,
+} from '@/unified/constants/timelineIcons'
 // 菜单项类型定义
 type MenuItem =
   | {
@@ -314,36 +308,24 @@ function getClipsForTrack(trackId: string) {
 }
 
 // 轨道管理方法
-async function addNewTrack(type: UnifiedTrackType = 'video') {
+async function addNewTrack(type: UnifiedTrackType = 'video', afterTrackId?: string) {
   try {
-    await unifiedStore.addTrackWithHistory(type)
-    console.log('✅ 轨道添加成功，类型:', type)
+    if (afterTrackId) {
+      // 找到目标轨道的位置
+      const afterTrackIndex = tracks.value.findIndex((track) => track.id === afterTrackId)
+      if (afterTrackIndex === -1) {
+        console.error('❌ 找不到目标轨道:', afterTrackId)
+        return
+      }
 
-    // 显示成功提示
-    if (type === 'text') {
-      dialogs.showSuccess('文本轨道创建成功！现在可以右键点击轨道添加文本内容。')
-    } else if (type === 'audio') {
-      dialogs.showSuccess('音频轨道创建成功！现在可以拖拽音频文件到轨道中。')
+      // 在目标轨道后插入新轨道（位置为 afterTrackIndex + 1）
+      await unifiedStore.addTrackWithHistory(type, undefined, afterTrackIndex + 1)
+      console.log('✅ 轨道添加成功，类型:', type, '位置:', afterTrackIndex + 1)
+    } else {
+      // 在末尾添加新轨道
+      await unifiedStore.addTrackWithHistory(type)
+      console.log('✅ 轨道添加成功，类型:', type)
     }
-  } catch (error) {
-    console.error('❌ 添加轨道时出错:', error)
-    dialogs.showOperationError('添加轨道', (error as Error).message)
-  }
-}
-
-// 在指定轨道后添加新轨道
-async function addNewTrackAfter(type: UnifiedTrackType, afterTrackId: string) {
-  try {
-    // 找到目标轨道的位置
-    const afterTrackIndex = tracks.value.findIndex((track) => track.id === afterTrackId)
-    if (afterTrackIndex === -1) {
-      console.error('❌ 找不到目标轨道:', afterTrackId)
-      return
-    }
-
-    // 在目标轨道后插入新轨道（位置为 afterTrackIndex + 1）
-    await unifiedStore.addTrackWithHistory(type, undefined, afterTrackIndex + 1)
-    console.log('✅ 轨道添加成功，类型:', type, '位置:', afterTrackIndex + 1)
 
     // 显示成功提示
     if (type === 'text') {
@@ -378,30 +360,6 @@ function showAddTrackMenu(event?: MouseEvent) {
   showContextMenu.value = true
 }
 
-// 获取轨道类型图标
-function getTrackTypeIcon(type: UnifiedTrackType): string {
-  const icons: Record<string, string> = {
-    video:
-      'M17,10.5V7A1,1 0 0,0 16,6H4A1,1 0 0,0 3,7V17A1,1 0 0,0 4,18H16A1,1 0 0,0 17,17V13.5L21,17.5V6.5L17,10.5Z',
-    audio:
-      'M14,3.23V5.29C16.89,6.15 19,8.83 19,12C19,15.17 16.89,17.85 14,18.71V20.77C18,19.86 21,16.28 21,12C21,7.72 18,4.14 14,3.23M16.5,12C16.5,10.23 15.5,8.71 14,7.97V16C15.5,15.29 16.5,13.76 16.5,12Z',
-    text: 'M18,11H16.5V10.5H14.5V13.5H16.5V13H18V14A1,1 0 0,1 17,15H14A1,1 0 0,1 13,14V10A1,1 0 0,1 14,9H17A1,1 0 0,1 18,10V11M11,15H9V9H11V15M8,9H6V15H8V9Z',
-    subtitle:
-      'M18,11H16.5V10.5H14.5V13.5H16.5V13H18V14A1,1 0 0,1 17,15H14A1,1 0 0,1 13,14V10A1,1 0 0,1 14,9H17A1,1 0 0,1 18,10V11M11,15H9V9H11V15M8,9H6V15H8V9Z',
-  }
-  return icons[type] || icons.video
-}
-
-// 获取轨道类型标签
-function getTrackTypeLabel(type: UnifiedTrackType): string {
-  const labels: Record<string, string> = {
-    video: '视频',
-    audio: '音频',
-    text: '文本',
-    subtitle: '字幕',
-  }
-  return labels[type] || '视频'
-}
 
 async function toggleVisibility(trackId: string) {
   try {
@@ -476,17 +434,17 @@ function getEmptyMenuItems(): MenuItem[] {
   return [
     {
       label: '添加视频轨道',
-      icon: 'M17,10.5V7A1,1 0 0,0 16,6H4A1,1 0 0,0 3,7V17A1,1 0 0,0 4,18H16A1,1 0 0,0 17,17V13.5L21,17.5V6.5L17,10.5Z',
+      icon: getTrackTypeIcon('video'),
       onClick: () => addNewTrack('video'),
     },
     {
       label: '添加音频轨道',
-      icon: 'M14,3.23V5.29C16.89,6.15 19,8.83 19,12C19,15.17 16.89,17.85 14,18.71V20.77C18,19.86 21,16.28 21,12C21,7.72 18,4.14 14,3.23M16.5,12C16.5,10.23 15.5,8.71 14,7.97V16C15.5,15.29 16.5,13.76 16.5,12Z',
+      icon: getTrackTypeIcon('audio'),
       onClick: () => addNewTrack('audio'),
     },
     {
       label: '添加文本轨道',
-      icon: 'M18,11H16.5V10.5H14.5V13.5H16.5V13H18V14A1,1 0 0,1 17,15H14A1,1 0 0,1 13,14V10A1,1 0 0,1 14,9H17A1,1 0 0,1 18,10V11M11,15H9V9H11V15M8,9H6V15H8V9Z',
+      icon: getTrackTypeIcon('text'),
       onClick: () => addNewTrack('text'),
     },
   ]
@@ -504,7 +462,7 @@ function getClipMenuItems(): MenuItem[] {
   // 复制片段 - 所有类型都支持
   menuItems.push({
     label: '复制片段',
-    icon: 'M19,21H8V7H19M19,5H8A2,2 0 0,0 6,7V21A2,2 0 0,0 8,23H19A2,2 0 0,0 21,21V7A2,2 0 0,0 19,5M16,1H4A2,2 0 0,0 2,3V17H4V3H16V1Z',
+    icon: MENU_ICONS.copy,
     onClick: () => duplicateClip(),
   })
 
@@ -512,7 +470,7 @@ function getClipMenuItems(): MenuItem[] {
   if (timelineItem.mediaType === 'video' || timelineItem.mediaType === 'image') {
     menuItems.push({
       label: '重新生成缩略图',
-      icon: 'M17.65,6.35C16.2,4.9 14.21,4 12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20C15.73,20 18.84,17.45 19.73,14H17.65C16.83,16.33 14.61,18 12,18A6,6 0 0,1 6,12A6,6 0 0,1 12,6C13.66,6 15.14,6.69 16.22,7.78L13,11H20V4L17.65,6.35Z',
+      icon: MENU_ICONS.refresh,
       onClick: () => regenerateThumbnail(),
     })
   }
@@ -523,7 +481,7 @@ function getClipMenuItems(): MenuItem[] {
   // 删除片段 - 所有类型都支持
   menuItems.push({
     label: '删除片段',
-    icon: 'M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z',
+    icon: MENU_ICONS.delete,
     onClick: () => removeClip(),
   })
 
@@ -546,7 +504,7 @@ function getTrackMenuItems(): MenuItem[] {
   if (track.type === 'text') {
     menuItems.push({
       label: '添加文本',
-      icon: 'M9,7H15V15H17V7H23V5H17V3A1,1 0 0,0 16,2H8A1,1 0 0,0 7,3V5H1V7H7V15H9V7Z',
+      icon: MENU_ICONS.addText,
       onClick: () => createTextAtPosition(trackId),
     })
 
@@ -559,12 +517,12 @@ function getTrackMenuItems(): MenuItem[] {
   menuItems.push(
     {
       label: hasClips ? '自动排列片段' : '自动排列片段（无片段）',
-      icon: 'M3,3H21V5H3V3M3,7H15V9H3V7M3,11H21V13H3V11M3,15H15V17H3V15M3,19H21V21H3V19Z',
+      icon: MENU_ICONS.autoArrange,
       onClick: hasClips ? () => autoArrangeTrack(trackId) : () => {},
     },
     {
       label: '重命名轨道',
-      icon: 'M20.71,7.04C21.1,6.65 21.1,6 20.71,5.63L18.37,3.29C18,2.9 17.35,2.9 16.96,3.29L15.12,5.12L18.87,8.87M3,17.25V21H6.75L17.81,9.93L14.06,6.18L3,17.25Z',
+      icon: MENU_ICONS.rename,
       onClick: () => renameTrack(),
     },
   )
@@ -573,9 +531,7 @@ function getTrackMenuItems(): MenuItem[] {
   if (track.type !== 'audio') {
     menuItems.push({
       label: track.isVisible ? '隐藏轨道' : '显示轨道',
-      icon: track.isVisible
-        ? 'M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 12,9M12,17A5,5 0 0,1 7,12A5,5 0 0,1 12,7A5,5 0 0,1 17,12A5,5 0 0,1 12,17M12,4.5C7,4.5 2.73,7.61 1,12C2.73,16.39 7,19.5 12,19.5C17,19.5 21.27,16.39 23,12C21.27,7.61 17,4.5 12,4.5Z'
-        : 'M11.83,9L15,12.16C15,12.11 15,12.05 15,12A3,3 0 0,0 12,9C11.94,9 11.89,9 11.83,9M7.53,9.8L9.08,11.35C9.03,11.56 9,11.77 9,12A3,3 0 0,0 12,15C12.22,15 12.44,14.97 12.65,14.92L14.2,16.47C13.53,16.8 12.79,17 12,17A5,5 0 0,1 7,12C7,11.21 7.2,10.47 7.53,9.8M2,4.27L4.28,6.55L4.73,7C3.08,8.3 1.78,10 1,12C2.73,16.39 7,19.5 12,19.5C13.55,19.5 15.03,19.2 16.38,18.66L16.81,19.09L19.73,22L21,20.73L3.27,3M12,7A5,5 0 0,1 17,12C17,12.64 16.87,13.26 16.64,13.82L19.57,16.75C21.07,15.5 22.27,13.86 23,12C21.27,7.61 17,4.5 12,4.5C10.6,4.5 9.26,4.75 8,5.2L10.17,7.35C10.76,7.13 11.37,7 12,7Z',
+      icon: getVisibilityIcon(track.isVisible),
       onClick: () => toggleVisibility(trackId),
     })
   }
@@ -584,9 +540,7 @@ function getTrackMenuItems(): MenuItem[] {
   if (track.type !== 'text') {
     menuItems.push({
       label: track.isMuted ? '取消静音' : '静音轨道',
-      icon: track.isMuted
-        ? 'M12,4L9.91,6.09L12,8.18M4.27,3L3,4.27L7.73,9H3V15H7L12,20V13.27L16.25,17.53C15.58,18.04 14.83,18.46 14,18.7V20.77C15.38,20.45 16.63,19.82 17.68,18.96L19.73,21L21,19.73L12,10.73M19,12C19,12.94 18.8,13.82 18.46,14.64L19.97,16.15C20.62,14.91 21,13.5 21,12C21,7.72 18,4.14 14,3.23V5.29C16.89,6.15 19,8.83 19,12M16.5,12C16.5,10.23 15.5,8.71 14,7.97V10.18L16.45,12.63C16.5,12.43 16.5,12.21 16.5,12Z'
-        : 'M14,3.23V5.29C16.89,6.15 19,8.83 19,12C19,15.17 16.89,17.85 14,18.71V20.77C18,19.86 21,16.28 21,12C21,7.72 18,4.14 14,3.23M16.5,12C16.5,10.23 15.5,8.71 14,7.97V16C15.5,15.29 16.5,13.76 16.5,12M3,9V15H7L12,20V4L7,9H3Z',
+      icon: getMuteIcon(track.isMuted),
       onClick: () => toggleMute(trackId),
     })
   }
@@ -594,22 +548,22 @@ function getTrackMenuItems(): MenuItem[] {
   // 添加新轨道子菜单
   menuItems.push({ type: 'separator' } as MenuItem, {
     label: '添加新轨道',
-    icon: 'M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z',
+    icon: MENU_ICONS.addTrack,
     children: [
       {
         label: '视频轨道',
-        icon: 'M17,10.5V7A1,1 0 0,0 16,6H4A1,1 0 0,0 3,7V17A1,1 0 0,0 4,18H16A1,1 0 0,0 17,17V13.5L21,17.5V6.5L17,10.5Z',
-        onClick: () => addNewTrackAfter('video', trackId),
+        icon: getTrackTypeIcon('video'),
+        onClick: () => addNewTrack('video', trackId),
       },
       {
         label: '音频轨道',
-        icon: 'M14,3.23V5.29C16.89,6.15 19,8.83 19,12C19,15.17 16.89,17.85 14,18.71V20.77C18,19.86 21,16.28 21,12C21,7.72 18,4.14 14,3.23M16.5,12C16.5,10.23 15.5,8.71 14,7.97V16C15.5,15.29 16.5,13.76 16.5,12Z',
-        onClick: () => addNewTrackAfter('audio', trackId),
+        icon: getTrackTypeIcon('audio'),
+        onClick: () => addNewTrack('audio', trackId),
       },
       {
         label: '文本轨道',
-        icon: 'M18,11H16.5V10.5H14.5V13.5H16.5V13H18V14A1,1 0 0,1 17,15H14A1,1 0 0,1 13,14V10A1,1 0 0,1 14,9H17A1,1 0 0,1 18,10V11M11,15H9V9H11V15M8,9H6V15H8V9Z',
-        onClick: () => addNewTrackAfter('text', trackId),
+        icon: getTrackTypeIcon('text'),
+        onClick: () => addNewTrack('text', trackId),
       },
     ],
   })
@@ -618,7 +572,7 @@ function getTrackMenuItems(): MenuItem[] {
   if (canDelete) {
     menuItems.push({
       label: '删除轨道',
-      icon: 'M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z',
+      icon: MENU_ICONS.delete,
       onClick: () => removeTrack(trackId),
     })
   }
