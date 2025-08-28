@@ -185,6 +185,7 @@ export class ProjectFileOperations {
    * @param options 保存选项
    */
   async saveProject(
+    porjectId: string,
     projectConfig?: UnifiedProjectConfig,
     projectContent?: UnifiedProjectContent,
     options?: {
@@ -192,7 +193,7 @@ export class ProjectFileOperations {
       contentChanged?: boolean
     }
   ): Promise<void> {
-    const { configChanged = true, contentChanged = true } = options || {}
+    const { configChanged = false, contentChanged = false } = options || {}
 
     try {
       const promises: Promise<void>[] = []
@@ -201,8 +202,8 @@ export class ProjectFileOperations {
         promises.push(this.saveProjectConfig(projectConfig))
       }
 
-      if (contentChanged && projectContent && projectConfig) {
-        promises.push(this.saveProjectContent(projectConfig.id, projectContent))
+      if (contentChanged && projectContent) {
+        promises.push(this.saveProjectContent(porjectId, projectContent))
       }
 
       await Promise.all(promises)

@@ -271,6 +271,7 @@ export function createUnifiedProjectModule(
 
       // 调用项目文件操作工具进行智能保存
       await projectFileOperations.saveProject(
+        configModule.projectId.value,
         updatedProjectConfig,
         updatedProjectContent,
         options
