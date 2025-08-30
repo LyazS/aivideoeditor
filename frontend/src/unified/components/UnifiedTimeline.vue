@@ -1958,12 +1958,6 @@ onUnmounted(() => {
   opacity: 0.8;
 }
 
-/* 轨道类型样式 - 移除边框，颜色标识已移至左侧控制区域 */
-.track-content.track-type-video,
-.track-content.track-type-audio,
-.track-content.track-type-text {
-  /* 统一使用默认背景色 */
-}
 
 .track-name {
   flex: 1;
