@@ -682,6 +682,7 @@ export const useUnifiedStore = defineStore('unified', () => {
         addTimelineItem: unifiedTimelineModule.addTimelineItem,
         removeTimelineItem: unifiedTimelineModule.removeTimelineItem,
         getTimelineItem: unifiedTimelineModule.getTimelineItem,
+        setupTimelineItemSprite: unifiedTimelineModule.setupTimelineItemSprite,
       },
       {
         addSprite: unifiedWebavModule.addSprite,
