@@ -1142,7 +1142,7 @@ function handleWheel(event: WheelEvent) {
     event.preventDefault()
     const scrollAmount = 50
 
-    if (event.deltaY < 0) {
+    if (event.deltaX < 0) {
       // 向上滚动：向左滚动
       unifiedStore.scrollLeft(scrollAmount, timelineWidth.value)
     } else {
