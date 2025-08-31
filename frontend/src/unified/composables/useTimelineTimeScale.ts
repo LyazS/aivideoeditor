@@ -174,6 +174,19 @@ export function useTimelineTimeScale(scaleContainer: Ref<HTMLElement | undefined
   }
 
   /**
+   * 计算全局鼠标位置对应的帧数
+   */
+  function calculateFrameFromGlobalMouse(event: MouseEvent): number {
+    if (!scaleContainer.value) return 0
+
+    const rect = scaleContainer.value.getBoundingClientRect()
+    // 限制鼠标X坐标在刻度容器范围内
+    const clampedX = Math.max(rect.left, Math.min(event.clientX, rect.right))
+    const clickX = clampedX - rect.left
+    return unifiedStore.pixelToFrame(clickX, containerWidth.value)
+  }
+
+  /**
    * 处理时间刻度区域的点击事件
    */
   function handleTimeScaleClick(event: MouseEvent) {
@@ -185,10 +198,39 @@ export function useTimelineTimeScale(scaleContainer: Ref<HTMLElement | undefined
    * 处理时间刻度区域的鼠标按下事件
    */
   function handleTimeScaleMouseDown(event: MouseEvent) {
+    // 阻止默认行为，防止文本选择
+    event.preventDefault()
+    
     // 开始拖拽，设置拖拽状态
     isDragging.value = true
     const frame = calculateFrameFromClick(event)
     unifiedStore.setCurrentFrame(frame)
+    
+    // 添加全局鼠标事件监听器，处理拖拽到区域外的情况
+    document.addEventListener('mousemove', handleGlobalMouseMove)
+    document.addEventListener('mouseup', handleGlobalMouseUp)
+  }
+
+  /**
+   * 处理全局鼠标移动事件
+   */
+  function handleGlobalMouseMove(event: MouseEvent) {
+    if (isDragging.value) {
+      const frame = calculateFrameFromGlobalMouse(event)
+      unifiedStore.setCurrentFrame(frame)
+    }
+  }
+
+  /**
+   * 处理全局鼠标释放事件
+   */
+  function handleGlobalMouseUp() {
+    // 结束拖拽
+    isDragging.value = false
+    
+    // 移除全局事件监听器
+    document.removeEventListener('mousemove', handleGlobalMouseMove)
+    document.removeEventListener('mouseup', handleGlobalMouseUp)
   }
 
   /**
@@ -205,7 +247,7 @@ export function useTimelineTimeScale(scaleContainer: Ref<HTMLElement | undefined
    * 处理时间刻度区域的鼠标释放事件
    */
   function handleTimeScaleMouseUp() {
-    isDragging.value = false
+    handleGlobalMouseUp()
   }
 
   /**
