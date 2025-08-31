@@ -3,6 +3,8 @@
  * 包含轨道类型、默认配置、UI常量等
  */
 
+import { LayoutConstants } from '@/unified/constants/LayoutConstants'
+
 // ==================== 轨道类型常量 ====================
 
 /**
@@ -90,16 +92,8 @@ export const TRACK_TYPE_DEFAULTS = {
 
 /**
  * 轨道布局默认值
+ * 已迁移到 LayoutConstants.ts
  */
-export const TRACK_LAYOUT_DEFAULTS = {
-  MIN_HEIGHT: 30,
-  MAX_HEIGHT: 200,
-  DEFAULT_HEIGHT: 60,
-  COLLAPSED_HEIGHT: 30,
-  EXPANDED_HEIGHT_MULTIPLIER: 1.5,
-  HEADER_HEIGHT: 40,
-  CONTENT_PADDING: 8,
-} as const
 
 /**
  * 轨道音频默认值
@@ -283,8 +277,8 @@ export const TRACK_NAME_VALIDATION = {
  */
 export const TRACK_PROPERTY_VALIDATION = {
   height: {
-    min: TRACK_LAYOUT_DEFAULTS.MIN_HEIGHT,
-    max: TRACK_LAYOUT_DEFAULTS.MAX_HEIGHT,
+    min: LayoutConstants.TRACK_MIN_HEIGHT,
+    max: LayoutConstants.TRACK_MAX_HEIGHT,
   },
   volume: {
     min: TRACK_AUDIO_DEFAULTS.MIN_VOLUME,
@@ -368,7 +362,7 @@ export const TRACK_CONSTANTS = {
   TYPES: UNIFIED_TRACK_TYPES,
   STATUS: TRACK_STATUS,
   DEFAULTS: TRACK_TYPE_DEFAULTS,
-  LAYOUT: TRACK_LAYOUT_DEFAULTS,
+  // LAYOUT: TRACK_LAYOUT_DEFAULTS, // 已迁移到 LayoutConstants.ts
   AUDIO: TRACK_AUDIO_DEFAULTS,
   VISIBILITY: TRACK_VISIBILITY_DEFAULTS,
   COLORS: TRACK_COLOR_THEMES,

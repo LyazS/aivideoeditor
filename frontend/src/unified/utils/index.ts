@@ -66,9 +66,6 @@ export {
 
 // ==================== 统一时间工具 ====================
 export {
-  // 时间码系统常量
-  FRAME_RATE,
-
   // 时间计算工具
   calculatePixelsPerFrame,
   expandTimelineIfNeededFrames,

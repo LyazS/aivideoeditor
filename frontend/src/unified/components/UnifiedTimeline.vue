@@ -133,7 +133,7 @@
           :key="line.time"
           class="grid-line"
           :class="{ 'frame-line': line.isFrame }"
-          :style="{ left: 150 + unifiedStore.frameToPixel(line.time, timelineWidth) + 'px' }"
+          :style="{ left: LayoutConstants.TRACK_CONTROL_WIDTH + unifiedStore.frameToPixel(line.time, timelineWidth) + 'px' }"
         ></div>
       </div>
     </div>
@@ -141,7 +141,7 @@
     <!-- 全局播放头组件 - 覆盖整个时间轴 -->
     <UnifiedPlayhead
       :timeline-width="timelineWidth"
-      :track-control-width="150"
+      :track-control-width="LayoutConstants.TRACK_CONTROL_WIDTH"
       :wheel-container="timelineBody"
       :enable-snapping="true"
     />
@@ -218,6 +218,7 @@ import {
   getMuteIcon,
   CONTROL_ICONS,
 } from '@/unified/constants/timelineIcons'
+import { LayoutConstants } from '@/unified/constants/LayoutConstants'
 
 // 导入创建的模块
 import { useTimelineTrackManagement } from '../composables/useTimelineTrackManagement'
@@ -254,7 +255,7 @@ const dragUtils = useDragUtils()
 const dialogs = useDialogs()
 
 const timelineBody = ref<HTMLElement>()
-const timelineWidth = ref(800)
+const timelineWidth = ref(LayoutConstants.TIMELINE_DEFAULT_WIDTH)
 
 // 首先初始化基础工具模块
 const {
@@ -415,7 +416,7 @@ onUnmounted(() => {
 }
 
 .track-manager-header {
-  width: 150px;
+  width: var(--track-control-width, 150px);
   padding: var(--spacing-md);
   background-color: var(--color-bg-tertiary);
   border-right: 1px solid var(--color-border-primary);
@@ -452,7 +453,7 @@ onUnmounted(() => {
 }
 
 .track-controls {
-  width: 150px;
+  width: var(--track-control-width, 150px);
   background-color: var(--color-bg-tertiary);
   border-right: 1px solid var(--color-border-primary);
   padding: var(--spacing-sm) var(--spacing-md);

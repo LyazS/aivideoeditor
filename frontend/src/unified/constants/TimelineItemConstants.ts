@@ -39,31 +39,7 @@ export const STATUS_ICONS = {
 } as const
 
 // ==================== 时间相关常量 ====================
-
-/**
- * 默认帧率
- */
-export const DEFAULT_FRAME_RATE = 30
-
-/**
- * 最小项目持续时间（帧数）
- */
-export const MIN_ITEM_DURATION = 1
-
-/**
- * 最大项目持续时间（帧数）- 1小时
- */
-export const MAX_ITEM_DURATION = 30 * 60 * 60 // 30fps * 60s * 60min
-
-/**
- * 默认项目持续时间（帧数）- 5秒
- */
-export const DEFAULT_ITEM_DURATION = 30 * 5
-
-/**
- * 时间轴网格间隔（帧数）
- */
-export const TIMELINE_GRID_INTERVAL = 30 // 1秒
+// 已迁移到 TimeConstants.ts
 
 // ==================== 变换相关常量 ====================
 
@@ -110,21 +86,21 @@ export const MEDIA_TYPE_DEFAULTS = {
   video: {
     hasVisualTrack: true,
     hasAudioTrack: true,
-    defaultDuration: DEFAULT_ITEM_DURATION,
+    defaultDuration: 30 * 5, // 5秒@30fps
     supportsCropping: true,
     supportsTransform: true,
   },
   audio: {
     hasVisualTrack: false,
     hasAudioTrack: true,
-    defaultDuration: DEFAULT_ITEM_DURATION,
+    defaultDuration: 30 * 5, // 5秒@30fps
     supportsCropping: false,
     supportsTransform: false,
   },
   image: {
     hasVisualTrack: true,
     hasAudioTrack: false,
-    defaultDuration: DEFAULT_ITEM_DURATION,
+    defaultDuration: 30 * 5, // 5秒@30fps
     supportsCropping: false,
     supportsTransform: true,
   },
@@ -266,11 +242,7 @@ export const TimelineConstants = {
   STATUS_ICONS,
 
   // 时间相关
-  DEFAULT_FRAME_RATE,
-  MIN_ITEM_DURATION,
-  MAX_ITEM_DURATION,
-  DEFAULT_ITEM_DURATION,
-  TIMELINE_GRID_INTERVAL,
+  // 已迁移到 TimeConstants.ts
 
   // 变换相关
   DEFAULT_TRANSFORM,
@@ -291,9 +263,7 @@ export const TimelineConstants = {
   RECOVERABLE_ERROR_CODES,
 
   // 性能相关
-  DEFAULT_BATCH_SIZE,
-  STATE_TRANSITION_DEBOUNCE,
-  PROGRESS_UPDATE_THROTTLE,
+  // 已迁移到 PerformanceConstants.ts
 
   // 调试相关
   DEBUG_MODE,

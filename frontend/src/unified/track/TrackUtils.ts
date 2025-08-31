@@ -10,7 +10,7 @@ import {
   TRACK_NAME_VALIDATION,
   TRACK_PROPERTY_VALIDATION,
   TRACK_COLOR_THEMES,
-} from './TrackConstants'
+} from '@/unified/constants/TrackConstants'
 
 // ==================== 轨道验证工具 ====================
 
