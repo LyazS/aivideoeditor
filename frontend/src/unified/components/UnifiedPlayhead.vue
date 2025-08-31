@@ -4,6 +4,7 @@
     <div
       class="playhead-handle"
       :style="{ left: playheadPosition + 'px' }"
+      @mousedown="handleMouseDown"
     >
       <!-- 白色倒三角 -->
       <div class="playhead-triangle"></div>
@@ -15,7 +16,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { useUnifiedStore } from '@/unified/unifiedStore'
 
 interface PlayheadProps {
@@ -30,6 +31,8 @@ const props = withDefaults(defineProps<PlayheadProps>(), {
 })
 
 const unifiedStore = useUnifiedStore()
+const isDragging = ref(false)
+const playheadContainer = ref<HTMLElement>()
 
 // 播放头手柄位置（相对于时间刻度区域）
 const playheadPosition = computed(() => {
@@ -43,6 +46,60 @@ const playheadPosition = computed(() => {
 // 播放竖线位置（与播放头手柄位置保持一致）
 const playheadLinePosition = computed(() => {
   return playheadPosition.value
+})
+
+// 处理鼠标按下事件
+const handleMouseDown = (event: MouseEvent) => {
+  event.preventDefault()
+  event.stopPropagation()
+  
+  isDragging.value = true
+  document.addEventListener('mousemove', handleMouseMove)
+  document.addEventListener('mouseup', handleMouseUp)
+  
+  // 设置拖拽光标样式
+  if (playheadContainer.value) {
+    playheadContainer.value.style.cursor = 'grabbing'
+  }
+}
+
+// 处理鼠标移动事件
+const handleMouseMove = (event: MouseEvent) => {
+  if (!isDragging.value) return
+  
+  const timelineRect = playheadContainer.value?.getBoundingClientRect()
+  if (!timelineRect) return
+  
+  // 计算鼠标相对于时间轴容器的位置
+  const mouseX = event.clientX - timelineRect.left
+  const trackControlAreaWidth = props.trackControlWidth
+  
+  // 确保鼠标位置在时间轴内容区域内
+  if (mouseX >= trackControlAreaWidth && mouseX <= timelineRect.width) {
+    const contentX = mouseX - trackControlAreaWidth
+    const frame = unifiedStore.pixelToFrame(contentX, props.timelineWidth)
+    
+    // 更新当前帧
+    unifiedStore.setCurrentFrame(Math.max(0, Math.floor(frame)))
+  }
+}
+
+// 处理鼠标释放事件
+const handleMouseUp = () => {
+  isDragging.value = false
+  document.removeEventListener('mousemove', handleMouseMove)
+  document.removeEventListener('mouseup', handleMouseUp)
+  
+  // 恢复光标样式
+  if (playheadContainer.value) {
+    playheadContainer.value.style.cursor = 'grab'
+  }
+}
+
+// 清理事件监听器
+onUnmounted(() => {
+  document.removeEventListener('mousemove', handleMouseMove)
+  document.removeEventListener('mouseup', handleMouseUp)
 })
 </script>
 
@@ -62,12 +119,17 @@ const playheadLinePosition = computed(() => {
   height: 100%;
   width: 20px; /* 增加点击区域 */
   margin-left: -10px; /* 居中对齐 */
-  pointer-events: none; /* 不允许交互 */
   z-index: 25; /* 确保在播放竖线之上，但在clip tooltip之下 */
   display: flex;
   align-items: flex-start;
   justify-content: center;
   padding-top: 0; /* 移除顶部间距，让三角形紧贴顶端 */
+  cursor: grab;
+  pointer-events: auto; /* 允许手柄区域接收事件 */
+}
+
+.playhead-handle:hover .playhead-triangle {
+  border-top-color: #ff6b6b; /* 悬停时变为红色 */
 }
 
 .playhead-triangle {
@@ -85,7 +147,6 @@ const playheadLinePosition = computed(() => {
   bottom: 0;
   width: 2px;
   background-color: white; /* 白色竖线 */
-  pointer-events: none;
   z-index: 20; /* 确保在所有内容之上，但在clip tooltip之下 */
   margin-left: -1px; /* 居中对齐 */
   filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.5));
