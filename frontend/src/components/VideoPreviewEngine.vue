@@ -677,6 +677,7 @@ onUnmounted(() => {
   background-color: var(--color-bg-secondary);
   border-radius: var(--border-radius-medium);
   padding: var(--spacing-xs);
+  margin-bottom: 35px; /* 底部gap空间 */
   display: flex;
   flex-direction: column;
   overflow: hidden;
