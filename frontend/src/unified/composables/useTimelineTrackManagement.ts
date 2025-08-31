@@ -54,7 +54,7 @@ export function useTimelineTrackManagement() {
       }
     } catch (error) {
       console.error('❌ 添加轨道时出错:', error)
-      dialogs.showOperationError('添加轨道', (error as Error).message)
+      dialogs.showError('添加轨道失败', (error as Error).message)
     }
   }
 
@@ -166,7 +166,7 @@ export function useTimelineTrackManagement() {
       console.log('✅ 轨道删除成功:', trackId)
     } catch (error) {
       console.error('❌ 删除轨道时出错:', error)
-      dialogs.showOperationError('删除轨道', (error as Error).message)
+      dialogs.showError('删除轨道失败', (error as Error).message)
     }
   }
 

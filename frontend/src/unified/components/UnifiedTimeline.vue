@@ -249,7 +249,6 @@ defineOptions({
 })
 
 const unifiedStore = useUnifiedStore()
-const { pauseForEditing } = usePlaybackControls()
 const dragPreviewManager = getDragPreviewManager()
 const dragUtils = useDragUtils()
 const dialogs = useDialogs()
@@ -261,7 +260,7 @@ const timelineWidth = ref(800)
 const {
   updateTimelineWidth,
   getTimePositionFromContextMenu,
-} = useTimelineCoordinateUtils(timelineBody, timelineWidth, unifiedStore)
+} = useTimelineCoordinateUtils(timelineBody, timelineWidth)
 
 // 初始化项目操作模块
 const {
@@ -307,10 +306,7 @@ const {
 } = useTimelineDragHandling(
   timelineBody,
   timelineWidth,
-  pauseForEditing,
-  dragUtils,
   dragPreviewManager,
-  dialogs,
   detectMediaItemConflicts,
   detectTimelineConflicts,
   createMediaClipFromMediaItem,

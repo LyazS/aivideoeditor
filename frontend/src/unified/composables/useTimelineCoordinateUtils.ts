@@ -5,8 +5,11 @@ import { useUnifiedStore } from '@/unified/unifiedStore'
  * 时间轴坐标转换工具模块
  * 提供时间轴坐标转换相关的功能，包括时间轴宽度更新和位置计算
  */
-export function useTimelineCoordinateUtils(timelineBodyParam: any, timelineWidthParam: any, unifiedStoreParam: any) {
-  const unifiedStore = unifiedStoreParam
+export function useTimelineCoordinateUtils(
+  timelineBodyParam: Ref<HTMLElement | undefined>,
+  timelineWidthParam: Ref<number>
+) {
+  const unifiedStore = useUnifiedStore()
   const timelineBody = timelineBodyParam
   const timelineWidth = timelineWidthParam
 

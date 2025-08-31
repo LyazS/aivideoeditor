@@ -1,8 +1,13 @@
 import { useUnifiedStore } from '@/unified/unifiedStore'
-import { usePlaybackControls, getDragPreviewManager, useDragUtils, useDialogs } from '@/unified/composables'
+import {
+  usePlaybackControls,
+  getDragPreviewManager,
+  useDragUtils,
+  useDialogs,
+} from '@/unified/composables'
 import type { UnifiedTimelineItemData } from '@/unified/timelineitem/TimelineItemData'
 import type { MediaType } from '@/unified/mediaitem/types'
-import type { TimelineItemDragData, MediaItemDragData } from '@/unified/types'
+import type { TimelineItemDragData, MediaItemDragData, ConflictInfo } from '@/unified/types'
 import type { Ref } from 'vue'
 import { UnifiedMediaItemQueries } from '@/unified/mediaitem'
 
@@ -13,38 +18,37 @@ import { UnifiedMediaItemQueries } from '@/unified/mediaitem'
 export function useTimelineDragHandling(
   timelineBody: Ref<HTMLElement | undefined>,
   timelineWidth: Ref<number>,
-  pauseForEditing: (reason: string) => void,
-  dragUtils: any,
-  dragPreviewManager: any,
-  dialogs: any,
+  dragPreviewManager: ReturnType<typeof getDragPreviewManager>,
   detectMediaItemConflicts: (
     dropTime: number,
     targetTrackId: string,
     duration: number,
     trackItems: UnifiedTimelineItemData[],
-    excludeItems?: string[]
-  ) => any[],
+    excludeItems?: string[],
+  ) => ConflictInfo[],
   detectTimelineConflicts: (
     dropTime: number,
     targetTrackId: string,
     dragData: TimelineItemDragData,
-    trackItems: UnifiedTimelineItemData[]
-  ) => any[],
+    trackItems: UnifiedTimelineItemData[],
+  ) => ConflictInfo[],
   createMediaClipFromMediaItem: (
     mediaItemId: string,
     startTimeFrames: number,
-    trackId?: string
+    trackId?: string,
   ) => Promise<void>,
   moveSingleItem: (itemId: string, newTimeFrames: number, newTrackId: string) => Promise<void>,
   moveMultipleItems: (
     itemIds: string[],
     newTimeFrames: number,
     newTrackId: string,
-    originalStartTimeFrames: number
-  ) => Promise<void>
+    originalStartTimeFrames: number,
+  ) => Promise<void>,
 ) {
   const unifiedStore = useUnifiedStore()
-
+  const dialogs = useDialogs()
+  const dragUtils = useDragUtils()
+  const { pauseForEditing } = usePlaybackControls()
   /**
    * 处理拖拽悬停
    * @param event 拖拽事件
@@ -104,7 +108,12 @@ export function useTimelineDragHandling(
 
       // 检测素材库拖拽的重叠冲突
       const trackItems = unifiedStore.getTimelineItemsByTrack(targetTrackId)
-      const conflicts = detectMediaItemConflicts(dropTime, targetTrackId, mediaDragData.duration, trackItems)
+      const conflicts = detectMediaItemConflicts(
+        dropTime,
+        targetTrackId,
+        mediaDragData.duration,
+        trackItems,
+      )
       const isConflict = conflicts.length > 0
 
       // 使用统一的拖拽工具创建预览数据，包含状态信息
@@ -169,11 +178,17 @@ export function useTimelineDragHandling(
     // 获取拖拽项目信息
     const draggedItem = unifiedStore.getTimelineItem(currentDragData.itemId)
     if (draggedItem) {
-      const duration = draggedItem.timeRange.timelineEndTime - draggedItem.timeRange.timelineStartTime // 帧数
+      const duration =
+        draggedItem.timeRange.timelineEndTime - draggedItem.timeRange.timelineStartTime // 帧数
 
       // 检测冲突
       const trackItems = unifiedStore.getTimelineItemsByTrack(targetTrackId)
-      const conflicts = detectTimelineConflicts(clipStartTime, targetTrackId, currentDragData, trackItems)
+      const conflicts = detectTimelineConflicts(
+        clipStartTime,
+        targetTrackId,
+        currentDragData,
+        trackItems,
+      )
       const isConflict = conflicts.length > 0
 
       // 获取显示名称
@@ -241,7 +256,7 @@ export function useTimelineDragHandling(
       }
       default:
         console.log('❌ [UnifiedTimeline] 没有检测到有效的拖拽数据')
-        dialogs.showInvalidDragWarning()
+        dialogs.showInfo('拖拽提示', '请先将视频或图片文件导入到素材库，然后从素材库拖拽到时间轴')
         break
     }
 
@@ -288,9 +303,14 @@ export function useTimelineDragHandling(
           text: '文本',
         }
         const mediaTypeLabel = mediaTypeLabels[draggedItem.mediaType as MediaType] || '未知'
-        const trackTypeLabel = targetTrack.type === 'video' ? '视频' : 
-                              targetTrack.type === 'audio' ? '音频' : 
-                              targetTrack.type === 'text' ? '文本' : '未知'
+        const trackTypeLabel =
+          targetTrack.type === 'video'
+            ? '视频'
+            : targetTrack.type === 'audio'
+              ? '音频'
+              : targetTrack.type === 'text'
+                ? '文本'
+                : '未知'
 
         // 根据媒体类型提供合适的建议
         let suggestion = ''
@@ -309,7 +329,7 @@ export function useTimelineDragHandling(
             suggestion = '请将该片段拖拽到兼容的轨道。'
         }
 
-        dialogs.showOperationError(
+        dialogs.showError(
           '拖拽失败',
           `${mediaTypeLabel}片段不能拖拽到${trackTypeLabel}轨道上。\n${suggestion}`,
         )
@@ -375,7 +395,7 @@ export function useTimelineDragHandling(
 
       // 文本类型不支持从素材库拖拽创建
       if (mediaItem.mediaType === 'text') {
-        dialogs.showOperationError(
+        dialogs.showError(
           '拖拽失败',
           '文本内容不能通过拖拽创建。\n请在文本轨道中右键选择"添加文本"。',
         )
@@ -394,9 +414,14 @@ export function useTimelineDragHandling(
           text: '文本',
         }
         const mediaTypeLabel = mediaTypeLabels[mediaItem.mediaType as MediaType] || '未知'
-        const trackTypeLabel = targetTrack.type === 'video' ? '视频' : 
-                              targetTrack.type === 'audio' ? '音频' : 
-                              targetTrack.type === 'text' ? '文本' : '未知'
+        const trackTypeLabel =
+          targetTrack.type === 'video'
+            ? '视频'
+            : targetTrack.type === 'audio'
+              ? '音频'
+              : targetTrack.type === 'text'
+                ? '文本'
+                : '未知'
 
         // 根据媒体类型提供合适的建议
         let suggestion = ''
@@ -412,7 +437,7 @@ export function useTimelineDragHandling(
             suggestion = '请将该素材拖拽到兼容的轨道。'
         }
 
-        dialogs.showOperationError(
+        dialogs.showError(
           '拖拽失败',
           `${mediaTypeLabel}素材不能拖拽到${trackTypeLabel}轨道上。\n${suggestion}`,
         )
@@ -431,7 +456,7 @@ export function useTimelineDragHandling(
       await createMediaClipFromMediaItem(mediaItem.id, dropTime, targetTrackId)
     } catch (error) {
       console.error('Failed to parse media item data:', error)
-      dialogs.showDragDataError()
+      dialogs.showError('拖拽失败', '拖拽数据格式错误')
     }
   }
 

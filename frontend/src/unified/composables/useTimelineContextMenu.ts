@@ -8,6 +8,9 @@ import {
   getMuteIcon,
   MENU_ICONS,
 } from '@/unified/constants/timelineIcons'
+import type { UnifiedTrackType, UnifiedTrackData } from '@/unified/track/TrackTypes'
+import type { UnifiedTimelineItemData } from '@/unified/timelineitem/TimelineItemData'
+import { regenerateThumbnailForUnifiedTimelineItem } from '@/unified/utils/thumbnailGenerator'
 
 /**
  * 菜单项类型定义
@@ -32,7 +35,7 @@ type MenuItem =
  * 提供时间轴右键菜单相关的功能，包括菜单项生成和菜单操作
  */
 export function useTimelineContextMenu(
-  addNewTrack: (type: any, afterTrackId?: string) => Promise<void>,
+  addNewTrack: (type: UnifiedTrackType, afterTrackId?: string) => Promise<void>,
   toggleVisibility: (trackId: string) => Promise<void>,
   toggleMute: (trackId: string) => Promise<void>,
   autoArrangeTrack: (trackId: string) => Promise<void>,
@@ -40,9 +43,9 @@ export function useTimelineContextMenu(
   removeTrack: (trackId: string) => Promise<void>,
   handleTimelineItemRemove: (timelineItemId: string) => Promise<void>,
   createTextAtPosition: (trackId: string, timePosition: number) => Promise<void>,
-  tracks: Ref<any[]>,
-  getClipsForTrack: (trackId: string) => any[],
-  getTimePositionFromContextMenu: (contextMenuOptions: { x: number }) => number
+  tracks: Ref<UnifiedTrackData[]>,
+  getClipsForTrack: (trackId: string) => UnifiedTimelineItemData[],
+  getTimePositionFromContextMenu: (contextMenuOptions: { x: number }) => number,
 ) {
   const unifiedStore = useUnifiedStore()
   const dialogs = useDialogs()
@@ -356,35 +359,7 @@ export function useTimelineContextMenu(
 
         // 只对本地时间轴项目进行缩略图重新生成
         if (timelineItem && mediaItem) {
-          // 尝试使用统一架构的缩略图重新生成功能
-          if ((unifiedStore as any).regenerateThumbnailForTimelineItem) {
-            const newThumbnailUrl = await (unifiedStore as any).regenerateThumbnailForTimelineItem(
-              timelineItem,
-              mediaItem,
-            )
-            if (newThumbnailUrl) {
-              console.log('✅ 缩略图重新生成成功')
-            }
-          } else {
-            // 回退到导入缩略图生成器
-            const { generateThumbnailForUnifiedMediaItem } = await import(
-              '../utils/thumbnailGenerator'
-            )
-            const newThumbnailUrl = await generateThumbnailForUnifiedMediaItem(mediaItem)
-
-            if (newThumbnailUrl) {
-              // 更新缩略图URL（如果统一架构支持）
-              if ('thumbnailUrl' in timelineItem) {
-                // 清理旧的缩略图URL
-                if ((timelineItem as any).thumbnailUrl) {
-                  URL.revokeObjectURL((timelineItem as any).thumbnailUrl)
-                }
-                // 更新缩略图URL
-                ;(timelineItem as any).thumbnailUrl = newThumbnailUrl
-              }
-              console.log('✅ 缩略图重新生成成功')
-            }
-          }
+          await regenerateThumbnailForUnifiedTimelineItem(timelineItem, mediaItem)
         }
       } catch (error) {
         console.error('❌ 重新生成缩略图失败:', error)
@@ -435,7 +410,7 @@ export function useTimelineContextMenu(
     contextMenuTarget,
     contextMenuOptions,
     currentMenuItems,
-    
+
     // 方法
     handleContextMenu,
     handleTimelineItemContextMenu,

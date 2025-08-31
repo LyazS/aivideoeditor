@@ -64,24 +64,6 @@ export function useDialogs() {
   }
 
   /**
-   * 文件类型验证提示
-   * @param acceptedTypes 接受的文件类型描述
-   */
-  function showFileTypeError(acceptedTypes: string = '视频或图片文件'): void {
-    showError('文件类型错误', `请选择${acceptedTypes}`)
-  }
-
-  /**
-   * 操作失败提示
-   * @param operation 操作名称
-   * @param error 错误信息
-   */
-  function showOperationError(operation: string, error?: string): void {
-    const message = error ? `${operation}失败：${error}` : `${operation}失败`
-    showError('操作失败', message)
-  }
-
-  /**
    * 删除确认对话框
    * @param itemName 要删除的项目名称
    * @param itemType 项目类型（如：素材、轨道等）
@@ -128,26 +110,6 @@ export function useDialogs() {
     return confirm('确认删除素材', message)
   }
 
-  /**
-   * 最少轨道数量限制提示
-   */
-  function showMinTrackWarning(): void {
-    showWarning('无法删除', '至少需要保留一个轨道')
-  }
-
-  /**
-   * 拖拽数据格式错误提示
-   */
-  function showDragDataError(): void {
-    showError('拖拽失败', '拖拽数据格式错误')
-  }
-
-  /**
-   * 无效拖拽提示
-   */
-  function showInvalidDragWarning(): void {
-    showInfo('拖拽提示', '请先将视频或图片文件导入到素材库，然后从素材库拖拽到时间轴')
-  }
 
   return {
     // 基础提示方法
@@ -157,12 +119,6 @@ export function useDialogs() {
     showSuccess,
     confirm,
 
-    // 专用提示方法
-    showFileTypeError,
-    showOperationError,
-    showMinTrackWarning,
-    showDragDataError,
-    showInvalidDragWarning,
 
     // 确认对话框方法
     confirmDelete,
