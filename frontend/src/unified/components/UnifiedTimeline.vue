@@ -457,14 +457,14 @@ onUnmounted(() => {
 .mark-line {
   width: 1px;
   background-color: var(--color-border-secondary);
-  height: 20px;
-  margin-top: 20px;
+  height: 10px;
+  margin-top: 30px;
 }
 
 .mark-line.major {
   background-color: var(--color-text-hint);
-  height: 30px;
-  margin-top: 10px;
+  height: 20px;
+  margin-top: 20px;
 }
 
 .mark-label {
