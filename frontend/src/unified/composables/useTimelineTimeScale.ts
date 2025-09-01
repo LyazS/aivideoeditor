@@ -5,6 +5,113 @@ import { framesToTimecode } from '@/unified/utils/timeUtils'
 import { useTimelineWheelHandler, TimelineWheelSource } from './useTimelineWheelHandler'
 
 /**
+ * 时间刻度层级接口
+ */
+interface TimeScaleLevel {
+  level: number;                    // 层级编号
+  majorInterval: number;           // 主刻度间隔（帧数）
+  minorInterval: number;           // 次刻度间隔（帧数）
+  unit: 'minutes' | 'seconds' | 'frames';  // 单位类型
+  displayName: string;             // 显示名称
+}
+
+/**
+ * 时间刻度层级配置
+ * 按照设计文档定义15个层级
+ */
+const TIME_SCALE_LEVELS: TimeScaleLevel[] = [
+  // 分钟级别 - 每个主刻度间隔有10个次刻度间隔
+  { level: 1, majorInterval: 54000, minorInterval: 5400, unit: 'minutes', displayName: '30分钟' },   // 30分钟/3分钟
+  { level: 2, majorInterval: 18000, minorInterval: 1800, unit: 'minutes', displayName: '10分钟' },   // 10分钟/1分钟
+  { level: 3, majorInterval: 9000, minorInterval: 900, unit: 'minutes', displayName: '5分钟' },    // 5分钟/0.5分钟
+  { level: 4, majorInterval: 5400, minorInterval: 540, unit: 'minutes', displayName: '3分钟' },      // 3分钟/0.3分钟
+  { level: 5, majorInterval: 3600, minorInterval: 360, unit: 'minutes', displayName: '2分钟' },       // 2分钟/0.2分钟
+  { level: 6, majorInterval: 1800, minorInterval: 180, unit: 'minutes', displayName: '1分钟' },       // 1分钟/0.1分钟
+  
+  // 秒级别 - 每个主刻度间隔有10个次刻度间隔
+  { level: 7, majorInterval: 900, minorInterval: 90, unit: 'seconds', displayName: '30秒' },         // 30秒/3秒
+  { level: 8, majorInterval: 300, minorInterval: 30, unit: 'seconds', displayName: '10秒' },        // 10秒/1秒
+  { level: 9, majorInterval: 150, minorInterval: 15, unit: 'seconds', displayName: '5秒' },          // 5秒/0.5秒
+  { level: 10, majorInterval: 90, minorInterval: 9, unit: 'seconds', displayName: '3秒' },          // 3秒/0.3秒
+  { level: 11, majorInterval: 60, minorInterval: 6, unit: 'seconds', displayName: '2秒' },           // 2秒/0.2秒
+  { level: 12, majorInterval: 30, minorInterval: 3, unit: 'seconds', displayName: '1秒' },         // 1秒/0.1秒
+  
+  // 帧级别 - 保持不变
+  { level: 13, majorInterval: 15, minorInterval: 3, unit: 'frames', displayName: '15帧' },           // 15帧/5帧
+  { level: 14, majorInterval: 10, minorInterval: 2, unit: 'frames', displayName: '10帧' },          // 10帧/5帧
+  { level: 15, majorInterval: 5, minorInterval: 1, unit: 'frames', displayName: '5帧' },            // 5帧/1帧
+];
+
+/**
+ * 选择时间刻度层级
+ * 根据缩放级别选择合适的时间刻度层级
+ * 支持 zoomLevel 范围 0.1 - 100
+ */
+function selectTimeScaleLevel(zoomLevel: number): TimeScaleLevel {
+  // 将 zoomLevel (0.1 - 100) 映射到层级 (1 - 15)
+  // 使用对数缩放，将 0.1-100 映射到 0-3 范围
+  const normalizedZoom = Math.log10(zoomLevel) + 1; // 0.1->-1, 1->0, 10->1, 100->2
+  const levelIndex = Math.floor((normalizedZoom / 3) * 14); // 映射到 0-14 范围
+  const clampedIndex = Math.max(0, Math.min(14, levelIndex));
+  
+  const selectedLevel = TIME_SCALE_LEVELS[clampedIndex];
+  
+  return selectedLevel;
+}
+
+/**
+ * 计算刻度间隔
+ * 根据设计文档的固定像素间隔原则计算主次刻度的像素间隔
+ * 优化：使用单一循环替代两个while循环，修正索引计算
+ */
+function calculateScaleIntervals(
+  containerWidth: number,
+  totalDurationFrames: number,
+  zoomLevel: number
+): {
+  currentLevel: TimeScaleLevel;
+  majorIntervalPixels: number;
+  minorIntervalPixels: number;
+} {
+  const pixelsPerFrame = (containerWidth * zoomLevel) / totalDurationFrames;
+  let currentLevel = selectTimeScaleLevel(zoomLevel);
+  
+  // 修正索引计算：数组索引 = 层级编号 - 1
+  let currentIndex = currentLevel.level - 1;
+  
+  // 计算主刻度像素间隔
+  let majorIntervalPixels = currentLevel.majorInterval * pixelsPerFrame;
+  
+  // 优化：使用单一循环处理层级调整，避免两个循环互相干扰
+  while (true) {
+    // 如果间隔超过200px且可以向下调整
+    if (majorIntervalPixels > 200 && currentIndex < TIME_SCALE_LEVELS.length - 1) {
+      currentIndex++;
+    }
+    // 如果间隔小于100px且可以向上调整
+    else if (majorIntervalPixels < 100 && currentIndex > 0) {
+      currentIndex--;
+    }
+    // 如果间隔在合理范围内或无法继续调整
+    else {
+      break;
+    }
+    
+    // 更新当前层级和像素间隔
+    currentLevel = TIME_SCALE_LEVELS[currentIndex];
+    majorIntervalPixels = currentLevel.majorInterval * pixelsPerFrame;
+  }
+  
+  const minorIntervalPixels = currentLevel.minorInterval * pixelsPerFrame;
+  
+  return {
+    currentLevel,
+    majorIntervalPixels,
+    minorIntervalPixels
+  };
+}
+
+/**
  * 时间刻度标记接口
  * 用于时间轴刻度显示
  */
@@ -31,63 +138,17 @@ export function useTimelineTimeScale(scaleContainer: Ref<HTMLElement | undefined
 
   /**
    * 计算时间刻度标记（基于帧数）
+   * 使用新的层级系统实现固定像素间隔
    */
   const timeMarks = computed((): TimeMark[] => {
     const marks: TimeMark[] = []
     const durationFrames = unifiedStore.totalDurationFrames
-    const pixelsPerFrame = (containerWidth.value * unifiedStore.zoomLevel) / durationFrames
-
-    // 根据缩放级别决定刻度间隔（基于帧数）
-    let majorIntervalFrames = 300 // 主刻度间隔（帧）- 默认10秒
-    let minorIntervalFrames = 30 // 次刻度间隔（帧）- 默认1秒
-
-    // 在高缩放级别下，显示更精细的刻度
-    let isFrameLevel = false
-
-    // 基于每帧像素数决定刻度间隔
-    if (pixelsPerFrame >= 3.33) {
-      // 相当于100 pixels/second
-      // 帧级别显示
-      majorIntervalFrames = 30 // 1秒间隔
-      minorIntervalFrames = 1 // 每帧
-      isFrameLevel = true
-    } else if (pixelsPerFrame >= 1.67) {
-      // 相当于50 pixels/second
-      // 每0.1秒显示刻度
-      majorIntervalFrames = 30 // 1秒
-      minorIntervalFrames = 3 // 0.1秒
-    } else if (pixelsPerFrame >= 0.67) {
-      // 相当于20 pixels/second
-      // 每0.5秒显示刻度
-      majorIntervalFrames = 150 // 5秒
-      minorIntervalFrames = 15 // 0.5秒
-    } else if (pixelsPerFrame >= 0.33) {
-      // 相当于10 pixels/second
-      majorIntervalFrames = 300 // 10秒
-      minorIntervalFrames = 30 // 1秒
-    } else if (pixelsPerFrame >= 0.17) {
-      // 相当于5 pixels/second
-      majorIntervalFrames = 900 // 30秒
-      minorIntervalFrames = 150 // 5秒
-    } else if (pixelsPerFrame >= 0.067) {
-      // 相当于2 pixels/second
-      majorIntervalFrames = 1800 // 60秒
-      minorIntervalFrames = 300 // 10秒
-    } else if (pixelsPerFrame >= 0.033) {
-      // 相当于1 pixel/second
-      // 极低缩放：每2分钟主刻度，30秒次刻度
-      majorIntervalFrames = 3600 // 120秒
-      minorIntervalFrames = 900 // 30秒
-    } else if (pixelsPerFrame >= 0.017) {
-      // 相当于0.5 pixels/second
-      // 超低缩放：每5分钟主刻度，1分钟次刻度
-      majorIntervalFrames = 9000 // 300秒
-      minorIntervalFrames = 1800 // 60秒
-    } else {
-      // 最低缩放：每10分钟主刻度，2分钟次刻度
-      majorIntervalFrames = 18000 // 600秒
-      minorIntervalFrames = 3600 // 120秒
-    }
+    const { currentLevel, majorIntervalPixels, minorIntervalPixels } =
+      calculateScaleIntervals(
+        containerWidth.value,
+        durationFrames,
+        unifiedStore.zoomLevel
+      )
 
     // 计算可见帧数范围
     const maxVisibleDurationFrames = unifiedStore.maxVisibleDurationFrames
@@ -99,48 +160,25 @@ export function useTimelineTimeScale(scaleContainer: Ref<HTMLElement | undefined
       maxVisibleDurationFrames,
     )
 
-    // 生成刻度标记（基于帧数范围）
+    // 对齐到刻度间隔
+    const alignedStart = Math.floor(startFrames / currentLevel.minorInterval) * currentLevel.minorInterval;
+    const alignedEnd = Math.ceil(endFrames / currentLevel.minorInterval) * currentLevel.minorInterval;
 
-    // 计算刻度线的最小像素间距，确保不会过于密集
-    const minPixelSpacing = 15 // 最小15像素间距
-    const actualMinorPixelSpacing = minorIntervalFrames * pixelsPerFrame
-
-    // 如果计算出的间距太小，动态调整间隔
-    let adjustedMinorIntervalFrames = minorIntervalFrames
-    let adjustedMajorIntervalFrames = majorIntervalFrames
-
-    if (actualMinorPixelSpacing < minPixelSpacing) {
-      const scaleFactor = Math.ceil(minPixelSpacing / actualMinorPixelSpacing)
-      adjustedMinorIntervalFrames = minorIntervalFrames * scaleFactor
-      adjustedMajorIntervalFrames = majorIntervalFrames * scaleFactor
-    }
-
-    // 重新计算起始和结束标记（基于帧数）
-    const adjustedStartFrames =
-      Math.floor(startFrames / adjustedMinorIntervalFrames) * adjustedMinorIntervalFrames
-    const adjustedEndFrames =
-      Math.ceil(endFrames / adjustedMinorIntervalFrames) * adjustedMinorIntervalFrames
-
-    // 生成帧数刻度标记
-    for (
-      let frames = adjustedStartFrames;
-      frames <= adjustedEndFrames;
-      frames += adjustedMinorIntervalFrames
-    ) {
-      if (frames < 0) continue
-
-      const isMajor = Math.abs(frames % adjustedMajorIntervalFrames) < 0.5 // 使用小的容差来处理整数精度问题
-      const position = unifiedStore.frameToPixel(frames, containerWidth.value)
-
-      // 只添加在可见范围内的刻度
+    // 生成刻度标记
+    for (let frames = alignedStart; frames <= alignedEnd; frames += currentLevel.minorInterval) {
+      if (frames < 0) continue;
+      
+      const isMajor = (frames % currentLevel.majorInterval) === 0;
+      const position = unifiedStore.frameToPixel(frames, containerWidth.value);
+      
+      // 只添加可见范围内的刻度
       if (position >= -50 && position <= containerWidth.value + 50) {
-        // 直接使用帧数
         marks.push({
-          time: frames, // 帧数
+          time: frames,
           position,
           isMajor,
-          isFrame: isFrameLevel && Math.abs(frames % adjustedMinorIntervalFrames) < 0.5,
-        })
+          isFrame: currentLevel.unit === 'frames'
+        });
       }
     }
 
@@ -149,9 +187,49 @@ export function useTimelineTimeScale(scaleContainer: Ref<HTMLElement | undefined
 
   /**
    * 格式化时间显示
+   * 根据当前层级显示不同的时间格式
+   * 如果小时为0则不显示小时部分，但分钟总是显示
    */
   function formatTime(frames: number): string {
-    return framesToTimecode(frames)
+    const { currentLevel } = calculateScaleIntervals(
+      containerWidth.value,
+      unifiedStore.totalDurationFrames,
+      unifiedStore.zoomLevel
+    );
+    
+    const totalSeconds = Math.floor(frames / 30); // 假设30fps
+    
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    const remainingFrames = frames % 30;
+    
+    // 格式化数字为两位数
+    const formatNumber = (num: number) => num.toString().padStart(2, '0');
+    
+    // 根据单位类型决定要显示的时间部分
+    const timeParts: string[] = [];
+    
+    // 如果有小时且小时不为0，在分钟前面添加小时
+    if (hours > 0) {
+      timeParts.push(formatNumber(hours));
+      timeParts.push(':');
+    }
+    // 总是显示分+秒
+    timeParts.push(formatNumber(minutes));
+      timeParts.push(':');
+    timeParts.push(formatNumber(seconds));
+
+    // 如果有帧数，在秒前面添加帧数
+    if (currentLevel.unit === 'frames') {
+      timeParts.push('.');
+      timeParts.push(formatNumber(remainingFrames));
+      // timeParts.push('f');
+    }
+    
+    
+    // 将数组中的所有元素连接成一个字符串
+    return timeParts.join('');
   }
 
   /**
