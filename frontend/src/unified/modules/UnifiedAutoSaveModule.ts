@@ -260,7 +260,7 @@ export function createUnifiedAutoSaveModule(
       () => dataWatchers.timelineItems.value,
       () => {
         console.log('🔄 [AutoSave] 检测到时间轴项目变化')
-        triggerAutoSave({ contentChanged: true })
+        triggerAutoSave({ configChanged: true, contentChanged: true })
       },
       { deep: true },
     )

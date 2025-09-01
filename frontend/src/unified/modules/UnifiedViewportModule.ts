@@ -94,12 +94,12 @@ export function createUnifiedViewportModule(
     const clampedZoom = Math.max(minZoom, Math.min(newZoomLevel, maxZoom))
 
     // 只在达到缩放限制时输出警告信息
-    if (newZoomLevel < minZoom && contentEndTimeFrames.value > 0) {
-      console.warn('⚠️ 已达到最小缩放级别限制')
-    }
-    if (newZoomLevel > maxZoom) {
-      console.warn('⚠️ 已达到最大缩放级别限制')
-    }
+    // if (newZoomLevel < minZoom && contentEndTimeFrames.value > 0) {
+    //   console.warn('⚠️ 已达到最小缩放级别限制')
+    // }
+    // if (newZoomLevel > maxZoom) {
+    //   console.warn('⚠️ 已达到最大缩放级别限制')
+    // }
 
     if (zoomLevel.value !== clampedZoom) {
       zoomLevel.value = clampedZoom
