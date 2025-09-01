@@ -27,3 +27,6 @@ export { useUnifiedKeyframeUI } from './useUnifiedKeyframeUI'
 
 // 重新导出 useTimelineTimeScale 函数
 export { useTimelineTimeScale } from './useTimelineTimeScale'
+
+// 重新导出 useTimelineWheelHandler 函数
+export { useTimelineWheelHandler } from './useTimelineWheelHandler'

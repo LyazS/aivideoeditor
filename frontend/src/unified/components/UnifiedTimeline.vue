@@ -410,6 +410,7 @@ onMounted(() => {
   window.addEventListener('keydown', handleKeyDown)
 
   if (scaleContainer.value) {
+    // 现在 handleTimeScaleWheel 是从 composable 返回的函数，直接使用即可
     scaleContainer.value.addEventListener('wheel', handleTimeScaleWheel, { passive: false })
   }
 })

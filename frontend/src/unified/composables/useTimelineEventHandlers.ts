@@ -1,6 +1,7 @@
 import { useUnifiedStore } from '@/unified/unifiedStore'
 import { usePlaybackControls } from '@/unified/composables'
 import type { Ref } from 'vue'
+import { useTimelineWheelHandler, TimelineWheelSource } from './useTimelineWheelHandler'
 
 /**
  * 时间轴事件处理模块
@@ -43,56 +44,6 @@ export function useTimelineEventHandlers(
     }
   }
 
-  /**
-   * 处理滚轮事件
-   * 支持Alt+滚轮缩放、Shift+滚轮水平滚动
-   */
-  function handleWheel(event: WheelEvent) {
-    if (event.altKey) {
-      // Alt + 滚轮：缩放
-      event.preventDefault()
-      const zoomFactor = 1.1
-      const rect = timelineBody.value?.getBoundingClientRect()
-      if (!rect) {
-        console.error('❌ 无法获取时间轴主体边界')
-        return
-      }
-
-      // 获取鼠标在时间轴上的位置（减去轨道控制区域的150px）
-      const mouseX = event.clientX - rect.left - 150
-      const mouseFrames = unifiedStore.pixelToFrame(mouseX, timelineWidth.value)
-
-      if (event.deltaY < 0) {
-        // 向上滚动：放大
-        unifiedStore.zoomIn(zoomFactor, timelineWidth.value)
-      } else {
-        // 向下滚动：缩小
-        unifiedStore.zoomOut(zoomFactor, timelineWidth.value)
-      }
-
-      // 调整滚动偏移量，使鼠标位置保持在相同的帧数点
-      const newMousePixel = unifiedStore.frameToPixel(mouseFrames, timelineWidth.value)
-      const offsetAdjustment = newMousePixel - mouseX
-      const newScrollOffset = unifiedStore.scrollOffset + offsetAdjustment
-
-      unifiedStore.setScrollOffset(newScrollOffset, timelineWidth.value)
-    } else if (event.shiftKey) {
-      // Shift + 滚轮：水平滚动
-      event.preventDefault()
-      const scrollAmount = 50
-
-      if (event.deltaX < 0) {
-        // 向上滚动：向左滚动
-        unifiedStore.scrollLeft(scrollAmount, timelineWidth.value)
-      } else {
-        // 向下滚动：向右滚动
-        unifiedStore.scrollRight(scrollAmount, timelineWidth.value)
-      }
-    } else {
-      // 普通滚轮：垂直滚动（让浏览器处理默认的滚动行为）
-      // 不阻止默认行为，允许正常的垂直滚动
-    }
-  }
 
   /**
    * 处理时间轴点击事件
@@ -186,6 +137,15 @@ export function useTimelineEventHandlers(
       }
     }
   }
+
+  // 使用统一的滚轮处理
+  const { handleWheel } = useTimelineWheelHandler(
+    timelineBody,
+    timelineWidth,
+    {
+      source: TimelineWheelSource.TIMELINE_BODY // 时间轴主体区域
+    }
+  )
 
   return {
     // 方法

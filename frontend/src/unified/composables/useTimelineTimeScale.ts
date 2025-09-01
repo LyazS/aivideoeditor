@@ -2,6 +2,7 @@ import { ref, computed, type Ref } from 'vue'
 import { useUnifiedStore } from '@/unified/unifiedStore'
 import { calculateVisibleFrameRange } from '@/unified/utils/coordinateUtils'
 import { framesToTimecode } from '@/unified/utils/timeUtils'
+import { useTimelineWheelHandler, TimelineWheelSource } from './useTimelineWheelHandler'
 
 /**
  * 时间刻度标记接口
@@ -250,51 +251,15 @@ export function useTimelineTimeScale(scaleContainer: Ref<HTMLElement | undefined
     handleGlobalMouseUp()
   }
 
-  /**
-   * 处理时间刻度区域的滚轮事件
-   */
-  function handleTimeScaleWheel(event: WheelEvent) {
-    event.preventDefault()
 
-    if (event.altKey) {
-      // Alt + 滚轮：缩放
-      const zoomFactor = 1.2 // 增加缩放因子，让缩放更快
-      const rect = scaleContainer.value?.getBoundingClientRect()
-      if (!rect) return
-
-      // 获取鼠标在时间轴上的位置（使用帧数版本）
-      const mouseX = event.clientX - rect.left
-      const mouseFrames = unifiedStore.pixelToFrame(mouseX, containerWidth.value)
-
-      // 缩放操作（精简调试信息）
-
-      if (event.deltaY < 0) {
-        // 向上滚动：放大
-        unifiedStore.zoomIn(zoomFactor, containerWidth.value)
-      } else {
-        // 向下滚动：缩小
-        unifiedStore.zoomOut(zoomFactor, containerWidth.value)
-      }
-
-      // 调整滚动偏移量，使鼠标位置保持在相同的帧数点
-      const newMousePixel = unifiedStore.frameToPixel(mouseFrames, containerWidth.value)
-      const offsetAdjustment = newMousePixel - mouseX
-      const newScrollOffset = unifiedStore.scrollOffset + offsetAdjustment
-
-      unifiedStore.setScrollOffset(newScrollOffset, containerWidth.value)
-    } else if (event.shiftKey) {
-      // Shift + 滚轮：水平滚动
-      const scrollAmount = event.deltaX
-
-      if (event.deltaX < 0) {
-        // 向上滚动：向左滚动
-        unifiedStore.scrollLeft(-scrollAmount, containerWidth.value)
-      } else {
-        // 向下滚动：向右滚动
-        unifiedStore.scrollRight(scrollAmount, containerWidth.value)
-      }
+  // 使用统一的滚轮处理
+  const { handleWheel: handleTimeScaleWheel } = useTimelineWheelHandler(
+    scaleContainer,
+    containerWidth,
+    {
+      source: TimelineWheelSource.TIME_SCALE // 时间刻度区域
     }
-  }
+  )
 
   return {
     // 状态
