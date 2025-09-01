@@ -1,4 +1,5 @@
 import { ref, watch, type Ref } from 'vue'
+import { debounce, throttle } from 'lodash'
 
 /**
  * 自动保存配置
@@ -79,9 +80,9 @@ export function createUnifiedAutoSaveModule(
     isDirty: false,
   })
 
-  // 定时器引用
-  let debounceTimer: number | null = null
-  let throttleTimer: number | null = null
+  // lodash 节流防抖函数引用
+  let debouncedSave: ReturnType<typeof debounce> | null = null
+  let throttledSave: ReturnType<typeof throttle> | null = null
   let retryCount = 0
 
   // 监听器清理函数数组
@@ -90,17 +91,34 @@ export function createUnifiedAutoSaveModule(
   // ==================== 内部方法 ====================
 
   /**
+   * 初始化节流防抖函数
+   */
+  function initializeDebounceThrottle() {
+    // 清除现有的函数
+    clearTimers()
+
+    // 创建新的防抖函数
+    debouncedSave = debounce((saveOptions?: { configChanged?: boolean; contentChanged?: boolean }) => {
+      performSave(saveOptions)
+    }, finalConfig.debounceTime)
+
+    // 创建新的节流函数
+    throttledSave = throttle((saveOptions?: { configChanged?: boolean; contentChanged?: boolean }) => {
+      if (autoSaveState.value.isDirty) {
+        console.log('⏰ [AutoSave] 节流触发强制保存')
+        performSave(saveOptions)
+      }
+    }, finalConfig.throttleTime, { leading: false, trailing: true })
+  }
+
+  /**
    * 清除所有定时器
    */
   function clearTimers() {
-    if (debounceTimer) {
-      clearTimeout(debounceTimer)
-      debounceTimer = null
-    }
-    if (throttleTimer) {
-      clearTimeout(throttleTimer)
-      throttleTimer = null
-    }
+    debouncedSave?.cancel()
+    throttledSave?.cancel()
+    debouncedSave = null
+    throttledSave = null
   }
 
   /**
@@ -163,27 +181,11 @@ export function createUnifiedAutoSaveModule(
     // 标记为有未保存的更改
     autoSaveState.value.isDirty = true
 
-    // 清除之前的防抖定时器
-    if (debounceTimer) {
-      clearTimeout(debounceTimer)
-    }
+    // 使用防抖函数（传递 options 参数）
+    debouncedSave?.(options)
 
-    // 设置防抖定时器
-    debounceTimer = setTimeout(() => {
-      performSave(options)
-    }, finalConfig.debounceTime)
-
-    // 如果没有节流定时器，设置一个
-    if (!throttleTimer) {
-      throttleTimer = setTimeout(() => {
-        // 强制保存（节流）
-        if (autoSaveState.value.isDirty) {
-          console.log('⏰ [AutoSave] 节流触发强制保存')
-          performSave(options)
-        }
-        throttleTimer = null
-      }, finalConfig.throttleTime)
-    }
+    // 使用节流函数（传递 options 参数）
+    throttledSave?.(options)
   }
 
   // ==================== 公共方法 ====================
@@ -193,6 +195,7 @@ export function createUnifiedAutoSaveModule(
    */
   function enableAutoSave() {
     autoSaveState.value.isEnabled = true
+    initializeDebounceThrottle() // 重新初始化节流防抖函数
     setupWatchers() // 重新设置监听器
     console.log('✅ [AutoSave] 自动保存已启用')
   }
@@ -259,8 +262,10 @@ export function createUnifiedAutoSaveModule(
     const unwatchTimelineItems = watch(
       () => dataWatchers.timelineItems.value,
       () => {
-        console.log('🔄 [AutoSave] 检测到时间轴项目变化')
-        triggerAutoSave({ configChanged: true, contentChanged: true })
+        if (autoSaveState.value.isEnabled) {
+          console.log('🔄 [AutoSave] 检测到时间轴项目变化')
+          triggerAutoSave({ configChanged: true, contentChanged: true })
+        }
       },
       { deep: true },
     )
@@ -270,8 +275,10 @@ export function createUnifiedAutoSaveModule(
     const unwatchTracks = watch(
       () => dataWatchers.tracks.value,
       () => {
-        console.log('🔄 [AutoSave] 检测到轨道变化')
-        triggerAutoSave({ contentChanged: true })
+        if (autoSaveState.value.isEnabled) {
+          console.log('🔄 [AutoSave] 检测到轨道变化')
+          triggerAutoSave({ contentChanged: true })
+        }
       },
       { deep: true },
     )
@@ -281,8 +288,10 @@ export function createUnifiedAutoSaveModule(
     const unwatchMediaItems = watch(
       () => dataWatchers.mediaItems.value,
       () => {
-        console.log('🔄 [AutoSave] 检测到媒体项目变化')
-        triggerAutoSave({ contentChanged: true })
+        if (autoSaveState.value.isEnabled) {
+          console.log('🔄 [AutoSave] 检测到媒体项目变化')
+          triggerAutoSave({ contentChanged: true })
+        }
       },
       { deep: true },
     )
@@ -292,8 +301,10 @@ export function createUnifiedAutoSaveModule(
     const unwatchProjectConfig = watch(
       () => dataWatchers.projectConfig.value,
       () => {
-        console.log('🔄 [AutoSave] 检测到项目配置变化')
-        triggerAutoSave({ configChanged: true })
+        if (autoSaveState.value.isEnabled) {
+          console.log('🔄 [AutoSave] 检测到项目配置变化')
+          triggerAutoSave({ configChanged: true })
+        }
       },
       { deep: true },
     )
@@ -310,8 +321,13 @@ export function createUnifiedAutoSaveModule(
 
   // ==================== 初始化 ====================
 
-  // 初始化监听器
-  setupWatchers()
+  // 初始化节流防抖函数
+  initializeDebounceThrottle()
+
+  // 只有在启用状态下才设置监听器
+  if (finalConfig.enabled && autoSaveState.value.isEnabled) {
+    setupWatchers()
+  }
 
   // ==================== 导出接口 ====================
 
