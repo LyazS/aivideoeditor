@@ -233,6 +233,7 @@ import { unifiedProjectManager } from '@/unified/utils/projectManager'
 import type { UnifiedProjectConfig } from '@/unified/project'
 import { ContextMenu, ContextMenuItem } from '@imengyu/vue3-context-menu'
 import EditProjectDialog from '../components/EditProjectDialog.vue'
+import { useProjectThumbnailService } from '@/unified/composables/useProjectThumbnailService'
 
 const router = useRouter()
 
@@ -363,12 +364,55 @@ async function loadProjects() {
 
   try {
     isLoading.value = true
-    projects.value = await unifiedProjectManager.listProjects()
+    const projectList = await unifiedProjectManager.listProjects()
+    
+    // 为每个项目加载缩略图
+    const projectsWithThumbnails = await Promise.all(
+      projectList.map(async (project) => {
+        try {
+          // 尝试加载缩略图
+          const thumbnailService = useProjectThumbnailService()
+          const thumbnailUrl = await thumbnailService.getThumbnailUrl(project.id)
+          
+          return {
+            ...project,
+            thumbnail: thumbnailUrl
+          }
+        } catch (error) {
+          console.warn(`无法加载项目 ${project.name} 的缩略图:`, error)
+          // 如果缩略图加载失败，保持原项目数据
+          return project
+        }
+      })
+    )
+    
+    projects.value = projectsWithThumbnails
   } catch (error) {
     console.error('加载项目列表失败:', error)
     // 可以添加错误提示
   } finally {
     isLoading.value = false
+  }
+}
+
+/**
+ * 加载单个项目的缩略图
+ */
+async function loadProjectThumbnail(projectId: string, projectName: string) {
+  try {
+    const thumbnailService = useProjectThumbnailService()
+    const thumbnailUrl = await thumbnailService.getThumbnailUrl(projectId)
+    
+    // 更新项目的缩略图URL
+    const projectIndex = projects.value.findIndex(p => p.id === projectId)
+    if (projectIndex !== -1) {
+      projects.value[projectIndex].thumbnail = thumbnailUrl
+    }
+    
+    return thumbnailUrl
+  } catch (error) {
+    console.warn(`加载项目缩略图失败: ${projectName}`, error)
+    throw error
   }
 }
 

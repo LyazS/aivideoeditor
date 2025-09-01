@@ -106,6 +106,8 @@ function createThumbnailCanvas(
 export async function generateVideoThumbnail(
   mp4Clip: MP4Clip,
   timePosition?: number,
+  containerWidth: number = 100,
+  containerHeight: number = 60,
 ): Promise<HTMLCanvasElement> {
   let clonedClip: MP4Clip | null = null
 
@@ -143,7 +145,7 @@ export async function generateVideoThumbnail(
     }
 
     // 计算缩略图尺寸
-    const sizeInfo = calculateThumbnailSize(meta.width, meta.height)
+    const sizeInfo = calculateThumbnailSize(meta.width, meta.height, containerWidth, containerHeight)
     console.log('📐 [ThumbnailGenerator] 缩略图尺寸:', {
       original: `${meta.width}x${meta.height}`,
       container: `${sizeInfo.containerWidth}x${sizeInfo.containerHeight}`,
@@ -180,7 +182,11 @@ export async function generateVideoThumbnail(
  * @param imgClip ImgClip实例
  * @returns Promise<HTMLCanvasElement>
  */
-export async function generateImageThumbnail(imgClip: ImgClip): Promise<HTMLCanvasElement> {
+export async function generateImageThumbnail(
+  imgClip: ImgClip,
+  containerWidth: number = 100,
+  containerHeight: number = 60,
+): Promise<HTMLCanvasElement> {
   let clonedClip: ImgClip | null = null
 
   try {
@@ -212,7 +218,7 @@ export async function generateImageThumbnail(imgClip: ImgClip): Promise<HTMLCanv
     }
 
     // 计算缩略图尺寸
-    const sizeInfo = calculateThumbnailSize(meta.width, meta.height)
+    const sizeInfo = calculateThumbnailSize(meta.width, meta.height, containerWidth, containerHeight)
     console.log('📐 [ThumbnailGenerator] 缩略图尺寸:', {
       original: `${meta.width}x${meta.height}`,
       container: `${sizeInfo.containerWidth}x${sizeInfo.containerHeight}`,
@@ -276,17 +282,19 @@ export function canvasToBlob(canvas: HTMLCanvasElement, quality: number = 0.8): 
 export async function generateThumbnailForUnifiedMediaItem(
   mediaItem: UnifiedMediaItemData,
   timePosition?: number,
+  containerWidth: number = 100,
+  containerHeight: number = 60,
 ): Promise<string | undefined> {
   try {
     let canvas: HTMLCanvasElement
 
     if (UnifiedMediaItemQueries.isVideo(mediaItem) && mediaItem.webav?.mp4Clip) {
       console.log('🎬 生成视频缩略图...')
-      canvas = await generateVideoThumbnail(mediaItem.webav.mp4Clip, timePosition)
+      canvas = await generateVideoThumbnail(mediaItem.webav.mp4Clip, timePosition, containerWidth, containerHeight)
       console.log('✅ 视频缩略图生成成功')
     } else if (UnifiedMediaItemQueries.isImage(mediaItem) && mediaItem.webav?.imgClip) {
       console.log('🖼️ 生成图片缩略图...')
-      canvas = await generateImageThumbnail(mediaItem.webav.imgClip)
+      canvas = await generateImageThumbnail(mediaItem.webav.imgClip, containerWidth, containerHeight)
       console.log('✅ 图片缩略图生成成功')
     } else if (UnifiedMediaItemQueries.isAudio(mediaItem)) {
       console.log('🎵 音频不需要缩略图，跳过生成')
@@ -309,16 +317,22 @@ export async function generateThumbnailForUnifiedMediaItem(
  * 根据TimelineItem的时间范围重新生成缩略图
  * @param timelineItem 统一时间轴项目
  * @param mediaItem 对应的统一媒体项目
+ * @param containerWidth 容器宽度（可选，默认100px）
+ * @param containerHeight 容器高度（可选，默认60px）
  * @returns Promise<string | undefined> 新的缩略图URL
  */
 export async function regenerateThumbnailForUnifiedTimelineItem(
   timelineItem: UnifiedTimelineItemData,
   mediaItem: UnifiedMediaItemData,
+  containerWidth: number = 100,
+  containerHeight: number = 60,
 ): Promise<string | undefined> {
   try {
     console.log('🔄 [ThumbnailGenerator] 重新生成时间轴clip缩略图:', {
       timelineItemId: timelineItem.id,
       mediaType: mediaItem.mediaType,
+      containerWidth,
+      containerHeight,
     })
 
     // 音频不需要缩略图，直接返回
@@ -342,8 +356,13 @@ export async function regenerateThumbnailForUnifiedTimelineItem(
       )
     }
 
-    // 使用统一的缩略图生成函数
-    const thumbnailUrl = await generateThumbnailForUnifiedMediaItem(mediaItem, thumbnailTime)
+    // 使用统一的缩略图生成函数，传递容器尺寸参数
+    const thumbnailUrl = await generateThumbnailForUnifiedMediaItem(
+      mediaItem,
+      thumbnailTime,
+      containerWidth,
+      containerHeight
+    )
 
     if (thumbnailUrl) {
       // 将缩略图URL存储到runtime中

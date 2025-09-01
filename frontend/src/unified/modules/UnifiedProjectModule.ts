@@ -8,6 +8,7 @@ import type { UnifiedTrackData, UnifiedTrackType } from '@/unified/track/TrackTy
 import type { UnifiedMediaItemData } from '@/unified/mediaitem/types'
 import type { MediaType } from '@/unified/mediaitem/types'
 import { globalProjectMediaManager } from '@/unified/utils/ProjectMediaManager'
+import { useProjectThumbnailService } from '@/unified/composables/useProjectThumbnailService'
 import {
   DataSourceFactory,
   DataSourceQueries,
@@ -72,6 +73,8 @@ export function createUnifiedProjectModule(
     removeSprite: (sprite: VisibleSprite) => boolean
   },
 ) {
+  
+  const thumbnailService = useProjectThumbnailService()
   // ==================== 状态定义 ====================
 
   // 项目保存状态
@@ -190,7 +193,8 @@ export function createUnifiedProjectModule(
           createdAt: configModule.projectCreatedAt.value,
           updatedAt: configModule.projectUpdatedAt.value,
           version: configModule.projectVersion.value,
-          thumbnail: configModule.projectThumbnail.value || undefined,
+          // 注意：保存时需要排除 thumbnail 字段（仅用于运行时承载blob url）
+          // thumbnail字段不保存到配置文件，使用约定的文件命名规则
           duration: calculatedDuration,
 
           // 项目设置
@@ -278,6 +282,17 @@ export function createUnifiedProjectModule(
       )
 
       console.log(`✅ 项目保存成功: ${configModule.projectName.value}`)
+
+      // 异步启动缩略图生成（不等待）
+      if (configChanged && timelineModule.timelineItems.value.length > 0) {
+        thumbnailService.generateProjectThumbnail(
+          configModule.projectId.value,
+          timelineModule.timelineItems.value,
+          mediaModule
+        ).catch(error => {
+          console.warn('缩略图生成失败:', error)
+        })
+      }
     } catch (error) {
       console.error('保存项目失败:', error)
       throw error
