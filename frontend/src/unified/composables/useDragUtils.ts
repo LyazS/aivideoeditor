@@ -3,6 +3,8 @@ import type { TimelineItemDragData, MediaItemDragData } from '@/unified/types'
 import type { MediaType } from '@/unified/mediaitem'
 import type { UnifiedTrackType } from '@/unified/track/TrackTypes'
 import { alignFramesToFrame } from '@/unified/utils/timeUtils'
+import { DEFAULT_TRACK_PADDING } from '@/unified/constants/TrackConstants'
+import { getDefaultTrackHeight, mapMediaTypeToTrackType } from '@/unified/track/TrackUtils'
 
 /**
  * 拖拽工具函数集合
@@ -100,13 +102,15 @@ export function useDragUtils() {
     }
   }
 
+
   /**
    * 根据媒体类型计算clip高度
    */
   function getClipHeightByMediaType(mediaType: MediaType): number {
-    // 统一所有类型的clip高度为50px
-    return 50 // 所有clip统一高度50px，轨道高度60px，上下各留5px间距
-  }
+      // 根据媒体类型获取对应的轨道类型，然后计算clip高度
+      const trackType = mapMediaTypeToTrackType(mediaType)
+      return getDefaultTrackHeight(trackType) - (DEFAULT_TRACK_PADDING * 2)
+    }
 
   /**
    * 获取被拖拽项目的实际高度
@@ -127,8 +131,8 @@ export function useDragUtils() {
       return getClipHeightByMediaType(mediaDragData.mediaType)
     }
 
-    // 默认高度
-    return 50
+    // 默认高度：视频轨道高度减去上下间距
+    return getDefaultTrackHeight('video') - (DEFAULT_TRACK_PADDING * 2)
   }
 
   /**

@@ -80,6 +80,7 @@ import type {
   ContentRenderContext,
 } from '../types/clipRenderer'
 import type { UnifiedTimeRange } from '@/unified/types/timeRange'
+import type { UnifiedTrackType } from '@/unified/track/TrackTypes'
 import { ContentRendererFactory } from './renderers/ContentRendererFactory'
 import { useUnifiedStore } from '@/unified/unifiedStore'
 import { useDragUtils, usePlaybackControls } from '@/unified/composables'
@@ -87,6 +88,8 @@ import { alignFramesToFrame } from '@/unified/utils/timeUtils'
 import UnifiedClipTooltip from './UnifiedClipTooltip.vue'
 import type { RemoteFileSourceData } from '@/unified/sources/RemoteFileSource'
 import { relativeFrameToAbsoluteFrame } from '@/unified/utils/unifiedKeyframeUtils'
+import { DEFAULT_TRACK_PADDING } from '@/unified/constants/TrackConstants'
+import { getDefaultTrackHeight, mapMediaTypeToTrackType } from '@/unified/track/TrackUtils'
 
 // ==================== 组件定义 ====================
 
@@ -254,13 +257,24 @@ const clipClasses = computed(() => {
 })
 
 /**
- * 动态样式（只包含渲染器提供的自定义样式，位置和尺寸由容器处理）
+ * 动态样式（包含渲染器提供的自定义样式和clip的尺寸样式）
  */
 const clipStyles = computed(() => {
+
+  // 计算clip高度和上边距
+  // 根据媒体类型获取对应的轨道类型，然后计算clip高度
+  const trackType = mapMediaTypeToTrackType(props.data.mediaType)
+  const clipHeight = getDefaultTrackHeight(trackType) - (DEFAULT_TRACK_PADDING * 2)
+  const clipTopOffset = DEFAULT_TRACK_PADDING
+
   // 添加渲染器提供的自定义样式
   const customStyles = renderer.value.getCustomStyles?.(renderContext.value) || {}
 
-  return { ...customStyles }
+  return {
+    height: `${clipHeight}px`,
+    top: `${clipTopOffset}px`,
+    ...customStyles
+  }
 })
 
 /**

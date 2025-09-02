@@ -4,7 +4,7 @@
  */
 
 import { reactive } from 'vue'
-import { generateUUID4 } from '@/unified/utils/idGenerator'
+import { generateTrackId, getDefaultTrackName, getDefaultTrackHeight } from './TrackUtils'
 
 // ==================== 基础类型定义 ====================
 
@@ -142,35 +142,4 @@ export function createUnifiedTrackData(
   }
 
   return reactive(baseData)
-}
-
-// ==================== 辅助函数 ====================
-
-/**
- * 生成轨道ID
- */
-export function generateTrackId(): string {
-  return generateUUID4()
-}
-
-/**
- * 获取默认轨道名称
- */
-function getDefaultTrackName(type: UnifiedTrackType): string {
-  const names = {
-    video: '默认视频轨道',
-    audio: '默认音频轨道',
-    text: '默认文本轨道',
-    subtitle: '默认字幕轨道',
-    effect: '默认特效轨道',
-  }
-  return names[type]
-}
-
-/**
- * 获取默认轨道高度
- */
-function getDefaultTrackHeight(type: UnifiedTrackType): number {
-  // 所有轨道类型统一使用60px高度
-  return 60
 }

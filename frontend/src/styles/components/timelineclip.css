@@ -16,8 +16,6 @@
   --clip-color-error-bg: var(--color-status-error);
 
   /* Clip基础尺寸变量 */
-  --clip-height: 50px;
-  --clip-top-offset: 5px;
   --clip-border-width: 2px;
   --clip-border-radius: var(--border-radius-medium);
   --clip-padding: var(--spacing-md) var(--spacing-lg);
@@ -43,8 +41,6 @@
 /* Clip基础样式 */
 .unified-timeline-clip {
   position: relative;
-  height: var(--clip-height);
-  top: var(--clip-top-offset);
   border-radius: var(--clip-border-radius);
   cursor: pointer;
   user-select: none;
@@ -277,14 +273,12 @@
   border: 2px dashed var(--clip-color-loading-border) !important;
   background: var(--clip-color-loading-bg) !important;
   animation: loading-pulse var(--clip-loading-animation-duration) infinite;
-  height: var(--clip-height) !important;
 }
 
 /* 错误状态 */
 .unified-timeline-clip.status-error {
   border: 1px solid var(--clip-color-error-border) !important;
   background: var(--clip-color-error-bg) !important;
-  height: var(--clip-height) !important;
 }
 
 /* 错误状态悬停效果 */

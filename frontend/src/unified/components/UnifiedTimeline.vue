@@ -92,7 +92,6 @@
             </span>
           </div>
 
-          <!-- 控制按钮已移至右键菜单 -->
           <div class="track-buttons">
             <!-- 轨道快捷操作按钮 -->
             <div class="track-status">
@@ -523,7 +522,7 @@ onUnmounted(() => {
   padding: var(--spacing-sm) var(--spacing-md);
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-sm);
+  gap: var(--spacing-xxs);
   justify-content: center;
   flex-shrink: 0;
   position: relative;
