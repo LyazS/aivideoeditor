@@ -63,9 +63,9 @@ export class UnifiedProjectManager {
    * 创建默认轨道
    */
   private createDefaultTracks(): UnifiedTrackData[] {
-    const videoTrack = createUnifiedTrackData('video', '视频轨道 1')
-    const audioTrack = createUnifiedTrackData('audio', '音频轨道 1')
-    const textTrack = createUnifiedTrackData('text', '文本轨道 1')
+    const videoTrack = createUnifiedTrackData('video')
+    const audioTrack = createUnifiedTrackData('audio')
+    const textTrack = createUnifiedTrackData('text')
 
     return [videoTrack, audioTrack, textTrack]
   }

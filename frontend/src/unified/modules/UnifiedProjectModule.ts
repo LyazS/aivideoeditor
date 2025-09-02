@@ -5,6 +5,7 @@ import type { VideoResolution } from '@/unified/types'
 import { TimelineItemFactory, TimelineItemQueries } from '@/unified/timelineitem'
 import type { UnifiedTimelineItemData } from '@/unified/timelineitem/TimelineItemData'
 import type { UnifiedTrackData, UnifiedTrackType } from '@/unified/track/TrackTypes'
+import { createUnifiedTrackData } from '@/unified/track/TrackTypes'
 import type { UnifiedMediaItemData } from '@/unified/mediaitem/types'
 import type { MediaType } from '@/unified/mediaitem/types'
 import { globalProjectMediaManager } from '@/unified/utils/ProjectMediaManager'
@@ -50,10 +51,8 @@ export function createUnifiedProjectModule(
   trackModule: {
     tracks: Ref<UnifiedTrackData[]>
     addTrack: (
-      type: UnifiedTrackType,
-      name?: string,
+      trackData: UnifiedTrackData,
       position?: number,
-      id?: string,
     ) => UnifiedTrackData
   },
   mediaModule: {
@@ -483,29 +482,28 @@ export function createUnifiedProjectModule(
       // 恢复轨道数据
       if (savedTracks && savedTracks.length > 0) {
         for (const trackData of savedTracks) {
-          // 使用轨道模块的 addTrack 方法创建轨道
-          trackModule.addTrack(
+          // 创建完整的轨道数据对象
+          const trackToAdd = createUnifiedTrackData(
             trackData.type,
-            trackData.name,
-            undefined, // position 参数，使用默认值
-            trackData.id, // 使用保存的轨道ID
+            {
+              id: trackData.id, // 使用保存的轨道ID
+              name: trackData.name,
+              isVisible: trackData.isVisible,
+              isMuted: trackData.isMuted,
+              height: trackData.height,
+            }
           )
 
-          // 恢复轨道属性
-          const restoredTrack = trackModule.tracks.value.find((t) => t.id === trackData.id)
-          if (restoredTrack) {
-            // 在统一架构中，轨道数据是响应式的，直接修改属性
-            restoredTrack.isVisible = trackData.isVisible
-            restoredTrack.isMuted = trackData.isMuted
-            restoredTrack.height = trackData.height
-          }
+          // 使用轨道模块的 addTrack 方法添加轨道
+          trackModule.addTrack(trackToAdd, undefined)
 
           console.log(`🛤️ 恢复轨道: ${trackData.name} (${trackData.type})`)
         }
       } else {
         // 如果没有保存的轨道，创建默认轨道
         console.log('🛤️ 没有保存的轨道数据，创建默认轨道')
-        trackModule.addTrack('video', '视频轨道')
+        const defaultTrack = createUnifiedTrackData('video')
+        trackModule.addTrack(defaultTrack)
       }
 
       console.log(`✅ 轨道恢复完成: ${trackModule.tracks.value.length}个轨道`)

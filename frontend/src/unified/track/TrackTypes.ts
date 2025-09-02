@@ -128,13 +128,12 @@ export function isEffectTrack(track: UnifiedTrackData): boolean {
  */
 export function createUnifiedTrackData(
   type: UnifiedTrackType,
-  name?: string,
   options?: Partial<UnifiedTrackData>,
   id?: string,
 ): UnifiedTrackData {
   const baseData: UnifiedTrackData = {
     id: id || generateTrackId(),
-    name: name || getDefaultTrackName(type),
+    name: getDefaultTrackName(type),
     type,
     isVisible: true,
     isMuted: false,
@@ -159,17 +158,17 @@ export function generateTrackId(): string {
  */
 function getDefaultTrackName(type: UnifiedTrackType): string {
   const names = {
-    video: '视频轨道',
-    audio: '音频轨道',
-    text: '文本轨道',
-    subtitle: '字幕轨道',
-    effect: '特效轨道',
+    video: '默认视频轨道',
+    audio: '默认音频轨道',
+    text: '默认文本轨道',
+    subtitle: '默认字幕轨道',
+    effect: '默认特效轨道',
   }
   return names[type]
 }
 
 /**
- * 获取默认轨道高度（统一为60px，与旧架构一致）
+ * 获取默认轨道高度
  */
 function getDefaultTrackHeight(type: UnifiedTrackType): number {
   // 所有轨道类型统一使用60px高度

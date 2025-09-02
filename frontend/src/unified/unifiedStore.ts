@@ -756,10 +756,9 @@ export const useUnifiedStore = defineStore('unified', () => {
    */
   async function addTrackWithHistory(
     type: UnifiedTrackType = 'video',
-    name?: string,
     position?: number,
   ) {
-    const command = new AddTrackCommand(type, name, position, {
+    const command = new AddTrackCommand(type, position, {
       addTrack: unifiedTrackModule.addTrack,
       removeTrack: unifiedTrackModule.removeTrack,
       getTrack: unifiedTrackModule.getTrack,

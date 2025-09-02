@@ -10,6 +10,7 @@ import type { SimpleCommand } from '@/unified/modules/commands/types'
 
 // ==================== 新架构类型导入 ====================
 import type { UnifiedTrackData, UnifiedTrackType } from '@/unified/track/TrackTypes'
+import { createUnifiedTrackData } from '@/unified/track/TrackTypes'
 import type { UnifiedTimelineItemData } from '@/unified/timelineitem/TimelineItemData'
 import type { MediaType } from '@/unified/mediaitem/types'
 
@@ -26,15 +27,9 @@ export class AddTrackCommand implements SimpleCommand {
 
   constructor(
     private trackType: UnifiedTrackType, // 轨道类型
-    private trackName: string | undefined, // 轨道名称（可选）
     private position: number | undefined, // 插入位置（可选）
     private trackModule: {
-      addTrack: (
-        type: UnifiedTrackType,
-        name?: string,
-        position?: number,
-        id?: string,
-      ) => UnifiedTrackData
+      addTrack: (trackData: UnifiedTrackData, position?: number) => UnifiedTrackData
       removeTrack: (
         trackId: string,
         timelineItems: Ref<UnifiedTimelineItemData<MediaType>[]>,
@@ -44,19 +39,12 @@ export class AddTrackCommand implements SimpleCommand {
     },
   ) {
     this.id = generateCommandId()
-    this.description = `添加轨道: ${trackName || `${trackType}轨道`}${position !== undefined ? ` (位置: ${position})` : ''}`
+    this.description = `添加轨道: ${trackType}轨道${position !== undefined ? ` (位置: ${position})` : ''}`
 
-    // 预先计算新轨道ID（模拟trackModule的逻辑）
-    // 注意：这里我们无法直接访问tracks数组，所以在execute时会获取实际的轨道数据
-    this.newTrackId = undefined // 将在execute时设置
-    this.trackData = {
-      id: '',
-      name: '',
-      type: trackType,
-      isVisible: true,
-      isMuted: false,
-      height: 80,
-    }
+    // 在构造函数中创建完整的轨道数据
+    this.trackData = createUnifiedTrackData(trackType)
+
+    this.newTrackId = this.trackData.id
   }
 
   /**
@@ -66,23 +54,17 @@ export class AddTrackCommand implements SimpleCommand {
     try {
       console.log(`🔄 执行添加轨道操作...`)
 
-      // 调用trackModule的addTrack方法，传入位置参数
-      const newTrack = this.trackModule.addTrack(
-        this.trackType,
-        this.trackName,
-        this.position,
-        this.newTrackId,
-      )
+      // 调用trackModule的addTrack方法，传入预先创建好的轨道数据和位置参数
+      const newTrack = this.trackModule.addTrack(this.trackData, this.position)
 
-      // 保存轨道数据用于撤销
+      // 保存轨道数据用于撤销（此时轨道数据已经完整）
       this.newTrackId = newTrack.id
-      this.trackData = { ...newTrack }
 
       console.log(
         `✅ 已添加轨道: ${newTrack.name} (ID: ${newTrack.id}, 类型: ${newTrack.type}, 位置: ${this.position ?? '末尾'})`,
       )
     } catch (error) {
-      console.error(`❌ 添加轨道失败: ${this.trackName || `${this.trackType}轨道`}`, error)
+      console.error(`❌ 添加轨道失败: ${this.trackType}轨道`, error)
       throw error
     }
   }

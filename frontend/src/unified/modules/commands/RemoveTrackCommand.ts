@@ -31,7 +31,7 @@ export class RemoveTrackCommand implements SimpleCommand {
   constructor(
     private trackId: string,
     private trackModule: {
-      addTrack: (type: UnifiedTrackType, name?: string) => UnifiedTrackData
+      addTrack: (trackData: UnifiedTrackData, position?: number) => UnifiedTrackData
       removeTrack: (
         trackId: string,
         timelineItems: Ref<UnifiedTimelineItemData<MediaType>[]>,
@@ -143,15 +143,13 @@ export class RemoveTrackCommand implements SimpleCommand {
       console.log(`🔄 撤销删除轨道操作：重建轨道 ${this.trackData.name}...`)
 
       // 1. 重建轨道
-      // 注意：我们需要手动重建轨道，保持原有的ID和属性
-      // 找到正确的插入位置（按ID排序）
+      // 找到正确的插入位置（按ID排序）并使用 addTrack 方法
       const tracks = this.trackModule.tracks.value
       const insertIndex = tracks.findIndex((track) => track.id > this.trackData.id)
-      if (insertIndex === -1) {
-        tracks.push({ ...this.trackData })
-      } else {
-        tracks.splice(insertIndex, 0, { ...this.trackData })
-      }
+      const position = insertIndex === -1 ? undefined : insertIndex
+      
+      // 使用 trackModule 的 addTrack 方法而不是手动操作数组
+      this.trackModule.addTrack({ ...this.trackData }, position)
 
       // 2. 重建所有受影响的时间轴项目
       for (const itemData of this.affectedTimelineItems) {

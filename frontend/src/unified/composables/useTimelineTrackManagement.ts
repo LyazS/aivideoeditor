@@ -36,7 +36,7 @@ export function useTimelineTrackManagement() {
         }
 
         // 在目标轨道后插入新轨道（位置为 afterTrackIndex + 1）
-        await unifiedStore.addTrackWithHistory(type, undefined, afterTrackIndex + 1)
+        await unifiedStore.addTrackWithHistory(type, afterTrackIndex + 1)
         console.log('✅ 轨道添加成功，类型:', type, '位置:', afterTrackIndex + 1)
       } else {
         // 在末尾添加新轨道
