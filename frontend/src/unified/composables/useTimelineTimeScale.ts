@@ -43,26 +43,9 @@ const TIME_SCALE_LEVELS: TimeScaleLevel[] = [
 ]
 
 /**
- * 选择时间刻度层级
- * 根据缩放级别选择合适的时间刻度层级
- * 支持 zoomLevel 范围 0.1 - 100
- */
-function selectTimeScaleLevel(zoomLevel: number): TimeScaleLevel {
-  // 将 zoomLevel (0.1 - 100) 映射到层级 (1 - 15)
-  // 使用对数缩放，将 0.1-100 映射到 0-3 范围
-  const normalizedZoom = Math.log10(zoomLevel) + 1 // 0.1->-1, 1->0, 10->1, 100->2
-  const levelIndex = Math.floor((normalizedZoom / 3) * 14) // 映射到 0-14 范围
-  const clampedIndex = Math.max(0, Math.min(14, levelIndex))
-
-  const selectedLevel = TIME_SCALE_LEVELS[clampedIndex]
-
-  return selectedLevel
-}
-
-/**
  * 计算刻度间隔
  * 根据设计文档的固定像素间隔原则计算主次刻度的像素间隔
- * 优化：使用单一循环替代两个while循环，修正索引计算
+ * 使用数学计算直接确定最优层级，避免 while 循环
  */
 function calculateScaleIntervals(
   containerWidth: number,
@@ -74,34 +57,25 @@ function calculateScaleIntervals(
   minorIntervalPixels: number
 } {
   const pixelsPerFrame = (containerWidth * zoomLevel) / totalDurationFrames
-  let currentLevel = selectTimeScaleLevel(zoomLevel)
 
-  // 修正索引计算：数组索引 = 层级编号 - 1
-  let currentIndex = currentLevel.level - 1
+  // 计算理想的主刻度间隔（帧数），目标150px（100-200px范围的中间值）
+  const idealMajorIntervalFrames = 150 / pixelsPerFrame
 
-  // 计算主刻度像素间隔
-  let majorIntervalPixels = currentLevel.majorInterval * pixelsPerFrame
+  // 找到最接近理想间隔的层级
+  let bestIndex = 0
+  let minDiff = Infinity
 
-  // 优化：使用单一循环处理层级调整，避免两个循环互相干扰
-  while (true) {
-    // 如果间隔超过200px且可以向下调整
-    if (majorIntervalPixels > 200 && currentIndex < TIME_SCALE_LEVELS.length - 1) {
-      currentIndex++
+  for (let i = 0; i < TIME_SCALE_LEVELS.length; i++) {
+    const level = TIME_SCALE_LEVELS[i]
+    const diff = Math.abs(level.majorInterval - idealMajorIntervalFrames)
+    if (diff < minDiff) {
+      minDiff = diff
+      bestIndex = i
     }
-    // 如果间隔小于100px且可以向上调整
-    else if (majorIntervalPixels < 100 && currentIndex > 0) {
-      currentIndex--
-    }
-    // 如果间隔在合理范围内或无法继续调整
-    else {
-      break
-    }
-
-    // 更新当前层级和像素间隔
-    currentLevel = TIME_SCALE_LEVELS[currentIndex]
-    majorIntervalPixels = currentLevel.majorInterval * pixelsPerFrame
   }
 
+  const currentLevel = TIME_SCALE_LEVELS[bestIndex]
+  const majorIntervalPixels = currentLevel.majorInterval * pixelsPerFrame
   const minorIntervalPixels = currentLevel.minorInterval * pixelsPerFrame
 
   return {
@@ -110,7 +84,6 @@ function calculateScaleIntervals(
     minorIntervalPixels,
   }
 }
-
 /**
  * 时间刻度标记接口
  * 用于时间轴刻度显示
