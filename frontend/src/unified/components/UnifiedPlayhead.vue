@@ -1,10 +1,11 @@
 <template>
-  <div class="playhead-container" ref="playheadContainer">
+  <div class="playhead-container" ref="playheadContainer" @wheel="handleWheel">
     <!-- 播放头手柄 -->
     <div
       class="playhead-handle"
       :style="{ left: playheadPosition + 'px' }"
       @mousedown="handleMouseDown"
+      @wheel="handleWheel"
     >
       <!-- 白色倒三角 -->
       <div class="playhead-triangle"></div>
@@ -24,10 +25,13 @@ interface PlayheadProps {
   timelineWidth: number
   /** 轨道控制区域宽度（左侧偏移） */
   trackControlWidth?: number
+  /** 滚轮事件处理容器引用 */
+  wheelContainer?: HTMLElement
 }
 
 const props = withDefaults(defineProps<PlayheadProps>(), {
   trackControlWidth: 150,
+  wheelContainer: undefined,
 })
 
 const unifiedStore = useUnifiedStore()
@@ -93,6 +97,38 @@ const handleMouseUp = () => {
   // 恢复光标样式
   if (playheadContainer.value) {
     playheadContainer.value.style.cursor = 'grab'
+  }
+}
+
+/**
+ * 处理滚轮事件
+ * 将滚轮事件传递给指定的容器，确保播放头不拦截滚轮操作
+ */
+const handleWheel = (event: WheelEvent) => {
+  // 阻止事件冒泡，避免重复处理
+  event.stopPropagation()
+  
+  // 如果指定了滚轮处理容器，将事件传递给该容器
+  if (props.wheelContainer) {
+    // 创建一个新的事件对象，确保所有属性都被复制
+    const newEvent = new WheelEvent('wheel', {
+      deltaX: event.deltaX,
+      deltaY: event.deltaY,
+      deltaZ: event.deltaZ,
+      deltaMode: event.deltaMode,
+      clientX: event.clientX,
+      clientY: event.clientY,
+      screenX: event.screenX,
+      screenY: event.screenY,
+      ctrlKey: event.ctrlKey,
+      shiftKey: event.shiftKey,
+      altKey: event.altKey,
+      metaKey: event.metaKey,
+      bubbles: true,
+      cancelable: true
+    })
+    
+    props.wheelContainer.dispatchEvent(newEvent)
   }
 }
 
