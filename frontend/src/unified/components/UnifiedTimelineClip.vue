@@ -117,6 +117,7 @@ const templateProps = computed<ContentTemplateProps>(() => ({
   isResizing: props.isResizing,
   currentFrame: props.currentFrame,
   trackHeight: props.trackHeight,
+  timelineWidth: props.timelineWidth,
 }))
 
 /**

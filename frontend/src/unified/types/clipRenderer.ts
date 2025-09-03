@@ -127,5 +127,8 @@ export interface ContentTemplateProps<T extends MediaType = MediaType> {
   
   /** 轨道高度 */
   trackHeight: number
+  
+  /** 时间轴宽度（用于坐标转换） */
+  timelineWidth: number
 }
 

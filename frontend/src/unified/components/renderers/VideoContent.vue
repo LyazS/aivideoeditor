@@ -1,73 +1,119 @@
-<!-- VideoContentTemplate.vue -->
+<!-- VideoContentTemplate.vue - 多缩略图版本 -->
 <template>
   <div class="video-content" :class="{ selected: isSelected }">
-    <!-- 缩略图区域 -->
-    <div v-if="showDetails" class="clip-thumbnail">
-      <img
-        v-if="thumbnailUrl"
-        :src="thumbnailUrl"
-        :alt="displayName"
-        class="thumbnail-image"
-      />
-      <div v-else class="thumbnail-placeholder">
-        <div class="loading-spinner"></div>
+    <!-- 多缩略图容器 -->
+    <div class="multi-thumbnails-container">
+      <div
+        v-for="item in thumbnailLayout"
+        :key="item.index"
+        class="thumbnail-slot"
+        :style="getThumbnailSlotStyle(item)"
+      >
+        <!-- 第一步实验：显示帧索引文本而非实际图片 -->
+        <div class="thumbnail-frame-index" v-if="item.isVisible">
+          {{ item.framePosition }}
+        </div>
+        <div v-else class="thumbnail-placeholder"></div>
       </div>
     </div>
-
-    <!-- 信息区域 -->
-    <div class="clip-info" v-if="showDetails">
-      <div class="clip-name">{{ displayName }}</div>
-      <div class="clip-duration">{{ formattedDuration }}</div>
-      <div v-if="hasSpeedAdjustment" class="clip-speed">{{ speedText }}</div>
-    </div>
-
-    <!-- 简化信息 -->
-    <div v-else class="clip-simple">
-      <div class="simple-duration">{{ formattedDuration }}</div>
-    </div>
-
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted, onUnmounted, watch } from 'vue'
 import type { ContentTemplateProps } from '@/unified/types/clipRenderer'
 import { getTimelineItemDisplayName } from '@/unified/utils/clipUtils'
+import { useUnifiedStore } from '@/unified/unifiedStore'
+import {
+  calculateThumbnailLayout,
+  updateThumbnailVisibility,
+  calculateViewportFrameRange,
+  calculateClipWidthPixels,
+} from '@/unified/utils/thumbnailAlgorithms'
+import type { ThumbnailLayoutItem } from '@/unified/types/thumbnail'
+import { THUMBNAIL_CONSTANTS } from '@/unified/constants/ThumbnailConstants'
 
 const props = defineProps<ContentTemplateProps<'video' | 'image'>>()
+const unifiedStore = useUnifiedStore()
 
-// 计算属性 - 使用时间轴宽度和帧率来计算显示详细程度
+// 缩略图布局数组
+const thumbnailLayout = computed<ThumbnailLayoutItem[]>(() => {
+  if (!props.data.timeRange) return []
+
+  const clipTLStartFrame = props.data.timeRange.timelineStartTime
+  const clipTLDurationFrames = props.data.timeRange.timelineEndTime - clipTLStartFrame
+  const clipStartFrame = props.data.timeRange.clipStartTime
+  const clipDurationFrames = props.data.timeRange.clipEndTime - clipStartFrame
+
+  // 计算clip的像素宽度
+  const clipWidthPixels = calculateClipWidthPixels(
+    clipTLDurationFrames,
+    props.timelineWidth,
+    unifiedStore.totalDurationFrames,
+    unifiedStore.zoomLevel,
+  )
+
+  // 计算视口帧范围
+  const { startFrames: viewportStartFrame, endFrames: viewportEndFrame } =
+    calculateViewportFrameRange(
+      props.timelineWidth,
+      unifiedStore.totalDurationFrames,
+      unifiedStore.zoomLevel,
+      unifiedStore.scrollOffset,
+      unifiedStore.maxVisibleDurationFrames,
+    )
+
+  // 计算初始布局
+  const layout = calculateThumbnailLayout(
+    clipStartFrame,
+    clipDurationFrames,
+    clipWidthPixels,
+    clipTLStartFrame,
+    clipTLDurationFrames,
+    THUMBNAIL_CONSTANTS.WIDTH, // 固定缩略图宽度
+  )
+
+  // 更新可见性
+  return updateThumbnailVisibility(
+    layout,
+    clipTLStartFrame,
+    clipTLDurationFrames,
+    viewportStartFrame,
+    viewportEndFrame,
+  )
+})
+
+// 获取缩略图槽位样式
+function getThumbnailSlotStyle(item: ThumbnailLayoutItem) {
+  return {
+    left: `${item.pixelPosition}px`,
+    width: `${THUMBNAIL_CONSTANTS.WIDTH}px`,
+    height: `${THUMBNAIL_CONSTANTS.HEIGHT}px`,
+  }
+}
+
+// 监听视口变化，更新缩略图可见性
+watch(
+  [() => unifiedStore.scrollOffset, () => unifiedStore.zoomLevel, () => props.timelineWidth],
+  () => {
+    // 缩略图可见性会在computed中自动更新
+  },
+  { deep: true },
+)
+
+// 保持原有的计算属性（向后兼容）
 const showDetails = computed(() => {
-  const durationFrames = props.data.timeRange.timelineEndTime - props.data.timeRange.timelineStartTime
-  // 使用固定阈值，后续可以根据需要调整为基于缩放级别的动态计算
-  return durationFrames >= 30 // 大约1秒的片段显示详细信息
+  const durationFrames =
+    props.data.timeRange.timelineEndTime - props.data.timeRange.timelineStartTime
+  return durationFrames >= 30
 })
 
 const displayName = computed(() => getTimelineItemDisplayName(props.data))
 
-const thumbnailUrl = computed(() => {
-  // 优先从runtime中获取缩略图URL
-  if (props.data.runtime.thumbnailUrl) {
-    return props.data.runtime.thumbnailUrl
-  }
-
-  // 兼容性检查
-  const config = props.data.config as any
-  if (config && config.thumbnailUrl) {
-    return config.thumbnailUrl
-  }
-
-  // 兼容性检查：检查是否有直接的thumbnailUrl属性
-  if ('thumbnailUrl' in props.data && (props.data as any).thumbnailUrl) {
-    return (props.data as any).thumbnailUrl
-  }
-
-  return null
-})
-
 const formattedDuration = computed(() => {
-  const durationFrames = props.data.timeRange.timelineEndTime - props.data.timeRange.timelineStartTime
-  const fps = 30 // 假设30fps
+  const durationFrames =
+    props.data.timeRange.timelineEndTime - props.data.timeRange.timelineStartTime
+  const fps = 30
   const totalSeconds = Math.floor(durationFrames / fps)
   const remainingFrames = durationFrames % fps
 
@@ -115,56 +161,73 @@ const speedText = computed(() => {
   }
   return '正常速度'
 })
+
+// 生命周期钩子
+onMounted(() => {
+  console.log('🎬 VideoContent mounted with multi-thumbnail support')
+})
+
+onUnmounted(() => {
+  console.log('🧹 VideoContent unmounted')
+})
 </script>
 
 <style scoped>
-/* 样式保持与现有渲染器一致 */
-.video-content {
-  display: flex;
-  align-items: center;
-  height: 100%;
-  padding: 4px 8px;
-  overflow: hidden;
-}
-
-.clip-thumbnail {
-  width: 50px;
-  height: 32px;
-  background-color: var(--color-bg-primary);
-  border-radius: 2px;
-  overflow: hidden;
+/* 多缩略图容器样式 */
+.multi-thumbnails-container {
   position: relative;
-  flex-shrink: 0;
-}
-
-.thumbnail-image {
   width: 100%;
-  height: 100%;
-  object-fit: cover;
+  height: 30px;
+  overflow: hidden;
 }
 
-.thumbnail-placeholder {
+.thumbnail-slot {
+  position: absolute;
+  width: 50px;
+  height: 30px;
+  top: 0;
+  overflow: hidden;
+  background-color: rgba(0, 0, 0, 0.3);
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.thumbnail-slot:last-child {
+  border-right: none;
+}
+
+.thumbnail-frame-index {
   width: 100%;
   height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: rgba(0, 0, 0, 0.3);
+  font-size: 8px;
+  font-weight: bold;
+  color: white;
+  background-color: rgba(0, 0, 0, 0.5);
 }
 
-.loading-spinner {
-  width: 16px;
-  height: 16px;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  border-top: 2px solid var(--color-text-primary);
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
+.thumbnail-placeholder {
+  width: 100%;
+  height: 100%;
+  background-color: rgba(255, 255, 255, 0.514);
 }
 
-.clip-info {
-  flex: 1;
-  margin-left: 6px;
-  min-width: 0;
+/* 保持原有样式（向后兼容） */
+.video-content {
+  display: flex;
+  align-items: center;
+  height: 100%;
+  overflow: hidden;
+}
+
+.overlay-info {
+  position: absolute;
+  top: 4px;
+  left: 8px;
+  right: 8px;
+  pointer-events: none;
+  z-index: 10;
 }
 
 .clip-name {
@@ -174,18 +237,17 @@ const speedText = computed(() => {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  margin-bottom: 2px;
 }
 
 .clip-duration {
   font-size: 9px;
   color: rgba(255, 255, 255, 0.8);
-  margin-top: 1px;
 }
 
 .clip-speed {
   font-size: 9px;
   color: var(--color-speed-indicator);
-  margin-top: 1px;
   font-weight: bold;
 }
 
@@ -208,25 +270,13 @@ const speedText = computed(() => {
   white-space: nowrap;
 }
 
-.clip-indicators {
-  position: absolute;
-  top: 2px;
-  right: 2px;
-  display: flex;
-  gap: 2px;
+/* 选中状态样式 */
+.video-content.selected {
+  outline: 2px solid var(--color-clip-selected);
+  outline-offset: -2px;
 }
 
-.clip-indicator {
-  font-size: 8px;
-  color: var(--color-warning);
-  background: rgba(0, 0, 0, 0.7);
-  border-radius: 2px;
-  padding: 1px 2px;
-  line-height: 1;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+.video-content.selected .multi-thumbnails-container {
+  opacity: 0.9;
 }
 </style>
