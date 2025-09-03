@@ -30,13 +30,7 @@ import { getTimelineItemDisplayName } from '@/unified/utils/clipUtils'
 import { useUnifiedStore } from '@/unified/unifiedStore'
 import type { RemoteFileSourceData } from '@/unified/sources/RemoteFileSource'
 
-const props = defineProps<ContentTemplateProps & {
-  progressInfo?: {
-    hasProgress: boolean
-    percent: number
-    speed?: string
-  }
-}>()
+const props = defineProps<ContentTemplateProps>()
 
 const unifiedStore = useUnifiedStore()
 
@@ -48,12 +42,7 @@ const loadingSubtitle = computed(() => {
 
 // 进度信息计算
 const progressInfo = computed(() => {
-  // 优先从props中获取进度信息
-  if (props.progressInfo) {
-    return props.progressInfo
-  }
-
-  // 如果没有从props传入，则从媒体项目获取实际进度数据
+  // 从媒体项目获取实际进度数据
   const mediaItem = unifiedStore.getMediaItem(props.data.mediaItemId)
   if (!mediaItem || !mediaItem.source) {
     return {

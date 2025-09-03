@@ -16,7 +16,7 @@
   --clip-color-error-bg: var(--color-status-error);
 
   /* Clip基础尺寸变量 */
-  --clip-border-width: 2px;
+  --clip-border-width: 1px; /* 统一为1px */
   --clip-border-radius: var(--border-radius-medium);
   --clip-padding: var(--spacing-md) var(--spacing-lg);
   
@@ -24,8 +24,8 @@
   --clip-bg-primary: #fafafa;
   --clip-bg-media-type: linear-gradient(135deg, #666666, #555555);
   --clip-border-default: transparent;
-  --clip-border-hover: var(--color-text-primary);
-  --clip-border-resizing: var(--color-primary);
+  --clip-border-hover: #ffffff; /* 统一为白色 */
+  --clip-border-resizing: #ffffff; /* 统一为白色 */
   --clip-shadow: var(--shadow-sm);
   
   /* Clip动画变量 */
@@ -197,8 +197,9 @@
 /* ==================== 状态样式 ==================== */
 
 /* 悬停状态 */
-.unified-timeline-clip:hover {
-  border-color: var(--clip-border-hover);
+.unified-timeline-clip:hover,
+.unified-timeline-clip .resize-handle:hover {
+  border: 1px solid #ffffff; /* 统一为白色的1px边框 */
 }
 
 /* 选中状态 */
@@ -208,8 +209,7 @@
     var(--color-clip-selected),
     var(--color-clip-selected-dark)
   ) !important;
-  border-color: var(--color-clip-selected);
-  box-shadow: 0 0 0 2px rgba(255, 107, 53, 0.3);
+  border: 1px solid #ffffff; /* 统一为白色的1px边框 */
 }
 
 /* 拖拽状态 */
@@ -223,7 +223,7 @@
 /* 调整大小状态 */
 .unified-timeline-clip.resizing {
   cursor: col-resize;
-  border-color: var(--clip-border-resizing);
+  border: 1px solid #ffffff; /* 统一为白色的1px边框 */
   transition: none !important;
 }
 
@@ -243,6 +243,7 @@
     var(--color-clip-overlapping),
     var(--color-clip-overlapping-dark)
   ) !important;
+  border: 1px solid #ffffff; /* 统一为白色的1px边框 */
 }
 
 /* 隐藏轨道状态 */
@@ -252,6 +253,7 @@
     var(--color-clip-hidden),
     var(--color-clip-hidden-dark)
   ) !important;
+  border: 1px solid #ffffff; /* 统一为白色的1px边框 */
 }
 
 /* 隐藏轨道选中状态 */
@@ -261,6 +263,7 @@
     var(--color-clip-hidden-selected),
     var(--color-clip-hidden-selected-dark)
   ) !important;
+  border: 1px solid #ffffff; /* 统一为白色的1px边框 */
 }
 
 /* 隐藏轨道上的clip内容透明度调整 */
@@ -270,26 +273,13 @@
 
 /* Loading状态 */
 .unified-timeline-clip.status-loading {
-  border: 2px dashed var(--clip-color-loading-border) !important;
   background: var(--clip-color-loading-bg) !important;
   animation: loading-pulse var(--clip-loading-animation-duration) infinite;
 }
 
 /* 错误状态 */
 .unified-timeline-clip.status-error {
-  border: 1px solid var(--clip-color-error-border) !important;
   background: var(--clip-color-error-bg) !important;
-}
-
-/* 错误状态悬停效果 */
-.unified-timeline-clip.status-error:hover {
-  border-color: var(--clip-color-error-border);
-}
-
-/* 错误状态选中效果 */
-.unified-timeline-clip.status-error.selected {
-  border-color: var(--clip-color-error-border);
-  box-shadow: 0 0 0 1px rgba(139, 0, 0, 0.3);
 }
 
 /* ==================== 错误内容样式 ==================== */
@@ -451,18 +441,23 @@
   cursor: col-resize;
   background: transparent;
   z-index: 10;
+  transition: background var(--clip-transition-duration) ease;
 }
 
 .resize-handle:hover {
-  background: rgba(24, 144, 255, 0.3);
+  background: #eeeeee; 
 }
 
 .resize-handle-left {
-  left: 0;
+  left: -1px;
+  border-top-left-radius: var(--border-radius-medium);
+  border-bottom-left-radius: var(--border-radius-medium);
 }
 
 .resize-handle-right {
-  right: 0;
+  right: -1px;
+  border-top-right-radius: var(--border-radius-medium);
+  border-bottom-right-radius: var(--border-radius-medium);
 }
 
 /* 进度条容器 */

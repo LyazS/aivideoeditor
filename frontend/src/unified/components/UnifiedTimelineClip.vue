@@ -1,75 +1,52 @@
 <template>
   <div
-    class="unified-timeline-clip-container"
-    :style="containerStyles"
+    :class="clipClasses"
+    :style="combinedStyles"
+    :data-media-type="data.mediaType"
+    :data-timeline-item-id="data.id"
+    :data-timeline-status="data.timelineStatus"
+    :draggable="true"
+    @dragstart="handleDragStart"
+    @dragend="handleDragEnd"
+    @click="handleSelect"
+    @dblclick="handleDoubleClick"
+    @contextmenu="handleContextMenu"
   >
+    <!-- 左侧调整把手 -->
     <div
-      :class="clipClasses"
-      :style="clipStyles"
-      :data-media-type="data.mediaType"
-      :data-timeline-item-id="data.id"
-      :data-timeline-status="data.timelineStatus"
-      :draggable="true"
-      @dragstart="handleDragStart"
-      @dragend="handleDragEnd"
-      @click="handleSelect"
-      @dblclick="handleDoubleClick"
-      @contextmenu="handleContextMenu"
-      @mouseenter="showTooltip"
-      @mousemove="updateTooltipPosition"
-      @mouseleave="hideTooltip"
-    >
-      <!-- 左侧调整把手 -->
-      <div
-        v-if="data.timelineStatus === 'ready'"
-        class="resize-handle resize-handle-left"
-        @mousedown.stop="handleResizeStart('left', $event)"
-      ></div>
+      v-if="data.timelineStatus === 'ready'"
+      class="resize-handle resize-handle-left"
+      @mousedown.stop="handleResizeStart('left', $event)"
+    ></div>
 
-      <!-- 动态渲染的内容区域（使用模板组件） -->
-      <div class="clip-content">
-        <component
-          :is="templateComponent"
-          v-bind="templateProps"
-        />
-      </div>
-
-      <!-- 右侧调整把手 -->
-      <div
-        v-if="data.timelineStatus === 'ready'"
-        class="resize-handle resize-handle-right"
-        @mousedown.stop="handleResizeStart('right', $event)"
-      ></div>
-
-
-      <!-- 进度条（模板组件内部处理） -->
-
-      <!-- 关键帧标记容器 -->
-      <div v-if="hasKeyframes" class="keyframes-container">
-        <div
-          v-for="keyframe in visibleKeyframes"
-          :key="keyframe.framePosition"
-          class="keyframe-marker"
-          :style="getKeyframeMarkerStyles(keyframe.pixelPosition)"
-          :title="`关键帧 - 帧 ${keyframe.absoluteFrame} (点击跳转)`"
-          @click.stop="jumpToKeyframe(keyframe.absoluteFrame)"
-        >
-          <div class="keyframe-diamond"></div>
-        </div>
-      </div>
+    <!-- 动态渲染的内容区域（使用模板组件） -->
+    <div class="clip-content">
+      <component
+        :is="templateComponent"
+        v-bind="templateProps"
+      />
     </div>
 
-    <!-- Tooltip 组件 -->
-    <UnifiedClipTooltip
-      :visible="showTooltipFlag"
-      :title="clipName"
-      :media-type="props.data.mediaType"
-      :duration="formattedDuration"
-      :position="formattedPosition"
-      :mouse-x="tooltipPosition.x"
-      :mouse-y="tooltipPosition.y"
-      :clip-top="clipTopPosition"
-    />
+    <!-- 右侧调整把手 -->
+    <div
+      v-if="data.timelineStatus === 'ready'"
+      class="resize-handle resize-handle-right"
+      @mousedown.stop="handleResizeStart('right', $event)"
+    ></div>
+
+    <!-- 关键帧标记容器 -->
+    <div v-if="hasKeyframes" class="keyframes-container">
+      <div
+        v-for="keyframe in visibleKeyframes"
+        :key="keyframe.framePosition"
+        class="keyframe-marker"
+        :style="getKeyframeMarkerStyles(keyframe.pixelPosition)"
+        :title="`关键帧 - 帧 ${keyframe.absoluteFrame} (点击跳转)`"
+        @click.stop="jumpToKeyframe(keyframe.absoluteFrame)"
+      >
+        <div class="keyframe-diamond"></div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -77,15 +54,13 @@
 import { computed, ref, onUnmounted, h } from 'vue'
 import type {
   UnifiedTimelineClipProps,
+  ContentTemplateProps,
 } from '../types/clipRenderer'
 import type { UnifiedTimeRange } from '@/unified/types/timeRange'
-import type { UnifiedTrackType } from '@/unified/track/TrackTypes'
 import { ContentRendererFactory } from './renderers/ContentRendererFactory'
 import { useUnifiedStore } from '@/unified/unifiedStore'
 import { useDragUtils, usePlaybackControls } from '@/unified/composables'
 import { alignFramesToFrame } from '@/unified/utils/timeUtils'
-import UnifiedClipTooltip from './UnifiedClipTooltip.vue'
-import type { RemoteFileSourceData } from '@/unified/sources/RemoteFileSource'
 import { relativeFrameToAbsoluteFrame } from '@/unified/utils/unifiedKeyframeUtils'
 import { DEFAULT_TRACK_PADDING } from '@/unified/constants/TrackConstants'
 import { getDefaultTrackHeight, mapMediaTypeToTrackType } from '@/unified/track/TrackUtils'
@@ -131,59 +106,12 @@ const emit = defineEmits<{
 
 // ==================== 响应式状态 ====================
 
-// 工具提示相关状态
-const showTooltipFlag = ref(false)
-const tooltipPosition = ref({ x: 0, y: 0 })
-
 // ==================== 计算属性 ====================
-
-/**
- * Clip进度信息计算属性
- */
-const clipProgress = computed(() => {
-  // 获取当前clip关联的媒体项目
-  const mediaItem = unifiedStore.getMediaItem(props.data.mediaItemId)
-  if (!mediaItem || !mediaItem.source) {
-    return {
-      hasProgress: false,
-      percent: 0,
-      speed: undefined
-    }
-  }
-
-  const source = mediaItem.source
-  
-  // 根据数据源类型获取进度信息
-  if (source.type === 'remote') {
-    // 远程文件源：使用下载字节数计算进度
-    const remoteSource = source as RemoteFileSourceData
-    if (remoteSource.totalBytes === 0) {
-      return {
-        hasProgress: false,
-        percent: 0,
-        speed: undefined
-      }
-    }
-    const percent = (remoteSource.downloadedBytes / remoteSource.totalBytes) * 100
-    return {
-      hasProgress: true,
-      percent,
-      speed: remoteSource.downloadSpeed
-    }
-  } else {
-    // 其他类型：使用基础进度值
-    return {
-      hasProgress: source.progress > 0,
-      percent: source.progress,
-      speed: undefined
-    }
-  }
-})
 
 /**
  * 构建模板组件的props
  */
-const templateProps = computed(() => ({
+const templateProps = computed<ContentTemplateProps>(() => ({
   data: props.data,
   isSelected: props.isSelected,
   isDragging: props.isDragging,
@@ -191,7 +119,6 @@ const templateProps = computed(() => ({
   currentFrame: props.currentFrame,
   scale: props.scale,
   trackHeight: props.trackHeight,
-  progressInfo: clipProgress.value, // 添加进度信息
 }))
 
 /**
@@ -221,26 +148,14 @@ const clipClasses = computed(() => {
 })
 
 /**
- * 动态样式（包含渲染器提供的自定义样式和clip的尺寸样式）
+ * 合并样式（包含位置尺寸和剪辑样式）
  */
-const clipStyles = computed(() => {
-
-  // 计算clip高度和上边距
-  // 根据媒体类型获取对应的轨道类型，然后计算clip高度
+const combinedStyles = computed(() => {
+  // 计算clip的高度和上边距
   const trackType = mapMediaTypeToTrackType(props.data.mediaType)
   const clipHeight = getDefaultTrackHeight(trackType) - (DEFAULT_TRACK_PADDING * 2)
   const clipTopOffset = DEFAULT_TRACK_PADDING
 
-  return {
-    height: `${clipHeight}px`,
-    top: `${clipTopOffset}px`,
-  }
-})
-
-/**
- * 容器样式（将位置和尺寸应用到容器上）
- */
-const containerStyles = computed(() => {
   // 计算clip的位置和尺寸
   const timeRange = props.data.timeRange
 
@@ -259,46 +174,13 @@ const containerStyles = computed(() => {
   const width = Math.max(right - left, 20) // 最小宽度20px
 
   return {
+    height: `${clipHeight}px`,
+    top: `${clipTopOffset}px`,
     left: `${left}px`,
     width: `${width}px`,
-    height: '60px', // 轨道高度
-    top: '0px',
   }
 })
 
-// ==================== Tooltip 计算属性 ====================
-
-/**
- * 获取clip名称
- */
-const clipName = computed(() => {
-  const mediaItem = unifiedStore.getMediaItem(props.data.mediaItemId)
-  return mediaItem?.name || '未知片段'
-})
-
-/**
- * 格式化时长
- */
-const formattedDuration = computed(() => {
-  const durationFrames =
-    props.data.timeRange.timelineEndTime - props.data.timeRange.timelineStartTime
-  const seconds = durationFrames / unifiedStore.frameRate
-  return `${seconds.toFixed(2)}秒`
-})
-
-/**
- * 格式化位置
- */
-const formattedPosition = computed(() => {
-  const startFrame = props.data.timeRange.timelineStartTime
-  const seconds = startFrame / unifiedStore.frameRate
-  return `${seconds.toFixed(2)}秒`
-})
-
-/**
- * 获取clip元素的顶部位置
- */
-const clipTopPosition = ref(0)
 
 // ==================== 关键帧标记相关计算属性 ====================
 
@@ -407,7 +289,6 @@ function handleDragStart(event: DragEvent) {
 
   // 暂停播放并处理拖拽
   pauseForEditing('时间轴项目拖拽')
-  hideTooltip()
   dragUtils.ensureItemSelected(props.data.id)
 
   // 设置拖拽数据
@@ -513,7 +394,6 @@ function handleResizeStart(direction: 'left' | 'right', event: MouseEvent) {
 
   // 暂停播放以便进行编辑
   pauseForEditing('片段大小调整')
-  hideTooltip()
 
   isResizing.value = true
   resizeDirection.value = direction
@@ -667,54 +547,6 @@ function cleanupResize() {
   }
 }
 
-/**
- * 显示工具提示
- */
-function showTooltip(event: MouseEvent) {
-  // 如果正在拖拽或调整大小，不显示tooltip
-  if (isDragging.value || isResizing.value) return
-
-  showTooltipFlag.value = true
-
-  // 获取clip元素的位置信息
-  const clipElement = event.currentTarget as HTMLElement
-  const clipRect = clipElement.getBoundingClientRect()
-
-  // 更新tooltip位置数据
-  tooltipPosition.value = {
-    x: event.clientX,
-    y: event.clientY,
-  }
-  clipTopPosition.value = clipRect.top
-}
-
-/**
- * 更新工具提示位置
- */
-function updateTooltipPosition(event: MouseEvent) {
-  // 只有在tooltip显示时才更新位置
-  if (!showTooltipFlag.value) return
-  // 如果正在拖拽或调整大小，不更新tooltip位置
-  if (isDragging.value || isResizing.value) return
-
-  // 获取clip元素的位置信息
-  const clipElement = event.currentTarget as HTMLElement
-  const clipRect = clipElement.getBoundingClientRect()
-
-  // 更新tooltip位置数据
-  tooltipPosition.value = {
-    x: event.clientX,
-    y: event.clientY,
-  }
-  clipTopPosition.value = clipRect.top
-}
-
-/**
- * 隐藏工具提示
- */
-function hideTooltip() {
-  showTooltipFlag.value = false
-}
 
 /**
  * 跳转到指定关键帧
@@ -745,8 +577,8 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-/* 容器样式 - 位置和尺寸由动态样式控制 */
-.unified-timeline-clip-container {
+/* 剪辑样式 - 位置和尺寸由动态样式控制 */
+.unified-timeline-clip {
   position: absolute;
   width: auto;
   height: auto;
