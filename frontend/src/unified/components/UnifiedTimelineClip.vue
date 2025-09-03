@@ -26,9 +26,12 @@
         @mousedown.stop="handleResizeStart('left', $event)"
       ></div>
 
-      <!-- 动态渲染的内容区域 -->
+      <!-- 动态渲染的内容区域（使用模板组件） -->
       <div class="clip-content">
-        <component :is="renderedContent" />
+        <component
+          :is="templateComponent"
+          v-bind="templateProps"
+        />
       </div>
 
       <!-- 右侧调整把手 -->
@@ -39,10 +42,7 @@
       ></div>
 
 
-      <!-- 进度条（如果渲染器提供） -->
-      <div v-if="progressBar" class="progress-bar-container">
-        <component :is="progressBar" />
-      </div>
+      <!-- 进度条（模板组件内部处理） -->
 
       <!-- 关键帧标记容器 -->
       <div v-if="hasKeyframes" class="keyframes-container">
@@ -77,7 +77,6 @@
 import { computed, ref, onUnmounted, h } from 'vue'
 import type {
   UnifiedTimelineClipProps,
-  ContentRenderContext,
 } from '../types/clipRenderer'
 import type { UnifiedTimeRange } from '@/unified/types/timeRange'
 import type { UnifiedTrackType } from '@/unified/track/TrackTypes'
@@ -182,9 +181,9 @@ const clipProgress = computed(() => {
 })
 
 /**
- * 构建渲染上下文
+ * 构建模板组件的props
  */
-const renderContext = computed<ContentRenderContext>(() => ({
+const templateProps = computed(() => ({
   data: props.data,
   isSelected: props.isSelected,
   isDragging: props.isDragging,
@@ -193,46 +192,14 @@ const renderContext = computed<ContentRenderContext>(() => ({
   scale: props.scale,
   trackHeight: props.trackHeight,
   progressInfo: clipProgress.value, // 添加进度信息
-  callbacks: {
-    onSelect: (id: string) => emit('select', id),
-    onDoubleClick: (id: string) => emit('doubleClick', id),
-    onContextMenu: (event: MouseEvent, id: string) => emit('contextMenu', event, id),
-    onDragStart: (event: DragEvent, id: string) => emit('dragStart', event, id),
-    onResizeStart: (event: MouseEvent, id: string, direction: 'left' | 'right') =>
-      emit('resizeStart', event, id, direction),
-  },
 }))
 
 /**
- * 动态选择渲染器
+ * 动态选择模板组件
  */
-const renderer = computed(() => {
-  // 如果提供了自定义渲染器，优先使用
-  if (props.customRenderer) {
-    return props.customRenderer
-  }
-
-  // 使用渲染器工厂获取合适的渲染器
-  return ContentRendererFactory.getRenderer(props.data)
-})
-
-/**
- * 渲染内容
- */
-const renderedContent = computed(() => {
-  return () => renderer.value.renderContent(renderContext.value)
-})
-
-
-/**
- * 进度条
- */
-const progressBar = computed(() => {
-  if (!renderer.value.renderProgressBar) {
-    return null
-  }
-
-  return () => renderer.value.renderProgressBar!(renderContext.value)
+const templateComponent = computed(() => {
+  // 使用渲染器工厂获取合适的模板组件
+  return ContentRendererFactory.getTemplateComponent(props.data)
 })
 
 /**
@@ -250,10 +217,7 @@ const clipClasses = computed(() => {
     },
   ]
 
-  // 添加渲染器提供的自定义类
-  const customClasses = renderer.value.getCustomClasses?.(renderContext.value) || []
-
-  return [...baseClasses, ...customClasses]
+  return baseClasses
 })
 
 /**
@@ -267,13 +231,9 @@ const clipStyles = computed(() => {
   const clipHeight = getDefaultTrackHeight(trackType) - (DEFAULT_TRACK_PADDING * 2)
   const clipTopOffset = DEFAULT_TRACK_PADDING
 
-  // 添加渲染器提供的自定义样式
-  const customStyles = renderer.value.getCustomStyles?.(renderContext.value) || {}
-
   return {
     height: `${clipHeight}px`,
     top: `${clipTopOffset}px`,
-    ...customStyles
   }
 })
 
