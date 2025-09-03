@@ -73,7 +73,6 @@ const props = withDefaults(defineProps<UnifiedTimelineClipProps>(), {
   isDragging: false,
   isResizing: false,
   currentFrame: 0,
-  scale: 1,
   trackHeight: 60,
   timelineWidth: 1000,
 })
@@ -117,7 +116,6 @@ const templateProps = computed<ContentTemplateProps>(() => ({
   isDragging: props.isDragging,
   isResizing: props.isResizing,
   currentFrame: props.currentFrame,
-  scale: props.scale,
   trackHeight: props.trackHeight,
 }))
 

@@ -83,8 +83,7 @@ const isMuted = computed(() => {
 
 const showWaveform = computed(() => {
   const durationFrames = props.data.timeRange.timelineEndTime - props.data.timeRange.timelineStartTime
-  const width = durationFrames * props.scale
-  return width >= 150 // 宽度大于150px时显示波形
+  return durationFrames >= 45 // 大约1.5秒的音频片段显示波形
 })
 
 // 模拟波形数据（实际实现需要从store或管理器中获取）

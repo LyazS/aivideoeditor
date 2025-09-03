@@ -28,8 +28,7 @@ const props = defineProps<ContentTemplateProps>()
 // 计算属性
 const showDetails = computed(() => {
   const durationFrames = props.data.timeRange.timelineEndTime - props.data.timeRange.timelineStartTime
-  const width = durationFrames * props.scale
-  return width >= 80 // 宽度大于80px时显示详细信息
+  return durationFrames >= 24 // 大约0.8秒的片段显示详细信息
 })
 
 const displayName = computed(() => getTimelineItemDisplayName(props.data))

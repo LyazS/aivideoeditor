@@ -125,9 +125,6 @@ export interface ContentTemplateProps<T extends MediaType = MediaType> {
   /** 当前播放时间（帧数） */
   currentFrame: number
   
-  /** 缩放比例 */
-  scale: number
-  
   /** 轨道高度 */
   trackHeight: number
 }

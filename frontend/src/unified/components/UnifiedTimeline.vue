@@ -385,7 +385,6 @@ function renderTimelineItem(item: UnifiedTimelineItemData | any, track: any) {
     data: item,
     'is-selected': unifiedStore.isTimelineItemSelected(item.id),
     'current-frame': unifiedStore.currentFrame,
-    scale: 1,
     'track-height': track.height,
     'timeline-width': timelineWidth.value, // 传递时间轴宽度用于坐标转换
     // 事件处理

@@ -36,11 +36,11 @@ import { getTimelineItemDisplayName } from '@/unified/utils/clipUtils'
 
 const props = defineProps<ContentTemplateProps<'video' | 'image'>>()
 
-// 计算属性保持与现有逻辑一致
+// 计算属性 - 使用时间轴宽度和帧率来计算显示详细程度
 const showDetails = computed(() => {
   const durationFrames = props.data.timeRange.timelineEndTime - props.data.timeRange.timelineStartTime
-  const width = durationFrames * props.scale
-  return width >= 100
+  // 使用固定阈值，后续可以根据需要调整为基于缩放级别的动态计算
+  return durationFrames >= 30 // 大约1秒的片段显示详细信息
 })
 
 const displayName = computed(() => getTimelineItemDisplayName(props.data))
