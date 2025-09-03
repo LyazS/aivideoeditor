@@ -123,17 +123,15 @@ export function useTimelineTimeScale(scaleContainer: Ref<HTMLElement | undefined
    */
   const timeMarks = computed((): TimeMark[] => {
     const marks: TimeMark[] = []
-    const durationFrames = unifiedStore.totalDurationFrames
     const { currentLevel, majorIntervalPixels, minorIntervalPixels } = scaleIntervals.value
 
     // 计算可见帧数范围
-    const maxVisibleDurationFrames = unifiedStore.maxVisibleDurationFrames
     const { startFrames, endFrames } = calculateVisibleFrameRange(
       containerWidth.value,
-      durationFrames,
+      unifiedStore.totalDurationFrames,
       unifiedStore.zoomLevel,
       unifiedStore.scrollOffset,
-      maxVisibleDurationFrames,
+      unifiedStore.maxVisibleDurationFrames,
     )
 
     // 对齐到刻度间隔
@@ -149,7 +147,7 @@ export function useTimelineTimeScale(scaleContainer: Ref<HTMLElement | undefined
       const isMajor = frames % currentLevel.majorInterval === 0
       const position = unifiedStore.frameToPixel(frames, containerWidth.value)
 
-      // 只添加可见范围内的刻度
+      // 只添加可见范围内的刻度（扩增可见范围）
       if (position >= -50 && position <= containerWidth.value + 50) {
         marks.push({
           time: frames,
