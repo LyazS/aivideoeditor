@@ -13,7 +13,6 @@ export interface ThumbnailLayoutItem {
   framePosition: number;         // 在clip内的帧位置
   timelineFramePosition: number; // 在时间轴上的帧位置
   pixelPosition: number;        // 像素位置（用于CSS定位）
-  isVisible: boolean;           // 是否在视口内可见
   thumbnailUrl: string | null;  // 缩略图URL
 }
 

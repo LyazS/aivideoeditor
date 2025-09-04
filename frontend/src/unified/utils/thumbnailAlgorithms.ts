@@ -45,7 +45,6 @@ export function calculateThumbnailLayout(
       framePosition,
       timelineFramePosition,
       pixelPosition,
-      isVisible: false, // 初始化为不可见，由可见性计算更新
       thumbnailUrl: null,
     })
   }
@@ -75,20 +74,13 @@ export function filterThumbnailVisible(
   const visibleStartFrame = Math.max(clipStartFrame, viewportStartFrame)
   const visibleEndFrame = Math.min(clipEndFrame, viewportEndFrame)
 
-  // 过滤出可见的缩略图，并更新可见性标志
-  return layoutItems
-    .map((item) => {
-      const isVisible =
-        item.timelineFramePosition >= visibleStartFrame - THUMBNAIL_CONSTANTS.VISIBILITY_BUFFER_FRAMES &&
-        item.timelineFramePosition <= visibleEndFrame + THUMBNAIL_CONSTANTS.VISIBILITY_BUFFER_FRAMES
-      
-      // 返回更新后的项
-      return {
-        ...item,
-        isVisible,
-      }
-    })
-    .filter((item) => item.isVisible)
+  // 过滤出可见的缩略图
+  return layoutItems.filter((item) => {
+    return (
+      item.timelineFramePosition >= visibleStartFrame - THUMBNAIL_CONSTANTS.VISIBILITY_BUFFER_FRAMES &&
+      item.timelineFramePosition <= visibleEndFrame + THUMBNAIL_CONSTANTS.VISIBILITY_BUFFER_FRAMES
+    )
+  })
 }
 
 /**
