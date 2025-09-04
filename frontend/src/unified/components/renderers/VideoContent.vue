@@ -10,10 +10,9 @@
         :style="getThumbnailSlotStyle(item)"
       >
         <!-- 第一步实验：显示帧索引文本而非实际图片 -->
-        <div class="thumbnail-frame-index" v-if="item.isVisible">
+        <div class="thumbnail-frame-index">
           {{ item.framePosition }}
         </div>
-        <div v-else class="thumbnail-placeholder"></div>
       </div>
     </div>
   </div>
@@ -25,7 +24,7 @@ import type { ContentTemplateProps } from '@/unified/types/clipRenderer'
 import { useUnifiedStore } from '@/unified/unifiedStore'
 import {
   calculateThumbnailLayout,
-  updateThumbnailVisibility,
+  filterThumbnailVisible,
   calculateViewportFrameRange,
   calculateClipWidthPixels,
 } from '@/unified/utils/thumbnailAlgorithms'
@@ -72,8 +71,8 @@ const thumbnailLayout = computed<ThumbnailLayoutItem[]>(() => {
     THUMBNAIL_CONSTANTS.WIDTH, // 固定缩略图宽度
   )
 
-  // 更新可见性
-  return updateThumbnailVisibility(
+  // 过滤可见的缩略图
+  return filterThumbnailVisible(
     layout,
     clipTLStartFrame,
     clipTLDurationFrames,
@@ -133,11 +132,6 @@ onUnmounted(() => {
   background-color: rgba(0, 0, 0, 0.5);
 }
 
-.thumbnail-placeholder {
-  width: 100%;
-  height: 100%;
-  background-color: rgba(255, 255, 255, 0.514);
-}
 
 /* 保持原有样式（向后兼容） */
 .video-content {

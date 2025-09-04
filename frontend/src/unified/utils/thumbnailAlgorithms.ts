@@ -54,15 +54,15 @@ export function calculateThumbnailLayout(
 }
 
 /**
- * 更新缩略图可见性
+ * 过滤可见的缩略图
  * @param layoutItems 缩略图布局项数组
  * @param clipStartFrame clip开始帧
  * @param clipDurationFrames clip时长（帧数）
  * @param viewportStartFrame 视口开始帧
  * @param viewportEndFrame 视口结束帧
- * @returns 更新后的缩略图布局项数组
+ * @returns 可见的缩略图布局项数组
  */
-export function updateThumbnailVisibility(
+export function filterThumbnailVisible(
   layoutItems: ThumbnailLayoutItem[],
   clipStartFrame: number,
   clipDurationFrames: number,
@@ -75,13 +75,20 @@ export function updateThumbnailVisibility(
   const visibleStartFrame = Math.max(clipStartFrame, viewportStartFrame)
   const visibleEndFrame = Math.min(clipEndFrame, viewportEndFrame)
 
-  // 更新每个缩略图的可见性
-  return layoutItems.map((item) => ({
-    ...item,
-    isVisible:
-      item.timelineFramePosition >= visibleStartFrame - THUMBNAIL_CONSTANTS.VISIBILITY_BUFFER_FRAMES &&
-      item.timelineFramePosition <= visibleEndFrame + THUMBNAIL_CONSTANTS.VISIBILITY_BUFFER_FRAMES,
-  }))
+  // 过滤出可见的缩略图，并更新可见性标志
+  return layoutItems
+    .map((item) => {
+      const isVisible =
+        item.timelineFramePosition >= visibleStartFrame - THUMBNAIL_CONSTANTS.VISIBILITY_BUFFER_FRAMES &&
+        item.timelineFramePosition <= visibleEndFrame + THUMBNAIL_CONSTANTS.VISIBILITY_BUFFER_FRAMES
+      
+      // 返回更新后的项
+      return {
+        ...item,
+        isVisible,
+      }
+    })
+    .filter((item) => item.isVisible)
 }
 
 /**
