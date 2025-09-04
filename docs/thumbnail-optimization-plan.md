@@ -21,18 +21,6 @@
 
 ```typescript
 // 精简的内存缓存结构
-interface ThumbnailMemoryCache {
-  // 内存缓存 Map
-  cache: Map<string, CachedThumbnail>;
-  
-  // 最大缓存数量
-  maxSize: number;
-  
-  // 缓存命中统计
-  hitCount: number;
-  missCount: number;
-}
-
 interface CachedThumbnail {
   blobUrl: string;
   timestamp: number;
@@ -44,34 +32,98 @@ interface CachedThumbnail {
 
 // 缓存键设计: timelineItemId-framePosition-clipStartTime-clipEndTime
 const cacheKey = `${timelineItemId}-${framePosition}-${clipStartTime}-${clipEndTime}`;
+
+// 直接使用Map作为内存缓存，资源清理与缓存条目删除同步进行
+const memoryCache = new Map<string, CachedThumbnail>();
+const maxCacheSize = 1000; // 最大缓存数量
+let hitCount = 0;
+let missCount = 0;
 ```
 
 ### 2. 任务调度系统
 
 ```typescript
+/**
+ * 缩略图任务调度器接口
+ * 负责管理缩略图生成任务的调度和分组
+ */
 interface ThumbnailTaskScheduler {
-  // 按时间轴项目分组
+  /** 按时间轴项目分组的任务集合 */
   taskGroups: Map<string, ThumbnailTaskGroup>;
   
-  // 批量处理器
+  /** 批量处理器实例，负责实际的缩略图生成 */
   batchProcessor: BatchProcessor;
   
-  // 处理队列
+  /** 待处理的任务队列 */
   processingQueue: Array<ThumbnailTaskGroup>;
 }
 
+/**
+ * 缩略图任务组接口
+ * 表示一个时间轴项目的所有待处理缩略图任务
+ */
 interface ThumbnailTaskGroup {
+  /** 时间轴项目ID */
   timelineItemId: string;
+  
+  /** 媒体项目数据 */
   mediaItem: UnifiedMediaItemData;
-  pendingFrames: Set<number>;      // 待处理的帧索引
-  processing: boolean;             // 是否正在处理
+  
+  /** 待处理的帧索引集合 */
+  pendingFrames: Set<number>;
+  
+  /** 是否正在处理中 */
+  processing: boolean;
+}
+
+/**
+ * 缩略图批量请求接口
+ * 表示一个缩略图生成请求的数据结构
+ */
+interface ThumbnailBatchRequest {
+  /** 时间轴项目ID */
+  timelineItemId: string;
+  
+  /** 帧位置 */
+  framePosition: number;
+  
+  /** 请求时间戳 */
+  timestamp: number;
+}
+
+/**
+ * 缩略图请求接口（单个请求）
+ */
+interface ThumbnailRequest {
+  /** 时间轴项目ID */
+  timelineItemId: string;
+  
+  /** 帧位置 */
+  framePosition: number;
+  
+  /** 请求时间戳 */
+  timestamp: number;
 }
 ```
 
 ### 3. 批量处理优化
 
 ```typescript
+/**
+ * 批量处理器类
+ * 负责批量生成缩略图，优化MP4Clip重用和缓存管理
+ */
 class BatchProcessor {
+  /** 内存缓存实例 */
+  private memoryCache = new Map<string, CachedThumbnail>();
+  
+  /**
+   * 批量处理缩略图生成
+   * @param timelineItemId 时间轴项目ID
+   * @param mediaItem 媒体项目数据
+   * @param frames 需要生成缩略图的帧索引数组
+   * @returns 包含帧索引和对应Blob URL的映射
+   */
   async processBatch(
     timelineItemId: string,
     mediaItem: UnifiedMediaItemData,
@@ -101,9 +153,12 @@ class BatchProcessor {
         blobResults.set(frame, blobUrl);
         
         // 5. 更新缓存
-        const cacheKey = this.generateCacheKey(timelineItemId, frame, mediaItem);
-        this.cacheManager.set(cacheKey, blobUrl, {
-          timelineItemId,
+        const cacheKey = this.generateCacheKey(timelineItem.id, frame, mediaItem);
+        // 直接使用内存缓存，Blob URL清理与缓存条目删除同步进行
+        this.memoryCache.set(cacheKey, {
+          blobUrl,
+          timestamp: Date.now(),
+          timelineItemId: timelineItem.id,
           framePosition: frame,
           clipStartTime: mediaItem.timeRange?.clipStartTime || 0,
           clipEndTime: mediaItem.timeRange?.clipEndTime || 0
@@ -118,7 +173,13 @@ class BatchProcessor {
     }
   }
   
-  // 生成缓存键
+  /**
+   * 生成缓存键
+   * @param timelineItemId 时间轴项目ID
+   * @param framePosition 帧位置
+   * @param mediaItem 媒体项目数据
+   * @returns 缓存键字符串
+   */
   private generateCacheKey(
     timelineItemId: string,
     framePosition: number,
@@ -127,6 +188,38 @@ class BatchProcessor {
     const clipStartTime = mediaItem.timeRange?.clipStartTime || 0;
     const clipEndTime = mediaItem.timeRange?.clipEndTime || 0;
     return `${timelineItemId}-${framePosition}-${clipStartTime}-${clipEndTime}`;
+  }
+  
+  /**
+   * 计算帧对应的时间位置
+   * @param mediaItem 媒体项目数据
+   * @param frame 帧索引
+   * @returns 时间位置（微秒）
+   */
+  private calculateTimePosition(mediaItem: UnifiedMediaItemData, frame: number): number {
+    // 实现细节...
+    return 0;
+  }
+  
+  /**
+   * 为指定帧生成缩略图
+   * @param mp4Clip MP4Clip实例
+   * @param timePosition 时间位置
+   * @returns HTMLCanvasElement包含缩略图
+   */
+  private async generateThumbnailForFrame(mp4Clip: any, timePosition: number): Promise<HTMLCanvasElement> {
+    // 实现细节...
+    return document.createElement('canvas');
+  }
+  
+  /**
+   * 将canvas转换为Blob URL
+   * @param canvas HTMLCanvasElement
+   * @returns Blob URL字符串
+   */
+  private async canvasToBlob(canvas: HTMLCanvasElement): Promise<string> {
+    // 实现细节...
+    return '';
   }
 }
 ```
@@ -145,13 +238,23 @@ class BatchProcessor {
 #### 调度算法实现
 
 ```typescript
-import { throttle } from 'lodash-es';
+import { throttle } from 'lodash';
 
+/**
+ * 优化的缩略图调度器类
+ * 使用定时触发机制管理缩略图生成任务的调度
+ */
 class OptimizedThumbnailScheduler {
+  /** 处理间隔时间（毫秒） */
   private readonly PROCESSING_INTERVAL = 1000; // 1秒间隔
+  
+  /** 待处理的请求映射，按时间轴项目分组 */
   private pendingRequests = new Map<string, Set<ThumbnailRequest>>();
   
-  // 使用lodash的throttle创建节流处理函数
+  /** 批量处理器实例 */
+  private batchProcessor: BatchProcessor;
+  
+  /** 使用lodash的throttle创建节流处理函数 */
   private throttledProcessor = throttle(() => {
     this.processAllPendingRequests();
   }, this.PROCESSING_INTERVAL, {
@@ -159,7 +262,10 @@ class OptimizedThumbnailScheduler {
     trailing: true   // 在结束时执行
   });
 
-  // 添加缩略图请求（由VideoContent.vue调用）
+  /**
+   * 添加缩略图请求（由VideoContent.vue调用）
+   * @param requests 缩略图批量请求数组
+   */
   requestThumbnails(requests: ThumbnailBatchRequest[]): void {
     // 将请求按时间轴项目分组存储
     requests.forEach(request => {
@@ -173,7 +279,9 @@ class OptimizedThumbnailScheduler {
     this.throttledProcessor();
   }
 
-  // 定时处理所有待处理请求
+  /**
+   * 定时处理所有待处理请求
+   */
   private async processAllPendingRequests(): void {
     if (this.pendingRequests.size === 0) return;
 
@@ -198,14 +306,30 @@ class OptimizedThumbnailScheduler {
     }
   }
 
-  // 处理单个时间轴项目的所有缩略图请求
+  /**
+   * 处理单个时间轴项目的所有缩略图请求
+   * @param timelineItemId 时间轴项目ID
+   * @param requests 缩略图请求数组
+   */
   private async processTimelineItemRequests(
     timelineItemId: string,
     requests: ThumbnailRequest[]
   ): Promise<void> {
     if (requests.length === 0) return;
 
-    const mediaItem = requests[0].mediaItem;
+    const timelineItemId = requests[0].timelineItemId;
+    // 通过时间轴项目ID获取时间轴项目数据
+    const timelineItem = unifiedStore.getTimelineItem(timelineItemId);
+    if (!timelineItem) {
+      console.error(`❌ 找不到时间轴项目: ${timelineItemId}`);
+      return;
+    }
+    // 通过时间轴项目获取媒体项目
+    const mediaItem = unifiedStore.getMediaItem(timelineItem.mediaItemId);
+    if (!mediaItem) {
+      console.error(`❌ 找不到媒体项目: ${timelineItem.mediaItemId}`);
+      return;
+    }
     const frames = requests.map(req => req.framePosition);
 
     console.log(`📸 处理项目 ${timelineItemId}，帧数: ${frames.length}`);
@@ -221,17 +345,31 @@ class OptimizedThumbnailScheduler {
     this.notifyConsumers(timelineItemId, results);
   }
 
-  // 取消指定时间轴项目的待处理请求
+  /**
+   * 取消指定时间轴项目的待处理请求
+   * @param timelineItemId 时间轴项目ID
+   */
   cancelTasks(timelineItemId: string): void {
     this.pendingRequests.delete(timelineItemId);
     console.log(`❌ 取消项目 ${timelineItemId} 的待处理任务`);
   }
 
-  // 清理资源
+  /**
+   * 清理资源
+   */
   destroy(): void {
     // 取消lodash throttle的待执行任务
     this.throttledProcessor.cancel();
     this.pendingRequests.clear();
+  }
+  
+  /**
+   * 通知消费者缩略图生成完成
+   * @param timelineItemId 时间轴项目ID
+   * @param results 生成结果映射
+   */
+  private notifyConsumers(timelineItemId: string, results: Map<number, string>): void {
+    // 实现通知逻辑
   }
 }
 ```
@@ -291,30 +429,29 @@ onUnmounted(() => {
 ### 5. 资源管理策略
 
 ```typescript
-class CacheManager {
-  // 当从缓存中移除条目时，自动清理对应的Blob URL
-  delete(cacheKey: string): boolean {
-    const cached = this.cache.get(cacheKey);
-    if (cached) {
-      // 清理Blob URL资源
-      URL.revokeObjectURL(cached.blobUrl);
-      this.cache.delete(cacheKey);
-      return true;
-    }
-    return false;
+// 资源管理直接集成到缓存系统中，Blob URL清理与缓存条目删除同步进行
+// 当从缓存中移除条目时，自动清理对应的Blob URL
+function deleteCacheEntry(cacheKey: string, cache: Map<string, CachedThumbnail>): boolean {
+  const cached = cache.get(cacheKey);
+  if (cached) {
+    // 清理Blob URL资源
+    URL.revokeObjectURL(cached.blobUrl);
+    cache.delete(cacheKey);
+    return true;
   }
-  
-  // 批量清理缓存
-  cleanup(maxSize: number = 1000): void {
-    if (this.cache.size > maxSize) {
-      // 简单的LRU策略：移除最老的缓存条目
-      const entries = Array.from(this.cache.entries());
-      entries.sort((a, b) => a[1].timestamp - b[1].timestamp);
-      
-      const toRemove = entries.slice(0, this.cache.size - maxSize);
-      for (const [key] of toRemove) {
-        this.delete(key);
-      }
+  return false;
+}
+
+// 批量清理缓存（LRU策略）
+function cleanupCache(cache: Map<string, CachedThumbnail>, maxSize: number = 1000): void {
+  if (cache.size > maxSize) {
+    // 简单的LRU策略：移除最老的缓存条目
+    const entries = Array.from(cache.entries());
+    entries.sort((a, b) => a[1].timestamp - b[1].timestamp);
+    
+    const toRemove = entries.slice(0, cache.size - maxSize);
+    for (const [key] of toRemove) {
+      deleteCacheEntry(key, cache);
     }
   }
 }
@@ -330,7 +467,7 @@ class CacheManager {
 
 2. **重构缓存系统**：
    - 直接实现新的缓存键格式：`${timelineItemId}-${framePosition}-${clipStartTime}-${clipEndTime}`
-   - 集成内存缓存、LRU策略和自动资源清理
+   - 集成内存缓存和LRU策略，资源清理与缓存管理一体化
    - 移除所有旧的缓存逻辑
 
 3. **批量处理核心**：
@@ -407,8 +544,7 @@ class CacheManager {
 
 #### 新建的文件
 - `frontend/src/unified/managers/OptimizedThumbnailManager.ts` - 新的缩略图管理器
-- `frontend/src/unified/utils/thumbnailCache.ts` - 智能缓存系统
-- `frontend/src/unified/utils/thumbnailBatchProcessor.ts` - 批量处理器
+- `frontend/src/unified/utils/thumbnailBatchProcessor.ts` - 批量处理器（集成缓存管理）
 - `frontend/src/unified/utils/thumbnailTaskScheduler.ts` - 任务调度器
 
 #### 重构的文件
@@ -420,15 +556,28 @@ class CacheManager {
 
 #### 1. 管理器层重构
 ```typescript
-// 新的OptimizedThumbnailManager接口
+/**
+ * 优化的缩略图管理器接口
+ * 提供批量缩略图生成和管理功能
+ */
 interface OptimizedThumbnailManager {
-  // 批量请求接口（替换单个生成）
+  /**
+   * 批量请求缩略图生成（替换单个生成）
+   * @param requests 缩略图批量请求数组
+   * @returns Promise<void>
+   */
   requestThumbnails(requests: ThumbnailBatchRequest[]): Promise<void>
   
-  // 取消任务（视口变化时）
+  /**
+   * 取消指定时间轴项目的待处理任务（视口变化时调用）
+   * @param timelineItemId 时间轴项目ID
+   */
   cancelTasks(timelineItemId: string): void
   
-  // 获取缓存状态
+  /**
+   * 获取缓存状态信息
+   * @returns 缓存状态对象
+   */
   getCacheStatus(): ThumbnailCacheStatus
 }
 ```
@@ -477,8 +626,8 @@ onUnmounted(() => {
 
 #### 3. 缓存系统重构
 - **彻底移除**现有的Map-based缓存
-- **直接实现**LRU + 智能清理的高级缓存
-- **统一管理**所有Blob URL的生命周期
+- **直接实现**LRU策略，资源清理与缓存管理一体化
+- **统一管理**所有Blob URL的生命周期，确保同步清理
 
 ### 性能验证标准
 
@@ -514,8 +663,8 @@ onUnmounted(() => {
 本激进重构方案通过彻底重建缩略图系统架构，实现以下核心优化：
 
 ### 三大核心策略
-1. **智能缓存系统**：LRU策略 + 自动资源管理，避免重复计算
-2. **批量处理架构**：任务分组 + MP4Clip重用，大幅减少资源消耗  
+1. **智能缓存系统**：LRU策略 + 资源管理一体化，避免重复计算
+2. **批量处理架构**：任务分组 + MP4Clip重用，大幅减少资源消耗
 3. **高效调度机制**：优先级管理 + 智能取消，提升响应速度
 
 ### 重构优势
