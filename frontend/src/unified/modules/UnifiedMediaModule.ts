@@ -67,11 +67,7 @@ function printUnifiedDebugInfo(
  * 统一媒体管理模块
  * 负责管理素材库中的统一媒体项目
  */
-export function createUnifiedMediaModule(webavModule: {
-  createMP4Clip: (file: File) => Promise<Raw<MP4Clip>>
-  createImgClip: (file: File) => Promise<Raw<ImgClip>>
-  createAudioClip: (file: File) => Promise<Raw<AudioClip>>
-}) {
+export function createUnifiedMediaModule() {
   // ==================== 状态定义 ====================
 
   // 统一媒体项目列表
@@ -264,50 +260,6 @@ export function createUnifiedMediaModule(webavModule: {
         },
         { immediate: true }, // 立即执行一次，检查当前状态
       )
-    })
-  }
-
-  // ==================== WebAV处理方法 ====================
-
-  // 注意：startWebAVProcessing方法已移除，现在由各个管理器直接处理WebAV解析
-
-  /**
-   * 生成视频缩略图
-   * @param file 视频文件
-   * @returns 缩略图URL
-   */
-  async function generateVideoThumbnail(file: File): Promise<string> {
-    return new Promise((resolve, reject) => {
-      const video = document.createElement('video')
-      const canvas = document.createElement('canvas')
-      const ctx = canvas.getContext('2d')
-
-      video.onloadedmetadata = () => {
-        canvas.width = video.videoWidth
-        canvas.height = video.videoHeight
-
-        video.currentTime = 1 // 获取第1秒的帧
-      }
-
-      video.onseeked = () => {
-        if (ctx) {
-          ctx.drawImage(video, 0, 0)
-          canvas.toBlob(
-            (blob) => {
-              if (blob) {
-                resolve(URL.createObjectURL(blob))
-              } else {
-                reject(new Error('生成缩略图失败'))
-              }
-            },
-            'image/jpeg',
-            0.8,
-          )
-        }
-      }
-
-      video.onerror = () => reject(new Error('视频加载失败'))
-      video.src = URL.createObjectURL(file)
     })
   }
 

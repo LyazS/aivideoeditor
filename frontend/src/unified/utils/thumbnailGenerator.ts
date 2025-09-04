@@ -2,6 +2,7 @@ import { MP4Clip, ImgClip } from '@webav/av-cliper'
 import type { UnifiedMediaItemData } from '@/unified/mediaitem'
 import type { UnifiedTimelineItemData } from '@/unified/timelineitem/TimelineItemData'
 import { UnifiedMediaItemQueries } from '@/unified/mediaitem'
+import { ThumbnailMode } from '@/unified/constants/ThumbnailConstants'
 
 /**
  * 统一架构下的缩略图生成器
@@ -9,11 +10,12 @@ import { UnifiedMediaItemQueries } from '@/unified/mediaitem'
  */
 
 /**
- * 计算保持宽高比的缩略图尺寸（在固定尺寸容器内居中显示）
+ * 计算缩略图尺寸
  * @param originalWidth 原始宽度
  * @param originalHeight 原始高度
  * @param containerWidth 容器宽度（100px）
  * @param containerHeight 容器高度（60px）
+ * @param mode 缩略图显示模式，默认为适应模式
  * @returns 缩略图尺寸和位置信息
  */
 function calculateThumbnailSize(
@@ -21,26 +23,47 @@ function calculateThumbnailSize(
   originalHeight: number,
   containerWidth: number = 100,
   containerHeight: number = 60,
+  mode: ThumbnailMode = ThumbnailMode.FIT,
 ) {
   const aspectRatio = originalWidth / originalHeight
   const containerAspectRatio = containerWidth / containerHeight
 
   let drawWidth: number
   let drawHeight: number
+  let offsetX: number
+  let offsetY: number
 
-  if (aspectRatio > containerAspectRatio) {
-    // 原始宽高比大于容器宽高比，以容器宽度为准
-    drawWidth = containerWidth
-    drawHeight = containerWidth / aspectRatio
+  if (mode === ThumbnailMode.FILL) {
+    // 填满模式：填满整个容器，可能裁剪部分内容
+    if (aspectRatio > containerAspectRatio) {
+      // 原始宽高比大于容器宽高比，以容器高度为准进行裁剪
+      drawWidth = containerHeight * aspectRatio
+      drawHeight = containerHeight
+      offsetX = (containerWidth - drawWidth) / 2
+      offsetY = 0
+    } else {
+      // 原始宽高比小于等于容器宽高比，以容器宽度为准进行裁剪
+      drawWidth = containerWidth
+      drawHeight = containerWidth / aspectRatio
+      offsetX = 0
+      offsetY = (containerHeight - drawHeight) / 2
+    }
   } else {
-    // 原始宽高比小于等于容器宽高比，以容器高度为准
-    drawWidth = containerHeight * aspectRatio
-    drawHeight = containerHeight
-  }
+    // 适应模式（默认）：保持宽高比，居中显示，两侧或上下留黑边
+    if (aspectRatio > containerAspectRatio) {
+      // 原始宽高比大于容器宽高比，以容器宽度为准
+      drawWidth = containerWidth
+      drawHeight = containerWidth / aspectRatio
+    } else {
+      // 原始宽高比小于等于容器宽高比，以容器高度为准
+      drawWidth = containerHeight * aspectRatio
+      drawHeight = containerHeight
+    }
 
-  // 计算居中位置
-  const offsetX = (containerWidth - drawWidth) / 2
-  const offsetY = (containerHeight - drawHeight) / 2
+    // 计算居中位置
+    offsetX = (containerWidth - drawWidth) / 2
+    offsetY = (containerHeight - drawHeight) / 2
+  }
 
   return {
     containerWidth,
@@ -101,6 +124,9 @@ function createThumbnailCanvas(
  * 使用MP4Clip的tick方法生成视频缩略图
  * @param mp4Clip MP4Clip实例
  * @param timePosition 时间位置（微秒），默认为视频中间位置
+ * @param containerWidth 容器宽度（默认100px）
+ * @param containerHeight 容器高度（默认60px）
+ * @param mode 缩略图显示模式，默认为适应模式
  * @returns Promise<HTMLCanvasElement>
  */
 export async function generateVideoThumbnail(
@@ -108,6 +134,7 @@ export async function generateVideoThumbnail(
   timePosition?: number,
   containerWidth: number = 100,
   containerHeight: number = 60,
+  mode: ThumbnailMode = ThumbnailMode.FIT,
 ): Promise<HTMLCanvasElement> {
   let clonedClip: MP4Clip | null = null
 
@@ -145,7 +172,7 @@ export async function generateVideoThumbnail(
     }
 
     // 计算缩略图尺寸
-    const sizeInfo = calculateThumbnailSize(meta.width, meta.height, containerWidth, containerHeight)
+    const sizeInfo = calculateThumbnailSize(meta.width, meta.height, containerWidth, containerHeight, mode)
     console.log('📐 [ThumbnailGenerator] 缩略图尺寸:', {
       original: `${meta.width}x${meta.height}`,
       container: `${sizeInfo.containerWidth}x${sizeInfo.containerHeight}`,
@@ -180,12 +207,16 @@ export async function generateVideoThumbnail(
 /**
  * 使用ImgClip的tick方法生成图片缩略图
  * @param imgClip ImgClip实例
+ * @param containerWidth 容器宽度（默认100px）
+ * @param containerHeight 容器高度（默认60px）
+ * @param mode 缩略图显示模式，默认为适应模式
  * @returns Promise<HTMLCanvasElement>
  */
 export async function generateImageThumbnail(
   imgClip: ImgClip,
   containerWidth: number = 100,
   containerHeight: number = 60,
+  mode: ThumbnailMode = ThumbnailMode.FIT,
 ): Promise<HTMLCanvasElement> {
   let clonedClip: ImgClip | null = null
 
@@ -218,7 +249,7 @@ export async function generateImageThumbnail(
     }
 
     // 计算缩略图尺寸
-    const sizeInfo = calculateThumbnailSize(meta.width, meta.height, containerWidth, containerHeight)
+    const sizeInfo = calculateThumbnailSize(meta.width, meta.height, containerWidth, containerHeight, mode)
     console.log('📐 [ThumbnailGenerator] 缩略图尺寸:', {
       original: `${meta.width}x${meta.height}`,
       container: `${sizeInfo.containerWidth}x${sizeInfo.containerHeight}`,
@@ -277,6 +308,9 @@ export function canvasToBlob(canvas: HTMLCanvasElement, quality: number = 0.8): 
  * 统一的缩略图生成函数 - 根据媒体类型自动选择合适的生成方法
  * @param mediaItem 统一媒体项目
  * @param timePosition 视频时间位置（微秒），仅对视频有效
+ * @param containerWidth 容器宽度（默认100px）
+ * @param containerHeight 容器高度（默认60px）
+ * @param mode 缩略图显示模式，默认为适应模式
  * @returns Promise<string | undefined> 缩略图URL
  */
 export async function generateThumbnailForUnifiedMediaItem(
@@ -284,17 +318,18 @@ export async function generateThumbnailForUnifiedMediaItem(
   timePosition?: number,
   containerWidth: number = 100,
   containerHeight: number = 60,
+  mode: ThumbnailMode = ThumbnailMode.FIT,
 ): Promise<string | undefined> {
   try {
     let canvas: HTMLCanvasElement
 
     if (UnifiedMediaItemQueries.isVideo(mediaItem) && mediaItem.webav?.mp4Clip) {
       console.log('🎬 生成视频缩略图...')
-      canvas = await generateVideoThumbnail(mediaItem.webav.mp4Clip, timePosition, containerWidth, containerHeight)
+      canvas = await generateVideoThumbnail(mediaItem.webav.mp4Clip, timePosition, containerWidth, containerHeight, mode)
       console.log('✅ 视频缩略图生成成功')
     } else if (UnifiedMediaItemQueries.isImage(mediaItem) && mediaItem.webav?.imgClip) {
       console.log('🖼️ 生成图片缩略图...')
-      canvas = await generateImageThumbnail(mediaItem.webav.imgClip, containerWidth, containerHeight)
+      canvas = await generateImageThumbnail(mediaItem.webav.imgClip, containerWidth, containerHeight, mode)
       console.log('✅ 图片缩略图生成成功')
     } else if (UnifiedMediaItemQueries.isAudio(mediaItem)) {
       console.log('🎵 音频不需要缩略图，跳过生成')
@@ -319,6 +354,7 @@ export async function generateThumbnailForUnifiedMediaItem(
  * @param mediaItem 对应的统一媒体项目
  * @param containerWidth 容器宽度（可选，默认100px）
  * @param containerHeight 容器高度（可选，默认60px）
+ * @param mode 缩略图显示模式，默认为适应模式
  * @returns Promise<string | undefined> 新的缩略图URL
  */
 export async function regenerateThumbnailForUnifiedTimelineItem(
@@ -326,6 +362,7 @@ export async function regenerateThumbnailForUnifiedTimelineItem(
   mediaItem: UnifiedMediaItemData,
   containerWidth: number = 100,
   containerHeight: number = 60,
+  mode: ThumbnailMode = ThumbnailMode.FIT,
 ): Promise<string | undefined> {
   try {
     console.log('🔄 [ThumbnailGenerator] 重新生成时间轴clip缩略图:', {
@@ -356,12 +393,13 @@ export async function regenerateThumbnailForUnifiedTimelineItem(
       )
     }
 
-    // 使用统一的缩略图生成函数，传递容器尺寸参数
+    // 使用统一的缩略图生成函数，传递容器尺寸参数和模式
     const thumbnailUrl = await generateThumbnailForUnifiedMediaItem(
       mediaItem,
       thumbnailTime,
       containerWidth,
-      containerHeight
+      containerHeight,
+      mode
     )
 
     if (thumbnailUrl) {

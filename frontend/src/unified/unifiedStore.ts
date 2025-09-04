@@ -126,7 +126,7 @@ export const useUnifiedStore = defineStore('unified', () => {
     setPlaying: unifiedPlaybackModule.setPlaying,
   })
   // 创建统一媒体管理模块（替代原有的mediaModule）
-  const unifiedMediaModule = createUnifiedMediaModule(unifiedWebavModule)
+  const unifiedMediaModule = createUnifiedMediaModule()
 
   // 创建统一轨道管理模块
   const unifiedTrackModule = createUnifiedTrackModule()
