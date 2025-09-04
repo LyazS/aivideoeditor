@@ -127,6 +127,7 @@ function createThumbnailCanvas(
  * @param containerWidth 容器宽度（默认100px）
  * @param containerHeight 容器高度（默认60px）
  * @param mode 缩略图显示模式，默认为适应模式
+ * @param shouldClone 是否克隆MP4Clip以避免影响原始实例，默认为true
  * @returns Promise<HTMLCanvasElement>
  */
 export async function generateVideoThumbnail(
@@ -135,8 +136,9 @@ export async function generateVideoThumbnail(
   containerWidth: number = 100,
   containerHeight: number = 60,
   mode: ThumbnailMode = ThumbnailMode.FIT,
+  shouldClone: boolean = true, // 新增参数，默认要clone
 ): Promise<HTMLCanvasElement> {
-  let clonedClip: MP4Clip | null = null
+  let workingClip: MP4Clip = mp4Clip // 使用原始clip或克隆的clip
 
   try {
     console.log('🎬 [ThumbnailGenerator] 开始生成视频缩略图...')
@@ -150,18 +152,23 @@ export async function generateVideoThumbnail(
       height: meta.height,
     })
 
-    // 克隆MP4Clip以避免影响原始实例
-    console.log('🔄 [ThumbnailGenerator] 克隆MP4Clip...')
-    clonedClip = await mp4Clip.clone()
-    console.log('✅ [ThumbnailGenerator] MP4Clip克隆完成')
+    // 根据shouldClone标志决定是否克隆MP4Clip
+    if (shouldClone) {
+      console.log('🔄 [ThumbnailGenerator] 克隆MP4Clip...')
+      workingClip = await mp4Clip.clone()
+      console.log('✅ [ThumbnailGenerator] MP4Clip克隆完成')
+    } else {
+      console.log('ℹ️ [ThumbnailGenerator] 跳过克隆，使用原始MP4Clip')
+      // workingClip 初始值已经是 mp4Clip，无需重新赋值
+    }
 
     // 如果没有指定时间位置，使用视频中间位置
     const tickTime = timePosition ?? meta.duration / 2
     console.log('⏰ [ThumbnailGenerator] 获取视频帧时间位置:', tickTime)
 
-    // 使用克隆的clip获取指定时间的帧
+    // 使用workingClip获取指定时间的帧
     console.log('🎞️ [ThumbnailGenerator] 开始tick获取视频帧...')
-    const tickResult = await clonedClip.tick(tickTime)
+    const tickResult = await workingClip.tick(tickTime)
     console.log('📸 [ThumbnailGenerator] tick结果:', {
       state: tickResult.state,
       hasVideo: !!tickResult.video,
@@ -196,10 +203,10 @@ export async function generateVideoThumbnail(
     console.error('❌ [ThumbnailGenerator] 错误堆栈:', (error as Error).stack)
     throw error
   } finally {
-    // 清理克隆的clip
-    if (clonedClip) {
+    // 清理克隆的clip（只有当shouldClone为true且workingClip是克隆的实例时才需要清理）
+    if (shouldClone && workingClip !== mp4Clip) {
       console.log('🧹 [ThumbnailGenerator] 清理克隆的clip')
-      clonedClip.destroy()
+      workingClip.destroy()
     }
   }
 }
@@ -210,6 +217,7 @@ export async function generateVideoThumbnail(
  * @param containerWidth 容器宽度（默认100px）
  * @param containerHeight 容器高度（默认60px）
  * @param mode 缩略图显示模式，默认为适应模式
+ * @param shouldClone 是否克隆ImgClip以避免影响原始实例，默认为true
  * @returns Promise<HTMLCanvasElement>
  */
 export async function generateImageThumbnail(
@@ -217,8 +225,9 @@ export async function generateImageThumbnail(
   containerWidth: number = 100,
   containerHeight: number = 60,
   mode: ThumbnailMode = ThumbnailMode.FIT,
+  shouldClone: boolean = true, // 新增参数，默认要clone
 ): Promise<HTMLCanvasElement> {
-  let clonedClip: ImgClip | null = null
+  let workingClip: ImgClip = imgClip // 使用原始clip或克隆的clip
 
   try {
     console.log('🖼️ [ThumbnailGenerator] 开始生成图片缩略图...')
@@ -231,14 +240,19 @@ export async function generateImageThumbnail(
       height: meta.height,
     })
 
-    // 克隆ImgClip以避免影响原始实例
-    console.log('🔄 [ThumbnailGenerator] 克隆ImgClip...')
-    clonedClip = await imgClip.clone()
-    console.log('✅ [ThumbnailGenerator] ImgClip克隆完成')
+    // 根据shouldClone标志决定是否克隆ImgClip
+    if (shouldClone) {
+      console.log('🔄 [ThumbnailGenerator] 克隆ImgClip...')
+      workingClip = await imgClip.clone()
+      console.log('✅ [ThumbnailGenerator] ImgClip克隆完成')
+    } else {
+      console.log('ℹ️ [ThumbnailGenerator] 跳过克隆，使用原始ImgClip')
+      // workingClip 初始值已经是 imgClip，无需重新赋值
+    }
 
-    // 使用克隆的clip获取图片（时间参数对静态图片无意义，传0即可）
+    // 使用workingClip获取图片（时间参数对静态图片无意义，传0即可）
     console.log('🎞️ [ThumbnailGenerator] 开始tick获取图片数据...')
-    const tickResult = await clonedClip.tick(0)
+    const tickResult = await workingClip.tick(0)
     console.log('📸 [ThumbnailGenerator] tick结果:', {
       state: tickResult.state,
       hasVideo: !!tickResult.video,
@@ -273,10 +287,10 @@ export async function generateImageThumbnail(
     console.error('❌ [ThumbnailGenerator] 错误堆栈:', (error as Error).stack)
     throw error
   } finally {
-    // 清理克隆的clip
-    if (clonedClip) {
+    // 清理克隆的clip（只有当shouldClone为true且workingClip是克隆的实例时才需要清理）
+    if (shouldClone && workingClip !== imgClip) {
       console.log('🧹 [ThumbnailGenerator] 清理克隆的clip')
-      clonedClip.destroy()
+      workingClip.destroy()
     }
   }
 }
@@ -325,11 +339,11 @@ export async function generateThumbnailForUnifiedMediaItem(
 
     if (UnifiedMediaItemQueries.isVideo(mediaItem) && mediaItem.webav?.mp4Clip) {
       console.log('🎬 生成视频缩略图...')
-      canvas = await generateVideoThumbnail(mediaItem.webav.mp4Clip, timePosition, containerWidth, containerHeight, mode)
+      canvas = await generateVideoThumbnail(mediaItem.webav.mp4Clip, timePosition, containerWidth, containerHeight, mode, true)
       console.log('✅ 视频缩略图生成成功')
     } else if (UnifiedMediaItemQueries.isImage(mediaItem) && mediaItem.webav?.imgClip) {
       console.log('🖼️ 生成图片缩略图...')
-      canvas = await generateImageThumbnail(mediaItem.webav.imgClip, containerWidth, containerHeight, mode)
+      canvas = await generateImageThumbnail(mediaItem.webav.imgClip, containerWidth, containerHeight, mode, true)
       console.log('✅ 图片缩略图生成成功')
     } else if (UnifiedMediaItemQueries.isAudio(mediaItem)) {
       console.log('🎵 音频不需要缩略图，跳过生成')
