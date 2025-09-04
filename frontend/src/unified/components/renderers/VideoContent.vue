@@ -2,7 +2,7 @@
 <template>
   <div class="video-content" :class="{ selected: isSelected }">
     <!-- 多缩略图容器 -->
-    <div class="multi-thumbnails-container">
+    <div class="multi-thumbnails-container" :style="{ height: `${THUMBNAIL_CONSTANTS.HEIGHT}px`, top: `${THUMBNAIL_CONSTANTS.TOP_OFFSET}px` }">
       <div
         v-for="item in thumbnailLayout"
         :key="item.index"
@@ -22,7 +22,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, watch } from 'vue'
 import type { ContentTemplateProps } from '@/unified/types/clipRenderer'
-import { getTimelineItemDisplayName } from '@/unified/utils/clipUtils'
 import { useUnifiedStore } from '@/unified/unifiedStore'
 import {
   calculateThumbnailLayout,
@@ -92,76 +91,6 @@ function getThumbnailSlotStyle(item: ThumbnailLayoutItem) {
   }
 }
 
-// 监听视口变化，更新缩略图可见性
-watch(
-  [() => unifiedStore.scrollOffset, () => unifiedStore.zoomLevel, () => props.timelineWidth],
-  () => {
-    // 缩略图可见性会在computed中自动更新
-  },
-  { deep: true },
-)
-
-// 保持原有的计算属性（向后兼容）
-const showDetails = computed(() => {
-  const durationFrames =
-    props.data.timeRange.timelineEndTime - props.data.timeRange.timelineStartTime
-  return durationFrames >= 30
-})
-
-const displayName = computed(() => getTimelineItemDisplayName(props.data))
-
-const formattedDuration = computed(() => {
-  const durationFrames =
-    props.data.timeRange.timelineEndTime - props.data.timeRange.timelineStartTime
-  const fps = 30
-  const totalSeconds = Math.floor(durationFrames / fps)
-  const remainingFrames = durationFrames % fps
-
-  const hours = Math.floor(totalSeconds / 3600)
-  const minutes = Math.floor((totalSeconds % 3600) / 60)
-  const seconds = totalSeconds % 60
-
-  if (hours > 0) {
-    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}:${remainingFrames.toString().padStart(2, '0')}`
-  } else {
-    return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}:${remainingFrames.toString().padStart(2, '0')}`
-  }
-})
-
-const hasSpeedAdjustment = computed(() => {
-  if (props.data.mediaType !== 'video') return false
-  if (props.data.runtime.sprite && 'getPlaybackRate' in props.data.runtime.sprite) {
-    try {
-      const sprite = props.data.runtime.sprite as any
-      const playbackRate = sprite.getPlaybackRate()
-      return Math.abs(playbackRate - 1.0) > 0.01
-    } catch (error) {
-      console.warn(`获取播放速度失败: ${props.data.id}`, error)
-      return false
-    }
-  }
-  return false
-})
-
-const speedText = computed(() => {
-  if (props.data.mediaType !== 'video') return '正常速度'
-  if (props.data.runtime.sprite && 'getPlaybackRate' in props.data.runtime.sprite) {
-    try {
-      const sprite = props.data.runtime.sprite as any
-      const playbackRate = sprite.getPlaybackRate()
-      if (Math.abs(playbackRate - 1.0) <= 0.01) {
-        return '正常速度'
-      } else {
-        return `${playbackRate.toFixed(1)}x`
-      }
-    } catch (error) {
-      console.warn(`获取播放速度失败: ${props.data.id}`, error)
-      return '正常速度'
-    }
-  }
-  return '正常速度'
-})
-
 // 生命周期钩子
 onMounted(() => {
   console.log('🎬 VideoContent mounted with multi-thumbnail support')
@@ -177,18 +106,15 @@ onUnmounted(() => {
 .multi-thumbnails-container {
   position: relative;
   width: 100%;
-  height: 30px;
   overflow: hidden;
 }
 
 .thumbnail-slot {
   position: absolute;
   width: 50px;
-  height: 30px;
   top: 0;
   overflow: hidden;
   background-color: rgba(0, 0, 0, 0.3);
-  border-right: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .thumbnail-slot:last-child {
