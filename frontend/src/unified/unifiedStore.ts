@@ -13,6 +13,7 @@ import { createUnifiedWebavModule } from '@/unified/modules/UnifiedWebavModule'
 import { createUnifiedNotificationModule } from '@/unified/modules/UnifiedNotificationModule'
 import { createUnifiedHistoryModule } from '@/unified/modules/UnifiedHistoryModule'
 import { createUnifiedAutoSaveModule } from '@/unified/modules/UnifiedAutoSaveModule'
+import { createUnifiedThumbnailSchedulerModule } from '@/unified/modules/UnifiedThumbnailSchedulerModule'
 import { calculateTotalDurationFrames } from '@/unified/utils/durationUtils'
 import type { MediaType, MediaTypeOrUnknown } from '@/unified'
 import type { UnifiedTrackType } from '@/unified/track/TrackTypes'
@@ -221,6 +222,12 @@ export const useUnifiedStore = defineStore('unified', () => {
       throttleTime: 30000,
       maxRetries: 3,
     },
+  )
+
+  // 创建缩略图调度器模块
+  const unifiedThumbnailSchedulerModule = createUnifiedThumbnailSchedulerModule(
+    unifiedTimelineModule,
+    unifiedMediaModule,
   )
 
   /**
@@ -755,10 +762,7 @@ export const useUnifiedStore = defineStore('unified', () => {
    * @param name 轨道名称（可选）
    * @param position 插入位置（可选）
    */
-  async function addTrackWithHistory(
-    type: UnifiedTrackType = 'video',
-    position?: number,
-  ) {
+  async function addTrackWithHistory(type: UnifiedTrackType = 'video', position?: number) {
     const command = new AddTrackCommand(type, position, {
       addTrack: unifiedTrackModule.addTrack,
       removeTrack: unifiedTrackModule.removeTrack,
@@ -1436,68 +1440,24 @@ export const useUnifiedStore = defineStore('unified', () => {
     resetAutoSaveState: unifiedAutoSaveModule.resetAutoSaveState,
 
     // ==================== 模块生命周期管理 ====================
-  
+
     destroyAllModules, // 新增：销毁所有模块资源的方法
-  
-    // ==================== 缩略图缓存功能 ====================
-    
-    // 全局响应式缩略图缓存
-    thumbnailCache: ref(new Map<string, CachedThumbnail>()),
-    
-    // 缓存管理方法
-    clearThumbnailCacheByTimelineItem(timelineItemId: string) {
-      const { thumbnailCache } = useUnifiedStore()
-      let removedCount = 0
-      
-      for (const [key, cached] of thumbnailCache.entries()) {
-        if (cached.timelineItemId === timelineItemId) {
-          // 释放Blob URL资源
-          if (cached.blobUrl.startsWith('blob:')) {
-            try {
-              URL.revokeObjectURL(cached.blobUrl)
-            } catch (error) {
-              console.warn('释放Blob URL失败:', error)
-            }
-          }
-          thumbnailCache.delete(key)
-          removedCount++
-        }
-      }
-      
-      return removedCount
-    },
-    
-    cleanupThumbnailCache(maxSize: number = 1000) {
-      const { thumbnailCache } = useUnifiedStore()
-      
-      if (thumbnailCache.size <= maxSize) {
-        return 0
-      }
-      
-      // 按时间戳排序，保留最新的
-      const entries = Array.from(thumbnailCache.entries())
-        .sort(([, a], [, b]) => b.timestamp - a.timestamp) // 降序排序，最新的在前
-      
-      let removedCount = 0
-      
-      // 删除超出限制的最旧项
-      for (let i = maxSize; i < entries.length; i++) {
-        const [key, cached] = entries[i]
-        
-        // 释放Blob URL资源
-        if (cached.blobUrl.startsWith('blob:')) {
-          try {
-            URL.revokeObjectURL(cached.blobUrl)
-          } catch (error) {
-            console.warn('释放Blob URL失败:', error)
-          }
-        }
-        
-        thumbnailCache.delete(key)
-        removedCount++
-      }
-      
-      return removedCount
-    }
+
+    // ==================== 缩略图调度器方法 ====================
+    requestThumbnails: unifiedThumbnailSchedulerModule.requestThumbnails,
+    cancelThumbnailTasks: unifiedThumbnailSchedulerModule.cancelTasks,
+    cleanupThumbnailScheduler: unifiedThumbnailSchedulerModule.cleanup,
+
+    // ==================== 缩略图缓存功能（通过模块提供） ====================
+    thumbnailCache: unifiedThumbnailSchedulerModule.thumbnailCache,
+    clearThumbnailCacheByTimelineItem:
+      unifiedThumbnailSchedulerModule.clearThumbnailCacheByTimelineItem,
+    cleanupThumbnailCache: unifiedThumbnailSchedulerModule.cleanupThumbnailCache,
+    getCachedThumbnail: unifiedThumbnailSchedulerModule.getCachedThumbnail,
+    cacheThumbnail: unifiedThumbnailSchedulerModule.cacheThumbnail,
+
+    // ==================== 工具函数导出 ====================
+    generateCacheKey: unifiedThumbnailSchedulerModule.generateCacheKey,
+    getThumbnailUrl: unifiedThumbnailSchedulerModule.getThumbnailUrl,
   }
 })

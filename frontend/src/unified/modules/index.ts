@@ -50,5 +50,11 @@ export { createUnifiedPlaybackModule, type UnifiedPlaybackModule } from './Unifi
 // ==================== 统一WebAV模块 ====================
 export { createUnifiedWebavModule, type UnifiedWebavModule } from './UnifiedWebavModule'
 
+// ==================== 统一缩略图调度器模块 ====================
+export {
+  createUnifiedThumbnailSchedulerModule,
+  type UnifiedThumbnailSchedulerModule
+} from './UnifiedThumbnailSchedulerModule'
+
 // ==================== 统一自动保存模块 ====================
 export { createUnifiedAutoSaveModule, type UnifiedAutoSaveModule } from './UnifiedAutoSaveModule'

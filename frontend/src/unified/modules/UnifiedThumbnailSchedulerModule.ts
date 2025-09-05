@@ -1,55 +1,67 @@
 /**
- * 优化的缩略图调度器类
- * 使用定时触发机制管理缩略图生成任务的调度，包含批量缩略图生成功能
+ * 统一缩略图调度器模块
+ * 模块化重构版本，替代原有的 ThumbnailScheduler 类
  */
 
-import type { MP4Clip, ImgClip } from '@webav/av-cliper'
+import { ref } from 'vue'
+import { throttle } from 'lodash'
 import type { UnifiedTimelineItemData } from '@/unified/timelineitem/TimelineItemData'
-import type { ThumbnailLayoutItem, ThumbnailBatchRequest, CachedThumbnail } from '@/unified/types/thumbnail'
+import type { UnifiedMediaItemData } from '@/unified/mediaitem'
+import type {
+  ThumbnailLayoutItem,
+  ThumbnailBatchRequest,
+  CachedThumbnail,
+} from '@/unified/types/thumbnail'
 import {
   canvasToBlob,
   calculateThumbnailSize,
   createThumbnailCanvas,
 } from '@/unified/utils/thumbnailGenerator'
-import { useUnifiedStore } from '@/unified/unifiedStore'
-import { generateCacheKey } from '@/unified/utils/'
 import { framesToMicroseconds } from '@/unified/utils/timeUtils'
 import { ThumbnailMode, THUMBNAIL_CONSTANTS } from '@/unified/constants/ThumbnailConstants'
 import { UnifiedMediaItemQueries } from '@/unified/mediaitem/queries'
-import { throttle } from 'lodash'
 
-export class ThumbnailScheduler {
-  private pendingRequests = new Map<string, Array<{framePosition: number, timestamp: number}>>()
-  private throttledProcessor: () => void
+export function createUnifiedThumbnailSchedulerModule(
+  timelineModule: {
+    getTimelineItem: (id: string) => UnifiedTimelineItemData | undefined
+  },
+  mediaModule: {
+    getMediaItem: (id: string) => UnifiedMediaItemData | undefined
+  },
+) {
+  // 状态定义
+  const pendingRequests = ref(
+    new Map<string, Array<{ framePosition: number; timestamp: number }>>(),
+  )
 
-  constructor() {
-    // 使用lodash的throttle函数，333ms间隔
-    this.throttledProcessor = throttle(
-      () => this.processAllPendingRequests(),
-      333,
-      { leading: false, trailing: true }
-    )
-  }
+  // 缩略图缓存状态（从unifiedStore.ts迁移）
+  const thumbnailCache = ref(new Map<string, CachedThumbnail>())
+
+  // 节流处理器
+  const throttledProcessor = throttle(() => processAllPendingRequests(), 333, {
+    leading: false,
+    trailing: true,
+  })
 
   /**
    * 添加缩略图请求（由VideoContent.vue调用）
    */
-  requestThumbnails(request: ThumbnailBatchRequest): void {
+  async function requestThumbnails(request: ThumbnailBatchRequest): Promise<void> {
     const { timelineItemId, thumbnailLayout, timestamp } = request
 
     // 1. 将请求按时间轴项目存储
-    const requests = this.pendingRequests.get(timelineItemId) || []
-    
+    const requests = pendingRequests.value.get(timelineItemId) || []
+
     // 2. 将缩略图布局转换为内部请求格式
-    const newRequests = thumbnailLayout.map(item => ({
+    const newRequests = thumbnailLayout.map((item) => ({
       framePosition: item.framePosition,
-      timestamp
+      timestamp,
     }))
 
     // 合并请求，保留最新的时间戳
-    const mergedRequests = [...requests, ...newRequests]
-      .reduce((acc, curr) => {
-        const existing = acc.find(r => r.framePosition === curr.framePosition)
+    const mergedRequests = [...requests, ...newRequests].reduce(
+      (acc, curr) => {
+        const existing = acc.find((r) => r.framePosition === curr.framePosition)
         if (existing) {
           // 保留最新的时间戳
           if (curr.timestamp > existing.timestamp) {
@@ -59,27 +71,29 @@ export class ThumbnailScheduler {
           acc.push(curr)
         }
         return acc
-      }, [] as Array<{framePosition: number, timestamp: number}>)
+      },
+      [] as Array<{ framePosition: number; timestamp: number }>,
+    )
 
-    this.pendingRequests.set(timelineItemId, mergedRequests)
+    pendingRequests.value.set(timelineItemId, mergedRequests)
 
     // 3. 触发节流处理器
-    this.throttledProcessor()
+    throttledProcessor()
   }
 
   /**
    * 处理所有待处理的请求
    */
-  private async processAllPendingRequests(): Promise<void> {
+  async function processAllPendingRequests(): Promise<void> {
     // 1. 创建当前请求快照并清空队列
-    const requestsSnapshot = new Map(this.pendingRequests)
-    this.pendingRequests.clear()
+    const requestsSnapshot = new Map(pendingRequests.value)
+    pendingRequests.value.clear()
 
     // 2. 按时间轴项目逐个处理
     for (const [timelineItemId, requests] of requestsSnapshot) {
       try {
         console.log('🔍 处理缩略图请求:', timelineItemId)
-        await this.processTimelineItemRequests(timelineItemId, requests)
+        await processTimelineItemRequests(timelineItemId, requests)
         console.log('✅ 处理缩略图请求成功:', timelineItemId)
       } catch (error) {
         console.error('❌ 处理缩略图请求失败:', error)
@@ -90,14 +104,12 @@ export class ThumbnailScheduler {
   /**
    * 处理单个时间轴项目的请求
    */
-  private async processTimelineItemRequests(
+  async function processTimelineItemRequests(
     timelineItemId: string,
-    requests: Array<{framePosition: number, timestamp: number}>
+    requests: Array<{ framePosition: number; timestamp: number }>,
   ): Promise<void> {
-    const unifiedStore = useUnifiedStore()
-
     // 1. 获取时间轴项目数据
-    const timelineItem = unifiedStore.getTimelineItem(timelineItemId)
+    const timelineItem = timelineModule.getTimelineItem(timelineItemId)
     if (!timelineItem) {
       console.error('❌ 找不到时间轴项目:', timelineItemId)
       return
@@ -109,41 +121,25 @@ export class ThumbnailScheduler {
       framePosition: request.framePosition,
       timelineFramePosition: 0, // 这个值在批量处理中不重要
       pixelPosition: 0, // 这个值在批量处理中不重要
-      thumbnailUrl: null
+      thumbnailUrl: null,
     }))
 
     // 3. 调用批量处理
-    await this.processBatch(timelineItem, thumbnailLayout)
+    await processBatch(timelineItem, thumbnailLayout)
   }
 
-  /**
-   * 取消指定项目的待处理任务
-   */
-  cancelTasks(timelineItemId: string): void {
-    this.pendingRequests.delete(timelineItemId)
-  }
-
-  /**
-   * 清理所有待处理任务
-   */
-  cleanup(): void {
-    this.pendingRequests.clear()
-  }
   /**
    * 批量处理缩略图生成
    */
-  private async processBatch(
+  async function processBatch(
     timelineItem: UnifiedTimelineItemData,
     thumbnailLayout: ThumbnailLayoutItem[],
-  ): Promise<Map<number, string>> {
-    const unifiedStore = useUnifiedStore()
-    const results = new Map<number, string>()
-
+  ): Promise<void> {
     // 1. 获取媒体项目数据
-    const mediaItem = unifiedStore.getMediaItem(timelineItem.mediaItemId)
+    const mediaItem = mediaModule.getMediaItem(timelineItem.mediaItemId)
     if (!mediaItem) {
       console.error('❌ 找不到对应的媒体项目:', timelineItem.mediaItemId)
-      return results
+      return
     }
 
     // 2. 按帧位置排序缩略图布局
@@ -152,7 +148,7 @@ export class ThumbnailScheduler {
     // 3. 处理视频和图片媒体项目
     if (UnifiedMediaItemQueries.isVideo(mediaItem) && mediaItem.webav?.mp4Clip) {
       // 视频处理逻辑
-      let mp4Clip: MP4Clip | null = null
+      let mp4Clip: any = null
       try {
         // 等待MP4Clip准备完成
         const meta = await mediaItem.webav.mp4Clip.ready
@@ -193,16 +189,8 @@ export class ThumbnailScheduler {
             thumbnailPromises.push(
               canvasToBlob(canvas)
                 .then((thumbnailUrl) => {
-                  // 转换为 Blob URL 并更新全局响应式缓存
-                  const cacheKey = generateCacheKey(
-                    timelineItem.id,
-                    item.framePosition,
-                    timelineItem.timeRange.clipStartTime || 0,
-                    timelineItem.timeRange.clipEndTime || 0,
-                  )
-
-                  // 更新全局缓存
-                  unifiedStore.thumbnailCache.set(cacheKey, {
+                  // 转换为 Blob URL 并更新模块缓存
+                  cacheThumbnail({
                     blobUrl: thumbnailUrl,
                     timestamp: Date.now(),
                     timelineItemId: timelineItem.id,
@@ -210,8 +198,6 @@ export class ThumbnailScheduler {
                     clipStartTime: timelineItem.timeRange.clipStartTime || 0,
                     clipEndTime: timelineItem.timeRange.clipEndTime || 0,
                   })
-
-                  results.set(item.framePosition, thumbnailUrl)
 
                   return {
                     framePosition: item.framePosition,
@@ -250,13 +236,13 @@ export class ThumbnailScheduler {
         // 等待ImgClip准备完成
         const meta = await mediaItem.webav.imgClip.ready
         imgClip = await mediaItem.webav.imgClip.clone()
-        
+
         // 使用tick获取图片数据（时间参数对静态图片无意义，传0即可）
         const tickResult = await imgClip.tick(0)
 
         if (tickResult.state !== 'success' || !tickResult.video) {
           console.error('❌ 无法获取图片数据')
-          return results
+          return
         }
 
         // 计算缩略图尺寸（使用FILL模式填满容器）
@@ -274,28 +260,15 @@ export class ThumbnailScheduler {
         // 生成缩略图URL
         const thumbnailUrl = await canvasToBlob(canvas)
 
-        // 为所有请求的帧设置相同的缩略图URL
-        for (const item of sortedLayout) {
-          // 对于图片类型，所有帧使用相同的缓存键（帧位置、clipStartTime、clipEndTime都固定为0）
-          const cacheKey = generateCacheKey(
-            timelineItem.id,
-            0, // 图片使用固定帧位置0
-            0, // 图片使用固定clipStartTime 0
-            0, // 图片使用固定clipEndTime 0
-          )
-
-          // 更新全局缓存
-          unifiedStore.thumbnailCache.set(cacheKey, {
-            blobUrl: thumbnailUrl,
-            timestamp: Date.now(),
-            timelineItemId: timelineItem.id,
-            framePosition: 0, // 图片使用固定帧位置0
-            clipStartTime: 0, // 图片使用固定clipStartTime 0
-            clipEndTime: 0, // 图片使用固定clipEndTime 0
-          })
-
-          results.set(item.framePosition, thumbnailUrl)
-        }
+        // 对于图片类型，所有帧使用相同的缩略图，只需要设置一次缓存
+        cacheThumbnail({
+          blobUrl: thumbnailUrl,
+          timestamp: Date.now(),
+          timelineItemId: timelineItem.id,
+          framePosition: 0, // 图片使用固定帧位置0
+          clipStartTime: 0, // 图片使用固定clipStartTime 0
+          clipEndTime: 0, // 图片使用固定clipEndTime 0
+        })
 
         // 清理VideoFrame资源
         if ('close' in tickResult.video) {
@@ -310,12 +283,140 @@ export class ThumbnailScheduler {
       }
     } else {
       console.warn('⚠️ 批量处理器只支持视频和图片媒体项目，跳过非支持项目:', mediaItem.mediaType)
-      return results
+    }
+  }
+
+  /**
+   * 取消指定项目的待处理任务
+   */
+  function cancelTasks(timelineItemId: string): void {
+    pendingRequests.value.delete(timelineItemId)
+  }
+
+  /**
+   * 清理所有待处理任务
+   */
+  function cleanup(): void {
+    pendingRequests.value.clear()
+  }
+
+  // 缓存管理方法（从unifiedStore.ts迁移）
+  function clearThumbnailCacheByTimelineItem(timelineItemId: string): number {
+    let removedCount = 0
+
+    for (const [key, cached] of thumbnailCache.value.entries()) {
+      if (cached.timelineItemId === timelineItemId) {
+        // 释放Blob URL资源
+        if (cached.blobUrl.startsWith('blob:')) {
+          try {
+            URL.revokeObjectURL(cached.blobUrl)
+          } catch (error) {
+            console.warn('释放Blob URL失败:', error)
+          }
+        }
+        thumbnailCache.value.delete(key)
+        removedCount++
+      }
     }
 
-    return results
+    return removedCount
+  }
+
+  function cleanupThumbnailCache(maxSize: number = 1000): number {
+    if (thumbnailCache.value.size <= maxSize) {
+      return 0
+    }
+
+    // 按时间戳排序，保留最新的
+    const entries = Array.from(thumbnailCache.value.entries()).sort(
+      ([, a], [, b]) => b.timestamp - a.timestamp,
+    ) // 降序排序，最新的在前
+
+    let removedCount = 0
+
+    // 删除超出限制的最旧项
+    for (let i = maxSize; i < entries.length; i++) {
+      const [key, cached] = entries[i]
+
+      // 释放Blob URL资源
+      if (cached.blobUrl.startsWith('blob:')) {
+        try {
+          URL.revokeObjectURL(cached.blobUrl)
+        } catch (error) {
+          console.warn('释放Blob URL失败:', error)
+        }
+      }
+
+      thumbnailCache.value.delete(key)
+      removedCount++
+    }
+
+    return removedCount
+  }
+
+  function getCachedThumbnail(timelineItemId: string, frame: number): CachedThumbnail | undefined {
+    const cacheKey = generateCacheKey(timelineItemId, frame, 0, 0)
+    return thumbnailCache.value.get(cacheKey)
+  }
+
+  function cacheThumbnail(thumbnail: CachedThumbnail): void {
+    const cacheKey = generateCacheKey(
+      thumbnail.timelineItemId,
+      thumbnail.framePosition,
+      thumbnail.clipStartTime,
+      thumbnail.clipEndTime,
+    )
+
+    // 检查是否已存在相同key的缓存，如果存在则释放旧的Blob URL
+    const existing = thumbnailCache.value.get(cacheKey)
+    if (existing && existing.blobUrl.startsWith('blob:')) {
+      URL.revokeObjectURL(existing.blobUrl)
+    }
+
+    thumbnailCache.value.set(cacheKey, thumbnail)
+  }
+
+  // 工具函数（从thumbnailCacheUtils.ts迁移）
+  function generateCacheKey(
+    timelineItemId: string,
+    framePosition: number,
+    clipStartTime: number,
+    clipEndTime: number,
+  ): string {
+    // 格式: ${timelineItemId}-${framePosition}-${clipStartTime}-${clipEndTime}
+    return `${timelineItemId}-${framePosition}-${clipStartTime}-${clipEndTime}`
+  }
+
+  function getThumbnailUrl(
+    timelineItemId: string,
+    framePosition: number,
+    clipStartTime: number,
+    clipEndTime: number,
+  ): string | null {
+    const cacheKey = generateCacheKey(timelineItemId, framePosition, clipStartTime, clipEndTime)
+    const cached = thumbnailCache.value.get(cacheKey)
+    return cached?.blobUrl || null
+  }
+
+  return {
+    requestThumbnails,
+    cancelTasks,
+    cleanup,
+    pendingRequests, // 可选：用于调试
+
+    // 缓存管理相关导出
+    thumbnailCache,
+    clearThumbnailCacheByTimelineItem,
+    cleanupThumbnailCache,
+    getCachedThumbnail,
+    cacheThumbnail,
+
+    // 工具函数导出
+    generateCacheKey,
+    getThumbnailUrl,
   }
 }
 
-// 导出单例实例
-export const thumbnailScheduler = new ThumbnailScheduler()
+export type UnifiedThumbnailSchedulerModule = ReturnType<
+  typeof createUnifiedThumbnailSchedulerModule
+>

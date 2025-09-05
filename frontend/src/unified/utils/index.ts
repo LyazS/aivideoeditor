@@ -295,9 +295,5 @@ export {
 } from './unifiedMediaSyncManager'
 
 // ==================== 统一缩略图缓存工具 ====================
-export {
-  // 缓存键生成和解析
-  generateCacheKey,
-  // 缓存访问
-  getThumbnailUrl,
-} from './thumbnailCacheUtils'
+// 注意：generateCacheKey 现在通过 unifiedStore 提供，作为 store 方法使用
+// 不再从此文件导出，直接使用 store.generateCacheKey() 调用

@@ -36,8 +36,7 @@ import {
 } from '@/unified/utils/thumbnailAlgorithms'
 import type { ThumbnailLayoutItem } from '@/unified/types/thumbnail'
 import { THUMBNAIL_CONSTANTS } from '@/unified/constants/ThumbnailConstants'
-import { thumbnailScheduler } from '@/unified/managers/ThumbnailScheduler'
-import { getThumbnailUrl as getCachedThumbnailUrl } from '@/unified/utils/thumbnailCacheUtils'
+import { isImageTimelineItem } from '@/unified/timelineitem/TimelineItemQueries'
 
 const props = defineProps<ContentTemplateProps<'video' | 'image'>>()
 const unifiedStore = useUnifiedStore()
@@ -101,15 +100,15 @@ function getThumbnailUrl(item: ThumbnailLayoutItem): string | null {
   // 使用全局缓存系统
   // 对于图片类型，使用固定缓存键（帧位置、clipStartTime、clipEndTime都为0）
   // 对于视频类型，使用实际参数
-  if (props.data.mediaType === 'image') {
-    return getCachedThumbnailUrl(
+  if (isImageTimelineItem(props.data)) {
+    return unifiedStore.getThumbnailUrl(
       props.data.id,
       0, // 图片使用固定帧位置0
       0, // 图片使用固定clipStartTime 0
       0  // 图片使用固定clipEndTime 0
     )
   } else {
-    return getCachedThumbnailUrl(
+    return unifiedStore.getThumbnailUrl(
       props.data.id,
       item.framePosition,
       props.data.timeRange.clipStartTime,
@@ -122,7 +121,7 @@ function getThumbnailUrl(item: ThumbnailLayoutItem): string | null {
 // 监听布局变化触发批量生成
 watch(thumbnailLayout, newLayout => {
   // 取消旧任务
-  thumbnailScheduler.cancelTasks(props.data.id)
+  unifiedStore.cancelThumbnailTasks(props.data.id)
 
   // 过滤未缓存的项目
   const uncachedItems = newLayout.filter(item => {
@@ -130,15 +129,15 @@ watch(thumbnailLayout, newLayout => {
     // 对于图片类型，使用固定缓存键（帧位置、clipStartTime、clipEndTime都为0）
     // 对于视频类型，使用实际参数
     let cachedUrl: string | null
-    if (props.data.mediaType === 'image') {
-      cachedUrl = getCachedThumbnailUrl(
+    if (isImageTimelineItem(props.data)) {
+      cachedUrl = unifiedStore.getThumbnailUrl(
         props.data.id,
         0, // 图片使用固定帧位置0
         0, // 图片使用固定clipStartTime 0
         0  // 图片使用固定clipEndTime 0
       )
     } else {
-      cachedUrl = getCachedThumbnailUrl(
+      cachedUrl = unifiedStore.getThumbnailUrl(
         props.data.id,
         item.framePosition,
         props.data.timeRange.clipStartTime,
@@ -150,7 +149,7 @@ watch(thumbnailLayout, newLayout => {
 
   if (uncachedItems.length > 0) {
     // 提交新请求到定时处理队列
-    thumbnailScheduler.requestThumbnails({
+    unifiedStore.requestThumbnails({
       timelineItemId: props.data.id,
       thumbnailLayout: uncachedItems,
       timestamp: Date.now()
