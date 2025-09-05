@@ -76,7 +76,7 @@ function calculateThumbnailSize(
 }
 
 /**
- * 从VideoFrame或ImageBitmap创建Canvas并绘制缩略图（固定80x80，居中显示，黑色背景）
+ * 从VideoFrame或ImageBitmap创建Canvas并绘制缩略图
  * @param source VideoFrame或ImageBitmap
  * @param sizeInfo 尺寸和位置信息
  * @returns Canvas元素

@@ -10,6 +10,7 @@ import { generateVideoThumbnail, canvasToBlob } from '@/unified/utils/thumbnailG
 import { useUnifiedStore } from '@/unified/unifiedStore'
 import { generateCacheKey } from '@/unified/utils/'
 import { ThumbnailMode, THUMBNAIL_CONSTANTS } from '@/unified/constants/ThumbnailConstants'
+import { UnifiedMediaItemQueries } from '@/unified/mediaitem/queries'
 
 export class BatchProcessor {
   /**
@@ -39,7 +40,7 @@ export class BatchProcessor {
         const timePosition = this.calculateTimePosition(mediaItem, item.framePosition)
         
         // 只处理视频媒体项目，使用专门的视频缩略图生成函数
-        if (mediaItem.mediaType === 'video' && mediaItem.webav?.mp4Clip) {
+        if (UnifiedMediaItemQueries.isVideo(mediaItem) && mediaItem.webav?.mp4Clip) {
           // 使用 generateVideoThumbnail 生成缩略图canvas
           const canvas = await generateVideoThumbnail(
             mediaItem.webav.mp4Clip,
