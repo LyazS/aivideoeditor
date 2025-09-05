@@ -3,7 +3,6 @@
  * 使用定时触发机制管理缩略图生成任务的调度
  */
 
-import type { UnifiedTimelineItemData } from '@/unified/timelineitem/TimelineItemData'
 import type { ThumbnailLayoutItem, ThumbnailBatchRequest } from '@/unified/types/thumbnail'
 import { batchProcessor } from './BatchProcessor'
 import { useUnifiedStore } from '@/unified/unifiedStore'
@@ -18,7 +17,7 @@ export class ThumbnailScheduler {
     // 使用lodash的throttle函数，1秒间隔
     this.throttledProcessor = throttle(
       () => this.processAllPendingRequests(),
-      1000,
+      333,
       { leading: false, trailing: true }
     )
   }
