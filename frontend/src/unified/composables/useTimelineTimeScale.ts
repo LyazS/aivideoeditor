@@ -251,6 +251,9 @@ export function useTimelineTimeScale(scaleContainer: Ref<HTMLElement | undefined
     // 阻止默认行为，防止文本选择
     event.preventDefault()
 
+    // 暂停WebAV播放
+    unifiedStore.pause()
+
     // 开始拖拽，设置拖拽状态
     isDragging.value = true
     const frame = calculateFrameFromClick(event)

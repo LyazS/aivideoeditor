@@ -57,6 +57,9 @@ const handleMouseDown = (event: MouseEvent) => {
   event.preventDefault()
   event.stopPropagation()
   
+  // 暂停WebAV播放
+  unifiedStore.pause()
+  
   isDragging.value = true
   document.addEventListener('mousemove', handleMouseMove)
   document.addEventListener('mouseup', handleMouseUp)
