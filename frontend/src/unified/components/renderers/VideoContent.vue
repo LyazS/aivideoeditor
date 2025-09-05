@@ -134,21 +134,12 @@ watch(thumbnailLayout, (newLayout, oldLayout) => {
   if (uncachedItems.length > 0) {
     // 提交新请求到定时处理队列
     thumbnailScheduler.requestThumbnails({
-      timelineItem: props.data,
+      timelineItemId: props.data.id,
       thumbnailLayout: uncachedItems,
       timestamp: Date.now()
     })
   }
 }, { deep: true, immediate: true })
-
-// 生命周期钩子
-onMounted(() => {
-  console.log('🎬 VideoContent mounted with multi-thumbnail support')
-})
-
-onUnmounted(() => {
-  console.log('🧹 VideoContent unmounted')
-})
 </script>
 
 <style scoped>

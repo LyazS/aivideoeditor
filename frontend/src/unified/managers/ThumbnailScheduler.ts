@@ -27,10 +27,10 @@ export class ThumbnailScheduler {
    * 添加缩略图请求（由VideoContent.vue调用）
    */
   requestThumbnails(request: ThumbnailBatchRequest): void {
-    const { timelineItem, thumbnailLayout, timestamp } = request
+    const { timelineItemId, thumbnailLayout, timestamp } = request
 
     // 1. 将请求按时间轴项目存储
-    const requests = this.pendingRequests.get(timelineItem.id) || []
+    const requests = this.pendingRequests.get(timelineItemId) || []
     
     // 2. 将缩略图布局转换为内部请求格式
     const newRequests = thumbnailLayout.map(item => ({
@@ -53,7 +53,7 @@ export class ThumbnailScheduler {
         return acc
       }, [] as Array<{framePosition: number, timestamp: number}>)
 
-    this.pendingRequests.set(timelineItem.id, mergedRequests)
+    this.pendingRequests.set(timelineItemId, mergedRequests)
 
     // 3. 触发节流处理器
     this.throttledProcessor()
@@ -70,7 +70,9 @@ export class ThumbnailScheduler {
     // 2. 按时间轴项目逐个处理
     for (const [timelineItemId, requests] of requestsSnapshot) {
       try {
+        console.log('🔍 处理缩略图请求:', timelineItemId)
         await this.processTimelineItemRequests(timelineItemId, requests)
+        console.log('✅ 处理缩略图请求成功:', timelineItemId)
       } catch (error) {
         console.error('❌ 处理缩略图请求失败:', error)
       }

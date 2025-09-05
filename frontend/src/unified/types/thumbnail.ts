@@ -93,8 +93,8 @@ export interface CachedThumbnail {
  * 批量缩略图请求
  */
 export interface ThumbnailBatchRequest {
-  /** 时间轴项目数据 */
-  timelineItem: UnifiedTimelineItemData;
+  /** 时间轴项目ID */
+  timelineItemId: string;
   
   /** 缩略图布局数组，包含需要生成的帧索引信息 */
   thumbnailLayout: ThumbnailLayoutItem[];

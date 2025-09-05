@@ -18,7 +18,7 @@ import { ThumbnailMode } from '@/unified/constants/ThumbnailConstants'
  * @param mode 缩略图显示模式，默认为适应模式
  * @returns 缩略图尺寸和位置信息
  */
-function calculateThumbnailSize(
+export function calculateThumbnailSize(
   originalWidth: number,
   originalHeight: number,
   containerWidth: number = 100,
@@ -81,7 +81,7 @@ function calculateThumbnailSize(
  * @param sizeInfo 尺寸和位置信息
  * @returns Canvas元素
  */
-function createThumbnailCanvas(
+export function createThumbnailCanvas(
   source: VideoFrame | ImageBitmap,
   sizeInfo: {
     containerWidth: number
