@@ -44,8 +44,6 @@ const unifiedStore = useUnifiedStore()
 
 // 缩略图布局数组
 const thumbnailLayout = computed<ThumbnailLayoutItem[]>(() => {
-  if (!props.data.timeRange) return []
-
   const clipTLStartFrame = props.data.timeRange.timelineStartTime
   const clipTLDurationFrames = props.data.timeRange.timelineEndTime - clipTLStartFrame
   const clipStartFrame = props.data.timeRange.clipStartTime
@@ -100,34 +98,53 @@ function getThumbnailSlotStyle(item: ThumbnailLayoutItem) {
 
 // 获取缩略图URL
 function getThumbnailUrl(item: ThumbnailLayoutItem): string | null {
-  if (!props.data.timeRange) return null
-  
   // 使用全局缓存系统
-  return getCachedThumbnailUrl(
-    props.data.id,
-    item.framePosition,
-    props.data.timeRange.clipStartTime,
-    props.data.timeRange.clipEndTime
-  )
-}
-
-
-// 监听布局变化触发批量生成
-watch(thumbnailLayout, (newLayout, oldLayout) => {
-  // 取消旧任务
-  thumbnailScheduler.cancelTasks(props.data.id)
-
-  // 过滤未缓存的项目
-  const uncachedItems = newLayout.filter(item => {
-    if (!props.data.timeRange) return true
-    
-    // 检查全局缓存
-    const cachedUrl = getCachedThumbnailUrl(
+  // 对于图片类型，使用固定缓存键（帧位置、clipStartTime、clipEndTime都为0）
+  // 对于视频类型，使用实际参数
+  if (props.data.mediaType === 'image') {
+    return getCachedThumbnailUrl(
+      props.data.id,
+      0, // 图片使用固定帧位置0
+      0, // 图片使用固定clipStartTime 0
+      0  // 图片使用固定clipEndTime 0
+    )
+  } else {
+    return getCachedThumbnailUrl(
       props.data.id,
       item.framePosition,
       props.data.timeRange.clipStartTime,
       props.data.timeRange.clipEndTime
     )
+  }
+}
+
+
+// 监听布局变化触发批量生成
+watch(thumbnailLayout, newLayout => {
+  // 取消旧任务
+  thumbnailScheduler.cancelTasks(props.data.id)
+
+  // 过滤未缓存的项目
+  const uncachedItems = newLayout.filter(item => {
+    // 检查全局缓存
+    // 对于图片类型，使用固定缓存键（帧位置、clipStartTime、clipEndTime都为0）
+    // 对于视频类型，使用实际参数
+    let cachedUrl: string | null
+    if (props.data.mediaType === 'image') {
+      cachedUrl = getCachedThumbnailUrl(
+        props.data.id,
+        0, // 图片使用固定帧位置0
+        0, // 图片使用固定clipStartTime 0
+        0  // 图片使用固定clipEndTime 0
+      )
+    } else {
+      cachedUrl = getCachedThumbnailUrl(
+        props.data.id,
+        item.framePosition,
+        props.data.timeRange.clipStartTime,
+        props.data.timeRange.clipEndTime
+      )
+    }
     return !cachedUrl
   })
 
