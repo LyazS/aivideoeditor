@@ -76,3 +76,29 @@ export interface ThumbnailCacheStatus {
   cachedPerItem: Map<string, number>;
   pendingGenerations: number;
 }
+
+/**
+ * 缓存的缩略图信息
+ */
+export interface CachedThumbnail {
+  blobUrl: string;
+  timestamp: number;
+  timelineItemId: string;
+  framePosition: number;
+  clipStartTime: number;
+  clipEndTime: number;
+}
+
+/**
+ * 批量缩略图请求
+ */
+export interface ThumbnailBatchRequest {
+  /** 时间轴项目数据 */
+  timelineItem: UnifiedTimelineItemData;
+  
+  /** 缩略图布局数组，包含需要生成的帧索引信息 */
+  thumbnailLayout: ThumbnailLayoutItem[];
+  
+  /** 请求时间戳 */
+  timestamp: number;
+}

@@ -17,6 +17,7 @@ import { calculateTotalDurationFrames } from '@/unified/utils/durationUtils'
 import type { MediaType, MediaTypeOrUnknown } from '@/unified'
 import type { UnifiedTrackType } from '@/unified/track/TrackTypes'
 import type { UnifiedTimelineItemData } from '@/unified/timelineitem'
+import type { CachedThumbnail } from '@/unified/types/thumbnail'
 // PropertyType 已经在本地定义，不再需要从外部导入
 /**
  * 属性类型枚举
@@ -1435,7 +1436,68 @@ export const useUnifiedStore = defineStore('unified', () => {
     resetAutoSaveState: unifiedAutoSaveModule.resetAutoSaveState,
 
     // ==================== 模块生命周期管理 ====================
-
+  
     destroyAllModules, // 新增：销毁所有模块资源的方法
+  
+    // ==================== 缩略图缓存功能 ====================
+    
+    // 全局响应式缩略图缓存
+    thumbnailCache: ref(new Map<string, CachedThumbnail>()),
+    
+    // 缓存管理方法
+    clearThumbnailCacheByTimelineItem(timelineItemId: string) {
+      const { thumbnailCache } = useUnifiedStore()
+      let removedCount = 0
+      
+      for (const [key, cached] of thumbnailCache.entries()) {
+        if (cached.timelineItemId === timelineItemId) {
+          // 释放Blob URL资源
+          if (cached.blobUrl.startsWith('blob:')) {
+            try {
+              URL.revokeObjectURL(cached.blobUrl)
+            } catch (error) {
+              console.warn('释放Blob URL失败:', error)
+            }
+          }
+          thumbnailCache.delete(key)
+          removedCount++
+        }
+      }
+      
+      return removedCount
+    },
+    
+    cleanupThumbnailCache(maxSize: number = 1000) {
+      const { thumbnailCache } = useUnifiedStore()
+      
+      if (thumbnailCache.size <= maxSize) {
+        return 0
+      }
+      
+      // 按时间戳排序，保留最新的
+      const entries = Array.from(thumbnailCache.entries())
+        .sort(([, a], [, b]) => b.timestamp - a.timestamp) // 降序排序，最新的在前
+      
+      let removedCount = 0
+      
+      // 删除超出限制的最旧项
+      for (let i = maxSize; i < entries.length; i++) {
+        const [key, cached] = entries[i]
+        
+        // 释放Blob URL资源
+        if (cached.blobUrl.startsWith('blob:')) {
+          try {
+            URL.revokeObjectURL(cached.blobUrl)
+          } catch (error) {
+            console.warn('释放Blob URL失败:', error)
+          }
+        }
+        
+        thumbnailCache.delete(key)
+        removedCount++
+      }
+      
+      return removedCount
+    }
   }
 })

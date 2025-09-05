@@ -31,75 +31,18 @@ interface CachedThumbnail {
 }
 ```
 
-### 2. 任务调度相关接口
+### 2. 请求相关接口
 
 ```typescript
-interface ThumbnailTaskScheduler {
-  /** 按时间轴项目分组的任务集合 */
-  taskGroups: Map<string, ThumbnailTaskGroup>;
-  
-  /** 批量处理器实例，负责实际的缩略图生成 */
-  batchProcessor: BatchProcessor;
-  
-  /** 待处理的任务队列 */
-  processingQueue: Array<ThumbnailTaskGroup>;
-}
-
-interface ThumbnailTaskGroup {
-  /** 时间轴项目ID */
-  timelineItemId: string;
-  
-  /** 媒体项目数据 */
-  mediaItem: UnifiedMediaItemData;
-  
-  /** 待处理的帧索引集合 */
-  pendingFrames: Set<number>;
-  
-  /** 是否正在处理中 */
-  processing: boolean;
-}
-
 interface ThumbnailBatchRequest {
-  /** 时间轴项目ID */
-  timelineItemId: string;
+  /** 时间轴项目数据 */
+  timelineItem: UnifiedTimelineItemData;
   
-  /** 帧位置 */
-  framePosition: number;
-  
-  /** 请求时间戳 */
-  timestamp: number;
-}
-
-interface ThumbnailRequest {
-  /** 时间轴项目ID */
-  timelineItemId: string;
-  
-  /** 帧位置 */
-  framePosition: number;
+  /** 缩略图布局数组，包含需要生成的帧索引信息 */
+  thumbnailLayout: ThumbnailLayoutItem[];
   
   /** 请求时间戳 */
   timestamp: number;
-}
-
-interface OptimizedThumbnailManager {
-  /**
-   * 批量请求缩略图生成（替换单个生成）
-   * @param requests 缩略图批量请求数组
-   * @returns Promise<void>
-   */
-  requestThumbnails(requests: ThumbnailBatchRequest[]): Promise<void>
-  
-  /**
-   * 取消指定时间轴项目的待处理任务（视口变化时调用）
-   * @param timelineItemId 时间轴项目ID
-   */
-  cancelTasks(timelineItemId: string): void
-  
-  /**
-   * 获取缓存状态信息
-   * @returns 缓存状态对象
-   */
-  getCacheStatus(): ThumbnailCacheStatus
 }
 ```
 
@@ -113,234 +56,69 @@ interface OptimizedThumbnailManager {
  * 负责批量生成缩略图，优化MP4Clip重用和缓存管理
  */
 class BatchProcessor {
-  /** 使用全局响应式缓存，无需私有缓存 */
-  // 通过 unifiedStore.thumbnailCache 访问全局缓存
-  
-  // 导入现有的缩略图生成工具
-  import { generateVideoThumbnail, canvasToBlob } from '@/unified/utils/thumbnailGenerator';
-  
   /**
    * 批量处理缩略图生成
-   * @param timelineItemId 时间轴项目ID
-   * @param mediaItem 媒体项目数据
-   * @param frames 需要生成缩略图的帧索引数组
-   * @returns 包含帧索引和对应Blob URL的映射
    */
   async processBatch(
-    timelineItemId: string,
-    mediaItem: UnifiedMediaItemData,
-    frames: number[]
+    timelineItem: UnifiedTimelineItemData,
+    thumbnailLayout: ThumbnailLayoutItem[]
   ): Promise<Map<number, string>> {
-    
-    // 1. 帧索引排序（按时间顺序）
-    const sortedFrames = frames.sort((a, b) => a - b);
-    
-    const blobResults = new Map<number, string>();
-    
-    try {
-      // 2. 使用 generateVideoThumbnail 批量处理所有帧
-      // generateVideoThumbnail 内部已经包含了 MP4Clip 准备和帧解码
-      for (const frame of sortedFrames) {
-        const timePosition = this.calculateTimePosition(mediaItem, frame);
-        
-        // 使用现有的 generateVideoThumbnail 生成缩略图
-        const canvas = await generateVideoThumbnail(
-          mediaItem.webav.mp4Clip,
-          timePosition
-        );
-        
-        // 转换为 Blob URL
-        const blobUrl = await canvasToBlob(canvas);
-        blobResults.set(frame, blobUrl);
-        
-        // 3. 更新全局响应式缓存（使用统一的缓存键格式）
-        const cacheKey = this.generateCacheKey(timelineItemId, frame, mediaItem);
-        // 使用全局响应式缓存，Vue会自动处理组件更新
-        unifiedStore.thumbnailCache.set(cacheKey, {
-          blobUrl,
-          timestamp: Date.now(),
-          timelineItemId: timelineItemId,
-          framePosition: frame,
-          clipStartTime: mediaItem.timeRange?.clipStartTime || 0,
-          clipEndTime: mediaItem.timeRange?.clipEndTime || 0
-        });
-      }
-      
-      return blobResults;
-      
-    } catch (error) {
-      console.error('批量处理缩略图失败:', error);
-      throw error;
-    }
+    // 1. 获取媒体项目数据
+    // 2. 按帧位置排序缩略图布局
+    // 3. 循环处理每个帧：
+    //    - 计算时间位置
+    //    - 使用 generateVideoThumbnail 生成缩略图
+    //    - 转换为 Blob URL
+    //    - 更新全局响应式缓存
+    // 4. 返回结果映射
   }
   
-  /**
-   * 生成缓存键
-   * @param timelineItemId 时间轴项目ID
-   * @param framePosition 帧位置
-   * @param mediaItem 媒体项目数据
-   * @returns 缓存键字符串
-   */
-  private generateCacheKey(
-    timelineItemId: string,
-    framePosition: number,
-    mediaItem: UnifiedMediaItemData
-  ): string {
-    const clipStartTime = mediaItem.timeRange?.clipStartTime || 0;
-    const clipEndTime = mediaItem.timeRange?.clipEndTime || 0;
-    return `${timelineItemId}-${framePosition}-${clipStartTime}-${clipEndTime}`;
-  }
-  
-  /**
-   * 计算帧对应的时间位置
-   * @param mediaItem 媒体项目数据
-   * @param frame 帧索引
-   * @returns 时间位置（微秒）
-   */
-  private calculateTimePosition(mediaItem: UnifiedMediaItemData, frame: number): number {
-    // 实现细节...
-    return 0;
+  private calculateTimePosition(
+    mediaItem: UnifiedMediaItemData,
+    frame: number
+  ): number {
+    // 根据帧率计算时间位置（微秒）
   }
 }
 ```
 
-### 2. OptimizedThumbnailScheduler 类
+### 2. ThumbnailScheduler 类
 
 ```typescript
-import { throttle } from 'lodash';
-
 /**
  * 优化的缩略图调度器类
  * 使用定时触发机制管理缩略图生成任务的调度
  */
-class OptimizedThumbnailScheduler {
-  /** 处理间隔时间（毫秒） */
-  private readonly PROCESSING_INTERVAL = 1000; // 1秒间隔
-  
-  /** 待处理的请求映射，按时间轴项目分组 */
-  private pendingRequests = new Map<string, Set<ThumbnailRequest>>();
-  
-  /** 批量处理器实例 */
+class ThumbnailScheduler {
+  private pendingRequests = new Map(); // 待处理请求映射
   private batchProcessor: BatchProcessor;
-  
-  /** 使用lodash的throttle创建节流处理函数 */
-  private throttledProcessor = throttle(() => {
-    this.processAllPendingRequests();
-  }, this.PROCESSING_INTERVAL, {
-    leading: false,  // 不在开始时执行
-    trailing: true   // 在结束时执行
-  });
+  private throttledProcessor; // 节流处理器（1秒间隔）（使用lodash的throttle函数）
 
   /**
    * 添加缩略图请求（由VideoContent.vue调用）
-   * @param requests 缩略图批量请求数组
    */
-  requestThumbnails(requests: ThumbnailBatchRequest[]): void {
-    // 将请求按时间轴项目分组存储
-    requests.forEach(request => {
-      if (!this.pendingRequests.has(request.timelineItemId)) {
-        this.pendingRequests.set(request.timelineItemId, new Set());
-      }
-      this.pendingRequests.get(request.timelineItemId)!.add(request);
-    });
-    
-    // 直接触发节流处理器（lodash会自动控制1秒执行频率）
-    this.throttledProcessor();
+  requestThumbnails(request: ThumbnailBatchRequest): void {
+    // 1. 将请求按时间轴项目存储
+    // 2. 将缩略图布局转换为内部请求格式
+    // 3. 触发节流处理器
   }
 
-  /**
-   * 定时处理所有待处理请求
-   */
-  private async processAllPendingRequests(): void {
-    if (this.pendingRequests.size === 0) return;
-
-    console.log(`🔄 定时处理开始，待处理项目数: ${this.pendingRequests.size}`);
-
-    // 创建当前待处理请求的快照，然后立即清空队列
-    // 这样可以避免处理过程中新的请求干扰当前批次
-    const currentRequests = new Map(this.pendingRequests);
-    this.pendingRequests.clear(); // 立即清空，为下一轮做准备
-
-    // 按时间轴项目逐个处理
-    for (const [timelineItemId, requests] of currentRequests.entries()) {
-      if (requests.size === 0) continue;
-
-      try {
-        await this.processTimelineItemRequests(timelineItemId, Array.from(requests));
-        console.log(`✅ 完成处理项目 ${timelineItemId}，帧数: ${requests.size}`);
-        
-      } catch (error) {
-        console.error(`❌ 处理时间轴项目 ${timelineItemId} 失败:`, error);
-      }
-    }
+  private async processAllPendingRequests(): Promise<void> {
+    // 1. 创建当前请求快照并清空队列
+    // 2. 按时间轴项目逐个处理
   }
 
-  /**
-   * 处理单个时间轴项目的所有缩略图请求
-   * @param timelineItemId 时间轴项目ID
-   * @param requests 缩略图请求数组
-   */
   private async processTimelineItemRequests(
     timelineItemId: string,
-    requests: ThumbnailRequest[]
+    requests: Array<{framePosition: number, timestamp: number}>
   ): Promise<void> {
-    if (requests.length === 0) return;
-
-    const timelineItemId = requests[0].timelineItemId;
-    // 通过时间轴项目ID获取时间轴项目数据
-    const timelineItem = unifiedStore.getTimelineItem(timelineItemId);
-    if (!timelineItem) {
-      console.error(`❌ 找不到时间轴项目: ${timelineItemId}`);
-      return;
-    }
-    // 通过时间轴项目获取媒体项目
-    const mediaItem = unifiedStore.getMediaItem(timelineItem.mediaItemId);
-    if (!mediaItem) {
-      console.error(`❌ 找不到媒体项目: ${timelineItem.mediaItemId}`);
-      return;
-    }
-    const frames = requests.map(req => req.framePosition);
-
-    console.log(`📸 处理项目 ${timelineItemId}，帧数: ${frames.length}`);
-
-    // 调用批量处理器
-    const results = await this.batchProcessor.processBatch(
-      timelineItemId,
-      mediaItem,
-      frames
-    );
-
-    // 结果已经通过全局响应式缓存更新，Vue会自动处理组件更新
-    // 无需额外的通知逻辑
+    // 1. 获取时间轴项目数据
+    // 2. 构建缩略图布局数组
+    // 3. 调用批量处理器
   }
 
-  /**
-   * 取消指定时间轴项目的待处理请求
-   * @param timelineItemId 时间轴项目ID
-   */
   cancelTasks(timelineItemId: string): void {
-    this.pendingRequests.delete(timelineItemId);
-    console.log(`❌ 取消项目 ${timelineItemId} 的待处理任务`);
-  }
-
-  /**
-   * 清理资源
-   */
-  destroy(): void {
-    // 取消lodash throttle的待执行任务
-    this.throttledProcessor.cancel();
-    this.pendingRequests.clear();
-  }
-  
-  /**
-   * 更新全局响应式缓存（替代notifyConsumers）
-   * Vue会自动处理组件更新，无需手动通知
-   * @param timelineItemId 时间轴项目ID
-   * @param results 生成结果映射
-   */
-  private updateGlobalCache(timelineItemId: string, results: Map<number, string>): void {
-    // 结果已经通过全局响应式缓存更新，Vue会自动触发组件重新渲染
-    // 无需额外的通知逻辑
+    // 取消指定项目的待处理任务
   }
 }
 ```
@@ -350,123 +128,59 @@ class OptimizedThumbnailScheduler {
 ### 1. 缓存键生成方法
 
 ```typescript
-// 缓存键设计: timelineItemId-framePosition-clipStartTime-clipEndTime
-const cacheKey = `${timelineItemId}-${framePosition}-${clipStartTime}-${clipEndTime}`;
-
-// 使用Vue响应式Map作为全局缓存，集成到unifiedStore中
-// 在 unifiedStore.ts 中添加：
-// thumbnailCache: reactive(new Map<string, CachedThumbnail>()),
-const maxCacheSize = 1000; // 最大缓存数量
+// 缓存键生成函数
+function generateCacheKey(
+  timelineItemId: string,
+  framePosition: number,
+  clipStartTime: number,
+  clipEndTime: number
+): string {
+  // 格式: ${timelineItemId}-${framePosition}-${clipStartTime}-${clipEndTime}
+}
 ```
 
 ### 2. Vue Store 方法
 
 ```typescript
-// 在unifiedStore.ts中添加全局响应式缓存（使用Composition API风格）
+// Vue Store 方法（伪代码）
 export const useUnifiedStore = defineStore('unified', () => {
-  // ...其他状态和模块初始化
-  
-  // 全局缩略图缓存
-  const thumbnailCache = reactive(new Map<string, CachedThumbnail>());
-  const maxCacheSize = 1000; // 最大缓存数量
+  const thumbnailCache = reactive(new Map<string, CachedThumbnail>()); // 全局缩略图缓存
 
-  /**
-   * 清理指定时间轴项目的缓存
-   */
   function clearThumbnailCacheByTimelineItem(timelineItemId: string): void {
-    for (const [key, cached] of thumbnailCache.entries()) {
-      if (cached.timelineItemId === timelineItemId) {
-        // 清理Blob URL资源
-        URL.revokeObjectURL(cached.blobUrl);
-        thumbnailCache.delete(key);
-      }
-    }
+    // 清理指定时间轴项目的缓存和Blob URL资源
   }
   
-  /**
-   * 清理缓存条目（LRU策略）
-   */
   function cleanupThumbnailCache(maxSize: number = 1000): void {
-    if (thumbnailCache.size > maxSize) {
-      const entries = Array.from(thumbnailCache.entries());
-      entries.sort((a, b) => a[1].timestamp - b[1].timestamp);
-      
-      const toRemove = entries.slice(0, thumbnailCache.size - maxSize);
-      for (const [key] of toRemove) {
-        const cached = thumbnailCache.get(key);
-        if (cached) {
-          URL.revokeObjectURL(cached.blobUrl);
-          thumbnailCache.delete(key);
-        }
-      }
-    }
+    // LRU策略清理缓存
   }
 
-  // 导出缓存相关状态和方法
-  return {
-    // ...其他导出的状态和方法
-    thumbnailCache,
-    clearThumbnailCacheByTimelineItem,
-    cleanupThumbnailCache
-  };
+  return { thumbnailCache, clearThumbnailCacheByTimelineItem, cleanupThumbnailCache };
 });
 
-// 组件中使用响应式缓存
-const unifiedStore = useUnifiedStore()
-
-// 获取缩略图URL（自动响应式）
-function getThumbnailUrl(timelineItemId: string, framePosition: number): string | null {
-  const cacheKey = generateCacheKey(timelineItemId, framePosition);
-  return unifiedStore.thumbnailCache.get(cacheKey)?.blobUrl || null;
+// 获取缓存的缩略图URL
+function getThumbnailUrl(
+  timelineItemId: string,
+  framePosition: number,
+  clipStartTime: number,
+  clipEndTime: number
+): string | null {
+  // 生成缓存键并从全局缓存获取URL
 }
-
-// 监听缓存变化（可选，Vue会自动处理）
-watch(() => unifiedStore.thumbnailCache, () => {
-  // 缓存更新时自动触发组件重新渲染
-}, { deep: true });
 ```
 
 ### 3. 组件方法（VideoContent.vue）
 
 ```typescript
-// 极简的触发逻辑 - 每次都取消旧任务，专注处理新任务
+// 组件方法（VideoContent.vue）
+// timeRange变化时thumbnailLayout也会响应式变化
 watch(thumbnailLayout, (newLayout) => {
-  // 1. 直接取消所有旧的待处理任务
-  // 因为newLayout是最新的布局，旧任务已无意义
-  optimizedThumbnailManager.cancelTasks(props.data.id);
+  // 1. 取消旧任务
+  // 2. 过滤未缓存的项目
+  // 3. 提交新请求到定时处理队列
+});
 
-  // 2. 收集未缓存的缩略图请求
-  const uncachedItems = newLayout.filter(item => {
-    const cacheKey = generateCacheKey(props.data.id, item);
-    return !unifiedStore.thumbnailCache.has(cacheKey);
-  });
-
-  if (uncachedItems.length === 0) return;
-
-  // 3. 提交新的请求到定时处理队列
-  const requests = uncachedItems.map(item => ({
-    timelineItemId: props.data.id,
-    framePosition: item.framePosition,
-    mediaItem: getMediaItem(),
-    timestamp: Date.now()
-  }));
-  
-  // 提交到队列，1秒后会被自动处理
-  optimizedThumbnailManager.requestThumbnails(requests);
-  
-}, { deep: true, immediate: true });
-
-// 监听时间轴变化
-watch(() => props.data.timeRange, () => {
-  // timeRange变化时，清除缓存和待处理任务
-  clearThumbnailCacheByTimelineItem(props.data.id);
-  optimizedThumbnailManager.cancelTasks(props.data.id);
-  // watch会自动重新触发
-}, { deep: true });
-
-// 组件卸载时清理
 onUnmounted(() => {
-  optimizedThumbnailManager.cancelTasks(props.data.id);
+  // 组件卸载清理
 });
 ```
 
@@ -478,122 +192,214 @@ onUnmounted(() => {
 
 ### 2. 任务调度系统
 
-采用定时触发机制，每1000ms检查一次是否有待处理的缩略图任务，实现批量处理和MP4Clip重用。
+采用节流机制，使用lodash的throttle函数（1秒间隔）处理待处理的缩略图任务，实现批量处理和MP4Clip重用。
 
 ### 3. 批量处理优化
 
 通过BatchProcessor类利用现有的generateVideoThumbnail函数进行批量处理，大幅简化实现复杂度并减少资源消耗。
 
-### 4. 简化的定时触发机制
+### 4. 节流机制优化
 
 **优势**：
-1. **实现简单，易于维护**: 无需复杂的防抖、优先级逻辑，代码更易维护
+1. **实现简单，易于维护**: 使用成熟的lodash throttle函数，无需复杂的防抖、优先级逻辑
 2. **避免性能开销**: 避免频繁触发带来的性能开销
 3. **批量处理效果好**: 1秒间隔内的所有请求合并处理，批量效果最大化
 4. **用户体验稳定**: 不会因为快速操作导致卡顿，1秒延迟对用户几乎无感知
 5. **资源利用高效**: MP4Clip重用效果更明显，减少资源浪费
 6. **逻辑简洁**: 每次thumbnailLayout变化时直接取消旧任务，无需复杂判断
 7. **响应及时**: 总是处理最新的布局需求，避免过时任务浪费资源
-8. **性能稳定**: 固定间隔处理，避免频繁操作造成的性能波动
+8. **性能稳定**: 节流控制处理频率，避免频繁操作造成的性能波动
 
-### 5. Vue响应式缓存与资源管理
+## 实施路线图
 
-#### Vue响应式方案的优势
+### 阶段一：基础架构搭建（第1-2周）
 
-**综合优势**
-1. **自动依赖追踪**: Vue自动处理组件更新，无需手动通知机制，移除复杂的 `notifyConsumers` 逻辑
-2. **开发体验优秀**: 与Vue DevTools完美集成，支持Time Travel调试，完整的TypeScript支持
-3. **性能优化**: 减少内存占用，避免重复的事件监听器注册，自动批量处理状态更新
-4. **实施便利**: 与现有 `unifiedStore` 架构完全兼容，支持渐进式迁移，代码更简洁易维护
+1. **创建核心类文件**
+   - 在 [`frontend/src/unified/managers/`](frontend/src/unified/managers/) 目录下创建：
+     - `BatchProcessor.ts` - 批量处理器类
+     - `ThumbnailScheduler.ts` - 缩略图调度器类
+   - 在 [`frontend/src/unified/utils/`](frontend/src/unified/utils/) 目录下创建：
+     - `thumbnailCacheUtils.ts` - 缓存相关工具函数
 
-## 实施路线图（响应式优化版）
+2. **扩展 unifiedStore**
+   - 在 [`frontend/src/unified/unifiedStore.ts`](frontend/src/unified/unifiedStore.ts) 中添加：
+     - 全局响应式缩略图缓存 `thumbnailCache`
+     - 缓存管理方法 `clearThumbnailCacheByTimelineItem`、`cleanupThumbnailCache`
 
-### 阶段一：核心架构重建 (2天)
-1. **完全替换现有管理器**：
-   - 删除`RealtimeThumbnailManager.ts`
-   - 创建全新的`OptimizedThumbnailManager.ts`，实现方案中的所有优化功能
-   - 重写`thumbnailCache.ts`和`thumbnailBatchProcessor.ts`
+3. **更新类型定义**
+   - 在 [`frontend/src/unified/types/thumbnail.ts`](frontend/src/unified/types/thumbnail.ts) 中添加新接口：
+     - `CachedThumbnail`
+     - `ThumbnailBatchRequest`
+   
+   注：[`ThumbnailLayoutItem`](frontend/src/unified/types/thumbnail.ts:11) 和 [`UnifiedMediaItemData`](frontend/src/unified/mediaitem/types.ts:51) 接口已存在
 
-2. **重构缓存系统**：
-   - 集成内存缓存和LRU策略，资源清理与缓存管理一体化
-   - 移除所有旧的缓存逻辑
+### 阶段二：批量处理器实现（第3周）
 
-3. **批量处理与响应式集成**：
-   - 实现任务调度系统和批量处理器
-   - 按时间轴项目分组处理
-  - 利用现有的generateVideoThumbnail函数进行批量处理，统一更新全局响应式缓存
+1. **实现 BatchProcessor 类**
+   - 集成现有的 [`generateVideoThumbnail`](frontend/src/unified/managers/RealtimeThumbnailManager.ts:45) 函数
+   - 实现批量顺序处理逻辑
+   - 优化 MP4Clip 重用机制
 
-### 阶段二：组件层激进重构 (2天)
-1. **完全重写VideoContent.vue**：
-   - 移除现有的`thumbnailStates`逐个生成逻辑
-   - 实现新的批量请求机制
-   - 集成智能预加载和优先级管理
+2. **缓存系统集成**
+   - 实现缓存键生成函数
+   - 集成 Blob URL 管理
+   - 实现 LRU 缓存清理策略
 
-2. **响应式组件重构**：
-   - 移除现有的`thumbnailStates`逐个生成逻辑
-   - 集成全局响应式缓存，直接消费 `unifiedStore.thumbnailCache`
-   - 实现智能预加载和基于响应式的优先级管理
+### 阶段三：调度器实现（第4周）
 
-3. **类型系统与响应式集成**：
-   - 扩展`types/thumbnail.ts`支持响应式缓存接口
-   - 添加全局缓存状态类型定义
-   - 优化组件与响应式缓存的类型集成
+1. **实现 ThumbnailScheduler 类**
+   - 集成 lodash 的 throttle 函数（1秒间隔）
+   - 实现请求队列管理
+   - 实现任务取消机制
 
-## 激进重构策略
+2. **集成到现有系统**
+   - 替换 [`RealtimeThumbnailManager.ts`](frontend/src/unified/managers/RealtimeThumbnailManager.ts) 中的相关逻辑
+   - 更新 [`VideoContent.vue`](frontend/src/unified/components/renderers/VideoContent.vue) 的缩略图请求逻辑
+
+### 阶段四：测试与优化（第5-6周）
+
+1. **功能测试**
+   - 验证缓存命中率
+   - 测试批量处理性能
+   - 验证内存使用优化效果
+
+2. **性能调优**
+   - 调整缓存大小限制
+   - 优化批量处理参数
+   - 验证响应速度提升
+
+3. **边界情况处理**
+   - 大文件处理测试
+   - 快速操作场景测试
+   - 内存泄漏检查
+
 
 ### 架构变更要点
 
-#### 1. 管理器层重构
-管理器层将实现之前定义的 `OptimizedThumbnailManager` 接口，提供批量缩略图生成和管理功能。
+#### 1. 数据流变更
 
-#### 2. 组件层重构（极简定时触发）
-```typescript
+**原架构**：
 ```
-- **彻底移除**现有的Map-based缓存
-- **直接实现**LRU策略，资源清理与缓存管理一体化
-- **统一管理**所有Blob URL的生命周期，确保同步清理
+VideoContent.vue → RealtimeThumbnailManager → generateVideoThumbnail (每帧独立)
+```
+
+**新架构**：
+```
+VideoContent.vue → ThumbnailScheduler → BatchProcessor → generateVideoThumbnail (批量处理)
+                                    ↓
+                              Global Cache (unifiedStore)
+```
+
+#### 2. 缓存层级结构
+
+- **L1缓存**：Vue响应式 Map (内存缓存，支持自动依赖追踪)
+- **缓存键策略**：`${timelineItemId}-${framePosition}-${clipStartTime}-${clipEndTime}`
+- **缓存清理**：LRU策略 + 项目级别清理
+
+#### 3. 并发控制优化
+
+**原实现问题**：
+- 每个缩略图请求独立处理
+- MP4Clip 为每帧单独克隆
+- 无请求聚合机制
+
+**新实现优势**：
+- 基于时间轴项目的批量处理
+- MP4Clip 每个项目只克隆一次
+- 1秒间隔的节流批量处理
+
+#### 4. 组件集成变更
+
+**VideoContent.vue 变更**：
+- 移除直接调用 `RealtimeThumbnailManager`
+- 添加 `ThumbnailScheduler.requestThumbnails()` 调用
+- 通过响应式缓存自动更新缩略图显示
+
+**Store 扩展**：
+- 添加全局缩略图缓存状态
+- 提供缓存管理和清理方法
+- 支持跨组件的缓存共享
+
+#### 5. 性能优化要点
+
+- **MP4Clip 重用**：从每帧克隆优化为每项目克隆
+- **批量解码**：利用 WebAV 的批量处理能力
+- **智能缓存**：避免重复计算，提高响应速度
+- **内存管理**：自动 Blob URL 清理和 LRU 缓存策略
+
 
 ## 缩略图优化方案流程图
 
 ```mermaid
-sequenceDiagram
-    participant VC as VideoContent.vue
-    participant OM as OptimizedThumbnailManager
-    participant TS as ThumbnailTaskScheduler
-    participant BP as BatchProcessor
-    participant UC as unifiedStore.thumbnailCache
-    participant MP4 as MP4Clip实例
-
-    Note over VC, MP4: 缩略图生成流程
-
-    VC->>VC: 监听thumbnailLayout变化
-    VC->>OM: 取消旧任务(props.data.id)
-    VC->>VC: 过滤未缓存的项目
-    VC->>OM: 提交新请求数组
+graph TB
+    A[VideoContent.vue 组件] --> B{检查缓存}
+    B -->|命中| C[直接使用缓存缩略图]
+    B -->|未命中| D[ThumbnailScheduler.requestThumbnails]
     
-    OM->>TS: 按timelineItemId分组请求
-    TS->>TS: 等待1000ms定时触发
+    D --> E[添加到待处理队列]
+    E --> F[定时器触发<br/>1秒间隔]
     
-    TS->>BP: 处理批次请求
-    loop 批量处理所有帧
-        BP->>BP: 使用generateVideoThumbnail生成缩略图
+    F --> G[processAllPendingRequests]
+    G --> H[按时间轴项目分组]
+    
+    H --> I[BatchProcessor.processBatch]
+    I --> J[获取媒体项目数据]
+    J --> K[按帧位置排序]
+    
+    K --> L[循环处理每帧]
+    L --> M[计算时间位置]
+    M --> N[调用 generateVideoThumbnail]
+    N --> O[转换为 Blob URL]
+    O --> P[更新全局响应式缓存]
+    
+    P --> Q[Vue 响应式更新]
+    Q --> R[VideoContent.vue 自动显示新缩略图]
+    
+    subgraph "缓存管理"
+        S[LRU 清理策略]
+        T[项目级别清理]
+        U[Blob URL 资源管理]
     end
-    BP->>BP: 统一转换为Blob URL
-    BP->>UC: 更新全局响应式缓存
-    BP->>MP4: 销毁MP4Clip实例
     
-    UC-->>VC: Vue自动触发组件更新
-    VC->>VC: 显示缓存的缩略图
+    P --> S
+    
+    subgraph "优化特性"
+        V[MP4Clip 重用<br/>每项目一次克隆]
+        W[批量顺序处理<br/>提升解码效率]
+        X[请求聚合<br/>减少并发压力]
+    end
+    
+    I --> V
+    L --> W
+    E --> X
+    
+    style A fill:#e1f5fe
+    style C fill:#c8e6c9
+    style P fill:#fff3e0
+    style V fill:#f3e5f5
+    style W fill:#f3e5f5
+    style X fill:#f3e5f5
 ```
 
-## 监控指标
+### 流程说明
 
-建议监控以下关键指标：
-- 缓存命中率
-- 平均处理时间
-- 内存使用情况
-- 任务队列长度
-- 错误率
+#### 主流程
+1. **请求阶段**：`VideoContent.vue` 检查缓存，未命中时发起请求
+2. **调度阶段**：`ThumbnailScheduler` 收集请求，定时批量处理
+3. **处理阶段**：`BatchProcessor` 按项目分组，批量生成缩略图
+4. **缓存阶段**：结果存入响应式缓存，触发组件自动更新
+
+#### 关键优化点
+- **智能缓存**：避免重复计算，提升响应速度
+- **批量处理**：MP4Clip 重用，减少资源消耗
+- **节流聚合**：1秒间隔处理，优化用户体验
+- **响应式更新**：利用 Vue 特性，自动更新界面
+
+#### 资源管理
+- **内存缓存**：LRU 策略控制缓存大小
+- **Blob URL 管理**：自动清理，防止内存泄漏
+- **项目级清理**：时间轴项目变更时清理相关缓存
+
 
 ## 总结
 
