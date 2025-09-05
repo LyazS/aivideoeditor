@@ -298,16 +298,6 @@ export {
 export {
   // 缓存键生成和解析
   generateCacheKey,
-  parseCacheKey,
-  
   // 缓存访问
   getThumbnailUrl,
-  
-  // 缓存有效性检查
-  isCacheValid,
-  
-  // 缓存清理策略
-  cleanupExpiredCache,
-  cleanupCacheByTimelineItem,
-  cleanupCacheLRU,
 } from './thumbnailCacheUtils'
