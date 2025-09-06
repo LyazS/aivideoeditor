@@ -31,7 +31,6 @@ import { useUnifiedStore } from '@/unified/unifiedStore'
 import {
   calculateThumbnailLayout,
   filterThumbnailVisible,
-  calculateViewportFrameRange,
   calculateClipWidthPixels,
 } from '@/unified/utils/thumbnailAlgorithms'
 import type { ThumbnailLayoutItem } from '@/unified/types/thumbnail'
@@ -56,15 +55,9 @@ const thumbnailLayout = computed<ThumbnailLayoutItem[]>(() => {
     unifiedStore.zoomLevel,
   )
 
-  // 计算视口帧范围
-  const { startFrames: viewportStartFrame, endFrames: viewportEndFrame } =
-    calculateViewportFrameRange(
-      props.timelineWidth,
-      unifiedStore.totalDurationFrames,
-      unifiedStore.zoomLevel,
-      unifiedStore.scrollOffset,
-      unifiedStore.maxVisibleDurationFrames,
-    )
+  // 使用传入的视口帧范围
+  const viewportStartFrame = props.viewportFrameRange.startFrames
+  const viewportEndFrame = props.viewportFrameRange.endFrames
 
   // 计算初始布局
   const layout = calculateThumbnailLayout(

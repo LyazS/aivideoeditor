@@ -52,34 +52,41 @@ export interface ContentRendererFactory {
 // ==================== 组件属性接口 ====================
 
 /**
- * UnifiedTimelineClip组件属性
+ * 时间轴项目公共属性接口
+ * 用于所有需要基本时间轴项目信息的组件
  */
-export interface UnifiedTimelineClipProps<T extends MediaType = MediaType> {
-  /** 时间轴项目数据 */
+interface TimelineItemProps<T extends MediaType = MediaType> {
+  /** 时间轴项目数据 - 必选 */
   data: UnifiedTimelineItemData<T>
 
-  /** 是否被选中 */
-  isSelected?: boolean
+  /** 是否被选中 - 必选 */
+  isSelected: boolean
 
-  /** 是否正在拖拽 */
-  isDragging?: boolean
+  /** 当前播放时间（帧数） - 必选 */
+  currentFrame: number
 
-  /** 是否正在调整大小 */
-  isResizing?: boolean
+  /** 轨道高度 - 必选 */
+  trackHeight: number
 
-  /** 当前播放时间（帧数） */
-  currentFrame?: number
+  /** 时间轴宽度（用于坐标转换） - 必选 */
+  timelineWidth: number
 
-  /** 缩放比例 */
-  scale?: number
-
-  /** 轨道高度 */
-  trackHeight?: number
-
-  /** 时间轴宽度（用于坐标转换） */
-  timelineWidth?: number
-
+  /** 视口帧范围 - 必选 */
+  viewportFrameRange: {
+    startFrames: number
+    endFrames: number
+  }
 }
+
+/**
+ * UnifiedTimelineClip组件属性 - 继承公共接口
+ */
+export type UnifiedTimelineClipProps<T extends MediaType = MediaType> = TimelineItemProps<T>
+
+/**
+ * 模板组件属性 - 继承公共接口
+ */
+export type ContentTemplateProps<T extends MediaType = MediaType> = TimelineItemProps<T>
 
 // ==================== 组件事件接口 ====================
 
@@ -103,32 +110,4 @@ export interface UnifiedTimelineClipEvents {
   resizeStart: (event: MouseEvent, id: string, direction: 'left' | 'right') => void
 }
 
-// ==================== 模板组件公共接口 ====================
-
-/**
- * 模板组件公共属性接口
- * 所有内容模板组件都应该使用这个接口作为基础
- */
-export interface ContentTemplateProps<T extends MediaType = MediaType> {
-  /** 时间轴项目数据 */
-  data: UnifiedTimelineItemData<T>
-  
-  /** 是否被选中 */
-  isSelected: boolean
-  
-  /** 是否正在拖拽 */
-  isDragging: boolean
-  
-  /** 是否正在调整大小 */
-  isResizing: boolean
-  
-  /** 当前播放时间（帧数） */
-  currentFrame: number
-  
-  /** 轨道高度 */
-  trackHeight: number
-  
-  /** 时间轴宽度（用于坐标转换） */
-  timelineWidth: number
-}
 

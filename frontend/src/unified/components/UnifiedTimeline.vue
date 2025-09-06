@@ -220,7 +220,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, h } from 'vue'
+import { ref, onMounted, onUnmounted, h, computed } from 'vue'
+import { calculateViewportFrameRange } from '@/unified/utils/thumbnailAlgorithms'
 import { useUnifiedStore } from '@/unified/unifiedStore'
 import { getDragPreviewManager } from '@/unified/composables'
 import type { UnifiedTimelineItemData } from '@/unified/timelineitem/TimelineItemData'
@@ -251,7 +252,6 @@ import { useTimelineItemOperations } from '@/unified/composables/useTimelineItem
 import { useTimelineConflictDetection } from '@/unified/composables/useTimelineConflictDetection'
 import { useTimelineEventHandlers } from '@/unified/composables/useTimelineEventHandlers'
 import { useTimelineGridLines } from '@/unified/composables/useTimelineGridLines'
-import { useTimelineCoordinateUtils } from '@/unified/composables/useTimelineCoordinateUtils'
 import { useTimelineTimeScale } from '@/unified/composables/useTimelineTimeScale'
 
 // Component name for Vue DevTools
@@ -262,8 +262,19 @@ defineOptions({
 const unifiedStore = useUnifiedStore()
 const dragPreviewManager = getDragPreviewManager()
 
+// 计算视口帧范围
+const viewportFrameRange = computed(() => {
+  return calculateViewportFrameRange(
+    timelineWidth.value,
+    unifiedStore.totalDurationFrames,
+    unifiedStore.zoomLevel,
+    unifiedStore.scrollOffset,
+    unifiedStore.maxVisibleDurationFrames,
+  )
+})
+
 const timelineBody = ref<HTMLElement>()
-const timelineWidth = ref(LayoutConstants.TIMELINE_DEFAULT_WIDTH)
+const timelineWidth = ref<number>(LayoutConstants.TIMELINE_DEFAULT_WIDTH)
 
 // 时间刻度相关变量
 const scaleContainer = ref<HTMLElement>()
@@ -280,11 +291,6 @@ const {
   handleTimeScaleWheel,
 } = useTimelineTimeScale(scaleContainer)
 
-// 首先初始化基础工具模块
-const { updateTimelineWidth, getTimePositionFromContextMenu } = useTimelineCoordinateUtils(
-  timelineBody,
-  timelineWidth,
-)
 
 // 初始化项目操作模块
 const {
@@ -360,7 +366,8 @@ const {
   createTextAtPosition,
   tracks,
   getClipsForTrack,
-  getTimePositionFromContextMenu,
+  timelineBody,
+  timelineWidth,
 )
 
 // 初始化事件处理模块
@@ -377,16 +384,30 @@ const {
 // 初始化网格线模块
 const { gridLines } = useTimelineGridLines(timelineWidth)
 
-// 类型安全的时间轴项目渲染函数
+/**
+ * 更新时间轴宽度
+ * 计算轨道内容区域的宽度（总宽度减去轨道控制区域的宽度）
+ */
+function updateTimelineWidth() {
+  if (timelineBody.value) {
+    // 计算轨道内容区域的宽度（总宽度减去轨道控制区域的宽度）
+    timelineWidth.value = timelineBody.value.clientWidth - LayoutConstants.TRACK_CONTROL_WIDTH
+  }
+}
+
+// 类型安全的时间轴项目渲染函数 - 优化版本，仅传递必要状态
 function renderTimelineItem(item: UnifiedTimelineItemData | any, track: any) {
   // 统一架构使用 UnifiedTimelineClip 组件，它内部通过 ContentRendererFactory 动态选择渲染器
   const commonProps = {
-    // UnifiedTimelineClip 需要的属性
+    // UnifiedTimelineClip 需要的核心属性
     data: item,
-    'is-selected': unifiedStore.isTimelineItemSelected(item.id),
-    'current-frame': unifiedStore.currentFrame,
-    'track-height': track.height,
-    'timeline-width': timelineWidth.value, // 传递时间轴宽度用于坐标转换
+    isSelected: unifiedStore.isTimelineItemSelected(item.id),
+    isDragging: false, // 默认非拖拽状态，组件内部维护实际的拖拽状态
+    isResizing: false,  // 默认非调整大小状态，组件内部维护实际的调整大小状态
+    currentFrame: unifiedStore.currentFrame,
+    trackHeight: track.height,
+    timelineWidth: timelineWidth.value, // 传递时间轴宽度用于坐标转换
+    viewportFrameRange: viewportFrameRange.value,
     // 事件处理
     onSelect: handleSelectClip,
     onDoubleClick: (id: string) => handleTimelineItemDoubleClick(id),

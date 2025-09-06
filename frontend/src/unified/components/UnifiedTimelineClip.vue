@@ -67,15 +67,8 @@ import { getDefaultTrackHeight, mapMediaTypeToTrackType } from '@/unified/track/
 
 // ==================== 组件定义 ====================
 
-// 定义组件属性
-const props = withDefaults(defineProps<UnifiedTimelineClipProps>(), {
-  isSelected: false,
-  isDragging: false,
-  isResizing: false,
-  currentFrame: 0,
-  trackHeight: 60,
-  timelineWidth: 1000,
-})
+// 定义组件属性 - 最终精简版本，所有属性都是必选的
+const props = defineProps<UnifiedTimelineClipProps>()
 
 // 获取统一store实例
 const unifiedStore = useUnifiedStore()
@@ -108,16 +101,15 @@ const emit = defineEmits<{
 // ==================== 计算属性 ====================
 
 /**
- * 构建模板组件的props
+ * 构建模板组件的props - 简化版本
  */
 const templateProps = computed<ContentTemplateProps>(() => ({
   data: props.data,
   isSelected: props.isSelected,
-  isDragging: props.isDragging,
-  isResizing: props.isResizing,
   currentFrame: props.currentFrame,
   trackHeight: props.trackHeight,
   timelineWidth: props.timelineWidth,
+  viewportFrameRange: props.viewportFrameRange,
 }))
 
 /**
@@ -138,8 +130,8 @@ const clipClasses = computed(() => {
     `status-${props.data.timelineStatus}`,
     {
       selected: props.isSelected,
-      dragging: isDragging.value || props.isDragging,
-      resizing: isResizing.value || props.isResizing,
+      dragging: isDragging.value,
+      resizing: isResizing.value,
     },
   ]
 

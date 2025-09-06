@@ -11,6 +11,7 @@ import {
 import type { UnifiedTrackType, UnifiedTrackData } from '@/unified/track/TrackTypes'
 import type { UnifiedTimelineItemData } from '@/unified/timelineitem/TimelineItemData'
 import { regenerateThumbnailForUnifiedTimelineItem } from '@/unified/utils/thumbnailGenerator'
+import { LayoutConstants } from '@/unified/constants/LayoutConstants'
 
 /**
  * 菜单项类型定义
@@ -45,7 +46,8 @@ export function useTimelineContextMenu(
   createTextAtPosition: (trackId: string, timePosition: number) => Promise<void>,
   tracks: Ref<UnifiedTrackData[]>,
   getClipsForTrack: (trackId: string) => UnifiedTimelineItemData[],
-  getTimePositionFromContextMenu: (contextMenuOptions: { x: number }) => number,
+  timelineBody: Ref<HTMLElement | undefined>,
+  timelineWidth: Ref<number>,
 ) {
   const unifiedStore = useUnifiedStore()
   const dialogs = useDialogs()
@@ -401,6 +403,32 @@ export function useTimelineContextMenu(
     contextMenuType.value = 'empty'
     contextMenuTarget.value = {}
     showContextMenu.value = true
+  }
+
+  /**
+   * 从右键菜单上下文获取时间位置
+   * 将右键点击的屏幕坐标转换为时间轴上的帧数位置
+   * @returns 时间位置（帧数）
+   */
+  function getTimePositionFromContextMenu(contextMenuOptions: { x: number }): number {
+    // 获取右键点击的位置
+    const clickX = contextMenuOptions.x
+
+    // 计算相对于时间轴内容区域的位置
+    const timelineBodyRect = timelineBody.value?.getBoundingClientRect()
+    if (!timelineBodyRect) {
+      console.warn('⚠️ 无法获取时间轴主体边界，使用默认位置')
+      return 0
+    }
+
+    // 减去轨道控制区域的宽度
+    const relativeX = clickX - timelineBodyRect.left - LayoutConstants.TRACK_CONTROL_WIDTH
+
+    // 转换为帧数
+    const timeFrames = unifiedStore.pixelToFrame(relativeX, timelineWidth.value)
+
+    // 确保时间位置不为负数
+    return Math.max(0, Math.round(timeFrames))
   }
 
   return {
