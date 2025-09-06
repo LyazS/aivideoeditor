@@ -21,7 +21,7 @@ import { framesToMicroseconds } from '@/unified/utils/timeUtils'
 import { ThumbnailMode, THUMBNAIL_CONSTANTS } from '@/unified/constants/ThumbnailConstants'
 import { UnifiedMediaItemQueries } from '@/unified/mediaitem/queries'
 
-export function createUnifiedThumbnailSchedulerModule(
+export function createUnifiedVideoThumbnailModule(
   timelineModule: {
     getTimelineItem: (id: string) => UnifiedTimelineItemData | undefined
   },
@@ -417,6 +417,6 @@ export function createUnifiedThumbnailSchedulerModule(
   }
 }
 
-export type UnifiedThumbnailSchedulerModule = ReturnType<
-  typeof createUnifiedThumbnailSchedulerModule
+export type UnifiedVideoThumbnailModule = ReturnType<
+  typeof createUnifiedVideoThumbnailModule
 >

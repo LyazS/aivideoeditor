@@ -13,7 +13,7 @@ import { createUnifiedWebavModule } from '@/unified/modules/UnifiedWebavModule'
 import { createUnifiedNotificationModule } from '@/unified/modules/UnifiedNotificationModule'
 import { createUnifiedHistoryModule } from '@/unified/modules/UnifiedHistoryModule'
 import { createUnifiedAutoSaveModule } from '@/unified/modules/UnifiedAutoSaveModule'
-import { createUnifiedThumbnailSchedulerModule } from '@/unified/modules/UnifiedThumbnailSchedulerModule'
+import { createUnifiedVideoThumbnailModule } from '@/unified/modules/UnifiedVideoThumbnailModule'
 import { calculateTotalDurationFrames } from '@/unified/utils/durationUtils'
 import type { MediaType, MediaTypeOrUnknown } from '@/unified'
 import type { UnifiedTrackType } from '@/unified/track/TrackTypes'
@@ -224,8 +224,8 @@ export const useUnifiedStore = defineStore('unified', () => {
     },
   )
 
-  // 创建缩略图调度器模块
-  const unifiedThumbnailSchedulerModule = createUnifiedThumbnailSchedulerModule(
+  // 创建视频缩略图模块
+  const unifiedVideoThumbnailModule = createUnifiedVideoThumbnailModule(
     unifiedTimelineModule,
     unifiedMediaModule,
   )
@@ -1443,21 +1443,21 @@ export const useUnifiedStore = defineStore('unified', () => {
 
     destroyAllModules, // 新增：销毁所有模块资源的方法
 
-    // ==================== 缩略图调度器方法 ====================
-    requestThumbnails: unifiedThumbnailSchedulerModule.requestThumbnails,
-    cancelThumbnailTasks: unifiedThumbnailSchedulerModule.cancelTasks,
-    cleanupThumbnailScheduler: unifiedThumbnailSchedulerModule.cleanup,
+    // ==================== 视频缩略图方法 ====================
+    requestThumbnails: unifiedVideoThumbnailModule.requestThumbnails,
+    cancelThumbnailTasks: unifiedVideoThumbnailModule.cancelTasks,
+    cleanupThumbnailScheduler: unifiedVideoThumbnailModule.cleanup,
 
     // ==================== 缩略图缓存功能（通过模块提供） ====================
-    thumbnailCache: unifiedThumbnailSchedulerModule.thumbnailCache,
+    thumbnailCache: unifiedVideoThumbnailModule.thumbnailCache,
     clearThumbnailCacheByTimelineItem:
-      unifiedThumbnailSchedulerModule.clearThumbnailCacheByTimelineItem,
-    cleanupThumbnailCache: unifiedThumbnailSchedulerModule.cleanupThumbnailCache,
-    getCachedThumbnail: unifiedThumbnailSchedulerModule.getCachedThumbnail,
-    cacheThumbnail: unifiedThumbnailSchedulerModule.cacheThumbnail,
+      unifiedVideoThumbnailModule.clearThumbnailCacheByTimelineItem,
+    cleanupThumbnailCache: unifiedVideoThumbnailModule.cleanupThumbnailCache,
+    getCachedThumbnail: unifiedVideoThumbnailModule.getCachedThumbnail,
+    cacheThumbnail: unifiedVideoThumbnailModule.cacheThumbnail,
 
     // ==================== 工具函数导出 ====================
-    generateCacheKey: unifiedThumbnailSchedulerModule.generateCacheKey,
-    getThumbnailUrl: unifiedThumbnailSchedulerModule.getThumbnailUrl,
+    generateCacheKey: unifiedVideoThumbnailModule.generateCacheKey,
+    getThumbnailUrl: unifiedVideoThumbnailModule.getThumbnailUrl,
   }
 })
