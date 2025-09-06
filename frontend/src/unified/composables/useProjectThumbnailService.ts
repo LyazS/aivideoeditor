@@ -148,7 +148,7 @@ export function useProjectThumbnailService() {
     mediaModule: {
       getMediaItem: (id: string) => UnifiedMediaItemData | undefined
     },
-  ): Promise<string> => {
+  ): Promise<string | null> => {
     if (isGenerating.value) {
       throw new ThumbnailError('缩略图生成中，请稍后重试', 'PROCESSING_FAILED')
     }
@@ -161,7 +161,8 @@ export function useProjectThumbnailService() {
       // 1. 筛选源项目
       const sourceItem = findThumbnailSource(timelineItems, mediaModule)
       if (!sourceItem) {
-        throw new ThumbnailError('没有找到可用的缩略图源', 'NO_SOURCE')
+        console.log('📝 项目中没有可用的视频或图像素材，跳过缩略图生成')
+        return null
       }
 
       // 2. 获取媒体项目
