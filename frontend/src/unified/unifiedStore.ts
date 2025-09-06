@@ -1448,16 +1448,7 @@ export const useUnifiedStore = defineStore('unified', () => {
     cancelThumbnailTasks: unifiedVideoThumbnailModule.cancelTasks,
     cleanupThumbnailScheduler: unifiedVideoThumbnailModule.cleanup,
 
-    // ==================== 缩略图缓存功能（通过模块提供） ====================
-    thumbnailCache: unifiedVideoThumbnailModule.thumbnailCache,
-    clearThumbnailCacheByTimelineItem:
-      unifiedVideoThumbnailModule.clearThumbnailCacheByTimelineItem,
-    cleanupThumbnailCache: unifiedVideoThumbnailModule.cleanupThumbnailCache,
-    getCachedThumbnail: unifiedVideoThumbnailModule.getCachedThumbnail,
-    cacheThumbnail: unifiedVideoThumbnailModule.cacheThumbnail,
-
     // ==================== 工具函数导出 ====================
-    generateCacheKey: unifiedVideoThumbnailModule.generateCacheKey,
     getThumbnailUrl: unifiedVideoThumbnailModule.getThumbnailUrl,
   }
 })

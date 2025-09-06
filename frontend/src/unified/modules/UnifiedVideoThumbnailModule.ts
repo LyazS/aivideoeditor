@@ -92,9 +92,9 @@ export function createUnifiedVideoThumbnailModule(
     // 2. 按时间轴项目逐个处理
     for (const [timelineItemId, requests] of requestsSnapshot) {
       try {
-        console.log('🔍 处理缩略图请求:', timelineItemId)
+        // console.log('🔍 处理缩略图请求:', timelineItemId)
         await processTimelineItemRequests(timelineItemId, requests)
-        console.log('✅ 处理缩略图请求成功:', timelineItemId)
+        // console.log('✅ 处理缩略图请求成功:', timelineItemId)
       } catch (error) {
         console.error('❌ 处理缩略图请求失败:', error)
       }
@@ -284,6 +284,12 @@ export function createUnifiedVideoThumbnailModule(
     } else {
       console.warn('⚠️ 批量处理器只支持视频和图片媒体项目，跳过非支持项目:', mediaItem.mediaType)
     }
+
+    // 批量处理完成后自动清理超出限制的缓存
+    const removedCount = cleanupThumbnailCache()
+    if (removedCount > 0) {
+      console.log(`🗑️ 清理了 ${removedCount} 张过时缩略图缓存`)
+    }
   }
 
   /**
@@ -300,29 +306,7 @@ export function createUnifiedVideoThumbnailModule(
     pendingRequests.value.clear()
   }
 
-  // 缓存管理方法（从unifiedStore.ts迁移）
-  function clearThumbnailCacheByTimelineItem(timelineItemId: string): number {
-    let removedCount = 0
-
-    for (const [key, cached] of thumbnailCache.value.entries()) {
-      if (cached.timelineItemId === timelineItemId) {
-        // 释放Blob URL资源
-        if (cached.blobUrl.startsWith('blob:')) {
-          try {
-            URL.revokeObjectURL(cached.blobUrl)
-          } catch (error) {
-            console.warn('释放Blob URL失败:', error)
-          }
-        }
-        thumbnailCache.value.delete(key)
-        removedCount++
-      }
-    }
-
-    return removedCount
-  }
-
-  function cleanupThumbnailCache(maxSize: number = 1000): number {
+  function cleanupThumbnailCache(maxSize: number = 1600): number {
     if (thumbnailCache.value.size <= maxSize) {
       return 0
     }
@@ -352,11 +336,6 @@ export function createUnifiedVideoThumbnailModule(
     }
 
     return removedCount
-  }
-
-  function getCachedThumbnail(timelineItemId: string, frame: number): CachedThumbnail | undefined {
-    const cacheKey = generateCacheKey(timelineItemId, frame, 0, 0)
-    return thumbnailCache.value.get(cacheKey)
   }
 
   function cacheThumbnail(thumbnail: CachedThumbnail): void {
@@ -402,21 +381,10 @@ export function createUnifiedVideoThumbnailModule(
     requestThumbnails,
     cancelTasks,
     cleanup,
-    pendingRequests, // 可选：用于调试
-
-    // 缓存管理相关导出
-    thumbnailCache,
-    clearThumbnailCacheByTimelineItem,
-    cleanupThumbnailCache,
-    getCachedThumbnail,
-    cacheThumbnail,
 
     // 工具函数导出
-    generateCacheKey,
     getThumbnailUrl,
   }
 }
 
-export type UnifiedVideoThumbnailModule = ReturnType<
-  typeof createUnifiedVideoThumbnailModule
->
+export type UnifiedVideoThumbnailModule = ReturnType<typeof createUnifiedVideoThumbnailModule>
