@@ -74,12 +74,7 @@ function renderWaveformInComponent() {
       viewportTLStartFrame,
       viewportTLEndFrame,
       clipWidthPixels,
-      {
-        waveColor: '#eeeeee',
-        amplitude: 0.8,
-        height: DEFAULT_TRACK_HEIGHTS.audio - 2 * DEFAULT_TRACK_PADDING,
-        lineWidth: 3,
-      },
+      DEFAULT_TRACK_HEIGHTS.audio - 2 * DEFAULT_TRACK_PADDING,
     )
   }
 }

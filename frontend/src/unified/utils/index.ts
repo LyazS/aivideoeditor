@@ -296,15 +296,7 @@ export {
 
 // ==================== 音频波形工具 ====================
 export {
-  // 波形渲染选项
-  type RenderOptions,
-  
   // 核心波形函数
-  getWaveformDataDirectly,
-  cropPCMDataToTimeRange,
   renderWaveformToCanvas,
   renderWaveformDirectly,
-  
-  // 性能优化
-  shouldReRender,
 } from './audioWaveformUtils'
