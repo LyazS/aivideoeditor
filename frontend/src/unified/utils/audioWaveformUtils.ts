@@ -14,9 +14,17 @@ function preparePCMData(
   clipWholeDurationFrames: number, // 音频总时长(帧数)
   startFrame: number, // 帧数
   endFrame: number, // 帧数
-): Float32Array {
+): {
+  pcmData: Float32Array
+  startPercent: number
+  endPercent: number
+} {
   if (!fullPcmData || fullPcmData.length === 0) {
-    return new Float32Array()
+    return {
+      pcmData: new Float32Array(),
+      startPercent: 0,
+      endPercent: 0,
+    }
   }
   // 时间轴长度
   const tlDurationFrames =
@@ -45,20 +53,23 @@ function preparePCMData(
   const startIndex = Math.floor(startPercent * fullPcmData.length)
   const endIndex = Math.floor(endPercent * fullPcmData.length)
 
-  return fullPcmData.subarray(startIndex, endIndex)
+  return { pcmData: fullPcmData.subarray(startIndex, endIndex), startPercent, endPercent }
 }
 
 /**
  * 渲染波形到Canvas
  * @param ctx Canvas渲染上下文
- * @param samples PCM采样数据
+ * @param data PCM采样数据
  * @param width 画布宽度
  * @param height 画布高度
- * @param options 渲染选项
  */
 export function renderWaveformToCanvas(
   canvas: HTMLCanvasElement,
-  samples: Float32Array,
+  data: {
+    pcmData: Float32Array
+    startPercent: number
+    endPercent: number
+  },
   width: number,
   height: number,
 ): void {
@@ -77,7 +88,10 @@ export function renderWaveformToCanvas(
 
   // 设置基线位置，留出底部空间
   const baselineY = height - DEFAULT_TRACK_PADDING
-  const samplesPerPixel = samples.length / width
+  const sampleWidth = (data.endPercent - data.startPercent) * width
+  const sampleStartX = data.startPercent * width
+  const sampleEndX = data.endPercent * width
+  const samplesPerPixel = data.pcmData.length / sampleWidth
 
   // 创建渐变色 - 从底部到顶部
   const gradient = ctx.createLinearGradient(0, baselineY, 0, 0)
@@ -86,15 +100,15 @@ export function renderWaveformToCanvas(
   gradient.addColorStop(0.6, '#45b7d1')
   gradient.addColorStop(1, '#ff6b6b')
 
-  for (let x = 0; x < width; x++) {
+  for (let x = 0; x < sampleWidth; x++) {
     let maxAmplitude = 0
 
     // 找到这个像素范围内的最大振幅（绝对值）
     const startSampleIndex = Math.floor(x * samplesPerPixel)
     const endSampleIndex = Math.floor((x + 1) * samplesPerPixel)
 
-    for (let j = startSampleIndex; j < endSampleIndex && j < samples.length; j++) {
-      const sample = Math.abs(samples[j])
+    for (let j = startSampleIndex; j < endSampleIndex && j < data.pcmData.length; j++) {
+      const sample = Math.abs(data.pcmData[j])
       if (sample > maxAmplitude) {
         maxAmplitude = sample
       }
@@ -107,7 +121,7 @@ export function renderWaveformToCanvas(
     // 绘制垂直线条（从基线向上），应用渐变色
     if (waveHeight > 1) {
       ctx.fillStyle = gradient
-      ctx.fillRect(x, topY, 1, waveHeight)
+      ctx.fillRect(x + sampleStartX, topY, 1, waveHeight)
     }
   }
 

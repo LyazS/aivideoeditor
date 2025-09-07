@@ -96,16 +96,8 @@ watch(
         width: newValue.clipWidthPixels,
       }
 
-      // 只在视口发生显著变化时重新渲染
-      const shouldRender =
-        Math.abs(currentParams.start - lastViewportParams.value.start) > 10 ||
-        Math.abs(currentParams.end - lastViewportParams.value.end) > 10 ||
-        Math.abs(currentParams.width - lastViewportParams.value.width) > 5
-
-      if (shouldRender) {
-        lastViewportParams.value = currentParams
-        throttledRenderWaveform()
-      }
+      lastViewportParams.value = currentParams
+      throttledRenderWaveform()
     }
   },
   { deep: true },
