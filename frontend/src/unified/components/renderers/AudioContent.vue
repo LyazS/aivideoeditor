@@ -6,6 +6,7 @@
       ref="waveformCanvas"
       :height="DEFAULT_TRACK_HEIGHTS.audio - 2 * DEFAULT_TRACK_PADDING"
       class="waveform-canvas"
+      :style="{ left: canvasLeft }"
     />
   </div>
 </template>
@@ -24,9 +25,7 @@ const props = defineProps<ContentTemplateProps<'audio'>>()
 const unifiedStore = useUnifiedStore()
 
 const waveformCanvas = ref<HTMLCanvasElement>()
-
-// 视口变化检测优化
-const lastViewportParams = ref({ start: 0, end: 0, width: 0 })
+const canvasLeft = ref(0)
 
 // 采样波形计算属性
 const sampleWaveform = computed(() => {
@@ -91,13 +90,6 @@ watch(
   () => sampleWaveform.value,
   (newValue) => {
     if (newValue && waveformCanvas.value) {
-      const currentParams = {
-        start: newValue.viewportTLStartFrame,
-        end: newValue.viewportTLEndFrame,
-        width: newValue.clipWidthPixels,
-      }
-
-      lastViewportParams.value = currentParams
       throttledRenderWaveform()
     }
   },
@@ -204,6 +196,9 @@ function renderWaveformToCanvas(
   const sampleEndX = data.endPercent * width
   const samplesPerPixel = data.pcmData.length / sampleWidth
 
+  canvasLeft.value = sampleStartX
+  canvas.width = sampleWidth
+
   // 创建渐变色 - 从底部到顶部
   const gradient = ctx.createLinearGradient(0, baselineY, 0, 0)
   gradient.addColorStop(0, '#96ceb4')
@@ -232,7 +227,7 @@ function renderWaveformToCanvas(
     // 绘制垂直线条（从基线向上），应用渐变色
     if (waveHeight > 1) {
       ctx.fillStyle = gradient
-      ctx.fillRect(x + sampleStartX, topY, 1, waveHeight)
+      ctx.fillRect(x + 0, topY, 1, waveHeight)
     }
   }
 
@@ -270,9 +265,9 @@ async function renderWaveformDirectly(
   const width = clipWidthPixels
 
   // 确保Canvas物理尺寸正确
-  if (canvas.width !== width) {
-    canvas.width = width
-  }
+  // if (canvas.width !== width) {
+  //   canvas.width = width
+  // }
   if (canvas.height !== height) {
     canvas.height = height
   }
@@ -340,6 +335,7 @@ async function renderWaveformDirectly(
   /* height: 40px; */
   background: rgba(0, 0, 0, 0); /* 添加背景以便调试 */
   display: block; /* 确保正确显示 */
+  position: relative; /* 使 left 样式生效 */
 }
 
 /* 保持向后兼容的样式 */
