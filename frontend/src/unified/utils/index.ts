@@ -293,10 +293,3 @@ export {
   // 调试信息函数
   getUnifiedMediaSyncInfo as getProjectLoadMediaSyncInfo,
 } from './unifiedMediaSyncManager'
-
-// ==================== 音频波形工具 ====================
-export {
-  // 核心波形函数
-  renderWaveformToCanvas,
-  renderWaveformDirectly,
-} from './audioWaveformUtils'
