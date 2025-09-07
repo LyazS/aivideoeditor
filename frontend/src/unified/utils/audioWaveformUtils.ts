@@ -5,6 +5,8 @@
 
 import { framesToMicroseconds } from './timeUtils'
 import type { AudioClip } from '@webav/av-cliper'
+import type { UnifiedTimelineItemData } from '../timelineitem'
+import { useUnifiedStore } from '@/unified/unifiedStore'
 
 export interface RenderOptions {
   /** 波形高度 */
@@ -137,12 +139,13 @@ export function renderWaveformToCanvas(
  */
 export async function renderWaveformDirectly(
   canvas: HTMLCanvasElement,
-  audioClip: AudioClip,
+  timelineItem: UnifiedTimelineItemData,
   viewportTLStartFrame: number,
   viewportTLEndFrame: number,
   clipWidthPixels: number,
   options: RenderOptions,
 ): Promise<void> {
+  const unifiedStore = useUnifiedStore()
   // 合并选项与默认值
   const mergedOptions = { ...options }
 
@@ -158,6 +161,12 @@ export async function renderWaveformDirectly(
   }
 
   try {
+    const mediaItem = unifiedStore.getMediaItem(timelineItem.mediaItemId)
+    if (!mediaItem?.webav?.audioClip) return
+
+    const audioClip = mediaItem.webav.audioClip
+    const meta = await audioClip.ready
+
     // 获取完整的PCM数据
     const fullPcmData = await getWaveformDataDirectly(audioClip)
 
@@ -168,7 +177,6 @@ export async function renderWaveformDirectly(
     // 获取音频总时长信息（需要从audioClip的meta信息中获取）
     let totalDurationFrames = 0
     try {
-      const meta = await audioClip.ready
       // 将微秒转换为帧数
       totalDurationFrames = Math.floor((meta.duration / 1_000_000) * 30) // 假设30fps
     } catch {

@@ -66,12 +66,11 @@ function renderWaveformInComponent() {
   }
 
   const { viewportTLStartFrame, viewportTLEndFrame, clipWidthPixels } = sampleWaveform.value
-  const mediaItem = unifiedStore.getMediaItem(props.data.mediaItemId)
 
-  if (mediaItem?.webav?.audioClip && waveformCanvas.value) {
+  if (waveformCanvas.value) {
     renderWaveformDirectly(
       waveformCanvas.value,
-      mediaItem.webav.audioClip,
+      props.data,
       viewportTLStartFrame,
       viewportTLEndFrame,
       clipWidthPixels,
