@@ -21,7 +21,7 @@ export const DEFAULT_TRACK_NAMES: Record<UnifiedTrackType, string> = {
  */
 export const DEFAULT_TRACK_HEIGHTS: Record<UnifiedTrackType, number> = {
   video: 70,
-  audio: 65,
+  audio: 60,
   text: 55,
   subtitle: 40,
   effect: 60,
