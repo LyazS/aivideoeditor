@@ -19,6 +19,11 @@
       @mousedown.stop="handleResizeStart('left', $event)"
     ></div>
 
+    <!-- 素材名称显示 -->
+    <div class="clip-name-overlay" v-if="mediaItemName">
+      {{ mediaItemName }}
+    </div>
+
     <!-- 动态渲染的内容区域（使用模板组件） -->
     <div class="clip-content">
       <component
@@ -74,6 +79,12 @@ const props = defineProps<UnifiedTimelineClipProps>()
 const unifiedStore = useUnifiedStore()
 const dragUtils = useDragUtils()
 const { pauseForEditing } = usePlaybackControls()
+
+// 获取素材名称
+const mediaItemName = computed(() => {
+  const mediaItem = unifiedStore.getMediaItem(props.data.mediaItemId)
+  return mediaItem?.name || ''
+})
 
 // 拖拽状态
 const isDragging = ref(false)

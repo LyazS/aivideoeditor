@@ -250,3 +250,36 @@
   background-color: var(--color-keyframe-active);
   transform: rotate(45deg) scale(1.1);
 }
+
+/* ==================== 素材名称覆盖层样式 ==================== */
+
+/* 素材名称基础样式 - 统一渲染器组件使用 */
+.clip-name-overlay {
+  position: absolute;
+  top: 1px;
+  left: 4px;
+  font-size: 9px;
+  font-weight: 500;
+  color: white;
+  background: transparent;
+  padding: 0;
+  border-radius: 0;
+  z-index: 10;
+  max-width: 80%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+  line-height: 1;
+  height: 12px;
+  display: flex;
+  align-items: center;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+/* 小尺寸时隐藏素材名称 */
+@media (max-width: 100px) {
+  .clip-name-overlay {
+    display: none;
+  }
+}
