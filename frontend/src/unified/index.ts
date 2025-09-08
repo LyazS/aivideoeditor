@@ -208,12 +208,6 @@ export {
   type UnifiedSelectionModule,
 } from './modules/UnifiedSelectionModule'
 
-export {
-  // 统一片段操作模块
-  createUnifiedClipOperationsModule,
-  type UnifiedClipOperationsModule,
-} from './modules/UnifiedClipOperationsModule'
-
 // ==================== 统一工具函数 ====================
 export {
   // 时间范围工具

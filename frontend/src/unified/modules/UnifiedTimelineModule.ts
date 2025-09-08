@@ -49,12 +49,14 @@ function unifiedDebugLog(operation: string, details: any) {
   }
 }
 import { syncTimeRange } from '@/unified/utils/timeRangeUtils'
-import { microsecondsToFrames } from '@/unified/utils/timeUtils'
+import { microsecondsToFrames, framesToTimecode } from '@/unified/utils/timeUtils'
 import { hasAudioCapabilities } from '@/unified/utils/spriteTypeGuards'
 import {
   globalWebAVAnimationManager,
   updateWebAVAnimation,
 } from '@/unified/utils/webavAnimationManager'
+import { isReady, isVideoTimelineItem, isAudioTimelineItem } from '@/unified/timelineitem/TimelineItemQueries'
+import { adjustKeyframesForDurationChange } from '@/unified/utils/unifiedKeyframeUtils'
 
 /**
  * 统一时间轴核心管理模块
@@ -543,6 +545,93 @@ export function createUnifiedTimelineModule(
     }
   }
 
+  /**
+   * 更新时间轴项目播放速度
+   * @param timelineItemId 时间轴项目ID
+   * @param newRate 新的播放速度
+   */
+  function updateTimelineItemPlaybackRate(timelineItemId: string, newRate: number) {
+    const item = getTimelineItem(timelineItemId)
+    if (item) {
+      // 确保播放速度在合理范围内（扩展到0.1-100倍）
+      const clampedRate = Math.max(0.1, Math.min(100, newRate))
+
+      // 🎯 关键帧位置调整：在更新播放速度之前计算时长变化
+      let oldDurationFrames = 0
+      let newDurationFrames = 0
+
+      if (isVideoTimelineItem(item)) {
+        const clipDurationFrames = item.timeRange.clipEndTime - item.timeRange.clipStartTime
+        oldDurationFrames = item.timeRange.timelineEndTime - item.timeRange.timelineStartTime
+        newDurationFrames = Math.round(clipDurationFrames / clampedRate)
+
+        // 如果有关键帧，先调整位置
+        if (item.animation && item.animation.keyframes.length > 0) {
+          adjustKeyframesForDurationChange(item, oldDurationFrames, newDurationFrames)
+          console.log('🎬 [Playback Rate] Keyframes adjusted for speed change:', {
+            oldRate: clampedRate,
+            newRate: clampedRate,
+            oldDuration: oldDurationFrames,
+            newDuration: newDurationFrames,
+          })
+        }
+      }
+
+      // 更新sprite的播放速度（这会自动更新sprite内部的timeRange）
+      // 视频和音频sprite都有setPlaybackRate方法
+      if (isReady(item) && item.runtime.sprite) {
+        if (isVideoTimelineItem(item)) {
+          ;(item.runtime.sprite as VideoVisibleSprite).setPlaybackRate(clampedRate)
+        } else if (isAudioTimelineItem(item)) {
+          ;(item.runtime.sprite as AudioVisibleSprite).setPlaybackRate(clampedRate)
+        }
+      }
+
+      // 使用同步函数更新TimelineItem的timeRange
+      syncTimeRange(item)
+
+      // 如果有动画，需要重新设置WebAV动画时长
+      if (item.animation && item.animation.isEnabled) {
+        // 异步更新动画，不阻塞播放速度调整
+        updateWebAVAnimation(item)
+          .then(() => {
+            console.log(
+              '🎬 [Playback Rate] Animation duration updated after playback rate change',
+            )
+          })
+          .catch((error) => {
+            console.error('🎬 [Playback Rate] Failed to update animation duration:', error)
+          })
+      }
+
+      // 只有视频才记录详细的时间范围信息
+      if (isVideoTimelineItem(item)) {
+        const clipDurationFrames = microsecondsToFrames(
+          item.timeRange.clipEndTime - item.timeRange.clipStartTime,
+        )
+        const timelineDurationFrames = microsecondsToFrames(
+          item.timeRange.timelineEndTime - item.timeRange.timelineStartTime,
+        )
+
+        console.log('🎬 播放速度更新:', {
+          timelineItemId,
+          newRate: clampedRate,
+          timeRange: {
+            clipDuration: framesToTimecode(clipDurationFrames),
+            timelineDuration: framesToTimecode(timelineDurationFrames),
+          },
+        })
+      } else if (isAudioTimelineItem(item)) {
+        console.log('🎬 [ClipOperations] 音频播放速度调整:', {
+          timelineItemId,
+          newRate: clampedRate
+        })
+      } else {
+        console.log('🎬 [ClipOperations] 图片不支持播放速度调整:', { timelineItemId })
+      }
+    }
+  }
+
   // ==================== 导出接口 ====================
 
   return {
@@ -558,6 +647,7 @@ export function createUnifiedTimelineModule(
     getReadyTimelineItem,
     updateTimelineItemPosition,
     updateTimelineItemTransform,
+    updateTimelineItemPlaybackRate,
   }
 }
 

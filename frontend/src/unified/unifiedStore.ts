@@ -6,7 +6,6 @@ import { createUnifiedTimelineModule } from '@/unified/modules/UnifiedTimelineMo
 import { createUnifiedProjectModule } from '@/unified/modules/UnifiedProjectModule'
 import { createUnifiedViewportModule } from '@/unified/modules/UnifiedViewportModule'
 import { createUnifiedSelectionModule } from '@/unified/modules/UnifiedSelectionModule'
-import { createUnifiedClipOperationsModule } from '@/unified/modules/UnifiedClipOperationsModule'
 import { createUnifiedConfigModule } from '@/unified/modules/UnifiedConfigModule'
 import { createUnifiedPlaybackModule } from '@/unified/modules/UnifiedPlaybackModule'
 import { createUnifiedWebavModule } from '@/unified/modules/UnifiedWebavModule'
@@ -102,8 +101,7 @@ import type { AudioVisibleSprite, VideoVisibleSprite } from './visiblesprite'
  * 4. 使用 UnifiedProjectModule 管理统一项目配置
  * 5. 使用 UnifiedViewportModule 管理统一视口缩放滚动
  * 6. 使用 UnifiedSelectionModule 管理时间轴项目和媒体项目的选择状态
- * 7. 使用 UnifiedClipOperationsModule 提供片段操作功能
- * 8. 使用 UnifiedConfigModule 管理视频编辑器全局配置
+ * 7. 使用 UnifiedConfigModule 管理视频编辑器全局配置
  * 9. 使用 UnifiedPlaybackModule 管理播放控制功能
  * 10. 使用 UnifiedWebavModule 管理WebAV集成和画布操作
  * 11. 集成 UnifiedNotificationModule 提供通知管理功能
@@ -183,20 +181,6 @@ export const useUnifiedStore = defineStore('unified', () => {
     unifiedHistoryModule.executeCommand,
   )
 
-  // 创建统一片段操作模块（需要在其他模块之后创建）
-  const unifiedClipOperationsModule = createUnifiedClipOperationsModule(
-    {
-      getTimelineItem: unifiedTimelineModule.getTimelineItem,
-      updateTimelineItem: (id: string, updates: Partial<UnifiedTimelineItemData>) => {
-        // 简单的更新实现：直接修改对象属性
-        const item = unifiedTimelineModule.getTimelineItem(id)
-        if (item) {
-          Object.assign(item, updates)
-        }
-      },
-    },
-    unifiedMediaModule,
-  )
 
   // 创建统一自动保存模块（需要在项目模块之后创建）
   const unifiedAutoSaveModule = createUnifiedAutoSaveModule(
@@ -309,7 +293,7 @@ export const useUnifiedStore = defineStore('unified', () => {
     unifiedNotificationModule.clearNotifications(true) // 清空所有通知，包括持久化通知
     unifiedHistoryModule.clear() // 清空历史记录
     unifiedSelectionModule.resetToDefaults() // 重置选择状态
-    // 注意：UnifiedMediaModule、UnifiedTimelineModule和UnifiedClipOperationsModule没有resetToDefaults方法
+    // 注意：UnifiedMediaModule和UnifiedTimelineModule没有resetToDefaults方法
     // 这些统一模块的状态通过清空数组或重置内部状态来实现重置功能
     unifiedAutoSaveModule.resetAutoSaveState() // 重置自动保存状态
     console.log('🔄 [UnifiedStore] 重置所有模块到默认状态')
@@ -547,13 +531,11 @@ export const useUnifiedStore = defineStore('unified', () => {
       {
         updateTimelineItemTransform: unifiedTimelineModule.updateTimelineItemTransform,
         getTimelineItem: unifiedTimelineModule.getTimelineItem,
+        updateTimelineItemPlaybackRate: unifiedTimelineModule.updateTimelineItemPlaybackRate,
       },
       {
         getMediaItem: unifiedMediaModule.getMediaItem,
-      },
-      {
-        updateTimelineItemPlaybackRate: unifiedClipOperationsModule.updateTimelineItemPlaybackRate,
-      },
+      }
     )
     await unifiedHistoryModule.executeCommand(command)
   }
@@ -1329,10 +1311,6 @@ export const useUnifiedStore = defineStore('unified', () => {
     clearMultiSelection: unifiedSelectionModule.clearMultiSelection,
     isInMultiSelection: unifiedSelectionModule.isInMultiSelection,
 
-    // ==================== 统一片段操作模块方法 ====================
-
-    // 片段操作方法
-    updateTimelineItemPlaybackRate: unifiedClipOperationsModule.updateTimelineItemPlaybackRate,
 
     // ==================== 系统状态方法 ====================
 

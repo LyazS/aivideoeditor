@@ -74,12 +74,10 @@ export class UpdateTransformCommand implements SimpleCommand {
     private timelineModule: {
       updateTimelineItemTransform: (id: string, transform: TransformData) => void
       getTimelineItem: (id: string) => UnifiedTimelineItemData<MediaType> | undefined
+      updateTimelineItemPlaybackRate?: (id: string, rate: number) => void
     },
     private mediaModule: {
       getMediaItem: (id: string) => UnifiedMediaItemData | undefined
-    },
-    private clipOperationsModule?: {
-      updateTimelineItemPlaybackRate: (id: string, rate: number) => void
     },
   ) {
     this.id = generateCommandId()
@@ -131,8 +129,8 @@ export class UpdateTransformCommand implements SimpleCommand {
       }
 
       // 处理倍速更新（对视频和音频有效）
-      if (this.newValues.playbackRate !== undefined && this.clipOperationsModule) {
-        this.clipOperationsModule.updateTimelineItemPlaybackRate(
+      if (this.newValues.playbackRate !== undefined) {
+        this.timelineModule.updateTimelineItemPlaybackRate?.(
           this.timelineItemId,
           this.newValues.playbackRate,
         )
@@ -226,8 +224,8 @@ export class UpdateTransformCommand implements SimpleCommand {
       }
 
       // 处理倍速恢复（对视频和音频有效）
-      if (this.oldValues.playbackRate !== undefined && this.clipOperationsModule) {
-        this.clipOperationsModule.updateTimelineItemPlaybackRate(
+      if (this.oldValues.playbackRate !== undefined) {
+        this.timelineModule.updateTimelineItemPlaybackRate?.(
           this.timelineItemId,
           this.oldValues.playbackRate,
         )
