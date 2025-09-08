@@ -26,7 +26,6 @@ export function useTimelineEventHandlers(
     // 检查点击的是否是时间轴容器本身或其他空白区域
     // 排除点击在VideoClip、按钮、输入框等交互元素上的情况
     if (
-      target.classList.contains('timeline') ||
       target.classList.contains('timeline-header') ||
       target.classList.contains('timeline-body') ||
       target.classList.contains('timeline-grid') ||
