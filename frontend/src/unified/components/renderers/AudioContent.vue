@@ -6,7 +6,7 @@
       ref="waveformCanvas"
       :height="DEFAULT_TRACK_HEIGHTS.audio - 2 * DEFAULT_TRACK_PADDING"
       class="waveform-canvas"
-      :style="{ left: canvasLeft }"
+      :style="{ left: canvasLeft + 'px' }"
     />
   </div>
 </template>
@@ -163,7 +163,7 @@ function preparePCMData(
  * 渲染波形到Canvas
  * @param ctx Canvas渲染上下文
  * @param data PCM采样数据
- * @param width 画布宽度
+ * @param clipWidth clip宽度
  * @param height 画布高度
  */
 function renderWaveformToCanvas(
@@ -173,7 +173,7 @@ function renderWaveformToCanvas(
     startPercent: number
     endPercent: number
   },
-  width: number,
+  clipWidth: number,
   height: number,
 ): void {
   const ctx = canvas.getContext('2d')
@@ -186,19 +186,19 @@ function renderWaveformToCanvas(
 
   const amplitude = 1.0
 
-  // 清空画布
-  ctx.clearRect(0, 0, width, height)
-
   // 设置基线位置，留出底部空间
   const baselineY = height - DEFAULT_TRACK_PADDING
-  const sampleWidth = (data.endPercent - data.startPercent) * width
-  const sampleStartX = data.startPercent * width
-  const sampleEndX = data.endPercent * width
+  const sampleStartX = data.startPercent * clipWidth
+  const sampleEndX = data.endPercent * clipWidth
+  const sampleWidth = sampleEndX - sampleStartX
   const samplesPerPixel = data.pcmData.length / sampleWidth
 
-  canvasLeft.value = sampleStartX
-  canvas.width = sampleWidth
+  // 确保canvasLeft是数字类型，而不是字符串
+  canvasLeft.value = Math.floor(sampleStartX)
+  canvas.width = Math.floor(sampleWidth)
 
+  // 清空画布
+  ctx.clearRect(0, 0, sampleWidth, height)
   // 创建渐变色 - 从底部到顶部
   const gradient = ctx.createLinearGradient(0, baselineY, 0, 0)
   gradient.addColorStop(0, '#96ceb4')
@@ -236,7 +236,7 @@ function renderWaveformToCanvas(
   ctx.lineWidth = 1
   ctx.beginPath()
   ctx.moveTo(0, baselineY)
-  ctx.lineTo(width, baselineY)
+  ctx.lineTo(clipWidth, baselineY)
   ctx.stroke()
 
   // 恢复Canvas状态
@@ -324,9 +324,7 @@ async function renderWaveformDirectly(
   position: relative;
   width: 100%;
   height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center; /* 保持居中显示 */
+  overflow: hidden; /* 确保canvas不会超出容器边界 */
 }
 
 .waveform-canvas {
@@ -335,7 +333,7 @@ async function renderWaveformDirectly(
   /* height: 40px; */
   background: rgba(0, 0, 0, 0); /* 添加背景以便调试 */
   display: block; /* 确保正确显示 */
-  position: relative; /* 使 left 样式生效 */
+  position: absolute; /* 使用absolute定位使left生效 */
 }
 
 /* 保持向后兼容的样式 */
