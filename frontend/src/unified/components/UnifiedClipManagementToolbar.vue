@@ -91,6 +91,26 @@
         历史
       </HoverButton> -->
     </div>
+    
+    <!-- 吸附控制开关 - 放在最右侧 -->
+    <div class="toolbar-section snap-controls">
+      <HoverButton
+        :class="unifiedStore.isSnapEnabled ? 'active' : ''"
+        :title="unifiedStore.isSnapEnabled ? '关闭吸附' : '开启吸附'"
+        @click="() => {
+          console.log('🧲 [Toolbar] 切换吸附状态，当前:', unifiedStore.isSnapEnabled)
+          unifiedStore.toggleSnapEnabled()
+          console.log('🧲 [Toolbar] 切换后状态:', unifiedStore.isSnapEnabled)
+        }"
+      >
+        <template #icon>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+            <path :d="CONTROL_ICONS.snap" />
+          </svg>
+        </template>
+        {{ unifiedStore.isSnapEnabled ? '吸附开' : '吸附关' }}
+      </HoverButton>
+    </div>
   </div>
 </template>
 
@@ -99,6 +119,7 @@ import { computed } from 'vue'
 import { useUnifiedStore } from '@/unified/unifiedStore'
 import { formatFileSize, framesToSeconds } from '@/unified/utils/timeUtils'
 import { countOverlappingItems } from '@/unified/utils/timeOverlapUtils'
+import { CONTROL_ICONS } from '@/unified/constants/timelineIcons'
 import HoverButton from '@/components/HoverButton.vue'
 
 const unifiedStore = useUnifiedStore()
@@ -449,6 +470,12 @@ function debugHistory() {
 
 .debug-section {
   margin-left: auto;
+}
+
+.snap-controls {
+  margin-left: auto;
+  border-left: 1px solid #444;
+  padding-left: 12px;
 }
 
 .toolbar-label {
