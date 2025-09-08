@@ -280,7 +280,7 @@ export function createUnifiedSelectionModule(
    * @returns 是否被选中
    */
   function isTimelineItemSelected(timelineItemId: string): boolean {
-    return selectedTimelineItemId.value === timelineItemId
+    return selectedTimelineItemIds.value.has(timelineItemId)
   }
 
   /**

@@ -89,7 +89,7 @@ const tempResizePositionFrames = ref(0)
 
 // 定义组件事件
 const emit = defineEmits<{
-  select: [id: string]
+  select: [event: MouseEvent, id: string]
   doubleClick: [id: string]
   contextMenu: [event: MouseEvent, id: string]
   dragStart: [event: DragEvent, id: string]
@@ -245,7 +245,7 @@ function getKeyframeMarkerStyles(pixelPosition: number): Record<string, string> 
  */
 function handleSelect(event: MouseEvent) {
   event.stopPropagation()
-  emit('select', props.data.id)
+  emit('select', event, props.data.id)  // 传递事件对象和ID
 }
 
 /**

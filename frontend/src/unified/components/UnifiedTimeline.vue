@@ -409,7 +409,7 @@ function renderTimelineItem(item: UnifiedTimelineItemData | any, track: any) {
     timelineWidth: timelineWidth.value, // 传递时间轴宽度用于坐标转换
     viewportFrameRange: viewportFrameRange.value,
     // 事件处理
-    onSelect: handleSelectClip,
+    onSelect: (event: MouseEvent, id: string) => handleSelectClip(event, id),
     onDoubleClick: (id: string) => handleTimelineItemDoubleClick(id),
     onContextMenu: (event: MouseEvent, id: string) => handleTimelineItemContextMenu(event, id),
     // 拖拽现在由UnifiedTimelineClip内部处理，不需要事件监听器

@@ -69,11 +69,16 @@ export function useTimelineEventHandlers(
   /**
    * 处理片段选中事件
    */
-  function handleSelectClip(clipId: string) {
-    console.log('🎯 [UnifiedTimeline] 选中clip:', clipId)
+  async function handleSelectClip(event: MouseEvent, clipId: string) {
+    console.log('🎯 [UnifiedTimeline] 选中clip:', clipId, 'Ctrl按下:', event.ctrlKey || event.metaKey)
     try {
-      // 使用unifiedStore的选择方法
-      unifiedStore.selectTimelineItem(clipId)
+      if (event.ctrlKey || event.metaKey) {
+        // Ctrl/Cmd+点击：切换选择状态（多选模式）
+        await unifiedStore.selectTimelineItemsWithHistory([clipId], 'toggle')
+      } else {
+        // 普通点击：替换选择（单选模式）
+        await unifiedStore.selectTimelineItemsWithHistory([clipId], 'replace')
+      }
     } catch (error) {
       console.error('❌ 选中clip失败:', error)
     }
@@ -108,7 +113,7 @@ export function useTimelineEventHandlers(
 
     // 确保项目被选中（如果还没有选中的话）
     if (!unifiedStore.isTimelineItemSelected(itemId)) {
-      unifiedStore.selectTimelineItem(itemId)
+      unifiedStore.selectTimelineItemsWithHistory([itemId], 'replace')
     }
   }
 
@@ -116,14 +121,15 @@ export function useTimelineEventHandlers(
    * 处理键盘事件
    */
   function handleKeyDown(event: KeyboardEvent) {
-    // 检查是否有修饰键，如果有则不处理（让全局快捷键处理）
-    if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) {
+    // 检查是否有修饰键（除了Escape和Delete），如果有则不处理（让全局快捷键处理）
+    if ((event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) &&
+        event.key !== 'Escape' && event.key !== 'Delete') {
       return
     }
 
     // 按 Escape 键取消选中
     if (event.key === 'Escape') {
-      unifiedStore.selectTimelineItem(null)
+      unifiedStore.selectTimelineItemsWithHistory([], 'replace')
     }
 
     // 按 Delete 键删除选中的项目
