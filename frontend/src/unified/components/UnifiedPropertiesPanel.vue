@@ -397,11 +397,11 @@ const getItemTypeLabel = (mediaType: string | undefined) => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  height: 200px;
   text-align: center;
   color: var(--color-text-secondary);
   padding: var(--spacing-lg);
+  height: 100%;
+  overflow: hidden;
 }
 
 .multi-select-state svg {
@@ -422,8 +422,9 @@ const getItemTypeLabel = (mediaType: string | undefined) => {
 .selected-items-list {
   margin-top: var(--spacing-lg);
   width: 100%;
-  max-height: 150px;
+  flex: 1;
   overflow-y: auto;
+  min-height: 0;
 }
 
 .selected-item {
