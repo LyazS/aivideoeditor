@@ -12,22 +12,23 @@
 
   /* 统一错误状态颜色 - 使用统一状态颜色变量 */
   --clip-color-error-border: var(--color-status-error);
-  --clip-color-error-text: #FFFFFF;
+  --clip-color-error-text: #ffffff;
   --clip-color-error-bg: var(--color-status-error);
 
   /* Clip基础尺寸变量 */
   --clip-border-width: 1px; /* 统一为1px */
   --clip-border-radius: var(--border-radius-medium);
   --clip-padding: var(--spacing-md) var(--spacing-lg);
-  
+
   /* Clip基础颜色变量 */
   --clip-bg-primary: #fafafa;
   --clip-bg-media-type: linear-gradient(135deg, #666666, #555555);
   --clip-border-default: transparent;
+  --clip-border-selected: #ffffff; /* 统一为白色 */
   --clip-border-hover: #ffffff; /* 统一为白色 */
   --clip-border-resizing: #ffffff; /* 统一为白色 */
   --clip-shadow: var(--shadow-sm);
-  
+
   /* Clip动画变量 */
   --clip-transition-duration: var(--transition-fast);
 
@@ -48,7 +49,7 @@
   z-index: 10;
   width: 100%;
   display: block;
-  
+
   /* 基础边框和背景 */
   border: var(--clip-border-width) solid var(--clip-border-default);
   background: var(--clip-bg-primary);
@@ -114,7 +115,6 @@
   white-space: nowrap;
 }
 
-
 /* ==================== 加载动画 ==================== */
 
 /* 旋转加载图标 */
@@ -163,7 +163,6 @@
   transition: width 0.3s ease;
 }
 
-
 /* ==================== 文本样式 ==================== */
 
 /* 加载文本 */
@@ -193,23 +192,17 @@
   white-space: nowrap;
 }
 
-
 /* ==================== 状态样式 ==================== */
 
 /* 悬停状态 */
 .unified-timeline-clip:hover,
 .unified-timeline-clip .resize-handle:hover {
-  border: 1px solid #ffffff; /* 统一为白色的1px边框 */
+  border: var(--clip-border-width) solid var(--clip-border-selected);
 }
 
 /* 选中状态 */
 .unified-timeline-clip.selected {
-  background: linear-gradient(
-    135deg,
-    var(--color-clip-selected),
-    var(--color-clip-selected-dark)
-  ) !important;
-  border: 1px solid #ffffff; /* 统一为白色的1px边框 */
+  border: var(--clip-border-width) solid var(--clip-border-selected);
 }
 
 /* 拖拽状态 */
@@ -223,7 +216,7 @@
 /* 调整大小状态 */
 .unified-timeline-clip.resizing {
   cursor: col-resize;
-  border: 1px solid #ffffff; /* 统一为白色的1px边框 */
+  border: var(--clip-border-width) solid var(--clip-border-selected);
   transition: none !important;
 }
 
@@ -243,7 +236,7 @@
     var(--color-clip-overlapping),
     var(--color-clip-overlapping-dark)
   ) !important;
-  border: 1px solid #ffffff; /* 统一为白色的1px边框 */
+  border: var(--clip-border-width) solid var(--clip-border-selected);
 }
 
 /* 隐藏轨道状态 */
@@ -253,7 +246,7 @@
     var(--color-clip-hidden),
     var(--color-clip-hidden-dark)
   ) !important;
-  border: 1px solid #ffffff; /* 统一为白色的1px边框 */
+  border: var(--clip-border-width) solid var(--clip-border-selected);
 }
 
 /* 隐藏轨道选中状态 */
@@ -263,7 +256,7 @@
     var(--color-clip-hidden-selected),
     var(--color-clip-hidden-selected-dark)
   ) !important;
-  border: 1px solid #ffffff; /* 统一为白色的1px边框 */
+  border: var(--clip-border-width) solid var(--clip-border-selected);
 }
 
 /* 隐藏轨道上的clip内容透明度调整 */
@@ -340,87 +333,6 @@
   color: var(--clip-color-error-text);
 }
 
-/* 错误渲染器 */
-.clip-error-renderer {
-  position: relative;
-}
-
-/* 错误大图标 */
-.clip-error-icon-large {
-  width: 32px;
-  height: 32px;
-  margin-right: 8px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-}
-
-/* 错误表情符号 */
-.clip-error-emoji {
-  font-size: 20px;
-  line-height: 1;
-}
-
-/* 错误类型文本 */
-.clip-error-type-text {
-  font-size: 10px;
-  margin-top: 2px;
-  text-align: center;
-}
-
-/* 错误操作按钮容器 */
-.clip-error-actions {
-  display: flex;
-  gap: 4px;
-  margin-top: 8px;
-}
-
-/* 重试按钮 */
-.clip-error-retry-button,
-.clip-error-remove-button {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 4px 8px;
-  border: none;
-  border-radius: var(--border-radius-small);
-  font-size: 12px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.clip-error-retry-button {
-  background-color: rgba(255, 255, 255, 0.2);
-  color: white;
-}
-
-.clip-error-retry-button:hover {
-  background-color: rgba(255, 255, 255, 0.3);
-}
-
-.clip-error-remove-button {
-  background-color: rgba(255, 0, 0, 0.3);
-  color: white;
-}
-
-.clip-error-remove-button:hover {
-  background-color: rgba(255, 0, 0, 0.5);
-}
-
-/* 按钮图标和文本 */
-.clip-error-retry-icon,
-.clip-error-remove-icon,
-.clip-error-retry-text,
-.clip-error-remove-text {
-  font-size: 12px;
-}
-
-.clip-error-retry-icon,
-.clip-error-remove-icon {
-  margin-right: 4px;
-}
-
 /* ==================== 子元素样式 ==================== */
 
 /* 内容区域 */
@@ -445,7 +357,7 @@
 }
 
 .resize-handle:hover {
-  background: #eeeeee; 
+  background: #eeeeee;
 }
 
 .resize-handle-left {
@@ -492,26 +404,6 @@
   }
 }
 
-.clip-error-file .clip-error-emoji {
-  color: #F5A623; /* 文件错误 - 橙色 */
-}
-
-.clip-error-format .clip-error-emoji {
-  color: #D0021B; /* 格式错误 - 红色 */
-}
-
-.clip-error-permission .clip-error-emoji {
-  color: #9013FE; /* 权限错误 - 紫色 */
-}
-
-.clip-error-timeout .clip-error-emoji {
-  color: #50E3C2; /* 超时错误 - 青色 */
-}
-
-.clip-error-unknown .clip-error-emoji {
-  color: #9B9B9B; /* 未知错误 - 灰色 */
-}
-
 /* ==================== 响应式设计 ==================== */
 
 /* 响应式布局 */
@@ -519,18 +411,18 @@
   .clip-loading-subtitle {
     display: none;
   }
-  
+
   .clip-loading-title {
     max-width: 80px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
-  
+
   .clip-loading-spinner {
     display: none;
   }
-  
+
   .clip-loading-text {
     flex-direction: row;
   }
@@ -550,9 +442,9 @@
 
 /* CSS变量 - 关键帧颜色 */
 :root {
-  --color-keyframe-primary: #4CAF50;
-  --color-keyframe-hover: #66BB6A;
-  --color-keyframe-active: #388E3C;
+  --color-keyframe-primary: #4caf50;
+  --color-keyframe-hover: #66bb6a;
+  --color-keyframe-active: #388e3c;
 }
 
 /* 关键帧容器 */

@@ -3,104 +3,105 @@
     <div class="dialog-container" @click.stop>
       <div class="dialog-header">
         <h3>远程下载</h3>
-        <button class="close-btn" @click="closeDialog">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-            <path
-              d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z"
-            />
-          </svg>
-        </button>
+        <HoverButton variant="primary" class="close-btn" @click="closeDialog" title="关闭">
+          <template #icon>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+              <path
+                d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z"
+              />
+            </svg>
+          </template>
+        </HoverButton>
       </div>
 
       <div class="dialog-content">
-        <form @submit.prevent="handleSubmit">
-          <!-- URL输入 -->
-          <div class="form-group">
-            <label for="url">远程文件URL *</label>
-            <input
-              id="url"
-              v-model="form.url"
-              type="url"
-              placeholder="https://example.com/video.mp4"
-              required
-              :disabled="isProcessing"
-            />
-            <div v-if="urlError" class="error-message">{{ urlError }}</div>
-          </div>
+        <!-- URL输入 -->
+        <div class="form-group">
+          <label for="url">远程文件URL *</label>
+          <input
+            id="url"
+            v-model="form.url"
+            type="url"
+            placeholder="https://example.com/video.mp4"
+            required
+            :disabled="isProcessing"
+          />
+          <div v-if="urlError" class="error-message">{{ urlError }}</div>
+        </div>
 
-          <!-- 预计时长 -->
-          <div class="form-group">
-            <label for="duration">预计时长（秒）*</label>
-            <input
-              id="duration"
-              v-model.number="form.duration"
-              type="number"
-              min="0.1"
-              step="0.1"
-              placeholder="5.0"
-              required
-              :disabled="isProcessing"
-            />
-            <div class="help-text">用于在时间轴上创建占位符，实际时长以下载后的文件为准</div>
-          </div>
+        <!-- 预计时长 -->
+        <div class="form-group">
+          <label for="duration">预计时长（秒）*</label>
+          <input
+            id="duration"
+            v-model.number="form.duration"
+            type="number"
+            min="0.1"
+            step="0.1"
+            placeholder="5.0"
+            required
+            :disabled="isProcessing"
+          />
+          <div class="help-text">用于在时间轴上创建占位符，实际时长以下载后的文件为准</div>
+        </div>
 
-          <!-- 素材名称 -->
-          <div class="form-group">
-            <label for="name">素材名称（可选）</label>
-            <input
-              id="name"
-              v-model="form.name"
-              type="text"
-              placeholder="自动从URL提取"
-              :disabled="isProcessing"
-            />
-          </div>
+        <!-- 素材名称 -->
+        <div class="form-group">
+          <label for="name">素材名称（可选）</label>
+          <input
+            id="name"
+            v-model="form.name"
+            type="text"
+            placeholder="自动从URL提取"
+            :disabled="isProcessing"
+          />
+        </div>
 
-          <!-- 超时设置 -->
-          <div class="form-group">
-            <label for="timeout">超时时间（秒）</label>
-            <input
-              id="timeout"
-              v-model.number="form.timeout"
-              type="number"
-              min="10"
-              max="300"
-              step="10"
-              :disabled="isProcessing"
-            />
-            <div class="help-text">下载超时时间，默认30秒</div>
-          </div>
+        <!-- 超时设置 -->
+        <div class="form-group">
+          <label for="timeout">超时时间（秒）</label>
+          <input
+            id="timeout"
+            v-model.number="form.timeout"
+            type="number"
+            min="10"
+            max="300"
+            step="10"
+            :disabled="isProcessing"
+          />
+          <div class="help-text">下载超时时间，默认30秒</div>
+        </div>
 
-          <!-- 支持格式提示 -->
-          <div class="format-info">
-            <h4>支持的文件格式：</h4>
-            <div class="format-list">
-              <span class="format-tag">MP4</span>
-              <span class="format-tag">WebM</span>
-              <span class="format-tag">MP3</span>
-              <span class="format-tag">WAV</span>
-              <span class="format-tag">JPG</span>
-              <span class="format-tag">PNG</span>
-              <span class="format-tag">GIF</span>
-            </div>
+        <!-- 支持格式提示 -->
+        <div class="format-info">
+          <h4>支持的文件格式：</h4>
+          <div class="format-list">
+            <span class="format-tag">MP4</span>
+            <span class="format-tag">WebM</span>
+            <span class="format-tag">MP3</span>
+            <span class="format-tag">WAV</span>
+            <span class="format-tag">JPG</span>
+            <span class="format-tag">PNG</span>
+            <span class="format-tag">GIF</span>
           </div>
+        </div>
 
-          <!-- 按钮组 -->
-          <div class="dialog-actions">
-            <button
-              type="button"
-              class="btn btn-secondary"
-              @click="closeDialog"
-              :disabled="isProcessing"
-            >
-              取消
-            </button>
-            <button type="submit" class="btn btn-primary" :disabled="!isFormValid || isProcessing">
-              <span v-if="isProcessing">处理中...</span>
-              <span v-else>开始下载</span>
-            </button>
-          </div>
-        </form>
+        <!-- 按钮组 -->
+        <div class="dialog-actions">
+          <HoverButton
+            variant="large"
+            text="取消"
+            @click="closeDialog"
+            :disabled="isProcessing"
+          />
+          <HoverButton
+            variant="large"
+            @click="handleSubmit"
+            :disabled="!isFormValid || isProcessing"
+          >
+            {{ isProcessing ? '处理中...' : '开始下载' }}
+          </HoverButton>
+        </div>
       </div>
     </div>
   </div>
@@ -108,6 +109,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
+import HoverButton from './HoverButton.vue'
 
 /**
  * 远程下载配置
@@ -363,39 +365,5 @@ function handleSubmit() {
   gap: var(--spacing-lg);
   justify-content: flex-end;
   margin-top: var(--spacing-xxl);
-}
-
-.btn {
-  padding: var(--spacing-lg) var(--spacing-xxl);
-  border: none;
-  border-radius: var(--border-radius-medium);
-  font-size: var(--font-size-lg);
-  font-weight: 500;
-  cursor: pointer;
-  transition: all var(--transition-fast);
-}
-
-.btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.btn-secondary {
-  background: var(--color-bg-primary);
-  color: var(--color-text-primary);
-  border: 1px solid var(--color-border-primary);
-}
-
-.btn-secondary:hover:not(:disabled) {
-  background: var(--color-bg-hover);
-}
-
-.btn-primary {
-  background: var(--color-accent-primary);
-  color: white;
-}
-
-.btn-primary:hover:not(:disabled) {
-  background: var(--color-accent-primary-hover);
 }
 </style>

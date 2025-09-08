@@ -5,7 +5,6 @@
       <div class="preview-section" :style="{ height: previewHeight + '%' }">
         <!-- 左侧：素材库 -->
         <div class="media-library-panel" :style="{ width: leftPanelWidth + 'px' }">
-          <!-- <MediaLibrary /> -->
           <UnifiedMediaLibrary />
         </div>
 
@@ -14,9 +13,7 @@
           class="splitter vertical left-splitter"
           @mousedown="startLeftResize"
           :class="{ dragging: isLeftDragging }"
-        >
-          <div class="splitter-handle"></div>
-        </div>
+        ></div>
 
         <!-- 中间：预览窗口和控制面板 -->
         <div class="preview-center">
@@ -55,9 +52,7 @@
           class="splitter vertical right-splitter"
           @mousedown="startRightResize"
           :class="{ dragging: isRightDragging }"
-        >
-          <div class="splitter-handle"></div>
-        </div>
+        ></div>
 
         <!-- 右侧：属性面板 -->
         <div class="properties-panel-container" :style="{ width: rightPanelWidth + 'px' }">
@@ -66,9 +61,11 @@
       </div>
 
       <!-- 可拖动的分割器 -->
-      <div class="splitter horizontal" @mousedown="startResize" :class="{ dragging: isDragging }">
-        <div class="splitter-handle"></div>
-      </div>
+      <div
+        class="splitter horizontal"
+        @mousedown="startResize"
+        :class="{ dragging: isDragging }"
+      ></div>
 
       <!-- 时间轴区域 -->
       <div class="timeline-section" :style="{ height: timelineHeight + '%' }">
@@ -77,7 +74,6 @@
           <UnifiedClipManagementToolbar />
         </div>
         <!-- 只有WebAV初始化完成后才显示Timeline -->
-        <!-- <Timeline v-if="unifiedStore.isWebAVReady" /> -->
         <UnifiedTimeline v-if="unifiedStore.isWebAVReady" />
         <div v-else class="timeline-loading">
           <div class="loading-spinner"></div>
@@ -630,30 +626,6 @@ onUnmounted(() => {
   background-color: transparent;
 }
 
-.splitter-handle {
-  background-color: var(--color-border-secondary);
-  border-radius: 2px;
-  transition: background-color var(--transition-fast);
-}
-
-.splitter.vertical .splitter-handle {
-  width: 4px;
-  height: 40px;
-}
-
-.splitter.horizontal .splitter-handle {
-  width: 40px;
-  height: 4px;
-}
-
-.splitter:hover .splitter-handle {
-  background-color: var(--color-text-muted);
-}
-
-.splitter.dragging .splitter-handle {
-  background-color: var(--color-text-primary);
-}
-
 .preview-center {
   flex: 1;
   display: flex;
@@ -676,7 +648,6 @@ onUnmounted(() => {
 .timeline-section {
   background-color: var(--color-bg-secondary);
   border-radius: var(--border-radius-medium);
-  padding: var(--spacing-xs);
   margin-bottom: 35px; /* 底部gap空间 */
   display: flex;
   flex-direction: column;

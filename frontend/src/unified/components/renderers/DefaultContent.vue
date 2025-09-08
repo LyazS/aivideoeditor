@@ -73,6 +73,14 @@ const shortStatus = computed(() => {
   border-radius: 3px;
 }
 
+.default-renderer-content.selected {
+  background: linear-gradient(
+    135deg,
+    var(--color-clip-selected),
+    var(--color-clip-selected-dark)
+  );
+}
+
 .media-type-indicator {
   font-weight: bold;
   color: white;

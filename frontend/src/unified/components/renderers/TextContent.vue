@@ -67,4 +67,13 @@ const previewText = computed(() => {
   font-style: normal;
   font-family: 'Arial, sans-serif';
 }
+
+/* 选中状态样式 */
+.text-content.selected {
+  background: linear-gradient(
+    135deg,
+    var(--color-clip-selected),
+    var(--color-clip-selected-dark)
+  );
+}
 </style>

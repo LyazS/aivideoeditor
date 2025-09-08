@@ -2,8 +2,6 @@
 
 /* 基础层 - 必须最先加载 */
 @import './foundation/variables.css';
-@import './foundation/reset.css';
-@import './foundation/typography.css';
 
 /* 组件层 */
 @import './components/buttons.css';

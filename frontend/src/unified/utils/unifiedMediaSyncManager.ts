@@ -474,19 +474,6 @@ function updateTimelineItemDimensions(
   mediaItem: UnifiedMediaItemData,
 ): void {
   try {
-    // 获取媒体的原始尺寸
-    const originalSize = UnifiedMediaItemQueries.getOriginalSize(mediaItem)
-    if (!originalSize) {
-      console.warn(`⚠️ [UnifiedMediaSync] 无法获取媒体原始尺寸: ${mediaItem.id}`)
-      return
-    }
-
-    console.log(`📐 [UnifiedMediaSync] 更新时间轴项目尺寸: ${timelineItem.id}`, {
-      originalWidth: originalSize.width,
-      originalHeight: originalSize.height,
-      mediaType: mediaItem.mediaType,
-    })
-
     // 更新timeRange - 使用媒体项目的duration
     if (mediaItem.duration && timelineItem.timeRange) {
       const duration = mediaItem.duration
@@ -507,11 +494,20 @@ function updateTimelineItemDimensions(
       })
     }
 
-    // 更新config中的宽高 - 仅对视频和图片类型
-    if (
+    // 获取媒体的原始尺寸
+    const originalSize = UnifiedMediaItemQueries.getOriginalSize(mediaItem)
+
+    // 更新config中的宽高 - 仅对视频和图片类型，并且有原始尺寸时才更新
+    if (originalSize && (
       TimelineItemQueries.isVideoTimelineItem(timelineItem) ||
       TimelineItemQueries.isImageTimelineItem(timelineItem)
-    ) {
+    )) {
+      console.log(`📐 [UnifiedMediaSync] 更新时间轴项目尺寸: ${timelineItem.id}`, {
+        originalWidth: originalSize.width,
+        originalHeight: originalSize.height,
+        mediaType: mediaItem.mediaType,
+      })
+
       // 保留现有的配置，只更新尺寸相关字段
       const currentConfig = timelineItem.config
 
@@ -527,6 +523,8 @@ function updateTimelineItemDimensions(
         width: originalSize.width,
         height: originalSize.height,
       })
+    } else if (!originalSize) {
+      console.warn(`⚠️ [UnifiedMediaSync] 无法获取媒体原始尺寸: ${mediaItem.id}`)
     }
   } catch (error) {
     console.error(`❌ [UnifiedMediaSync] 更新时间轴项目尺寸失败: ${timelineItem.id}`, {

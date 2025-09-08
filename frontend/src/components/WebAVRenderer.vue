@@ -69,11 +69,11 @@ const canvasDisplaySize = computed(() => {
 
   if (aspectRatio > containerAspectRatio) {
     // 画布更宽，以宽度为准
-    displayWidth = Math.min(containerWidth.value * 0.95, canvasWidth.value) // 留5%边距
+    displayWidth = Math.min(containerWidth.value, canvasWidth.value)
     displayHeight = displayWidth / aspectRatio
   } else {
     // 画布更高，以高度为准
-    displayHeight = Math.min(containerHeight.value * 0.95, canvasHeight.value) // 留5%边距
+    displayHeight = Math.min(containerHeight.value, canvasHeight.value)
     displayWidth = displayHeight * aspectRatio
   }
 

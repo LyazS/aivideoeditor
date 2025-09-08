@@ -146,4 +146,13 @@ const progressInfo = computed(() => {
     opacity: 0.6;
   }
 }
+
+/* 选中状态样式 */
+.clip-loading-content.selected {
+  background: linear-gradient(
+    135deg,
+    var(--color-clip-selected),
+    var(--color-clip-selected-dark)
+  );
+}
 </style>

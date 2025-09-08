@@ -80,4 +80,13 @@ const errorMessage = computed(() => {
 .clip-error-message {
   font-weight: 500;
 }
+
+/* 选中状态样式 */
+.clip-error-content.selected {
+  background: linear-gradient(
+    135deg,
+    var(--color-clip-selected),
+    var(--color-clip-selected-dark)
+  );
+}
 </style>

@@ -342,4 +342,13 @@ async function renderWaveformDirectly(
   color: white;
   font-weight: bold;
 }
+
+/* 选中状态样式 */
+.audio-content.selected {
+  background: linear-gradient(
+    135deg,
+    var(--color-clip-selected),
+    var(--color-clip-selected-dark)
+  );
+}
 </style>

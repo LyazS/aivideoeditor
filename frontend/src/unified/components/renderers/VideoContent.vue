@@ -245,9 +245,10 @@ watch(thumbnailLayout, newLayout => {
 .video-content.selected {
   outline: 2px solid var(--color-clip-selected);
   outline-offset: -2px;
-}
-
-.video-content.selected .multi-thumbnails-container {
-  opacity: 0.9;
+  background: linear-gradient(
+    135deg,
+    var(--color-clip-selected),
+    var(--color-clip-selected-dark)
+  );
 }
 </style>
