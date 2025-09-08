@@ -104,9 +104,30 @@
     <!-- 加载进度覆盖层 -->
     <LoadingOverlay
       :visible="unifiedStore.showProjectLoadingProgress"
+      title="正在加载项目"
       :stage="unifiedStore.projectLoadingStage"
       :progress="unifiedStore.projectLoadingProgress"
       :details="unifiedStore.projectLoadingDetails"
+      tipText="请稍候，正在为您准备编辑环境..."
+      :showTitle="true"
+      :showStage="true"
+      :showProgress="true"
+      :showDetails="true"
+      :showTips="true"
+    />
+
+    <!-- 导出进度覆盖层 -->
+    <LoadingOverlay
+      :visible="showExportProgress"
+      title="正在导出视频"
+      :progress="exportProgress"
+      :details="exportDetails"
+      tipText="视频导出可能需要一些时间，请耐心等待..."
+      :showTitle="true"
+      :showStage="false"
+      :showProgress="true"
+      :showDetails="true"
+      :showTips="true"
     />
 
     <!-- 编辑项目对话框 -->
@@ -134,6 +155,14 @@ const unifiedStore = useUnifiedStore()
 
 // 响应式数据
 const showEditDialog = ref(false)
+
+// 导出进度状态（本地管理，替代使用单独模块）
+const isExporting = ref(false)
+const exportProgress = ref(0)
+const exportDetails = ref('')
+
+// 计算属性：是否显示导出进度
+const showExportProgress = computed(() => isExporting.value && exportProgress.value >= 0)
 
 // 计算属性 - 使用store中的项目状态（适配新的API）
 const projectStatus = computed(() => unifiedStore.projectStatus)
@@ -187,15 +216,45 @@ async function saveProject() {
 
 async function exportProject() {
   try {
+    // 开始导出
+    isExporting.value = true
+    exportProgress.value = 0
+    exportDetails.value = ''
+    
+    // 执行导出，传入进度回调
     await exportProjectUtil({
       videoWidth: unifiedStore.videoResolution.width,
       videoHeight: unifiedStore.videoResolution.height,
       projectName: unifiedStore.projectName,
       timelineItems: unifiedStore.timelineItems,
-      tracks: unifiedStore.tracks
+      tracks: unifiedStore.tracks,
+      onProgress: (stage: string, progress: number, details?: string) => {
+        // 更新本地导出进度
+        exportProgress.value = Math.max(0, Math.min(100, progress))
+        exportDetails.value = details || ''
+        console.log(`📤 [导出进度] ${progress}%${details ? ` - ${details}` : ''}`)
+      }
     })
+    
+    // 导出成功完成
+    isExporting.value = false
+    console.log('✅ [导出] 视频导出完成')
+    
+    // 显示成功通知
+    unifiedStore.showSuccess('视频导出成功！')
+    
   } catch (error) {
     console.error('导出项目失败:', error)
+    
+    // 显示错误通知
+    unifiedStore.showError(
+      error instanceof Error ? error.message : '导出过程中发生错误'
+    )
+    
+    // 重置导出状态
+    isExporting.value = false
+    exportProgress.value = 0
+    exportDetails.value = ''
   }
 }
 

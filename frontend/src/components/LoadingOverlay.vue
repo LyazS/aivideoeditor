@@ -32,30 +32,30 @@
         </div>
 
         <!-- 加载标题 -->
-        <h2 class="loading-title">正在加载项目</h2>
+        <h2 v-if="showTitle && title" class="loading-title">{{ title }}</h2>
 
         <!-- 当前阶段 -->
-        <p class="loading-stage">{{ currentStage }}</p>
+        <p v-if="showStage && stage" class="loading-stage">{{ currentStage }}</p>
 
         <!-- 进度条 -->
-        <div class="progress-container">
+        <div v-if="showProgress && progress !== undefined" class="progress-container">
           <div class="progress-bar">
             <div
               class="progress-fill"
-              :style="{ width: Math.max(0, Math.min(100, progress || 0)) + '%' }"
+              :style="{ width: Math.max(0, Math.min(100, progress)) + '%' }"
             ></div>
           </div>
-          <span class="progress-text">{{ Math.round(progress || 0) }}%</span>
+          <span class="progress-text">{{ Math.round(progress) }}%</span>
         </div>
 
         <!-- 详细信息 -->
-        <div class="loading-details" v-if="details">
+        <div v-if="showDetails && details" class="loading-details">
           <p class="details-text">{{ details }}</p>
         </div>
 
         <!-- 提示信息 -->
-        <div class="loading-tips">
-          <p class="tip-text">请稍候，正在为您准备编辑环境...</p>
+        <div v-if="showTips && tipText" class="loading-tips">
+          <p class="tip-text">{{ tipText }}</p>
         </div>
       </div>
     </div>
@@ -69,24 +69,33 @@ import { computed } from 'vue'
 interface Props {
   /** 是否显示加载覆盖层 */
   visible: boolean
+  /** 加载标题 */
+  title?: string
   /** 当前加载阶段 */
   stage?: string
   /** 加载进度 (0-100) */
   progress?: number
   /** 详细信息 */
   details?: string
+  /** 提示文本 */
+  tipText?: string
+  /** 是否显示标题 */
+  showTitle?: boolean
+  /** 是否显示阶段 */
+  showStage?: boolean
+  /** 是否显示进度条 */
+  showProgress?: boolean
+  /** 是否显示详细信息 */
+  showDetails?: boolean
+  /** 是否显示提示信息 */
+  showTips?: boolean
 }
 
-const props = withDefaults(defineProps<Props>(), {
-  visible: false,
-  stage: '准备中...',
-  progress: 0,
-  details: '',
-})
+const props = defineProps<Props>()
 
 // 计算属性
 const currentStage = computed(() => {
-  return props.stage || '准备中...'
+  return props.stage
 })
 </script>
 

@@ -40,6 +40,8 @@ export interface ExportProjectOptions {
   timelineItems: UnifiedTimelineItemData<MediaType>[]
   /** 轨道列表 */
   tracks: { id: string; isVisible: boolean; isMuted: boolean }[]
+  /** 进度更新回调函数（可选） */
+  onProgress?: (stage: string, progress: number, details?: string) => void
 }
 
 /**
@@ -47,7 +49,12 @@ export interface ExportProjectOptions {
  * @param options 导出项目参数
  */
 export async function exportProject(options: ExportProjectOptions): Promise<void> {
-  const { videoWidth, videoHeight, projectName, timelineItems, tracks } = options
+  const { videoWidth, videoHeight, projectName, timelineItems, tracks, onProgress } = options
+  
+  // 初始化进度
+  if (onProgress) {
+    onProgress('', 0) // 直接开始导出进度，不显示准备阶段
+  }
   console.log('开始导出项目...')
 
   try {
@@ -59,11 +66,13 @@ export async function exportProject(options: ExportProjectOptions): Promise<void
     })
 
     console.log('Combinator 实例已创建')
+    // 不显示准备阶段的进度，直接从0开始
 
     console.log('获取到时间轴项目:', timelineItems.length)
 
     // 3. 将时间轴项目转换为 OffscreenSprite 并添加到 Combinator
-    for (const item of timelineItems) {
+    for (let i = 0; i < timelineItems.length; i++) {
+      const item = timelineItems[i]
       // 检查轨道可见性
       if (item.trackId) {
         const track = tracks.find(t => t.id === item.trackId)
@@ -221,16 +230,20 @@ export async function exportProject(options: ExportProjectOptions): Promise<void
         // 将 OffscreenSprite 添加到 Combinator
         await combinator.addSprite(offscreenSprite)
         console.log(`已添加 ${item.mediaType} OffscreenSprite 到 Combinator`)
+        // 不显示准备阶段的进度更新
       }
     }
 
-    // 4. 监听导出进度事件
-    combinator.on('OutputProgress', (progress) => {
-      console.log(`导出进度: ${(progress * 100).toFixed(2)}%`)
+    // 4. 监听导出进度事件 - 这是真正的视频合成阶段，从0-100%显示
+    combinator.on('OutputProgress', (progress: number) => {
+      const percent = progress * 100
+      console.log(`导出进度: ${percent.toFixed(2)}%`)
+      if (onProgress) {
+        onProgress('', percent) // 直接从0-100%显示实际导出进度
+      }
     })
 
-    // 5. 开始合成输出
-    console.log('开始合成输出...')
+    // 5. 开始合成输出（真正的导出过程）
     const output = combinator.output()
 
     // 6. 将流转换为 Blob
@@ -256,9 +269,16 @@ export async function exportProject(options: ExportProjectOptions): Promise<void
     document.body.removeChild(a)
     URL.revokeObjectURL(url)
 
+    // 完成
+    if (onProgress) {
+      onProgress('', 100) // 最终完成状态
+    }
     console.log('导出完成')
   } catch (error) {
     console.error('导出项目失败:', error)
+    if (onProgress) {
+      onProgress('', -1, error instanceof Error ? error.message : '未知错误')
+    }
     throw error // 重新抛出错误，让调用者处理
   }
 }
