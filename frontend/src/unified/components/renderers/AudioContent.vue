@@ -117,17 +117,9 @@ function preparePCMData(
   clipWholeDurationFrames: number, // 音频总时长(帧数)
   startFrame: number, // 帧数
   endFrame: number, // 帧数
-): {
-  pcmData: Float32Array
-  startPercent: number
-  endPercent: number
-} {
+): Float32Array {
   if (!fullPcmData || fullPcmData.length === 0) {
-    return {
-      pcmData: new Float32Array(),
-      startPercent: 0,
-      endPercent: 0,
-    }
+    return new Float32Array()
   }
   // 时间轴长度
   const tlDurationFrames =
@@ -135,6 +127,7 @@ function preparePCMData(
   // clip对应长度
   const clipDurationFrames =
     timelineItem.timeRange.clipEndTime - timelineItem.timeRange.clipStartTime
+
   // clip开始帧
   const startFrameInClip =
     timelineItem.timeRange.clipStartTime +
@@ -156,7 +149,7 @@ function preparePCMData(
   const startIndex = Math.floor(startPercent * fullPcmData.length)
   const endIndex = Math.floor(endPercent * fullPcmData.length)
 
-  return { pcmData: fullPcmData.subarray(startIndex, endIndex), startPercent, endPercent }
+  return fullPcmData.subarray(startIndex, endIndex)
 }
 
 /**
@@ -168,11 +161,10 @@ function preparePCMData(
  */
 function renderWaveformToCanvas(
   canvas: HTMLCanvasElement,
-  data: {
-    pcmData: Float32Array
-    startPercent: number
-    endPercent: number
-  },
+  timelineItem: UnifiedTimelineItemData,
+  pcmData: Float32Array,
+  startFrame: number,
+  endFrame: number,
   clipWidth: number,
   height: number,
 ): void {
@@ -188,10 +180,17 @@ function renderWaveformToCanvas(
 
   // 设置基线位置，留出底部空间
   const baselineY = height - DEFAULT_TRACK_PADDING
-  const sampleStartX = data.startPercent * clipWidth
-  const sampleEndX = data.endPercent * clipWidth
+
+  // 计算宽度
+  const tlDurationFrames =
+    timelineItem.timeRange.timelineEndTime - timelineItem.timeRange.timelineStartTime
+
+  const sampleStartX =
+    ((startFrame - timelineItem.timeRange.timelineStartTime) / tlDurationFrames) * clipWidth
+  const sampleEndX =
+    ((endFrame - timelineItem.timeRange.timelineStartTime) / tlDurationFrames) * clipWidth
   const sampleWidth = sampleEndX - sampleStartX
-  const samplesPerPixel = data.pcmData.length / sampleWidth
+  const samplesPerPixel = pcmData.length / sampleWidth
 
   // 确保canvasLeft是数字类型，而不是字符串
   canvasLeft.value = Math.floor(sampleStartX)
@@ -213,8 +212,8 @@ function renderWaveformToCanvas(
     const startSampleIndex = Math.floor(x * samplesPerPixel)
     const endSampleIndex = Math.floor((x + 1) * samplesPerPixel)
 
-    for (let j = startSampleIndex; j < endSampleIndex && j < data.pcmData.length; j++) {
-      const sample = Math.abs(data.pcmData[j])
+    for (let j = startSampleIndex; j < endSampleIndex && j < pcmData.length; j++) {
+      const sample = Math.abs(pcmData[j])
       if (sample > maxAmplitude) {
         maxAmplitude = sample
       }
@@ -262,12 +261,6 @@ async function renderWaveformDirectly(
 ): Promise<void> {
   const unifiedStore = useUnifiedStore()
 
-  const width = clipWidthPixels
-
-  // 确保Canvas物理尺寸正确
-  // if (canvas.width !== width) {
-  //   canvas.width = width
-  // }
   if (canvas.height !== height) {
     canvas.height = height
   }
@@ -302,7 +295,7 @@ async function renderWaveformDirectly(
     }
 
     // 裁剪PCM数据到当前视口范围
-    const croppedData = preparePCMData(
+    const pcmData = preparePCMData(
       fullPcmData,
       timelineItem,
       microsecondsToFrames(meta.duration),
@@ -311,7 +304,15 @@ async function renderWaveformDirectly(
     )
 
     // 渲染波形
-    renderWaveformToCanvas(canvas, croppedData, width, height)
+    renderWaveformToCanvas(
+      canvas,
+      timelineItem,
+      pcmData,
+      viewportTLStartFrame,
+      viewportTLEndFrame,
+      clipWidthPixels,
+      height,
+    )
   } catch (error) {
     console.error('波形渲染失败:', error)
     return
@@ -346,10 +347,6 @@ async function renderWaveformDirectly(
 
 /* 选中状态样式 */
 .audio-content.selected {
-  background: linear-gradient(
-    135deg,
-    var(--color-clip-selected),
-    var(--color-clip-selected-dark)
-  );
+  background: linear-gradient(135deg, var(--color-clip-selected), var(--color-clip-selected-dark));
 }
 </style>
