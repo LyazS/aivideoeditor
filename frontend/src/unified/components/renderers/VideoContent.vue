@@ -190,6 +190,7 @@ watch(thumbnailLayout, newLayout => {
   align-items: center;
   height: 100%;
   overflow: hidden;
+  border-radius: var(--border-radius-medium);
 }
 
 .overlay-info {
@@ -243,8 +244,6 @@ watch(thumbnailLayout, newLayout => {
 
 /* 选中状态样式 */
 .video-content.selected {
-  outline: 2px solid var(--color-clip-selected);
-  outline-offset: -2px;
   background: linear-gradient(
     135deg,
     var(--color-clip-selected),

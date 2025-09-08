@@ -89,6 +89,7 @@ const progressInfo = computed(() => {
   height: 100%;
   padding: 4px 8px;
   animation: clip-loading-pulse 2s infinite;
+  border-radius: var(--border-radius-medium);
 }
 
 .clip-normal-loading-content {

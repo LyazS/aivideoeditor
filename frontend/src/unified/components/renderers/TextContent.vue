@@ -42,6 +42,7 @@ const previewText = computed(() => {
   height: 100%;
   padding: 4px 8px;
   overflow: hidden;
+  border-radius: var(--border-radius-medium);
 }
 
 .text-preview {

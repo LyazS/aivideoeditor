@@ -325,6 +325,7 @@ async function renderWaveformDirectly(
   width: 100%;
   height: 100%;
   overflow: hidden; /* 确保canvas不会超出容器边界 */
+  border-radius: var(--border-radius-medium);
 }
 
 .waveform-canvas {

@@ -70,7 +70,7 @@ const shortStatus = computed(() => {
   font-size: 10px;
   color: rgba(255, 255, 255, 0.8);
   background: rgba(128, 128, 128, 0.2);
-  border-radius: 3px;
+  border-radius: var(--border-radius-medium);
 }
 
 .default-renderer-content.selected {

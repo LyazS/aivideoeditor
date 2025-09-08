@@ -57,6 +57,7 @@ const errorMessage = computed(() => {
   padding: 4px 8px;
   background: rgba(255, 0, 0, 0.1);
   border: 1px solid rgba(255, 0, 0, 0.3);
+  border-radius: var(--border-radius-medium);
 }
 
 .clip-error-message-container {
