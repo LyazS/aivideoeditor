@@ -678,7 +678,7 @@ const updateTextContent = async () => {
     console.log('✅ [UnifiedTextClipProperties] 文本内容更新成功')
   } catch (error) {
     console.error('❌ [UnifiedTextClipProperties] 更新文本内容失败:', error)
-    unifiedStore.showError('更新失败', '文本内容更新失败，请重试')
+    unifiedStore.showError('文本内容更新失败，请重试')
   }
 }
 
@@ -726,7 +726,7 @@ const updateTextStyle = async () => {
     console.log('✅ [UnifiedTextClipProperties] 文本样式更新成功')
   } catch (error) {
     console.error('❌ [UnifiedTextClipProperties] 更新文本样式失败:', error)
-    unifiedStore.showError('更新失败', '文本样式更新失败，请重试')
+    unifiedStore.showError('文本样式更新失败，请重试')
   }
 }
 
@@ -882,9 +882,7 @@ const updateTargetDurationFromTimecode = async (event: Event) => {
 
     // 显示错误通知
     unifiedStore.showError(
-      '时间码格式错误',
-      errorMessage,
-      8000, // 显示8秒，给用户足够时间阅读
+      `时间码格式错误：${errorMessage}`
     )
 
     // 恢复到当前值

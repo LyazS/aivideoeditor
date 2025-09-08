@@ -11,8 +11,7 @@ type NotificationType = 'success' | 'error' | 'warning' | 'info'
 interface Notification {
   id: string
   type: NotificationType
-  title: string
-  message?: string
+  message: string
   duration?: number // 显示时长（毫秒），0表示不自动消失
   timestamp?: number // 创建时间戳
   persistent?: boolean // 是否持久化（不会被批量清除）
@@ -31,7 +30,7 @@ class NotificationManager {
    * 显示通知
    * @param notification 通知配置
    */
-  show(notification: Omit<Notification, 'id'>): string {
+  show(notification: Omit<Notification, 'id' | 'message'> & { message: string }): string {
     const id = `notification-${this.nextId++}`
     const fullNotification: Notification = {
       id,
@@ -105,8 +104,8 @@ class NotificationManager {
    * @param title 标题
    * @param message 消息
    */
-  hasDuplicate(title: string, message?: string): boolean {
-    return this.notifications.value.some((n) => n.title === title && n.message === message)
+  hasDuplicate(message: string): boolean {
+    return this.notifications.value.some((n) => n.message === message)
   }
 
   /**
@@ -120,19 +119,17 @@ class NotificationManager {
    * 显示成功通知
    */
   success(
-    title: string,
-    message?: string,
+    message: string,
     duration?: number,
     options?: { persistent?: boolean },
   ): string {
     // 检查重复通知
-    if (this.hasDuplicate(title, message)) {
-      console.log('🔄 跳过重复的成功通知:', title)
+    if (this.hasDuplicate(message)) {
+      console.log('🔄 跳过重复的成功通知:', message)
       return ''
     }
     return this.show({
       type: 'success',
-      title,
       message,
       duration: duration || 3000,
       persistent: options?.persistent || false,
@@ -143,15 +140,13 @@ class NotificationManager {
    * 显示错误通知
    */
   error(
-    title: string,
-    message?: string,
+    message: string,
     duration?: number,
     options?: { persistent?: boolean },
   ): string {
     // 错误通知不检查重复，因为可能需要多次显示
     return this.show({
       type: 'error',
-      title,
       message,
       duration: duration || 8000, // 错误通知显示更久
       persistent: options?.persistent || false,
@@ -162,18 +157,16 @@ class NotificationManager {
    * 显示警告通知
    */
   warning(
-    title: string,
-    message?: string,
+    message: string,
     duration?: number,
     options?: { persistent?: boolean },
   ): string {
-    if (this.hasDuplicate(title, message)) {
-      console.log('🔄 跳过重复的警告通知:', title)
+    if (this.hasDuplicate(message)) {
+      console.log('🔄 跳过重复的警告通知:', message)
       return ''
     }
     return this.show({
       type: 'warning',
-      title,
       message,
       duration: duration || 6000,
       persistent: options?.persistent || false,
@@ -184,18 +177,16 @@ class NotificationManager {
    * 显示信息通知
    */
   info(
-    title: string,
-    message?: string,
+    message: string,
     duration?: number,
     options?: { persistent?: boolean },
   ): string {
-    if (this.hasDuplicate(title, message)) {
-      console.log('🔄 跳过重复的信息通知:', title)
+    if (this.hasDuplicate(message)) {
+      console.log('🔄 跳过重复的信息通知:', message)
       return ''
     }
     return this.show({
       type: 'info',
-      title,
       message,
       duration: duration || 5000,
       persistent: options?.persistent || false,
@@ -219,7 +210,7 @@ export function createUnifiedNotificationModule() {
    * 显示通知
    * @param notification 通知配置
    */
-  function showNotification(notification: Omit<Notification, 'id'>): string {
+  function showNotification(notification: Omit<Notification, 'id' | 'message'> & { message: string }): string {
     return notificationManager.show(notification)
   }
 
@@ -259,48 +250,44 @@ export function createUnifiedNotificationModule() {
    * 显示成功通知
    */
   function showSuccess(
-    title: string,
-    message?: string,
+    message: string,
     duration?: number,
     options?: { persistent?: boolean },
   ): string {
-    return notificationManager.success(title, message, duration, options)
+    return notificationManager.success(message, duration, options)
   }
 
   /**
    * 显示错误通知
    */
   function showError(
-    title: string,
-    message?: string,
+    message: string,
     duration?: number,
     options?: { persistent?: boolean },
   ): string {
-    return notificationManager.error(title, message, duration, options)
+    return notificationManager.error(message, duration, options)
   }
 
   /**
    * 显示警告通知
    */
   function showWarning(
-    title: string,
-    message?: string,
+    message: string,
     duration?: number,
     options?: { persistent?: boolean },
   ): string {
-    return notificationManager.warning(title, message, duration, options)
+    return notificationManager.warning(message, duration, options)
   }
 
   /**
    * 显示信息通知
    */
   function showInfo(
-    title: string,
-    message?: string,
+    message: string,
     duration?: number,
     options?: { persistent?: boolean },
   ): string {
-    return notificationManager.info(title, message, duration, options)
+    return notificationManager.info(message, duration, options)
   }
 
   // ==================== 导出接口 ====================

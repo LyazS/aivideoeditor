@@ -399,9 +399,7 @@ const updateTargetDurationFromTimecode = async (event: Event) => {
 
     // 显示错误通知
     unifiedStore.showError(
-      '时间码格式错误',
-      errorMessage,
-      8000, // 显示8秒，给用户足够时间阅读
+      `时间码格式错误：${errorMessage}`
     )
 
     // 恢复到当前值

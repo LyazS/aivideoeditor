@@ -6,10 +6,10 @@ import type { SimpleCommand } from '@/unified/modules/commands/types'
  * 定义历史管理器需要的通知功能
  */
 interface NotificationManager {
-  showSuccess(title: string, message?: string, duration?: number): string
-  showError(title: string, message?: string, duration?: number): string
-  showWarning(title: string, message?: string, duration?: number): string
-  showInfo(title: string, message?: string, duration?: number): string
+  showSuccess(message: string, duration?: number): string
+  showError(message: string, duration?: number): string
+  showWarning(message: string, duration?: number): string
+  showInfo(message: string, duration?: number): string
 }
 /**
  * 批量命令基类
@@ -196,7 +196,6 @@ class SimpleHistoryManager {
 
       // 显示错误通知
       this.notificationManager.showError(
-        '操作执行失败',
         `无法执行操作: ${command.description}。${error instanceof Error ? error.message : '未知错误'}`,
       )
 
@@ -211,7 +210,7 @@ class SimpleHistoryManager {
   async undo(): Promise<boolean> {
     if (!this.canUndo()) {
       console.log('⚠️ 没有可撤销的操作')
-      this.notificationManager.showWarning('无法撤销', '没有可撤销的操作')
+      this.notificationManager.showWarning('无法撤销：没有可撤销的操作')
       return false
     }
 
@@ -224,7 +223,7 @@ class SimpleHistoryManager {
       console.log(`📊 历史记录: ${this.currentIndex + 1}/${this.commands.length}`)
 
       // 显示成功通知
-      this.notificationManager.showSuccess('撤销成功', `已撤销: ${command.description}`)
+      this.notificationManager.showSuccess(`已撤销: ${command.description}`)
 
       return true
     } catch (error) {
@@ -232,8 +231,7 @@ class SimpleHistoryManager {
 
       // 显示错误通知
       this.notificationManager.showError(
-        '撤销失败',
-        `撤销操作时发生错误。${error instanceof Error ? error.message : '未知错误'}`,
+        `撤销失败：撤销操作时发生错误。${error instanceof Error ? error.message : '未知错误'}`,
       )
 
       return false
@@ -247,7 +245,7 @@ class SimpleHistoryManager {
   async redo(): Promise<boolean> {
     if (!this.canRedo()) {
       console.log('⚠️ 没有可重做的操作')
-      this.notificationManager.showWarning('无法重做', '没有可重做的操作')
+      this.notificationManager.showWarning('无法重做：没有可重做的操作')
       return false
     }
 
@@ -260,7 +258,7 @@ class SimpleHistoryManager {
       console.log(`📊 历史记录: ${this.currentIndex + 1}/${this.commands.length}`)
 
       // 显示成功通知
-      this.notificationManager.showSuccess('重做成功', `已重做: ${command.description}`)
+      this.notificationManager.showSuccess(`已重做: ${command.description}`)
 
       return true
     } catch (error) {
@@ -269,8 +267,7 @@ class SimpleHistoryManager {
 
       // 显示错误通知
       this.notificationManager.showError(
-        '重做失败',
-        `重做操作时发生错误。${error instanceof Error ? error.message : '未知错误'}`,
+        `重做失败：重做操作时发生错误。${error instanceof Error ? error.message : '未知错误'}`,
       )
 
       return false
@@ -337,13 +334,12 @@ class SimpleHistoryManager {
       console.log(`✅ 批量命令已执行: ${batchCommand.getBatchSummary()}`)
 
       // 显示批量操作成功通知
-      this.notificationManager.showSuccess('批量操作完成', batchCommand.getBatchSummary())
+      this.notificationManager.showSuccess(`批量操作完成：${batchCommand.getBatchSummary()}`)
     } catch (error) {
       console.error(`❌ 批量命令执行失败: ${batchCommand.description}`, error)
 
       this.notificationManager.showError(
-        '批量操作失败',
-        `${batchCommand.description}执行失败。${error instanceof Error ? error.message : '未知错误'}`,
+        `批量操作失败：${batchCommand.description}执行失败。${error instanceof Error ? error.message : '未知错误'}`,
       )
 
       throw error

@@ -13,8 +13,7 @@
           <NotificationIcons :type="notification.type" />
         </div>
         <div class="notification__content">
-          <div class="notification__title">{{ notification.title }}</div>
-          <div v-if="notification.message" class="notification__message">
+          <div class="notification__message">
             {{ notification.message }}
           </div>
         </div>
@@ -77,9 +76,9 @@ onUnmounted(() => {
 .notification {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  border-radius: 6px;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: 4px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
   backdrop-filter: blur(8px);
   cursor: pointer;
@@ -87,8 +86,11 @@ onUnmounted(() => {
   transition: all 0.2s ease;
   max-width: 100%;
   word-wrap: break-word;
-  font-size: 13px;
+  font-size: 12px;
   position: relative;
+  background: var(--color-bg-quaternary);
+  border: 1px solid var(--color-border-primary);
+  color: var(--color-text-primary);
 }
 
 .notification:hover {
@@ -96,95 +98,38 @@ onUnmounted(() => {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
 }
 
-.notification--success {
-  background: rgba(34, 197, 94, 0.95);
-  border: 1px solid rgba(34, 197, 94, 0.3);
-  color: white;
+.notification--success .notification__icon {
+  color: #16a34a;
 }
 
-.notification--success::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 3px;
-  background: #16a34a;
-  border-radius: 6px 0 0 6px;
+.notification--error .notification__icon {
+  color: #dc2626;
 }
 
-.notification--error {
-  background: rgba(239, 68, 68, 0.95);
-  border: 1px solid rgba(239, 68, 68, 0.3);
-  color: white;
+.notification--warning .notification__icon {
+  color: #d97706;
 }
 
-.notification--error::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 3px;
-  background: #dc2626;
-  border-radius: 6px 0 0 6px;
-}
-
-.notification--warning {
-  background: rgba(245, 158, 11, 0.95);
-  border: 1px solid rgba(245, 158, 11, 0.3);
-  color: white;
-}
-
-.notification--warning::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 3px;
-  background: #d97706;
-  border-radius: 6px 0 0 6px;
-}
-
-.notification--info {
-  background: rgba(59, 130, 246, 0.95);
-  border: 1px solid rgba(59, 130, 246, 0.3);
-  color: white;
-}
-
-.notification--info::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 3px;
-  background: #2563eb;
-  border-radius: 6px 0 0 6px;
+.notification--info .notification__icon {
+  color: #2563eb;
 }
 
 .notification__icon {
   flex-shrink: 0;
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
 }
 
 .notification__content {
   flex: 1;
   min-width: 0;
-}
-
-.notification__title {
-  font-weight: 500;
-  font-size: 13px;
-  line-height: 1.3;
-  margin-bottom: 2px;
+  display: flex;
+  align-items: center;
 }
 
 .notification__message {
   font-size: 12px;
-  line-height: 1.3;
+  line-height: 1.2;
   opacity: 0.9;
 }
 
@@ -226,17 +171,13 @@ onUnmounted(() => {
   }
 
   .notification {
-    padding: 6px 10px;
-    font-size: 12px;
+    padding: 3px 6px;
+    font-size: 11px;
   }
 
   .notification__icon {
-    width: 14px;
-    height: 14px;
-  }
-
-  .notification__title {
-    font-size: 12px;
+    width: 12px;
+    height: 12px;
   }
 
   .notification__message {
@@ -245,27 +186,6 @@ onUnmounted(() => {
 }
 
 /* 深色模式适配 */
-@media (prefers-color-scheme: dark) {
-  .notification--success {
-    background: rgba(34, 197, 94, 0.9);
-    border-color: rgba(34, 197, 94, 0.4);
-  }
-
-  .notification--error {
-    background: rgba(239, 68, 68, 0.9);
-    border-color: rgba(239, 68, 68, 0.4);
-  }
-
-  .notification--warning {
-    background: rgba(245, 158, 11, 0.9);
-    border-color: rgba(245, 158, 11, 0.4);
-  }
-
-  .notification--info {
-    background: rgba(59, 130, 246, 0.9);
-    border-color: rgba(59, 130, 246, 0.4);
-  }
-}
 
 /* 减少动画效果（用户偏好） */
 @media (prefers-reduced-motion: reduce) {

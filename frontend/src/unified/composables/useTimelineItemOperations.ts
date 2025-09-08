@@ -139,7 +139,7 @@ export function useTimelineItemOperations() {
       console.log(`✅ [UnifiedTimeline] 时间轴项目创建完成: ${timelineItemData.id}`)
     } catch (error) {
       console.error('❌ [UnifiedTimeline] 创建时间轴项目失败:', error)
-      dialogs.showError('创建时间轴项目失败', (error as Error).message)
+      dialogs.showError(`创建时间轴项目失败：${(error as Error).message}`)
     }
   }
 
@@ -364,7 +364,7 @@ export function useTimelineItemOperations() {
       unifiedStore.selectTimelineItem(textItem.id)
     } catch (error) {
       console.error('❌ [UnifiedTimeline] 创建文本项目失败:', error)
-      dialogs.showError('创建文本项目失败', (error as Error).message)
+      dialogs.showError(`创建文本项目失败：${(error as Error).message}`)
     }
   }
 

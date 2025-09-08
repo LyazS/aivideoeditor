@@ -256,7 +256,7 @@ export function useTimelineDragHandling(
       }
       default:
         console.log('❌ [UnifiedTimeline] 没有检测到有效的拖拽数据')
-        dialogs.showInfo('拖拽提示', '请先将视频或图片文件导入到素材库，然后从素材库拖拽到时间轴')
+        dialogs.showInfo('请先将视频或图片文件导入到素材库，然后从素材库拖拽到时间轴')
         break
     }
 
@@ -330,7 +330,6 @@ export function useTimelineDragHandling(
         }
 
         dialogs.showError(
-          '拖拽失败',
           `${mediaTypeLabel}片段不能拖拽到${trackTypeLabel}轨道上。\n${suggestion}`,
         )
         return
@@ -396,7 +395,6 @@ export function useTimelineDragHandling(
       // 文本类型不支持从素材库拖拽创建
       if (mediaItem.mediaType === 'text') {
         dialogs.showError(
-          '拖拽失败',
           '文本内容不能通过拖拽创建。\n请在文本轨道中右键选择"添加文本"。',
         )
         return
@@ -438,7 +436,6 @@ export function useTimelineDragHandling(
         }
 
         dialogs.showError(
-          '拖拽失败',
           `${mediaTypeLabel}素材不能拖拽到${trackTypeLabel}轨道上。\n${suggestion}`,
         )
         return
@@ -456,7 +453,7 @@ export function useTimelineDragHandling(
       await createMediaClipFromMediaItem(mediaItem.id, dropTime, targetTrackId)
     } catch (error) {
       console.error('Failed to parse media item data:', error)
-      dialogs.showError('拖拽失败', '拖拽数据格式错误')
+      dialogs.showError('拖拽失败：拖拽数据格式错误')
     }
   }
 

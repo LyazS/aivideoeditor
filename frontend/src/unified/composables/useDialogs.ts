@@ -18,8 +18,8 @@ export function useDialogs() {
    * @param message 消息内容
    * @param duration 显示时长（毫秒）
    */
-  function showInfo(title: string, message?: string, duration?: number): void {
-    unifiedStore.showInfo(title, message, duration)
+  function showInfo(message: string, duration?: number): void {
+    unifiedStore.showInfo(message, duration)
   }
 
   /**
@@ -28,8 +28,8 @@ export function useDialogs() {
    * @param message 消息内容
    * @param duration 显示时长（毫秒）
    */
-  function showError(title: string, message?: string, duration?: number): void {
-    unifiedStore.showError(title, message, duration)
+  function showError(message: string, duration?: number): void {
+    unifiedStore.showError(message, duration)
   }
 
   /**
@@ -38,8 +38,8 @@ export function useDialogs() {
    * @param message 消息内容
    * @param duration 显示时长（毫秒）
    */
-  function showWarning(title: string, message?: string, duration?: number): void {
-    unifiedStore.showWarning(title, message, duration)
+  function showWarning(message: string, duration?: number): void {
+    unifiedStore.showWarning(message, duration)
   }
 
   /**
@@ -48,8 +48,8 @@ export function useDialogs() {
    * @param message 消息内容
    * @param duration 显示时长（毫秒）
    */
-  function showSuccess(title: string, message?: string, duration?: number): void {
-    unifiedStore.showSuccess(title, message, duration)
+  function showSuccess(message: string, duration?: number): void {
+    unifiedStore.showSuccess(message, duration)
   }
 
   /**
