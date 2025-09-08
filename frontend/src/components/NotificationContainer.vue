@@ -12,10 +12,8 @@
         <div class="notification__icon">
           <NotificationIcons :type="notification.type" />
         </div>
-        <div class="notification__content">
-          <div class="notification__message">
-            {{ notification.message }}
-          </div>
+        <div class="notification__message">
+          {{ notification.message }}
         </div>
       </div>
     </TransitionGroup>
@@ -36,23 +34,6 @@ const notifications = computed(() => unifiedStore.notifications)
 function removeNotification(id: string) {
   unifiedStore.removeNotification(id)
 }
-
-// 键盘快捷键支持
-function handleKeydown(event: KeyboardEvent) {
-  // ESC键清除所有通知
-  if (event.key === 'Escape' && notifications.value.length > 0) {
-    unifiedStore.clearNotifications()
-    event.preventDefault()
-  }
-}
-
-onMounted(() => {
-  document.addEventListener('keydown', handleKeydown)
-})
-
-onUnmounted(() => {
-  document.removeEventListener('keydown', handleKeydown)
-})
 </script>
 
 <style scoped>
@@ -69,8 +50,8 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  max-width: 320px;
-  min-width: 280px;
+  max-width: 500px;
+  min-width: 320px;
 }
 
 .notification {
@@ -83,53 +64,55 @@ onUnmounted(() => {
   backdrop-filter: blur(8px);
   cursor: pointer;
   pointer-events: auto;
-  transition: all 0.2s ease;
   max-width: 100%;
   word-wrap: break-word;
-  font-size: 12px;
+  font-size: 13px;
   position: relative;
   background: var(--color-bg-quaternary);
-  border: 1px solid var(--color-border-primary);
   color: var(--color-text-primary);
 }
 
-.notification:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
-}
-
 .notification--success .notification__icon {
-  color: #16a34a;
+  color: #63e2b7;
 }
 
 .notification--error .notification__icon {
-  color: #dc2626;
+  color: #e88080;
 }
 
 .notification--warning .notification__icon {
-  color: #d97706;
+  color: #f2c97d;
 }
 
 .notification--info .notification__icon {
-  color: #2563eb;
+  color: #70c0e8;
 }
 
 .notification__icon {
   flex-shrink: 0;
   width: 14px;
   height: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: currentColor;
+  border-radius: 50%;
+  padding: 2px;
 }
 
-.notification__content {
+.notification__icon svg {
+  width: 10px;
+  height: 10px;
+  color: var(--color-bg-quaternary);
+}
+
+.notification__message {
   flex: 1;
   min-width: 0;
   display: flex;
   align-items: center;
-}
-
-.notification__message {
-  font-size: 12px;
-  line-height: 1.2;
+  font-size: 14px;
+  line-height: 1.6;
   opacity: 0.9;
 }
 
@@ -167,12 +150,11 @@ onUnmounted(() => {
 
   .notification-list {
     max-width: none;
-    min-width: auto;
   }
 
   .notification {
     padding: 3px 6px;
-    font-size: 11px;
+    font-size: 12px;
   }
 
   .notification__icon {
@@ -181,7 +163,7 @@ onUnmounted(() => {
   }
 
   .notification__message {
-    font-size: 11px;
+    font-size: 12px;
   }
 }
 
@@ -191,13 +173,8 @@ onUnmounted(() => {
 @media (prefers-reduced-motion: reduce) {
   .notification-enter-active,
   .notification-leave-active,
-  .notification-move,
-  .notification {
+  .notification-move {
     transition: none;
-  }
-
-  .notification:hover {
-    transform: none;
   }
 }
 </style>

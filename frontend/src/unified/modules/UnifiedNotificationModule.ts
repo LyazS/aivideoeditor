@@ -34,7 +34,7 @@ class NotificationManager {
     const id = `notification-${this.nextId++}`
     const fullNotification: Notification = {
       id,
-      duration: 5000, // 默认5秒
+      duration: 3000, // 默认3秒
       timestamp: Date.now(),
       persistent: false,
       ...notification,
