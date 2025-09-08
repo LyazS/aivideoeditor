@@ -89,6 +89,7 @@ import {
   BatchDeleteCommand,
   BatchAutoArrangeTrackCommand,
 } from '@/unified/modules/commands/batchCommands'
+import type { AudioVisibleSprite, VideoVisibleSprite } from './visiblesprite'
 
 /**
  * 统一视频编辑器存储
@@ -496,13 +497,18 @@ export const useUnifiedStore = defineStore('unified', () => {
 
     if (newTransform.playbackRate !== undefined) {
       // 获取当前倍速（对视频和音频有效）
+      oldTransform.playbackRate = 1
       if (
-        (timelineItem.mediaType === 'video' || timelineItem.mediaType === 'audio') &&
-        'playbackRate' in timelineItem.timeRange
+        TimelineItemQueries.isVideoTimelineItem(timelineItem) ||
+        TimelineItemQueries.isAudioTimelineItem(timelineItem)
       ) {
-        oldTransform.playbackRate = (timelineItem.timeRange as any).playbackRate || 1
-      } else {
-        oldTransform.playbackRate = 1 // 图片和文本默认为1
+        const sprite = timelineItem.runtime.sprite as
+          | VideoVisibleSprite
+          | AudioVisibleSprite
+          | undefined
+        if (sprite) {
+          oldTransform.playbackRate = sprite.getPlaybackRate()
+        }
       }
     }
 
