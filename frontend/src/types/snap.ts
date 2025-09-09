@@ -18,6 +18,7 @@ export interface ClipBoundarySnapPoint extends BaseSnapPoint {
   clipId: string
   clipName: string
   priority: 1 // 高优先级
+  snappedPart?: 'start' | 'end' // 新增：标识是clip的哪个部分被吸附
 }
 
 /**
@@ -32,7 +33,6 @@ export interface KeyframeSnapPoint extends BaseSnapPoint {
 
 /**
  * 播放头位置吸附点
- * @deprecated 已弃用，不再使用播放头位置作为吸附点
  */
 export interface PlayheadSnapPoint extends BaseSnapPoint {
   type: 'playhead'
@@ -136,7 +136,7 @@ export const DEFAULT_SNAP_CONFIG: SnapConfig = {
   enabled: true,
   clipBoundaries: true,
   keyframes: true,
-  playhead: false, // 禁用播放头吸附
+  playhead: true, // 启用播放头吸附
   timelineStart: true,
   threshold: 20, // 20像素
   visualFeedback: true,

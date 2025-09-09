@@ -99,7 +99,10 @@ interface TimeMark {
  * 时间轴时间刻度模块
  * 提供时间轴时间刻度相关的功能，包括刻度标记计算、事件处理等
  */
-export function useTimelineTimeScale(scaleContainer: Ref<HTMLElement | undefined>) {
+export function useTimelineTimeScale(
+  scaleContainer: Ref<HTMLElement | undefined>,
+  onSnapResultUpdate?: (snapResult: any) => void
+) {
   const unifiedStore = useUnifiedStore()
 
   // 容器宽度
@@ -107,6 +110,14 @@ export function useTimelineTimeScale(scaleContainer: Ref<HTMLElement | undefined
 
   // 拖拽状态
   const isDragging = ref(false)
+
+  // 当前吸附结果
+  const currentSnapResult = ref<{
+    snapped: boolean
+    frame: number
+    snapPoint?: any
+    distance?: number
+  } | null>(null)
 
   // 缓存的刻度间隔计算结果
   const scaleIntervals = computed(() => {
@@ -269,7 +280,58 @@ export function useTimelineTimeScale(scaleContainer: Ref<HTMLElement | undefined
    */
   function handleGlobalMouseMove(event: MouseEvent) {
     if (isDragging.value) {
-      const frame = calculateFrameFromGlobalMouse(event)
+      let frame = calculateFrameFromGlobalMouse(event)
+      let snapResult = null
+      
+      // 应用吸附功能到时间刻度拖拽
+      if (unifiedStore.snapConfig.enabled && unifiedStore.snapConfig.playhead) {
+        // 开始拖拽阶段，收集候选目标
+        if (!unifiedStore.isSnapCalculating) {
+          unifiedStore.startSnapDrag([])
+        }
+        
+        // 计算吸附位置
+        const snapOptions = {
+          excludeClipIds: [],
+          customThreshold: unifiedStore.snapConfig.threshold
+        }
+        const calculatedSnapResult = unifiedStore.calculateSnapPosition(frame, snapOptions)
+        if (calculatedSnapResult) {
+          // 避免吸附到播放头自身位置
+          const isSnappingToCurrentPlayhead = calculatedSnapResult.snapPoint?.type === 'playhead'
+          if (!isSnappingToCurrentPlayhead) {
+            frame = calculatedSnapResult.frame
+            snapResult = {
+              snapped: true,
+              frame: calculatedSnapResult.frame,
+              snapPoint: calculatedSnapResult.snapPoint,
+              distance: calculatedSnapResult.distance
+            }
+          } else {
+            snapResult = {
+              snapped: false,
+              frame: frame
+            }
+          }
+        } else {
+          snapResult = {
+            snapped: false,
+            frame: frame
+          }
+        }
+      } else {
+        // 如果吸附功能未启用，直接更新位置
+        snapResult = {
+          snapped: false,
+          frame: frame
+        }
+      }
+      
+      // 发送吸附结果更新给父组件
+      if (onSnapResultUpdate) {
+        onSnapResultUpdate(snapResult)
+      }
+      
       unifiedStore.setCurrentFrame(frame)
     }
   }
@@ -284,6 +346,17 @@ export function useTimelineTimeScale(scaleContainer: Ref<HTMLElement | undefined
     // 移除全局事件监听器
     document.removeEventListener('mousemove', handleGlobalMouseMove)
     document.removeEventListener('mouseup', handleGlobalMouseUp)
+    
+    // 清理吸附状态
+    if (unifiedStore.snapConfig.enabled && unifiedStore.snapConfig.playhead) {
+      unifiedStore.endSnapDrag()
+    }
+    
+    // 清理吸附结果
+    currentSnapResult.value = null
+    if (onSnapResultUpdate) {
+      onSnapResultUpdate(null)
+    }
   }
 
   /**
@@ -291,7 +364,53 @@ export function useTimelineTimeScale(scaleContainer: Ref<HTMLElement | undefined
    */
   function handleTimeScaleMouseMove(event: MouseEvent) {
     if (isDragging.value) {
-      const frame = calculateFrameFromClick(event)
+      let frame = calculateFrameFromClick(event)
+      let snapResult = null
+      
+      // 应用吸附功能到时间刻度拖拽
+      if (unifiedStore.snapConfig.enabled && unifiedStore.snapConfig.playhead) {
+        // 计算吸附位置
+        const snapOptions = {
+          excludeClipIds: [],
+          customThreshold: unifiedStore.snapConfig.threshold
+        }
+        const calculatedSnapResult = unifiedStore.calculateSnapPosition(frame, snapOptions)
+        if (calculatedSnapResult) {
+          // 避免吸附到播放头自身位置
+          const isSnappingToCurrentPlayhead = calculatedSnapResult.snapPoint?.type === 'playhead'
+          if (!isSnappingToCurrentPlayhead) {
+            frame = calculatedSnapResult.frame
+            snapResult = {
+              snapped: true,
+              frame: calculatedSnapResult.frame,
+              snapPoint: calculatedSnapResult.snapPoint,
+              distance: calculatedSnapResult.distance
+            }
+          } else {
+            snapResult = {
+              snapped: false,
+              frame: frame
+            }
+          }
+        } else {
+          snapResult = {
+            snapped: false,
+            frame: frame
+          }
+        }
+      } else {
+        // 如果吸附功能未启用，直接更新位置
+        snapResult = {
+          snapped: false,
+          frame: frame
+        }
+      }
+      
+      // 发送吸附结果更新给父组件
+      if (onSnapResultUpdate) {
+        onSnapResultUpdate(snapResult)
+      }
+      
       unifiedStore.setCurrentFrame(frame)
     }
   }
@@ -316,6 +435,7 @@ export function useTimelineTimeScale(scaleContainer: Ref<HTMLElement | undefined
     // 状态
     containerWidth,
     isDragging,
+    currentSnapResult,
 
     // 计算属性
     timeMarks,

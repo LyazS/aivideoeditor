@@ -1,15 +1,18 @@
 import { ref, type Ref } from 'vue'
-import type { 
-  SnapConfig, 
-  SnapPoint, 
-  SnapResult, 
-  SnapCalculationOptions, 
+import type {
+  SnapConfig,
+  SnapPoint,
+  SnapResult,
+  SnapCalculationOptions,
   SnapPointCollectionOptions,
   ClipBoundarySnapPoint,
+  KeyframeSnapPoint,
+  PlayheadSnapPoint,
   TimelineStartSnapPoint
 } from '@/types/snap'
 import { DEFAULT_SNAP_CONFIG } from '@/types/snap'
 import type { UnifiedTimelineItemData } from '@/unified/timelineitem/TimelineItemData'
+import { relativeFrameToAbsoluteFrame } from '@/unified/utils/unifiedKeyframeUtils'
 
 /**
  * 吸附缓存接口
@@ -63,8 +66,8 @@ export function createUnifiedSnapModule(
   function collectSnapTargets(options: SnapPointCollectionOptions = {}): SnapPoint[] {
     const {
       includeClipBoundaries = true,
-      includeKeyframes = false, // 暂不实现关键帧吸附
-      includePlayhead = false,   // 暂不实现播放头吸附
+      includeKeyframes = true,   // 启用关键帧吸附
+      includePlayhead = true,     // 启用播放头吸附
       includeTimelineStart = true,
       excludeClipIds = [],
       frameRange
@@ -123,6 +126,51 @@ export function createUnifiedSnapModule(
           }
           targets.push(endPoint)
         })
+      }
+      
+      // 收集关键帧吸附点
+      if (includeKeyframes) {
+        timelineItems.value.forEach(item => {
+          // 跳过被排除的片段
+          if (excludeClipIds.includes(item.id)) {
+            return
+          }
+          
+          // 检查是否在指定帧范围内
+          if (frameRange) {
+            const itemStart = item.timeRange.timelineStartTime
+            const itemEnd = item.timeRange.timelineEndTime
+            if (itemEnd < frameRange.start || itemStart > frameRange.end) {
+              return
+            }
+          }
+          
+          // 收集片段的关键帧
+          if (item.animation && item.animation.keyframes && item.animation.keyframes.length > 0) {
+            item.animation.keyframes.forEach(keyframe => {
+              // 使用工具函数计算绝对帧数
+              const absoluteFrame = relativeFrameToAbsoluteFrame(keyframe.framePosition, item.timeRange)
+              const keyframePoint: KeyframeSnapPoint = {
+                type: 'keyframe',
+                frame: absoluteFrame,
+                priority: 2,
+                clipId: item.id,
+                keyframeId: `keyframe-${keyframe.framePosition}`
+              }
+              targets.push(keyframePoint)
+            })
+          }
+        })
+      }
+      
+      // 收集播放头位置吸附点
+      if (includePlayhead && currentFrame.value > 0) {
+        const playheadPoint: PlayheadSnapPoint = {
+          type: 'playhead',
+          frame: currentFrame.value,
+          priority: 1
+        }
+        targets.push(playheadPoint)
       }
       
       // 收集时间轴起始位置吸附点

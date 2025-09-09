@@ -57,7 +57,7 @@ const indicatorStyle = computed((): CSSProperties => {
     props.scrollOffset
   )
   
-  // 只保留动态的 left 属性，其他样式移到 CSS 中
+  // 统一的吸附指示器样式，不区分开始或尾部吸附
   return {
     left: `${pixel}px`
   }

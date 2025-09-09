@@ -5,6 +5,7 @@ import type { UnifiedTrackType } from '@/unified/track/TrackTypes'
 import { alignFramesToFrame } from '@/unified/utils/timeUtils'
 import { DEFAULT_TRACK_PADDING } from '@/unified/constants/TrackConstants'
 import { getDefaultTrackHeight, mapMediaTypeToTrackType } from '@/unified/track/TrackUtils'
+import type { SnapCalculationOptions } from '@/types/snap'
 
 /**
  * 拖拽工具函数集合
@@ -388,21 +389,74 @@ export function useDragUtils() {
       // 开始拖拽阶段，收集候选目标
       unifiedStore.startSnapDrag(excludeClipIds)
       
-      // 计算吸附位置
-      const snapOptions: any = {
+      // 获取被拖拽的clip信息以计算尾部位置
+      const timelineDragData = getCurrentTimelineItemDragData()
+      let clipDuration = 0
+      if (timelineDragData) {
+        const draggedItem = unifiedStore.getTimelineItem(timelineDragData.itemId)
+        if (draggedItem) {
+          clipDuration = draggedItem.timeRange.timelineEndTime - draggedItem.timeRange.timelineStartTime
+        }
+      }
+      
+      // 计算clip尾部位置
+      const clipEndFrames = dropFrames + clipDuration
+      
+      // 计算开始位置的吸附
+      const startSnapOptions: SnapCalculationOptions = {
         excludeClipIds,
         customThreshold: unifiedStore.snapConfig.threshold
       }
+      const startSnapResult = unifiedStore.calculateSnapPosition(dropFrames, startSnapOptions)
       
-      const snapResult = unifiedStore.calculateSnapPosition(dropFrames, snapOptions)
+      // 计算尾部位置的吸附
+      const endSnapOptions: SnapCalculationOptions = {
+        excludeClipIds,
+        customThreshold: unifiedStore.snapConfig.threshold
+      }
+      const endSnapResult = unifiedStore.calculateSnapPosition(clipEndFrames, endSnapOptions)
+      
+      // 选择更好的吸附结果（距离更近的）
+      let bestSnapResult = null
+      let bestFrame = dropFrames
+      
+      if (startSnapResult && endSnapResult) {
+        // 两个位置都有吸附，选择距离更近的
+        if (startSnapResult.distance <= endSnapResult.distance) {
+          bestSnapResult = startSnapResult
+          bestFrame = startSnapResult.frame
+        } else {
+          bestSnapResult = {
+            ...endSnapResult,
+            snappedPart: 'end' as const // 标记为尾部吸附
+          }
+          // 如果是尾部吸附，需要调整开始位置
+          bestFrame = endSnapResult.frame - clipDuration
+        }
+      } else if (startSnapResult) {
+        // 只有开始位置有吸附
+        bestSnapResult = {
+          ...startSnapResult,
+          snappedPart: 'start' as const // 标记为开始吸附
+        }
+        bestFrame = startSnapResult.frame
+      } else if (endSnapResult) {
+        // 只有尾部位置有吸附
+        bestSnapResult = {
+          ...endSnapResult,
+          snappedPart: 'end' as const // 标记为尾部吸附
+        }
+        // 如果是尾部吸附，需要调整开始位置
+        bestFrame = endSnapResult.frame - clipDuration
+      }
       
       // 结束拖拽阶段，清理缓存
       unifiedStore.endSnapDrag()
       
-      if (snapResult) {
+      if (bestSnapResult) {
         return {
-          frame: snapResult.frame,
-          snapResult: snapResult // 返回完整的吸附结果
+          frame: bestFrame,
+          snapResult: bestSnapResult // 返回完整的吸附结果
         }
       }
     }

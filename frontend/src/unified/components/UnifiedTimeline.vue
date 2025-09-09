@@ -182,7 +182,7 @@
       :timeline-width="timelineWidth"
       :track-control-width="LayoutConstants.TRACK_CONTROL_WIDTH"
       :wheel-container="timelineBody"
-      :enable-snapping="true"
+      @snapResultUpdate="handlePlayheadSnapResult"
     />
   </div>
 
@@ -300,6 +300,11 @@ const timelineWidth = ref<number>(LayoutConstants.TIMELINE_DEFAULT_WIDTH)
 // 时间刻度相关变量
 const scaleContainer = ref<HTMLElement>()
 
+// 处理时间刻度拖拽的吸附结果更新
+const handleTimeScaleSnapResult = (snapResult: any) => {
+  currentSnapResult.value = snapResult
+}
+
 // 初始化时间刻度模块
 const {
   timeMarks,
@@ -310,7 +315,7 @@ const {
   handleTimeScaleMouseMove,
   handleTimeScaleMouseUp,
   handleTimeScaleWheel,
-} = useTimelineTimeScale(scaleContainer)
+} = useTimelineTimeScale(scaleContainer, handleTimeScaleSnapResult)
 
 
 // 初始化项目操作模块
@@ -406,6 +411,11 @@ const {
 // 初始化网格线模块
 const { gridLines } = useTimelineGridLines(timelineWidth)
 
+// 处理播放头吸附结果更新
+const handlePlayheadSnapResult = (snapResult: any) => {
+  currentSnapResult.value = snapResult
+}
+
 /**
  * 更新时间轴宽度
  * 计算轨道内容区域的宽度（总宽度减去轨道控制区域的宽度）
@@ -436,6 +446,10 @@ function renderTimelineItem(item: UnifiedTimelineItemData | any, track: any) {
     onContextMenu: (event: MouseEvent, id: string) => handleTimelineItemContextMenu(event, id),
     // 拖拽现在由UnifiedTimelineClip内部处理，不需要事件监听器
     onResizeStart: handleTimelineItemResizeStart,
+    // 监听吸附结果更新（用于resize期间的吸附指示器）
+    onUpdateSnapResult: (snapResult: any) => {
+      currentSnapResult.value = snapResult
+    },
   }
 
   // 统一使用 UnifiedTimelineClip，它会根据 mediaType 自动选择合适的渲染器

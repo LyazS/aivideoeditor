@@ -56,7 +56,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onUnmounted, h } from 'vue'
+import { computed, ref, onUnmounted, h, inject } from 'vue'
 import type {
   UnifiedTimelineClipProps,
   ContentTemplateProps,
@@ -105,6 +105,7 @@ const emit = defineEmits<{
   contextMenu: [event: MouseEvent, id: string]
   dragStart: [event: DragEvent, id: string]
   resizeStart: [event: MouseEvent, id: string, direction: 'left' | 'right']
+  updateSnapResult: [snapResult: any]
 }>()
 
 // ==================== 响应式状态 ====================
@@ -289,6 +290,15 @@ function handleDragStart(event: DragEvent) {
     return
   }
 
+  // 检查是否有多个项目被选中，如果是则禁止拖拽
+  if (unifiedStore.selectedTimelineItemIds.size > 1) {
+    console.log('🚫 [UnifiedTimelineClip] 多选状态下禁止拖拽')
+    // 显示警告通知
+    unifiedStore.showWarning('多选状态下禁止拖拽操作')
+    event.preventDefault()
+    return
+  }
+
   // 暂停播放并处理拖拽
   pauseForEditing('时间轴项目拖拽')
   dragUtils.ensureItemSelected(props.data.id)
@@ -411,6 +421,11 @@ function handleResizeStart(direction: 'left' | 'right', event: MouseEvent) {
   tempDurationFrames.value = resizeStartDurationFrames.value
   tempResizePositionFrames.value = resizeStartPositionFrames.value
 
+  // 开始拖拽阶段，收集候选目标（用于调整大小时的吸附）
+  if (unifiedStore.snapConfig.enabled) {
+    unifiedStore.startSnapDrag([props.data.id])
+  }
+
   // 添加全局事件监听器
   document.addEventListener('mousemove', handleResize)
   document.addEventListener('mouseup', stopResize)
@@ -441,7 +456,32 @@ function handleResize(event: MouseEvent) {
     let newLeftFrames = unifiedStore.pixelToFrame(newLeftPixel, props.timelineWidth)
     newLeftFrames = Math.max(0, alignFramesToFrame(newLeftFrames))
 
-    // 吸附功能已禁用，直接使用计算的帧数
+    // 启用左边把柄吸附功能
+    if (unifiedStore.snapConfig.enabled) {
+      // 计算吸附位置
+      const snapOptions = {
+        excludeClipIds: [props.data.id],
+        customThreshold: unifiedStore.snapConfig.threshold
+      }
+      
+      const snapResult = unifiedStore.calculateSnapPosition(newLeftFrames, snapOptions)
+      if (snapResult) {
+        newLeftFrames = snapResult.frame
+        // 触发吸附指示器显示
+        emit('updateSnapResult', {
+          snapped: true,
+          frame: snapResult.frame,
+          snapPoint: snapResult.snapPoint,
+          distance: snapResult.distance
+        })
+      } else {
+        // 清除吸附指示器
+        emit('updateSnapResult', null)
+      }
+    } else {
+      // 清除吸附指示器
+      emit('updateSnapResult', null)
+    }
 
     newTimelinePositionFrames = newLeftFrames
     newDurationFrames =
@@ -455,7 +495,32 @@ function handleResize(event: MouseEvent) {
     let newRightFrames = unifiedStore.pixelToFrame(newRightPixel, props.timelineWidth)
     newRightFrames = alignFramesToFrame(newRightFrames)
 
-    // 吸附功能已禁用，直接使用计算的帧数
+    // 启用右边把柄吸附功能
+    if (unifiedStore.snapConfig.enabled) {
+      // 计算吸附位置
+      const snapOptions = {
+        excludeClipIds: [props.data.id],
+        customThreshold: unifiedStore.snapConfig.threshold
+      }
+      
+      const snapResult = unifiedStore.calculateSnapPosition(newRightFrames, snapOptions)
+      if (snapResult) {
+        newRightFrames = snapResult.frame
+        // 触发吸附指示器显示
+        emit('updateSnapResult', {
+          snapped: true,
+          frame: snapResult.frame,
+          snapPoint: snapResult.snapPoint,
+          distance: snapResult.distance
+        })
+      } else {
+        // 清除吸附指示器
+        emit('updateSnapResult', null)
+      }
+    } else {
+      // 清除吸附指示器
+      emit('updateSnapResult', null)
+    }
 
     newDurationFrames = newRightFrames - resizeStartPositionFrames.value
   }
@@ -541,7 +606,12 @@ function cleanupResize() {
   resizeDirection.value = null
   document.removeEventListener('mousemove', handleResize)
   document.removeEventListener('mouseup', stopResize)
-  // 吸附指示器已禁用
+  
+  // 结束拖拽阶段，清理缓存
+  if (unifiedStore.snapConfig.enabled) {
+    unifiedStore.endSnapDrag()
+    emit('updateSnapResult', null) // 清除吸附指示器
+  }
 
   if (direction) {
     // 这里可以发出resize-end事件，但新架构可能不需要
