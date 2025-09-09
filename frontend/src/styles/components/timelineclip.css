@@ -42,14 +42,16 @@
 
 /* Clip基础样式 - 主容器样式 */
 .unified-timeline-clip {
-  position: relative;
+  position: absolute;
   border-radius: var(--clip-border-radius);
   cursor: pointer;
   user-select: none;
   transition: all var(--clip-transition-duration) ease;
   z-index: 10;
-  width: 100%;
+  width: auto;
+  height: auto;
   display: block;
+  max-height: 100%;
 
   /* 基础边框和背景 */
   border: var(--clip-border-width) solid var(--clip-border-default);
@@ -282,4 +284,22 @@
   .clip-name-overlay {
     display: none;
   }
+}
+
+/* ==================== 拖拽预览样式 ==================== */
+
+/* 简单拖拽预览样式 - 用于动态创建的拖拽预览元素 */
+.simple-drag-preview {
+  position: fixed !important;
+  background: rgba(255, 107, 53, 0.8) !important;
+  border: 1px solid var(--color-clip-selected) !important;
+  border-radius: 4px !important;
+  pointer-events: none !important;
+  z-index: 9999 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  color: white !important;
+  font-size: 10px !important;
+  font-weight: bold !important;
 }

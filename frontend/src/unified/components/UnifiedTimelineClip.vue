@@ -304,7 +304,13 @@ function handleDragStart(event: DragEvent) {
   dragUtils.ensureItemSelected(props.data.id)
 
   // 设置拖拽数据
-  const dragOffset = { x: event.offsetX, y: event.offsetY }
+  // 计算鼠标位置相对于clip元素本身的偏移量
+  const clipElement = event.currentTarget as HTMLElement
+  const clipRect = clipElement.getBoundingClientRect()
+  const dragOffset = {
+    x: event.clientX - clipRect.left,
+    y: event.clientY - clipRect.top
+  }
   const dragData = dragUtils.setTimelineItemDragData(
     event,
     props.data.id,
@@ -352,24 +358,12 @@ function createSimpleDragPreview(): HTMLElement {
   const clipElement = dragUtils.getTimelineItemElement(props.data.id)
   const { width: clipWidth, height: clipHeight } = dragUtils.getElementDimensions(clipElement)
 
-  // 简单的预览样式
+  // 设置基础类名和动态尺寸
   preview.style.cssText = `
-    position: fixed;
     top: -1000px;
     left: -1000px;
     width: ${clipWidth}px;
     height: ${clipHeight}px;
-    background: rgba(255, 107, 53, 0.8);
-    border: 1px solid var(--color-clip-selected);
-    border-radius: 4px;
-    pointer-events: none;
-    z-index: 9999;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    font-size: 10px;
-    font-weight: bold;
   `
 
   // 简单的文本内容
@@ -580,7 +574,6 @@ async function stopResize() {
       }
 
       // 调用统一store的resize方法，传入完整的newTimeRange对象
-      // 注意：adjustKeyframesForDurationChange 和 updateWebAVAnimation 现在已整合到 ResizeTimelineItemCommand 中
       const success = await unifiedStore.resizeTimelineItemWithHistory(props.data.id, newTimeRange)
 
       if (success) {
@@ -649,28 +642,4 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-/* 剪辑样式 - 位置和尺寸由动态样式控制 */
-.unified-timeline-clip {
-  position: absolute;
-  width: auto;
-  height: auto;
-  /* 移除max-width限制，允许clip在高缩放级别下正常拉伸 */
-  max-height: 100%;
-}
-
-/* 简单拖拽预览样式 */
-:global(.simple-drag-preview) {
-  position: fixed !important;
-  background: rgba(255, 107, 53, 0.8) !important;
-  border: 1px solid var(--color-clip-selected) !important;
-  border-radius: 4px !important;
-  pointer-events: none !important;
-  z-index: 9999 !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  color: white !important;
-  font-size: 10px !important;
-  font-weight: bold !important;
-}
 </style>
