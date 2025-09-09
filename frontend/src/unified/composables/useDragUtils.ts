@@ -233,7 +233,7 @@ export function useDragUtils() {
   }
 
   /**
-   * 计算拖拽目标位置（已禁用吸附功能，保留接口用于重构）
+   * 计算拖拽目标位置（已集成吸附功能）
    */
   function calculateDropPosition(
     event: DragEvent,
@@ -320,26 +320,26 @@ export function useDragUtils() {
             const newRect = newTrackContent.getBoundingClientRect()
             // 重新计算mouseX相对于新轨道的位置
             const mouseXRelativeToNewTrack = event.clientX - newRect.left
-            // 使用新的相对位置计算时间（已禁用吸附）
-            const dropResult = calculateDropFrames(
-              mouseXRelativeToNewTrack,
-              timelineWidth,
-              dragOffset,
-              enableSnapping,
-              excludeClipIds,
-            )
-            return {
-              dropTime: dropResult.frame,
-              targetTrackId,
-              trackContent: newTrackContent,
-              snapResult: undefined, // 吸附功能已禁用
-            }
+            // 使用新的相对位置计算时间（已启用吸附）
+                    const dropResult = calculateDropFrames(
+                      mouseXRelativeToNewTrack,
+                      timelineWidth,
+                      dragOffset,
+                      enableSnapping,
+                      excludeClipIds,
+                    )
+                    return {
+                      dropTime: dropResult.frame,
+                      targetTrackId,
+                      trackContent: newTrackContent,
+                      snapResult: dropResult.snapResult,
+                    }
           }
         }
       }
     }
 
-    // 使用原始逻辑计算时间（已禁用吸附）
+    // 使用原始逻辑计算时间（已启用吸附）
     const dropResult = calculateDropFrames(
       mouseX,
       timelineWidth,
@@ -352,19 +352,19 @@ export function useDragUtils() {
       dropTime: dropResult.frame,
       targetTrackId,
       trackContent,
-      snapResult: undefined, // 吸附功能已禁用
+      snapResult: dropResult.snapResult,
     }
   }
 
   /**
-   * 计算拖拽帧数的辅助函数（已禁用吸附功能，保留接口用于重构）
+   * 计算拖拽帧数的辅助函数（已集成吸附功能）
    */
   function calculateDropFrames(
     mouseX: number,
     timelineWidth: number,
     dragOffset?: { x: number; y: number },
     enableSnapping: boolean = true,
-    excludeClipIds?: string[],
+    excludeClipIds: string[] = [],
   ): { frame: number; snapResult?: any } {
     // 使用帧数进行精确计算
     let dropFrames: number
@@ -383,8 +383,32 @@ export function useDragUtils() {
     // 对齐到帧边界
     dropFrames = alignFramesToFrame(dropFrames)
 
-    // 吸附功能已禁用，直接返回计算结果
-    return { frame: dropFrames, snapResult: undefined }
+    // 启用吸附功能
+    if (enableSnapping && unifiedStore.snapConfig.enabled) {
+      // 开始拖拽阶段，收集候选目标
+      unifiedStore.startSnapDrag(excludeClipIds)
+      
+      // 计算吸附位置
+      const snapOptions: any = {
+        excludeClipIds,
+        customThreshold: unifiedStore.snapConfig.threshold
+      }
+      
+      const snapResult = unifiedStore.calculateSnapPosition(dropFrames, snapOptions)
+      
+      // 结束拖拽阶段，清理缓存
+      unifiedStore.endSnapDrag()
+      
+      if (snapResult) {
+        return {
+          frame: snapResult.frame,
+          snapResult: snapResult // 返回完整的吸附结果
+        }
+      }
+    }
+    
+    // 返回原始位置（未吸附）
+    return { frame: dropFrames, snapResult: null }
   }
 
   /**

@@ -44,6 +44,12 @@ export function useTimelineDragHandling(
     newTrackId: string,
     originalStartTimeFrames: number,
   ) => Promise<void>,
+  currentSnapResult: Ref<{
+    snapped: boolean
+    frame: number
+    snapPoint?: any
+    distance?: number
+  } | null>,
 ) {
   const unifiedStore = useUnifiedStore()
   const dialogs = useDialogs()
@@ -90,12 +96,20 @@ export function useTimelineDragHandling(
 
     if (!dropPosition) {
       dragPreviewManager.hidePreview()
+      currentSnapResult.value = null // 清除吸附指示器
       return
     }
 
-    const { dropTime, targetTrackId } = dropPosition
+    const { dropTime, targetTrackId, snapResult } = dropPosition
 
-    // 吸附指示器已禁用
+    // 更新吸附指示器 - 启用吸附指示器
+    if (snapResult && unifiedStore.snapConfig.visualFeedback) {
+      console.log('🧲 库存媒体拖拽 - 显示吸附指示器:', snapResult)
+      currentSnapResult.value = snapResult
+    } else {
+      console.log('🧲 库存媒体拖拽 - 清除吸附指示器')
+      currentSnapResult.value = null
+    }
 
     // 使用统一的拖拽工具获取素材拖拽数据
     const mediaDragData = dragUtils.getCurrentMediaItemDragData()
@@ -156,6 +170,7 @@ export function useTimelineDragHandling(
     const currentDragData = dragUtils.getCurrentTimelineItemDragData()
     if (!currentDragData) {
       dragPreviewManager.hidePreview()
+      currentSnapResult.value = null // 清除吸附指示器
       return
     }
 
@@ -168,12 +183,18 @@ export function useTimelineDragHandling(
 
     if (!dropPosition) {
       dragPreviewManager.hidePreview()
+      currentSnapResult.value = null // 清除吸附指示器
       return
     }
 
-    const { dropTime: clipStartTime, targetTrackId } = dropPosition
+    const { dropTime: clipStartTime, targetTrackId, snapResult } = dropPosition
 
-    // 吸附指示器已禁用
+    // 更新吸附指示器 - 启用吸附指示器
+    if (snapResult && unifiedStore.snapConfig.visualFeedback) {
+      currentSnapResult.value = snapResult
+    } else {
+      currentSnapResult.value = null
+    }
 
     // 获取拖拽项目信息
     const draggedItem = unifiedStore.getTimelineItem(currentDragData.itemId)
@@ -228,8 +249,9 @@ export function useTimelineDragHandling(
     event.preventDefault()
     console.log('🎯 [UnifiedTimeline] 时间轴接收到拖拽事件')
 
-    // 清理统一预览
+    // 清理统一预览和吸附指示器
     dragPreviewManager.hidePreview()
+    currentSnapResult.value = null // 清除吸附指示器
 
     // 暂停播放以便进行拖拽操作
     pauseForEditing('时间轴拖拽放置')
@@ -468,6 +490,7 @@ export function useTimelineDragHandling(
 
     if (!timelineElement.contains(relatedTarget)) {
       dragPreviewManager.hidePreview()
+      currentSnapResult.value = null // 清除吸附指示器
     }
   }
 

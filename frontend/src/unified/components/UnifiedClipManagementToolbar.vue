@@ -70,6 +70,25 @@
 
     <!-- 调试按钮放在最右边 -->
     <div class="toolbar-section debug-section">
+      <!-- 吸附开关按钮 -->
+      <HoverButton
+        @click="toggleSnap"
+        :active="snapEnabled"
+        :title="snapButtonTitle"
+      >
+        <template #icon>
+          <!-- 吸附开启状态 - 实心磁铁图标 -->
+          <svg v-if="snapEnabled" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M17,2H7A3,3 0 0,0 4,5V19A3,3 0 0,0 7,22H17A3,3 0 0,0 20,19V5A3,3 0 0,0 17,2M17,4A1,1 0 0,1 18,5V19A1,1 0 0,1 17,20H7A1,1 0 0,1 6,19V5A1,1 0 0,1 7,4H17M12,7L9,10H12V14H15V10H18L15,7H12Z" />
+          </svg>
+          <!-- 吸附关闭状态 - 虚线磁铁图标 -->
+          <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="1.5" opacity="0.6">
+            <path d="M17,2H7A3,3 0 0,0 4,5V19A3,3 0 0,0 7,22H17A3,3 0 0,0 20,19V5A3,3 0 0,0 17,2M17,4A1,1 0 0,1 18,5V19A1,1 0 0,1 17,20H7A1,1 0 0,1 6,19V5A1,1 0 0,1 7,4H17M12,7L9,10H12V14H15V10H18L15,7H12Z" />
+          </svg>
+        </template>
+        吸附
+      </HoverButton>
+      
       <!-- <HoverButton @click="debugTimeline" title="在控制台打印时间轴配置信息">
          <template #icon>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
@@ -104,6 +123,24 @@ import HoverButton from '@/components/HoverButton.vue'
 const unifiedStore = useUnifiedStore()
 
 const timelineItems = computed(() => unifiedStore.timelineItems)
+
+// 吸附功能状态
+const snapEnabled = computed(() => unifiedStore.snapConfig.enabled)
+
+// 吸附按钮提示文本
+const snapButtonTitle = computed(() => {
+  if (snapEnabled.value) {
+    return '吸附功能已开启 - 片段会自动对齐到相邻片段边缘和时间轴起点'
+  } else {
+    return '吸附功能已关闭 - 点击开启吸附功能，拖拽时将自动对齐片段'
+  }
+})
+
+// 切换吸附功能
+function toggleSnap() {
+  unifiedStore.updateSnapConfig({ enabled: !snapEnabled.value })
+  console.log(`🧲 吸附功能${snapEnabled.value ? '已开启' : '已关闭'}`)
+}
 
 // 计算重叠时间轴项目数量（只计算同轨道内的重叠）
 const overlappingCount = computed(() => {

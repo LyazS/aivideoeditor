@@ -53,3 +53,6 @@ export {
 
 // ==================== 统一自动保存模块 ====================
 export { createUnifiedAutoSaveModule, type UnifiedAutoSaveModule } from './UnifiedAutoSaveModule'
+
+// ==================== 统一吸附模块 ====================
+export { createUnifiedSnapModule, type UnifiedSnapModule } from './UnifiedSnapModule'

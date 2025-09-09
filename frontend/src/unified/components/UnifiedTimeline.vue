@@ -163,6 +163,18 @@
           }"
         ></div>
       </div>
+
+    </div>
+
+    <!-- 吸附指示器 - 贯穿整个时间轴区域 -->
+    <div class="snap-indicator-container">
+      <UnifiedSnapIndicator
+        :snap-result="currentSnapResult"
+        :timeline-width="timelineWidth"
+        :total-duration-frames="unifiedStore.totalDurationFrames"
+        :zoom-level="unifiedStore.zoomLevel"
+        :scroll-offset="unifiedStore.scrollOffset"
+      />
     </div>
 
     <!-- 全局播放头组件 - 覆盖整个时间轴 -->
@@ -228,6 +240,7 @@ import type { UnifiedTimelineItemData } from '@/unified/timelineitem/TimelineIte
 
 import UnifiedPlayhead from './UnifiedPlayhead.vue'
 import UnifiedTimelineClip from './UnifiedTimelineClip.vue'
+import UnifiedSnapIndicator from './UnifiedSnapIndicator.vue'
 import HoverButton from '@/components/HoverButton.vue'
 import {
   ContextMenu,
@@ -261,6 +274,14 @@ defineOptions({
 
 const unifiedStore = useUnifiedStore()
 const dragPreviewManager = getDragPreviewManager()
+
+// 吸附指示器状态
+const currentSnapResult = ref<{
+  snapped: boolean
+  frame: number
+  snapPoint?: any
+  distance?: number
+} | null>(null)
 
 // 计算视口帧范围
 const viewportFrameRange = computed(() => {
@@ -339,6 +360,7 @@ const {
   createMediaClipFromMediaItem,
   moveSingleItem,
   moveMultipleItems,
+  currentSnapResult,
 )
 
 // 初始化右键菜单模块
@@ -427,6 +449,7 @@ onMounted(() => {
   window.addEventListener('resize', updateTimelineWidth)
   window.addEventListener('resize', updateContainerWidth)
   window.addEventListener('keydown', handleKeyDown)
+
 
   if (scaleContainer.value) {
     // 现在 handleTimeScaleWheel 是从 composable 返回的函数，直接使用即可
@@ -752,5 +775,32 @@ onUnmounted(() => {
   background-color: var(--color-border-secondary);
   opacity: 0.3;
   width: 1px;
+}
+
+/* 吸附指示器容器 - 贯穿整个时间轴区域 */
+.snap-indicator-container {
+  position: absolute;
+  top: 0; /* 从顶部开始，包括时间刻度 */
+  left: var(--track-control-width, 150px); /* 从轨道控制区域右侧开始 */
+  right: 0; /* 延伸到右侧 */
+  bottom: 0; /* 延伸到底部 */
+  pointer-events: none;
+  z-index: 1000; /* 确保在所有内容之上 */
+}
+
+/* 确保时间轴容器有明确的定位环境 */
+.timeline {
+  flex: 1;
+  background-color: var(--color-bg-secondary);
+  border-radius: var(--border-radius-medium);
+  overflow: hidden;
+  position: relative; /* 确保子元素的绝对定位基于此 */
+  display: flex;
+  flex-direction: column;
+}
+
+.snap-indicator-line {
+  background-image: linear-gradient(to bottom, #22c55e, #22c55e); /* 确保线条是实心的 */
+  box-shadow: 0 0 2px rgba(34, 197, 94, 0.5); /* 添加微妙发光效果提高可见性 */
 }
 </style>

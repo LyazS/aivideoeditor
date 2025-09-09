@@ -13,6 +13,7 @@ import { createUnifiedNotificationModule } from '@/unified/modules/UnifiedNotifi
 import { createUnifiedHistoryModule } from '@/unified/modules/UnifiedHistoryModule'
 import { createUnifiedAutoSaveModule } from '@/unified/modules/UnifiedAutoSaveModule'
 import { createUnifiedVideoThumbnailModule } from '@/unified/modules/UnifiedVideoThumbnailModule'
+import { createUnifiedSnapModule } from '@/unified/modules/UnifiedSnapModule'
 import { calculateTotalDurationFrames } from '@/unified/utils/durationUtils'
 import type { MediaType, MediaTypeOrUnknown } from '@/unified'
 import type { UnifiedTrackType } from '@/unified/track/TrackTypes'
@@ -213,6 +214,13 @@ export const useUnifiedStore = defineStore('unified', () => {
   const unifiedVideoThumbnailModule = createUnifiedVideoThumbnailModule(
     unifiedTimelineModule,
     unifiedMediaModule,
+  )
+
+  // 创建统一吸附管理模块
+  const unifiedSnapModule = createUnifiedSnapModule(
+    unifiedTimelineModule.timelineItems,
+    unifiedPlaybackModule.currentFrame,
+    unifiedConfigModule
   )
 
   /**
@@ -1434,5 +1442,24 @@ export const useUnifiedStore = defineStore('unified', () => {
 
     // ==================== 工具函数导出 ====================
     getThumbnailUrl: unifiedVideoThumbnailModule.getThumbnailUrl,
+
+    // ==================== 统一吸附模块状态和方法 ====================
+
+    // 吸附功能状态
+    snapConfig: unifiedSnapModule.snapConfig,
+    isSnapCalculating: unifiedSnapModule.isCalculating,
+    isSnapCacheUpdating: unifiedSnapModule.isCacheUpdating,
+
+    // 吸附功能方法
+    updateSnapConfig: unifiedSnapModule.updateSnapConfig,
+    calculateSnapPosition: unifiedSnapModule.calculateSnapPosition,
+    collectSnapTargets: unifiedSnapModule.collectSnapTargets,
+    clearSnapCache: unifiedSnapModule.clearCache,
+    isSnapCacheValid: unifiedSnapModule.isCacheValid,
+    getSnapSummary: unifiedSnapModule.getSnapSummary,
+
+    // 拖拽集成方法
+    startSnapDrag: unifiedSnapModule.startDrag,
+    endSnapDrag: unifiedSnapModule.endDrag,
   }
 })

@@ -79,17 +79,14 @@ export interface SnapConfig {
  * 吸附计算结果
  */
 export interface SnapResult {
-  // 是否发生了吸附
-  snapped: boolean
-
   // 吸附后的帧数
   frame: number
 
-  // 吸附点信息（如果发生了吸附）
-  snapPoint?: SnapPoint
+  // 吸附点信息
+  snapPoint: SnapPoint
 
   // 吸附距离（帧数）
-  distance?: number
+  distance: number
 }
 
 /**
@@ -141,6 +138,6 @@ export const DEFAULT_SNAP_CONFIG: SnapConfig = {
   keyframes: true,
   playhead: false, // 禁用播放头吸附
   timelineStart: true,
-  threshold: 10, // 10像素
+  threshold: 20, // 20像素
   visualFeedback: true,
 }
