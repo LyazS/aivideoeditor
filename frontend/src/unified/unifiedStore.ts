@@ -13,7 +13,6 @@ import { createUnifiedNotificationModule } from '@/unified/modules/UnifiedNotifi
 import { createUnifiedHistoryModule } from '@/unified/modules/UnifiedHistoryModule'
 import { createUnifiedAutoSaveModule } from '@/unified/modules/UnifiedAutoSaveModule'
 import { createUnifiedVideoThumbnailModule } from '@/unified/modules/UnifiedVideoThumbnailModule'
-import { createUnifiedSnapModule } from '@/unified/modules/UnifiedSnapModule'
 import { calculateTotalDurationFrames } from '@/unified/utils/durationUtils'
 import type { MediaType, MediaTypeOrUnknown } from '@/unified'
 import type { UnifiedTrackType } from '@/unified/track/TrackTypes'
@@ -215,9 +214,6 @@ export const useUnifiedStore = defineStore('unified', () => {
     unifiedTimelineModule,
     unifiedMediaModule,
   )
-
-  // 创建统一吸附模块
-  const unifiedSnapModule = createUnifiedSnapModule()
 
   /**
    * 媒体项目统计信息
@@ -1430,35 +1426,6 @@ export const useUnifiedStore = defineStore('unified', () => {
     // ==================== 模块生命周期管理 ====================
 
     destroyAllModules, // 新增：销毁所有模块资源的方法
-
-    // ==================== 统一吸附模块状态和方法 ====================
-
-    // 吸附状态
-    snapConfig: unifiedSnapModule.snapConfig,
-    isSnapEnabled: unifiedSnapModule.isSnapEnabled,
-    currentSnapConfig: unifiedSnapModule.currentSnapConfig,
-    snapResult: unifiedSnapModule.snapResult,
-
-    // 吸附管理方法
-    updateSnapConfig: unifiedSnapModule.updateSnapConfig,
-    toggleSnapEnabled: unifiedSnapModule.toggleSnapEnabled,
-    calculateSnapWithTimelineItems: (
-      sourceFrame: number,
-      timelineItems: UnifiedTimelineItemData[],
-      options?: any,
-      customFrameToPixel?: (frames: number, timelineWidth: number) => number,
-      timelineWidth?: number
-    ) => unifiedSnapModule.calculateSnapWithTimelineItems(
-      sourceFrame,
-      timelineItems,
-      options,
-      customFrameToPixel || ((frames: number, width: number) =>
-        frameToPixel(frames, width, totalDurationFrames.value, unifiedViewportModule.zoomLevel.value, unifiedViewportModule.scrollOffset.value)
-      ),
-      timelineWidth || 0
-    ),
-    clearCurrentSnap: unifiedSnapModule.clearCurrentSnap,
-    getSnapSummary: unifiedSnapModule.getSnapSummary,
 
     // ==================== 视频缩略图方法 ====================
     requestThumbnails: unifiedVideoThumbnailModule.requestThumbnails,

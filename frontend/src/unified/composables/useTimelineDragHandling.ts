@@ -95,41 +95,7 @@ export function useTimelineDragHandling(
 
     const { dropTime, targetTrackId } = dropPosition
 
-    // 执行吸附计算
-    console.log('🧲 [TimelineDrag] 执行吸附计算，原始位置:', dropTime)
-    console.log('🧲 [TimelineDrag] 吸附功能状态:', unifiedStore.isSnapEnabled)
-    console.log('🧲 [TimelineDrag] 时间轴宽度:', timelineWidth.value)
-    console.log('🧲 [TimelineDrag] 时间轴项目数量:', unifiedStore.timelineItems.length)
-    
-    const timelineItems = unifiedStore.timelineItems
-    console.log('🧲 [TimelineDrag] 时间轴项目详情:', timelineItems.map(item => {
-      let name = 'Clip'
-      if (item.config && typeof item.config === 'object' && 'name' in item.config) {
-        name = String(item.config.name)
-      }
-      return {
-        id: item.id,
-        name: name,
-        start: item.timeRange.timelineStartTime,
-        end: item.timeRange.timelineEndTime,
-        mediaType: item.mediaType
-      }
-    }))
-    
-    const snapResult = unifiedStore.calculateSnapWithTimelineItems(
-      dropTime,
-      timelineItems,
-      {},
-      unifiedStore.frameToPixel,
-      timelineWidth.value
-    )
-    
-    console.log('🧲 [TimelineDrag] 吸附结果:', JSON.stringify(snapResult, null, 2))
-    
-    const finalDropTime = snapResult.snapped ? snapResult.frame : dropTime
-    if (snapResult.snapped) {
-      console.log(`🧲 [TimelineDrag] 吸附成功：从 ${dropTime} 到 ${finalDropTime}`)
-    }
+    // 吸附指示器已禁用
 
     // 使用统一的拖拽工具获取素材拖拽数据
     const mediaDragData = dragUtils.getCurrentMediaItemDragData()
@@ -143,7 +109,7 @@ export function useTimelineDragHandling(
       // 检测素材库拖拽的重叠冲突
       const trackItems = unifiedStore.getTimelineItemsByTrack(targetTrackId)
       const conflicts = detectMediaItemConflicts(
-        finalDropTime,
+        dropTime,
         targetTrackId,
         mediaDragData.duration,
         trackItems,
@@ -154,7 +120,7 @@ export function useTimelineDragHandling(
       const previewData = dragUtils.createDragPreviewData(
         mediaDragData.name,
         mediaDragData.duration,
-        finalDropTime,
+        dropTime,
         targetTrackId,
         isConflict,
         false,
@@ -169,7 +135,7 @@ export function useTimelineDragHandling(
       const previewData = dragUtils.createDragPreviewData(
         '素材预览',
         5,
-        finalDropTime,
+        dropTime,
         targetTrackId,
         false,
         false,
@@ -207,24 +173,7 @@ export function useTimelineDragHandling(
 
     const { dropTime: clipStartTime, targetTrackId } = dropPosition
 
-    // 执行吸附计算
-    const excludeClipIds = currentDragData?.selectedItems || []
-    console.log('🧲 [TimelineDrag-Item] 执行吸附计算，原始位置:', clipStartTime)
-    console.log('🧲 [TimelineDrag-Item] 排除的片段ID:', excludeClipIds)
-    
-    const timelineItems = unifiedStore.timelineItems
-    console.log('🧲 [TimelineDrag-Item] 可用时间轴项目数量:', timelineItems.length)
-    
-    const snapResult = unifiedStore.calculateSnapWithTimelineItems(
-      clipStartTime,
-      timelineItems,
-      { excludeClipIds },
-      unifiedStore.frameToPixel,
-      timelineWidth.value
-    )
-    console.log('🧲 [TimelineDrag-Item] 吸附结果:', JSON.stringify(snapResult, null, 2))
-    
-    const finalClipStartTime = snapResult.snapped ? snapResult.frame : clipStartTime
+    // 吸附指示器已禁用
 
     // 获取拖拽项目信息
     const draggedItem = unifiedStore.getTimelineItem(currentDragData.itemId)
@@ -235,7 +184,7 @@ export function useTimelineDragHandling(
       // 检测冲突
       const trackItems = unifiedStore.getTimelineItemsByTrack(targetTrackId)
       const conflicts = detectTimelineConflicts(
-        finalClipStartTime,
+        clipStartTime,
         targetTrackId,
         currentDragData,
         trackItems,
@@ -257,7 +206,7 @@ export function useTimelineDragHandling(
       const previewData = dragUtils.createDragPreviewData(
         name,
         duration,
-        finalClipStartTime,
+        clipStartTime,
         targetTrackId,
         isConflict,
         currentDragData.selectedItems.length > 1,
@@ -337,18 +286,6 @@ export function useTimelineDragHandling(
 
     const { dropTime, targetTrackId } = dropPosition
 
-    // 执行吸附计算
-    const currentDragData = dragUtils.getCurrentTimelineItemDragData()
-    const excludeClipIds = currentDragData?.selectedItems || []
-    const snapResult = unifiedStore.calculateSnapWithTimelineItems(
-      dropTime,
-      unifiedStore.timelineItems,
-      { excludeClipIds },
-      unifiedStore.frameToPixel,
-      timelineWidth.value
-    )
-    const finalDropTime = snapResult.snapped ? snapResult.frame : dropTime
-
     // 验证轨道类型兼容性
     const draggedItem = unifiedStore.getTimelineItem(dragData.itemId)
     if (draggedItem) {
@@ -411,11 +348,11 @@ export function useTimelineDragHandling(
       if (dragData.selectedItems.length > 1) {
         // 多选拖拽
         console.log('🔄 [UnifiedTimeline] 执行多选项目移动')
-        await moveMultipleItems(dragData.selectedItems, finalDropTime, targetTrackId, dragData.startTime)
+        await moveMultipleItems(dragData.selectedItems, dropTime, targetTrackId, dragData.startTime)
       } else {
         // 单个拖拽
         console.log('🔄 [UnifiedTimeline] 执行单个项目移动')
-        await moveSingleItem(dragData.itemId, finalDropTime, targetTrackId)
+        await moveSingleItem(dragData.itemId, dropTime, targetTrackId)
       }
       console.log('✅ [UnifiedTimeline] 时间轴项目移动完成')
     } catch (error) {
@@ -506,24 +443,14 @@ export function useTimelineDragHandling(
 
       const { dropTime, targetTrackId } = dropPosition
 
-      // 执行吸附计算（素材拖拽也需要吸附）
-      const snapResult = unifiedStore.calculateSnapWithTimelineItems(
-        dropTime,
-        unifiedStore.timelineItems,
-        {},
-        unifiedStore.frameToPixel,
-        timelineWidth.value
-      )
-      const finalDropTime = snapResult.snapped ? snapResult.frame : dropTime
-
       console.log(`🎯 拖拽素材到时间轴: ${mediaDragData.name}`)
-      console.log(`📍 拖拽位置: 对应帧数: ${finalDropTime}, 目标轨道: ${targetTrackId}`)
+      console.log(`📍 拖拽位置: 对应帧数: ${dropTime}, 目标轨道: ${targetTrackId}`)
 
       // 如果拖拽位置超出当前时间轴长度，动态扩展时间轴
       const bufferFrames = 300 // 预留10秒缓冲（300帧）
-      unifiedStore.expandTimelineIfNeededFrames(finalDropTime + bufferFrames)
+      unifiedStore.expandTimelineIfNeededFrames(dropTime + bufferFrames)
 
-      await createMediaClipFromMediaItem(mediaItem.id, finalDropTime, targetTrackId)
+      await createMediaClipFromMediaItem(mediaItem.id, dropTime, targetTrackId)
     } catch (error) {
       console.error('Failed to parse media item data:', error)
       dialogs.showError('拖拽失败：拖拽数据格式错误')
@@ -542,9 +469,6 @@ export function useTimelineDragHandling(
     if (!timelineElement.contains(relatedTarget)) {
       dragPreviewManager.hidePreview()
     }
-    
-    // 清除当前吸附结果
-    unifiedStore.clearCurrentSnap()
   }
 
   return {

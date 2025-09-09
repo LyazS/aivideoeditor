@@ -172,16 +172,6 @@
       :wheel-container="timelineBody"
       :enable-snapping="true"
     />
-    
-    <!-- 吸附指示器组件 -->
-    <SnapIndicator
-      ref="snapIndicatorRef"
-      :snap-points="currentSnapPoints"
-      :frame-to-pixel="unifiedStore.frameToPixel"
-      :timeline-width="timelineWidth"
-      :enabled="true"
-      :track-control-width="LayoutConstants.TRACK_CONTROL_WIDTH"
-    />
   </div>
 
   <!-- 统一右键菜单 -->
@@ -230,13 +220,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, h, computed, watch } from 'vue'
+import { ref, onMounted, onUnmounted, h, computed } from 'vue'
 import { calculateViewportFrameRange } from '@/unified/utils/thumbnailAlgorithms'
 import { useUnifiedStore } from '@/unified/unifiedStore'
 import { getDragPreviewManager } from '@/unified/composables'
 import type { UnifiedTimelineItemData } from '@/unified/timelineitem/TimelineItemData'
-import type { SnapPoint } from '@/types/snap'
-import SnapIndicator from '@/components/SnapIndicator.vue'
 
 import UnifiedPlayhead from './UnifiedPlayhead.vue'
 import UnifiedTimelineClip from './UnifiedTimelineClip.vue'
@@ -273,32 +261,6 @@ defineOptions({
 
 const unifiedStore = useUnifiedStore()
 const dragPreviewManager = getDragPreviewManager()
-
-// 吸附功能（用于指示器显示）
-const currentSnapPoints = ref<SnapPoint[]>([])
-const snapIndicatorRef = ref()
-
-// 监听吸附结果变化，更新视觉反馈
-watch(
-  () => unifiedStore.snapResult,
-  (result) => {
-    console.log('🧲 [Timeline] 吸附结果变化:', result)
-    if (result && result.snapped && result.snapPoint) {
-      console.log('🧲 [Timeline] 显示吸附指示器:', result.snapPoint)
-      currentSnapPoints.value = [result.snapPoint as SnapPoint]
-      if (snapIndicatorRef.value) {
-        snapIndicatorRef.value.showSnapIndicator(result.snapPoint as SnapPoint)
-      }
-    } else {
-      currentSnapPoints.value = []
-      if (snapIndicatorRef.value) {
-        snapIndicatorRef.value.hideAllIndicators()
-      }
-    }
-  },
-  { deep: true }
-)
-
 
 // 计算视口帧范围
 const viewportFrameRange = computed(() => {
@@ -556,12 +518,6 @@ onUnmounted(() => {
   margin: 0;
   font-size: var(--font-size-base);
   color: var(--color-text-primary);
-}
-
-.track-manager-controls {
-  display: flex;
-  gap: var(--spacing-xs);
-  align-items: center;
 }
 
 /* 旧的添加轨道按钮样式已移除，现在使用 HoverButton 组件 */
