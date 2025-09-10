@@ -21,6 +21,3 @@ export {
   isPlayheadInTimelineItem,
   showUserWarning,
 } from './keyframes'
-
-// 导出便捷工具函数
-export * from '@/unified/utils/keyframeCommandUtils'

@@ -650,30 +650,12 @@ const updateTextContent = async () => {
       localText.value.substring(0, 20) + '...',
     )
 
-    // 导入统一文本命令
-    const { UpdateTextCommand } = await import('@/unified/modules/commands/UpdateTextCommand')
-
-    // 创建更新命令
-    const command = new UpdateTextCommand(
+    // 使用历史记录操作更新文本内容
+    await unifiedStore.updateTextContentWithHistory(
       props.selectedTimelineItem.id,
       localText.value.trim(),
-      {},
-      {
-        getTimelineItem: (id: string) =>
-          unifiedStore.getTimelineItem(id) as UnifiedTimelineItemData<'text'> | undefined,
-        setupBidirectionalSync: unifiedStore.setupBidirectionalSync,
-      },
-      {
-        addSprite: unifiedStore.addSpriteToCanvas,
-        removeSprite: unifiedStore.removeSpriteFromCanvas,
-      },
-      {
-        videoResolution: unifiedStore.videoResolution,
-      },
+      {} // 样式更新为空对象，只更新文本内容
     )
-
-    // 执行命令（带历史记录）
-    await unifiedStore.executeCommand(command)
 
     console.log('✅ [UnifiedTextClipProperties] 文本内容更新成功')
   } catch (error) {
@@ -698,30 +680,11 @@ const updateTextStyle = async () => {
 
     console.log('🎨 [UnifiedTextClipProperties] 更新文本样式:', styleToUpdate)
 
-    // 导入统一文本命令
-    const { UpdateTextCommand } = await import('@/unified/modules/commands/UpdateTextCommand')
-
-    // 创建更新命令
-    const command = new UpdateTextCommand(
+    // 使用历史记录操作更新文本样式
+    await unifiedStore.updateTextStyleWithHistory(
       props.selectedTimelineItem.id,
-      props.selectedTimelineItem.config.text, // 保持文本内容不变
-      styleToUpdate,
-      {
-        getTimelineItem: (id: string) =>
-          unifiedStore.getTimelineItem(id) as UnifiedTimelineItemData<'text'> | undefined,
-        setupBidirectionalSync: unifiedStore.setupBidirectionalSync,
-      },
-      {
-        addSprite: unifiedStore.addSpriteToCanvas,
-        removeSprite: unifiedStore.removeSpriteFromCanvas,
-      },
-      {
-        videoResolution: unifiedStore.videoResolution,
-      },
+      styleToUpdate
     )
-
-    // 执行命令（带历史记录）
-    await unifiedStore.executeCommand(command)
 
     console.log('✅ [UnifiedTextClipProperties] 文本样式更新成功')
   } catch (error) {

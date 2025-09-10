@@ -155,11 +155,7 @@ export const useUnifiedStore = defineStore('unified', () => {
   const unifiedHistoryModule = createUnifiedHistoryModule(unifiedNotificationModule)
 
   // 创建统一选择管理模块（需要在unifiedHistoryModule之后创建）
-  const unifiedSelectionModule = createUnifiedSelectionModule(
-    unifiedTimelineModule.getTimelineItem,
-    unifiedMediaModule.getMediaItem,
-    unifiedHistoryModule.executeCommand,
-  )
+  const unifiedSelectionModule = createUnifiedSelectionModule(unifiedTimelineModule.getTimelineItem)
 
   // 创建统一自动保存模块（需要在项目模块之后创建）
   const unifiedAutoSaveModule = createUnifiedAutoSaveModule(
@@ -324,6 +320,26 @@ export const useUnifiedStore = defineStore('unified', () => {
     autoArrangeTrackWithHistory: historyOperations.autoArrangeTrackWithHistory,
     toggleTrackVisibilityWithHistory: historyOperations.toggleTrackVisibilityWithHistory,
     toggleTrackMuteWithHistory: historyOperations.toggleTrackMuteWithHistory,
+    updateTextContentWithHistory: historyOperations.updateTextContentWithHistory,
+    updateTextStyleWithHistory: historyOperations.updateTextStyleWithHistory,
+    selectTimelineItemsWithHistory: (itemIds: string[], mode?: 'replace' | 'toggle') => {
+      return historyOperations.selectTimelineItemsWithHistory(
+        itemIds,
+        mode,
+        {
+          selectedTimelineItemIds: unifiedSelectionModule.selectedTimelineItemIds,
+          selectTimelineItems: unifiedSelectionModule.selectTimelineItems,
+        },
+        unifiedTimelineModule.getTimelineItem,
+        unifiedMediaModule.getMediaItem,
+      )
+    },
+    // 关键帧历史记录方法
+    createKeyframeWithHistory: historyOperations.createKeyframeWithHistory,
+    deleteKeyframeWithHistory: historyOperations.deleteKeyframeWithHistory,
+    updatePropertyWithHistory: historyOperations.updatePropertyWithHistory,
+    clearAllKeyframesWithHistory: historyOperations.clearAllKeyframesWithHistory,
+    toggleKeyframeWithHistory: historyOperations.toggleKeyframeWithHistory,
 
     // ==================== 统一媒体模块状态和方法 ====================
 
@@ -593,7 +609,6 @@ export const useUnifiedStore = defineStore('unified', () => {
     canRedo: unifiedHistoryModule.canRedo,
 
     // 历史操作方法
-    executeCommand: unifiedHistoryModule.executeCommand,
     undo: unifiedHistoryModule.undo,
     redo: unifiedHistoryModule.redo,
     clearHistory: unifiedHistoryModule.clear,
@@ -612,8 +627,6 @@ export const useUnifiedStore = defineStore('unified', () => {
 
     // 统一选择API
     selectTimelineItems: unifiedSelectionModule.selectTimelineItems,
-    selectTimelineItemsWithHistory: unifiedSelectionModule.selectTimelineItemsWithHistory,
-    syncAVCanvasSelection: unifiedSelectionModule.syncAVCanvasSelection,
 
     // 兼容性选择方法
     selectTimelineItem: unifiedSelectionModule.selectTimelineItem,
