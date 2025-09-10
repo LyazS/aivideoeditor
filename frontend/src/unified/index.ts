@@ -222,6 +222,9 @@ export {
 
   // 播放控制
   usePlaybackControls,
+
+  // 历史记录操作
+  createHistoryOperations,
 } from './composables'
 
 // ==================== 统一类型定义 ====================
