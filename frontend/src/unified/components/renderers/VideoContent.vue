@@ -1,19 +1,26 @@
 <!-- VideoContentTemplate.vue - 多缩略图版本 -->
 <template>
   <div class="video-content" :class="{ selected: isSelected }">
-    <!-- 多缩略图容器 -->
-    <div class="multi-thumbnails-container" :style="{ height: `${THUMBNAIL_CONSTANTS.HEIGHT}px`, top: `${THUMBNAIL_CONSTANTS.TOP_OFFSET}px` }">
+    <!-- 多缩略图容器 - 添加了拖拽事件处理 -->
+    <div
+      class="multi-thumbnails-container"
+      :style="{ height: `${THUMBNAIL_CONSTANTS.HEIGHT}px`, top: `${THUMBNAIL_CONSTANTS.TOP_OFFSET}px` }"
+      @dragstart.stop.prevent="handleInnerDrag"
+    >
       <div
         v-for="item in thumbnailLayout"
         :key="item.index"
         class="thumbnail-slot"
         :style="getThumbnailSlotStyle(item)"
       >
-        <!-- 实时生成的缩略图 -->
+        <!-- 实时生成的缩略图 - 阻止拖拽行为 -->
         <img
           v-if="getThumbnailUrl(item)"
           :src="getThumbnailUrl(item)!"
           class="thumbnail-image"
+          :draggable="false"
+          @mousedown.stop
+          @dragstart.stop.prevent
         />
         <div v-else class="thumbnail-placeholder">
           <!-- 生成中的加载状态 -->
@@ -149,6 +156,18 @@ watch(thumbnailLayout, newLayout => {
     })
   }
 }, { deep: true, immediate: true })
+
+/**
+* 处理内部元素的拖拽事件 - 阻止浏览器默认行为
+* 确保拖拽时显示整个clip的预览，而不是单个缩略图
+*/
+function handleInnerDrag(event: DragEvent) {
+// 阻止内部元素的拖拽行为，让整个clip处理拖拽
+event.preventDefault()
+event.stopPropagation()
+// 返回false阻止默认拖拽行为
+return false
+}
 </script>
 
 <style scoped>

@@ -322,10 +322,6 @@ function handleDragStart(event: DragEvent) {
 
   console.log('📦 [UnifiedTimelineClip] 设置拖拽数据:', dragData)
 
-  // 创建简单的拖拽预览图像
-  const dragImage = createSimpleDragPreview()
-  event.dataTransfer!.setDragImage(dragImage, dragOffset.x, dragOffset.y)
-
   // 设置拖拽状态
   isDragging.value = true
   emit('dragStart', event, props.data.id)
@@ -340,56 +336,6 @@ function handleDragEnd(_event: DragEvent) {
   // 清理拖拽状态
   isDragging.value = false
   dragUtils.clearDragData()
-  removeSimpleDragPreview()
-
-  // 吸附指示器已禁用
-}
-
-/**
- * 创建简单的拖拽预览图像
- */
-function createSimpleDragPreview(): HTMLElement {
-  const selectedCount = unifiedStore.selectedTimelineItemIds.size
-  const preview = document.createElement('div')
-
-  preview.className = 'simple-drag-preview'
-
-  // 获取当前clip的实际尺寸
-  const clipElement = dragUtils.getTimelineItemElement(props.data.id)
-  const { width: clipWidth, height: clipHeight } = dragUtils.getElementDimensions(clipElement)
-
-  // 设置基础类名和动态尺寸
-  preview.style.cssText = `
-    top: -1000px;
-    left: -1000px;
-    width: ${clipWidth}px;
-    height: ${clipHeight}px;
-  `
-
-  // 简单的文本内容
-  if (selectedCount > 1) {
-    preview.textContent = `${selectedCount} 项目`
-  } else {
-    const mediaItem = unifiedStore.getMediaItem(props.data.mediaItemId)
-    const clipName = mediaItem?.name || 'Clip'
-    preview.textContent = clipName.length > 8 ? clipName.substring(0, 6) + '..' : clipName
-  }
-
-  document.body.appendChild(preview)
-
-  // 设置清理定时器
-  setTimeout(() => {
-    removeSimpleDragPreview()
-  }, 100)
-
-  return preview
-}
-
-function removeSimpleDragPreview() {
-  const preview = document.querySelector('.simple-drag-preview')
-  if (preview && document.body.contains(preview)) {
-    document.body.removeChild(preview)
-  }
 }
 
 /**

@@ -2,11 +2,13 @@
 <template>
   <div class="audio-content" :class="{ selected: isSelected }">
     <!-- 波形Canvas容器 -->
+    <!-- 音频波形Canvas - 添加拖拽事件处理 -->
     <canvas
       ref="waveformCanvas"
       :height="DEFAULT_TRACK_HEIGHTS.audio - 2 * DEFAULT_TRACK_PADDING"
       class="waveform-canvas"
       :style="{ left: canvasLeft + 'px' }"
+      @dragstart.stop.prevent="handleInnerDrag"
     />
   </div>
 </template>
@@ -107,6 +109,17 @@ onMounted(() => {
 onUnmounted(() => {
   throttledRenderWaveform.cancel()
 })
+
+/**
+ * 处理内部元素的拖拽事件 - 阻止浏览器默认行为
+ * 确保拖拽时显示整个clip的预览，而不是Canvas元素的虚影
+ */
+function handleInnerDrag(event: DragEvent) {
+  // 阻止Canvas元素的拖拽行为，让整个clip处理拖拽
+  event.preventDefault()
+  event.stopPropagation()
+  return false
+}
 
 // ==================== 音频波形渲染工具函数 ====================
 // 基于直接PCM数据获取的简化音频波形渲染方案
