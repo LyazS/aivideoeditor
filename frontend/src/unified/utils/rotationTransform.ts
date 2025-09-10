@@ -80,4 +80,3 @@ export function isValidDegrees(degrees: number): boolean {
 export function isValidRadians(radians: number): boolean {
   return radians >= -Math.PI && radians <= Math.PI && !isNaN(radians)
 }
-

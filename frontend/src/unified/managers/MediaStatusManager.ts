@@ -20,15 +20,19 @@ export class MediaStatusManager {
    */
   transitionTo(mediaItem: UnifiedMediaItemData, newStatus: MediaStatus, context?: any): boolean {
     if (!this.validateTransition(mediaItem.mediaStatus, newStatus)) {
-      console.warn(`⚠️ [MediaStatusManager] 无效状态转换: ${mediaItem.name} ${mediaItem.mediaStatus} → ${newStatus}`)
+      console.warn(
+        `⚠️ [MediaStatusManager] 无效状态转换: ${mediaItem.name} ${mediaItem.mediaStatus} → ${newStatus}`,
+      )
       return false
     }
 
     const oldStatus = mediaItem.mediaStatus
     mediaItem.mediaStatus = newStatus
 
-    console.log(`🔄 [MediaStatusManager] 媒体状态转换: ${mediaItem.name} ${oldStatus} → ${newStatus}`)
-    
+    console.log(
+      `🔄 [MediaStatusManager] 媒体状态转换: ${mediaItem.name} ${oldStatus} → ${newStatus}`,
+    )
+
     if (context) {
       console.log(`📝 [MediaStatusManager] 转换上下文:`, context)
     }
@@ -94,9 +98,11 @@ export class MediaStatusManager {
   resetStatus(mediaItem: UnifiedMediaItemData, targetStatus: MediaStatus = 'pending'): boolean {
     // 只有错误状态、取消状态或缺失状态才能重置
     const resettableStatuses: MediaStatus[] = ['error', 'cancelled', 'missing']
-    
+
     if (!resettableStatuses.includes(mediaItem.mediaStatus)) {
-      console.warn(`⚠️ [MediaStatusManager] 无法重置状态: ${mediaItem.name} 当前状态 ${mediaItem.mediaStatus} 不允许重置`)
+      console.warn(
+        `⚠️ [MediaStatusManager] 无法重置状态: ${mediaItem.name} 当前状态 ${mediaItem.mediaStatus} 不允许重置`,
+      )
       return false
     }
 

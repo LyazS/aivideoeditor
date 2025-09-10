@@ -1,25 +1,33 @@
 import { ref, computed, type Ref } from 'vue'
-import type { UnifiedProjectConfig, UnifiedMediaReference } from '@/unified/project/types'
+import type {
+  UnifiedProjectConfig,
+  UnifiedProjectContent,
+  UnifiedMediaReference,
+} from '@/unified/project/types'
 import { projectFileOperations } from '@/unified/utils/ProjectFileOperations'
 import type { VideoResolution } from '@/unified/types'
-import { TimelineItemFactory } from '@/unified/timelineitem'
+import { TimelineItemFactory, TimelineItemQueries } from '@/unified/timelineitem'
 import type { UnifiedTimelineItemData } from '@/unified/timelineitem/TimelineItemData'
 import type { UnifiedTrackData, UnifiedTrackType } from '@/unified/track/TrackTypes'
+import { createUnifiedTrackData } from '@/unified/track/TrackTypes'
 import type { UnifiedMediaItemData } from '@/unified/mediaitem/types'
 import type { MediaType } from '@/unified/mediaitem/types'
 import { globalProjectMediaManager } from '@/unified/utils/ProjectMediaManager'
+import { useProjectThumbnailService } from '@/unified/composables/useProjectThumbnailService'
 import {
   DataSourceFactory,
   DataSourceQueries,
   extractSourceData,
 } from '@/unified/sources/DataSourceTypes'
 import type { VisibleSprite } from '@webav/av-cliper'
+import { VideoVisibleSprite, AudioVisibleSprite } from '@/unified/visiblesprite'
 import {
-  setupCommandMediaSync,
+  setupMediaSync,
   cleanupCommandMediaSync,
-} from '@/unified/composables/useCommandMediaSync'
-import { setupProjectLoadMediaSync, cleanupProjectLoadMediaSync } from '@/unified/composables/useProjectLoadMediaSync'
+  cleanupProjectLoadMediaSync,
+} from '@/unified/utils/unifiedMediaSyncManager'
 import { generateCommandId } from '@/unified/utils/idGenerator'
+import { framesToSeconds } from '@/unified/utils/timeUtils'
 
 /**
  * 统一项目管理模块
@@ -34,26 +42,21 @@ export function createUnifiedProjectModule(
     projectUpdatedAt: Ref<string>
     projectVersion: Ref<string>
     projectThumbnail: Ref<string | undefined | null>
-    projectDuration: Ref<number>
     videoResolution: Ref<VideoResolution>
     frameRate: Ref<number>
     timelineDurationFrames: Ref<number>
     restoreFromProjectSettings: (pid: string, pconifg: UnifiedProjectConfig) => void
   },
-  timelineModule?: {
+  timelineModule: {
     timelineItems: Ref<UnifiedTimelineItemData<MediaType>[]>
     addTimelineItem: (item: UnifiedTimelineItemData<MediaType>) => Promise<void>
+    setupTimelineItemSprite: (item: UnifiedTimelineItemData<MediaType>) => Promise<void>
   },
-  trackModule?: {
+  trackModule: {
     tracks: Ref<UnifiedTrackData[]>
-    addTrack: (
-      type: UnifiedTrackType,
-      name?: string,
-      position?: number,
-      id?: string,
-    ) => UnifiedTrackData
+    addTrack: (trackData: UnifiedTrackData, position?: number) => UnifiedTrackData
   },
-  mediaModule?: {
+  mediaModule: {
     mediaItems: Ref<UnifiedMediaItemData[]>
     createUnifiedMediaItemData: (
       id: string,
@@ -61,14 +64,16 @@ export function createUnifiedProjectModule(
       source: any,
       options?: any,
     ) => UnifiedMediaItemData
+    getMediaItem: (id: string) => UnifiedMediaItemData | undefined
     addMediaItem: (item: UnifiedMediaItemData) => void
     startMediaProcessing: (item: UnifiedMediaItemData) => void
   },
-  webavModule?: {
+  webavModule: {
     addSprite: (sprite: VisibleSprite) => Promise<boolean>
     removeSprite: (sprite: VisibleSprite) => boolean
   },
 ) {
+  const thumbnailService = useProjectThumbnailService()
   // ==================== 状态定义 ====================
 
   // 项目保存状态
@@ -152,39 +157,62 @@ export function createUnifiedProjectModule(
 
   /**
    * 保存当前项目
-   * @param projectData 项目数据（可选，如果不提供则使用当前项目）
+   * @param options 保存选项
    */
-  async function saveCurrentProject(): Promise<void> {
+  async function saveCurrentProject(options?: {
+    configChanged?: boolean
+    contentChanged?: boolean
+  }): Promise<void> {
     try {
       isSaving.value = true
       console.log(`💾 保存项目: ${configModule.projectName.value}`)
       configModule.projectUpdatedAt.value = new Date().toISOString()
 
-      // 构建更新的项目配置
-      // 注意：采用即时保存策略后，媒体文件已在WebAV解析时保存，这里只保存项目配置
-      const updatedProject: UnifiedProjectConfig = {
-        id: configModule.projectId.value,
-        name: configModule.projectName.value,
-        description: configModule.projectDescription.value,
-        createdAt: configModule.projectCreatedAt.value,
-        updatedAt: configModule.projectUpdatedAt.value,
-        version: configModule.projectVersion.value,
-        thumbnail: configModule.projectThumbnail.value || undefined,
-        duration: configModule.projectDuration.value,
+      // 解构保存选项，默认都为 false
+      const { configChanged = false, contentChanged = false } = options || {}
 
-        // 项目设置
-        settings: {
-          videoResolution: configModule.videoResolution.value,
-          frameRate: configModule.frameRate.value,
-          timelineDurationFrames: configModule.timelineDurationFrames.value,
-        },
+      // 根据选项决定是否构建项目配置
+      let updatedProjectConfig: UnifiedProjectConfig | undefined
+      if (configChanged) {
+        // 计算项目时长：从timelineItems中统计时间范围
+        let calculatedDuration = 0
+        if (timelineModule.timelineItems.value.length > 0) {
+          // 找到所有时间轴项目中的最大结束时间
+          const maxEndTime = Math.max(
+            ...timelineModule.timelineItems.value.map((item) => item.timeRange.timelineEndTime),
+          )
+          // 将帧数转换为秒
+          calculatedDuration = framesToSeconds(maxEndTime)
+        }
 
-        // 时间轴数据 - 从各个模块获取当前的时间轴数据，使用工厂函数克隆去掉运行时内容
-        timeline: {
+        updatedProjectConfig = {
+          id: configModule.projectId.value,
+          name: configModule.projectName.value,
+          description: configModule.projectDescription.value,
+          createdAt: configModule.projectCreatedAt.value,
+          updatedAt: configModule.projectUpdatedAt.value,
+          version: configModule.projectVersion.value,
+          // 注意：保存时需要排除 thumbnail 字段（仅用于运行时承载blob url）
+          // thumbnail字段不保存到配置文件，使用约定的文件命名规则
+          duration: calculatedDuration,
+
+          // 项目设置
+          settings: {
+            videoResolution: configModule.videoResolution.value,
+            frameRate: configModule.frameRate.value,
+            timelineDurationFrames: configModule.timelineDurationFrames.value,
+          },
+        }
+      }
+
+      // 根据选项决定是否构建项目内容
+      let updatedProjectContent: UnifiedProjectContent | undefined
+      if (contentChanged) {
+        updatedProjectContent = {
           // tracks 数据结构简单，没有运行时对象，可以直接使用
-          tracks: trackModule?.tracks.value || [],
+          tracks: trackModule.tracks.value,
           // timelineItems 包含运行时数据，需要克隆并清理
-          timelineItems: (timelineModule?.timelineItems.value || []).map((item) => {
+          timelineItems: timelineModule.timelineItems.value.map((item) => {
             // 使用工厂函数克隆时间轴项目，去掉运行时内容（如sprite等）
             const clonedItem = TimelineItemFactory.clone(item)
             // 确保克隆的项目没有运行时数据
@@ -194,7 +222,7 @@ export function createUnifiedProjectModule(
             return clonedItem
           }),
           // mediaItems 包含 webav 运行时对象，需要清理
-          mediaItems: (mediaModule?.mediaItems.value || [])
+          mediaItems: mediaModule.mediaItems.value
             .map((item) => {
               // 提取数据源的持久化数据
               const extractedSource = extractSourceData(item.source)
@@ -226,23 +254,46 @@ export function createUnifiedProjectModule(
               }
             })
             .filter(Boolean) as UnifiedMediaItemData[], // 过滤掉提取失败的项目并断言类型
-        },
+        }
       }
 
-      console.log(`📊 保存项目数据统计:`, {
-        项目ID: updatedProject.id,
-        项目名称: updatedProject.name,
-        轨道数量: updatedProject.timeline.tracks.length,
-        时间轴项目数量: updatedProject.timeline.timelineItems.length,
-        媒体项目数量: updatedProject.timeline.mediaItems.length,
-        视频分辨率: updatedProject.settings.videoResolution,
-        帧率: updatedProject.settings.frameRate,
-      })
+      // 记录保存的数据统计（只在有数据时记录）
+      if (configChanged || contentChanged) {
+        console.log(`📊 保存项目数据统计:`, {
+          项目ID: updatedProjectConfig?.id || configModule.projectId.value,
+          项目名称: updatedProjectConfig?.name || configModule.projectName.value,
+          轨道数量: updatedProjectContent?.tracks.length || 0,
+          时间轴项目数量: updatedProjectContent?.timelineItems.length || 0,
+          媒体项目数量: updatedProjectContent?.mediaItems.length || 0,
+          视频分辨率: updatedProjectConfig?.settings.videoResolution || '未保存',
+          帧率: updatedProjectConfig?.settings.frameRate || '未保存',
+          保存配置: configChanged ? '是' : '否',
+          保存内容: contentChanged ? '是' : '否',
+        })
+      }
 
-      // 调用项目文件操作工具进行保存
-      await projectFileOperations.saveProject(updatedProject)
+      // 调用项目文件操作工具进行智能保存
+      await projectFileOperations.saveProject(
+        configModule.projectId.value,
+        updatedProjectConfig,
+        updatedProjectContent,
+        options,
+      )
 
       console.log(`✅ 项目保存成功: ${configModule.projectName.value}`)
+
+      // 异步启动缩略图生成（不等待）
+      if (configChanged && timelineModule.timelineItems.value.length > 0) {
+        thumbnailService
+          .generateProjectThumbnail(
+            configModule.projectId.value,
+            timelineModule.timelineItems.value,
+            mediaModule,
+          )
+          .catch((error) => {
+            console.warn('缩略图生成失败:', error)
+          })
+      }
     } catch (error) {
       console.error('保存项目失败:', error)
       throw error
@@ -289,28 +340,28 @@ export function createUnifiedProjectModule(
       updateLoadingProgress('开始加载项目内容...', 5)
       console.log(`📂 [Content Load] 开始加载项目内容: ${projectId}`)
 
-      // 1. 加载项目配置
-      updateLoadingProgress('加载项目配置...', 10)
-      const projectConfig = await projectFileOperations.loadProjectConfig(projectId)
-      if (!projectConfig) {
-        throw new Error('项目配置不存在')
+      // 1. 加载项目内容数据
+      updateLoadingProgress('加载项目内容数据...', 10)
+      const projectContent = await projectFileOperations.loadProjectContent(projectId)
+      if (!projectContent) {
+        throw new Error('项目内容不存在')
       }
 
       // 2. 初始化页面级媒体管理器（内部包含扫描媒体目录逻辑）
       updateLoadingProgress('初始化媒体管理器...', 20)
       await globalProjectMediaManager.initializeForProject(projectId)
 
-      // 4. 构建媒体项目，启动数据源获取 - 强制传入配置的媒体项目
+      // 3. 构建媒体项目，启动数据源获取
       updateLoadingProgress('重建媒体项目...', 50)
-      await rebuildMediaItems(projectConfig.timeline.mediaItems)
+      await rebuildMediaItems(projectContent.mediaItems)
 
-      // 5. 恢复轨道状态
+      // 4. 恢复轨道状态
       updateLoadingProgress('恢复轨道数据...', 70)
-      await restoreTracks()
+      await restoreTracks(projectContent.tracks)
 
-      // 6. 恢复时间轴项目状态
+      // 5. 恢复时间轴项目状态
       updateLoadingProgress('恢复时间轴项目...', 90)
-      await restoreTimelineItems()
+      await restoreTimelineItems(projectContent.timelineItems)
 
       updateLoadingProgress('项目内容加载完成', 100)
       isProjectContentReady.value = true
@@ -417,15 +468,9 @@ export function createUnifiedProjectModule(
   /**
    * 恢复轨道状态（用于项目加载）
    */
-  async function restoreTracks(): Promise<void> {
+  async function restoreTracks(savedTracks: UnifiedTrackData[]): Promise<void> {
     try {
       console.log('🛤️ 开始恢复轨道状态...')
-      
-      // 获取项目配置
-      const projectConfig = await projectFileOperations.loadProjectConfig(configModule.projectId.value)
-      if (!projectConfig) {
-        throw new Error('项目配置不存在，无法恢复轨道')
-      }
 
       // 检查轨道模块是否可用
       if (!trackModule) {
@@ -437,32 +482,27 @@ export function createUnifiedProjectModule(
       trackModule.tracks.value = []
 
       // 恢复轨道数据
-      const savedTracks = projectConfig.timeline.tracks
       if (savedTracks && savedTracks.length > 0) {
         for (const trackData of savedTracks) {
-          // 使用轨道模块的 addTrack 方法创建轨道
-          trackModule.addTrack(
-            trackData.type,
-            trackData.name,
-            undefined, // position 参数，使用默认值
-            trackData.id // 使用保存的轨道ID
-          )
-          
-          // 恢复轨道属性
-          const restoredTrack = trackModule.tracks.value.find(t => t.id === trackData.id)
-          if (restoredTrack) {
-            // 在统一架构中，轨道数据是响应式的，直接修改属性
-            restoredTrack.isVisible = trackData.isVisible
-            restoredTrack.isMuted = trackData.isMuted
-            restoredTrack.height = trackData.height
-          }
-          
+          // 创建完整的轨道数据对象
+          const trackToAdd = createUnifiedTrackData(trackData.type, {
+            id: trackData.id, // 使用保存的轨道ID
+            name: trackData.name,
+            isVisible: trackData.isVisible,
+            isMuted: trackData.isMuted,
+            height: trackData.height,
+          })
+
+          // 使用轨道模块的 addTrack 方法添加轨道
+          trackModule.addTrack(trackToAdd, undefined)
+
           console.log(`🛤️ 恢复轨道: ${trackData.name} (${trackData.type})`)
         }
       } else {
         // 如果没有保存的轨道，创建默认轨道
         console.log('🛤️ 没有保存的轨道数据，创建默认轨道')
-        trackModule.addTrack('video', '视频轨道')
+        const defaultTrack = createUnifiedTrackData('video')
+        trackModule.addTrack(defaultTrack)
       }
 
       console.log(`✅ 轨道恢复完成: ${trackModule.tracks.value.length}个轨道`)
@@ -475,22 +515,18 @@ export function createUnifiedProjectModule(
   /**
    * 恢复时间轴项目状态（用于项目加载）
    */
-  async function restoreTimelineItems(): Promise<void> {
+  async function restoreTimelineItems(
+    savedTimelineItems: UnifiedTimelineItemData[],
+  ): Promise<void> {
     try {
       console.log('🎬 开始恢复时间轴项目状态...')
-      
-      // 获取项目配置
-      const projectConfig = await projectFileOperations.loadProjectConfig(configModule.projectId.value)
-      if (!projectConfig) {
-        throw new Error('项目配置不存在，无法恢复时间轴项目')
-      }
 
       // 检查必要模块是否可用
       if (!timelineModule) {
         console.warn('⚠️ 时间轴模块未初始化，跳过时间轴项目恢复')
         return
       }
-      
+
       if (!mediaModule) {
         console.warn('⚠️ 媒体模块未初始化，跳过时间轴项目恢复')
         return
@@ -500,7 +536,6 @@ export function createUnifiedProjectModule(
       timelineModule.timelineItems.value = []
 
       // 恢复时间轴项目数据
-      const savedTimelineItems = projectConfig.timeline.timelineItems
       if (savedTimelineItems && savedTimelineItems.length > 0) {
         for (const itemData of savedTimelineItems) {
           try {
@@ -511,7 +546,10 @@ export function createUnifiedProjectModule(
             }
 
             // 验证轨道是否存在
-            if (itemData.trackId && !trackModule?.tracks.value.some(t => t.id === itemData.trackId)) {
+            if (
+              itemData.trackId &&
+              !trackModule.tracks.value.some((t) => t.id === itemData.trackId)
+            ) {
               console.warn(`⚠️ 跳过时间轴项目，对应的轨道不存在: ${itemData.trackId}`)
               continue
             }
@@ -524,7 +562,9 @@ export function createUnifiedProjectModule(
 
             // 非文本类型：验证对应的媒体项目是否存在
             if (itemData.mediaType !== 'text' && itemData.mediaItemId) {
-              const mediaItem = mediaModule.mediaItems.value.find(m => m.id === itemData.mediaItemId)
+              const mediaItem = mediaModule.mediaItems.value.find(
+                (m) => m.id === itemData.mediaItemId,
+              )
               if (!mediaItem) {
                 console.warn(`⚠️ 跳过时间轴项目，对应的媒体项目不存在: ${itemData.mediaItemId}`)
                 continue
@@ -533,10 +573,11 @@ export function createUnifiedProjectModule(
 
             console.log(`🔄 恢复时间轴项目：从源头重建 ${itemData.id}...`)
 
-            // 使用 TimelineItemFactory.rebuildKnown 重建时间轴项目
-            const rebuildResult = await TimelineItemFactory.rebuildKnown({
+            // 从原始素材重新创建TimelineItem和sprite
+            const rebuildResult = await TimelineItemFactory.rebuildForCmd({
               originalTimelineItemData: itemData,
-              getMediaItem: (id: string) => mediaModule.mediaItems.value.find(m => m.id === id),
+              getMediaItem: mediaModule.getMediaItem,
+              setupTimelineItemSprite: timelineModule.setupTimelineItemSprite,
               logIdentifier: 'restoreTimelineItems',
             })
 
@@ -550,18 +591,14 @@ export function createUnifiedProjectModule(
             // 1. 添加到时间轴
             await timelineModule.addTimelineItem(newTimelineItem)
 
-            // 2. 添加sprite到WebAV画布
-            if (newTimelineItem.runtime.sprite && webavModule) {
-              await webavModule.addSprite(newTimelineItem.runtime.sprite)
-            }
-
-            // 3. 针对loading状态的项目设置状态同步
+            // 2. 针对loading状态的项目设置状态同步
             if (newTimelineItem.timelineStatus === 'loading') {
-              setupProjectLoadMediaSync(
-                newTimelineItem.mediaItemId,
-                newTimelineItem.id,
-                `restoreTimelineItems ${newTimelineItem.id}`,
-              )
+              setupMediaSync({
+                mediaItemId: newTimelineItem.mediaItemId,
+                timelineItemId: newTimelineItem.id,
+                description: `restoreTimelineItems ${newTimelineItem.id}`,
+                scenario: 'projectLoad',
+              })
             }
 
             console.log(`✅ 已恢复时间轴项目: ${itemData.id} (${itemData.mediaType})`)
@@ -575,25 +612,6 @@ export function createUnifiedProjectModule(
       console.log(`✅ 时间轴项目恢复完成: ${timelineModule.timelineItems.value.length}个项目`)
     } catch (error) {
       console.error('❌ 恢复时间轴项目失败:', error)
-      throw error
-    }
-  }
-
-  /**
-   * 恢复时间轴轨道和项目状态（保持向后兼容）
-   * @deprecated 请使用 restoreTracks 和 restoreTimelineItems 分别调用
-   */
-  async function restoreTimelineAndTracks(): Promise<void> {
-    try {
-      // 先恢复轨道
-      await restoreTracks()
-      
-      // 然后恢复时间轴项目
-      await restoreTimelineItems()
-      
-      console.log('✅ 时间轴轨道和项目状态恢复完成')
-    } catch (error) {
-      console.error('❌ 恢复时间轴轨道和项目状态失败:', error)
       throw error
     }
   }
@@ -645,11 +663,10 @@ export function createUnifiedProjectModule(
     loadProjectContent,
     clearCurrentProject,
     getProjectSummary,
-    
+
     // 恢复方法（拆分后的独立函数）
     restoreTracks,
     restoreTimelineItems,
-    restoreTimelineAndTracks, // 保持向后兼容
 
     // 加载进度方法
     updateLoadingProgress,

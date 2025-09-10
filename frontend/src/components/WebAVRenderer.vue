@@ -69,11 +69,11 @@ const canvasDisplaySize = computed(() => {
 
   if (aspectRatio > containerAspectRatio) {
     // 画布更宽，以宽度为准
-    displayWidth = Math.min(containerWidth.value * 0.95, canvasWidth.value) // 留5%边距
+    displayWidth = Math.min(containerWidth.value, canvasWidth.value)
     displayHeight = displayWidth / aspectRatio
   } else {
     // 画布更高，以高度为准
-    displayHeight = Math.min(containerHeight.value * 0.95, canvasHeight.value) // 留5%边距
+    displayHeight = Math.min(containerHeight.value, canvasHeight.value)
     displayWidth = displayHeight * aspectRatio
   }
 
@@ -181,7 +181,7 @@ const recreateCanvasWithNewSize = async (newResolution: VideoResolution): Promis
     console.log('开始销毁旧画布并备份内容...')
 
     // 销毁旧画布并备份内容
-    const backup = await unifiedStore.destroyCanvas()
+    await unifiedStore.destroyCanvas(unifiedStore.timelineItems)
 
     console.log('开始重新创建画布...')
 
@@ -210,7 +210,13 @@ const recreateCanvasWithNewSize = async (newResolution: VideoResolution): Promis
         height: newResolution.height,
         bgColor: '#000000', // WebAV库要求的格式，保持不变
       },
-      backup,
+      {
+        timelineItems: unifiedStore.timelineItems,
+        setupTimelineItemSprite: unifiedStore.setupTimelineItemSprite,
+      },
+      {
+        getMediaItem: unifiedStore.getMediaItem,
+      },
     )
 
     console.log('画布重新创建完成')

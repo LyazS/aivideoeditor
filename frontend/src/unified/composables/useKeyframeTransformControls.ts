@@ -8,7 +8,7 @@ import { useUnifiedStore } from '@/unified/unifiedStore'
 import { uiDegreesToWebAVRadians, webAVRadiansToUIDegrees } from '@/unified/utils/rotationTransform'
 import { useUnifiedKeyframeUI } from '@/unified/composables/useUnifiedKeyframeUI'
 import type { UnifiedTimelineItemData } from '@/unified/timelineitem'
-import { hasVisualProperties } from '@/unified/timelineitem'
+import { TimelineItemQueries } from '@/unified/timelineitem'
 
 interface UnifiedKeyframeTransformControlsOptions {
   selectedTimelineItem: Ref<UnifiedTimelineItemData | null>
@@ -41,19 +41,31 @@ export function useUnifiedKeyframeTransformControls(
 
   // 变换属性 - 基于TimelineItem的响应式计算属性（类型安全版本）
   const transformX = computed(() => {
-    if (!selectedTimelineItem.value || !hasVisualProperties(selectedTimelineItem.value)) return 0
+    if (
+      !selectedTimelineItem.value ||
+      !TimelineItemQueries.hasVisualProperties(selectedTimelineItem.value)
+    )
+      return 0
     // hasVisualProperties 类型守卫确保了 config 具有视觉属性
     return selectedTimelineItem.value.config.x
   })
 
   const transformY = computed(() => {
-    if (!selectedTimelineItem.value || !hasVisualProperties(selectedTimelineItem.value)) return 0
+    if (
+      !selectedTimelineItem.value ||
+      !TimelineItemQueries.hasVisualProperties(selectedTimelineItem.value)
+    )
+      return 0
     // hasVisualProperties 类型守卫确保了 config 具有视觉属性
     return selectedTimelineItem.value.config.y
   })
 
   const scaleX = computed(() => {
-    if (!selectedTimelineItem.value || !hasVisualProperties(selectedTimelineItem.value)) return 1
+    if (
+      !selectedTimelineItem.value ||
+      !TimelineItemQueries.hasVisualProperties(selectedTimelineItem.value)
+    )
+      return 1
 
     // hasVisualProperties 类型守卫确保了 config 具有视觉属性
     const config = selectedTimelineItem.value.config
@@ -61,7 +73,11 @@ export function useUnifiedKeyframeTransformControls(
   })
 
   const scaleY = computed(() => {
-    if (!selectedTimelineItem.value || !hasVisualProperties(selectedTimelineItem.value)) return 1
+    if (
+      !selectedTimelineItem.value ||
+      !TimelineItemQueries.hasVisualProperties(selectedTimelineItem.value)
+    )
+      return 1
 
     // hasVisualProperties 类型守卫确保了 config 具有视觉属性
     const config = selectedTimelineItem.value.config
@@ -69,14 +85,22 @@ export function useUnifiedKeyframeTransformControls(
   })
 
   const rotation = computed(() => {
-    if (!selectedTimelineItem.value || !hasVisualProperties(selectedTimelineItem.value)) return 0
+    if (
+      !selectedTimelineItem.value ||
+      !TimelineItemQueries.hasVisualProperties(selectedTimelineItem.value)
+    )
+      return 0
     // hasVisualProperties 类型守卫确保了 config 具有视觉属性
     const radians = selectedTimelineItem.value.config.rotation
     return webAVRadiansToUIDegrees(radians)
   })
 
   const opacity = computed(() => {
-    if (!selectedTimelineItem.value || !hasVisualProperties(selectedTimelineItem.value)) return 1
+    if (
+      !selectedTimelineItem.value ||
+      !TimelineItemQueries.hasVisualProperties(selectedTimelineItem.value)
+    )
+      return 1
     // hasVisualProperties 类型守卫确保了 config 具有视觉属性
     return selectedTimelineItem.value.config.opacity
   })
@@ -89,13 +113,20 @@ export function useUnifiedKeyframeTransformControls(
   // 等比缩放相关（每个clip独立状态）
   const proportionalScale = computed({
     get: () => {
-      if (!selectedTimelineItem.value || !hasVisualProperties(selectedTimelineItem.value))
+      if (
+        !selectedTimelineItem.value ||
+        !TimelineItemQueries.hasVisualProperties(selectedTimelineItem.value)
+      )
         return true
       // hasVisualProperties 类型守卫确保了 config 具有视觉属性
       return selectedTimelineItem.value.config.proportionalScale
     },
     set: (value) => {
-      if (!selectedTimelineItem.value || !hasVisualProperties(selectedTimelineItem.value)) return
+      if (
+        !selectedTimelineItem.value ||
+        !TimelineItemQueries.hasVisualProperties(selectedTimelineItem.value)
+      )
+        return
       // hasVisualProperties 类型守卫确保了 config 具有视觉属性
       selectedTimelineItem.value.config.proportionalScale = value
     },
@@ -164,10 +195,10 @@ export function useUnifiedKeyframeTransformControls(
     const finalTransform = transform || {
       x: transformX.value,
       y: transformY.value,
-      width: hasVisualProperties(selectedTimelineItem.value)
+      width: TimelineItemQueries.hasVisualProperties(selectedTimelineItem.value)
         ? selectedTimelineItem.value.config.width
         : 0,
-      height: hasVisualProperties(selectedTimelineItem.value)
+      height: TimelineItemQueries.hasVisualProperties(selectedTimelineItem.value)
         ? selectedTimelineItem.value.config.height
         : 0,
       rotation: rotation.value,
@@ -260,7 +291,7 @@ export function useUnifiedKeyframeTransformControls(
     if (
       proportionalScale.value &&
       selectedTimelineItem.value &&
-      hasVisualProperties(selectedTimelineItem.value)
+      TimelineItemQueries.hasVisualProperties(selectedTimelineItem.value)
     ) {
       // hasVisualProperties 类型守卫确保了 config 具有视觉属性
       const config = selectedTimelineItem.value.config
@@ -279,7 +310,7 @@ export function useUnifiedKeyframeTransformControls(
     if (
       proportionalScale.value &&
       selectedTimelineItem.value &&
-      hasVisualProperties(selectedTimelineItem.value)
+      TimelineItemQueries.hasVisualProperties(selectedTimelineItem.value)
     ) {
       // hasVisualProperties 类型守卫确保了 config 具有视觉属性
       const config = selectedTimelineItem.value.config
@@ -295,7 +326,11 @@ export function useUnifiedKeyframeTransformControls(
    * 设置X缩放绝对值的方法
    */
   const setScaleX = (value: number) => {
-    if (!selectedTimelineItem.value || !hasVisualProperties(selectedTimelineItem.value)) return
+    if (
+      !selectedTimelineItem.value ||
+      !TimelineItemQueries.hasVisualProperties(selectedTimelineItem.value)
+    )
+      return
 
     // hasVisualProperties 类型守卫确保了 config 具有视觉属性
     const config = selectedTimelineItem.value.config
@@ -311,7 +346,11 @@ export function useUnifiedKeyframeTransformControls(
    * 设置Y缩放绝对值的方法
    */
   const setScaleY = (value: number) => {
-    if (!selectedTimelineItem.value || !hasVisualProperties(selectedTimelineItem.value)) return
+    if (
+      !selectedTimelineItem.value ||
+      !TimelineItemQueries.hasVisualProperties(selectedTimelineItem.value)
+    )
+      return
 
     // hasVisualProperties 类型守卫确保了 config 具有视觉属性
     const config = selectedTimelineItem.value.config

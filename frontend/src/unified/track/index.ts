@@ -20,5 +20,12 @@ export {
   isSubtitleTrack,
   isEffectTrack,
   createUnifiedTrackData,
-  generateTrackId,
 } from './TrackTypes'
+
+// ==================== 工具函数导出 ====================
+export {
+  generateTrackId,
+  getDefaultTrackName,
+  getDefaultTrackHeight,
+  mapMediaTypeToTrackType,
+} from './TrackUtils'

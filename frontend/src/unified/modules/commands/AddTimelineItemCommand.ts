@@ -5,23 +5,18 @@
  */
 
 import type { VisibleSprite } from '@webav/av-cliper'
-
+import type { Ref } from 'vue'
 // ==================== 新架构类型导入 ====================
 import type { SimpleCommand } from '@/unified/modules/commands/types'
-import type {
-  UnifiedTimelineItemData,
-} from '@/unified/timelineitem/TimelineItemData'
-
+import type { UnifiedTimelineItemData } from '@/unified/timelineitem/TimelineItemData'
 import type { UnifiedMediaItemData, MediaType } from '@/unified/mediaitem/types'
+import type { VideoResolution } from '@/unified/types'
 
 // ==================== 新架构工具导入 ====================
-import {
-  setupCommandMediaSync,
-  cleanupCommandMediaSync,
-} from '@/unified/composables/useCommandMediaSync'
+import { setupMediaSync, cleanupCommandMediaSync } from '@/unified/utils/unifiedMediaSyncManager'
 
 import { TimelineItemFactory } from '@/unified/timelineitem'
-
+import { TimelineItemQueries } from '@/unified/timelineitem/TimelineItemQueries'
 // ==================== 旧架构类型工具导入 ====================
 import { generateCommandId } from '@/unified/utils/idGenerator'
 
@@ -42,6 +37,7 @@ export class AddTimelineItemCommand implements SimpleCommand {
       addTimelineItem: (item: UnifiedTimelineItemData<MediaType>) => Promise<void>
       removeTimelineItem: (id: string) => void
       getTimelineItem: (id: string) => UnifiedTimelineItemData<MediaType> | undefined
+      setupTimelineItemSprite: (item: UnifiedTimelineItemData<MediaType>) => Promise<void>
     },
     private webavModule: {
       addSprite: (sprite: VisibleSprite) => Promise<boolean>
@@ -51,7 +47,7 @@ export class AddTimelineItemCommand implements SimpleCommand {
       getMediaItem: (id: string) => UnifiedMediaItemData | undefined
     },
     private configModule: {
-      videoResolution: { value: { width: number; height: number } }
+      videoResolution: Ref<VideoResolution>
     },
   ) {
     this.id = generateCommandId()
@@ -75,9 +71,10 @@ export class AddTimelineItemCommand implements SimpleCommand {
       console.log(`🔄 执行添加操作：从源头重建时间轴项目...`)
 
       // 从原始素材重新创建TimelineItem和sprite
-      const rebuildResult = await TimelineItemFactory.rebuildKnown({
+      const rebuildResult = await TimelineItemFactory.rebuildForCmd({
         originalTimelineItemData: this.originalTimelineItemData,
-        getMediaItem: (id: string) => this.mediaModule.getMediaItem(id),
+        getMediaItem: this.mediaModule.getMediaItem,
+        setupTimelineItemSprite: this.timelineModule.setupTimelineItemSprite,
         logIdentifier: 'AddTimelineItemCommand execute',
       })
 
@@ -90,19 +87,15 @@ export class AddTimelineItemCommand implements SimpleCommand {
       // 1. 添加到时间轴
       await this.timelineModule.addTimelineItem(newTimelineItem)
 
-      // 2. 添加sprite到WebAV画布
-      if (newTimelineItem.runtime.sprite) {
-        await this.webavModule.addSprite(newTimelineItem.runtime.sprite)
-      }
-
-      // 3. 针对loading状态的项目设置状态同步（确保时间轴项目已添加到store）
-      if (newTimelineItem.timelineStatus === 'loading') {
-        setupCommandMediaSync(
-          this.id,
-          newTimelineItem.mediaItemId,
-          newTimelineItem.id,
-          `execute ${this.description}`,
-        )
+      // 2. 针对loading状态的项目设置状态同步（确保时间轴项目已添加到store）
+      if (TimelineItemQueries.isLoading(newTimelineItem)) {
+        setupMediaSync({
+          commandId: this.id,
+          mediaItemId: newTimelineItem.mediaItemId,
+          timelineItemId: newTimelineItem.id,
+          description: `execute ${this.description}`,
+          scenario: 'command',
+        })
       }
       console.log(`✅ 已添加时间轴项目: ${this.originalTimelineItemData.id}`)
     } catch (error) {

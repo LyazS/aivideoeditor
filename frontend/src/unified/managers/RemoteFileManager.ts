@@ -174,9 +174,7 @@ export class RemoteFileManager extends DataSourceManager<RemoteFileSourceData> {
       }
 
       // 从项目目录加载文件
-      const file = await globalProjectMediaManager.loadMediaFromProject(
-        mediaReference.storedPath
-      )
+      const file = await globalProjectMediaManager.loadMediaFromProject(mediaReference.storedPath)
 
       // 创建URL
       const url = URL.createObjectURL(file)
@@ -594,7 +592,7 @@ export class RemoteFileManager extends DataSourceManager<RemoteFileSourceData> {
    */
   private async downloadFileForMediaItem(mediaItem: UnifiedMediaItemData): Promise<void> {
     const source = mediaItem.source as RemoteFileSourceData
-    
+
     try {
       // 设置为获取中状态
       RuntimeStateBusinessActions.startAcquisition(source)
@@ -649,7 +647,7 @@ export class RemoteFileManager extends DataSourceManager<RemoteFileSourceData> {
    */
   async processMediaItemWithCache(mediaItem: UnifiedMediaItemData): Promise<void> {
     const source = mediaItem.source as RemoteFileSourceData
-    
+
     try {
       console.log(`🚀 [RemoteFileManager] 开始智能处理媒体项目: ${mediaItem.name}`)
 
@@ -664,15 +662,17 @@ export class RemoteFileManager extends DataSourceManager<RemoteFileSourceData> {
           console.log(`✅ [RemoteFileManager] 从本地缓存完整恢复媒体项目: ${mediaItem.name}`)
           return
         }
-        
+
         // 缓存恢复失败（可能是文件损坏或WebAV解析失败），重新下载
-        console.warn(`⚠️ [RemoteFileManager] 本地缓存不可用或解析失败，将重新下载: ${mediaItem.name}`)
+        console.warn(
+          `⚠️ [RemoteFileManager] 本地缓存不可用或解析失败，将重新下载: ${mediaItem.name}`,
+        )
       }
 
       // 3. 本地缓存不可用或解析失败，执行重新下载流程
       console.log(`🌐 [RemoteFileManager] 开始重新下载远程文件: ${mediaItem.name}`)
       await this.processMediaItemWithoutCache(mediaItem)
-      
+
       console.log(`✅ [RemoteFileManager] 重新下载并处理完成: ${mediaItem.name}`)
     } catch (error) {
       console.error(`❌ [RemoteFileManager] 智能处理媒体项目失败: ${mediaItem.name}`, error)
@@ -688,7 +688,7 @@ export class RemoteFileManager extends DataSourceManager<RemoteFileSourceData> {
    */
   private async tryLoadFromCacheForMediaItem(mediaItem: UnifiedMediaItemData): Promise<boolean> {
     const source = mediaItem.source as RemoteFileSourceData
-    
+
     try {
       // 尝试从缓存恢复数据源
       const cacheRestored = await this.tryRestoreFromCache(source)
@@ -720,15 +720,14 @@ export class RemoteFileManager extends DataSourceManager<RemoteFileSourceData> {
       return true
     } catch (error) {
       console.warn(`从缓存加载媒体项目失败，可能是缓存文件损坏: ${mediaItem.name}`, error)
-      
+
       // 清理损坏的缓存数据源状态
       RuntimeStateBusinessActions.cleanup(source)
-      
+
       // 返回 false，让上层重新下载
       return false
     }
   }
-
 
   /**
    * 获取最大重试次数

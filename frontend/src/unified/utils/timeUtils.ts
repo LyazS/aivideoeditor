@@ -4,11 +4,10 @@
  */
 
 import type { Ref, WritableComputedRef } from 'vue'
+import { TimeConstants } from '@/unified/constants/TimeConstants'
 
 // ==================== 时间码系统常量 ====================
-
-/** 固定帧率：30fps */
-export const FRAME_RATE = 30
+// 使用 TimeConstants.FRAME_RATE 替代
 
 // ==================== 时间计算工具 ====================
 
@@ -65,7 +64,7 @@ export function formatFileSize(bytes: number, precision: number = 1): string {
  * @returns 秒数
  */
 export function framesToSeconds(frames: number): number {
-  return frames / FRAME_RATE
+  return frames / TimeConstants.FRAME_RATE
 }
 
 /**
@@ -74,7 +73,7 @@ export function framesToSeconds(frames: number): number {
  * @returns 帧数（向下取整）
  */
 export function secondsToFrames(seconds: number): number {
-  return Math.floor(seconds * FRAME_RATE)
+  return Math.floor(seconds * TimeConstants.FRAME_RATE)
 }
 
 /**
@@ -84,7 +83,7 @@ export function secondsToFrames(seconds: number): number {
  */
 export function framesToMicroseconds(frames: number): number {
   // 使用更精确的计算，避免精度丢失
-  return Math.floor((frames / FRAME_RATE) * 1_000_000)
+  return Math.floor((frames / TimeConstants.FRAME_RATE) * 1_000_000)
 }
 
 /**
@@ -94,7 +93,7 @@ export function framesToMicroseconds(frames: number): number {
  */
 export function microsecondsToFrames(microseconds: number): number {
   // 直接四舍五入，避免精度问题
-  return Math.round((microseconds / 1_000_000) * FRAME_RATE)
+  return Math.round((microseconds / 1_000_000) * TimeConstants.FRAME_RATE)
 }
 
 /**
@@ -103,8 +102,8 @@ export function microsecondsToFrames(microseconds: number): number {
  * @returns 时间码字符串 "HH:MM:SS.FF"
  */
 export function framesToTimecode(frames: number): string {
-  const totalSeconds = Math.floor(frames / FRAME_RATE)
-  const remainingFrames = frames % FRAME_RATE
+  const totalSeconds = Math.floor(frames / TimeConstants.FRAME_RATE)
+  const remainingFrames = frames % TimeConstants.FRAME_RATE
 
   const hours = Math.floor(totalSeconds / 3600)
   const minutes = Math.floor((totalSeconds % 3600) / 60)
@@ -128,11 +127,11 @@ export function timecodeToFrames(timecode: string): number {
   const [, hours, minutes, seconds, frames] = match.map(Number)
 
   // 验证范围
-  if (minutes >= 60 || seconds >= 60 || frames >= FRAME_RATE) {
+  if (minutes >= 60 || seconds >= 60 || frames >= TimeConstants.FRAME_RATE) {
     throw new Error(`Invalid timecode values: ${timecode}`)
   }
 
-  return (hours * 3600 + minutes * 60 + seconds) * FRAME_RATE + frames
+  return (hours * 3600 + minutes * 60 + seconds) * TimeConstants.FRAME_RATE + frames
 }
 
 /**

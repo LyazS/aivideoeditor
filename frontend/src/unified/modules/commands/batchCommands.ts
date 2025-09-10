@@ -9,16 +9,18 @@
  * 4. 使用统一的状态管理系统（3状态：ready|loading|error）
  * 5. 保持与原有命令相同的API接口，便于迁移
  */
-
+import type { VisibleSprite } from '@webav/av-cliper'
+import type { Ref } from 'vue'
+import type { VideoResolution } from '@/unified/types'
 import { BaseBatchCommand } from '@/unified/modules/UnifiedHistoryModule'
 import type { SimpleCommand } from '@/unified/modules/commands/types'
-import { RemoveTimelineItemCommand, MoveTimelineItemCommand } from '@/unified/modules/commands/timelineCommands'
-import type { VisibleSprite } from '@webav/av-cliper'
+import {
+  RemoveTimelineItemCommand,
+  MoveTimelineItemCommand,
+} from '@/unified/modules/commands/timelineCommands'
 
 // ==================== 新架构类型导入 ====================
-import type {
-  UnifiedTimelineItemData,
-} from '@/unified/timelineitem/TimelineItemData'
+import type { UnifiedTimelineItemData } from '@/unified/timelineitem/TimelineItemData'
 
 import type { UnifiedMediaItemData, MediaType } from '@/unified/mediaitem/types'
 
@@ -35,6 +37,7 @@ export class BatchDeleteCommand extends BaseBatchCommand {
       getTimelineItem: (id: string) => UnifiedTimelineItemData<MediaType> | undefined
       addTimelineItem: (item: UnifiedTimelineItemData<MediaType>) => Promise<void>
       removeTimelineItem: (id: string) => void
+      setupTimelineItemSprite: (item: UnifiedTimelineItemData<MediaType>) => Promise<void>
     },
     private webavModule: {
       addSprite: (sprite: VisibleSprite) => Promise<boolean>
@@ -44,7 +47,7 @@ export class BatchDeleteCommand extends BaseBatchCommand {
       getMediaItem: (id: string) => UnifiedMediaItemData | undefined
     },
     private configModule: {
-      videoResolution: { value: { width: number; height: number } }
+      videoResolution: Ref<VideoResolution>
     },
   ) {
     super(`批量删除 ${timelineItemIds.length} 个时间轴项目`)
@@ -65,7 +68,6 @@ export class BatchDeleteCommand extends BaseBatchCommand {
       )
       this.addCommand(deleteCommand)
     }
-    
 
     console.log(`📋 准备批量删除 ${this.subCommands.length} 个时间轴项目`)
   }

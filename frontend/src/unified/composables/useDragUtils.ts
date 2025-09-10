@@ -3,6 +3,9 @@ import type { TimelineItemDragData, MediaItemDragData } from '@/unified/types'
 import type { MediaType } from '@/unified/mediaitem'
 import type { UnifiedTrackType } from '@/unified/track/TrackTypes'
 import { alignFramesToFrame } from '@/unified/utils/timeUtils'
+import { DEFAULT_TRACK_PADDING } from '@/unified/constants/TrackConstants'
+import { getDefaultTrackHeight, mapMediaTypeToTrackType } from '@/unified/track/TrackUtils'
+import type { SnapCalculationOptions } from '@/types/snap'
 
 /**
  * 拖拽工具函数集合
@@ -104,8 +107,9 @@ export function useDragUtils() {
    * 根据媒体类型计算clip高度
    */
   function getClipHeightByMediaType(mediaType: MediaType): number {
-    // 统一所有类型的clip高度为50px
-    return 50 // 所有clip统一高度50px，轨道高度60px，上下各留5px间距
+    // 根据媒体类型获取对应的轨道类型，然后计算clip高度
+    const trackType = mapMediaTypeToTrackType(mediaType)
+    return getDefaultTrackHeight(trackType) - DEFAULT_TRACK_PADDING * 2
   }
 
   /**
@@ -127,8 +131,8 @@ export function useDragUtils() {
       return getClipHeightByMediaType(mediaDragData.mediaType)
     }
 
-    // 默认高度
-    return 50
+    // 默认高度：视频轨道高度减去上下间距
+    return getDefaultTrackHeight('video') - DEFAULT_TRACK_PADDING * 2
   }
 
   /**
@@ -170,10 +174,7 @@ export function useDragUtils() {
   /**
    * 检查媒体类型与轨道类型的兼容性
    */
-  function isMediaCompatibleWithTrack(
-    mediaType: MediaType,
-    trackType: UnifiedTrackType,
-  ): boolean {
+  function isMediaCompatibleWithTrack(mediaType: MediaType, trackType: UnifiedTrackType): boolean {
     // 视频轨道支持视频和图片素材
     if (trackType === 'video') {
       return mediaType === 'video' || mediaType === 'image'
@@ -195,10 +196,7 @@ export function useDragUtils() {
   /**
    * 根据媒体类型寻找最近的兼容轨道
    */
-  function findNearestCompatibleTrack(
-    mouseY: number,
-    mediaType: MediaType,
-  ): string | null {
+  function findNearestCompatibleTrack(mouseY: number, mediaType: MediaType): string | null {
     const tracks = unifiedStore.tracks
     if (tracks.length === 0) return null
 
@@ -229,7 +227,7 @@ export function useDragUtils() {
   }
 
   /**
-   * 计算拖拽目标位置（已禁用吸附功能，保留接口用于重构）
+   * 计算拖拽目标位置（已集成吸附功能）
    */
   function calculateDropPosition(
     event: DragEvent,
@@ -316,7 +314,7 @@ export function useDragUtils() {
             const newRect = newTrackContent.getBoundingClientRect()
             // 重新计算mouseX相对于新轨道的位置
             const mouseXRelativeToNewTrack = event.clientX - newRect.left
-            // 使用新的相对位置计算时间（已禁用吸附）
+            // 使用新的相对位置计算时间（已启用吸附）
             const dropResult = calculateDropFrames(
               mouseXRelativeToNewTrack,
               timelineWidth,
@@ -328,14 +326,14 @@ export function useDragUtils() {
               dropTime: dropResult.frame,
               targetTrackId,
               trackContent: newTrackContent,
-              snapResult: undefined, // 吸附功能已禁用
+              snapResult: dropResult.snapResult,
             }
           }
         }
       }
     }
 
-    // 使用原始逻辑计算时间（已禁用吸附）
+    // 使用原始逻辑计算时间（已启用吸附）
     const dropResult = calculateDropFrames(
       mouseX,
       timelineWidth,
@@ -348,19 +346,19 @@ export function useDragUtils() {
       dropTime: dropResult.frame,
       targetTrackId,
       trackContent,
-      snapResult: undefined, // 吸附功能已禁用
+      snapResult: dropResult.snapResult,
     }
   }
 
   /**
-   * 计算拖拽帧数的辅助函数（已禁用吸附功能，保留接口用于重构）
+   * 计算拖拽帧数的辅助函数（已集成吸附功能）
    */
   function calculateDropFrames(
     mouseX: number,
     timelineWidth: number,
     dragOffset?: { x: number; y: number },
     enableSnapping: boolean = true,
-    excludeClipIds?: string[],
+    excludeClipIds: string[] = [],
   ): { frame: number; snapResult?: any } {
     // 使用帧数进行精确计算
     let dropFrames: number
@@ -379,8 +377,86 @@ export function useDragUtils() {
     // 对齐到帧边界
     dropFrames = alignFramesToFrame(dropFrames)
 
-    // 吸附功能已禁用，直接返回计算结果
-    return { frame: dropFrames, snapResult: undefined }
+    // 启用吸附功能
+    if (enableSnapping && unifiedStore.snapConfig.enabled) {
+      // 开始拖拽阶段，收集候选目标
+      unifiedStore.startSnapDrag(excludeClipIds)
+
+      // 获取被拖拽的clip信息以计算尾部位置
+      const timelineDragData = getCurrentTimelineItemDragData()
+      let clipDuration = 0
+      if (timelineDragData) {
+        const draggedItem = unifiedStore.getTimelineItem(timelineDragData.itemId)
+        if (draggedItem) {
+          clipDuration =
+            draggedItem.timeRange.timelineEndTime - draggedItem.timeRange.timelineStartTime
+        }
+      }
+
+      // 计算clip尾部位置
+      const clipEndFrames = dropFrames + clipDuration
+
+      // 计算开始位置的吸附
+      const startSnapOptions: SnapCalculationOptions = {
+        excludeClipIds,
+        customThreshold: unifiedStore.snapConfig.threshold,
+      }
+      const startSnapResult = unifiedStore.calculateSnapPosition(dropFrames, startSnapOptions)
+
+      // 计算尾部位置的吸附
+      const endSnapOptions: SnapCalculationOptions = {
+        excludeClipIds,
+        customThreshold: unifiedStore.snapConfig.threshold,
+      }
+      const endSnapResult = unifiedStore.calculateSnapPosition(clipEndFrames, endSnapOptions)
+
+      // 选择更好的吸附结果（距离更近的）
+      let bestSnapResult = null
+      let bestFrame = dropFrames
+
+      if (startSnapResult && endSnapResult) {
+        // 两个位置都有吸附，选择距离更近的
+        if (startSnapResult.distance <= endSnapResult.distance) {
+          bestSnapResult = startSnapResult
+          bestFrame = startSnapResult.frame
+        } else {
+          bestSnapResult = {
+            ...endSnapResult,
+            snappedPart: 'end' as const, // 标记为尾部吸附
+          }
+          // 如果是尾部吸附，需要调整开始位置
+          bestFrame = endSnapResult.frame - clipDuration
+        }
+      } else if (startSnapResult) {
+        // 只有开始位置有吸附
+        bestSnapResult = {
+          ...startSnapResult,
+          snappedPart: 'start' as const, // 标记为开始吸附
+        }
+        bestFrame = startSnapResult.frame
+      } else if (endSnapResult) {
+        // 只有尾部位置有吸附
+        bestSnapResult = {
+          ...endSnapResult,
+          snappedPart: 'end' as const, // 标记为尾部吸附
+        }
+        // 如果是尾部吸附，需要调整开始位置
+        bestFrame = endSnapResult.frame - clipDuration
+      }
+
+      // 结束拖拽阶段，清理缓存
+      unifiedStore.endSnapDrag()
+
+      if (bestSnapResult) {
+        return {
+          frame: bestFrame,
+          snapResult: bestSnapResult, // 返回完整的吸附结果
+        }
+      }
+    }
+
+    // 返回原始位置（未吸附）
+    return { frame: dropFrames, snapResult: null }
   }
 
   /**

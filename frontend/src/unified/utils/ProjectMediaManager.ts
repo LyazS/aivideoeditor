@@ -1,7 +1,7 @@
 /**
  * 页面级项目媒体管理器
  * 基于新架构项目保存方案的核心实现
- * 
+ *
  * 核心理念：
  * - 即时保存：素材解析成功后立刻保存到项目本地磁盘，确保数据安全
  * - Meta驱动架构：通过"磁盘Meta文件为权威数据源 + 页面级内存缓存"的模式实现数据管理
@@ -20,11 +20,11 @@ import type { MediaType } from '@/unified/mediaitem/types'
  * Meta文件扫描过程中使用的临时数据结构
  */
 interface MetaFileInfo {
-  metaFileName: string              // meta文件名
-  sourceFileName: string            // 对应的源文件名
-  relativePath: string              // 相对路径（不含.meta后缀）
-  dirHandle: FileSystemDirectoryHandle  // 目录句柄
-  metadata: UnifiedMediaMetadata    // 解析后的元数据
+  metaFileName: string // meta文件名
+  sourceFileName: string // 对应的源文件名
+  relativePath: string // 相对路径（不含.meta后缀）
+  dirHandle: FileSystemDirectoryHandle // 目录句柄
+  metadata: UnifiedMediaMetadata // 解析后的元数据
 }
 
 /**
@@ -47,11 +47,11 @@ export interface MediaSaveResult {
 export class ProjectMediaManager {
   private projectId: string = ''
   private mediaReferences: Map<string, UnifiedMediaReference> = new Map()
-  
+
   constructor() {
     // 无参构造函数，支持页面级全局实例化
   }
-  
+
   /**
    * 初始化项目媒体管理器
    * @param projectId 项目ID
@@ -60,7 +60,7 @@ export class ProjectMediaManager {
     this.projectId = projectId
     this.mediaReferences.clear()
     console.log(`🔧 初始化页面级媒体管理器: ${projectId}`)
-    
+
     // 扫描媒体目录构建文件索引
     console.log(`🔍 开始扫描项目媒体目录: ${projectId}`)
     await this.scanMediaDirectory()
@@ -101,10 +101,12 @@ export class ProjectMediaManager {
       const buffer = await file.arrayBuffer()
       const hashBuffer = await crypto.subtle.digest('SHA-256', buffer)
       const hashArray = Array.from(new Uint8Array(hashBuffer))
-      return hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
+      return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('')
     } catch (error) {
       console.error('计算文件校验和失败:', error)
-      throw new Error(`计算文件校验和失败: ${error instanceof Error ? error.message : String(error)}`)
+      throw new Error(
+        `计算文件校验和失败: ${error instanceof Error ? error.message : String(error)}`,
+      )
     }
   }
 
@@ -126,7 +128,7 @@ export class ProjectMediaManager {
     const extension = this.getFileExtension(fileName)
     const sanitizedName = fileName.replace(extension, '').replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, '_')
     const uniqueName = `${sanitizedName}_${timestamp}${extension}`
-    
+
     return `media/${mediaType}s/${uniqueName}`
   }
 
@@ -136,7 +138,10 @@ export class ProjectMediaManager {
    * @param dirName 目录名
    * @returns 目录句柄
    */
-  private async ensureDirectoryExists(parentHandle: FileSystemDirectoryHandle, dirName: string): Promise<FileSystemDirectoryHandle> {
+  private async ensureDirectoryExists(
+    parentHandle: FileSystemDirectoryHandle,
+    dirName: string,
+  ): Promise<FileSystemDirectoryHandle> {
     try {
       return await parentHandle.getDirectoryHandle(dirName)
     } catch (error) {
@@ -154,11 +159,7 @@ export class ProjectMediaManager {
    * @param clip WebAV Clip对象（可选，用于生成完整元数据）
    * @returns 媒体保存结果
    */
-  async saveMediaToProject(
-    file: File,
-    mediaType: MediaType,
-    clip?: any
-  ): Promise<MediaSaveResult> {
+  async saveMediaToProject(file: File, mediaType: MediaType, clip?: any): Promise<MediaSaveResult> {
     try {
       console.log(`💾 开始保存媒体文件到项目: ${file.name}`)
 
@@ -167,7 +168,7 @@ export class ProjectMediaManager {
 
       // 2. 检查是否已存在相同文件（通过遍历查找相同哈希）
       const existingRef = Array.from(this.mediaReferences.values()).find(
-        ref => ref.metadata && ref.metadata.checksum === contentHash
+        (ref) => ref.metadata && ref.metadata.checksum === contentHash,
       )
       if (existingRef) {
         console.log(`♻️ 复用现有媒体: ${file.name} -> ${existingRef.id}`)
@@ -175,7 +176,7 @@ export class ProjectMediaManager {
           success: true,
           mediaReference: existingRef,
           storagePath: existingRef.storedPath,
-          isReused: true
+          isReused: true,
         }
       }
 
@@ -206,14 +207,14 @@ export class ProjectMediaManager {
 
       // 6. 创建媒体引用
       const mediaReference: UnifiedMediaReference = {
-        id: mediaId,                   // 使用相同的ID
+        id: mediaId, // 使用相同的ID
         originalFileName: file.name,
         storedPath: storagePath,
         mediaType,
         fileSize: file.size,
         mimeType: file.type,
         checksum: contentHash,
-        metadata
+        metadata,
       }
 
       // 7. 注册引用
@@ -228,13 +229,13 @@ export class ProjectMediaManager {
         success: true,
         mediaReference,
         storagePath,
-        isReused: false
+        isReused: false,
       }
     } catch (error) {
       console.error('保存媒体文件失败:', error)
       return {
         success: false,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       }
     }
   }
@@ -294,11 +295,11 @@ export class ProjectMediaManager {
 
       // 构建元数据
       const metadata: UnifiedMediaMetadata = {
-        id: mediaId,                  // 持久化ID
+        id: mediaId, // 持久化ID
         originalFileName: file.name,
         fileSize: file.size,
         mimeType: file.type,
-        checksum: checksum,           // 文件校验和
+        checksum: checksum, // 文件校验和
         importedAt: new Date().toISOString(),
       }
 
@@ -315,7 +316,9 @@ export class ProjectMediaManager {
       return metadata
     } catch (error) {
       console.error('生成媒体元数据失败:', error)
-      throw new Error(`生成媒体元数据失败: ${error instanceof Error ? error.message : String(error)}`)
+      throw new Error(
+        `生成媒体元数据失败: ${error instanceof Error ? error.message : String(error)}`,
+      )
     }
   }
 
@@ -324,10 +327,7 @@ export class ProjectMediaManager {
    * @param storedPath 存储路径
    * @param metadata 媒体元数据
    */
-  async saveMediaMetadata(
-    storedPath: string,
-    metadata: UnifiedMediaMetadata,
-  ): Promise<void> {
+  async saveMediaMetadata(storedPath: string, metadata: UnifiedMediaMetadata): Promise<void> {
     try {
       const workspaceHandle = await directoryManager.getWorkspaceHandle()
       if (!workspaceHandle) throw new Error('未设置工作目录')
@@ -358,7 +358,9 @@ export class ProjectMediaManager {
       console.log(`💾 元数据文件保存成功: ${metaFilePath}`)
     } catch (error) {
       console.error('保存媒体元数据失败:', error)
-      throw new Error(`保存媒体元数据失败: ${error instanceof Error ? error.message : String(error)}`)
+      throw new Error(
+        `保存媒体元数据失败: ${error instanceof Error ? error.message : String(error)}`,
+      )
     }
   }
 
@@ -380,7 +382,10 @@ export class ProjectMediaManager {
       for (const metaInfo of allMetaFiles) {
         try {
           // 验证对应的源文件是否存在
-          const sourceFileExists = await this.verifySourceFileExists(metaInfo.dirHandle, metaInfo.sourceFileName)
+          const sourceFileExists = await this.verifySourceFileExists(
+            metaInfo.dirHandle,
+            metaInfo.sourceFileName,
+          )
 
           if (sourceFileExists) {
             // 源文件存在，创建有效的媒体引用
@@ -394,7 +399,7 @@ export class ProjectMediaManager {
               fileSize: metaInfo.metadata.fileSize,
               mimeType: metaInfo.metadata.mimeType,
               checksum: metaInfo.metadata.checksum,
-              metadata: metaInfo.metadata
+              metadata: metaInfo.metadata,
             }
 
             // 更新内存中的引用映射
@@ -410,27 +415,34 @@ export class ProjectMediaManager {
         }
       }
 
-      console.log(`📁 Meta驱动扫描完成，有效媒体引用: ${validReferences.length}/${allMetaFiles.length}`)
-      
+      console.log(
+        `📁 Meta驱动扫描完成，有效媒体引用: ${validReferences.length}/${allMetaFiles.length}`,
+      )
+
       // 输出媒体素材调试信息表格
       if (validReferences.length > 0) {
         console.log('📊 媒体素材调试信息:')
-        console.table(validReferences.map(ref => ({
-          'ID': ref.id,
-          '文件名': ref.originalFileName,
-          '类型': ref.mediaType,
-          '大小': `${(ref.fileSize / 1024 / 1024).toFixed(2)} MB`,
-          'MIME类型': ref.mimeType,
-          '存储路径': ref.storedPath,
-          '校验和': ref.checksum.substring(0, 8) + '...',
-          '导入时间': ref.metadata?.importedAt || '-',
-          '时长': ref.metadata?.duration ? `${ref.metadata.duration.toFixed(2)}s` : '-',
-          '尺寸': ref.metadata?.width && ref.metadata?.height ? `${ref.metadata.width}x${ref.metadata.height}` : '-'
-        })))
+        console.table(
+          validReferences.map((ref) => ({
+            ID: ref.id,
+            文件名: ref.originalFileName,
+            类型: ref.mediaType,
+            大小: `${(ref.fileSize / 1024 / 1024).toFixed(2)} MB`,
+            MIME类型: ref.mimeType,
+            存储路径: ref.storedPath,
+            校验和: ref.checksum.substring(0, 8) + '...',
+            导入时间: ref.metadata?.importedAt || '-',
+            时长: ref.metadata?.duration ? `${ref.metadata.duration.toFixed(2)}s` : '-',
+            尺寸:
+              ref.metadata?.width && ref.metadata?.height
+                ? `${ref.metadata.width}x${ref.metadata.height}`
+                : '-',
+          })),
+        )
       } else {
         console.log('📊 未发现有效的媒体素材')
       }
-      
+
       return validReferences
     } catch (error) {
       console.error('Meta驱动扫描媒体目录失败:', error)
@@ -467,7 +479,7 @@ export class ProjectMediaManager {
   private async scanDirectoryForMeta(
     dirHandle: FileSystemDirectoryHandle,
     relativePath: string,
-    metaFiles: MetaFileInfo[]
+    metaFiles: MetaFileInfo[],
   ): Promise<void> {
     try {
       for await (const [name, handle] of dirHandle.entries()) {
@@ -489,7 +501,7 @@ export class ProjectMediaManager {
               sourceFileName,
               relativePath: sourceRelativePath,
               dirHandle,
-              metadata
+              metadata,
             })
           } catch (error) {
             console.warn(`解析meta文件失败: ${currentPath}`, error)
@@ -506,7 +518,7 @@ export class ProjectMediaManager {
    */
   private async verifySourceFileExists(
     dirHandle: FileSystemDirectoryHandle,
-    sourceFileName: string
+    sourceFileName: string,
   ): Promise<boolean> {
     try {
       await dirHandle.getFileHandle(sourceFileName)
@@ -573,10 +585,7 @@ export class ProjectMediaManager {
    * @param expectedChecksum 预期校验和
    * @returns 是否验证通过
    */
-  async verifyMediaIntegrity(
-    storedPath: string,
-    expectedChecksum: string,
-  ): Promise<boolean> {
+  async verifyMediaIntegrity(storedPath: string, expectedChecksum: string): Promise<boolean> {
     try {
       const file = await this.loadMediaFromProject(storedPath)
       const actualChecksum = await this.calculateChecksum(file)
@@ -621,10 +630,7 @@ export class ProjectMediaManager {
 
     for (const mediaRef of allReferences) {
       try {
-        const isValid = await this.verifyMediaIntegrity(
-          mediaRef.storedPath,
-          mediaRef.checksum
-        )
+        const isValid = await this.verifyMediaIntegrity(mediaRef.storedPath, mediaRef.checksum)
 
         if (isValid) {
           passed++
@@ -632,7 +638,7 @@ export class ProjectMediaManager {
             id: mediaRef.id,
             originalFileName: mediaRef.originalFileName,
             storedPath: mediaRef.storedPath,
-            status: 'passed'
+            status: 'passed',
           })
         } else {
           failed++
@@ -641,7 +647,7 @@ export class ProjectMediaManager {
             originalFileName: mediaRef.originalFileName,
             storedPath: mediaRef.storedPath,
             status: 'failed',
-            error: '文件校验和不匹配'
+            error: '文件校验和不匹配',
           })
         }
       } catch (error) {
@@ -651,7 +657,7 @@ export class ProjectMediaManager {
           originalFileName: mediaRef.originalFileName,
           storedPath: mediaRef.storedPath,
           status: 'missing',
-          error: error instanceof Error ? error.message : String(error)
+          error: error instanceof Error ? error.message : String(error),
         })
       }
     }
@@ -661,14 +667,14 @@ export class ProjectMediaManager {
       passed,
       failed,
       missing,
-      results
+      results,
     }
 
     console.log(`✅ 批量验证完成:`, {
       总数: report.total,
       通过: report.passed,
       失败: report.failed,
-      缺失: report.missing
+      缺失: report.missing,
     })
 
     return report
@@ -708,7 +714,10 @@ export class ProjectMediaManager {
     for (const metaInfo of allMetaFiles) {
       try {
         // 检查对应的源文件是否存在
-        const sourceFileExists = await this.verifySourceFileExists(metaInfo.dirHandle, metaInfo.sourceFileName)
+        const sourceFileExists = await this.verifySourceFileExists(
+          metaInfo.dirHandle,
+          metaInfo.sourceFileName,
+        )
 
         if (!sourceFileExists) {
           // 源文件不存在，删除对应的meta文件
@@ -723,7 +732,7 @@ export class ProjectMediaManager {
               id: metaInfo.metadata.id,
               originalFileName: metaInfo.metadata.originalFileName,
               metaPath: `${metaInfo.relativePath}.meta`,
-              status: 'cleaned'
+              status: 'cleaned',
             })
 
             console.log(`🗑️ 已清理孤立引用: ${metaInfo.metadata.originalFileName}`)
@@ -734,7 +743,7 @@ export class ProjectMediaManager {
               originalFileName: metaInfo.metadata.originalFileName,
               metaPath: `${metaInfo.relativePath}.meta`,
               status: 'error',
-              error: deleteError instanceof Error ? deleteError.message : String(deleteError)
+              error: deleteError instanceof Error ? deleteError.message : String(deleteError),
             })
 
             console.error(`❌ 清理孤立引用失败: ${metaInfo.metadata.originalFileName}`, deleteError)
@@ -747,7 +756,7 @@ export class ProjectMediaManager {
           originalFileName: metaInfo.metadata.originalFileName,
           metaPath: `${metaInfo.relativePath}.meta`,
           status: 'error',
-          error: error instanceof Error ? error.message : String(error)
+          error: error instanceof Error ? error.message : String(error),
         })
 
         console.error(`❌ 检查孤立引用失败: ${metaInfo.metaFileName}`, error)
@@ -758,13 +767,13 @@ export class ProjectMediaManager {
       total: allMetaFiles.length,
       cleaned,
       errors,
-      results
+      results,
     }
 
     console.log(`✅ 孤立引用清理完成:`, {
       总数: report.total,
       已清理: report.cleaned,
-      错误: report.errors
+      错误: report.errors,
     })
 
     return report
@@ -775,4 +784,3 @@ export class ProjectMediaManager {
 
 // 导出页面级实例，每个项目页面维护一个独立的管理器实例
 export const globalProjectMediaManager = new ProjectMediaManager()
-

@@ -18,7 +18,7 @@ interface Props {
   /** 按钮文本 */
   text?: string
   /** 按钮变体 */
-  variant?: 'default' | 'primary' | 'small'
+  variant?: 'default' | 'primary' | 'small' | 'large'
   /** 是否禁用 */
   disabled?: boolean
   /** 悬停提示 */
@@ -88,6 +88,13 @@ const handleClick = (event: MouseEvent) => {
 /* 主要变体 - 更大的内边距 */
 .hover-btn--primary {
   padding: var(--spacing-md);
+}
+
+/* 大型变体 */
+.hover-btn--large {
+  padding: var(--spacing-md) var(--spacing-lg);
+  font-size: calc(var(--font-size-base) * 1.1);
+  min-width: 80px;
 }
 
 /* 小尺寸变体 */

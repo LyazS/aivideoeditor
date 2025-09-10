@@ -52,9 +52,6 @@ export class AudioVisibleSprite extends BaseVisibleSprite {
   constructor(clip: AudioClip) {
     // 调用父类构造函数
     super(clip)
-
-    // 设置音频拦截器来控制音量和增益
-    this.#setupAudioInterceptor()
   }
 
   /**
@@ -81,7 +78,33 @@ export class AudioVisibleSprite extends BaseVisibleSprite {
     // 将startOffset（帧数）转换为微秒后应用到时间上，传递给父类
     const startOffsetMicroseconds = framesToMicroseconds(this.#startOffset)
     const adjustedTime = time + startOffsetMicroseconds
-    return super.render(ctx, adjustedTime)
+
+    // 调用父类的render方法获取音频数据
+    const renderResult = super.render(ctx, adjustedTime)
+
+    // 如果有音频数据，根据静音状态、音量和增益调整
+    if (renderResult.audio && renderResult.audio.length > 0) {
+      // 计算实际音量：轨道静音或片段静音时为0，否则使用当前音量
+      const effectiveVolume =
+        this.#audioState.isMuted || this.#isTrackMuted ? 0 : this.#audioState.volume
+
+      // 计算增益倍数（dB转线性）
+      const gainMultiplier = Math.pow(10, this.#gain / 20)
+
+      // 最终音频倍数
+      const finalVolume = effectiveVolume * gainMultiplier
+
+      if (finalVolume !== 1) {
+        // 应用音量和增益到所有声道
+        for (const channel of renderResult.audio) {
+          for (let i = 0; i < channel.length; i++) {
+            channel[i] *= finalVolume
+          }
+        }
+      }
+    }
+
+    return renderResult
   }
 
   // ==================== 时间轴接口 ====================
@@ -343,43 +366,6 @@ export class AudioVisibleSprite extends BaseVisibleSprite {
   }
 
   // ==================== 私有方法 ====================
-
-  /**
-   * 设置音频拦截器来控制音量和增益
-   */
-  #setupAudioInterceptor(): void {
-    const clip = this.getClip() as AudioClip
-    if (clip && 'tickInterceptor' in clip) {
-      // 设置tickInterceptor来拦截音频数据
-      // 使用正确的类型：接受和返回 AudioClip.tick 方法的返回类型
-      clip.tickInterceptor = async <T extends Awaited<ReturnType<AudioClip['tick']>>>(
-        _time: number,
-        tickRet: T,
-      ): Promise<T> => {
-        // 如果有音频数据，根据静音状态、音量和增益调整
-        if (tickRet.audio && tickRet.audio.length > 0) {
-          // 计算实际音量：轨道静音或片段静音时为0，否则使用当前音量
-          const effectiveVolume =
-            this.#audioState.isMuted || this.#isTrackMuted ? 0 : this.#audioState.volume
-
-          // 计算增益倍数（dB转线性）
-          const gainMultiplier = Math.pow(10, this.#gain / 20)
-
-          // 最终音频倍数
-          const finalVolume = effectiveVolume * gainMultiplier
-
-          // 应用音量和增益到所有声道
-          for (const channel of tickRet.audio) {
-            for (let i = 0; i < channel.length; i++) {
-              channel[i] *= finalVolume
-            }
-          }
-        }
-
-        return tickRet
-      }
-    }
-  }
 
   /**
    * 更新 VisibleSprite 的 time 属性

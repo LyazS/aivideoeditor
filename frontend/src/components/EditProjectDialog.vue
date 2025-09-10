@@ -4,13 +4,15 @@
     <div class="dialog-content" @click.stop>
       <div class="dialog-header">
         <h3>编辑项目</h3>
-        <button class="close-btn" @click="closeDialog">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-            <path
-              d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z"
-            />
-          </svg>
-        </button>
+        <HoverButton class="close-btn" variant="primary" @click="closeDialog" title="关闭">
+          <template #icon>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+              <path
+                d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z"
+              />
+            </svg>
+          </template>
+        </HoverButton>
       </div>
       <div class="dialog-body">
         <div class="form-group">
@@ -38,14 +40,10 @@
         </div>
       </div>
       <div class="dialog-footer">
-        <button class="btn btn-secondary" @click="closeDialog">取消</button>
-        <button
-          class="btn btn-primary"
-          @click="saveProject"
-          :disabled="!form.name.trim() || isSaving"
-        >
+        <HoverButton variant="large" text="取消" @click="closeDialog" />
+        <HoverButton variant="large" @click="saveProject" :disabled="!form.name.trim() || isSaving">
           {{ isSaving ? '保存中...' : '保存' }}
-        </button>
+        </HoverButton>
       </div>
     </div>
   </div>
@@ -53,6 +51,7 @@
 
 <script setup lang="ts">
 import { ref, watch } from 'vue'
+import HoverButton from './HoverButton.vue'
 import type { UnifiedProjectConfig } from '@/unified/project/types'
 
 interface Props {
@@ -239,54 +238,5 @@ function saveProject() {
   padding: 1.5rem;
   border-top: 1px solid var(--color-border);
   background: var(--color-bg-tertiary);
-}
-
-.btn {
-  padding: 0.5rem 1rem;
-  border: none;
-  border-radius: var(--border-radius-medium);
-  font-size: 0.875rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.btn-secondary {
-  background: var(--color-bg-active);
-  border: 1px solid var(--color-border);
-  color: var(--color-text-secondary);
-  transition: all 0.2s ease;
-}
-
-.btn-secondary:hover {
-  background: var(--color-bg-hover);
-  color: var(--color-text-primary);
-  border-color: var(--color-border-hover);
-  transform: translateY(-1px);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-}
-
-.btn-primary {
-  background: var(--color-accent-secondary);
-  border: 1px solid var(--color-accent-secondary);
-  color: var(--color-text-primary);
-  transition: all 0.2s ease;
-}
-
-.btn-primary:hover:not(:disabled) {
-  background: #1976d2;
-  border-color: #1976d2;
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(33, 150, 243, 0.4);
-}
-
-.btn-primary:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-  transform: none;
-  box-shadow: none;
 }
 </style>

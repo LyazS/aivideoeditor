@@ -14,8 +14,7 @@ import type { VideoResolution } from '@/unified/types'
 import type { UnifiedTimelineItemData } from '@/unified/timelineitem/TimelineItemData'
 import type { MediaType } from '@/unified/mediaitem'
 // ==================== 新架构工具导入 ====================
-import { isTextTimelineItem, TimelineItemFactory } from '@/unified/timelineitem'
-import { createSpriteForTextTimelineItem } from '@/unified/utils/textTimelineUtils'
+import { TimelineItemQueries, TimelineItemFactory } from '@/unified/timelineitem'
 import { TextVisibleSprite } from '@/unified/visiblesprite/TextVisibleSprite'
 import type { TextStyleConfig } from '@/unified/timelineitem'
 
@@ -54,7 +53,7 @@ export class UpdateTextCommand implements SimpleCommand {
       console.log(`🔄 执行更新文本操作...`)
 
       const item = this.timelineModule.getTimelineItem(this.timelineItemId)
-      if (!item || !isTextTimelineItem(item)) {
+      if (!item || !TimelineItemQueries.isTextTimelineItem(item)) {
         throw new Error(`文本项目不存在或类型错误: ${this.timelineItemId}`)
       }
 
@@ -196,7 +195,7 @@ export class UpdateTextCommand implements SimpleCommand {
         console.log(`🔄 撤销更新文本操作...`)
 
         const item = this.timelineModule.getTimelineItem(this.timelineItemId)
-        if (!item || !isTextTimelineItem(item)) {
+        if (!item || !TimelineItemQueries.isTextTimelineItem(item)) {
           throw new Error(`文本项目不存在或类型错误: ${this.timelineItemId}`)
         }
 

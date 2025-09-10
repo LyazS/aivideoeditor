@@ -128,7 +128,9 @@ export function createUnifiedSelectionModule(
     lastSelectionCommand = { itemIds: [...itemIds], mode, timestamp: now }
 
     // 动态导入命令类以避免循环依赖
-    const { SelectTimelineItemsCommand } = await import('@/unified/modules/commands/timelineCommands')
+    const { SelectTimelineItemsCommand } = await import(
+      '@/unified/modules/commands/timelineCommands'
+    )
 
     // 创建选择命令
     const command = new SelectTimelineItemsCommand(
@@ -280,7 +282,7 @@ export function createUnifiedSelectionModule(
    * @returns 是否被选中
    */
   function isTimelineItemSelected(timelineItemId: string): boolean {
-    return selectedTimelineItemId.value === timelineItemId
+    return selectedTimelineItemIds.value.has(timelineItemId)
   }
 
   /**

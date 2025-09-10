@@ -20,7 +20,7 @@
         </div>
       </div>
       <div class="header-buttons">
-        <HoverButton @click="debugMediaItems" title="调试统一媒体">
+        <!-- <HoverButton @click="debugMediaItems" title="调试统一媒体">
           <template #icon>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
               <path
@@ -28,7 +28,7 @@
               />
             </svg>
           </template>
-        </HoverButton>
+        </HoverButton> -->
         <HoverButton @click="showImportMenu" title="导入文件">
           <template #icon>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
@@ -552,7 +552,7 @@ const handleRemoteDownloadSubmit = async (config: any, expectedDuration: number,
     console.log('✅ [UnifiedMediaLibrary] 远程下载任务已启动')
   } catch (error) {
     console.error('❌ [UnifiedMediaLibrary] 远程下载失败:', error)
-    dialogs.showError('下载失败', error instanceof Error ? error.message : '未知错误')
+    dialogs.showError(`下载失败：${error instanceof Error ? error.message : '未知错误'}`)
     showRemoteDownloadDialog.value = false
   }
 }
@@ -634,7 +634,7 @@ const processFiles = async (files: File[]) => {
 
   if (successful === 0 && failed > 0) {
     // 所有文件都处理失败，显示提示
-    dialogs.showError('文件处理失败', '所选文件均无法处理，请检查文件格式是否支持')
+    dialogs.showError('所选文件均无法处理，请检查文件格式是否支持')
     return
   }
 
@@ -730,10 +730,10 @@ const removeMediaItem = async (id: string) => {
         unifiedStore.removeMediaItem(id)
 
         console.log(`✅ 素材库项目删除完成: ${item.name}`)
-        dialogs.showSuccess('删除成功', `素材 "${item.name}" 已从项目中删除`)
+        dialogs.showSuccess(`素材 "${item.name}" 已从项目中删除`)
       } catch (error) {
         console.error(`❌ 删除素材失败: ${item.name}`, error)
-        dialogs.showError('删除失败', `删除素材 "${item.name}" 时发生错误`)
+        dialogs.showError(`删除素材 "${item.name}" 时发生错误`)
       }
     }
   }

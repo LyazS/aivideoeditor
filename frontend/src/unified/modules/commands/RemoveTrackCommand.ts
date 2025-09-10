@@ -1,27 +1,21 @@
+import type { Ref } from 'vue'
+import type { VideoResolution } from '@/unified/types'
 import { generateCommandId } from '@/unified/utils/idGenerator'
-import { type Ref } from 'vue'
 import type { VisibleSprite } from '@webav/av-cliper'
 import type { SimpleCommand } from '@/unified/modules/commands/types'
 
 // 类型导入
-import type {
-  UnifiedTimelineItemData,
-} from '@/unified/timelineitem/TimelineItemData'
+import type { UnifiedTimelineItemData } from '@/unified/timelineitem/TimelineItemData'
 
-import type {
-  UnifiedMediaItemData,
-  MediaType,
-} from '@/unified/mediaitem/types'
+import type { UnifiedMediaItemData, MediaType } from '@/unified/mediaitem/types'
 
 import type { UnifiedTrackData, UnifiedTrackType } from '@/unified/track/TrackTypes'
 
-import {
-  TimelineItemFactory,
-} from '@/unified/timelineitem'
+import { TimelineItemFactory } from '@/unified/timelineitem'
 
-import {
-  setupCommandMediaSync,
-} from '@/unified/composables/useCommandMediaSync'
+import { setupMediaSync } from '@/unified/utils/unifiedMediaSyncManager'
+
+import { TimelineItemQueries } from '@/unified/timelineitem/TimelineItemQueries'
 
 /**
  * 删除轨道命令
@@ -37,7 +31,7 @@ export class RemoveTrackCommand implements SimpleCommand {
   constructor(
     private trackId: string,
     private trackModule: {
-      addTrack: (type: UnifiedTrackType, name?: string) => UnifiedTrackData
+      addTrack: (trackData: UnifiedTrackData, position?: number) => UnifiedTrackData
       removeTrack: (
         trackId: string,
         timelineItems: Ref<UnifiedTimelineItemData<MediaType>[]>,
@@ -50,6 +44,7 @@ export class RemoveTrackCommand implements SimpleCommand {
       addTimelineItem: (item: UnifiedTimelineItemData<MediaType>) => Promise<void>
       removeTimelineItem: (id: string) => void
       getTimelineItem: (id: string) => UnifiedTimelineItemData<MediaType> | undefined
+      setupTimelineItemSprite: (item: UnifiedTimelineItemData<MediaType>) => Promise<void>
       timelineItems: Ref<UnifiedTimelineItemData<MediaType>[]>
     },
     private webavModule: {
@@ -60,7 +55,7 @@ export class RemoveTrackCommand implements SimpleCommand {
       getMediaItem: (id: string) => UnifiedMediaItemData | undefined
     },
     private configModule: {
-      videoResolution: { value: { width: number; height: number } }
+      videoResolution: Ref<VideoResolution>
     },
   ) {
     this.id = generateCommandId()
@@ -110,10 +105,15 @@ export class RemoveTrackCommand implements SimpleCommand {
 
       // 为所有处于loading状态的时间轴项目设置媒体同步
       for (const item of this.affectedTimelineItems) {
-        if (item.timelineStatus === 'loading') {
+        if (TimelineItemQueries.isLoading(item)) {
           const mediaItem = this.mediaModule.getMediaItem(item.mediaItemId)
           if (mediaItem) {
-            setupCommandMediaSync(this.id, mediaItem.id, undefined, this.description)
+            setupMediaSync({
+              commandId: this.id,
+              mediaItemId: mediaItem.id,
+              description: this.description,
+              scenario: 'command',
+            })
           }
         }
       }
@@ -143,24 +143,23 @@ export class RemoveTrackCommand implements SimpleCommand {
       console.log(`🔄 撤销删除轨道操作：重建轨道 ${this.trackData.name}...`)
 
       // 1. 重建轨道
-      // 注意：我们需要手动重建轨道，保持原有的ID和属性
-      // 找到正确的插入位置（按ID排序）
+      // 找到正确的插入位置（按ID排序）并使用 addTrack 方法
       const tracks = this.trackModule.tracks.value
       const insertIndex = tracks.findIndex((track) => track.id > this.trackData.id)
-      if (insertIndex === -1) {
-        tracks.push({ ...this.trackData })
-      } else {
-        tracks.splice(insertIndex, 0, { ...this.trackData })
-      }
+      const position = insertIndex === -1 ? undefined : insertIndex
+
+      // 使用 trackModule 的 addTrack 方法而不是手动操作数组
+      this.trackModule.addTrack({ ...this.trackData }, position)
 
       // 2. 重建所有受影响的时间轴项目
       for (const itemData of this.affectedTimelineItems) {
         console.log(`🔄 执行撤销删除轨道操作：从源头重建时间轴项目...`)
 
         // 从原始素材重新创建TimelineItem和sprite
-        const rebuildResult = await TimelineItemFactory.rebuildKnown({
+        const rebuildResult = await TimelineItemFactory.rebuildForCmd({
           originalTimelineItemData: itemData,
-          getMediaItem: (id: string) => this.mediaModule.getMediaItem(id),
+          getMediaItem: this.mediaModule.getMediaItem,
+          setupTimelineItemSprite: this.timelineModule.setupTimelineItemSprite,
           logIdentifier: 'RemoveTrackCommand',
         })
 
@@ -173,19 +172,15 @@ export class RemoveTrackCommand implements SimpleCommand {
         // 1. 添加到时间轴
         await this.timelineModule.addTimelineItem(newTimelineItem)
 
-        // 2. 添加sprite到WebAV画布
-        if (newTimelineItem.runtime.sprite) {
-          await this.webavModule.addSprite(newTimelineItem.runtime.sprite)
-        }
-
-        // 3. 针对loading状态的项目设置状态同步（确保时间轴项目已添加到store）
-        if (newTimelineItem.timelineStatus === 'loading') {
-          setupCommandMediaSync(
-            this.id,
-            newTimelineItem.mediaItemId,
-            newTimelineItem.id,
-            this.description,
-          )
+        // 2. 针对loading状态的项目设置状态同步（确保时间轴项目已添加到store）
+        if (TimelineItemQueries.isLoading(newTimelineItem)) {
+          setupMediaSync({
+            commandId: this.id,
+            mediaItemId: newTimelineItem.mediaItemId,
+            timelineItemId: newTimelineItem.id,
+            description: this.description,
+            scenario: 'command',
+          })
         }
         console.log(`✅ 轨道删除撤销已撤销删除时间轴项目: ${itemData.id}`)
       }
@@ -211,7 +206,7 @@ export class RemoveTrackCommand implements SimpleCommand {
       if (timelineItemId && timelineItem.id !== timelineItemId) {
         continue
       }
-      
+
       // 如果没有指定timelineItemId或者项目ID匹配，则更新该项目
       const config = timelineItem.config as any
 
@@ -242,7 +237,7 @@ export class RemoveTrackCommand implements SimpleCommand {
         height: config.height,
         duration: mediaData.duration,
       })
-      
+
       // 如果指定了timelineItemId且已找到并更新了对应项目，则退出循环
       if (timelineItemId && timelineItem.id === timelineItemId) {
         break

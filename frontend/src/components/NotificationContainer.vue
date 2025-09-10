@@ -12,11 +12,8 @@
         <div class="notification__icon">
           <NotificationIcons :type="notification.type" />
         </div>
-        <div class="notification__content">
-          <div class="notification__title">{{ notification.title }}</div>
-          <div v-if="notification.message" class="notification__message">
-            {{ notification.message }}
-          </div>
+        <div class="notification__message">
+          {{ notification.message }}
         </div>
       </div>
     </TransitionGroup>
@@ -37,23 +34,6 @@ const notifications = computed(() => unifiedStore.notifications)
 function removeNotification(id: string) {
   unifiedStore.removeNotification(id)
 }
-
-// 键盘快捷键支持
-function handleKeydown(event: KeyboardEvent) {
-  // ESC键清除所有通知
-  if (event.key === 'Escape' && notifications.value.length > 0) {
-    unifiedStore.clearNotifications()
-    event.preventDefault()
-  }
-}
-
-onMounted(() => {
-  document.addEventListener('keydown', handleKeydown)
-})
-
-onUnmounted(() => {
-  document.removeEventListener('keydown', handleKeydown)
-})
 </script>
 
 <style scoped>
@@ -70,121 +50,69 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  max-width: 320px;
-  min-width: 280px;
+  max-width: 500px;
+  min-width: 320px;
 }
 
 .notification {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  border-radius: 6px;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: 4px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
   backdrop-filter: blur(8px);
   cursor: pointer;
   pointer-events: auto;
-  transition: all 0.2s ease;
   max-width: 100%;
   word-wrap: break-word;
   font-size: 13px;
   position: relative;
+  background: var(--color-bg-quaternary);
+  color: var(--color-text-primary);
 }
 
-.notification:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+.notification--success .notification__icon {
+  color: #63e2b7;
 }
 
-.notification--success {
-  background: rgba(34, 197, 94, 0.95);
-  border: 1px solid rgba(34, 197, 94, 0.3);
-  color: white;
+.notification--error .notification__icon {
+  color: #e88080;
 }
 
-.notification--success::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 3px;
-  background: #16a34a;
-  border-radius: 6px 0 0 6px;
+.notification--warning .notification__icon {
+  color: #f2c97d;
 }
 
-.notification--error {
-  background: rgba(239, 68, 68, 0.95);
-  border: 1px solid rgba(239, 68, 68, 0.3);
-  color: white;
-}
-
-.notification--error::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 3px;
-  background: #dc2626;
-  border-radius: 6px 0 0 6px;
-}
-
-.notification--warning {
-  background: rgba(245, 158, 11, 0.95);
-  border: 1px solid rgba(245, 158, 11, 0.3);
-  color: white;
-}
-
-.notification--warning::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 3px;
-  background: #d97706;
-  border-radius: 6px 0 0 6px;
-}
-
-.notification--info {
-  background: rgba(59, 130, 246, 0.95);
-  border: 1px solid rgba(59, 130, 246, 0.3);
-  color: white;
-}
-
-.notification--info::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 3px;
-  background: #2563eb;
-  border-radius: 6px 0 0 6px;
+.notification--info .notification__icon {
+  color: #70c0e8;
 }
 
 .notification__icon {
   flex-shrink: 0;
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: currentColor;
+  border-radius: 50%;
+  padding: 2px;
 }
 
-.notification__content {
-  flex: 1;
-  min-width: 0;
-}
-
-.notification__title {
-  font-weight: 500;
-  font-size: 13px;
-  line-height: 1.3;
-  margin-bottom: 2px;
+.notification__icon svg {
+  width: 10px;
+  height: 10px;
+  color: var(--color-bg-quaternary);
 }
 
 .notification__message {
-  font-size: 12px;
-  line-height: 1.3;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  font-size: 14px;
+  line-height: 1.6;
   opacity: 0.9;
 }
 
@@ -222,62 +150,31 @@ onUnmounted(() => {
 
   .notification-list {
     max-width: none;
-    min-width: auto;
   }
 
   .notification {
-    padding: 6px 10px;
+    padding: 3px 6px;
     font-size: 12px;
   }
 
   .notification__icon {
-    width: 14px;
-    height: 14px;
-  }
-
-  .notification__title {
-    font-size: 12px;
+    width: 12px;
+    height: 12px;
   }
 
   .notification__message {
-    font-size: 11px;
+    font-size: 12px;
   }
 }
 
 /* 深色模式适配 */
-@media (prefers-color-scheme: dark) {
-  .notification--success {
-    background: rgba(34, 197, 94, 0.9);
-    border-color: rgba(34, 197, 94, 0.4);
-  }
-
-  .notification--error {
-    background: rgba(239, 68, 68, 0.9);
-    border-color: rgba(239, 68, 68, 0.4);
-  }
-
-  .notification--warning {
-    background: rgba(245, 158, 11, 0.9);
-    border-color: rgba(245, 158, 11, 0.4);
-  }
-
-  .notification--info {
-    background: rgba(59, 130, 246, 0.9);
-    border-color: rgba(59, 130, 246, 0.4);
-  }
-}
 
 /* 减少动画效果（用户偏好） */
 @media (prefers-reduced-motion: reduce) {
   .notification-enter-active,
   .notification-leave-active,
-  .notification-move,
-  .notification {
+  .notification-move {
     transition: none;
-  }
-
-  .notification:hover {
-    transform: none;
   }
 }
 </style>

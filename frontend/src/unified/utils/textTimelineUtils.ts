@@ -1,6 +1,6 @@
 import { reactive } from 'vue'
 import { TextVisibleSprite } from '@/unified/visiblesprite/TextVisibleSprite'
-import { webavToProjectCoords } from '@/unified/utils/coordinateTransform'
+import { webavToProjectCoords, projectToWebavCoords } from '@/unified/utils/coordinateTransform'
 import { generateUUID4 } from '@/unified/utils/idGenerator'
 import type { UnifiedTimelineItemData } from '@/unified/timelineitem/TimelineItemData'
 import type { TextMediaConfig, TextStyleConfig } from '@/unified/timelineitem/TimelineItemData'
@@ -256,99 +256,54 @@ export async function createSpriteForTextTimelineItem(
   })
 
   try {
-    // 1. 创建文本精灵
+    // 1. 获取画布分辨率
+    const { useUnifiedStore } = await import('@/unified/unifiedStore')
+    const unifiedStore = useUnifiedStore()
+    const canvasWidth = unifiedStore.videoResolution.width
+    const canvasHeight = unifiedStore.videoResolution.height
+
+    // 2. 创建文本精灵
     const textSprite = await TextVisibleSprite.create(
       timelineItem.config.text,
       timelineItem.config.style,
     )
 
-    // 2. 设置时间范围
+    // 3. 设置时间范围
     textSprite.setTimeRange(timelineItem.timeRange)
 
-    // 3. 设置位置和变换属性
-    textSprite.rect.x = timelineItem.config.x
-    textSprite.rect.y = timelineItem.config.y
-    textSprite.rect.w = timelineItem.config.width
-    textSprite.rect.h = timelineItem.config.height
-    textSprite.rect.angle = timelineItem.config.rotation
-    textSprite.opacity = timelineItem.config.opacity
-    textSprite.zIndex = timelineItem.config.zIndex
+    // 4. 应用变换属性（使用坐标转换）
+    const config = timelineItem.config
+
+    // 使用坐标转换将项目坐标系转换为 WebAV 坐标系
+    const webavCoords = projectToWebavCoords(
+      config.x,
+      config.y,
+      config.width,
+      config.height,
+      canvasWidth,
+      canvasHeight,
+    )
+    textSprite.rect.x = webavCoords.x
+    textSprite.rect.y = webavCoords.y
+
+    // 设置尺寸和其他属性
+    textSprite.rect.w = config.width
+    textSprite.rect.h = config.height
+    textSprite.rect.angle = config.rotation
+    textSprite.opacity = config.opacity
+    textSprite.zIndex = config.zIndex
 
     console.log('✅ [UnifiedTextTimelineUtils] 精灵创建完成:', {
       id: timelineItem.id,
       position: { x: textSprite.rect.x, y: textSprite.rect.y },
       size: { width: textSprite.rect.w, height: textSprite.rect.h },
+      webavCoords,
+      projectCoords: { x: config.x, y: config.y },
     })
 
     return textSprite
   } catch (error) {
     console.error('❌ [UnifiedTextTimelineUtils] 为时间轴项目创建精灵失败:', error)
     throw new Error(`创建精灵失败: ${(error as Error).message}`)
-  }
-}
-
-/**
- * 验证文本轨道兼容性
- * @param trackType 轨道类型
- * @returns 是否兼容文本项目
- */
-export function isTextTrackCompatible(trackType: string): boolean {
-  return trackType === 'text'
-}
-
-/**
- * 创建默认文本样式
- * @param overrides 样式覆盖选项
- * @returns 完整的文本样式配置
- */
-export function createDefaultTextStyle(overrides: Partial<TextStyleConfig> = {}): TextStyleConfig {
-  return {
-    ...DEFAULT_TEXT_STYLE,
-    ...overrides,
-  }
-}
-
-/**
- * 获取文本项目的显示名称
- * @param textItem 文本时间轴项目
- * @param maxLength 最大显示长度
- * @returns 显示名称
- */
-export function getTextItemDisplayName(
-  textItem: UnifiedTimelineItemData<'text'>,
-  maxLength: number = 20,
-): string {
-  const text = textItem.config.text || '文本'
-  return text.length > maxLength ? text.substring(0, maxLength) + '...' : text
-}
-
-/**
- * 检查文本内容是否有效
- * @param text 文本内容
- * @returns 是否有效
- */
-export function isValidTextContent(text: string): boolean {
-  return typeof text === 'string' && text.trim().length > 0
-}
-
-/**
- * 创建文本项目的预览信息
- * @param textItem 文本时间轴项目
- * @returns 预览信息对象
- */
-export function createTextItemPreview(textItem: UnifiedTimelineItemData<'text'>) {
-  return {
-    id: textItem.id,
-    text: getTextItemDisplayName(textItem),
-    style: {
-      fontSize: textItem.config.style.fontSize,
-      fontFamily: textItem.config.style.fontFamily,
-      color: textItem.config.style.color,
-    },
-    duration: textItem.timeRange.timelineEndTime - textItem.timeRange.timelineStartTime,
-    position: {
-      x: textItem.config.x,
-      y: textItem.config.y,
-    },
   }
 }

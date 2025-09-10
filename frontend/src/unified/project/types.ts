@@ -12,34 +12,43 @@ import type { MediaType } from '@/unified/mediaitem'
  * 媒体元数据接口
  */
 export interface UnifiedMediaMetadata {
-  id: string                    // 元数据ID
-  originalFileName: string      // 原始文件名
-  fileSize: number             // 文件大小
-  mimeType: string             // MIME类型
-  checksum: string             // 文件校验和
-  importedAt: string           // 导入时间
-  duration?: number            // 持续时间（视频/音频）
-  width?: number               // 宽度（视频/图片）
-  height?: number              // 高度（视频/图片）
-  [key: string]: any           // 其他元数据
+  id: string // 元数据ID
+  originalFileName: string // 原始文件名
+  fileSize: number // 文件大小
+  mimeType: string // MIME类型
+  checksum: string // 文件校验和
+  importedAt: string // 导入时间
+  duration?: number // 持续时间（视频/音频）
+  width?: number // 宽度（视频/图片）
+  height?: number // 高度（视频/图片）
+  [key: string]: any // 其他元数据
 }
 
 /**
  * 媒体引用接口
  */
 export interface UnifiedMediaReference {
-  id: string                    // 媒体ID
-  originalFileName: string      // 原始文件名
-  storedPath: string           // 存储路径
-  mediaType: MediaType         // 媒体类型
-  fileSize: number             // 文件大小
-  mimeType: string             // MIME类型
-  checksum: string             // 文件校验和
+  id: string // 媒体ID
+  originalFileName: string // 原始文件名
+  storedPath: string // 存储路径
+  mediaType: MediaType // 媒体类型
+  fileSize: number // 文件大小
+  mimeType: string // MIME类型
+  checksum: string // 文件校验和
   metadata?: UnifiedMediaMetadata // 媒体元数据
 }
 
 /**
- * 统一项目配置接口（基于新架构统一类型）
+ * 项目内容数据（从UnifiedProjectConfig中拆分出来）
+ */
+export interface UnifiedProjectContent {
+  tracks: UnifiedTrackData[]
+  timelineItems: UnifiedTimelineItemData[]
+  mediaItems: UnifiedMediaItemData[]
+}
+
+/**
+ * 统一项目配置接口（移除timeline字段）
  */
 export interface UnifiedProjectConfig {
   id: string
@@ -63,11 +72,5 @@ export interface UnifiedProjectConfig {
     timelineDurationFrames: number
   }
 
-  // 时间轴数据（使用统一类型）
-  timeline: {
-    tracks: UnifiedTrackData[]
-    timelineItems: UnifiedTimelineItemData[]
-    mediaItems: UnifiedMediaItemData[]
-  }
-
+  // timeline字段被移除，单独保存到content.json
 }

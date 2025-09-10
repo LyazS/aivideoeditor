@@ -1,5 +1,5 @@
-/* 统一Clip Loading状态优化样式
- * 注意：使用clip-前缀避免与全局loading覆盖层冲突
+/* 统一Clip样式 - 全局基础样式
+ * 内容样式已迁移到对应组件的scoped样式中
  */
 
 /* ==================== CSS变量定义 ==================== */
@@ -12,47 +12,47 @@
 
   /* 统一错误状态颜色 - 使用统一状态颜色变量 */
   --clip-color-error-border: var(--color-status-error);
-  --clip-color-error-text: #FFFFFF;
+  --clip-color-error-text: #ffffff;
   --clip-color-error-bg: var(--color-status-error);
 
   /* Clip基础尺寸变量 */
-  --clip-height: 50px;
-  --clip-top-offset: 5px;
-  --clip-border-width: 2px;
+  --clip-border-width: 1px; /* 统一为1px */
   --clip-border-radius: var(--border-radius-medium);
   --clip-padding: var(--spacing-md) var(--spacing-lg);
-  
+
   /* Clip基础颜色变量 */
   --clip-bg-primary: #fafafa;
   --clip-bg-media-type: linear-gradient(135deg, #666666, #555555);
   --clip-border-default: transparent;
-  --clip-border-hover: var(--color-text-primary);
-  --clip-border-resizing: var(--color-primary);
+  --clip-border-selected: #ffffff; /* 统一为白色 */
+  --clip-border-hover: #ffffff; /* 统一为白色 */
+  --clip-border-resizing: #ffffff; /* 统一为白色 */
   --clip-shadow: var(--shadow-sm);
-  
+
   /* Clip动画变量 */
   --clip-transition-duration: var(--transition-fast);
 
-  /* 动画时长 */
-  --clip-loading-animation-duration: 2s;
-  --clip-loading-pulse-duration: 1.5s;
+  /* 关键帧颜色 - 合并自尾部root块 */
+  --color-keyframe-primary: #4caf50;
+  --color-keyframe-hover: #66bb6a;
+  --color-keyframe-active: #388e3c;
 }
 
 /* ==================== 基础样式 ==================== */
 
-/* Clip基础样式 */
+/* Clip基础样式 - 主容器样式 */
 .unified-timeline-clip {
-  position: relative;
-  height: var(--clip-height);
-  top: var(--clip-top-offset);
+  position: absolute;
   border-radius: var(--clip-border-radius);
   cursor: pointer;
   user-select: none;
   transition: all var(--clip-transition-duration) ease;
   z-index: 10;
-  width: 100%;
+  width: auto;
+  height: auto;
   display: block;
-  
+  max-height: 100%;
+
   /* 基础边框和背景 */
   border: var(--clip-border-width) solid var(--clip-border-default);
   background: var(--clip-bg-primary);
@@ -60,160 +60,26 @@
   color: white;
 }
 
-/* Loading状态基础样式 */
-.clip-loading-content {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  width: 100%;
-  background: var(--clip-color-loading-bg);
-  border-radius: var(--border-radius-medium);
+/* 内容区域 - 基础布局，具体内容样式在组件中 */
+.clip-content {
   position: relative;
+  width: 100%;
+  height: 100%;
+  padding: 0;
   overflow: hidden;
-  white-space: nowrap;
 }
-
-/* 状态指示器 */
-.clip-loading-status-indicator {
-  position: absolute;
-  top: 4px;
-  right: 4px;
-  width: 16px;
-  height: 16px;
-}
-
-/* 渲染器基础样式 */
-.clip-loading-renderer {
-  position: relative;
-}
-
-/* 普通加载样式 */
-.clip-normal-loading {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: center;
-  gap: var(--spacing-sm);
-}
-
-/* 媒体类型特定样式 */
-.clip-loading-video,
-.clip-loading-image,
-.clip-loading-audio,
-.clip-loading-text {
-  width: 100%;
-  height: 100%;
-}
-
-/* 普通加载内容 */
-.clip-normal-loading-content {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  width: 100%;
-  white-space: nowrap;
-}
-
-
-/* ==================== 加载动画 ==================== */
-
-/* 旋转加载图标 */
-.clip-loading-spinner {
-  width: 24px;
-  height: 24px;
-  margin-right: var(--spacing-sm);
-  position: relative;
-}
-
-.clip-spinner-ring {
-  width: 100%;
-  height: 100%;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  border-top-color: var(--clip-color-loading-text);
-  border-radius: 50%;
-  animation: clip-spinner-rotate 1s linear infinite;
-}
-
-@keyframes clip-spinner-rotate {
-  0% {
-    transform: rotate(0deg);
-  }
-
-  100% {
-    transform: rotate(360deg);
-  }
-}
-
-/* ==================== 进度条样式 ==================== */
-
-/* 进度条容器 */
-.clip-loading-progress-bar {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 3px;
-  background: rgba(255, 255, 255, 0.2);
-}
-
-/* 进度填充 */
-.clip-progress-fill {
-  height: 100%;
-  background: var(--clip-color-loading-progress);
-  transition: width 0.3s ease;
-}
-
-
-/* ==================== 文本样式 ==================== */
-
-/* 加载文本 */
-.clip-loading-text {
-  text-align: center;
-  color: var(--clip-color-loading-text);
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: center;
-  white-space: nowrap;
-}
-
-.clip-loading-title {
-  font-size: var(--font-size-base);
-  font-weight: 500;
-  margin-right: var(--spacing-xs);
-  white-space: nowrap;
-}
-
-.clip-loading-subtitle {
-  font-size: var(--font-size-sm);
-  opacity: 0.8;
-  max-width: 120px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 
 /* ==================== 状态样式 ==================== */
 
 /* 悬停状态 */
-.unified-timeline-clip:hover {
-  border-color: var(--clip-border-hover);
+.unified-timeline-clip:hover,
+.unified-timeline-clip .resize-handle:hover {
+  border: var(--clip-border-width) solid var(--clip-border-selected);
 }
 
 /* 选中状态 */
 .unified-timeline-clip.selected {
-  background: linear-gradient(
-    135deg,
-    var(--color-clip-selected),
-    var(--color-clip-selected-dark)
-  ) !important;
-  border-color: var(--color-clip-selected);
-  box-shadow: 0 0 0 2px rgba(255, 107, 53, 0.3);
+  border: var(--clip-border-width) solid var(--clip-border-selected);
 }
 
 /* 拖拽状态 */
@@ -227,7 +93,7 @@
 /* 调整大小状态 */
 .unified-timeline-clip.resizing {
   cursor: col-resize;
-  border-color: var(--clip-border-resizing);
+  border: var(--clip-border-width) solid var(--clip-border-selected);
   transition: none !important;
 }
 
@@ -247,6 +113,7 @@
     var(--color-clip-overlapping),
     var(--color-clip-overlapping-dark)
   ) !important;
+  border: var(--clip-border-width) solid var(--clip-border-selected);
 }
 
 /* 隐藏轨道状态 */
@@ -256,6 +123,7 @@
     var(--color-clip-hidden),
     var(--color-clip-hidden-dark)
   ) !important;
+  border: var(--clip-border-width) solid var(--clip-border-selected);
 }
 
 /* 隐藏轨道选中状态 */
@@ -265,6 +133,7 @@
     var(--color-clip-hidden-selected),
     var(--color-clip-hidden-selected-dark)
   ) !important;
+  border: var(--clip-border-width) solid var(--clip-border-selected);
 }
 
 /* 隐藏轨道上的clip内容透明度调整 */
@@ -274,179 +143,16 @@
 
 /* Loading状态 */
 .unified-timeline-clip.status-loading {
-  border: 2px dashed var(--clip-color-loading-border) !important;
   background: var(--clip-color-loading-bg) !important;
   animation: loading-pulse var(--clip-loading-animation-duration) infinite;
-  height: var(--clip-height) !important;
 }
 
 /* 错误状态 */
 .unified-timeline-clip.status-error {
-  border: 1px solid var(--clip-color-error-border) !important;
   background: var(--clip-color-error-bg) !important;
-  height: var(--clip-height) !important;
-}
-
-/* 错误状态悬停效果 */
-.unified-timeline-clip.status-error:hover {
-  border-color: var(--clip-color-error-border);
-}
-
-/* 错误状态选中效果 */
-.unified-timeline-clip.status-error.selected {
-  border-color: var(--clip-color-error-border);
-  box-shadow: 0 0 0 1px rgba(139, 0, 0, 0.3);
-}
-
-/* ==================== 错误内容样式 ==================== */
-
-/* 错误内容容器 */
-.clip-error-content {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  width: 100%;
-  background: var(--clip-color-error-bg);
-  border-radius: var(--border-radius-medium);
-  position: relative;
-  overflow: hidden;
-}
-
-/* 错误信息容器 */
-.clip-error-message-container {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  width: 100%;
-  background: var(--clip-color-error-bg);
-  border-radius: var(--border-radius-medium);
-  position: relative;
-  overflow: hidden;
-  color: var(--clip-color-error-text);
-}
-
-/* 错误图标 */
-.clip-error-icon {
-  font-size: 14px;
-  margin-right: 4px;
-  color: var(--clip-color-error-text);
-}
-
-/* 错误文本容器 */
-.clip-error-text {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  width: 100%;
-  color: var(--clip-color-error-text);
-}
-
-/* 错误消息 */
-.clip-error-message {
-  font-size: 12px;
-  font-weight: 500;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  color: var(--clip-color-error-text);
-}
-
-/* 错误渲染器 */
-.clip-error-renderer {
-  position: relative;
-}
-
-/* 错误大图标 */
-.clip-error-icon-large {
-  width: 32px;
-  height: 32px;
-  margin-right: 8px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-}
-
-/* 错误表情符号 */
-.clip-error-emoji {
-  font-size: 20px;
-  line-height: 1;
-}
-
-/* 错误类型文本 */
-.clip-error-type-text {
-  font-size: 10px;
-  margin-top: 2px;
-  text-align: center;
-}
-
-/* 错误操作按钮容器 */
-.clip-error-actions {
-  display: flex;
-  gap: 4px;
-  margin-top: 8px;
-}
-
-/* 重试按钮 */
-.clip-error-retry-button,
-.clip-error-remove-button {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 4px 8px;
-  border: none;
-  border-radius: var(--border-radius-small);
-  font-size: 12px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.clip-error-retry-button {
-  background-color: rgba(255, 255, 255, 0.2);
-  color: white;
-}
-
-.clip-error-retry-button:hover {
-  background-color: rgba(255, 255, 255, 0.3);
-}
-
-.clip-error-remove-button {
-  background-color: rgba(255, 0, 0, 0.3);
-  color: white;
-}
-
-.clip-error-remove-button:hover {
-  background-color: rgba(255, 0, 0, 0.5);
-}
-
-/* 按钮图标和文本 */
-.clip-error-retry-icon,
-.clip-error-remove-icon,
-.clip-error-retry-text,
-.clip-error-remove-text {
-  font-size: 12px;
-}
-
-.clip-error-retry-icon,
-.clip-error-remove-icon {
-  margin-right: 4px;
 }
 
 /* ==================== 子元素样式 ==================== */
-
-/* 内容区域 */
-.clip-content {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  padding: 0;
-  overflow: hidden;
-}
 
 /* 调整把手 */
 .resize-handle {
@@ -457,18 +163,23 @@
   cursor: col-resize;
   background: transparent;
   z-index: 10;
+  transition: background var(--clip-transition-duration) ease;
 }
 
 .resize-handle:hover {
-  background: rgba(24, 144, 255, 0.3);
+  background: #eeeeee;
 }
 
 .resize-handle-left {
-  left: 0;
+  left: -1px;
+  border-top-left-radius: var(--border-radius-medium);
+  border-bottom-left-radius: var(--border-radius-medium);
 }
 
 .resize-handle-right {
-  right: 0;
+  right: -1px;
+  border-top-right-radius: var(--border-radius-medium);
+  border-bottom-right-radius: var(--border-radius-medium);
 }
 
 /* 进度条容器 */
@@ -479,16 +190,6 @@
   right: 0;
   height: 3px;
   z-index: 5;
-}
-
-/* 默认内容样式 */
-.default-content {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  font-size: 12px;
-  color: #666;
 }
 
 /* ==================== 动画定义 ==================== */
@@ -503,68 +204,7 @@
   }
 }
 
-.clip-error-file .clip-error-emoji {
-  color: #F5A623; /* 文件错误 - 橙色 */
-}
-
-.clip-error-format .clip-error-emoji {
-  color: #D0021B; /* 格式错误 - 红色 */
-}
-
-.clip-error-permission .clip-error-emoji {
-  color: #9013FE; /* 权限错误 - 紫色 */
-}
-
-.clip-error-timeout .clip-error-emoji {
-  color: #50E3C2; /* 超时错误 - 青色 */
-}
-
-.clip-error-unknown .clip-error-emoji {
-  color: #9B9B9B; /* 未知错误 - 灰色 */
-}
-
-/* ==================== 响应式设计 ==================== */
-
-/* 响应式布局 */
-@media (max-width: 100px) {
-  .clip-loading-subtitle {
-    display: none;
-  }
-  
-  .clip-loading-title {
-    max-width: 80px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  
-  .clip-loading-spinner {
-    display: none;
-  }
-  
-  .clip-loading-text {
-    flex-direction: row;
-  }
-}
-
-@media (min-width: 150px) {
-  .clip-loading-text {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    justify-content: center;
-    gap: var(--spacing-sm);
-  }
-}
-
 /* ==================== 关键帧标记样式 ==================== */
-
-/* CSS变量 - 关键帧颜色 */
-:root {
-  --color-keyframe-primary: #4CAF50;
-  --color-keyframe-hover: #66BB6A;
-  --color-keyframe-active: #388E3C;
-}
 
 /* 关键帧容器 */
 .keyframes-container {
@@ -573,8 +213,8 @@
   left: 0;
   right: 0;
   bottom: 0;
-  pointer-events: none; /* 不阻挡clip的交互 */
-  z-index: 15; /* 在播放头之下，但高于clip内容 */
+  pointer-events: none;
+  z-index: 15;
 }
 
 /* 关键帧标记 */
@@ -583,8 +223,8 @@
   top: 50%;
   width: 10px;
   height: 10px;
-  z-index: 16; /* 高于关键帧容器，确保可点击 */
-  pointer-events: auto; /* 允许点击 */
+  z-index: 16;
+  pointer-events: auto;
   cursor: pointer;
 }
 
@@ -612,4 +252,37 @@
 .keyframe-marker:active .keyframe-diamond {
   background-color: var(--color-keyframe-active);
   transform: rotate(45deg) scale(1.1);
+}
+
+/* ==================== 素材名称覆盖层样式 ==================== */
+
+/* 素材名称基础样式 - 统一渲染器组件使用 */
+.clip-name-overlay {
+  position: absolute;
+  top: 1px;
+  left: 4px;
+  font-size: 9px;
+  font-weight: 500;
+  color: white;
+  background: transparent;
+  padding: 0;
+  border-radius: 0;
+  z-index: 10;
+  max-width: 80%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+  line-height: 1;
+  height: 12px;
+  display: flex;
+  align-items: center;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+/* 小尺寸时隐藏素材名称 */
+@media (max-width: 100px) {
+  .clip-name-overlay {
+    display: none;
+  }
 }

@@ -31,9 +31,12 @@
           <!-- 根据选中项目类型显示不同的属性组件 -->
           <UnifiedVideoClipProperties
             v-if="
-              selectedTimelineItem.mediaType === 'video' || selectedTimelineItem.mediaType === 'image'
+              selectedTimelineItem.mediaType === 'video' ||
+              selectedTimelineItem.mediaType === 'image'
             "
-            :selected-timeline-item="selectedTimelineItem as UnifiedTimelineItemData<'video' | 'image'>"
+            :selected-timeline-item="
+              selectedTimelineItem as UnifiedTimelineItemData<'video' | 'image'>
+            "
             :current-frame="currentFrame"
           />
 
@@ -51,7 +54,7 @@
             :current-frame="currentFrame"
           />
         </template>
-        
+
         <!-- 非ready状态时显示加载状态或简化属性 -->
         <div v-else class="loading-properties">
           <div class="loading-icon">
@@ -89,7 +92,6 @@ import { getStatusText } from '@/unified/timelineitem/TimelineItemQueries'
 import UnifiedTextClipProperties from './properties/UnifiedTextClipProperties.vue'
 import UnifiedAudioClipProperties from './properties/UnifiedAudioClipProperties.vue'
 
-
 const unifiedStore = useUnifiedStore()
 
 // 选中的时间轴项目
@@ -100,7 +102,7 @@ const selectedTimelineItem = computed(() => {
   // 单选模式时返回选中项
   const selectedIds = unifiedStore.selectedTimelineItemIds
   if (selectedIds.size === 0) return null
-  
+
   const firstSelectedId = Array.from(selectedIds)[0]
   return unifiedStore.getTimelineItem(firstSelectedId) || null
 })
@@ -397,11 +399,11 @@ const getItemTypeLabel = (mediaType: string | undefined) => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  height: 200px;
   text-align: center;
   color: var(--color-text-secondary);
   padding: var(--spacing-lg);
+  height: 100%;
+  overflow: hidden;
 }
 
 .multi-select-state svg {
@@ -422,8 +424,9 @@ const getItemTypeLabel = (mediaType: string | undefined) => {
 .selected-items-list {
   margin-top: var(--spacing-lg);
   width: 100%;
-  max-height: 150px;
+  flex: 1;
   overflow-y: auto;
+  min-height: 0;
 }
 
 .selected-item {

@@ -23,11 +23,3 @@ const AUDIO_ICON_SVG = `<svg width="60" height="40" xmlns="http://www.w3.org/200
  * 使用Data URL格式，可以直接作为图片源使用
  */
 export const AUDIO_DEFAULT_THUMBNAIL_URL = `data:image/svg+xml;base64,${btoa(AUDIO_ICON_SVG)}`
-
-/**
- * 生成音频默认图标URL的函数（兼容性保持）
- * @returns 音频默认图标的Data URL
- */
-export function generateAudioDefaultIcon(): string {
-  return AUDIO_DEFAULT_THUMBNAIL_URL
-}

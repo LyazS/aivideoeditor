@@ -18,8 +18,8 @@ export function useDialogs() {
    * @param message 消息内容
    * @param duration 显示时长（毫秒）
    */
-  function showInfo(title: string, message?: string, duration?: number): void {
-    unifiedStore.showInfo(title, message, duration)
+  function showInfo(message: string, duration?: number): void {
+    unifiedStore.showInfo(message, duration)
   }
 
   /**
@@ -28,8 +28,8 @@ export function useDialogs() {
    * @param message 消息内容
    * @param duration 显示时长（毫秒）
    */
-  function showError(title: string, message?: string, duration?: number): void {
-    unifiedStore.showError(title, message, duration)
+  function showError(message: string, duration?: number): void {
+    unifiedStore.showError(message, duration)
   }
 
   /**
@@ -38,8 +38,8 @@ export function useDialogs() {
    * @param message 消息内容
    * @param duration 显示时长（毫秒）
    */
-  function showWarning(title: string, message?: string, duration?: number): void {
-    unifiedStore.showWarning(title, message, duration)
+  function showWarning(message: string, duration?: number): void {
+    unifiedStore.showWarning(message, duration)
   }
 
   /**
@@ -48,8 +48,8 @@ export function useDialogs() {
    * @param message 消息内容
    * @param duration 显示时长（毫秒）
    */
-  function showSuccess(title: string, message?: string, duration?: number): void {
-    unifiedStore.showSuccess(title, message, duration)
+  function showSuccess(message: string, duration?: number): void {
+    unifiedStore.showSuccess(message, duration)
   }
 
   /**
@@ -61,24 +61,6 @@ export function useDialogs() {
   function confirm(title: string, message?: string): boolean {
     const fullMessage = message ? `${title}\n\n${message}` : title
     return window.confirm(fullMessage)
-  }
-
-  /**
-   * 文件类型验证提示
-   * @param acceptedTypes 接受的文件类型描述
-   */
-  function showFileTypeError(acceptedTypes: string = '视频或图片文件'): void {
-    showError('文件类型错误', `请选择${acceptedTypes}`)
-  }
-
-  /**
-   * 操作失败提示
-   * @param operation 操作名称
-   * @param error 错误信息
-   */
-  function showOperationError(operation: string, error?: string): void {
-    const message = error ? `${operation}失败：${error}` : `${operation}失败`
-    showError('操作失败', message)
   }
 
   /**
@@ -128,27 +110,6 @@ export function useDialogs() {
     return confirm('确认删除素材', message)
   }
 
-  /**
-   * 最少轨道数量限制提示
-   */
-  function showMinTrackWarning(): void {
-    showWarning('无法删除', '至少需要保留一个轨道')
-  }
-
-  /**
-   * 拖拽数据格式错误提示
-   */
-  function showDragDataError(): void {
-    showError('拖拽失败', '拖拽数据格式错误')
-  }
-
-  /**
-   * 无效拖拽提示
-   */
-  function showInvalidDragWarning(): void {
-    showInfo('拖拽提示', '请先将视频或图片文件导入到素材库，然后从素材库拖拽到时间轴')
-  }
-
   return {
     // 基础提示方法
     showInfo,
@@ -156,13 +117,6 @@ export function useDialogs() {
     showWarning,
     showSuccess,
     confirm,
-
-    // 专用提示方法
-    showFileTypeError,
-    showOperationError,
-    showMinTrackWarning,
-    showDragDataError,
-    showInvalidDragWarning,
 
     // 确认对话框方法
     confirmDelete,

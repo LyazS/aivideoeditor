@@ -103,9 +103,7 @@ export class UserSelectedFileManager extends DataSourceManager<UserSelectedFileS
         }
 
         // 从项目目录加载文件
-        file = await globalProjectMediaManager.loadMediaFromProject(
-          mediaReference.storedPath
-        )
+        file = await globalProjectMediaManager.loadMediaFromProject(mediaReference.storedPath)
 
         // 更新 selectedFile
         source.selectedFile = file
@@ -120,7 +118,10 @@ export class UserSelectedFileManager extends DataSourceManager<UserSelectedFileS
         console.error(
           `❌ [UserSelectedFile] 文件验证失败: ${file.name} - ${validationResult.errorMessage}`,
         )
-        RuntimeStateBusinessActions.setError(source, validationResult.errorMessage || '文件验证失败')
+        RuntimeStateBusinessActions.setError(
+          source,
+          validationResult.errorMessage || '文件验证失败',
+        )
         return
       }
 
@@ -417,7 +418,10 @@ export class UserSelectedFileManager extends DataSourceManager<UserSelectedFileS
 
           console.log(`💾 [UserSelectedFileManager] 媒体文件保存成功: ${mediaItem.name}`)
         } catch (saveError) {
-          console.error(`❌ [UserSelectedFileManager] 媒体文件保存失败: ${mediaItem.name}`, saveError)
+          console.error(
+            `❌ [UserSelectedFileManager] 媒体文件保存失败: ${mediaItem.name}`,
+            saveError,
+          )
           console.warn(`媒体文件保存失败，但WebAV解析继续: ${mediaItem.name}`, saveError)
         }
       }
@@ -449,7 +453,7 @@ export class UserSelectedFileManager extends DataSourceManager<UserSelectedFileS
    */
   private async prepareFileForMediaItem(mediaItem: UnifiedMediaItemData): Promise<void> {
     const source = mediaItem.source as UserSelectedFileSourceData
-    
+
     try {
       // 设置为获取中状态
       RuntimeStateBusinessActions.startAcquisition(source)
@@ -471,9 +475,7 @@ export class UserSelectedFileManager extends DataSourceManager<UserSelectedFileS
         }
 
         // 从项目目录加载文件
-        file = await globalProjectMediaManager.loadMediaFromProject(
-          mediaReference.storedPath
-        )
+        file = await globalProjectMediaManager.loadMediaFromProject(mediaReference.storedPath)
 
         // 更新 selectedFile
         source.selectedFile = file
@@ -488,7 +490,10 @@ export class UserSelectedFileManager extends DataSourceManager<UserSelectedFileS
         console.error(
           `❌ [UserSelectedFile] 文件验证失败: ${file.name} - ${validationResult.errorMessage}`,
         )
-        RuntimeStateBusinessActions.setError(source, validationResult.errorMessage || '文件验证失败')
+        RuntimeStateBusinessActions.setError(
+          source,
+          validationResult.errorMessage || '文件验证失败',
+        )
         throw new Error(validationResult.errorMessage)
       }
 
@@ -508,7 +513,6 @@ export class UserSelectedFileManager extends DataSourceManager<UserSelectedFileS
       throw error
     }
   }
-
 
   /**
    * 获取最大重试次数

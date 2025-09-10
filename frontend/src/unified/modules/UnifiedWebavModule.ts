@@ -25,7 +25,9 @@ import {
   createPerformanceTimer,
   debugError,
 } from '@/unified/utils/webavDebug'
-
+import type { UnifiedTimelineItemData } from '@/unified/timelineitem'
+import { TimelineItemFactory } from '@/unified/timelineitem'
+import type { MediaType, UnifiedMediaItemData } from '@/unified/mediaitem/types'
 /**
  * 播放选项接口
  */
@@ -33,16 +35,6 @@ interface PlayOptions {
   start: number // 开始时间（帧数）
   playbackRate: number
   end?: number // 结束时间（帧数）
-}
-
-/**
- * 类型安全的画布备份接口
- * 画布重新创建时的内容备份 - 只备份元数据，不备份WebAV对象
- */
-interface CanvasBackup {
-  timelineItems: any[]
-  currentFrame: number // 当前播放帧数
-  isPlaying: boolean
 }
 
 // 全局WebAV状态 - 确保单例模式
@@ -535,11 +527,6 @@ export function createUnifiedWebavModule(playbackModule: {
     if (!globalAVCanvas) return
 
     playbackModule.setCurrentFrame(frames)
-    const microseconds = framesToMicroseconds(frames)
-
-    // console.log(
-    //   `[setCurrentFrame] seekTo ${playbackModule.currentFrame.value}|${playbackModule.currentWebAVFrame.value} ${microseconds}ms`,
-    // )
   }
 
   /**
@@ -643,8 +630,9 @@ export function createUnifiedWebavModule(playbackModule: {
 
   /**
    * 销毁画布并备份内容
+   * @param timelineItems 时间轴项目数据数组，用于重置runtime字段
    */
-  async function destroyCanvas(): Promise<CanvasBackup | null> {
+  async function destroyCanvas(timelineItems: UnifiedTimelineItemData[] = []) {
     const destroyTimer = createPerformanceTimer('Canvas Destroy')
 
     logCanvasDestroyStart({
@@ -653,23 +641,10 @@ export function createUnifiedWebavModule(playbackModule: {
     })
 
     try {
-      let backup: CanvasBackup | null = null
-
       if (globalAVCanvas) {
-        // 获取当前时间轴项目作为备份
-        // 注意：这里需要从外部传入时间轴项目数据，暂时使用空数组
-        const timelineItems: any[] = []
-
-        backup = {
-          timelineItems: timelineItems.map((item: any) => ({ ...item })), // 深拷贝
-          currentFrame: playbackModule.currentFrame.value,
-          isPlaying: playbackModule.isPlaying.value,
-        }
-
-        logCanvasBackup(backup.timelineItems.length, {
-          timelineItemsCount: backup.timelineItems.length,
-          currentFrame: backup.currentFrame,
-          isPlaying: backup.isPlaying,
+        // 只重置runtime字段，sprite会被画布自动销毁
+        timelineItems.forEach((item) => {
+          item.runtime.sprite = undefined
         })
 
         // 销毁AVCanvas
@@ -682,9 +657,7 @@ export function createUnifiedWebavModule(playbackModule: {
       setWebAVReady(false)
 
       const destroyTime = destroyTimer.end()
-      logCanvasDestroyComplete(destroyTime, backup?.timelineItems.length || 0)
-
-      return backup
+      logCanvasDestroyComplete(destroyTime, timelineItems.length)
     } catch (error) {
       const destroyTime = destroyTimer.end()
       debugError('Canvas destroy failed', error as Error, destroyTime)
@@ -702,56 +675,75 @@ export function createUnifiedWebavModule(playbackModule: {
       height: number
       bgColor: string
     },
-    backup?: CanvasBackup | null,
+    timelineModule: {
+      timelineItems: UnifiedTimelineItemData<MediaType>[]
+      setupTimelineItemSprite: (item: UnifiedTimelineItemData<MediaType>) => Promise<void>
+    },
+    mediaModule: {
+      getMediaItem: (id: string) => UnifiedMediaItemData | undefined
+    },
   ): Promise<void> {
     const recreateTimer = createPerformanceTimer('Canvas Recreate')
 
     logCanvasRecreateStart({
       containerSize: `${container.clientWidth}x${container.clientHeight}`,
       canvasOptions: options,
-      hasBackup: !!backup,
-      backupTimelineItems: backup?.timelineItems.length || 0,
     })
 
     try {
       // 重新初始化画布
       await initializeCanvas(container, options)
 
-      // 如果有备份内容，从源头重建所有时间轴项目
-      if (backup && backup.timelineItems.length > 0) {
-        // 确保WebAV已经准备好
-        await waitForWebAVReady()
+      // 确保WebAV已经准备好
+      await waitForWebAVReady()
 
-        // 恢复时间轴项目
-        for (const timelineItem of backup.timelineItems) {
-          try {
-            // 重新创建sprite - 简化调用，因为createSpriteFromMediaItem可能需要不同的参数
-            // 这里需要根据实际的spriteFactory实现来调整
-            console.log(`🔧 [Canvas Recreate] 恢复时间轴项目: ${timelineItem.id}`)
+      // 重建所有时间轴项目的runtime字段
+      let restoredCount = 0
 
-            // 记录sprite恢复 - 修正参数
-            logSpriteRestore(timelineItem.id, 'unknown')
-          } catch (error) {
-            console.error(`❌ [Canvas Recreate] 恢复时间轴项目失败: ${timelineItem.id}`, error)
+      for (const timelineItem of timelineModule.timelineItems) {
+        try {
+          console.log(`🔧 [Canvas Recreate] 重建时间轴项目runtime字段: ${timelineItem.id}`)
+
+          // 使用TimelineItemFactory.rebuildKnown重建runtime字段
+          const rebuildResult = await TimelineItemFactory.rebuildInplace({
+            originalTimelineItemData: timelineItem,
+            getMediaItem: mediaModule.getMediaItem,
+            setupTimelineItemSprite: timelineModule.setupTimelineItemSprite,
+            logIdentifier: 'Canvas Recreate',
+          })
+
+          if (!rebuildResult.success) {
+            console.error(
+              `❌ [Canvas Recreate] 重建runtime字段失败: ${timelineItem.id}`,
+              rebuildResult.error,
+            )
+            continue
           }
-        }
 
-        // 恢复播放状态
-        if (backup.currentFrame !== undefined) {
-          await seekTo(backup.currentFrame)
-        }
+          // 添加sprite到WebAV画布
+          if (rebuildResult.timelineItem.runtime.sprite) {
+            await addSprite(rebuildResult.timelineItem.runtime.sprite)
+          }
 
-        // 恢复播放状态
-        if (backup.isPlaying) {
-          // 这里可以根据需要恢复播放状态
-          console.log('🔧 [Canvas Recreate] 恢复播放状态')
+          // 记录sprite恢复
+          logSpriteRestore(timelineItem.id, timelineItem.mediaType)
+          restoredCount++
+
+          console.log(`✅ [Canvas Recreate] 成功重建runtime字段: ${timelineItem.id}`)
+        } catch (error) {
+          console.error(`❌ [Canvas Recreate] 重建runtime字段失败: ${timelineItem.id}`, error)
         }
+      }
+
+      if (globalAVCanvas) {
+        const microseconds = framesToMicroseconds(playbackModule.currentFrame.value)
+        await globalAVCanvas.previewFrame(microseconds)
       }
 
       const recreateTime = recreateTimer.end()
       logCanvasRecreateComplete(recreateTime, {
         canvasSize: `${options.width}x${options.height}`,
-        restoredItems: backup?.timelineItems.length || 0,
+        restoredItems: restoredCount,
         isReady: isWebAVReady.value,
       })
     } catch (error) {

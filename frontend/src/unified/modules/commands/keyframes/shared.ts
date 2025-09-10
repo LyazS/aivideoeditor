@@ -178,7 +178,7 @@ export async function showUserWarning(title: string, message: string): Promise<v
     const store = useUnifiedStore()
     // 假设新架构有类似的警告方法
     if (typeof store.showWarning === 'function') {
-      store.showWarning(title, message)
+      store.showWarning(`${title}：${message}`)
     } else {
       console.warn(`${title}: ${message}`)
     }

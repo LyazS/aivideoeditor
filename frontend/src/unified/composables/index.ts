@@ -2,7 +2,6 @@
  * 统一架构 Composables 导出文件
  */
 
-
 // 重新导出 useDragUtils 函数
 export { useDragUtils } from './useDragUtils'
 
@@ -15,7 +14,6 @@ export { usePlaybackControls } from './usePlaybackControls'
 // 重新导出 useDialogs 函数
 export { useDialogs } from './useDialogs'
 
-
 // 重新导出 useKeyboardShortcuts 函数
 export { useKeyboardShortcuts } from './useKeyboardShortcuts'
 
@@ -25,4 +23,8 @@ export { useUnifiedKeyframeTransformControls } from './useKeyframeTransformContr
 // 重新导出 useUnifiedKeyframeUI 函数
 export { useUnifiedKeyframeUI } from './useUnifiedKeyframeUI'
 
-// useAutoSave 已迁移到模块化架构，现在通过 UnifiedAutoSaveModule 提供
+// 重新导出 useTimelineTimeScale 函数
+export { useTimelineTimeScale } from './useTimelineTimeScale'
+
+// 重新导出 useTimelineWheelHandler 函数
+export { useTimelineWheelHandler } from './useTimelineWheelHandler'

@@ -56,21 +56,49 @@ export class DirectoryManager {
       // 检查queryPermission方法是否存在
       if (typeof handle.queryPermission === 'function') {
         const permission = await handle.queryPermission({ mode: 'readwrite' })
-        return permission === 'granted'
+        if (permission === 'granted') {
+          // 权限已授予，进一步验证目录是否实际存在
+          return await this.verifyDirectoryExists(handle)
+        }
+        return false
       } else {
         // 如果queryPermission不存在，尝试直接访问目录来测试权限
         try {
-          // 尝试读取目录内容来验证权限
+          // 尝试读取目录内容来验证权限和目录存在性
           const entries = handle.entries()
           await entries.next()
           return true
-        } catch (permissionError) {
-          console.warn('目录访问权限不足:', permissionError)
+        } catch (error) {
+          console.warn('目录访问权限不足或目录不存在:', error)
           return false
         }
       }
     } catch (error) {
       console.warn('检查工作目录权限失败:', error)
+      return false
+    }
+  }
+
+  /**
+   * 验证目录是否实际存在
+   */
+  private async verifyDirectoryExists(handle: FileSystemDirectoryHandle): Promise<boolean> {
+    try {
+      // 尝试获取目录的迭代器来验证目录存在性
+      const entries = handle.entries()
+      await entries.next() // 尝试获取第一个条目
+      return true
+    } catch (error) {
+      console.warn('目录不存在或无法访问:', error)
+      // 如果目录不存在，清除保存的句柄
+      if (
+        error instanceof Error &&
+        (error.message.includes('找不到') ||
+          error.message.includes('not found') ||
+          error.message.includes('无法找到'))
+      ) {
+        await this.clearWorkspaceDirectory()
+      }
       return false
     }
   }
@@ -156,11 +184,16 @@ export class DirectoryManager {
       ) {
         const permission = await handle.queryPermission({ mode: 'readwrite' })
         if (permission === 'granted') {
-          return true
+          // 权限已授予，验证目录是否实际存在
+          return await this.verifyDirectoryExists(handle)
         }
 
+        // 权限未授予，尝试请求权限
         const requestedPermission = await handle.requestPermission({ mode: 'readwrite' })
-        return requestedPermission === 'granted'
+        if (requestedPermission === 'granted') {
+          return await this.verifyDirectoryExists(handle)
+        }
+        return false
       } else {
         // 如果权限API不可用，尝试直接访问来测试权限
         try {
@@ -168,7 +201,16 @@ export class DirectoryManager {
           await entries.next()
           return true
         } catch (permissionError) {
-          console.warn('目录访问权限不足，需要重新选择目录:', permissionError)
+          console.warn('目录访问权限不足或目录不存在，需要重新选择目录:', permissionError)
+          // 如果目录不存在，清除保存的句柄
+          if (
+            permissionError instanceof Error &&
+            (permissionError.message.includes('找不到') ||
+              permissionError.message.includes('not found') ||
+              permissionError.message.includes('无法找到'))
+          ) {
+            await this.clearWorkspaceDirectory()
+          }
           return false
         }
       }

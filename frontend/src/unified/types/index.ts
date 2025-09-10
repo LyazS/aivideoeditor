@@ -26,9 +26,7 @@ export {
 
 // ==================== Clip渲染器相关类型 ====================
 export {
-  // 渲染上下文和渲染器接口
-  type ContentRenderContext,
-  type ContentRenderer,
+  // 渲染器工厂接口
   type ContentRendererFactory,
 
   // 渲染器类型定义
@@ -39,6 +37,9 @@ export {
   // 组件接口
   type UnifiedTimelineClipProps,
   type UnifiedTimelineClipEvents,
+
+  // 模板组件接口
+  type ContentTemplateProps,
 } from './clipRenderer'
 
 /**

@@ -22,9 +22,10 @@
             <span>{{ workspaceInfo.name }}</span>
           </button>
           <button
+            v-if="hasWorkspaceAccess && workspaceInfo"
             class="btn btn-primary"
             @click="createNewProject"
-            :disabled="!hasWorkspaceAccess || isLoading"
+            :disabled="isLoading"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
               <path d="M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z" />
@@ -40,7 +41,11 @@
       <div class="content-container">
         <!-- 权限检测和设置区域 -->
         <section v-if="!hasWorkspaceAccess" class="workspace-setup">
-          <div class="setup-card">
+          <div
+            class="setup-card"
+            :class="{ 'clickable-card': isApiSupported && !permissionError }"
+            @click="isApiSupported && !permissionError && !isLoading ? setupWorkspace() : null"
+          >
             <div class="setup-icon">
               <svg width="64" height="64" viewBox="0 0 24 24" fill="currentColor">
                 <path
@@ -48,7 +53,7 @@
                 />
               </svg>
             </div>
-            <h2>设置项目工作目录</h2>
+            <h2>点击设置目录</h2>
             <p>
               为了管理您的视频编辑项目，请选择一个本地文件夹作为项目工作目录。所有项目文件将保存在此文件夹中。
             </p>
@@ -65,29 +70,15 @@
               >
             </div>
 
-            <button
-              v-else
-              class="btn btn-primary btn-large"
-              @click="setupWorkspace"
-              :disabled="isLoading"
-            >
-              <svg v-if="!isLoading" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+            <!-- 权限丢失提示 -->
+            <div v-else-if="permissionError" class="error-message">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
                 <path
-                  d="M10,4H4C2.89,4 2,4.89 2,6V18A2,2 0 0,0 4,20H20A2,2 0 0,0 22,18V8C22,6.89 21.1,6 20,6H12L10,4Z"
+                  d="M12,2C17.53,2 22,6.47 22,12C22,17.53 17.53,22 12,22C6.47,22 2,17.53 2,12C2,6.47 6.47,2 12,2M15.59,7L12,10.59L8.41,7L7,8.41L10.59,12L7,15.59L8.41,17L12,13.41L15.59,17L17,15.59L13.41,12L17,8.41L15.59,7Z"
                 />
               </svg>
-              <svg
-                v-else
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="currentColor"
-                class="spinning"
-              >
-                <path d="M12,4V2A10,10 0 0,0 2,12H4A8,8 0 0,1 12,4Z" />
-              </svg>
-              {{ isLoading ? '设置中...' : '选择工作目录' }}
-            </button>
+              <span>工作目录权限已丢失或目录不存在，请重新选择工作目录。</span>
+            </div>
           </div>
         </section>
 
@@ -192,7 +183,7 @@
                 <p class="project-description">{{ project.description || '无描述' }}</p>
                 <div class="project-meta">
                   <span class="project-date">{{ formatDate(project.updatedAt) }}</span>
-                  <span class="project-duration">{{ project.duration || '00:00' }}</span>
+                  <span class="project-duration">{{ formatDuration(project.duration) }}</span>
                 </div>
               </div>
             </div>
@@ -242,6 +233,7 @@ import { unifiedProjectManager } from '@/unified/utils/projectManager'
 import type { UnifiedProjectConfig } from '@/unified/project'
 import { ContextMenu, ContextMenuItem } from '@imengyu/vue3-context-menu'
 import EditProjectDialog from '../components/EditProjectDialog.vue'
+import { useProjectThumbnailService } from '@/unified/composables/useProjectThumbnailService'
 
 const router = useRouter()
 
@@ -251,6 +243,7 @@ const projects = ref<UnifiedProjectConfig[]>([])
 const isLoading = ref(false)
 const hasWorkspaceAccess = ref(false)
 const workspaceInfo = ref<{ name: string; path?: string } | null>(null)
+const permissionError = ref(false)
 
 // 上下文菜单相关
 const showContextMenu = ref(false)
@@ -282,10 +275,42 @@ async function checkWorkspaceAccess() {
       await loadProjects()
     } else {
       console.log('⚠️ 没有工作目录权限，需要用户设置')
+      // 检查是否是因为目录不存在导致的权限丢失
+      await checkIfDirectoryLost()
     }
   } catch (error) {
     console.error('❌ 检查工作目录权限失败:', error)
     hasWorkspaceAccess.value = false
+    // 显示具体的错误信息给用户
+    showPermissionError(error)
+  }
+}
+
+// 检查是否是因为目录不存在导致的权限丢失
+async function checkIfDirectoryLost() {
+  try {
+    // 尝试重新检查权限，获取更详细的错误信息
+    const recheckResult = await directoryManager.recheckPermissions()
+    if (!recheckResult) {
+      console.log('🔍 检测到目录权限已丢失，需要重新设置工作目录')
+      // 清除旧的目录设置，强制用户重新选择
+      await directoryManager.clearWorkspaceDirectory()
+    }
+  } catch (error) {
+    console.warn('检查目录状态失败:', error)
+  }
+}
+
+// 显示权限错误信息
+function showPermissionError(error: unknown) {
+  const errorMessage = error instanceof Error ? error.message : '未知错误'
+
+  if (errorMessage.includes('权限') || errorMessage.includes('permission')) {
+    console.log('🔒 权限错误，需要用户重新授权')
+    permissionError.value = true
+  } else if (errorMessage.includes('目录') || errorMessage.includes('directory')) {
+    console.log('📁 目录访问错误，可能需要重新选择工作目录')
+    permissionError.value = true
   }
 }
 
@@ -294,6 +319,7 @@ async function setupWorkspace() {
 
   try {
     isLoading.value = true
+    permissionError.value = false // 重置权限错误状态
     const handle = await directoryManager.requestWorkspaceDirectory()
 
     if (handle) {
@@ -303,7 +329,7 @@ async function setupWorkspace() {
     }
   } catch (error) {
     console.error('设置工作目录失败:', error)
-    // 可以添加错误提示
+    showPermissionError(error)
   } finally {
     isLoading.value = false
   }
@@ -338,12 +364,55 @@ async function loadProjects() {
 
   try {
     isLoading.value = true
-    projects.value = await unifiedProjectManager.listProjects()
+    const projectList = await unifiedProjectManager.listProjects()
+
+    // 为每个项目加载缩略图
+    const projectsWithThumbnails = await Promise.all(
+      projectList.map(async (project) => {
+        try {
+          // 尝试加载缩略图
+          const thumbnailService = useProjectThumbnailService()
+          const thumbnailUrl = await thumbnailService.getThumbnailUrl(project.id)
+
+          return {
+            ...project,
+            thumbnail: thumbnailUrl,
+          }
+        } catch (error) {
+          console.warn(`无法加载项目 ${project.name} 的缩略图:`, error)
+          // 如果缩略图加载失败，保持原项目数据
+          return project
+        }
+      }),
+    )
+
+    projects.value = projectsWithThumbnails
   } catch (error) {
     console.error('加载项目列表失败:', error)
     // 可以添加错误提示
   } finally {
     isLoading.value = false
+  }
+}
+
+/**
+ * 加载单个项目的缩略图
+ */
+async function loadProjectThumbnail(projectId: string, projectName: string) {
+  try {
+    const thumbnailService = useProjectThumbnailService()
+    const thumbnailUrl = await thumbnailService.getThumbnailUrl(projectId)
+
+    // 更新项目的缩略图URL
+    const projectIndex = projects.value.findIndex((p) => p.id === projectId)
+    if (projectIndex !== -1) {
+      projects.value[projectIndex].thumbnail = thumbnailUrl
+    }
+
+    return thumbnailUrl
+  } catch (error) {
+    console.warn(`加载项目缩略图失败: ${projectName}`, error)
+    throw error
   }
 }
 
@@ -411,24 +480,42 @@ async function handleSaveProjectEdit(data: { name: string; description: string }
   }
 
   try {
+    // 生成统一的更新时间戳
+    const updatedAt = new Date().toISOString()
+
     // 更新项目配置
     const updatedProject: UnifiedProjectConfig = {
       ...selectedProject.value,
       name: data.name,
       description: data.description,
-      updatedAt: new Date().toISOString(),
+      updatedAt: updatedAt,
     }
 
-    // 保存项目
-    await unifiedProjectManager.saveProject(updatedProject)
-
-    // 刷新项目列表
-    await loadProjects()
-
-    // 关闭对话框
+    // 先关闭对话框，提升用户体验
     showEditProjectDialog.value = false
+    console.log('项目信息已更新:', updatedProject.name)
 
-    console.log('项目信息更新成功:', updatedProject.name)
+    // 立即更新本地内存中的项目数据
+    const projectIndex = projects.value.findIndex((p) => p.id === selectedProject.value!.id)
+    if (projectIndex !== -1) {
+      projects.value[projectIndex] = updatedProject
+      // 重新排序项目列表（按更新时间排序）
+      projects.value.sort(
+        (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+      )
+    }
+
+    // 异步保存项目配置到文件系统（传入相同的updatedAt确保一致性）
+    unifiedProjectManager
+      .saveProjectConfig(updatedProject, updatedAt)
+      .then(() => {
+        console.log('项目配置保存成功:', updatedProject.name)
+      })
+      .catch((error) => {
+        console.error('保存项目配置失败:', error)
+        // 保存失败时重新加载项目列表以恢复正确状态
+        loadProjects()
+      })
   } catch (error) {
     console.error('更新项目信息失败:', error)
     // 可以添加错误提示
@@ -442,6 +529,17 @@ function formatDate(dateString: string) {
     month: 'short',
     day: 'numeric',
   })
+}
+
+function formatDuration(seconds: number): string {
+  if (!seconds || seconds === 0) {
+    return '00:00'
+  }
+
+  const minutes = Math.floor(seconds / 60)
+  const remainingSeconds = Math.floor(seconds % 60)
+
+  return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`
 }
 
 // 生命周期
@@ -553,6 +651,21 @@ onMounted(async () => {
   text-align: center;
   max-width: 500px;
   width: 100%;
+  transition: all 0.2s ease;
+}
+
+.setup-card.clickable-card {
+  cursor: pointer;
+  border-color: var(--color-primary);
+  opacity: 0.9;
+}
+
+.setup-card.clickable-card:hover {
+  background-color: var(--color-bg-hover);
+  border-color: var(--color-primary);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  opacity: 1;
 }
 
 .setup-icon {
@@ -892,6 +1005,23 @@ onMounted(async () => {
 
 .btn-primary:hover {
   background-color: var(--color-primary-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* 空状态按钮的特殊样式 */
+.empty-state .btn-primary {
+  background-color: var(--color-bg-tertiary);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+}
+
+.empty-state .btn-primary:hover {
+  background-color: var(--color-bg-hover);
+  border-color: var(--color-border-hover);
+  color: var(--color-text-primary);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
 .spinning {

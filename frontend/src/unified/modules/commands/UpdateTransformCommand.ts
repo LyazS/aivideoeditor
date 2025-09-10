@@ -8,18 +8,17 @@ import { framesToMicroseconds, framesToTimecode } from '@/unified/utils/timeUtil
 import type { SimpleCommand } from '@/unified/modules/commands/types'
 
 // ==================== 新架构类型导入 ====================
-import type { VideoMediaConfig, AudioMediaConfig, UnifiedTimelineItemData, TransformData } from '@/unified/timelineitem'
+import type {
+  VideoMediaConfig,
+  AudioMediaConfig,
+  UnifiedTimelineItemData,
+  TransformData,
+} from '@/unified/timelineitem'
 
 import type { UnifiedMediaItemData, MediaType } from '@/unified/mediaitem'
 
 // ==================== 新架构工具导入 ====================
-import {
-  isVideoTimelineItem,
-  isImageTimelineItem,
-  isAudioTimelineItem,
-  isTextTimelineItem,
-  hasAudioProperties,
-} from '@/unified/timelineitem'
+import { TimelineItemQueries } from '@/unified/timelineitem'
 
 import {
   isUnifiedVideoVisibleSprite,
@@ -80,12 +79,10 @@ export class UpdateTransformCommand implements SimpleCommand {
     private timelineModule: {
       updateTimelineItemTransform: (id: string, transform: TransformData) => void
       getTimelineItem: (id: string) => UnifiedTimelineItemData<MediaType> | undefined
+      updateTimelineItemPlaybackRate?: (id: string, rate: number) => void
     },
     private mediaModule: {
       getMediaItem: (id: string) => UnifiedMediaItemData | undefined
-    },
-    private clipOperationsModule?: {
-      updateTimelineItemPlaybackRate: (id: string, rate: number) => void
     },
   ) {
     this.id = generateCommandId()
@@ -137,8 +134,8 @@ export class UpdateTransformCommand implements SimpleCommand {
       }
 
       // 处理倍速更新（对视频和音频有效）
-      if (this.newValues.playbackRate !== undefined && this.clipOperationsModule) {
-        this.clipOperationsModule.updateTimelineItemPlaybackRate(
+      if (this.newValues.playbackRate !== undefined) {
+        this.timelineModule.updateTimelineItemPlaybackRate?.(
           this.timelineItemId,
           this.newValues.playbackRate,
         )
@@ -150,7 +147,7 @@ export class UpdateTransformCommand implements SimpleCommand {
       }
 
       // 处理音量更新（对视频和音频有效）
-      if (hasAudioProperties(timelineItem)) {
+      if (TimelineItemQueries.hasAudioProperties(timelineItem)) {
         if (this.newValues.volume !== undefined) {
           const config = timelineItem.config as VideoMediaConfig | AudioMediaConfig
           if (config.volume !== undefined) {
@@ -175,7 +172,10 @@ export class UpdateTransformCommand implements SimpleCommand {
       }
 
       // 处理音频增益更新（仅对音频有效）
-      if (isAudioTimelineItem(timelineItem) && this.newValues.gain !== undefined) {
+      if (
+        TimelineItemQueries.isAudioTimelineItem(timelineItem) &&
+        this.newValues.gain !== undefined
+      ) {
         // 类型安全的音频配置更新
         const config = timelineItem.config as AudioMediaConfig
         if (config.gain !== undefined) {
@@ -232,8 +232,8 @@ export class UpdateTransformCommand implements SimpleCommand {
       }
 
       // 处理倍速恢复（对视频和音频有效）
-      if (this.oldValues.playbackRate !== undefined && this.clipOperationsModule) {
-        this.clipOperationsModule.updateTimelineItemPlaybackRate(
+      if (this.oldValues.playbackRate !== undefined) {
+        this.timelineModule.updateTimelineItemPlaybackRate?.(
           this.timelineItemId,
           this.oldValues.playbackRate,
         )
@@ -245,7 +245,7 @@ export class UpdateTransformCommand implements SimpleCommand {
       }
 
       // 处理音量恢复（对视频和音频有效）
-      if (hasAudioProperties(timelineItem)) {
+      if (TimelineItemQueries.hasAudioProperties(timelineItem)) {
         if (this.oldValues.volume !== undefined) {
           const config = timelineItem.config as VideoMediaConfig | AudioMediaConfig
           if (config.volume !== undefined) {
@@ -270,7 +270,10 @@ export class UpdateTransformCommand implements SimpleCommand {
       }
 
       // 处理音频增益恢复（仅对音频有效）
-      if (isAudioTimelineItem(timelineItem) && this.oldValues.gain !== undefined) {
+      if (
+        TimelineItemQueries.isAudioTimelineItem(timelineItem) &&
+        this.oldValues.gain !== undefined
+      ) {
         // 类型安全的音频配置恢复
         const config = timelineItem.config as AudioMediaConfig
         if (config.gain !== undefined) {
@@ -401,19 +404,19 @@ export class UpdateTransformCommand implements SimpleCommand {
     const newTimelineEndFrames = timelineStartFrames + newDurationFrames
     const newTimelineEndTime = framesToMicroseconds(newTimelineEndFrames)
 
-    if (isVideoTimelineItem(timelineItem)) {
+    if (TimelineItemQueries.isVideoTimelineItem(timelineItem)) {
       // 更新sprite的时间范围
       sprite.setTimeRange({
         ...timeRange,
         timelineEndTime: newTimelineEndTime,
       })
-    } else if (isAudioTimelineItem(timelineItem)) {
+    } else if (TimelineItemQueries.isAudioTimelineItem(timelineItem)) {
       // 更新sprite的时间范围
       sprite.setTimeRange({
         ...timeRange,
         timelineEndTime: newTimelineEndTime,
       })
-    } else if (isImageTimelineItem(timelineItem)) {
+    } else if (TimelineItemQueries.isImageTimelineItem(timelineItem)) {
       // 对于图片，直接更新显示时长（使用帧数），clipStartTime和clipEndTime设置为-1
       sprite.setTimeRange({
         timelineStartTime: timeRange.timelineStartTime,
@@ -421,7 +424,7 @@ export class UpdateTransformCommand implements SimpleCommand {
         clipStartTime: -1,
         clipEndTime: -1,
       })
-    } else if (isTextTimelineItem(timelineItem)) {
+    } else if (TimelineItemQueries.isTextTimelineItem(timelineItem)) {
       // 对于文本，与图片类似，直接更新显示时长（使用帧数），clipStartTime和clipEndTime设置为-1
       sprite.setTimeRange({
         timelineStartTime: timeRange.timelineStartTime,

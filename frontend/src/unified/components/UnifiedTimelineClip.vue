@@ -1,110 +1,84 @@
 <template>
   <div
-    class="unified-timeline-clip-container"
-    :style="containerStyles"
+    :class="clipClasses"
+    :style="combinedStyles"
+    :data-media-type="data.mediaType"
+    :data-timeline-item-id="data.id"
+    :data-timeline-status="data.timelineStatus"
+    :draggable="true"
+    @dragstart="handleDragStart"
+    @dragend="handleDragEnd"
+    @click="handleSelect"
+    @dblclick="handleDoubleClick"
+    @contextmenu="handleContextMenu"
   >
+    <!-- 左侧调整把手 -->
     <div
-      :class="clipClasses"
-      :style="clipStyles"
-      :data-media-type="data.mediaType"
-      :data-timeline-item-id="data.id"
-      :data-timeline-status="data.timelineStatus"
-      :draggable="true"
-      @dragstart="handleDragStart"
-      @dragend="handleDragEnd"
-      @click="handleSelect"
-      @dblclick="handleDoubleClick"
-      @contextmenu="handleContextMenu"
-      @mouseenter="showTooltip"
-      @mousemove="updateTooltipPosition"
-      @mouseleave="hideTooltip"
-    >
-      <!-- 左侧调整把手 -->
-      <div
-        v-if="data.timelineStatus === 'ready'"
-        class="resize-handle resize-handle-left"
-        @mousedown.stop="handleResizeStart('left', $event)"
-      ></div>
+      v-if="data.timelineStatus === 'ready'"
+      class="resize-handle resize-handle-left"
+      @mousedown.stop="handleResizeStart('left', $event)"
+    ></div>
 
-      <!-- 动态渲染的内容区域 -->
-      <div class="clip-content">
-        <component :is="renderedContent" />
-      </div>
-
-      <!-- 右侧调整把手 -->
-      <div
-        v-if="data.timelineStatus === 'ready'"
-        class="resize-handle resize-handle-right"
-        @mousedown.stop="handleResizeStart('right', $event)"
-      ></div>
-
-
-      <!-- 进度条（如果渲染器提供） -->
-      <div v-if="progressBar" class="progress-bar-container">
-        <component :is="progressBar" />
-      </div>
-
-      <!-- 关键帧标记容器 -->
-      <div v-if="hasKeyframes" class="keyframes-container">
-        <div
-          v-for="keyframe in visibleKeyframes"
-          :key="keyframe.framePosition"
-          class="keyframe-marker"
-          :style="getKeyframeMarkerStyles(keyframe.pixelPosition)"
-          :title="`关键帧 - 帧 ${keyframe.absoluteFrame} (点击跳转)`"
-          @click.stop="jumpToKeyframe(keyframe.absoluteFrame)"
-        >
-          <div class="keyframe-diamond"></div>
-        </div>
-      </div>
+    <!-- 素材名称显示 -->
+    <div class="clip-name-overlay" v-if="mediaItemName">
+      {{ mediaItemName }}
     </div>
 
-    <!-- Tooltip 组件 -->
-    <UnifiedClipTooltip
-      :visible="showTooltipFlag"
-      :title="clipName"
-      :media-type="props.data.mediaType"
-      :duration="formattedDuration"
-      :position="formattedPosition"
-      :mouse-x="tooltipPosition.x"
-      :mouse-y="tooltipPosition.y"
-      :clip-top="clipTopPosition"
-    />
+    <!-- 动态渲染的内容区域（使用模板组件） -->
+    <div class="clip-content">
+      <component :is="templateComponent" v-bind="templateProps" />
+    </div>
+
+    <!-- 右侧调整把手 -->
+    <div
+      v-if="data.timelineStatus === 'ready'"
+      class="resize-handle resize-handle-right"
+      @mousedown.stop="handleResizeStart('right', $event)"
+    ></div>
+
+    <!-- 关键帧标记容器 -->
+    <div v-if="hasKeyframes" class="keyframes-container">
+      <div
+        v-for="keyframe in visibleKeyframes"
+        :key="keyframe.framePosition"
+        class="keyframe-marker"
+        :style="getKeyframeMarkerStyles(keyframe.pixelPosition)"
+        :title="`关键帧 - 帧 ${keyframe.absoluteFrame} (点击跳转)`"
+        @click.stop="jumpToKeyframe(keyframe.absoluteFrame)"
+      >
+        <div class="keyframe-diamond"></div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onUnmounted, h } from 'vue'
-import type {
-  UnifiedTimelineClipProps,
-  ContentRenderContext,
-} from '../types/clipRenderer'
+import { computed, ref, onUnmounted, h, inject } from 'vue'
+import type { UnifiedTimelineClipProps, ContentTemplateProps } from '../types/clipRenderer'
 import type { UnifiedTimeRange } from '@/unified/types/timeRange'
 import { ContentRendererFactory } from './renderers/ContentRendererFactory'
 import { useUnifiedStore } from '@/unified/unifiedStore'
 import { useDragUtils, usePlaybackControls } from '@/unified/composables'
 import { alignFramesToFrame } from '@/unified/utils/timeUtils'
-import UnifiedClipTooltip from './UnifiedClipTooltip.vue'
-import type { RemoteFileSourceData } from '@/unified/sources/RemoteFileSource'
 import { relativeFrameToAbsoluteFrame } from '@/unified/utils/unifiedKeyframeUtils'
+import { DEFAULT_TRACK_PADDING } from '@/unified/constants/TrackConstants'
+import { getDefaultTrackHeight, mapMediaTypeToTrackType } from '@/unified/track/TrackUtils'
 
 // ==================== 组件定义 ====================
 
-// 定义组件属性
-const props = withDefaults(defineProps<UnifiedTimelineClipProps>(), {
-  isSelected: false,
-  isDragging: false,
-  isResizing: false,
-  currentFrame: 0,
-  scale: 1,
-  trackHeight: 60,
-  timelineWidth: 1000,
-})
+// 定义组件属性 - 最终精简版本，所有属性都是必选的
+const props = defineProps<UnifiedTimelineClipProps>()
 
 // 获取统一store实例
 const unifiedStore = useUnifiedStore()
 const dragUtils = useDragUtils()
 const { pauseForEditing } = usePlaybackControls()
+
+// 获取素材名称
+const mediaItemName = computed(() => {
+  const mediaItem = unifiedStore.getMediaItem(props.data.mediaItemId)
+  return mediaItem?.name || ''
+})
 
 // 拖拽状态
 const isDragging = ref(false)
@@ -120,116 +94,36 @@ const tempResizePositionFrames = ref(0)
 
 // 定义组件事件
 const emit = defineEmits<{
-  select: [id: string]
+  select: [event: MouseEvent, id: string]
   doubleClick: [id: string]
   contextMenu: [event: MouseEvent, id: string]
   dragStart: [event: DragEvent, id: string]
   resizeStart: [event: MouseEvent, id: string, direction: 'left' | 'right']
+  updateSnapResult: [snapResult: any]
 }>()
 
 // ==================== 响应式状态 ====================
 
-// 工具提示相关状态
-const showTooltipFlag = ref(false)
-const tooltipPosition = ref({ x: 0, y: 0 })
-
 // ==================== 计算属性 ====================
 
 /**
- * Clip进度信息计算属性
+ * 构建模板组件的props - 简化版本
  */
-const clipProgress = computed(() => {
-  // 获取当前clip关联的媒体项目
-  const mediaItem = unifiedStore.getMediaItem(props.data.mediaItemId)
-  if (!mediaItem || !mediaItem.source) {
-    return {
-      hasProgress: false,
-      percent: 0,
-      speed: undefined
-    }
-  }
-
-  const source = mediaItem.source
-  
-  // 根据数据源类型获取进度信息
-  if (source.type === 'remote') {
-    // 远程文件源：使用下载字节数计算进度
-    const remoteSource = source as RemoteFileSourceData
-    if (remoteSource.totalBytes === 0) {
-      return {
-        hasProgress: false,
-        percent: 0,
-        speed: undefined
-      }
-    }
-    const percent = (remoteSource.downloadedBytes / remoteSource.totalBytes) * 100
-    return {
-      hasProgress: true,
-      percent,
-      speed: remoteSource.downloadSpeed
-    }
-  } else {
-    // 其他类型：使用基础进度值
-    return {
-      hasProgress: source.progress > 0,
-      percent: source.progress,
-      speed: undefined
-    }
-  }
-})
-
-/**
- * 构建渲染上下文
- */
-const renderContext = computed<ContentRenderContext>(() => ({
+const templateProps = computed<ContentTemplateProps>(() => ({
   data: props.data,
   isSelected: props.isSelected,
-  isDragging: props.isDragging,
-  isResizing: props.isResizing,
   currentFrame: props.currentFrame,
-  scale: props.scale,
   trackHeight: props.trackHeight,
-  progressInfo: clipProgress.value, // 添加进度信息
-  callbacks: {
-    onSelect: (id: string) => emit('select', id),
-    onDoubleClick: (id: string) => emit('doubleClick', id),
-    onContextMenu: (event: MouseEvent, id: string) => emit('contextMenu', event, id),
-    onDragStart: (event: DragEvent, id: string) => emit('dragStart', event, id),
-    onResizeStart: (event: MouseEvent, id: string, direction: 'left' | 'right') =>
-      emit('resizeStart', event, id, direction),
-  },
+  timelineWidth: props.timelineWidth,
+  viewportFrameRange: props.viewportFrameRange,
 }))
 
 /**
- * 动态选择渲染器
+ * 动态选择模板组件
  */
-const renderer = computed(() => {
-  // 如果提供了自定义渲染器，优先使用
-  if (props.customRenderer) {
-    return props.customRenderer
-  }
-
-  // 使用渲染器工厂获取合适的渲染器
-  return ContentRendererFactory.getRenderer(props.data)
-})
-
-/**
- * 渲染内容
- */
-const renderedContent = computed(() => {
-  return () => renderer.value.renderContent(renderContext.value)
-})
-
-
-/**
- * 进度条
- */
-const progressBar = computed(() => {
-  if (!renderer.value.renderProgressBar) {
-    return null
-  }
-
-  return () => renderer.value.renderProgressBar!(renderContext.value)
+const templateComponent = computed(() => {
+  // 使用渲染器工厂获取合适的模板组件
+  return ContentRendererFactory.getTemplateComponent(props.data)
 })
 
 /**
@@ -242,31 +136,23 @@ const clipClasses = computed(() => {
     `status-${props.data.timelineStatus}`,
     {
       selected: props.isSelected,
-      dragging: isDragging.value || props.isDragging,
-      resizing: isResizing.value || props.isResizing,
+      dragging: isDragging.value,
+      resizing: isResizing.value,
     },
   ]
 
-  // 添加渲染器提供的自定义类
-  const customClasses = renderer.value.getCustomClasses?.(renderContext.value) || []
-
-  return [...baseClasses, ...customClasses]
+  return baseClasses
 })
 
 /**
- * 动态样式（只包含渲染器提供的自定义样式，位置和尺寸由容器处理）
+ * 合并样式（包含位置尺寸和剪辑样式）
  */
-const clipStyles = computed(() => {
-  // 添加渲染器提供的自定义样式
-  const customStyles = renderer.value.getCustomStyles?.(renderContext.value) || {}
+const combinedStyles = computed(() => {
+  // 计算clip的高度和上边距
+  const trackType = mapMediaTypeToTrackType(props.data.mediaType)
+  const clipHeight = getDefaultTrackHeight(trackType) - DEFAULT_TRACK_PADDING * 2
+  const clipTopOffset = DEFAULT_TRACK_PADDING
 
-  return { ...customStyles }
-})
-
-/**
- * 容器样式（将位置和尺寸应用到容器上）
- */
-const containerStyles = computed(() => {
   // 计算clip的位置和尺寸
   const timeRange = props.data.timeRange
 
@@ -285,46 +171,12 @@ const containerStyles = computed(() => {
   const width = Math.max(right - left, 20) // 最小宽度20px
 
   return {
+    height: `${clipHeight}px`,
+    top: `${clipTopOffset}px`,
     left: `${left}px`,
     width: `${width}px`,
-    height: '60px', // 轨道高度
-    top: '0px',
   }
 })
-
-// ==================== Tooltip 计算属性 ====================
-
-/**
- * 获取clip名称
- */
-const clipName = computed(() => {
-  const mediaItem = unifiedStore.getMediaItem(props.data.mediaItemId)
-  return mediaItem?.name || '未知片段'
-})
-
-/**
- * 格式化时长
- */
-const formattedDuration = computed(() => {
-  const durationFrames =
-    props.data.timeRange.timelineEndTime - props.data.timeRange.timelineStartTime
-  const seconds = durationFrames / unifiedStore.frameRate
-  return `${seconds.toFixed(2)}秒`
-})
-
-/**
- * 格式化位置
- */
-const formattedPosition = computed(() => {
-  const startFrame = props.data.timeRange.timelineStartTime
-  const seconds = startFrame / unifiedStore.frameRate
-  return `${seconds.toFixed(2)}秒`
-})
-
-/**
- * 获取clip元素的顶部位置
- */
-const clipTopPosition = ref(0)
 
 // ==================== 关键帧标记相关计算属性 ====================
 
@@ -398,7 +250,7 @@ function getKeyframeMarkerStyles(pixelPosition: number): Record<string, string> 
  */
 function handleSelect(event: MouseEvent) {
   event.stopPropagation()
-  emit('select', props.data.id)
+  emit('select', event, props.data.id) // 传递事件对象和ID
 }
 
 /**
@@ -431,13 +283,27 @@ function handleDragStart(event: DragEvent) {
     return
   }
 
+  // 检查是否有多个项目被选中，如果是则禁止拖拽
+  if (unifiedStore.selectedTimelineItemIds.size > 1) {
+    console.log('🚫 [UnifiedTimelineClip] 多选状态下禁止拖拽')
+    // 显示警告通知
+    unifiedStore.showWarning('多选状态下禁止拖拽操作')
+    event.preventDefault()
+    return
+  }
+
   // 暂停播放并处理拖拽
   pauseForEditing('时间轴项目拖拽')
-  hideTooltip()
   dragUtils.ensureItemSelected(props.data.id)
 
   // 设置拖拽数据
-  const dragOffset = { x: event.offsetX, y: event.offsetY }
+  // 计算鼠标位置相对于clip元素本身的偏移量
+  const clipElement = event.currentTarget as HTMLElement
+  const clipRect = clipElement.getBoundingClientRect()
+  const dragOffset = {
+    x: event.clientX - clipRect.left,
+    y: event.clientY - clipRect.top,
+  }
   const dragData = dragUtils.setTimelineItemDragData(
     event,
     props.data.id,
@@ -448,10 +314,6 @@ function handleDragStart(event: DragEvent) {
   )
 
   console.log('📦 [UnifiedTimelineClip] 设置拖拽数据:', dragData)
-
-  // 创建简单的拖拽预览图像
-  const dragImage = createSimpleDragPreview()
-  event.dataTransfer!.setDragImage(dragImage, dragOffset.x, dragOffset.y)
 
   // 设置拖拽状态
   isDragging.value = true
@@ -467,68 +329,6 @@ function handleDragEnd(_event: DragEvent) {
   // 清理拖拽状态
   isDragging.value = false
   dragUtils.clearDragData()
-  removeSimpleDragPreview()
-
-  // 吸附指示器已禁用
-}
-
-/**
- * 创建简单的拖拽预览图像
- */
-function createSimpleDragPreview(): HTMLElement {
-  const selectedCount = unifiedStore.selectedTimelineItemIds.size
-  const preview = document.createElement('div')
-
-  preview.className = 'simple-drag-preview'
-
-  // 获取当前clip的实际尺寸
-  const clipElement = dragUtils.getTimelineItemElement(props.data.id)
-  const { width: clipWidth, height: clipHeight } = dragUtils.getElementDimensions(clipElement)
-
-  // 简单的预览样式
-  preview.style.cssText = `
-    position: fixed;
-    top: -1000px;
-    left: -1000px;
-    width: ${clipWidth}px;
-    height: ${clipHeight}px;
-    background: rgba(255, 107, 53, 0.8);
-    border: 1px solid var(--color-clip-selected);
-    border-radius: 4px;
-    pointer-events: none;
-    z-index: 9999;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    font-size: 10px;
-    font-weight: bold;
-  `
-
-  // 简单的文本内容
-  if (selectedCount > 1) {
-    preview.textContent = `${selectedCount} 项目`
-  } else {
-    const mediaItem = unifiedStore.getMediaItem(props.data.mediaItemId)
-    const clipName = mediaItem?.name || 'Clip'
-    preview.textContent = clipName.length > 8 ? clipName.substring(0, 6) + '..' : clipName
-  }
-
-  document.body.appendChild(preview)
-
-  // 设置清理定时器
-  setTimeout(() => {
-    removeSimpleDragPreview()
-  }, 100)
-
-  return preview
-}
-
-function removeSimpleDragPreview() {
-  const preview = document.querySelector('.simple-drag-preview')
-  if (preview && document.body.contains(preview)) {
-    document.body.removeChild(preview)
-  }
 }
 
 /**
@@ -539,7 +339,6 @@ function handleResizeStart(direction: 'left' | 'right', event: MouseEvent) {
 
   // 暂停播放以便进行编辑
   pauseForEditing('片段大小调整')
-  hideTooltip()
 
   isResizing.value = true
   resizeDirection.value = direction
@@ -554,6 +353,11 @@ function handleResizeStart(direction: 'left' | 'right', event: MouseEvent) {
   // 初始化临时值
   tempDurationFrames.value = resizeStartDurationFrames.value
   tempResizePositionFrames.value = resizeStartPositionFrames.value
+
+  // 开始拖拽阶段，收集候选目标（用于调整大小时的吸附）
+  if (unifiedStore.snapConfig.enabled) {
+    unifiedStore.startSnapDrag([props.data.id])
+  }
 
   // 添加全局事件监听器
   document.addEventListener('mousemove', handleResize)
@@ -585,7 +389,32 @@ function handleResize(event: MouseEvent) {
     let newLeftFrames = unifiedStore.pixelToFrame(newLeftPixel, props.timelineWidth)
     newLeftFrames = Math.max(0, alignFramesToFrame(newLeftFrames))
 
-    // 吸附功能已禁用，直接使用计算的帧数
+    // 启用左边把柄吸附功能
+    if (unifiedStore.snapConfig.enabled) {
+      // 计算吸附位置
+      const snapOptions = {
+        excludeClipIds: [props.data.id],
+        customThreshold: unifiedStore.snapConfig.threshold,
+      }
+
+      const snapResult = unifiedStore.calculateSnapPosition(newLeftFrames, snapOptions)
+      if (snapResult) {
+        newLeftFrames = snapResult.frame
+        // 触发吸附指示器显示
+        emit('updateSnapResult', {
+          snapped: true,
+          frame: snapResult.frame,
+          snapPoint: snapResult.snapPoint,
+          distance: snapResult.distance,
+        })
+      } else {
+        // 清除吸附指示器
+        emit('updateSnapResult', null)
+      }
+    } else {
+      // 清除吸附指示器
+      emit('updateSnapResult', null)
+    }
 
     newTimelinePositionFrames = newLeftFrames
     newDurationFrames =
@@ -599,7 +428,32 @@ function handleResize(event: MouseEvent) {
     let newRightFrames = unifiedStore.pixelToFrame(newRightPixel, props.timelineWidth)
     newRightFrames = alignFramesToFrame(newRightFrames)
 
-    // 吸附功能已禁用，直接使用计算的帧数
+    // 启用右边把柄吸附功能
+    if (unifiedStore.snapConfig.enabled) {
+      // 计算吸附位置
+      const snapOptions = {
+        excludeClipIds: [props.data.id],
+        customThreshold: unifiedStore.snapConfig.threshold,
+      }
+
+      const snapResult = unifiedStore.calculateSnapPosition(newRightFrames, snapOptions)
+      if (snapResult) {
+        newRightFrames = snapResult.frame
+        // 触发吸附指示器显示
+        emit('updateSnapResult', {
+          snapped: true,
+          frame: snapResult.frame,
+          snapPoint: snapResult.snapPoint,
+          distance: snapResult.distance,
+        })
+      } else {
+        // 清除吸附指示器
+        emit('updateSnapResult', null)
+      }
+    } else {
+      // 清除吸附指示器
+      emit('updateSnapResult', null)
+    }
 
     newDurationFrames = newRightFrames - resizeStartPositionFrames.value
   }
@@ -659,7 +513,6 @@ async function stopResize() {
       }
 
       // 调用统一store的resize方法，传入完整的newTimeRange对象
-      // 注意：adjustKeyframesForDurationChange 和 updateWebAVAnimation 现在已整合到 ResizeTimelineItemCommand 中
       const success = await unifiedStore.resizeTimelineItemWithHistory(props.data.id, newTimeRange)
 
       if (success) {
@@ -685,61 +538,17 @@ function cleanupResize() {
   resizeDirection.value = null
   document.removeEventListener('mousemove', handleResize)
   document.removeEventListener('mouseup', stopResize)
-  // 吸附指示器已禁用
+
+  // 结束拖拽阶段，清理缓存
+  if (unifiedStore.snapConfig.enabled) {
+    unifiedStore.endSnapDrag()
+    emit('updateSnapResult', null) // 清除吸附指示器
+  }
 
   if (direction) {
     // 这里可以发出resize-end事件，但新架构可能不需要
     console.log('🏁 [UnifiedTimelineClip] resize结束:', direction)
   }
-}
-
-/**
- * 显示工具提示
- */
-function showTooltip(event: MouseEvent) {
-  // 如果正在拖拽或调整大小，不显示tooltip
-  if (isDragging.value || isResizing.value) return
-
-  showTooltipFlag.value = true
-
-  // 获取clip元素的位置信息
-  const clipElement = event.currentTarget as HTMLElement
-  const clipRect = clipElement.getBoundingClientRect()
-
-  // 更新tooltip位置数据
-  tooltipPosition.value = {
-    x: event.clientX,
-    y: event.clientY,
-  }
-  clipTopPosition.value = clipRect.top
-}
-
-/**
- * 更新工具提示位置
- */
-function updateTooltipPosition(event: MouseEvent) {
-  // 只有在tooltip显示时才更新位置
-  if (!showTooltipFlag.value) return
-  // 如果正在拖拽或调整大小，不更新tooltip位置
-  if (isDragging.value || isResizing.value) return
-
-  // 获取clip元素的位置信息
-  const clipElement = event.currentTarget as HTMLElement
-  const clipRect = clipElement.getBoundingClientRect()
-
-  // 更新tooltip位置数据
-  tooltipPosition.value = {
-    x: event.clientX,
-    y: event.clientY,
-  }
-  clipTopPosition.value = clipRect.top
-}
-
-/**
- * 隐藏工具提示
- */
-function hideTooltip() {
-  showTooltipFlag.value = false
 }
 
 /**
@@ -753,7 +562,7 @@ function jumpToKeyframe(absoluteFrame: number) {
 
   // 暂停播放以便进行时间跳转
   pauseForEditing('关键帧跳转')
-  
+
   // 通过WebAV进行时间跳转，这会触发画布渲染更新
   try {
     // 使用webAVSeekTo方法，确保画布渲染得到更新
@@ -770,29 +579,4 @@ onUnmounted(() => {
 })
 </script>
 
-<style scoped>
-/* 容器样式 - 位置和尺寸由动态样式控制 */
-.unified-timeline-clip-container {
-  position: absolute;
-  width: auto;
-  height: auto;
-  /* 移除max-width限制，允许clip在高缩放级别下正常拉伸 */
-  max-height: 100%;
-}
-
-/* 简单拖拽预览样式 */
-:global(.simple-drag-preview) {
-  position: fixed !important;
-  background: rgba(255, 107, 53, 0.8) !important;
-  border: 1px solid var(--color-clip-selected) !important;
-  border-radius: 4px !important;
-  pointer-events: none !important;
-  z-index: 9999 !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  color: white !important;
-  font-size: 10px !important;
-  font-weight: bold !important;
-}
-</style>
+<style scoped></style>

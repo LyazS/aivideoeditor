@@ -59,14 +59,20 @@ export class TimelineStatusDisplayUtils {
         return '等待处理'
       case 'asyncprocessing':
         // 检查是否正在获取数据源（通过进度和文件状态判断）
-        if (mediaData.source.progress > 0 && mediaData.source.progress < 100 && !mediaData.source.file) {
+        if (
+          mediaData.source.progress > 0 &&
+          mediaData.source.progress < 100 &&
+          !mediaData.source.file
+        ) {
           const progress = mediaData.source.progress || 0
           // 只有远程文件源才有 downloadSpeed 属性
           const speed =
             mediaData.source.type === 'remote' && 'downloadSpeed' in mediaData.source
               ? mediaData.source.downloadSpeed
               : undefined
-          return speed ? `获取中... ${progress.toFixed(2)}% (${speed})` : `获取中... ${progress.toFixed(2)}%`
+          return speed
+            ? `获取中... ${progress.toFixed(2)}% (${speed})`
+            : `获取中... ${progress.toFixed(2)}%`
         }
         return '解析中...'
       case 'webavdecoding':
@@ -95,7 +101,11 @@ export class TimelineStatusDisplayUtils {
     switch (mediaData.mediaStatus) {
       case 'asyncprocessing':
         // 检查是否正在获取数据源（通过进度和文件状态判断）
-        if (mediaData.source.progress > 0 && mediaData.source.progress < 100 && !mediaData.source.file) {
+        if (
+          mediaData.source.progress > 0 &&
+          mediaData.source.progress < 100 &&
+          !mediaData.source.file
+        ) {
           // 只有远程文件源才有 downloadSpeed 属性
           const speed =
             mediaData.source.type === 'remote' && 'downloadSpeed' in mediaData.source

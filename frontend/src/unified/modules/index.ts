@@ -21,12 +21,6 @@ export { createUnifiedViewportModule, type UnifiedViewportModule } from './Unifi
 // ==================== 统一选择模块 ====================
 export { createUnifiedSelectionModule, type UnifiedSelectionModule } from './UnifiedSelectionModule'
 
-// ==================== 统一片段操作模块 ====================
-export {
-  createUnifiedClipOperationsModule,
-  type UnifiedClipOperationsModule,
-} from './UnifiedClipOperationsModule'
-
 // ==================== 统一配置模块 ====================
 export { createUnifiedConfigModule, type UnifiedConfigModule } from './UnifiedConfigModule'
 
@@ -50,5 +44,14 @@ export { createUnifiedPlaybackModule, type UnifiedPlaybackModule } from './Unifi
 // ==================== 统一WebAV模块 ====================
 export { createUnifiedWebavModule, type UnifiedWebavModule } from './UnifiedWebavModule'
 
+// ==================== 统一视频缩略图模块 ====================
+export {
+  createUnifiedVideoThumbnailModule,
+  type UnifiedVideoThumbnailModule,
+} from './UnifiedVideoThumbnailModule'
+
 // ==================== 统一自动保存模块 ====================
 export { createUnifiedAutoSaveModule, type UnifiedAutoSaveModule } from './UnifiedAutoSaveModule'
+
+// ==================== 统一吸附模块 ====================
+export { createUnifiedSnapModule, type UnifiedSnapModule } from './UnifiedSnapModule'

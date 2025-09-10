@@ -1,100 +1,13 @@
 /**
- * 统一Clip架构 - 内容渲染策略接口定义
+ * 统一Clip架构 - 内容渲染类型定义
  *
- * 设计理念：
- * - 基于策略模式分离不同类型和状态的渲染逻辑
- * - 状态优先：优先基于状态选择渲染器，然后基于媒体类型选择
- * - 类型安全：使用泛型确保编译时类型安全
- * - 组合优于继承：通过组合实现功能扩展
+ * 模板组件架构：使用Vue SFC模板组件替代类渲染器
+ * 注意：模板组件直接定义props接口，不再使用这里的类型
  */
 
-import type { VNode } from 'vue'
+import type { VNode, Component } from 'vue'
 import type { UnifiedTimelineItemData } from '@/unified/timelineitem/TimelineItemData'
 import type { MediaType } from '@/unified/mediaitem/types'
-
-// ==================== 渲染上下文接口 ====================
-
-/**
- * 内容渲染上下文
- * 包含渲染所需的所有信息和回调函数
- */
-export interface ContentRenderContext<T extends MediaType = MediaType> {
-  /** 时间轴项目数据 */
-  data: UnifiedTimelineItemData<T>
-
-  /** 是否被选中 */
-  isSelected: boolean
-
-  /** 是否正在拖拽 */
-  isDragging: boolean
-
-  /** 是否正在调整大小 */
-  isResizing: boolean
-
-  /** 当前播放时间（帧数） */
-  currentFrame: number
-
-  /** 缩放比例 */
-  scale: number
-
-  /** 轨道高度 */
-  trackHeight: number
-
-  /** 进度信息（可选） */
-  progressInfo?: {
-    hasProgress: boolean
-    percent: number
-    speed?: string
-  }
-
-  /** 事件回调 */
-  callbacks: {
-    onSelect: (id: string) => void
-    onDoubleClick: (id: string) => void
-    onContextMenu: (event: MouseEvent, id: string) => void
-    onDragStart: (event: DragEvent, id: string) => void
-    onResizeStart: (event: MouseEvent, id: string, direction: 'left' | 'right') => void
-  }
-}
-
-// ==================== 内容渲染器接口 ====================
-
-/**
- * 内容渲染器基础接口
- * 定义所有内容渲染器必须实现的方法
- */
-export interface ContentRenderer<T extends MediaType = MediaType> {
-  /** 渲染器类型标识 */
-  readonly type: T | string
-
-  /**
-   * 渲染内容区域
-   * @param context 渲染上下文
-   * @returns Vue虚拟节点
-   */
-  renderContent(context: ContentRenderContext<T>): VNode | VNode[]
-
-  /**
-   * 渲染进度条（可选）
-   * @param context 渲染上下文
-   * @returns Vue虚拟节点或null
-   */
-  renderProgressBar?(context: ContentRenderContext<T>): VNode | null
-
-  /**
-   * 获取自定义样式类（可选）
-   * @param context 渲染上下文
-   * @returns CSS类名数组
-   */
-  getCustomClasses?(context: ContentRenderContext<T>): string[]
-
-  /**
-   * 获取自定义样式（可选）
-   * @param context 渲染上下文
-   * @returns CSS样式对象
-   */
-  getCustomStyles?(context: ContentRenderContext<T>): Record<string, string | number>
-}
 
 // ==================== 渲染器类型定义 ====================
 
@@ -116,62 +29,64 @@ export type RendererType = StatusRendererType | MediaTypeRendererType
 // ==================== 工厂接口 ====================
 
 /**
- * 渲染器工厂接口
+ * 渲染器工厂接口（模板组件架构）
  */
 export interface ContentRendererFactory {
   /**
-   * 获取指定数据的内容渲染器
+   * 获取指定数据的模板组件
    * 优先基于状态选择，然后基于媒体类型选择
    */
-  getRenderer<T extends MediaType>(data: UnifiedTimelineItemData<T>): ContentRenderer<T>
+  getTemplateComponent<T extends MediaType>(data: UnifiedTimelineItemData<T>): Component
 
   /**
-   * 注册状态渲染器
+   * 注册状态模板组件
    */
-  registerStatusRenderer(status: StatusRendererType, renderer: ContentRenderer): void
+  registerStatusTemplate(status: StatusRendererType, component: Component): void
 
   /**
-   * 注册媒体类型渲染器
+   * 注册媒体类型模板组件
    */
-  registerMediaTypeRenderer<T extends MediaType>(
-    type: T,
-    renderer: ContentRenderer<T>,
-  ): void
+  registerMediaTypeTemplate<T extends MediaType>(type: T, component: Component): void
 }
 
 // ==================== 组件属性接口 ====================
 
 /**
- * UnifiedTimelineClip组件属性
+ * 时间轴项目公共属性接口
+ * 用于所有需要基本时间轴项目信息的组件
  */
-export interface UnifiedTimelineClipProps<T extends MediaType = MediaType> {
-  /** 时间轴项目数据 */
+interface TimelineItemProps<T extends MediaType = MediaType> {
+  /** 时间轴项目数据 - 必选 */
   data: UnifiedTimelineItemData<T>
 
-  /** 是否被选中 */
-  isSelected?: boolean
+  /** 是否被选中 - 必选 */
+  isSelected: boolean
 
-  /** 是否正在拖拽 */
-  isDragging?: boolean
+  /** 当前播放时间（帧数） - 必选 */
+  currentFrame: number
 
-  /** 是否正在调整大小 */
-  isResizing?: boolean
+  /** 轨道高度 - 必选 */
+  trackHeight: number
 
-  /** 当前播放时间（帧数） */
-  currentFrame?: number
+  /** 时间轴宽度（用于坐标转换） - 必选 */
+  timelineWidth: number
 
-  /** 缩放比例 */
-  scale?: number
-
-  /** 轨道高度 */
-  trackHeight?: number
-
-  /** 时间轴宽度（用于坐标转换） */
-  timelineWidth?: number
-
-  /** 自定义内容渲染器（可选，用于扩展） */
-  customRenderer?: ContentRenderer<T>
+  /** 视口帧范围 - 必选 */
+  viewportFrameRange: {
+    startFrames: number
+    endFrames: number
+  }
 }
+
+/**
+ * UnifiedTimelineClip组件属性 - 继承公共接口
+ */
+export type UnifiedTimelineClipProps<T extends MediaType = MediaType> = TimelineItemProps<T>
+
+/**
+ * 模板组件属性 - 继承公共接口
+ */
+export type ContentTemplateProps<T extends MediaType = MediaType> = TimelineItemProps<T>
 
 // ==================== 组件事件接口 ====================
 

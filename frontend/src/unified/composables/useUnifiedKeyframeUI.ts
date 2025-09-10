@@ -115,7 +115,6 @@ export function useUnifiedKeyframeUI(
     if (!canOperateKeyframes.value) {
       // 使用通知系统显示用户友好的警告
       unifiedStore.showWarning(
-        '无法操作关键帧',
         '播放头不在当前视频片段的时间范围内。请将播放头移动到片段内再尝试操作关键帧。',
       )
 
@@ -154,7 +153,6 @@ export function useUnifiedKeyframeUI(
     if (!canOperateKeyframes.value) {
       // 使用通知系统显示用户友好的警告
       unifiedStore.showWarning(
-        '无法修改属性',
         '播放头不在当前视频片段的时间范围内。请将播放头移动到片段内再尝试修改属性。',
       )
 

@@ -173,28 +173,8 @@ export {
   // 工厂函数集合
   TimelineItemFactory,
 
-  // 状态转换函数
-  // transitionTimelineStatus 已删除，因为未被使用
-
-  // 类型守卫函数
-  isKnownTimelineItem,
-  isUnknownTimelineItem,
-  isVideoTimelineItem,
-  isImageTimelineItem,
-  isAudioTimelineItem,
-  isTextTimelineItem,
-  hasVisualProperties,
-  hasAudioProperties,
-
-  // 查询函数
-  isReady,
-  isLoading,
-  hasError,
-  getDuration,
-  getStatusText,
-
-  // 管理器
-  // TimelineMediaSyncManager 已删除，因为未被使用
+  // 查询工具集合
+  TimelineItemQueries,
 } from './timelineitem'
 
 // ==================== 统一模块系统 ====================
@@ -228,26 +208,11 @@ export {
   type UnifiedSelectionModule,
 } from './modules/UnifiedSelectionModule'
 
-export {
-  // 统一片段操作模块
-  createUnifiedClipOperationsModule,
-  type UnifiedClipOperationsModule,
-} from './modules/UnifiedClipOperationsModule'
-
 // ==================== 统一工具函数 ====================
 export {
   // 时间范围工具
   syncTimeRange,
-  validateBaseTimeRange,
-  validateTimelineItemTimeRange,
   calculateDuration,
-  containsFrame,
-  isTimeRangeOverlapping,
-  calculateOverlapDuration,
-  moveTimelineItem,
-  resizeTimelineItem,
-  trimTimelineItem,
-  UnifiedTimeRangeUtils,
 } from './utils'
 
 // ==================== 统一Composables ====================

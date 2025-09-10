@@ -173,7 +173,6 @@ export async function createUnifiedKeyframeCommandExecutor(): Promise<UnifiedKey
   const { useUnifiedStore } = await import('@/unified/unifiedStore')
   const store = useUnifiedStore()
 
-
   return {
     timelineModule: {
       getTimelineItem: (id: string) => store.getTimelineItem(id),
@@ -254,11 +253,7 @@ class UnifiedSmartBatchKeyframeCommand {
   private subCommands: any[] = []
   private playbackControls?: PlaybackControls
 
-  constructor(
-    description: string,
-    commands: any[],
-    playbackControls?: PlaybackControls,
-  ) {
+  constructor(description: string, commands: any[], playbackControls?: PlaybackControls) {
     this.id = `smart_batch_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`
     this.description = description
     this.subCommands = [...commands]

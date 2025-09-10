@@ -5,6 +5,9 @@
 
 import type { UnifiedMediaItemData, MediaType, WebAVObjects } from '@/unified/mediaitem/types'
 import { microsecondsToFrames, secondsToFrames } from '@/unified/utils/timeUtils'
+import { generateVideoThumbnail } from '@/unified/utils/thumbnailGenerator'
+import { ThumbnailMode } from '@/unified/constants/ThumbnailConstants'
+import { createMP4Clip, createImgClip, createAudioClip } from '@/unified/utils/webavClipUtils'
 
 /**
  * WebAV处理结果
@@ -37,9 +40,6 @@ export class WebAVProcessor {
       throw new Error('数据源未准备好')
     }
 
-    // 使用工具函数
-    const { createMP4Clip, createImgClip, createAudioClip } = await import('@/unified/utils/webavClipUtils')
-
     // 根据媒体类型创建对应的WebAV Clip
     let clip: any
     let thumbnailUrl: string
@@ -47,7 +47,7 @@ export class WebAVProcessor {
     switch (mediaItem.mediaType) {
       case 'video':
         clip = await createMP4Clip(mediaItem.source.file)
-        thumbnailUrl = await this.generateVideoThumbnail(mediaItem.source.file)
+        thumbnailUrl = await this.generateVideoThumbnailFromClip(clip)
         break
       case 'image':
         clip = await createImgClip(mediaItem.source.file)
@@ -112,8 +112,6 @@ export class WebAVProcessor {
    * @returns Clip对象
    */
   async createClip(file: File, mediaType: MediaType): Promise<any> {
-    const { createMP4Clip, createImgClip, createAudioClip } = await import('@/unified/utils/webavClipUtils')
-
     switch (mediaType) {
       case 'video':
         return createMP4Clip(file)
@@ -127,43 +125,37 @@ export class WebAVProcessor {
   }
 
   /**
-   * 生成视频缩略图
-   * @param file 视频文件
+   * 从已创建的MP4Clip生成视频缩略图
+   * @param mp4Clip MP4Clip实例
+   * @param mode 缩略图显示模式，默认为适应模式
    * @returns 缩略图URL
    */
-  async generateVideoThumbnail(file: File): Promise<string> {
-    return new Promise((resolve, reject) => {
-      const video = document.createElement('video')
-      const canvas = document.createElement('canvas')
-      const ctx = canvas.getContext('2d')
+  private async generateVideoThumbnailFromClip(
+    mp4Clip: any,
+    mode: ThumbnailMode = ThumbnailMode.FIT,
+  ): Promise<string> {
+    try {
+      // 生成缩略图（使用中间位置）
+      const canvas = await generateVideoThumbnail(mp4Clip, undefined, 100, 60, mode)
 
-      video.onloadedmetadata = () => {
-        canvas.width = video.videoWidth
-        canvas.height = video.videoHeight
-
-        video.currentTime = 1 // 获取第1秒的帧
-      }
-
-      video.onseeked = () => {
-        if (ctx) {
-          ctx.drawImage(video, 0, 0)
-          canvas.toBlob(
-            (blob) => {
-              if (blob) {
-                resolve(URL.createObjectURL(blob))
-              } else {
-                reject(new Error('生成缩略图失败'))
-              }
-            },
-            'image/jpeg',
-            0.8,
-          )
-        }
-      }
-
-      video.onerror = () => reject(new Error('视频加载失败'))
-      video.src = URL.createObjectURL(file)
-    })
+      // 转换为Blob URL
+      return new Promise((resolve, reject) => {
+        canvas.toBlob(
+          (blob) => {
+            if (blob) {
+              resolve(URL.createObjectURL(blob))
+            } else {
+              reject(new Error('生成缩略图失败'))
+            }
+          },
+          'image/jpeg',
+          0.8,
+        )
+      })
+    } catch (error) {
+      console.error('❌ [WebAVProcessor] 从Clip生成视频缩略图失败:', error)
+      throw new Error(`生成缩略图失败: ${error instanceof Error ? error.message : '未知错误'}`)
+    }
   }
 
   /**
@@ -181,7 +173,10 @@ export class WebAVProcessor {
    * @param mediaType 媒体类型
    * @returns 媒体元数据
    */
-  async getMediaMetadata(file: File, mediaType: MediaType): Promise<{
+  async getMediaMetadata(
+    file: File,
+    mediaType: MediaType,
+  ): Promise<{
     width: number
     height: number
     duration: number
@@ -201,7 +196,10 @@ export class WebAVProcessor {
    * @param mediaType 媒体类型
    * @returns 验证结果
    */
-  async validateMediaFile(file: File, mediaType: MediaType): Promise<{
+  async validateMediaFile(
+    file: File,
+    mediaType: MediaType,
+  ): Promise<{
     isValid: boolean
     error?: string
     metadata?: {
@@ -213,7 +211,7 @@ export class WebAVProcessor {
     try {
       const clip = await this.createClip(file, mediaType)
       const meta = await clip.ready
-      
+
       return {
         isValid: true,
         metadata: {

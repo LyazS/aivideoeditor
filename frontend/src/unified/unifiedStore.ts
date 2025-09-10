@@ -6,17 +6,19 @@ import { createUnifiedTimelineModule } from '@/unified/modules/UnifiedTimelineMo
 import { createUnifiedProjectModule } from '@/unified/modules/UnifiedProjectModule'
 import { createUnifiedViewportModule } from '@/unified/modules/UnifiedViewportModule'
 import { createUnifiedSelectionModule } from '@/unified/modules/UnifiedSelectionModule'
-import { createUnifiedClipOperationsModule } from '@/unified/modules/UnifiedClipOperationsModule'
 import { createUnifiedConfigModule } from '@/unified/modules/UnifiedConfigModule'
 import { createUnifiedPlaybackModule } from '@/unified/modules/UnifiedPlaybackModule'
 import { createUnifiedWebavModule } from '@/unified/modules/UnifiedWebavModule'
 import { createUnifiedNotificationModule } from '@/unified/modules/UnifiedNotificationModule'
 import { createUnifiedHistoryModule } from '@/unified/modules/UnifiedHistoryModule'
 import { createUnifiedAutoSaveModule } from '@/unified/modules/UnifiedAutoSaveModule'
+import { createUnifiedVideoThumbnailModule } from '@/unified/modules/UnifiedVideoThumbnailModule'
+import { createUnifiedSnapModule } from '@/unified/modules/UnifiedSnapModule'
 import { calculateTotalDurationFrames } from '@/unified/utils/durationUtils'
 import type { MediaType, MediaTypeOrUnknown } from '@/unified'
 import type { UnifiedTrackType } from '@/unified/track/TrackTypes'
-import type { UnifiedTimelineItemData } from '@/unified/timelineitem/TimelineItemData'
+import type { UnifiedTimelineItemData } from '@/unified/timelineitem'
+import type { CachedThumbnail } from '@/unified/types/thumbnail'
 // PropertyType 已经在本地定义，不再需要从外部导入
 /**
  * 属性类型枚举
@@ -60,37 +62,14 @@ import {
   findOverlappingTimelineItemsOnTrack,
   findOrphanedTimelineItems,
 } from '@/unified/utils/timelineSearchUtils'
-import {
-  isVideoTimelineItem,
-  isImageTimelineItem,
-  isAudioTimelineItem,
-  isTextTimelineItem,
-  isUnknownTimelineItem,
-  isKnownTimelineItem,
-  hasVisualProperties,
-  hasAudioProperties,
-  isReady,
-  isLoading,
-  hasError,
-  getDuration,
-  getStatusText,
-  filterByStatus,
-  filterByTrack,
-  sortByTime,
-} from '@/unified/timelineitem/TimelineItemQueries'
+import { TimelineItemQueries } from '@/unified/timelineitem/'
 
 // 从TimelineItemFactory导入工厂函数
 import {
-  createUnknownTimelineItem,
-  createVideoTimelineItem,
-  createAudioTimelineItem,
-  createImageTimelineItem,
   cloneTimelineItem,
   duplicateTimelineItem,
 } from '@/unified/timelineitem/TimelineItemFactory'
 
-// 从TimelineItemBehaviors导入行为函数
-// transitionTimelineStatus 已删除，因为未被使用
 // ==================== 命令类导入 ====================
 import {
   AddTimelineItemCommand,
@@ -110,6 +89,7 @@ import {
   BatchDeleteCommand,
   BatchAutoArrangeTrackCommand,
 } from '@/unified/modules/commands/batchCommands'
+import type { AudioVisibleSprite, VideoVisibleSprite } from './visiblesprite'
 
 /**
  * 统一视频编辑器存储
@@ -122,8 +102,7 @@ import {
  * 4. 使用 UnifiedProjectModule 管理统一项目配置
  * 5. 使用 UnifiedViewportModule 管理统一视口缩放滚动
  * 6. 使用 UnifiedSelectionModule 管理时间轴项目和媒体项目的选择状态
- * 7. 使用 UnifiedClipOperationsModule 提供片段操作功能
- * 8. 使用 UnifiedConfigModule 管理视频编辑器全局配置
+ * 7. 使用 UnifiedConfigModule 管理视频编辑器全局配置
  * 9. 使用 UnifiedPlaybackModule 管理播放控制功能
  * 10. 使用 UnifiedWebavModule 管理WebAV集成和画布操作
  * 11. 集成 UnifiedNotificationModule 提供通知管理功能
@@ -149,7 +128,7 @@ export const useUnifiedStore = defineStore('unified', () => {
     setPlaying: unifiedPlaybackModule.setPlaying,
   })
   // 创建统一媒体管理模块（替代原有的mediaModule）
-  const unifiedMediaModule = createUnifiedMediaModule(unifiedWebavModule)
+  const unifiedMediaModule = createUnifiedMediaModule()
 
   // 创建统一轨道管理模块
   const unifiedTrackModule = createUnifiedTrackModule()
@@ -168,6 +147,7 @@ export const useUnifiedStore = defineStore('unified', () => {
     unifiedTimelineModule,
     unifiedTrackModule,
     unifiedMediaModule,
+    unifiedWebavModule,
   )
 
   // ==================== 计算属性 ====================
@@ -202,21 +182,6 @@ export const useUnifiedStore = defineStore('unified', () => {
     unifiedHistoryModule.executeCommand,
   )
 
-  // 创建统一片段操作模块（需要在其他模块之后创建）
-  const unifiedClipOperationsModule = createUnifiedClipOperationsModule(
-    {
-      getTimelineItem: unifiedTimelineModule.getTimelineItem,
-      updateTimelineItem: (id: string, updates: Partial<UnifiedTimelineItemData>) => {
-        // 简单的更新实现：直接修改对象属性
-        const item = unifiedTimelineModule.getTimelineItem(id)
-        if (item) {
-          Object.assign(item, updates)
-        }
-      },
-    },
-    unifiedMediaModule,
-  )
-
   // 创建统一自动保存模块（需要在项目模块之后创建）
   const unifiedAutoSaveModule = createUnifiedAutoSaveModule(
     {
@@ -241,7 +206,20 @@ export const useUnifiedStore = defineStore('unified', () => {
       debounceTime: 2000,
       throttleTime: 30000,
       maxRetries: 3,
-    }
+    },
+  )
+
+  // 创建视频缩略图模块
+  const unifiedVideoThumbnailModule = createUnifiedVideoThumbnailModule(
+    unifiedTimelineModule,
+    unifiedMediaModule,
+  )
+
+  // 创建统一吸附管理模块
+  const unifiedSnapModule = createUnifiedSnapModule(
+    unifiedTimelineModule.timelineItems,
+    unifiedPlaybackModule.currentFrame,
+    unifiedConfigModule,
   )
 
   /**
@@ -322,7 +300,7 @@ export const useUnifiedStore = defineStore('unified', () => {
     unifiedNotificationModule.clearNotifications(true) // 清空所有通知，包括持久化通知
     unifiedHistoryModule.clear() // 清空历史记录
     unifiedSelectionModule.resetToDefaults() // 重置选择状态
-    // 注意：UnifiedMediaModule、UnifiedTimelineModule和UnifiedClipOperationsModule没有resetToDefaults方法
+    // 注意：UnifiedMediaModule和UnifiedTimelineModule没有resetToDefaults方法
     // 这些统一模块的状态通过清空数组或重置内部状态来实现重置功能
     unifiedAutoSaveModule.resetAutoSaveState() // 重置自动保存状态
     console.log('🔄 [UnifiedStore] 重置所有模块到默认状态')
@@ -343,19 +321,13 @@ export const useUnifiedStore = defineStore('unified', () => {
    * @param timelineItem 要添加的时间轴项目
    */
   async function addTimelineItemWithHistory(timelineItem: UnifiedTimelineItemData<MediaType>) {
-    // 检查是否是文本项目，使用专门的文本命令
-    // if (timelineItem.mediaType === 'text') {
-    //   // 类型检查确保这是文本项目
-    //   await addTextItemWithHistory(timelineItem as UnifiedTimelineItemData<'text'>)
-    //   return
-    // }
-
     const command = new AddTimelineItemCommand(
       timelineItem,
       {
         addTimelineItem: unifiedTimelineModule.addTimelineItem,
         removeTimelineItem: unifiedTimelineModule.removeTimelineItem,
         getTimelineItem: unifiedTimelineModule.getTimelineItem,
+        setupTimelineItemSprite: unifiedTimelineModule.setupTimelineItemSprite,
       },
       {
         addSprite: unifiedWebavModule.addSprite,
@@ -382,6 +354,7 @@ export const useUnifiedStore = defineStore('unified', () => {
         addTimelineItem: unifiedTimelineModule.addTimelineItem,
         removeTimelineItem: unifiedTimelineModule.removeTimelineItem,
         getTimelineItem: unifiedTimelineModule.getTimelineItem,
+        setupTimelineItemSprite: unifiedTimelineModule.setupTimelineItemSprite,
       },
       {
         addSprite: unifiedWebavModule.addSprite,
@@ -479,7 +452,7 @@ export const useUnifiedStore = defineStore('unified', () => {
     const oldTransform: typeof newTransform = {}
 
     // 检查是否具有视觉属性
-    if (hasVisualProperties(timelineItem)) {
+    if (TimelineItemQueries.hasVisualProperties(timelineItem)) {
       const config = timelineItem.config as any
       if (newTransform.x !== undefined) {
         oldTransform.x = config.x
@@ -515,18 +488,23 @@ export const useUnifiedStore = defineStore('unified', () => {
 
     if (newTransform.playbackRate !== undefined) {
       // 获取当前倍速（对视频和音频有效）
+      oldTransform.playbackRate = 1
       if (
-        (timelineItem.mediaType === 'video' || timelineItem.mediaType === 'audio') &&
-        'playbackRate' in timelineItem.timeRange
+        TimelineItemQueries.isVideoTimelineItem(timelineItem) ||
+        TimelineItemQueries.isAudioTimelineItem(timelineItem)
       ) {
-        oldTransform.playbackRate = (timelineItem.timeRange as any).playbackRate || 1
-      } else {
-        oldTransform.playbackRate = 1 // 图片和文本默认为1
+        const sprite = timelineItem.runtime.sprite as
+          | VideoVisibleSprite
+          | AudioVisibleSprite
+          | undefined
+        if (sprite) {
+          oldTransform.playbackRate = sprite.getPlaybackRate()
+        }
       }
     }
 
     // 检查是否具有音频属性
-    if (hasAudioProperties(timelineItem)) {
+    if (TimelineItemQueries.hasAudioProperties(timelineItem)) {
       const config = timelineItem.config as any
       if (newTransform.volume !== undefined) {
         oldTransform.volume = config.volume ?? 1
@@ -560,12 +538,10 @@ export const useUnifiedStore = defineStore('unified', () => {
       {
         updateTimelineItemTransform: unifiedTimelineModule.updateTimelineItemTransform,
         getTimelineItem: unifiedTimelineModule.getTimelineItem,
+        updateTimelineItemPlaybackRate: unifiedTimelineModule.updateTimelineItemPlaybackRate,
       },
       {
         getMediaItem: unifiedMediaModule.getMediaItem,
-      },
-      {
-        updateTimelineItemPlaybackRate: unifiedClipOperationsModule.updateTimelineItemPlaybackRate,
       },
     )
     await unifiedHistoryModule.executeCommand(command)
@@ -709,6 +685,7 @@ export const useUnifiedStore = defineStore('unified', () => {
         addTimelineItem: unifiedTimelineModule.addTimelineItem,
         removeTimelineItem: unifiedTimelineModule.removeTimelineItem,
         getTimelineItem: unifiedTimelineModule.getTimelineItem,
+        setupTimelineItemSprite: unifiedTimelineModule.setupTimelineItemSprite,
       },
       {
         addSprite: unifiedWebavModule.addSprite,
@@ -758,6 +735,7 @@ export const useUnifiedStore = defineStore('unified', () => {
         addTimelineItem: unifiedTimelineModule.addTimelineItem,
         removeTimelineItem: unifiedTimelineModule.removeTimelineItem,
         getTimelineItem: unifiedTimelineModule.getTimelineItem,
+        setupTimelineItemSprite: unifiedTimelineModule.setupTimelineItemSprite,
       },
       {
         addSprite: unifiedWebavModule.addSprite,
@@ -779,12 +757,8 @@ export const useUnifiedStore = defineStore('unified', () => {
    * @param name 轨道名称（可选）
    * @param position 插入位置（可选）
    */
-  async function addTrackWithHistory(
-    type: UnifiedTrackType = 'video',
-    name?: string,
-    position?: number,
-  ) {
-    const command = new AddTrackCommand(type, name, position, {
+  async function addTrackWithHistory(type: UnifiedTrackType = 'video', position?: number) {
+    const command = new AddTrackCommand(type, position, {
       addTrack: unifiedTrackModule.addTrack,
       removeTrack: unifiedTrackModule.removeTrack,
       getTrack: unifiedTrackModule.getTrack,
@@ -816,6 +790,7 @@ export const useUnifiedStore = defineStore('unified', () => {
         addTimelineItem: unifiedTimelineModule.addTimelineItem,
         removeTimelineItem: unifiedTimelineModule.removeTimelineItem,
         getTimelineItem: unifiedTimelineModule.getTimelineItem,
+        setupTimelineItemSprite: unifiedTimelineModule.setupTimelineItemSprite,
         timelineItems: unifiedTimelineModule.timelineItems,
       },
       {
@@ -1110,30 +1085,12 @@ export const useUnifiedStore = defineStore('unified', () => {
     getReadyTimelineItem: unifiedTimelineModule.getReadyTimelineItem,
     setupBidirectionalSync: unifiedTimelineModule.setupBidirectionalSync,
     updateTimelineItemPosition: unifiedTimelineModule.updateTimelineItemPosition,
-    updateTimelineItemSprite: unifiedTimelineModule.updateTimelineItemSprite,
     updateTimelineItemTransform: unifiedTimelineModule.updateTimelineItemTransform,
+    setupTimelineItemSprite: unifiedTimelineModule.setupTimelineItemSprite,
 
     // 时间轴项目工厂函数
-    createTimelineItemData: createUnknownTimelineItem,
-    createVideoTimelineItem,
-    createAudioTimelineItem,
-    createImageTimelineItem,
     cloneTimelineItemData: cloneTimelineItem,
     duplicateTimelineItem,
-
-    // 时间轴项目查询函数
-    isTimelineItemReady: isReady,
-    isTimelineItemLoading: isLoading,
-    hasTimelineItemError: hasError,
-    getTimelineItemDuration: getDuration,
-    getTimelineItemStatusText: getStatusText,
-    filterTimelineItemsByStatus: filterByStatus,
-    filterTimelineItemsByTrack: filterByTrack,
-    sortTimelineItemsByTime: sortByTime,
-
-    // 时间轴项目辅助函数
-    timelineItemHasVisualProps: hasVisualProperties,
-    timelineItemHasAudioProps: hasAudioProperties,
 
     // ==================== 统一项目模块状态和方法 ====================
 
@@ -1201,7 +1158,6 @@ export const useUnifiedStore = defineStore('unified', () => {
     projectUpdatedAt: unifiedConfigModule.projectUpdatedAt,
     projectVersion: unifiedConfigModule.projectVersion,
     projectThumbnail: unifiedConfigModule.projectThumbnail,
-    projectDuration: unifiedConfigModule.projectDuration,
 
     // 配置状态
     videoResolution: unifiedConfigModule.videoResolution,
@@ -1211,7 +1167,6 @@ export const useUnifiedStore = defineStore('unified', () => {
     // 配置管理方法
     setVideoResolution: unifiedConfigModule.setVideoResolution,
     setFrameRate: unifiedConfigModule.setFrameRate,
-    setTimelineDurationFrames: unifiedConfigModule.setTimelineDurationFrames,
     getConfigSummary: unifiedConfigModule.getConfigSummary,
     resetConfigToDefaults: unifiedConfigModule.resetToDefaults,
     restoreFromProjectSettings: unifiedConfigModule.restoreFromProjectSettings,
@@ -1363,11 +1318,6 @@ export const useUnifiedStore = defineStore('unified', () => {
     clearMultiSelection: unifiedSelectionModule.clearMultiSelection,
     isInMultiSelection: unifiedSelectionModule.isInMultiSelection,
 
-    // ==================== 统一片段操作模块方法 ====================
-
-    // 片段操作方法
-    updateTimelineItemPlaybackRate: unifiedClipOperationsModule.updateTimelineItemPlaybackRate,
-
     // ==================== 系统状态方法 ====================
 
     resetToDefaults, // 保留封装，因为需要重置所有模块
@@ -1482,5 +1432,32 @@ export const useUnifiedStore = defineStore('unified', () => {
     // ==================== 模块生命周期管理 ====================
 
     destroyAllModules, // 新增：销毁所有模块资源的方法
+
+    // ==================== 视频缩略图方法 ====================
+    requestThumbnails: unifiedVideoThumbnailModule.requestThumbnails,
+    cancelThumbnailTasks: unifiedVideoThumbnailModule.cancelTasks,
+    cleanupThumbnailScheduler: unifiedVideoThumbnailModule.cleanup,
+
+    // ==================== 工具函数导出 ====================
+    getThumbnailUrl: unifiedVideoThumbnailModule.getThumbnailUrl,
+
+    // ==================== 统一吸附模块状态和方法 ====================
+
+    // 吸附功能状态
+    snapConfig: unifiedSnapModule.snapConfig,
+    isSnapCalculating: unifiedSnapModule.isCalculating,
+    isSnapCacheUpdating: unifiedSnapModule.isCacheUpdating,
+
+    // 吸附功能方法
+    updateSnapConfig: unifiedSnapModule.updateSnapConfig,
+    calculateSnapPosition: unifiedSnapModule.calculateSnapPosition,
+    collectSnapTargets: unifiedSnapModule.collectSnapTargets,
+    clearSnapCache: unifiedSnapModule.clearCache,
+    isSnapCacheValid: unifiedSnapModule.isCacheValid,
+    getSnapSummary: unifiedSnapModule.getSnapSummary,
+
+    // 拖拽集成方法
+    startSnapDrag: unifiedSnapModule.startDrag,
+    endSnapDrag: unifiedSnapModule.endDrag,
   }
 })

@@ -8,7 +8,7 @@ import {
   UnifiedMediaItemQueries,
   UnifiedMediaItemActions,
 } from '@/unified'
-import { SimplifiedMediaSyncManager } from '@/unified/timelineitem/SimplifiedMediaSyncManager'
+import { UnifiedMediaSyncManager } from '@/unified/utils/unifiedMediaSyncManager'
 import { useUnifiedStore } from '@/unified/unifiedStore'
 
 // ==================== 统一媒体项目调试工具 ====================
@@ -67,11 +67,7 @@ function printUnifiedDebugInfo(
  * 统一媒体管理模块
  * 负责管理素材库中的统一媒体项目
  */
-export function createUnifiedMediaModule(webavModule: {
-  createMP4Clip: (file: File) => Promise<Raw<MP4Clip>>
-  createImgClip: (file: File) => Promise<Raw<ImgClip>>
-  createAudioClip: (file: File) => Promise<Raw<AudioClip>>
-}) {
+export function createUnifiedMediaModule() {
   // ==================== 状态定义 ====================
 
   // 统一媒体项目列表
@@ -267,50 +263,6 @@ export function createUnifiedMediaModule(webavModule: {
     })
   }
 
-  // ==================== WebAV处理方法 ====================
-
-  // 注意：startWebAVProcessing方法已移除，现在由各个管理器直接处理WebAV解析
-
-  /**
-   * 生成视频缩略图
-   * @param file 视频文件
-   * @returns 缩略图URL
-   */
-  async function generateVideoThumbnail(file: File): Promise<string> {
-    return new Promise((resolve, reject) => {
-      const video = document.createElement('video')
-      const canvas = document.createElement('canvas')
-      const ctx = canvas.getContext('2d')
-
-      video.onloadedmetadata = () => {
-        canvas.width = video.videoWidth
-        canvas.height = video.videoHeight
-
-        video.currentTime = 1 // 获取第1秒的帧
-      }
-
-      video.onseeked = () => {
-        if (ctx) {
-          ctx.drawImage(video, 0, 0)
-          canvas.toBlob(
-            (blob) => {
-              if (blob) {
-                resolve(URL.createObjectURL(blob))
-              } else {
-                reject(new Error('生成缩略图失败'))
-              }
-            },
-            'image/jpeg',
-            0.8,
-          )
-        }
-      }
-
-      video.onerror = () => reject(new Error('视频加载失败'))
-      video.src = URL.createObjectURL(file)
-    })
-  }
-
   // ==================== 数据源状态同步方法 ====================
   // 注意：handleSourceStatusChange方法已移除，现在由各个管理器直接处理媒体状态
 
@@ -330,7 +282,8 @@ export function createUnifiedMediaModule(webavModule: {
         const manager = registry.getManager(mediaItem.source.type)
         if (manager) {
           // 调用管理器的processMediaItem方法处理完整的媒体项目生命周期
-          manager.processMediaItem(mediaItem)
+          manager
+            .processMediaItem(mediaItem)
             .then(() => {
               console.log(`✅ [UnifiedMediaModule] 媒体项目处理完成: ${mediaItem.name}`)
             })
@@ -340,7 +293,9 @@ export function createUnifiedMediaModule(webavModule: {
               UnifiedMediaItemActions.transitionTo(mediaItem, 'error')
             })
         } else {
-          console.error(`❌ [UnifiedMediaModule] 找不到对应的数据源管理器: ${mediaItem.source.type}`)
+          console.error(
+            `❌ [UnifiedMediaModule] 找不到对应的数据源管理器: ${mediaItem.source.type}`,
+          )
           UnifiedMediaItemActions.transitionTo(mediaItem, 'error')
         }
       })
@@ -444,7 +399,9 @@ export function createUnifiedMediaModule(webavModule: {
       const timelineItems = unifiedStore.timelineItems
 
       // 找出使用该素材的所有时间轴项目
-      const relatedTimelineItems = timelineItems.filter((item: any) => item.mediaItemId === mediaItemId)
+      const relatedTimelineItems = timelineItems.filter(
+        (item: any) => item.mediaItemId === mediaItemId,
+      )
 
       // 清理每个相关的时间轴项目
       relatedTimelineItems.forEach((timelineItem: any) => {
@@ -464,10 +421,25 @@ export function createUnifiedMediaModule(webavModule: {
    */
   function cleanupCommandMediaSyncForMediaItem(mediaItemId: string): void {
     try {
-      const syncManager = SimplifiedMediaSyncManager.getInstance()
-      syncManager.cleanupMediaItemSync(mediaItemId)
+      const syncManager = UnifiedMediaSyncManager.getInstance()
 
-      console.log(`✅ 已清理媒体项目相关的命令同步: ${mediaItemId}`)
+      // 清理所有与该媒体项目相关的同步
+      const syncInfoList = syncManager.getSyncInfo()
+      const relatedSyncs = syncInfoList.filter((sync) => sync.mediaItemId === mediaItemId)
+
+      relatedSyncs.forEach((sync) => {
+        if (sync.commandId) {
+          syncManager.cleanupByCommandId(sync.commandId)
+        } else if (sync.timelineItemId) {
+          syncManager.cleanupByTimelineItemId(sync.timelineItemId)
+        } else {
+          syncManager.cleanup(sync.id)
+        }
+      })
+
+      console.log(
+        `✅ 已清理媒体项目相关的命令同步: ${mediaItemId} (清理了 ${relatedSyncs.length} 个同步)`,
+      )
     } catch (error) {
       console.error(`❌ 清理媒体项目命令同步失败: ${mediaItemId}`, error)
     }

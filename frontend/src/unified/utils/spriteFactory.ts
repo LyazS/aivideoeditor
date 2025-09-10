@@ -14,7 +14,7 @@
  * - 包含详细的错误信息和状态检查
  */
 
-import { markRaw } from 'vue'
+import { markRaw, type Raw } from 'vue'
 import type { UnifiedMediaItemData, MediaType } from '@/unified/mediaitem/types'
 import type { UnifiedSprite } from '@/unified/visiblesprite'
 import type {
@@ -22,7 +22,7 @@ import type {
   VideoMediaConfig,
   ImageMediaConfig,
   TextMediaConfig,
-  BaseMediaProps
+  BaseMediaProps,
 } from '@/unified/timelineitem/TimelineItemData'
 import { hasVisualProperties } from '@/unified/timelineitem/TimelineItemQueries'
 
@@ -57,7 +57,7 @@ import { AudioVisibleSprite } from '@/unified/visiblesprite/AudioVisibleSprite'
  */
 export async function createSpriteFromUnifiedMediaItem(
   mediaData: UnifiedMediaItemData,
-): Promise<UnifiedSprite> {
+): Promise<Raw<UnifiedSprite>> {
   // 1. 验证媒体项目状态
   if (mediaData.mediaStatus !== 'ready') {
     throw new Error(
@@ -223,49 +223,6 @@ export function canCreateSpriteFromUnifiedMediaItem(mediaData: UnifiedMediaItemD
 }
 
 /**
- * 获取媒体项目支持的 Sprite 类型
- *
- * 根据统一媒体项目数据返回对应的 Sprite 类型名称，
- * 用于调试和日志记录。
- *
- * @param mediaData 统一媒体项目数据
- * @returns Sprite 类型名称
- */
-export function getSpriteTypeFromUnifiedMediaItem(mediaData: UnifiedMediaItemData): string {
-  switch (mediaData.mediaType) {
-    case 'video':
-      return 'VideoVisibleSprite'
-    case 'image':
-      return 'ImageVisibleSprite'
-    case 'audio':
-      return 'AudioVisibleSprite'
-    case 'text':
-      return 'TextVisibleSprite'
-    case 'unknown':
-      return 'UnknownSprite'
-    default:
-      return 'UnsupportedSprite'
-  }
-}
-
-/**
- * 批量检查多个媒体项目是否可以创建 Sprite
- *
- * 用于批量操作场景，可以快速筛选出可以创建 Sprite 的媒体项目。
- *
- * @param mediaItems 统一媒体项目数据数组
- * @returns 检查结果数组
- */
-export function batchCheckCanCreateSprite(
-  mediaItems: UnifiedMediaItemData[],
-): Array<{ mediaData: UnifiedMediaItemData; canCreate: boolean; reason?: string }> {
-  return mediaItems.map((mediaData) => ({
-    mediaData,
-    ...canCreateSpriteFromUnifiedMediaItem(mediaData),
-  }))
-}
-
-/**
  * 从统一时间轴项目数据创建对应的 Sprite 实例
  *
  * 这个函数用于从时间轴项目数据重建 sprite 实例，包括：
@@ -299,7 +256,7 @@ export async function createSpriteFromUnifiedTimelineItem(
   const { useUnifiedStore } = await import('@/unified/unifiedStore')
   const unifiedStore = useUnifiedStore()
   const mediaItem = unifiedStore.getMediaItem(timelineItemData.mediaItemId)
-  
+
   if (!mediaItem) {
     throw new Error(`找不到关联的媒体项目: ${timelineItemData.mediaItemId}`)
   }
@@ -316,16 +273,18 @@ export async function createSpriteFromUnifiedTimelineItem(
 
   // 4. 应用变换属性（使用坐标转换）
   if (hasVisualProperties(timelineItemData)) {
-    const config = timelineItemData.config as
-      | VideoMediaConfig
-      | ImageMediaConfig
-      | TextMediaConfig
+    const config = timelineItemData.config as VideoMediaConfig | ImageMediaConfig | TextMediaConfig
 
     // 导入坐标转换工具
     const { projectToWebavCoords } = await import('@/unified/utils/coordinateTransform')
 
     // 使用坐标转换将项目坐标系转换为 WebAV 坐标系
-    if (config.x !== undefined && config.y !== undefined && config.width !== undefined && config.height !== undefined) {
+    if (
+      config.x !== undefined &&
+      config.y !== undefined &&
+      config.width !== undefined &&
+      config.height !== undefined
+    ) {
       const webavCoords = projectToWebavCoords(
         config.x,
         config.y,
@@ -351,4 +310,3 @@ export async function createSpriteFromUnifiedTimelineItem(
 
   return newSprite
 }
-

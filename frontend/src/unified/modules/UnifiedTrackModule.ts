@@ -29,45 +29,28 @@ export function createUnifiedTrackModule() {
    * @param position 插入位置（可选，默认为末尾）
    * @returns 新创建的轨道对象
    */
-  function addTrack(
-    type: UnifiedTrackType = 'video',
-    name?: string,
-    position?: number,
-    id?: string,
-  ): UnifiedTrackData {
-    // 计算同类型轨道的数量，用于生成默认名称
-    const sameTypeCount = tracks.value.filter((t) => t.type === type).length + 1
-
-    // 生成默认名称
-    const typeNames = {
-      video: '视频轨道',
-      audio: '音频轨道',
-      text: '文本轨道',
-      subtitle: '字幕轨道',
-      effect: '特效轨道',
+  function addTrack(trackData: UnifiedTrackData, position?: number): UnifiedTrackData {
+    // 检查轨道数据是否有效
+    if (!trackData || !trackData.id) {
+      throw new Error('无效的轨道数据：缺少必要的轨道信息')
     }
-
-    const trackName = name || `${typeNames[type]} ${sameTypeCount}`
-
-    // 创建新轨道
-    const newTrack = createUnifiedTrackData(type, trackName, undefined, id)
 
     // 根据位置参数决定插入位置
     if (position !== undefined && position >= 0 && position <= tracks.value.length) {
-      tracks.value.splice(position, 0, newTrack)
+      tracks.value.splice(position, 0, trackData)
     } else {
-      tracks.value.push(newTrack)
+      tracks.value.push(trackData)
     }
 
-    console.log('🎵 添加新轨道:', {
-      id: newTrack.id,
-      name: newTrack.name,
-      type: newTrack.type,
+    console.log('🎵 添加轨道:', {
+      id: trackData.id,
+      name: trackData.name,
+      type: trackData.type,
       position: position !== undefined ? position : tracks.value.length - 1,
       totalTracks: tracks.value.length,
     })
 
-    return newTrack
+    return trackData
   }
 
   /**
@@ -318,7 +301,6 @@ export function createUnifiedTrackModule() {
       // 创建新的响应式轨道对象
       const restoredTrack = createUnifiedTrackData(
         track.type,
-        track.name,
         {
           ...track,
         },

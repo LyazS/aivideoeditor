@@ -3,27 +3,22 @@
  * 支持移除已知和未知时间轴项目的撤销/重做操作
  * 遵循"从源头重建"原则：保存完整的重建元数据，撤销时从原始素材重新创建
  */
-
+import type { Ref } from 'vue'
 import { generateCommandId } from '@/unified/utils/idGenerator'
 import type { VisibleSprite } from '@webav/av-cliper'
 import type { SimpleCommand } from '@/unified/modules/commands/types'
 
 // ==================== 新架构类型导入 ====================
-import type {
-  UnifiedTimelineItemData,
-} from '@/unified/timelineitem/TimelineItemData'
-
+import type { UnifiedTimelineItemData } from '@/unified/timelineitem/TimelineItemData'
 import type { UnifiedMediaItemData, MediaType } from '@/unified/mediaitem/types'
+import type { VideoResolution } from '@/unified/types'
 
 // ==================== 新架构工具导入 ====================
-import {
-  TimelineItemFactory,
-} from '@/unified/timelineitem'
+import { TimelineItemFactory } from '@/unified/timelineitem'
 
-import {
-  setupCommandMediaSync,
-  cleanupCommandMediaSync,
-} from '@/unified/composables/useCommandMediaSync'
+import { setupMediaSync, cleanupCommandMediaSync } from '@/unified/utils/unifiedMediaSyncManager'
+
+import { TimelineItemQueries } from '@/unified/timelineitem/TimelineItemQueries'
 
 /**
  * 移除时间轴项目命令
@@ -42,6 +37,7 @@ export class RemoveTimelineItemCommand implements SimpleCommand {
       addTimelineItem: (item: UnifiedTimelineItemData<MediaType>) => Promise<void>
       removeTimelineItem: (id: string) => void
       getTimelineItem: (id: string) => UnifiedTimelineItemData<MediaType> | undefined
+      setupTimelineItemSprite: (item: UnifiedTimelineItemData<MediaType>) => Promise<void>
     },
     private webavModule: {
       addSprite: (sprite: VisibleSprite) => Promise<boolean>
@@ -51,7 +47,7 @@ export class RemoveTimelineItemCommand implements SimpleCommand {
       getMediaItem: (id: string) => UnifiedMediaItemData | undefined
     },
     private configModule: {
-      videoResolution: { value: { width: number; height: number } }
+      videoResolution: Ref<VideoResolution>
     },
   ) {
     this.id = generateCommandId()
@@ -84,10 +80,15 @@ export class RemoveTimelineItemCommand implements SimpleCommand {
       }
 
       // 设置媒体同步（只针对loading状态的项目）
-      if (existingItem.timelineStatus === 'loading') {
+      if (TimelineItemQueries.isLoading(existingItem)) {
         const mediaItem = this.mediaModule.getMediaItem(existingItem.mediaItemId)
         if (mediaItem) {
-          setupCommandMediaSync(this.id, mediaItem.id, undefined, `execute ${this.description}`)
+          setupMediaSync({
+            commandId: this.id,
+            mediaItemId: mediaItem.id,
+            description: `execute ${this.description}`,
+            scenario: 'command',
+          })
         }
       }
 
@@ -112,9 +113,10 @@ export class RemoveTimelineItemCommand implements SimpleCommand {
       console.log(`🔄 执行撤销删除操作：从源头重建时间轴项目...`)
 
       // 从原始素材重新创建TimelineItem和sprite
-      const rebuildResult = await TimelineItemFactory.rebuildKnown({
+      const rebuildResult = await TimelineItemFactory.rebuildForCmd({
         originalTimelineItemData: this.originalTimelineItemData,
-        getMediaItem: (id: string) => this.mediaModule.getMediaItem(id),
+        getMediaItem: this.mediaModule.getMediaItem,
+        setupTimelineItemSprite: this.timelineModule.setupTimelineItemSprite,
         logIdentifier: 'RemoveTimelineItemCommand undo',
       })
 
@@ -127,19 +129,15 @@ export class RemoveTimelineItemCommand implements SimpleCommand {
       // 1. 添加到时间轴
       await this.timelineModule.addTimelineItem(newTimelineItem)
 
-      // 2. 添加sprite到WebAV画布
-      if (newTimelineItem.runtime.sprite) {
-        await this.webavModule.addSprite(newTimelineItem.runtime.sprite)
-      }
-
-      // 3. 针对loading状态的项目设置状态同步（确保时间轴项目已添加到store）
-      if (newTimelineItem.timelineStatus === 'loading') {
-        setupCommandMediaSync(
-          this.id,
-          newTimelineItem.mediaItemId,
-          newTimelineItem.id,
-          `undo ${this.description}`,
-        )
+      // 2. 针对loading状态的项目设置状态同步（确保时间轴项目已添加到store）
+      if (TimelineItemQueries.isLoading(newTimelineItem)) {
+        setupMediaSync({
+          commandId: this.id,
+          mediaItemId: newTimelineItem.mediaItemId,
+          timelineItemId: newTimelineItem.id,
+          description: `undo ${this.description}`,
+          scenario: 'command',
+        })
       }
       console.log(`✅ 已撤销删除时间轴项目: ${this.originalTimelineItemData.id}`)
     } catch (error) {

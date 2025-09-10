@@ -3,8 +3,14 @@
  * 提供联合类型、工厂函数和类型查询的核心功能
  */
 
-import type { UserSelectedFileSourceData, BaseUserSelectedFileSourceData } from '@/unified/sources/UserSelectedFileSource'
-import type { RemoteFileSourceData, BaseRemoteFileSourceData } from '@/unified/sources/RemoteFileSource'
+import type {
+  UserSelectedFileSourceData,
+  BaseUserSelectedFileSourceData,
+} from '@/unified/sources/UserSelectedFileSource'
+import type {
+  RemoteFileSourceData,
+  BaseRemoteFileSourceData,
+} from '@/unified/sources/RemoteFileSource'
 import { UserSelectedFileSourceFactory } from '@/unified/sources/UserSelectedFileSource'
 import { RemoteFileSourceFactory } from '@/unified/sources/RemoteFileSource'
 import { UserSelectedFileTypeGuards } from '@/unified/sources/UserSelectedFileSource'
@@ -23,9 +29,7 @@ export type UnifiedDataSourceData = UserSelectedFileSourceData | RemoteFileSourc
 /**
  * 数据源基类型联合类型 - 用于持久化
  */
-export type BaseDataSourcePersistedData =
-  | BaseUserSelectedFileSourceData
-  | BaseRemoteFileSourceData
+export type BaseDataSourcePersistedData = BaseUserSelectedFileSourceData | BaseRemoteFileSourceData
 
 // ==================== 统一工厂函数 ====================
 
@@ -34,7 +38,9 @@ export type BaseDataSourcePersistedData =
  */
 export const DataSourceFactory = {
   // 统一创建方法，支持文件或媒体引用ID
-  createUserSelectedSource(param: File | BaseUserSelectedFileSourceData): UserSelectedFileSourceData {
+  createUserSelectedSource(
+    param: File | BaseUserSelectedFileSourceData,
+  ): UserSelectedFileSourceData {
     return UserSelectedFileSourceFactory.createUserSelectedSource(param)
   },
 

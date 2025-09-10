@@ -57,8 +57,8 @@ export abstract class BaseVisibleSprite extends VisibleSprite {
 
     // 初始化属性值（从父类获取）
     this.#zIndexValue = super.zIndex
-    // 安全地获取父类的 opacity 属性，如果不存在则使用默认值 1
-    this.#opacityValue = this.getParentOpacity() || 1
+    // 注意：不能通过 super.opacity 访问，先使用默认值
+    this.#opacityValue = (this as any).opacity || 1
 
     // 覆写 opacity 属性为访问器
     this.#setupOpacityAccessor()
@@ -93,35 +93,17 @@ export abstract class BaseVisibleSprite extends VisibleSprite {
   // ==================== 私有方法 ====================
 
   /**
-   * 安全地获取父类的 opacity 属性
-   * @returns 父类的 opacity 值，如果不存在则返回 undefined
-   */
-  private getParentOpacity(): number | undefined {
-    try {
-      // 尝试访问父类的 opacity 属性
-      const parentOpacity = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(this), 'opacity')
-      if (parentOpacity && parentOpacity.get) {
-        return parentOpacity.get.call(this)
-      }
-      // 如果没有 getter，尝试直接访问属性
-      // 这里使用 any 是因为需要访问父类的私有属性，是必要的类型断言
-      return (Object.getPrototypeOf(this) as { opacity?: number }).opacity
-    } catch {
-      // 如果访问失败，返回 undefined
-      return undefined
-    }
-  }
-
-  /**
    * 设置 opacity 属性访问器
    * 使用属性描述符覆写父类的 opacity 属性
+   * 注意：由于父类的 opacity 是数据属性，不能直接用 getter/setter 覆写，
+   * 所以必须使用 Object.defineProperty 方式
    */
   #setupOpacityAccessor(): void {
     Object.defineProperty(this, 'opacity', {
-      get: () => {
+      get: (): number => {
         return this.#opacityValue
       },
-      set: (value: number) => {
+      set: (value: number): void => {
         const changed = this.#opacityValue !== value
         this.#opacityValue = value
         if (changed) {

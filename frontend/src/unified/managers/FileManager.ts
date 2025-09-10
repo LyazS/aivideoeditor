@@ -97,14 +97,8 @@ export class FileManager {
    * @param mediaReferenceId 媒体引用ID
    */
   setMediaReferenceId(mediaItem: UnifiedMediaItemData, mediaReferenceId: string): void {
-    if (!mediaItem.source.mediaReferenceId) {
-      mediaItem.source.mediaReferenceId = mediaReferenceId
-      console.log(`🔗 [FileManager] 媒体引用ID已设置: ${mediaItem.name} -> ${mediaReferenceId}`)
-    } else {
-      console.log(
-        `🔗 [FileManager] 媒体引用ID已存在: ${mediaItem.name} -> ${mediaItem.source.mediaReferenceId}`,
-      )
-    }
+    mediaItem.source.mediaReferenceId = mediaReferenceId
+    console.log(`🔗 [FileManager] 媒体引用ID已设置: ${mediaItem.name} -> ${mediaReferenceId}`)
   }
 
   /**

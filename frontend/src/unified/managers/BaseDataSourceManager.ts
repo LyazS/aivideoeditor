@@ -3,9 +3,7 @@
  * 基于"核心数据与行为分离"的重构方案
  */
 
-import {
-  RuntimeStateActions,
-} from '@/unified/sources/BaseDataSource'
+import { RuntimeStateActions } from '@/unified/sources/BaseDataSource'
 import type { UnifiedDataSourceData } from '@/unified/sources/DataSourceTypes'
 import type { UnifiedMediaItemData, MediaStatus } from '@/unified/mediaitem/types'
 import { UnifiedMediaItemActions } from '@/unified/mediaitem/actions'
@@ -59,10 +57,10 @@ export abstract class DataSourceManager<T extends UnifiedDataSourceData> {
   protected currentRunningTasks: number = 0
   protected taskQueue: string[] = []
   protected processingTimes: number[] = []
-  
+
   // 新增：直接管理UnifiedMediaItemData
   protected mediaItems: Map<string, UnifiedMediaItemData> = new Map()
-  
+
   // 新增：专门的管理器实例
   protected mediaStatusManager: MediaStatusManager = new MediaStatusManager()
   protected webavProcessor: WebAVProcessor = new WebAVProcessor()
@@ -209,7 +207,6 @@ export abstract class DataSourceManager<T extends UnifiedDataSourceData> {
           this.processingTimes.shift()
         }
       }
-
     } catch (error) {
       // 任务执行失败
       const errorMessage = error instanceof Error ? error.message : '未知错误'
@@ -227,10 +224,10 @@ export abstract class DataSourceManager<T extends UnifiedDataSourceData> {
             task.status = 'pending'
             task.retryCount++
             task.error = undefined
-            
+
             // 重新加入队列
             this.taskQueue.push(task.id)
-            
+
             // 处理队列
             this.processQueue()
           }
@@ -293,18 +290,15 @@ export abstract class DataSourceManager<T extends UnifiedDataSourceData> {
    * @param mediaItem 媒体项目
    * @param status 目标状态
    */
-  protected transitionMediaStatus(
-    mediaItem: UnifiedMediaItemData,
-    status: MediaStatus
-  ): void {
+  protected transitionMediaStatus(mediaItem: UnifiedMediaItemData, status: MediaStatus): void {
     // 避免重复转换到相同状态
     if (mediaItem.mediaStatus === status) {
-      console.log(`🔄 [${this.getManagerType()}] 媒体状态已经是 ${status}，跳过转换: ${mediaItem.name}`)
+      console.log(
+        `🔄 [${this.getManagerType()}] 媒体状态已经是 ${status}，跳过转换: ${mediaItem.name}`,
+      )
       return
     }
-    
+
     this.mediaStatusManager.transitionTo(mediaItem, status, { manager: this.getManagerType() })
   }
-
-
 }

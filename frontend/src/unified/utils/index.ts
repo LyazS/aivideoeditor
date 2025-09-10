@@ -26,23 +26,8 @@ export {
   // 同步工具
   syncTimeRange,
 
-  // 验证工具
-  validateBaseTimeRange,
-  validateTimelineItemTimeRange,
-
   // 计算工具
   calculateDuration,
-  containsFrame,
-  isTimeRangeOverlapping,
-  calculateOverlapDuration,
-
-  // 操作工具
-  moveTimelineItem,
-  resizeTimelineItem,
-  trimTimelineItem,
-
-  // 工具集合
-  UnifiedTimeRangeUtils,
 } from './timeRangeUtils'
 
 // ==================== 统一Sprite工厂 ====================
@@ -52,8 +37,6 @@ export {
 
   // 辅助函数
   canCreateSpriteFromUnifiedMediaItem,
-  getSpriteTypeFromUnifiedMediaItem,
-  batchCheckCanCreateSprite,
 } from './spriteFactory'
 
 // ==================== 坐标转换工具 ====================
@@ -83,9 +66,6 @@ export {
 
 // ==================== 统一时间工具 ====================
 export {
-  // 时间码系统常量
-  FRAME_RATE,
-
   // 时间计算工具
   calculatePixelsPerFrame,
   expandTimelineIfNeededFrames,
@@ -105,22 +85,17 @@ export {
 export {
   // 核心重叠检测函数
   detectTimeRangeOverlap,
+  isTimeRangeOverlapping,
 
   // TimelineItem 专用函数
   extractTimeRange,
   isTimelineItemsOverlapping,
-  detectTimelineItemOverlap,
 
-  // 轨道级别的重叠检测
-  hasOverlapInTrack,
-  detectTrackConflicts,
+  // 重叠计算函数
+  calculateOverlapDuration,
 
   // 批量重叠检测
   countOverlappingItems,
-  getAllOverlappingPairs,
-
-  // 兼容性函数
-  calculateTimeRangeOverlap,
 } from './timeOverlapUtils'
 
 // ==================== 统一缩略图生成器 ====================
@@ -172,17 +147,6 @@ export {
 
   // 文本时间轴项目创建
   createTextTimelineItem,
-
-  // 轨道兼容性检查
-  isTextTrackCompatible,
-
-  // 样式工具
-  createDefaultTextStyle,
-
-  // 显示和验证工具
-  getTextItemDisplayName,
-  isValidTextContent,
-  createTextItemPreview,
 } from './textTimelineUtils'
 
 export { TextHelper } from './TextHelper'
@@ -278,7 +242,7 @@ export {
   // 单项目文件操作类
   ProjectFileOperations,
   projectFileOperations,
-  
+
   // 类型定义
   type UnifiedLoadProjectOptions,
   type UnifiedProjectLoadResult,
@@ -299,9 +263,33 @@ export {
   createMP4Clip,
   createImgClip,
   createAudioClip,
-  
+
   // 克隆函数
   cloneMP4Clip,
   cloneImgClip,
   cloneAudioClip,
 } from './webavClipUtils'
+
+// ==================== 项目导出工具 ====================
+export {
+  // 项目导出函数
+  exportProject,
+  // 导出项目参数接口
+  type ExportProjectOptions,
+} from './projectExporter'
+
+// ==================== 统一媒体同步管理器 ====================
+export {
+  // 核心类
+  UnifiedMediaSyncManager,
+
+  // 主要功能函数
+  setupMediaSync,
+
+  // 清理函数
+  cleanupCommandMediaSync,
+  cleanupProjectLoadMediaSync,
+
+  // 调试信息函数
+  getUnifiedMediaSyncInfo as getProjectLoadMediaSyncInfo,
+} from './unifiedMediaSyncManager'

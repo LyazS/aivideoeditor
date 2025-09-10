@@ -13,7 +13,6 @@ import type { SimpleCommand } from '@/unified/modules/commands/types'
 // ==================== 新架构类型导入 ====================
 import type {
   UnifiedTimelineItemData,
-  KnownTimelineItem,
   TimelineItemStatus,
 } from '@/unified/timelineitem/TimelineItemData'
 
@@ -26,16 +25,12 @@ import type {
   BaseMediaProps,
 } from '@/unified/timelineitem/TimelineItemData'
 
-// ==================== 新架构工具导入 ====================
-import { createSpriteFromUnifiedMediaItem } from '@/unified/utils/spriteFactory'
+import type { UnifiedTimeRange } from '@/unified/types/timeRange'
 
+// ==================== 新架构工具导入 ====================
 import { regenerateThumbnailForUnifiedTimelineItem } from '@/unified/utils/thumbnailGenerator'
 
-import {
-  isKnownTimelineItem,
-  hasVisualProperties,
-  TimelineItemFactory,
-} from '@/unified/timelineitem'
+import { TimelineItemFactory } from '@/unified/timelineitem'
 
 import { UnifiedMediaItemQueries } from '@/unified/mediaitem'
 
@@ -59,6 +54,7 @@ export class SplitTimelineItemCommand implements SimpleCommand {
       addTimelineItem: (item: UnifiedTimelineItemData<MediaType>) => Promise<void>
       removeTimelineItem: (id: string) => void
       getTimelineItem: (id: string) => UnifiedTimelineItemData<MediaType> | undefined
+      setupTimelineItemSprite: (item: UnifiedTimelineItemData<MediaType>) => Promise<void>
     },
     private webavModule: {
       addSprite: (sprite: VisibleSprite) => Promise<boolean>
@@ -70,18 +66,12 @@ export class SplitTimelineItemCommand implements SimpleCommand {
   ) {
     this.id = generateCommandId()
 
-    // 使用类型守卫来区分已知和未知项目
-    if (isKnownTimelineItem(originalTimelineItem)) {
-      // 已知项目处理逻辑
-      const mediaItem = this.mediaModule.getMediaItem(originalTimelineItem.mediaItemId)
-      this.description = `分割时间轴项目: ${mediaItem?.name || '未知素材'} (在 ${framesToTimecode(splitTimeFrames)})`
+    // 已知项目处理逻辑
+    const mediaItem = this.mediaModule.getMediaItem(originalTimelineItem.mediaItemId)
+    this.description = `分割时间轴项目: ${mediaItem?.name || '未知素材'} (在 ${framesToTimecode(splitTimeFrames)})`
 
-      // 保存原始项目的完整重建元数据
-      this.originalTimelineItemData = TimelineItemFactory.clone(originalTimelineItem)
-    // 注意：移除了对 isUnknownTimelineItem 的处理，因为不再支持 unknown 类型
-    } else {
-      throw new Error('不支持的时间轴项目类型')
-    }
+    // 保存原始项目的完整重建元数据
+    this.originalTimelineItemData = TimelineItemFactory.clone(originalTimelineItem)
 
     // 生成分割后项目的ID
     this.firstItemId = `timeline_item_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`
@@ -108,17 +98,6 @@ export class SplitTimelineItemCommand implements SimpleCommand {
   }> {
     console.log('🔄 开始从源头重建分割后的时间轴项目...')
 
-    // 1. 获取原始素材
-    const mediaItem = this.mediaModule.getMediaItem(this.originalTimelineItemData.mediaItemId)
-    if (!mediaItem) {
-      throw new Error(`原始素材不存在: ${this.originalTimelineItemData.mediaItemId}`)
-    }
-
-    // 检查素材是否已准备好并且是支持分割的类型
-    if (!UnifiedMediaItemQueries.isReady(mediaItem)) {
-      throw new Error(`素材尚未解析完成: ${mediaItem.name}`)
-    }
-
     // 2. 计算分割点的时间信息（直接使用帧数）
     const originalTimeRange = this.originalTimelineItemData.timeRange
     const timelineStartTimeFrames = originalTimeRange.timelineStartTime
@@ -130,95 +109,62 @@ export class SplitTimelineItemCommand implements SimpleCommand {
     const relativeTimelineFrames = splitTimeFrames - timelineStartTimeFrames
     const relativeRatio = relativeTimelineFrames / timelineDurationFrames
 
-    // 3. 从原始素材重新创建两个sprite
-    const firstSprite = await createSpriteFromUnifiedMediaItem(mediaItem)
-    const secondSprite = await createSpriteFromUnifiedMediaItem(mediaItem)
-
-    // 4. 设置时间范围
     // 统一使用UnifiedTimeRange，所有类型都有clipStartTime和clipEndTime
     const clipStartTimeFrames = originalTimeRange.clipStartTime || 0
-    const clipEndTimeFrames = originalTimeRange.clipEndTime || mediaItem.duration || 0
+    const clipEndTimeFrames = originalTimeRange.clipEndTime || 0
     const clipDurationFrames = clipEndTimeFrames - clipStartTimeFrames
     const splitClipTimeFrames = clipStartTimeFrames + Math.round(clipDurationFrames * relativeRatio)
 
-    firstSprite.setTimeRange({
+    // 创建第一个分割片段的时间范围
+    const firstTimeRange: UnifiedTimeRange = {
       clipStartTime: clipStartTimeFrames,
       clipEndTime: splitClipTimeFrames,
       timelineStartTime: timelineStartTimeFrames,
       timelineEndTime: splitTimeFrames,
-    })
+    }
 
-    secondSprite.setTimeRange({
+    // 创建第二个分割片段的时间范围
+    const secondTimeRange: UnifiedTimeRange = {
       clipStartTime: splitClipTimeFrames,
       clipEndTime: clipEndTimeFrames,
       timelineStartTime: splitTimeFrames,
       timelineEndTime: timelineEndTimeFrames,
-    })
-
-    // 5. 应用变换属性
-    if (hasVisualProperties(this.originalTimelineItemData)) {
-      const config = this.originalTimelineItemData.config as
-        | VideoMediaConfig
-        | ImageMediaConfig
-        | TextMediaConfig
-
-      // 应用到第一个sprite
-      if (config.x !== undefined) firstSprite.rect.x = config.x
-      if (config.y !== undefined) firstSprite.rect.y = config.y
-      if (config.width !== undefined) firstSprite.rect.w = config.width
-      if (config.height !== undefined) firstSprite.rect.h = config.height
-      if (config.rotation !== undefined) firstSprite.rect.angle = config.rotation
-      if (config.opacity !== undefined) firstSprite.opacity = config.opacity
-
-      // 应用到第二个sprite
-      if (config.x !== undefined) secondSprite.rect.x = config.x
-      if (config.y !== undefined) secondSprite.rect.y = config.y
-      if (config.width !== undefined) secondSprite.rect.w = config.width
-      if (config.height !== undefined) secondSprite.rect.h = config.height
-      if (config.rotation !== undefined) secondSprite.rect.angle = config.rotation
-      if (config.opacity !== undefined) secondSprite.opacity = config.opacity
     }
 
-    // 安全地获取 zIndex，所有媒体类型的配置都应该有 zIndex 属性
-    const config = this.originalTimelineItemData.config as BaseMediaProps
-    firstSprite.zIndex = config.zIndex
-    secondSprite.zIndex = config.zIndex
-
-    // 6. 创建新的TimelineItem
-    const firstItem = reactive({
-      id: this.firstItemId,
-      mediaItemId: this.originalTimelineItemData.mediaItemId,
-      trackId: this.originalTimelineItemData.trackId,
-      mediaType: this.originalTimelineItemData.mediaType,
-      timeRange: firstSprite.getTimeRange(),
-      config: { ...this.originalTimelineItemData.config },
-      animation: this.originalTimelineItemData.animation
-        ? { ...this.originalTimelineItemData.animation }
-        : undefined,
-      timelineStatus: 'ready' as TimelineItemStatus,
-      runtime: {
-        sprite: markRaw(firstSprite),
+    // 使用 TimelineItemFactory.rebuildForCmd 创建第一个分割片段
+    const firstRebuildResult = await TimelineItemFactory.rebuildForCmd({
+      originalTimelineItemData: {
+        ...this.originalTimelineItemData,
+        id: this.firstItemId,
+        timeRange: firstTimeRange,
       },
-    }) as KnownTimelineItem
+      getMediaItem: this.mediaModule.getMediaItem,
+      setupTimelineItemSprite: this.timelineModule.setupTimelineItemSprite,
+      logIdentifier: 'SplitTimelineItemCommand rebuildSplitItems first',
+    })
 
-    const secondItem = reactive({
-      id: this.secondItemId,
-      mediaItemId: this.originalTimelineItemData.mediaItemId,
-      trackId: this.originalTimelineItemData.trackId,
-      mediaType: this.originalTimelineItemData.mediaType,
-      timeRange: secondSprite.getTimeRange(),
-      config: { ...this.originalTimelineItemData.config },
-      animation: this.originalTimelineItemData.animation
-        ? { ...this.originalTimelineItemData.animation }
-        : undefined,
-      timelineStatus: 'ready' as TimelineItemStatus,
-      runtime: {
-        sprite: markRaw(secondSprite),
+    if (!firstRebuildResult.success) {
+      throw new Error(`重建第一个分割片段失败: ${firstRebuildResult.error}`)
+    }
+
+    // 使用 TimelineItemFactory.rebuildForCmd 创建第二个分割片段
+    const secondRebuildResult = await TimelineItemFactory.rebuildForCmd({
+      originalTimelineItemData: {
+        ...this.originalTimelineItemData,
+        id: this.secondItemId,
+        timeRange: secondTimeRange,
       },
-    }) as KnownTimelineItem
+      getMediaItem: this.mediaModule.getMediaItem,
+      setupTimelineItemSprite: this.timelineModule.setupTimelineItemSprite,
+      logIdentifier: 'SplitTimelineItemCommand rebuildSplitItems second',
+    })
 
-    // 7. 重新生成缩略图（异步执行，不阻塞重建过程）
-    this.regenerateThumbnailsForSplitItems(firstItem, secondItem, mediaItem)
+    if (!secondRebuildResult.success) {
+      throw new Error(`重建第二个分割片段失败: ${secondRebuildResult.error}`)
+    }
+
+    const firstItem = firstRebuildResult.timelineItem
+    const secondItem = secondRebuildResult.timelineItem
 
     console.log('🔄 重建分割项目完成:', {
       firstItemId: firstItem.id,
@@ -238,64 +184,23 @@ export class SplitTimelineItemCommand implements SimpleCommand {
   private async rebuildOriginalItem(): Promise<UnifiedTimelineItemData<MediaType>> {
     console.log('🔄 开始从源头重建原始时间轴项目...')
 
-    // 1. 获取原始素材
-    const mediaItem = this.mediaModule.getMediaItem(this.originalTimelineItemData.mediaItemId)
-    if (!mediaItem) {
-      throw new Error(`原始素材不存在: ${this.originalTimelineItemData.mediaItemId}`)
+    // 使用 TimelineItemFactory.rebuildForCmd 重建原始项目
+    const rebuildResult = await TimelineItemFactory.rebuildForCmd({
+      originalTimelineItemData: this.originalTimelineItemData,
+      getMediaItem: this.mediaModule.getMediaItem,
+      setupTimelineItemSprite: this.timelineModule.setupTimelineItemSprite,
+      logIdentifier: 'SplitTimelineItemCommand rebuildOriginalItem',
+    })
+
+    if (!rebuildResult.success) {
+      throw new Error(`重建原始项目失败: ${rebuildResult.error}`)
     }
 
-    // 确保素材已准备好
-    if (!UnifiedMediaItemQueries.isReady(mediaItem)) {
-      throw new Error(`素材尚未解析完成: ${mediaItem.name}`)
-    }
-
-    // 2. 从原始素材重新创建sprite
-    const newSprite = await createSpriteFromUnifiedMediaItem(mediaItem)
-
-    // 3. 设置原始时间范围
-    newSprite.setTimeRange(this.originalTimelineItemData.timeRange)
-
-    // 4. 应用变换属性
-    if (hasVisualProperties(this.originalTimelineItemData)) {
-      const config = this.originalTimelineItemData.config as
-        | VideoMediaConfig
-        | ImageMediaConfig
-        | TextMediaConfig
-      if (config.x !== undefined) newSprite.rect.x = config.x
-      if (config.y !== undefined) newSprite.rect.y = config.y
-      if (config.width !== undefined) newSprite.rect.w = config.width
-      if (config.height !== undefined) newSprite.rect.h = config.height
-      if (config.rotation !== undefined) newSprite.rect.angle = config.rotation
-      if (config.opacity !== undefined) newSprite.opacity = config.opacity
-    }
-
-    // 安全地获取 zIndex，所有媒体类型的配置都应该有 zIndex 属性
-    const config = this.originalTimelineItemData.config as BaseMediaProps
-    newSprite.zIndex = config.zIndex
-
-    // 5. 创建新的TimelineItem
-    const newTimelineItem = reactive({
-      id: this.originalTimelineItemData.id,
-      mediaItemId: this.originalTimelineItemData.mediaItemId,
-      trackId: this.originalTimelineItemData.trackId,
-      mediaType: this.originalTimelineItemData.mediaType,
-      timeRange: newSprite.getTimeRange(),
-      config: { ...this.originalTimelineItemData.config },
-      animation: this.originalTimelineItemData.animation
-        ? { ...this.originalTimelineItemData.animation }
-        : undefined,
-      timelineStatus: 'ready' as TimelineItemStatus,
-      runtime: {
-        sprite: markRaw(newSprite),
-      },
-    }) as KnownTimelineItem
-
-    // 6. 重新生成缩略图（异步执行，不阻塞重建过程）
-    this.regenerateThumbnailForOriginalItem(newTimelineItem, mediaItem)
+    const newTimelineItem = rebuildResult.timelineItem
 
     console.log('🔄 重建原始项目完成:', {
       id: newTimelineItem.id,
-      mediaType: mediaItem.mediaType,
+      mediaType: this.originalTimelineItemData.mediaType,
       timeRange: this.originalTimelineItemData.timeRange,
     })
 
@@ -323,14 +228,6 @@ export class SplitTimelineItemCommand implements SimpleCommand {
       // 2. 添加分割后的两个项目
       await this.timelineModule.addTimelineItem(firstItem)
       await this.timelineModule.addTimelineItem(secondItem)
-
-      // 3. 添加sprite到WebAV画布
-      if (isKnownTimelineItem(firstItem) && firstItem.runtime.sprite) {
-        await this.webavModule.addSprite(firstItem.runtime.sprite)
-      }
-      if (isKnownTimelineItem(secondItem) && secondItem.runtime.sprite) {
-        await this.webavModule.addSprite(secondItem.runtime.sprite)
-      }
 
       const mediaItem = this.mediaModule.getMediaItem(this.originalTimelineItemData.mediaItemId)
       console.log(
@@ -361,89 +258,12 @@ export class SplitTimelineItemCommand implements SimpleCommand {
       // 3. 添加原始项目到时间轴
       await this.timelineModule.addTimelineItem(originalItem)
 
-      // 4. 添加sprite到WebAV画布
-      if (isKnownTimelineItem(originalItem) && originalItem.runtime.sprite) {
-        await this.webavModule.addSprite(originalItem.runtime.sprite)
-      }
-
       const mediaItem = this.mediaModule.getMediaItem(this.originalTimelineItemData.mediaItemId)
       console.log(`↩️ 已撤销分割时间轴项目: ${mediaItem?.name || '未知素材'}`)
     } catch (error) {
       const mediaItem = this.mediaModule.getMediaItem(this.originalTimelineItemData.mediaItemId)
       console.error(`❌ 撤销分割时间轴项目失败: ${mediaItem?.name || '未知素材'}`, error)
       throw error
-    }
-  }
-
-  /**
-   * 为重建的原始项目重新生成缩略图
-   * @param timelineItem 重建的时间轴项目
-   * @param mediaItem 对应的媒体项目
-   */
-  private async regenerateThumbnailForOriginalItem(
-    timelineItem: KnownTimelineItem,
-    mediaItem: UnifiedMediaItemData,
-  ) {
-    // 音频不需要缩略图
-    if (mediaItem.mediaType === 'audio') {
-      console.log('🎵 音频不需要缩略图，跳过生成')
-      return
-    }
-
-    try {
-      console.log('🖼️ 开始为重建的原始项目重新生成缩略图...')
-
-      const thumbnailUrl = await regenerateThumbnailForUnifiedTimelineItem(timelineItem, mediaItem)
-
-      if (thumbnailUrl) {
-        // 缩略图已存储到runtime.thumbnailUrl中
-        // 这里暂时保留原有逻辑，需要根据实际实现调整
-        console.log('✅ 重建原始项目缩略图生成完成')
-      }
-    } catch (error) {
-      console.error('❌ 重建原始项目缩略图生成失败:', error)
-    }
-  }
-
-  /**
-   * 为分割后的两个项目重新生成缩略图
-   * @param firstItem 第一个分割片段
-   * @param secondItem 第二个分割片段
-   * @param mediaItem 对应的媒体项目
-   */
-  private async regenerateThumbnailsForSplitItems(
-    firstItem: KnownTimelineItem,
-    secondItem: KnownTimelineItem,
-    mediaItem: UnifiedMediaItemData,
-  ) {
-    // 音频不需要缩略图
-    if (mediaItem.mediaType === 'audio') {
-      console.log('🎵 音频不需要缩略图，跳过生成')
-      return
-    }
-
-    try {
-      console.log('🖼️ 开始为分割后的项目重新生成缩略图...')
-
-      // 为第一个片段生成缩略图
-      const firstThumbnailUrl = await regenerateThumbnailForUnifiedTimelineItem(
-        firstItem,
-        mediaItem,
-      )
-      if (firstThumbnailUrl) {
-        console.log('✅ 第一个分割片段缩略图生成完成')
-      }
-
-      // 为第二个片段生成缩略图
-      const secondThumbnailUrl = await regenerateThumbnailForUnifiedTimelineItem(
-        secondItem,
-        mediaItem,
-      )
-      if (secondThumbnailUrl) {
-        console.log('✅ 第二个分割片段缩略图生成完成')
-      }
-    } catch (error) {
-      console.error('❌ 分割项目缩略图生成失败:', error)
     }
   }
 }

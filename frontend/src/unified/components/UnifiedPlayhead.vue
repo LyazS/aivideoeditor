@@ -1,20 +1,11 @@
 <template>
-  <div
-    class="playhead-container"
-    ref="playheadContainer"
-    @mousedown="handleContainerMouseDown"
-    @wheel="handleWheel"
-    :class="{
-      'container-interactive': enableContainerClick,
-      dragging: isDragging && enableContainerClick,
-    }"
-  >
+  <div class="playhead-container" ref="playheadContainer" @wheel="handleWheel">
     <!-- 播放头手柄 -->
     <div
       class="playhead-handle"
       :style="{ left: playheadPosition + 'px' }"
-      @mousedown="startDragPlayhead"
-      :class="{ dragging: isDragging }"
+      @mousedown="handleMouseDown"
+      @wheel="handleWheel"
     >
       <!-- 白色倒三角 -->
       <div class="playhead-triangle"></div>
@@ -26,47 +17,26 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onUnmounted } from 'vue'
+import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { useUnifiedStore } from '@/unified/unifiedStore'
-import { usePlaybackControls } from '@/unified/composables'
-import { alignFramesToFrame } from '@/unified/utils/timeUtils'
 
 interface PlayheadProps {
   /** 时间轴容器宽度 */
   timelineWidth: number
   /** 轨道控制区域宽度（左侧偏移） */
   trackControlWidth?: number
-  /** 播放头手柄的容器元素（用于计算相对位置） */
-  handleContainer?: HTMLElement | null
-  /** 滚轮事件的目标容器元素 */
-  wheelContainer?: HTMLElement | null
-  /** 是否启用整个容器区域的点击交互 */
-  enableContainerClick?: boolean
-  /** 是否启用吸附功能 */
-  enableSnapping?: boolean
+  /** 滚轮事件处理容器引用 */
+  wheelContainer?: HTMLElement
 }
 
 const props = withDefaults(defineProps<PlayheadProps>(), {
   trackControlWidth: 150,
-  handleContainer: null,
-  wheelContainer: null,
-  enableContainerClick: false,
-  enableSnapping: true,
+  wheelContainer: undefined,
 })
 
 const unifiedStore = useUnifiedStore()
-const { pauseForEditing } = usePlaybackControls()
-
-const playheadContainer = ref<HTMLElement>()
 const isDragging = ref(false)
-
-/**
- * 应用吸附逻辑到目标帧数（已禁用吸附功能，保留接口用于重构）
- */
-function applySnapToClips(targetFrames: number): number {
-  // 吸附功能已禁用，直接返回原始帧数
-  return targetFrames
-}
+const playheadContainer = ref<HTMLElement>()
 
 // 播放头手柄位置（相对于时间刻度区域）
 const playheadPosition = computed(() => {
@@ -82,205 +52,121 @@ const playheadLinePosition = computed(() => {
   return playheadPosition.value
 })
 
-/**
- * 处理容器区域的鼠标按下事件（用于整个时间刻度区域的交互）
- */
-function handleContainerMouseDown(event: MouseEvent) {
-  if (!props.enableContainerClick) return
+// 处理鼠标按下事件
+const handleMouseDown = (event: MouseEvent) => {
+  event.preventDefault()
+  event.stopPropagation()
 
-  // 如果点击的是播放头手柄，让播放头手柄自己处理
-  const target = event.target as HTMLElement
-  if (target.closest('.playhead-handle')) {
-    return
+  // 暂停WebAV播放
+  unifiedStore.pause()
+
+  isDragging.value = true
+  document.addEventListener('mousemove', handleMouseMove)
+  document.addEventListener('mouseup', handleMouseUp)
+
+  // 设置拖拽光标样式
+  if (playheadContainer.value) {
+    playheadContainer.value.style.cursor = 'grabbing'
   }
-
-  // 如果已经在拖拽，不处理
-  if (isDragging.value) return
-
-  // 立即跳转到点击位置并开始拖拽
-  jumpToClickPosition(event)
-  startDragFromClick(event)
 }
 
-/**
- * 跳转到点击位置
- */
-function jumpToClickPosition(event: MouseEvent) {
-  const container = props.handleContainer || playheadContainer.value
-  if (!container) return
-
-  // 暂停播放以便进行时间跳转
-  pauseForEditing('时间轴点击')
-
-  const rect = container.getBoundingClientRect()
-  const clickX = event.clientX - rect.left
-
-  // 减去轨道控制区域的偏移，得到实际的时间轴像素位置
-  const timelinePixelX = clickX - props.trackControlWidth
-
-  // 转换为帧数
-  const clickFrames = unifiedStore.pixelToFrame(timelinePixelX, props.timelineWidth)
-  const clampedFrames = Math.max(0, clickFrames)
-
-  // 应用吸附逻辑
-  const snappedFrames = applySnapToClips(clampedFrames)
-  const alignedFrames = alignFramesToFrame(snappedFrames)
-
-  // 通过WebAV设置帧数
-  unifiedStore.webAVSeekTo(alignedFrames)
-}
-
-/**
- * 从点击位置开始拖拽
- */
-function startDragFromClick(event: MouseEvent) {
-  event.preventDefault()
-  event.stopPropagation()
-
-  isDragging.value = true
-
-  document.addEventListener('mousemove', handleDragPlayhead)
-  document.addEventListener('mouseup', stopDragPlayhead)
-}
-
-/**
- * 开始拖拽播放头（从播放头手柄开始）
- */
-function startDragPlayhead(event: MouseEvent) {
-  event.preventDefault()
-  event.stopPropagation()
-
-  // 暂停播放以便进行播放头拖拽
-  pauseForEditing('播放头拖拽')
-
-  isDragging.value = true
-
-  document.addEventListener('mousemove', handleDragPlayhead)
-  document.addEventListener('mouseup', stopDragPlayhead)
-}
-
-/**
- * 处理播放头拖拽
- */
-function handleDragPlayhead(event: MouseEvent) {
+// 处理鼠标移动事件
+const handleMouseMove = (event: MouseEvent) => {
   if (!isDragging.value) return
 
-  const container = props.handleContainer || playheadContainer.value
-  if (!container) return
+  const timelineRect = playheadContainer.value?.getBoundingClientRect()
+  if (!timelineRect) return
 
-  const rect = container.getBoundingClientRect()
-  const mouseX = event.clientX - rect.left
+  // 计算鼠标相对于时间轴容器的位置
+  const mouseX = event.clientX - timelineRect.left
+  const trackControlAreaWidth = props.trackControlWidth
 
-  // 减去轨道控制区域的偏移，得到实际的时间轴像素位置
-  const timelinePixelX = mouseX - props.trackControlWidth
+  // 确保鼠标位置在时间轴内容区域内
+  if (mouseX >= trackControlAreaWidth && mouseX <= timelineRect.width) {
+    const contentX = mouseX - trackControlAreaWidth
+    let frame = unifiedStore.pixelToFrame(contentX, props.timelineWidth)
 
-  // 转换为帧数
-  const dragFrames = unifiedStore.pixelToFrame(timelinePixelX, props.timelineWidth)
-  const clampedFrames = Math.max(0, dragFrames)
+    // 应用吸附功能
+    if (unifiedStore.snapConfig.enabled && unifiedStore.snapConfig.playhead) {
+      // 开始拖拽阶段，收集候选目标
+      if (!unifiedStore.isSnapCalculating) {
+        // 开始拖拽时收集吸附目标（排除播放头自身位置）
+        unifiedStore.startSnapDrag([])
+      }
 
-  // 应用吸附逻辑
-  const snappedFrames = applySnapToClips(clampedFrames)
-  const alignedFrames = alignFramesToFrame(snappedFrames)
+      // 计算吸附位置
+      const snapOptions = {
+        excludeClipIds: [],
+        customThreshold: unifiedStore.snapConfig.threshold,
+      }
+      const calculatedSnapResult = unifiedStore.calculateSnapPosition(frame, snapOptions)
+      if (calculatedSnapResult) {
+        // 避免吸附到播放头自身位置
+        const isSnappingToCurrentPlayhead = calculatedSnapResult.snapPoint?.type === 'playhead'
+        if (!isSnappingToCurrentPlayhead) {
+          frame = calculatedSnapResult.frame
+        }
+      }
+    }
 
-  // 通过WebAV设置帧数
-  unifiedStore.webAVSeekTo(alignedFrames)
+    // 更新当前帧
+    unifiedStore.setCurrentFrame(Math.max(0, Math.floor(frame)))
+  }
 }
 
-/**
- * 停止拖拽播放头
- */
-function stopDragPlayhead() {
+// 处理鼠标释放事件
+const handleMouseUp = () => {
   isDragging.value = false
+  document.removeEventListener('mousemove', handleMouseMove)
+  document.removeEventListener('mouseup', handleMouseUp)
 
-  document.removeEventListener('mousemove', handleDragPlayhead)
-  document.removeEventListener('mouseup', stopDragPlayhead)
-
-  // 防止拖拽结束后触发意外的点击事件
-  const preventClick = (e: MouseEvent) => {
-    e.stopPropagation()
-    e.preventDefault()
-    document.removeEventListener('click', preventClick, true)
+  // 恢复光标样式
+  if (playheadContainer.value) {
+    playheadContainer.value.style.cursor = 'grab'
   }
 
-  document.addEventListener('click', preventClick, true)
-  setTimeout(() => {
-    document.removeEventListener('click', preventClick, true)
-  }, 50)
+  // 结束拖拽阶段，清理缓存
+  if (unifiedStore.snapConfig.enabled && unifiedStore.snapConfig.playhead) {
+    unifiedStore.endSnapDrag()
+  }
 }
 
 /**
- * 处理时间轴点击跳转
+ * 处理滚轮事件
+ * 将滚轮事件传递给指定的容器，确保播放头不拦截滚轮操作
  */
-function handleTimelineClick(event: MouseEvent) {
-  if (isDragging.value) return
-
-  const container = props.handleContainer || playheadContainer.value
-  if (!container) return
-
-  // 暂停播放以便进行时间跳转
-  pauseForEditing('时间轴点击')
-
-  const rect = container.getBoundingClientRect()
-  const clickX = event.clientX - rect.left
-
-  // 减去轨道控制区域的偏移，得到实际的时间轴像素位置
-  const timelinePixelX = clickX - props.trackControlWidth
-
-  // 转换为帧数
-  const clickFrames = unifiedStore.pixelToFrame(timelinePixelX, props.timelineWidth)
-  const clampedFrames = Math.max(0, clickFrames)
-
-  // 应用吸附逻辑
-  const snappedFrames = applySnapToClips(clampedFrames)
-  const alignedFrames = alignFramesToFrame(snappedFrames)
-
-  // 通过WebAV设置帧数
-  unifiedStore.webAVSeekTo(alignedFrames)
-}
-
-/**
- * 处理滚轮事件 - 将事件传播给父组件处理
- */
-function handleWheel(event: WheelEvent) {
-  if (!props.wheelContainer) {
-    return
-  }
-
-  // 阻止当前事件的默认行为和冒泡
-  event.preventDefault()
+const handleWheel = (event: WheelEvent) => {
+  // 阻止事件冒泡，避免重复处理
   event.stopPropagation()
 
-  // 创建一个新的滚轮事件并在目标容器上触发
-  const newEvent = new WheelEvent('wheel', {
-    deltaX: event.deltaX,
-    deltaY: event.deltaY,
-    deltaZ: event.deltaZ,
-    deltaMode: event.deltaMode,
-    clientX: event.clientX,
-    clientY: event.clientY,
-    screenX: event.screenX,
-    screenY: event.screenY,
-    ctrlKey: event.ctrlKey,
-    shiftKey: event.shiftKey,
-    altKey: event.altKey,
-    metaKey: event.metaKey,
-    bubbles: true,
-    cancelable: true,
-  })
+  // 如果指定了滚轮处理容器，将事件传递给该容器
+  if (props.wheelContainer) {
+    // 创建一个新的事件对象，确保所有属性都被复制
+    const newEvent = new WheelEvent('wheel', {
+      deltaX: event.deltaX,
+      deltaY: event.deltaY,
+      deltaZ: event.deltaZ,
+      deltaMode: event.deltaMode,
+      clientX: event.clientX,
+      clientY: event.clientY,
+      screenX: event.screenX,
+      screenY: event.screenY,
+      ctrlKey: event.ctrlKey,
+      shiftKey: event.shiftKey,
+      altKey: event.altKey,
+      metaKey: event.metaKey,
+      bubbles: true,
+      cancelable: true,
+    })
 
-  props.wheelContainer.dispatchEvent(newEvent)
+    props.wheelContainer.dispatchEvent(newEvent)
+  }
 }
 
-// 暴露方法给父组件
-defineExpose({
-  handleTimelineClick,
-  isDragging: computed(() => isDragging.value),
-})
-
+// 清理事件监听器
 onUnmounted(() => {
-  // 清理事件监听器
-  document.removeEventListener('mousemove', handleDragPlayhead)
-  document.removeEventListener('mouseup', stopDragPlayhead)
+  document.removeEventListener('mousemove', handleMouseMove)
+  document.removeEventListener('mouseup', handleMouseUp)
 })
 </script>
 
@@ -291,16 +177,7 @@ onUnmounted(() => {
   left: 0;
   right: 0;
   bottom: 0;
-  pointer-events: none; /* 默认容器本身不接收事件 */
-}
-
-.playhead-container.container-interactive {
-  pointer-events: auto; /* 启用容器交互时允许接收事件 */
-  cursor: pointer;
-}
-
-.playhead-container.container-interactive.dragging {
-  cursor: grabbing !important;
+  pointer-events: none; /* 容器本身不接收事件 */
 }
 
 .playhead-handle {
@@ -309,21 +186,17 @@ onUnmounted(() => {
   height: 100%;
   width: 20px; /* 增加点击区域 */
   margin-left: -10px; /* 居中对齐 */
-  pointer-events: auto; /* 允许交互 */
   z-index: 25; /* 确保在播放竖线之上，但在clip tooltip之下 */
-  cursor: grab;
   display: flex;
   align-items: flex-start;
   justify-content: center;
   padding-top: 0; /* 移除顶部间距，让三角形紧贴顶端 */
-}
-
-.playhead-handle:hover {
   cursor: grab;
+  pointer-events: auto; /* 允许手柄区域接收事件 */
 }
 
-.playhead-handle.dragging {
-  cursor: grabbing;
+.playhead-handle:hover .playhead-triangle {
+  border-top-color: #ff6b6b; /* 悬停时变为红色 */
 }
 
 .playhead-triangle {
@@ -341,7 +214,6 @@ onUnmounted(() => {
   bottom: 0;
   width: 2px;
   background-color: white; /* 白色竖线 */
-  pointer-events: none;
   z-index: 20; /* 确保在所有内容之上，但在clip tooltip之下 */
   margin-left: -1px; /* 居中对齐 */
   filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.5));

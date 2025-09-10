@@ -1,5 +1,7 @@
 import { directoryManager } from '@/unified/utils/DirectoryManager'
-import type { UnifiedProjectConfig } from '@/unified/project'
+import type { UnifiedProjectConfig, UnifiedProjectContent } from '@/unified/project'
+import { createUnifiedTrackData } from '@/unified/track'
+import type { UnifiedTrackData } from '@/unified/track'
 
 /**
  * 统一项目管理器
@@ -58,6 +60,17 @@ export class UnifiedProjectManager {
   }
 
   /**
+   * 创建默认轨道
+   */
+  private createDefaultTracks(): UnifiedTrackData[] {
+    const videoTrack = createUnifiedTrackData('video')
+    const audioTrack = createUnifiedTrackData('audio')
+    const textTrack = createUnifiedTrackData('text')
+
+    return [videoTrack, audioTrack, textTrack]
+  }
+
+  /**
    * 创建新项目
    */
   async createProject(
@@ -71,6 +84,9 @@ export class UnifiedProjectManager {
 
     const projectId = 'project_' + Date.now()
     const now = new Date().toISOString()
+
+    // 创建默认轨道
+    const defaultTracks = this.createDefaultTracks()
 
     const projectConfig: UnifiedProjectConfig = {
       id: projectId,
@@ -92,12 +108,13 @@ export class UnifiedProjectManager {
         frameRate: 30,
         timelineDurationFrames: 1800,
       },
+    }
 
-      timeline: template?.timeline || {
-        tracks: [],
-        timelineItems: [],
-        mediaItems: [],
-      },
+    // 创建项目内容数据（拆分出来的timeline数据）
+    const projectContent: UnifiedProjectContent = {
+      tracks: defaultTracks,
+      timelineItems: [],
+      mediaItems: [],
     }
 
     try {
@@ -114,8 +131,9 @@ export class UnifiedProjectManager {
       await mediaHandle.getDirectoryHandle('audios', { create: true })
       await mediaHandle.getDirectoryHandle('thumbnails', { create: true })
 
-      // 保存项目配置文件
-      await this.saveProjectConfig(projectHandle, projectConfig)
+      // 分别保存项目配置文件和内容文件
+      await this.saveProjectConfigFile(projectHandle, projectConfig)
+      await this.saveProjectContentFile(projectHandle, projectContent)
 
       console.log('统一项目创建成功:', projectConfig.name)
       return projectConfig
@@ -145,9 +163,9 @@ export class UnifiedProjectManager {
   }
 
   /**
-   * 保存项目
+   * 保存项目配置（只保存project.json）
    */
-  async saveProject(projectConfig: UnifiedProjectConfig): Promise<void> {
+  async saveProjectConfig(projectConfig: UnifiedProjectConfig, updatedAt?: string): Promise<void> {
     const workspaceHandle = await directoryManager.getWorkspaceHandle()
     if (!workspaceHandle) {
       throw new Error('未设置工作目录')
@@ -157,10 +175,58 @@ export class UnifiedProjectManager {
       const projectsHandle = await workspaceHandle.getDirectoryHandle(this.PROJECTS_FOLDER)
       const projectHandle = await projectsHandle.getDirectoryHandle(projectConfig.id)
 
+      // 使用外部传入的时间戳，或者生成新的时间戳
+      projectConfig.updatedAt = updatedAt || new Date().toISOString()
+
+      await this.saveProjectConfigFile(projectHandle, projectConfig)
+      console.log('统一项目配置保存成功:', projectConfig.name)
+    } catch (error) {
+      console.error('保存统一项目配置失败:', error)
+      throw error
+    }
+  }
+
+  /**
+   * 保存项目内容（只保存content.json）
+   */
+  async saveProjectContent(
+    projectId: string,
+    projectContent: UnifiedProjectContent,
+  ): Promise<void> {
+    const workspaceHandle = await directoryManager.getWorkspaceHandle()
+    if (!workspaceHandle) {
+      throw new Error('未设置工作目录')
+    }
+
+    try {
+      const projectsHandle = await workspaceHandle.getDirectoryHandle(this.PROJECTS_FOLDER)
+      const projectHandle = await projectsHandle.getDirectoryHandle(projectId)
+
+      await this.saveProjectContentFile(projectHandle, projectContent)
+      console.log('统一项目内容保存成功:', projectId)
+    } catch (error) {
+      console.error('保存统一项目内容失败:', error)
+      throw error
+    }
+  }
+
+  /**
+   * 保存完整项目（配置+内容）
+   */
+  async saveProject(
+    projectConfig: UnifiedProjectConfig,
+    projectContent: UnifiedProjectContent,
+  ): Promise<void> {
+    try {
       // 更新时间戳
       projectConfig.updatedAt = new Date().toISOString()
 
-      await this.saveProjectConfig(projectHandle, projectConfig)
+      // 并行保存配置和内容
+      await Promise.all([
+        this.saveProjectConfig(projectConfig),
+        this.saveProjectContent(projectConfig.id, projectContent),
+      ])
+
       console.log('统一项目保存成功:', projectConfig.name)
     } catch (error) {
       console.error('保存统一项目失败:', error)
@@ -203,7 +269,7 @@ export class UnifiedProjectManager {
   /**
    * 保存项目配置到文件
    */
-  private async saveProjectConfig(
+  private async saveProjectConfigFile(
     projectHandle: FileSystemDirectoryHandle,
     config: UnifiedProjectConfig,
   ): Promise<void> {
@@ -211,6 +277,20 @@ export class UnifiedProjectManager {
     const writable = await configFileHandle.createWritable()
 
     await writable.write(JSON.stringify(config, null, 2))
+    await writable.close()
+  }
+
+  /**
+   * 保存项目内容到文件
+   */
+  private async saveProjectContentFile(
+    projectHandle: FileSystemDirectoryHandle,
+    content: UnifiedProjectContent,
+  ): Promise<void> {
+    const contentFileHandle = await projectHandle.getFileHandle('content.json', { create: true })
+    const writable = await contentFileHandle.createWritable()
+
+    await writable.write(JSON.stringify(content, null, 2))
     await writable.close()
   }
 }
