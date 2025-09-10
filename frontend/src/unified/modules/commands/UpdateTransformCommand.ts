@@ -8,7 +8,12 @@ import { framesToMicroseconds, framesToTimecode } from '@/unified/utils/timeUtil
 import type { SimpleCommand } from '@/unified/modules/commands/types'
 
 // ==================== 新架构类型导入 ====================
-import type { VideoMediaConfig, AudioMediaConfig, UnifiedTimelineItemData, TransformData } from '@/unified/timelineitem'
+import type {
+  VideoMediaConfig,
+  AudioMediaConfig,
+  UnifiedTimelineItemData,
+  TransformData,
+} from '@/unified/timelineitem'
 
 import type { UnifiedMediaItemData, MediaType } from '@/unified/mediaitem'
 
@@ -167,7 +172,10 @@ export class UpdateTransformCommand implements SimpleCommand {
       }
 
       // 处理音频增益更新（仅对音频有效）
-      if (TimelineItemQueries.isAudioTimelineItem(timelineItem) && this.newValues.gain !== undefined) {
+      if (
+        TimelineItemQueries.isAudioTimelineItem(timelineItem) &&
+        this.newValues.gain !== undefined
+      ) {
         // 类型安全的音频配置更新
         const config = timelineItem.config as AudioMediaConfig
         if (config.gain !== undefined) {
@@ -262,7 +270,10 @@ export class UpdateTransformCommand implements SimpleCommand {
       }
 
       // 处理音频增益恢复（仅对音频有效）
-      if (TimelineItemQueries.isAudioTimelineItem(timelineItem) && this.oldValues.gain !== undefined) {
+      if (
+        TimelineItemQueries.isAudioTimelineItem(timelineItem) &&
+        this.oldValues.gain !== undefined
+      ) {
         // 类型安全的音频配置恢复
         const config = timelineItem.config as AudioMediaConfig
         if (config.gain !== undefined) {

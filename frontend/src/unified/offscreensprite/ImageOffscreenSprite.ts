@@ -78,7 +78,7 @@ export class ImageOffscreenSprite extends OffscreenSprite {
       playbackRate: 1.0, // 图片固定为1.0，没有倍速概念
     }
   }
-  
+
   async clone() {
     return this
   }

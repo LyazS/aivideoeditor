@@ -881,9 +881,7 @@ const updateTargetDurationFromTimecode = async (event: Event) => {
     }
 
     // 显示错误通知
-    unifiedStore.showError(
-      `时间码格式错误：${errorMessage}`
-    )
+    unifiedStore.showError(`时间码格式错误：${errorMessage}`)
 
     // 恢复到当前值
     input.value = formattedDuration.value

@@ -21,7 +21,9 @@ export interface BaseUserSelectedFileSourceData extends BaseDataSourceData {
 /**
  * 用户选择文件数据源 - 继承基类型和运行时状态
  */
-export interface UserSelectedFileSourceData extends BaseUserSelectedFileSourceData, DataSourceRuntimeState {
+export interface UserSelectedFileSourceData
+  extends BaseUserSelectedFileSourceData,
+    DataSourceRuntimeState {
   selectedFile: File
 }
 
@@ -32,7 +34,9 @@ export interface UserSelectedFileSourceData extends BaseUserSelectedFileSourceDa
  */
 export const UserSelectedFileSourceFactory = {
   // 统一创建方法，支持文件或媒体引用ID
-  createUserSelectedSource(param: File | BaseUserSelectedFileSourceData): UserSelectedFileSourceData {
+  createUserSelectedSource(
+    param: File | BaseUserSelectedFileSourceData,
+  ): UserSelectedFileSourceData {
     if (param instanceof File) {
       // 使用文件创建
       return reactive({
@@ -209,13 +213,15 @@ export const UserSelectedFileQueries = {
 /**
  * 提取用户选择文件数据源的持久化数据
  */
-export function extractUserSelectedFileSourceData(source: UserSelectedFileSourceData): BaseUserSelectedFileSourceData {
+export function extractUserSelectedFileSourceData(
+  source: UserSelectedFileSourceData,
+): BaseUserSelectedFileSourceData {
   return {
     // 基础字段
     id: source.id,
     type: source.type,
     mediaReferenceId: source.mediaReferenceId,
-    
+
     // 不需要保存运行时状态
     // progress: source.progress, // 重新加载时会重置
     // errorMessage: source.errorMessage, // 重新加载时会重置

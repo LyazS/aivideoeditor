@@ -42,13 +42,15 @@ export function useProjectThumbnailService() {
     const visualItems = timelineItems
       .filter((item) => {
         const mediaItem = mediaModule.getMediaItem(item.mediaItemId)
-        return mediaItem && (UnifiedMediaItemQueries.isVideo(mediaItem) || UnifiedMediaItemQueries.isImage(mediaItem))
+        return (
+          mediaItem &&
+          (UnifiedMediaItemQueries.isVideo(mediaItem) || UnifiedMediaItemQueries.isImage(mediaItem))
+        )
       })
       .sort((a, b) => a.timeRange.timelineStartTime - b.timeRange.timelineStartTime)
 
     return visualItems.length > 0 ? visualItems[0] : null
   }
-
 
   /**
    * 保存缩略图文件到指定目录
@@ -173,13 +175,8 @@ export function useProjectThumbnailService() {
 
       // 3. 使用统一的缩略图生成函数获取缩略图URL（直接生成640x360的高分辨率缩略图）
       console.log('🔄 使用统一缩略图生成器生成高分辨率缩略图...')
-      const thumbnailUrl = await generateThumbnailForUnifiedMediaItem(
-        mediaItem,
-        100000,
-        640,
-        360
-      )
-      
+      const thumbnailUrl = await generateThumbnailForUnifiedMediaItem(mediaItem, 100000, 640, 360)
+
       if (!thumbnailUrl) {
         throw new ThumbnailError('无法生成缩略图', 'EXTRACTION_FAILED')
       }

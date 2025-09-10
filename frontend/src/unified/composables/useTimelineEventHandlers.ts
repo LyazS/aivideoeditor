@@ -10,7 +10,7 @@ import { useTimelineWheelHandler, TimelineWheelSource } from './useTimelineWheel
 export function useTimelineEventHandlers(
   timelineBody: Ref<HTMLElement | undefined>,
   timelineWidth: Ref<number>,
-  handleTimelineItemRemove: (timelineItemId: string) => Promise<void>
+  handleTimelineItemRemove: (timelineItemId: string) => Promise<void>,
 ) {
   const unifiedStore = useUnifiedStore()
   const { pauseForEditing } = usePlaybackControls()
@@ -43,7 +43,6 @@ export function useTimelineEventHandlers(
     }
   }
 
-
   /**
    * 处理时间轴点击事件
    * 点击轨道内容空白区域取消所有选中（包括单选和多选）
@@ -70,7 +69,12 @@ export function useTimelineEventHandlers(
    * 处理片段选中事件
    */
   async function handleSelectClip(event: MouseEvent, clipId: string) {
-    console.log('🎯 [UnifiedTimeline] 选中clip:', clipId, 'Ctrl按下:', event.ctrlKey || event.metaKey)
+    console.log(
+      '🎯 [UnifiedTimeline] 选中clip:',
+      clipId,
+      'Ctrl按下:',
+      event.ctrlKey || event.metaKey,
+    )
     try {
       if (event.ctrlKey || event.metaKey) {
         // Ctrl/Cmd+点击：切换选择状态（多选模式）
@@ -122,8 +126,11 @@ export function useTimelineEventHandlers(
    */
   function handleKeyDown(event: KeyboardEvent) {
     // 检查是否有修饰键（除了Escape和Delete），如果有则不处理（让全局快捷键处理）
-    if ((event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) &&
-        event.key !== 'Escape' && event.key !== 'Delete') {
+    if (
+      (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) &&
+      event.key !== 'Escape' &&
+      event.key !== 'Delete'
+    ) {
       return
     }
 
@@ -144,13 +151,9 @@ export function useTimelineEventHandlers(
   }
 
   // 使用统一的滚轮处理
-  const { handleWheel } = useTimelineWheelHandler(
-    timelineBody,
-    timelineWidth,
-    {
-      source: TimelineWheelSource.TIMELINE_BODY // 时间轴主体区域
-    }
-  )
+  const { handleWheel } = useTimelineWheelHandler(timelineBody, timelineWidth, {
+    source: TimelineWheelSource.TIMELINE_BODY, // 时间轴主体区域
+  })
 
   return {
     // 方法

@@ -27,7 +27,6 @@ export const DEFAULT_TRACK_HEIGHTS: Record<UnifiedTrackType, number> = {
   effect: 60,
 }
 
-
 /**
  * 默认轨道内间距
  * 轨道高度60px，clip高度50px（60px - 5px * 2），上下各留5px间距

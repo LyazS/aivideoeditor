@@ -3,10 +3,10 @@
   <div class="default-renderer-content" :class="{ selected: isSelected }">
     <!-- 媒体类型指示器 -->
     <div class="media-type-indicator">{{ mediaType }}</div>
-    
+
     <!-- 状态指示器 -->
     <div class="status-indicator">{{ timelineStatus }}</div>
-    
+
     <!-- 项目名称 -->
     <div class="item-name">{{ displayName }}</div>
 
@@ -27,7 +27,8 @@ const props = defineProps<ContentTemplateProps>()
 
 // 计算属性
 const showDetails = computed(() => {
-  const durationFrames = props.data.timeRange.timelineEndTime - props.data.timeRange.timelineStartTime
+  const durationFrames =
+    props.data.timeRange.timelineEndTime - props.data.timeRange.timelineStartTime
   return durationFrames >= 24 // 大约0.8秒的片段显示详细信息
 })
 
@@ -55,7 +56,6 @@ const shortStatus = computed(() => {
   }
   return statusMap[props.data.timelineStatus] || props.data.timelineStatus.charAt(0).toUpperCase()
 })
-
 </script>
 
 <style scoped>
@@ -74,11 +74,7 @@ const shortStatus = computed(() => {
 }
 
 .default-renderer-content.selected {
-  background: linear-gradient(
-    135deg,
-    var(--color-clip-selected),
-    var(--color-clip-selected-dark)
-  );
+  background: linear-gradient(135deg, var(--color-clip-selected), var(--color-clip-selected-dark));
 }
 
 .media-type-indicator {
@@ -136,33 +132,33 @@ const shortStatus = computed(() => {
 }
 
 /* 状态颜色 */
-.default-renderer-content[data-timeline-status="ready"] .status-indicator {
+.default-renderer-content[data-timeline-status='ready'] .status-indicator {
   color: var(--color-status-ready);
 }
 
-.default-renderer-content[data-timeline-status="loading"] .status-indicator {
+.default-renderer-content[data-timeline-status='loading'] .status-indicator {
   color: var(--color-status-loading);
   animation: pulse 1.5s infinite;
 }
 
-.default-renderer-content[data-timeline-status="error"] .status-indicator {
+.default-renderer-content[data-timeline-status='error'] .status-indicator {
   color: var(--color-status-error);
 }
 
 /* 媒体类型颜色 */
-.default-renderer-content[data-media-type="video"] .media-type-indicator {
+.default-renderer-content[data-media-type='video'] .media-type-indicator {
   background: rgba(255, 107, 53, 0.3);
 }
 
-.default-renderer-content[data-media-type="image"] .media-type-indicator {
+.default-renderer-content[data-media-type='image'] .media-type-indicator {
   background: rgba(66, 133, 244, 0.3);
 }
 
-.default-renderer-content[data-media-type="audio"] .media-type-indicator {
+.default-renderer-content[data-media-type='audio'] .media-type-indicator {
   background: rgba(123, 31, 162, 0.3);
 }
 
-.default-renderer-content[data-media-type="text"] .media-type-indicator {
+.default-renderer-content[data-media-type='text'] .media-type-indicator {
   background: rgba(16, 150, 24, 0.3);
 }
 

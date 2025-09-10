@@ -182,7 +182,6 @@ export const useUnifiedStore = defineStore('unified', () => {
     unifiedHistoryModule.executeCommand,
   )
 
-
   // 创建统一自动保存模块（需要在项目模块之后创建）
   const unifiedAutoSaveModule = createUnifiedAutoSaveModule(
     {
@@ -220,7 +219,7 @@ export const useUnifiedStore = defineStore('unified', () => {
   const unifiedSnapModule = createUnifiedSnapModule(
     unifiedTimelineModule.timelineItems,
     unifiedPlaybackModule.currentFrame,
-    unifiedConfigModule
+    unifiedConfigModule,
   )
 
   /**
@@ -543,7 +542,7 @@ export const useUnifiedStore = defineStore('unified', () => {
       },
       {
         getMediaItem: unifiedMediaModule.getMediaItem,
-      }
+      },
     )
     await unifiedHistoryModule.executeCommand(command)
   }
@@ -1318,7 +1317,6 @@ export const useUnifiedStore = defineStore('unified', () => {
     toggleMultiSelection: unifiedSelectionModule.toggleMultiSelection,
     clearMultiSelection: unifiedSelectionModule.clearMultiSelection,
     isInMultiSelection: unifiedSelectionModule.isInMultiSelection,
-
 
     // ==================== 系统状态方法 ====================
 

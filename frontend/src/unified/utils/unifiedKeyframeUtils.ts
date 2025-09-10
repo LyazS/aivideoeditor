@@ -29,7 +29,10 @@ import { updateWebAVAnimation } from '@/unified/utils/webavAnimationManager'
  * @param timeRange clip的时间范围
  * @returns 相对于clip开始的帧数
  */
-export function absoluteFrameToRelativeFrame(absoluteFrame: number, timeRange: UnifiedTimeRange): number {
+export function absoluteFrameToRelativeFrame(
+  absoluteFrame: number,
+  timeRange: UnifiedTimeRange,
+): number {
   const clipStartFrame = timeRange.timelineStartTime
   const relativeFrame = absoluteFrame - clipStartFrame
 
@@ -43,7 +46,10 @@ export function absoluteFrameToRelativeFrame(absoluteFrame: number, timeRange: U
  * @param timeRange clip的时间范围
  * @returns 绝对帧数（相对于整个项目时间轴）
  */
-export function relativeFrameToAbsoluteFrame(relativeFrame: number, timeRange: UnifiedTimeRange): number {
+export function relativeFrameToAbsoluteFrame(
+  relativeFrame: number,
+  timeRange: UnifiedTimeRange,
+): number {
   const clipStartFrame = timeRange.timelineStartTime
   return clipStartFrame + relativeFrame
 }
@@ -142,7 +148,10 @@ export function hasAnimation(item: UnifiedTimelineItemData): boolean {
 /**
  * 检查当前帧是否在关键帧位置
  */
-export function isCurrentFrameOnKeyframe(item: UnifiedTimelineItemData, absoluteFrame: number): boolean {
+export function isCurrentFrameOnKeyframe(
+  item: UnifiedTimelineItemData,
+  absoluteFrame: number,
+): boolean {
   if (!item.animation) return false
 
   const relativeFrame = absoluteFrameToRelativeFrame(absoluteFrame, item.timeRange)
@@ -174,7 +183,10 @@ export function getKeyframeButtonState(
 /**
  * 获取关键帧UI状态
  */
-export function getKeyframeUIState(item: UnifiedTimelineItemData, currentFrame: number): KeyframeUIState {
+export function getKeyframeUIState(
+  item: UnifiedTimelineItemData,
+  currentFrame: number,
+): KeyframeUIState {
   return {
     hasAnimation: hasAnimation(item),
     isOnKeyframe: isCurrentFrameOnKeyframe(item, currentFrame),
@@ -186,7 +198,10 @@ export function getKeyframeUIState(item: UnifiedTimelineItemData, currentFrame: 
 /**
  * 在指定帧位置查找关键帧
  */
-function findKeyframeAtFrame(item: UnifiedTimelineItemData, absoluteFrame: number): Keyframe | undefined {
+function findKeyframeAtFrame(
+  item: UnifiedTimelineItemData,
+  absoluteFrame: number,
+): Keyframe | undefined {
   if (!item.animation) return undefined
 
   const relativeFrame = absoluteFrameToRelativeFrame(absoluteFrame, item.timeRange)
@@ -218,7 +233,10 @@ export function disableAnimation(item: UnifiedTimelineItemData): void {
 /**
  * 删除指定帧位置的关键帧
  */
-export function removeKeyframeAtFrame(item: UnifiedTimelineItemData, absoluteFrame: number): boolean {
+export function removeKeyframeAtFrame(
+  item: UnifiedTimelineItemData,
+  absoluteFrame: number,
+): boolean {
   if (!item.animation) return false
 
   const relativeFrame = absoluteFrameToRelativeFrame(absoluteFrame, item.timeRange)
@@ -298,8 +316,9 @@ export function adjustKeyframesForDurationChange(
  */
 export function sortKeyframes(item: UnifiedTimelineItemData): void {
   if (!item.animation) return
-
-  ;(item.animation as any).keyframes.sort((a: Keyframe, b: Keyframe) => a.framePosition - b.framePosition)
+  ;(item.animation as any).keyframes.sort(
+    (a: Keyframe, b: Keyframe) => a.framePosition - b.framePosition,
+  )
 }
 
 // ==================== 统一关键帧交互逻辑 ====================
@@ -769,7 +788,10 @@ export function getPreviousKeyframeFrame(
 /**
  * 获取下一个关键帧的帧数
  */
-export function getNextKeyframeFrame(item: UnifiedTimelineItemData, currentFrame: number): number | null {
+export function getNextKeyframeFrame(
+  item: UnifiedTimelineItemData,
+  currentFrame: number,
+): number | null {
   if (!item.animation || item.animation.keyframes.length === 0) return null
 
   const currentRelativeFrame = absoluteFrameToRelativeFrame(currentFrame, item.timeRange)
@@ -792,7 +814,6 @@ export function getNextKeyframeFrame(item: UnifiedTimelineItemData, currentFrame
  */
 export function clearAllKeyframes(item: UnifiedTimelineItemData): void {
   if (!item.animation) return
-
   ;(item.animation as any).keyframes = []
   ;(item.animation as any).isEnabled = false
 

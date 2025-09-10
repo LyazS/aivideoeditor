@@ -4,7 +4,10 @@
     <!-- 多缩略图容器 - 添加了拖拽事件处理 -->
     <div
       class="multi-thumbnails-container"
-      :style="{ height: `${THUMBNAIL_CONSTANTS.HEIGHT}px`, top: `${THUMBNAIL_CONSTANTS.TOP_OFFSET}px` }"
+      :style="{
+        height: `${THUMBNAIL_CONSTANTS.HEIGHT}px`,
+        top: `${THUMBNAIL_CONSTANTS.TOP_OFFSET}px`,
+      }"
       @dragstart.stop.prevent="handleInnerDrag"
     >
       <div
@@ -105,68 +108,71 @@ function getThumbnailUrl(item: ThumbnailLayoutItem): string | null {
       props.data.id,
       0, // 图片使用固定帧位置0
       0, // 图片使用固定clipStartTime 0
-      0  // 图片使用固定clipEndTime 0
+      0, // 图片使用固定clipEndTime 0
     )
   } else {
     return unifiedStore.getThumbnailUrl(
       props.data.id,
       item.framePosition,
       props.data.timeRange.clipStartTime,
-      props.data.timeRange.clipEndTime
+      props.data.timeRange.clipEndTime,
     )
   }
 }
 
-
 // 监听布局变化触发批量生成
-watch(thumbnailLayout, newLayout => {
-  // 取消旧任务
-  unifiedStore.cancelThumbnailTasks(props.data.id)
+watch(
+  thumbnailLayout,
+  (newLayout) => {
+    // 取消旧任务
+    unifiedStore.cancelThumbnailTasks(props.data.id)
 
-  // 过滤未缓存的项目
-  const uncachedItems = newLayout.filter(item => {
-    // 检查全局缓存
-    // 对于图片类型，使用固定缓存键（帧位置、clipStartTime、clipEndTime都为0）
-    // 对于视频类型，使用实际参数
-    let cachedUrl: string | null
-    if (isImageTimelineItem(props.data)) {
-      cachedUrl = unifiedStore.getThumbnailUrl(
-        props.data.id,
-        0, // 图片使用固定帧位置0
-        0, // 图片使用固定clipStartTime 0
-        0  // 图片使用固定clipEndTime 0
-      )
-    } else {
-      cachedUrl = unifiedStore.getThumbnailUrl(
-        props.data.id,
-        item.framePosition,
-        props.data.timeRange.clipStartTime,
-        props.data.timeRange.clipEndTime
-      )
-    }
-    return !cachedUrl
-  })
-
-  if (uncachedItems.length > 0) {
-    // 提交新请求到定时处理队列
-    unifiedStore.requestThumbnails({
-      timelineItemId: props.data.id,
-      thumbnailLayout: uncachedItems,
-      timestamp: Date.now()
+    // 过滤未缓存的项目
+    const uncachedItems = newLayout.filter((item) => {
+      // 检查全局缓存
+      // 对于图片类型，使用固定缓存键（帧位置、clipStartTime、clipEndTime都为0）
+      // 对于视频类型，使用实际参数
+      let cachedUrl: string | null
+      if (isImageTimelineItem(props.data)) {
+        cachedUrl = unifiedStore.getThumbnailUrl(
+          props.data.id,
+          0, // 图片使用固定帧位置0
+          0, // 图片使用固定clipStartTime 0
+          0, // 图片使用固定clipEndTime 0
+        )
+      } else {
+        cachedUrl = unifiedStore.getThumbnailUrl(
+          props.data.id,
+          item.framePosition,
+          props.data.timeRange.clipStartTime,
+          props.data.timeRange.clipEndTime,
+        )
+      }
+      return !cachedUrl
     })
-  }
-}, { deep: true, immediate: true })
+
+    if (uncachedItems.length > 0) {
+      // 提交新请求到定时处理队列
+      unifiedStore.requestThumbnails({
+        timelineItemId: props.data.id,
+        thumbnailLayout: uncachedItems,
+        timestamp: Date.now(),
+      })
+    }
+  },
+  { deep: true, immediate: true },
+)
 
 /**
-* 处理内部元素的拖拽事件 - 阻止浏览器默认行为
-* 确保拖拽时显示整个clip的预览，而不是单个缩略图
-*/
+ * 处理内部元素的拖拽事件 - 阻止浏览器默认行为
+ * 确保拖拽时显示整个clip的预览，而不是单个缩略图
+ */
 function handleInnerDrag(event: DragEvent) {
-// 阻止内部元素的拖拽行为，让整个clip处理拖拽
-event.preventDefault()
-event.stopPropagation()
-// 返回false阻止默认拖拽行为
-return false
+  // 阻止内部元素的拖拽行为，让整个clip处理拖拽
+  event.preventDefault()
+  event.stopPropagation()
+  // 返回false阻止默认拖拽行为
+  return false
 }
 </script>
 
@@ -201,7 +207,6 @@ return false
   color: white;
   background-color: rgba(0, 0, 0, 0.5);
 }
-
 
 /* 保持原有样式（向后兼容） */
 .video-content {
@@ -263,10 +268,6 @@ return false
 
 /* 选中状态样式 */
 .video-content.selected {
-  background: linear-gradient(
-    135deg,
-    var(--color-clip-selected),
-    var(--color-clip-selected-dark)
-  );
+  background: linear-gradient(135deg, var(--color-clip-selected), var(--color-clip-selected-dark));
 }
 </style>

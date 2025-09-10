@@ -37,7 +37,7 @@ const props = withDefaults(defineProps<PlayheadProps>(), {
 
 // Emits
 const emit = defineEmits<{
-  'snapResultUpdate': [snapResult: SnapResult | null]
+  snapResultUpdate: [snapResult: SnapResult | null]
 }>()
 
 const unifiedStore = useUnifiedStore()
@@ -65,14 +65,14 @@ const playheadLinePosition = computed(() => {
 const handleMouseDown = (event: MouseEvent) => {
   event.preventDefault()
   event.stopPropagation()
-  
+
   // 暂停WebAV播放
   unifiedStore.pause()
-  
+
   isDragging.value = true
   document.addEventListener('mousemove', handleMouseMove)
   document.addEventListener('mouseup', handleMouseUp)
-  
+
   // 设置拖拽光标样式
   if (playheadContainer.value) {
     playheadContainer.value.style.cursor = 'grabbing'
@@ -82,19 +82,19 @@ const handleMouseDown = (event: MouseEvent) => {
 // 处理鼠标移动事件
 const handleMouseMove = (event: MouseEvent) => {
   if (!isDragging.value) return
-  
+
   const timelineRect = playheadContainer.value?.getBoundingClientRect()
   if (!timelineRect) return
-  
+
   // 计算鼠标相对于时间轴容器的位置
   const mouseX = event.clientX - timelineRect.left
   const trackControlAreaWidth = props.trackControlWidth
-  
+
   // 确保鼠标位置在时间轴内容区域内
   if (mouseX >= trackControlAreaWidth && mouseX <= timelineRect.width) {
     const contentX = mouseX - trackControlAreaWidth
     let frame = unifiedStore.pixelToFrame(contentX, props.timelineWidth)
-    
+
     // 应用吸附功能
     if (unifiedStore.snapConfig.enabled && unifiedStore.snapConfig.playhead) {
       // 开始拖拽阶段，收集候选目标
@@ -102,11 +102,11 @@ const handleMouseMove = (event: MouseEvent) => {
         // 开始拖拽时收集吸附目标（排除播放头自身位置）
         unifiedStore.startSnapDrag([])
       }
-      
+
       // 计算吸附位置
       const snapOptions = {
         excludeClipIds: [],
-        customThreshold: unifiedStore.snapConfig.threshold
+        customThreshold: unifiedStore.snapConfig.threshold,
       }
       const calculatedSnapResult = unifiedStore.calculateSnapPosition(frame, snapOptions)
       if (calculatedSnapResult) {
@@ -116,7 +116,7 @@ const handleMouseMove = (event: MouseEvent) => {
           snapResult.value = {
             frame: calculatedSnapResult.frame,
             snapPoint: calculatedSnapResult.snapPoint,
-            distance: calculatedSnapResult.distance
+            distance: calculatedSnapResult.distance,
           }
           frame = calculatedSnapResult.frame
         } else {
@@ -129,10 +129,10 @@ const handleMouseMove = (event: MouseEvent) => {
       // 如果吸附功能未启用，直接更新位置
       snapResult.value = null
     }
-    
+
     // 更新当前帧
     unifiedStore.setCurrentFrame(Math.max(0, Math.floor(frame)))
-    
+
     // 发送吸附结果更新事件
     emit('snapResultUpdate', snapResult.value)
   }
@@ -143,15 +143,15 @@ const handleMouseUp = () => {
   isDragging.value = false
   document.removeEventListener('mousemove', handleMouseMove)
   document.removeEventListener('mouseup', handleMouseUp)
-  
+
   // 恢复光标样式
   if (playheadContainer.value) {
     playheadContainer.value.style.cursor = 'grab'
   }
-  
+
   // 清理吸附状态
   snapResult.value = null
-  
+
   // 结束拖拽阶段，清理缓存
   if (unifiedStore.snapConfig.enabled && unifiedStore.snapConfig.playhead) {
     unifiedStore.endSnapDrag()
@@ -165,7 +165,7 @@ const handleMouseUp = () => {
 const handleWheel = (event: WheelEvent) => {
   // 阻止事件冒泡，避免重复处理
   event.stopPropagation()
-  
+
   // 如果指定了滚轮处理容器，将事件传递给该容器
   if (props.wheelContainer) {
     // 创建一个新的事件对象，确保所有属性都被复制
@@ -183,9 +183,9 @@ const handleWheel = (event: WheelEvent) => {
       altKey: event.altKey,
       metaKey: event.metaKey,
       bubbles: true,
-      cancelable: true
+      cancelable: true,
     })
-    
+
     props.wheelContainer.dispatchEvent(newEvent)
   }
 }

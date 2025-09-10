@@ -50,7 +50,7 @@ export interface ExportProjectOptions {
  */
 export async function exportProject(options: ExportProjectOptions): Promise<void> {
   const { videoWidth, videoHeight, projectName, timelineItems, tracks, onProgress } = options
-  
+
   // 初始化进度
   if (onProgress) {
     onProgress('', 0) // 直接开始导出进度，不显示准备阶段
@@ -75,7 +75,7 @@ export async function exportProject(options: ExportProjectOptions): Promise<void
       const item = timelineItems[i]
       // 检查轨道可见性
       if (item.trackId) {
-        const track = tracks.find(t => t.id === item.trackId)
+        const track = tracks.find((t) => t.id === item.trackId)
         if (track && !track.isVisible) {
           console.log(`跳过不可见轨道上的时间轴项目: ${item.id} (轨道: ${item.trackId})`)
           continue
@@ -151,16 +151,16 @@ export async function exportProject(options: ExportProjectOptions): Promise<void
             const spriteHeight = item.config.height || 100
             const projectX = item.config.x || 0
             const projectY = item.config.y || 0
-            
+
             const webavCoords = projectToWebavCoords(
               projectX,
               projectY,
               spriteWidth,
               spriteHeight,
               videoWidth,
-              videoHeight
+              videoHeight,
             )
-            
+
             offscreenSprite.rect.x = webavCoords.x
             offscreenSprite.rect.y = webavCoords.y
             offscreenSprite.rect.w = spriteWidth
@@ -177,10 +177,12 @@ export async function exportProject(options: ExportProjectOptions): Promise<void
 
           // 设置轨道静音状态
           if (item.trackId) {
-            const track = tracks.find(t => t.id === item.trackId)
+            const track = tracks.find((t) => t.id === item.trackId)
             if (track) {
               audioCapableSprite.setTrackMuted(track.isMuted)
-              console.log(`设置轨道静音状态: ${item.id} (轨道: ${item.trackId}, 静音: ${track.isMuted})`)
+              console.log(
+                `设置轨道静音状态: ${item.id} (轨道: ${item.trackId}, 静音: ${track.isMuted})`,
+              )
             }
           }
 
@@ -189,7 +191,7 @@ export async function exportProject(options: ExportProjectOptions): Promise<void
             ;(audioCapableSprite as AudioOffscreenSprite).setGain(item.config.gain || 0)
           }
         }
-        
+
         // 设置动画（如果存在）
         if (hasAnimation(item) && item.animation && isValidAnimationConfig(item.animation)) {
           try {
@@ -197,20 +199,20 @@ export async function exportProject(options: ExportProjectOptions): Promise<void
               itemId: item.id,
               keyframeCount: item.animation.keyframes.length,
             })
-            
+
             // 转换为WebAV格式
             const webavConfig = convertToWebAVAnimation(
               item.animation,
               item.timeRange,
               videoWidth,
-              videoHeight
+              videoHeight,
             )
-            
+
             // 检查是否有关键帧
             if (Object.keys(webavConfig.keyframes).length > 0) {
               // 应用动画到OffscreenSprite
               offscreenSprite.setAnimation(webavConfig.keyframes, webavConfig.options)
-              
+
               console.log('🎬 [Export] 动画设置成功:', {
                 itemId: item.id,
                 keyframes: webavConfig.keyframes,

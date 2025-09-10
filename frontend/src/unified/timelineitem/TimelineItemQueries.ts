@@ -4,10 +4,7 @@
  */
 
 import type { MediaType } from '../mediaitem'
-import type {
-  UnifiedTimelineItemData,
-  TimelineItemStatus,
-} from './TimelineItemData'
+import type { UnifiedTimelineItemData, TimelineItemStatus } from './TimelineItemData'
 import { TimelineStatusDisplayUtils } from './TimelineStatusDisplayUtils'
 import { useUnifiedStore } from '../unifiedStore'
 
@@ -211,10 +208,7 @@ export function isOverlapping(
 /**
  * 检查指定时间点是否在项目范围内
  */
-export function containsTime(
-  data: UnifiedTimelineItemData<MediaType>,
-  time: number,
-): boolean {
+export function containsTime(data: UnifiedTimelineItemData<MediaType>, time: number): boolean {
   return time >= data.timeRange.timelineStartTime && time < data.timeRange.timelineEndTime
 }
 

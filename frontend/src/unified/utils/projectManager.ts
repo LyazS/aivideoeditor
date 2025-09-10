@@ -189,7 +189,10 @@ export class UnifiedProjectManager {
   /**
    * 保存项目内容（只保存content.json）
    */
-  async saveProjectContent(projectId: string, projectContent: UnifiedProjectContent): Promise<void> {
+  async saveProjectContent(
+    projectId: string,
+    projectContent: UnifiedProjectContent,
+  ): Promise<void> {
     const workspaceHandle = await directoryManager.getWorkspaceHandle()
     if (!workspaceHandle) {
       throw new Error('未设置工作目录')
@@ -210,7 +213,10 @@ export class UnifiedProjectManager {
   /**
    * 保存完整项目（配置+内容）
    */
-  async saveProject(projectConfig: UnifiedProjectConfig, projectContent: UnifiedProjectContent): Promise<void> {
+  async saveProject(
+    projectConfig: UnifiedProjectConfig,
+    projectContent: UnifiedProjectContent,
+  ): Promise<void> {
     try {
       // 更新时间戳
       projectConfig.updatedAt = new Date().toISOString()
@@ -218,7 +224,7 @@ export class UnifiedProjectManager {
       // 并行保存配置和内容
       await Promise.all([
         this.saveProjectConfig(projectConfig),
-        this.saveProjectContent(projectConfig.id, projectContent)
+        this.saveProjectContent(projectConfig.id, projectContent),
       ])
 
       console.log('统一项目保存成功:', projectConfig.name)

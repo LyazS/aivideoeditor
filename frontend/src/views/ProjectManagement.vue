@@ -304,7 +304,7 @@ async function checkIfDirectoryLost() {
 // 显示权限错误信息
 function showPermissionError(error: unknown) {
   const errorMessage = error instanceof Error ? error.message : '未知错误'
-  
+
   if (errorMessage.includes('权限') || errorMessage.includes('permission')) {
     console.log('🔒 权限错误，需要用户重新授权')
     permissionError.value = true
@@ -365,7 +365,7 @@ async function loadProjects() {
   try {
     isLoading.value = true
     const projectList = await unifiedProjectManager.listProjects()
-    
+
     // 为每个项目加载缩略图
     const projectsWithThumbnails = await Promise.all(
       projectList.map(async (project) => {
@@ -373,19 +373,19 @@ async function loadProjects() {
           // 尝试加载缩略图
           const thumbnailService = useProjectThumbnailService()
           const thumbnailUrl = await thumbnailService.getThumbnailUrl(project.id)
-          
+
           return {
             ...project,
-            thumbnail: thumbnailUrl
+            thumbnail: thumbnailUrl,
           }
         } catch (error) {
           console.warn(`无法加载项目 ${project.name} 的缩略图:`, error)
           // 如果缩略图加载失败，保持原项目数据
           return project
         }
-      })
+      }),
     )
-    
+
     projects.value = projectsWithThumbnails
   } catch (error) {
     console.error('加载项目列表失败:', error)
@@ -402,13 +402,13 @@ async function loadProjectThumbnail(projectId: string, projectName: string) {
   try {
     const thumbnailService = useProjectThumbnailService()
     const thumbnailUrl = await thumbnailService.getThumbnailUrl(projectId)
-    
+
     // 更新项目的缩略图URL
-    const projectIndex = projects.value.findIndex(p => p.id === projectId)
+    const projectIndex = projects.value.findIndex((p) => p.id === projectId)
     if (projectIndex !== -1) {
       projects.value[projectIndex].thumbnail = thumbnailUrl
     }
-    
+
     return thumbnailUrl
   } catch (error) {
     console.warn(`加载项目缩略图失败: ${projectName}`, error)
@@ -482,7 +482,7 @@ async function handleSaveProjectEdit(data: { name: string; description: string }
   try {
     // 生成统一的更新时间戳
     const updatedAt = new Date().toISOString()
-    
+
     // 更新项目配置
     const updatedProject: UnifiedProjectConfig = {
       ...selectedProject.value,
@@ -496,21 +496,26 @@ async function handleSaveProjectEdit(data: { name: string; description: string }
     console.log('项目信息已更新:', updatedProject.name)
 
     // 立即更新本地内存中的项目数据
-    const projectIndex = projects.value.findIndex(p => p.id === selectedProject.value!.id)
+    const projectIndex = projects.value.findIndex((p) => p.id === selectedProject.value!.id)
     if (projectIndex !== -1) {
       projects.value[projectIndex] = updatedProject
       // 重新排序项目列表（按更新时间排序）
-      projects.value.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+      projects.value.sort(
+        (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+      )
     }
 
     // 异步保存项目配置到文件系统（传入相同的updatedAt确保一致性）
-    unifiedProjectManager.saveProjectConfig(updatedProject, updatedAt).then(() => {
-      console.log('项目配置保存成功:', updatedProject.name)
-    }).catch((error) => {
-      console.error('保存项目配置失败:', error)
-      // 保存失败时重新加载项目列表以恢复正确状态
-      loadProjects()
-    })
+    unifiedProjectManager
+      .saveProjectConfig(updatedProject, updatedAt)
+      .then(() => {
+        console.log('项目配置保存成功:', updatedProject.name)
+      })
+      .catch((error) => {
+        console.error('保存项目配置失败:', error)
+        // 保存失败时重新加载项目列表以恢复正确状态
+        loadProjects()
+      })
   } catch (error) {
     console.error('更新项目信息失败:', error)
     // 可以添加错误提示
@@ -530,10 +535,10 @@ function formatDuration(seconds: number): string {
   if (!seconds || seconds === 0) {
     return '00:00'
   }
-  
+
   const minutes = Math.floor(seconds / 60)
   const remainingSeconds = Math.floor(seconds % 60)
-  
+
   return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`
 }
 
@@ -697,7 +702,6 @@ onMounted(async () => {
   margin-bottom: 1.5rem;
   text-align: left;
 }
-
 
 .btn-large {
   padding: 0.75rem 2rem;

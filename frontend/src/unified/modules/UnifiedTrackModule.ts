@@ -29,10 +29,7 @@ export function createUnifiedTrackModule() {
    * @param position 插入位置（可选，默认为末尾）
    * @returns 新创建的轨道对象
    */
-  function addTrack(
-    trackData: UnifiedTrackData,
-    position?: number,
-  ): UnifiedTrackData {
+  function addTrack(trackData: UnifiedTrackData, position?: number): UnifiedTrackData {
     // 检查轨道数据是否有效
     if (!trackData || !trackData.id) {
       throw new Error('无效的轨道数据：缺少必要的轨道信息')

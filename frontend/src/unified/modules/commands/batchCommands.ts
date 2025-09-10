@@ -14,12 +14,13 @@ import type { Ref } from 'vue'
 import type { VideoResolution } from '@/unified/types'
 import { BaseBatchCommand } from '@/unified/modules/UnifiedHistoryModule'
 import type { SimpleCommand } from '@/unified/modules/commands/types'
-import { RemoveTimelineItemCommand, MoveTimelineItemCommand } from '@/unified/modules/commands/timelineCommands'
+import {
+  RemoveTimelineItemCommand,
+  MoveTimelineItemCommand,
+} from '@/unified/modules/commands/timelineCommands'
 
 // ==================== 新架构类型导入 ====================
-import type {
-  UnifiedTimelineItemData,
-} from '@/unified/timelineitem/TimelineItemData'
+import type { UnifiedTimelineItemData } from '@/unified/timelineitem/TimelineItemData'
 
 import type { UnifiedMediaItemData, MediaType } from '@/unified/mediaitem/types'
 
@@ -67,7 +68,6 @@ export class BatchDeleteCommand extends BaseBatchCommand {
       )
       this.addCommand(deleteCommand)
     }
-    
 
     console.log(`📋 准备批量删除 ${this.subCommands.length} 个时间轴项目`)
   }

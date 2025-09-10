@@ -88,12 +88,7 @@
 
         <!-- 按钮组 -->
         <div class="dialog-actions">
-          <HoverButton
-            variant="large"
-            text="取消"
-            @click="closeDialog"
-            :disabled="isProcessing"
-          />
+          <HoverButton variant="large" text="取消" @click="closeDialog" :disabled="isProcessing" />
           <HoverButton
             variant="large"
             @click="handleSubmit"

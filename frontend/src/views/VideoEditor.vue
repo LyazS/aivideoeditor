@@ -178,7 +178,7 @@ const currentProject = computed(() => {
     updatedAt: unifiedStore.projectUpdatedAt,
     version: unifiedStore.projectVersion,
     thumbnail: unifiedStore.projectThumbnail || undefined,
-    duration: 0,// 未使用
+    duration: 0, // 未使用
     settings: {
       videoResolution: unifiedStore.videoResolution,
       frameRate: unifiedStore.frameRate,
@@ -220,7 +220,7 @@ async function exportProject() {
     isExporting.value = true
     exportProgress.value = 0
     exportDetails.value = ''
-    
+
     // 执行导出，传入进度回调
     await exportProjectUtil({
       videoWidth: unifiedStore.videoResolution.width,
@@ -233,24 +233,21 @@ async function exportProject() {
         exportProgress.value = Math.max(0, Math.min(100, progress))
         exportDetails.value = details || ''
         console.log(`📤 [导出进度] ${progress}%${details ? ` - ${details}` : ''}`)
-      }
+      },
     })
-    
+
     // 导出成功完成
     isExporting.value = false
     console.log('✅ [导出] 视频导出完成')
-    
+
     // 显示成功通知
     unifiedStore.showSuccess('视频导出成功！')
-    
   } catch (error) {
     console.error('导出项目失败:', error)
-    
+
     // 显示错误通知
-    unifiedStore.showError(
-      error instanceof Error ? error.message : '导出过程中发生错误'
-    )
-    
+    unifiedStore.showError(error instanceof Error ? error.message : '导出过程中发生错误')
+
     // 重置导出状态
     isExporting.value = false
     exportProgress.value = 0
@@ -269,18 +266,21 @@ async function handleSaveProject(data: { name: string; description: string }) {
     // 更新 store 中的项目信息
     unifiedStore.projectName = data.name
     unifiedStore.projectDescription = data.description
-    
+
     // 先关闭对话框，提升用户体验
     showEditDialog.value = false
     console.log('项目信息已更新:', data.name)
-    
+
     // 异步保存项目配置（只保存元信息，不涉及timeline内容）
-    unifiedStore.saveCurrentProject({ configChanged: true }).then(() => {
-      console.log('项目配置保存成功:', data.name)
-    }).catch((error) => {
-      console.error('保存项目配置失败:', error)
-      // 可以添加错误提示，但不影响对话框关闭
-    })
+    unifiedStore
+      .saveCurrentProject({ configChanged: true })
+      .then(() => {
+        console.log('项目配置保存成功:', data.name)
+      })
+      .catch((error) => {
+        console.error('保存项目配置失败:', error)
+        // 可以添加错误提示，但不影响对话框关闭
+      })
   } catch (error) {
     console.error('更新项目信息失败:', error)
     // 可以添加错误提示

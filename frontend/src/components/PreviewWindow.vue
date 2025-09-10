@@ -24,6 +24,4 @@ import WebAVRenderer from './WebAVRenderer.vue'
   min-width: 150px;
   min-height: 100px;
 }
-
-
 </style>

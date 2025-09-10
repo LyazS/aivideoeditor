@@ -27,12 +27,15 @@ export class MetadataManager {
    * @param webavObjects WebAV对象
    * @returns 更新结果
    */
-  setWebAVObjects(mediaItem: UnifiedMediaItemData, webavObjects: WebAVObjects): MetadataUpdateResult {
+  setWebAVObjects(
+    mediaItem: UnifiedMediaItemData,
+    webavObjects: WebAVObjects,
+  ): MetadataUpdateResult {
     try {
       console.log(`🔧 [MetadataManager] 设置WebAV对象: ${mediaItem.name}`)
-      
+
       UnifiedMediaItemActions.setWebAVObjects(mediaItem, webavObjects)
-      
+
       return {
         success: true,
         updatedFields: ['webav'],
@@ -40,7 +43,7 @@ export class MetadataManager {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : '设置WebAV对象失败'
       console.error(`❌ [MetadataManager] 设置WebAV对象失败: ${mediaItem.name}`, error)
-      
+
       return {
         success: false,
         error: errorMessage,
@@ -57,9 +60,9 @@ export class MetadataManager {
   setDuration(mediaItem: UnifiedMediaItemData, duration: number): MetadataUpdateResult {
     try {
       console.log(`⏱️ [MetadataManager] 设置媒体时长: ${mediaItem.name} -> ${duration}帧`)
-      
+
       UnifiedMediaItemActions.setDuration(mediaItem, duration)
-      
+
       return {
         success: true,
         updatedFields: ['duration'],
@@ -67,7 +70,7 @@ export class MetadataManager {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : '设置时长失败'
       console.error(`❌ [MetadataManager] 设置时长失败: ${mediaItem.name}`, error)
-      
+
       return {
         success: false,
         error: errorMessage,
@@ -84,9 +87,9 @@ export class MetadataManager {
   setMediaType(mediaItem: UnifiedMediaItemData, mediaType: MediaType): MetadataUpdateResult {
     try {
       console.log(`🏷️ [MetadataManager] 设置媒体类型: ${mediaItem.name} -> ${mediaType}`)
-      
+
       UnifiedMediaItemActions.setMediaType(mediaItem, mediaType)
-      
+
       return {
         success: true,
         updatedFields: ['mediaType'],
@@ -94,7 +97,7 @@ export class MetadataManager {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : '设置媒体类型失败'
       console.error(`❌ [MetadataManager] 设置媒体类型失败: ${mediaItem.name}`, error)
-      
+
       return {
         success: false,
         error: errorMessage,
@@ -118,9 +121,9 @@ export class MetadataManager {
       }
 
       console.log(`📝 [MetadataManager] 更新媒体项目名称: ${mediaItem.name} -> ${newName}`)
-      
+
       UnifiedMediaItemActions.updateName(mediaItem, newName.trim())
-      
+
       return {
         success: true,
         updatedFields: ['name'],
@@ -128,7 +131,7 @@ export class MetadataManager {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : '更新名称失败'
       console.error(`❌ [MetadataManager] 更新名称失败: ${mediaItem.name}`, error)
-      
+
       return {
         success: false,
         error: errorMessage,
@@ -143,12 +146,12 @@ export class MetadataManager {
    * @returns 更新结果
    */
   batchSetMetadata(
-    mediaItem: UnifiedMediaItemData, 
-    webavResult: WebAVProcessingResult
+    mediaItem: UnifiedMediaItemData,
+    webavResult: WebAVProcessingResult,
   ): MetadataUpdateResult {
     try {
       const updatedFields: string[] = []
-      
+
       // 设置WebAV对象
       const webavResult1 = this.setWebAVObjects(mediaItem, webavResult.webavObjects)
       if (webavResult1.success && webavResult1.updatedFields) {
@@ -156,7 +159,7 @@ export class MetadataManager {
       } else if (!webavResult1.success) {
         return webavResult1
       }
-      
+
       // 设置时长
       const durationResult = this.setDuration(mediaItem, webavResult.duration)
       if (durationResult.success && durationResult.updatedFields) {
@@ -164,10 +167,10 @@ export class MetadataManager {
       } else if (!durationResult.success) {
         return durationResult
       }
-      
+
       console.log(`🔧 [MetadataManager] 批量设置元数据完成: ${mediaItem.name}`)
       console.log(`📋 [MetadataManager] 更新字段: ${updatedFields.join(', ')}`)
-      
+
       return {
         success: true,
         updatedFields,
@@ -175,7 +178,7 @@ export class MetadataManager {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : '批量设置元数据失败'
       console.error(`❌ [MetadataManager] 批量设置元数据失败: ${mediaItem.name}`, error)
-      
+
       return {
         success: false,
         error: errorMessage,
@@ -244,11 +247,11 @@ export class MetadataManager {
     if (mediaItem.mediaType === 'unknown') {
       warnings.push('媒体类型未知')
     }
-    
+
     if (mediaItem.source && !mediaItem.source.file) {
       warnings.push('数据源缺少文件')
     }
-    
+
     if (mediaItem.source && !mediaItem.source.url) {
       warnings.push('数据源缺少URL')
     }
@@ -267,12 +270,12 @@ export class MetadataManager {
    * @returns 更新结果
    */
   cloneMetadata(
-    sourceItem: UnifiedMediaItemData, 
-    targetItem: UnifiedMediaItemData
+    sourceItem: UnifiedMediaItemData,
+    targetItem: UnifiedMediaItemData,
   ): MetadataUpdateResult {
     try {
       const updatedFields: string[] = []
-      
+
       // 克隆基本元数据
       if (sourceItem.duration !== undefined) {
         const result = this.setDuration(targetItem, sourceItem.duration)
@@ -280,14 +283,14 @@ export class MetadataManager {
           updatedFields.push(...result.updatedFields)
         }
       }
-      
+
       if (sourceItem.mediaType !== 'unknown') {
         const result = this.setMediaType(targetItem, sourceItem.mediaType)
         if (result.success && result.updatedFields) {
           updatedFields.push(...result.updatedFields)
         }
       }
-      
+
       // 克隆WebAV对象
       if (sourceItem.webav) {
         const result = this.setWebAVObjects(targetItem, sourceItem.webav)
@@ -295,17 +298,20 @@ export class MetadataManager {
           updatedFields.push(...result.updatedFields)
         }
       }
-      
+
       console.log(`🔧 [MetadataManager] 克隆元数据完成: ${sourceItem.name} -> ${targetItem.name}`)
-      
+
       return {
         success: true,
         updatedFields,
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : '克隆元数据失败'
-      console.error(`❌ [MetadataManager] 克隆元数据失败: ${sourceItem.name} -> ${targetItem.name}`, error)
-      
+      console.error(
+        `❌ [MetadataManager] 克隆元数据失败: ${sourceItem.name} -> ${targetItem.name}`,
+        error,
+      )
+
       return {
         success: false,
         error: errorMessage,
@@ -320,12 +326,12 @@ export class MetadataManager {
    * @returns 更新结果
    */
   clearMetadata(
-    mediaItem: UnifiedMediaItemData, 
-    fieldsToClear: string[] = ['webav', 'duration']
+    mediaItem: UnifiedMediaItemData,
+    fieldsToClear: string[] = ['webav', 'duration'],
   ): MetadataUpdateResult {
     try {
       const updatedFields: string[] = []
-      
+
       for (const field of fieldsToClear) {
         switch (field) {
           case 'webav':
@@ -344,10 +350,10 @@ export class MetadataManager {
             console.warn(`⚠️ [MetadataManager] 不支持清理的字段: ${field}`)
         }
       }
-      
+
       console.log(`🧹 [MetadataManager] 清理元数据完成: ${mediaItem.name}`)
       console.log(`📋 [MetadataManager] 清理字段: ${updatedFields.join(', ')}`)
-      
+
       return {
         success: true,
         updatedFields,
@@ -355,7 +361,7 @@ export class MetadataManager {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : '清理元数据失败'
       console.error(`❌ [MetadataManager] 清理元数据失败: ${mediaItem.name}`, error)
-      
+
       return {
         success: false,
         error: errorMessage,

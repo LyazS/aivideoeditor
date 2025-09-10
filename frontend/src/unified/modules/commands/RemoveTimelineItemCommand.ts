@@ -9,21 +9,14 @@ import type { VisibleSprite } from '@webav/av-cliper'
 import type { SimpleCommand } from '@/unified/modules/commands/types'
 
 // ==================== 新架构类型导入 ====================
-import type {
-  UnifiedTimelineItemData,
-} from '@/unified/timelineitem/TimelineItemData'
+import type { UnifiedTimelineItemData } from '@/unified/timelineitem/TimelineItemData'
 import type { UnifiedMediaItemData, MediaType } from '@/unified/mediaitem/types'
 import type { VideoResolution } from '@/unified/types'
 
 // ==================== 新架构工具导入 ====================
-import {
-  TimelineItemFactory,
-} from '@/unified/timelineitem'
+import { TimelineItemFactory } from '@/unified/timelineitem'
 
-import {
-  setupMediaSync,
-  cleanupCommandMediaSync,
-} from '@/unified/utils/unifiedMediaSyncManager'
+import { setupMediaSync, cleanupCommandMediaSync } from '@/unified/utils/unifiedMediaSyncManager'
 
 import { TimelineItemQueries } from '@/unified/timelineitem/TimelineItemQueries'
 

@@ -147,7 +147,7 @@ export class RemoveTrackCommand implements SimpleCommand {
       const tracks = this.trackModule.tracks.value
       const insertIndex = tracks.findIndex((track) => track.id > this.trackData.id)
       const position = insertIndex === -1 ? undefined : insertIndex
-      
+
       // 使用 trackModule 的 addTrack 方法而不是手动操作数组
       this.trackModule.addTrack({ ...this.trackData }, position)
 

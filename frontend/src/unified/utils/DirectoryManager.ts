@@ -91,10 +91,12 @@ export class DirectoryManager {
     } catch (error) {
       console.warn('目录不存在或无法访问:', error)
       // 如果目录不存在，清除保存的句柄
-      if (error instanceof Error &&
-          (error.message.includes('找不到') ||
-           error.message.includes('not found') ||
-           error.message.includes('无法找到'))) {
+      if (
+        error instanceof Error &&
+        (error.message.includes('找不到') ||
+          error.message.includes('not found') ||
+          error.message.includes('无法找到'))
+      ) {
         await this.clearWorkspaceDirectory()
       }
       return false
@@ -201,10 +203,12 @@ export class DirectoryManager {
         } catch (permissionError) {
           console.warn('目录访问权限不足或目录不存在，需要重新选择目录:', permissionError)
           // 如果目录不存在，清除保存的句柄
-          if (permissionError instanceof Error &&
-              (permissionError.message.includes('找不到') ||
-               permissionError.message.includes('not found') ||
-               permissionError.message.includes('无法找到'))) {
+          if (
+            permissionError instanceof Error &&
+            (permissionError.message.includes('找不到') ||
+              permissionError.message.includes('not found') ||
+              permissionError.message.includes('无法找到'))
+          ) {
             await this.clearWorkspaceDirectory()
           }
           return false

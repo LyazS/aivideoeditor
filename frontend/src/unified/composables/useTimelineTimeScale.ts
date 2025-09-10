@@ -101,7 +101,7 @@ interface TimeMark {
  */
 export function useTimelineTimeScale(
   scaleContainer: Ref<HTMLElement | undefined>,
-  onSnapResultUpdate?: (snapResult: any) => void
+  onSnapResultUpdate?: (snapResult: any) => void,
 ) {
   const unifiedStore = useUnifiedStore()
 
@@ -282,18 +282,18 @@ export function useTimelineTimeScale(
     if (isDragging.value) {
       let frame = calculateFrameFromGlobalMouse(event)
       let snapResult = null
-      
+
       // 应用吸附功能到时间刻度拖拽
       if (unifiedStore.snapConfig.enabled && unifiedStore.snapConfig.playhead) {
         // 开始拖拽阶段，收集候选目标
         if (!unifiedStore.isSnapCalculating) {
           unifiedStore.startSnapDrag([])
         }
-        
+
         // 计算吸附位置
         const snapOptions = {
           excludeClipIds: [],
-          customThreshold: unifiedStore.snapConfig.threshold
+          customThreshold: unifiedStore.snapConfig.threshold,
         }
         const calculatedSnapResult = unifiedStore.calculateSnapPosition(frame, snapOptions)
         if (calculatedSnapResult) {
@@ -305,33 +305,33 @@ export function useTimelineTimeScale(
               snapped: true,
               frame: calculatedSnapResult.frame,
               snapPoint: calculatedSnapResult.snapPoint,
-              distance: calculatedSnapResult.distance
+              distance: calculatedSnapResult.distance,
             }
           } else {
             snapResult = {
               snapped: false,
-              frame: frame
+              frame: frame,
             }
           }
         } else {
           snapResult = {
             snapped: false,
-            frame: frame
+            frame: frame,
           }
         }
       } else {
         // 如果吸附功能未启用，直接更新位置
         snapResult = {
           snapped: false,
-          frame: frame
+          frame: frame,
         }
       }
-      
+
       // 发送吸附结果更新给父组件
       if (onSnapResultUpdate) {
         onSnapResultUpdate(snapResult)
       }
-      
+
       unifiedStore.setCurrentFrame(frame)
     }
   }
@@ -346,12 +346,12 @@ export function useTimelineTimeScale(
     // 移除全局事件监听器
     document.removeEventListener('mousemove', handleGlobalMouseMove)
     document.removeEventListener('mouseup', handleGlobalMouseUp)
-    
+
     // 清理吸附状态
     if (unifiedStore.snapConfig.enabled && unifiedStore.snapConfig.playhead) {
       unifiedStore.endSnapDrag()
     }
-    
+
     // 清理吸附结果
     currentSnapResult.value = null
     if (onSnapResultUpdate) {
@@ -366,13 +366,13 @@ export function useTimelineTimeScale(
     if (isDragging.value) {
       let frame = calculateFrameFromClick(event)
       let snapResult = null
-      
+
       // 应用吸附功能到时间刻度拖拽
       if (unifiedStore.snapConfig.enabled && unifiedStore.snapConfig.playhead) {
         // 计算吸附位置
         const snapOptions = {
           excludeClipIds: [],
-          customThreshold: unifiedStore.snapConfig.threshold
+          customThreshold: unifiedStore.snapConfig.threshold,
         }
         const calculatedSnapResult = unifiedStore.calculateSnapPosition(frame, snapOptions)
         if (calculatedSnapResult) {
@@ -384,33 +384,33 @@ export function useTimelineTimeScale(
               snapped: true,
               frame: calculatedSnapResult.frame,
               snapPoint: calculatedSnapResult.snapPoint,
-              distance: calculatedSnapResult.distance
+              distance: calculatedSnapResult.distance,
             }
           } else {
             snapResult = {
               snapped: false,
-              frame: frame
+              frame: frame,
             }
           }
         } else {
           snapResult = {
             snapped: false,
-            frame: frame
+            frame: frame,
           }
         }
       } else {
         // 如果吸附功能未启用，直接更新位置
         snapResult = {
           snapped: false,
-          frame: frame
+          frame: frame,
         }
       }
-      
+
       // 发送吸附结果更新给父组件
       if (onSnapResultUpdate) {
         onSnapResultUpdate(snapResult)
       }
-      
+
       unifiedStore.setCurrentFrame(frame)
     }
   }

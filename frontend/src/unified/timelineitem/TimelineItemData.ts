@@ -363,7 +363,6 @@ export interface UnifiedTimelineItemRuntime {
   /** 缩略图URL - 运行时生成的Blob URL */
   thumbnailUrl?: string
 
-
   /** 预留：未来可能的运行时字段 */
   // renderCache?: RenderCacheData
   // animationState?: AnimationRuntimeState

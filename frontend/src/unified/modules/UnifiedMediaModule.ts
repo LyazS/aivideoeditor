@@ -282,7 +282,8 @@ export function createUnifiedMediaModule() {
         const manager = registry.getManager(mediaItem.source.type)
         if (manager) {
           // 调用管理器的processMediaItem方法处理完整的媒体项目生命周期
-          manager.processMediaItem(mediaItem)
+          manager
+            .processMediaItem(mediaItem)
             .then(() => {
               console.log(`✅ [UnifiedMediaModule] 媒体项目处理完成: ${mediaItem.name}`)
             })
@@ -292,7 +293,9 @@ export function createUnifiedMediaModule() {
               UnifiedMediaItemActions.transitionTo(mediaItem, 'error')
             })
         } else {
-          console.error(`❌ [UnifiedMediaModule] 找不到对应的数据源管理器: ${mediaItem.source.type}`)
+          console.error(
+            `❌ [UnifiedMediaModule] 找不到对应的数据源管理器: ${mediaItem.source.type}`,
+          )
           UnifiedMediaItemActions.transitionTo(mediaItem, 'error')
         }
       })
@@ -396,7 +399,9 @@ export function createUnifiedMediaModule() {
       const timelineItems = unifiedStore.timelineItems
 
       // 找出使用该素材的所有时间轴项目
-      const relatedTimelineItems = timelineItems.filter((item: any) => item.mediaItemId === mediaItemId)
+      const relatedTimelineItems = timelineItems.filter(
+        (item: any) => item.mediaItemId === mediaItemId,
+      )
 
       // 清理每个相关的时间轴项目
       relatedTimelineItems.forEach((timelineItem: any) => {
@@ -417,12 +422,12 @@ export function createUnifiedMediaModule() {
   function cleanupCommandMediaSyncForMediaItem(mediaItemId: string): void {
     try {
       const syncManager = UnifiedMediaSyncManager.getInstance()
-      
+
       // 清理所有与该媒体项目相关的同步
       const syncInfoList = syncManager.getSyncInfo()
-      const relatedSyncs = syncInfoList.filter(sync => sync.mediaItemId === mediaItemId)
-      
-      relatedSyncs.forEach(sync => {
+      const relatedSyncs = syncInfoList.filter((sync) => sync.mediaItemId === mediaItemId)
+
+      relatedSyncs.forEach((sync) => {
         if (sync.commandId) {
           syncManager.cleanupByCommandId(sync.commandId)
         } else if (sync.timelineItemId) {
@@ -432,7 +437,9 @@ export function createUnifiedMediaModule() {
         }
       })
 
-      console.log(`✅ 已清理媒体项目相关的命令同步: ${mediaItemId} (清理了 ${relatedSyncs.length} 个同步)`)
+      console.log(
+        `✅ 已清理媒体项目相关的命令同步: ${mediaItemId} (清理了 ${relatedSyncs.length} 个同步)`,
+      )
     } catch (error) {
       console.error(`❌ 清理媒体项目命令同步失败: ${mediaItemId}`, error)
     }

@@ -163,7 +163,6 @@
           }"
         ></div>
       </div>
-
     </div>
 
     <!-- 吸附指示器 - 贯穿整个时间轴区域 -->
@@ -317,7 +316,6 @@ const {
   handleTimeScaleWheel,
 } = useTimelineTimeScale(scaleContainer, handleTimeScaleSnapResult)
 
-
 // 初始化项目操作模块
 const {
   createMediaClipFromMediaItem,
@@ -435,7 +433,7 @@ function renderTimelineItem(item: UnifiedTimelineItemData | any, track: any) {
     data: item,
     isSelected: unifiedStore.isTimelineItemSelected(item.id),
     isDragging: false, // 默认非拖拽状态，组件内部维护实际的拖拽状态
-    isResizing: false,  // 默认非调整大小状态，组件内部维护实际的调整大小状态
+    isResizing: false, // 默认非调整大小状态，组件内部维护实际的调整大小状态
     currentFrame: unifiedStore.currentFrame,
     trackHeight: track.height,
     timelineWidth: timelineWidth.value, // 传递时间轴宽度用于坐标转换
@@ -463,7 +461,6 @@ onMounted(() => {
   window.addEventListener('resize', updateTimelineWidth)
   window.addEventListener('resize', updateContainerWidth)
   window.addEventListener('keydown', handleKeyDown)
-
 
   if (scaleContainer.value) {
     // 现在 handleTimeScaleWheel 是从 composable 返回的函数，直接使用即可

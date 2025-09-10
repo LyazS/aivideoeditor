@@ -8,5 +8,5 @@ export type {
   UnifiedProjectConfig,
   UnifiedProjectContent,
   UnifiedMediaMetadata,
-  UnifiedMediaReference
+  UnifiedMediaReference,
 } from './types'

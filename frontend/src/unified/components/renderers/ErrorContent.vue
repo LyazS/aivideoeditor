@@ -22,7 +22,7 @@ const props = defineProps<ContentTemplateProps>()
 // 简化错误信息计算
 const errorMessage = computed(() => {
   const name = getTimelineItemDisplayName(props.data)
-  
+
   if (name.includes('http') || name.includes('网络')) {
     return '网络连接失败'
   }
@@ -45,7 +45,6 @@ const errorMessage = computed(() => {
 
   return '加载失败'
 })
-
 </script>
 
 <style scoped>
@@ -84,10 +83,6 @@ const errorMessage = computed(() => {
 
 /* 选中状态样式 */
 .clip-error-content.selected {
-  background: linear-gradient(
-    135deg,
-    var(--color-clip-selected),
-    var(--color-clip-selected-dark)
-  );
+  background: linear-gradient(135deg, var(--color-clip-selected), var(--color-clip-selected-dark));
 }
 </style>

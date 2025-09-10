@@ -28,10 +28,10 @@
   --color-accent-error-hover: #d32f2f;
 
   /* 状态颜色变量 */
-  --color-status-pending: #f39c12;      /* 等待状态 - 橙色 */
-  --color-status-processing: #506386;   /* 处理中状态 - 蓝色 */
-  --color-status-completed: #27ae60;    /* 完成状态 - 绿色 */
-  --color-status-error: #b94047;       /* 错误状态 - 红色 */
+  --color-status-pending: #f39c12; /* 等待状态 - 橙色 */
+  --color-status-processing: #506386; /* 处理中状态 - 蓝色 */
+  --color-status-completed: #27ae60; /* 完成状态 - 绿色 */
+  --color-status-error: #b94047; /* 错误状态 - 红色 */
 
   /* 状态颜色渐变变量 */
   --color-status-pending-gradient: linear-gradient(135deg, #f39c12, #e67e22);
@@ -40,7 +40,7 @@
   --color-status-error-gradient: linear-gradient(135deg, #e74c3c, #c0392b);
 
   /* 进度条背景色 */
-  --color-progress-background: #2c3e50;  /* 进度条背景色 - 深蓝灰色 */
+  --color-progress-background: #2c3e50; /* 进度条背景色 - 深蓝灰色 */
 
   /* 视频片段颜色 */
   --color-clip-primary: #4a90e2;

@@ -351,9 +351,7 @@ export function useTimelineDragHandling(
             suggestion = '请将该片段拖拽到兼容的轨道。'
         }
 
-        dialogs.showError(
-          `${mediaTypeLabel}片段不能拖拽到${trackTypeLabel}轨道上。\n${suggestion}`,
-        )
+        dialogs.showError(`${mediaTypeLabel}片段不能拖拽到${trackTypeLabel}轨道上。\n${suggestion}`)
         return
       }
     }
@@ -416,9 +414,7 @@ export function useTimelineDragHandling(
 
       // 文本类型不支持从素材库拖拽创建
       if (mediaItem.mediaType === 'text') {
-        dialogs.showError(
-          '文本内容不能通过拖拽创建。\n请在文本轨道中右键选择"添加文本"。',
-        )
+        dialogs.showError('文本内容不能通过拖拽创建。\n请在文本轨道中右键选择"添加文本"。')
         return
       }
 
@@ -457,9 +453,7 @@ export function useTimelineDragHandling(
             suggestion = '请将该素材拖拽到兼容的轨道。'
         }
 
-        dialogs.showError(
-          `${mediaTypeLabel}素材不能拖拽到${trackTypeLabel}轨道上。\n${suggestion}`,
-        )
+        dialogs.showError(`${mediaTypeLabel}素材不能拖拽到${trackTypeLabel}轨道上。\n${suggestion}`)
         return
       }
 

@@ -13,10 +13,7 @@ import type { UnifiedMediaItemData, MediaType } from '@/unified/mediaitem/types'
 import type { VideoResolution } from '@/unified/types'
 
 // ==================== 新架构工具导入 ====================
-import {
-  setupMediaSync,
-  cleanupCommandMediaSync,
-} from '@/unified/utils/unifiedMediaSyncManager'
+import { setupMediaSync, cleanupCommandMediaSync } from '@/unified/utils/unifiedMediaSyncManager'
 
 import { TimelineItemFactory } from '@/unified/timelineitem'
 import { TimelineItemQueries } from '@/unified/timelineitem/TimelineItemQueries'

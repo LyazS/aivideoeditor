@@ -109,5 +109,3 @@ export interface UnifiedTimelineClipEvents {
   /** 调整大小开始事件 */
   resizeStart: (event: MouseEvent, id: string, direction: 'left' | 'right') => void
 }
-
-

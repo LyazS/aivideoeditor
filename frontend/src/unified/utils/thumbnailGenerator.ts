@@ -179,7 +179,13 @@ export async function generateVideoThumbnail(
     }
 
     // 计算缩略图尺寸
-    const sizeInfo = calculateThumbnailSize(meta.width, meta.height, containerWidth, containerHeight, mode)
+    const sizeInfo = calculateThumbnailSize(
+      meta.width,
+      meta.height,
+      containerWidth,
+      containerHeight,
+      mode,
+    )
     console.log('📐 [ThumbnailGenerator] 缩略图尺寸:', {
       original: `${meta.width}x${meta.height}`,
       container: `${sizeInfo.containerWidth}x${sizeInfo.containerHeight}`,
@@ -263,7 +269,13 @@ export async function generateImageThumbnail(
     }
 
     // 计算缩略图尺寸
-    const sizeInfo = calculateThumbnailSize(meta.width, meta.height, containerWidth, containerHeight, mode)
+    const sizeInfo = calculateThumbnailSize(
+      meta.width,
+      meta.height,
+      containerWidth,
+      containerHeight,
+      mode,
+    )
     console.log('📐 [ThumbnailGenerator] 缩略图尺寸:', {
       original: `${meta.width}x${meta.height}`,
       container: `${sizeInfo.containerWidth}x${sizeInfo.containerHeight}`,
@@ -339,11 +351,24 @@ export async function generateThumbnailForUnifiedMediaItem(
 
     if (UnifiedMediaItemQueries.isVideo(mediaItem) && mediaItem.webav?.mp4Clip) {
       console.log('🎬 生成视频缩略图...')
-      canvas = await generateVideoThumbnail(mediaItem.webav.mp4Clip, timePosition, containerWidth, containerHeight, mode, true)
+      canvas = await generateVideoThumbnail(
+        mediaItem.webav.mp4Clip,
+        timePosition,
+        containerWidth,
+        containerHeight,
+        mode,
+        true,
+      )
       console.log('✅ 视频缩略图生成成功')
     } else if (UnifiedMediaItemQueries.isImage(mediaItem) && mediaItem.webav?.imgClip) {
       console.log('🖼️ 生成图片缩略图...')
-      canvas = await generateImageThumbnail(mediaItem.webav.imgClip, containerWidth, containerHeight, mode, true)
+      canvas = await generateImageThumbnail(
+        mediaItem.webav.imgClip,
+        containerWidth,
+        containerHeight,
+        mode,
+        true,
+      )
       console.log('✅ 图片缩略图生成成功')
     } else if (UnifiedMediaItemQueries.isAudio(mediaItem)) {
       console.log('🎵 音频不需要缩略图，跳过生成')
@@ -413,7 +438,7 @@ export async function regenerateThumbnailForUnifiedTimelineItem(
       thumbnailTime,
       containerWidth,
       containerHeight,
-      mode
+      mode,
     )
 
     if (thumbnailUrl) {

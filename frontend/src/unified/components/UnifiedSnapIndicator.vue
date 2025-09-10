@@ -29,7 +29,7 @@ const props = withDefaults(defineProps<Props>(), {
   timelineWidth: 0,
   totalDurationFrames: 0,
   zoomLevel: 1,
-  scrollOffset: 0
+  scrollOffset: 0,
 })
 
 // Store
@@ -41,25 +41,25 @@ const shouldShowIndicator = computed(() => {
   if (!unifiedStore.snapConfig.enabled) return false
   if (!unifiedStore.snapConfig.visualFeedback) return false
   if (!props.snapResult) return false
-  
+
   // 检查是否发生了吸附（通过snapPoint存在性判断）
   return !!props.snapResult.snapPoint
 })
 
 const indicatorStyle = computed((): CSSProperties => {
   if (!props.snapResult) return {}
-  
+
   const pixel = frameToPixel(
     props.snapResult.frame,
     props.timelineWidth,
     props.totalDurationFrames,
     props.zoomLevel,
-    props.scrollOffset
+    props.scrollOffset,
   )
-  
+
   // 统一的吸附指示器样式，不区分开始或尾部吸附
   return {
-    left: `${pixel}px`
+    left: `${pixel}px`,
   }
 })
 </script>

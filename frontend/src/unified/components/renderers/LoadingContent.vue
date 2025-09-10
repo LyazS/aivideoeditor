@@ -47,12 +47,12 @@ const progressInfo = computed(() => {
   if (!mediaItem || !mediaItem.source) {
     return {
       hasProgress: false,
-      percent: 0
+      percent: 0,
     }
   }
 
   const source = mediaItem.source
-  
+
   // 根据数据源类型获取进度信息
   if (source.type === 'remote') {
     // 远程文件源：使用下载字节数计算进度
@@ -60,24 +60,23 @@ const progressInfo = computed(() => {
     if (remoteSource.totalBytes === 0) {
       return {
         hasProgress: false,
-        percent: 0
+        percent: 0,
       }
     }
     const percent = (remoteSource.downloadedBytes / remoteSource.totalBytes) * 100
     return {
       hasProgress: true,
       percent,
-      speed: remoteSource.downloadSpeed
+      speed: remoteSource.downloadSpeed,
     }
   } else {
     // 其他类型：使用基础进度值
     return {
       hasProgress: source.progress > 0,
-      percent: source.progress
+      percent: source.progress,
     }
   }
 })
-
 </script>
 
 <style scoped>
@@ -150,10 +149,6 @@ const progressInfo = computed(() => {
 
 /* 选中状态样式 */
 .clip-loading-content.selected {
-  background: linear-gradient(
-    135deg,
-    var(--color-clip-selected),
-    var(--color-clip-selected-dark)
-  );
+  background: linear-gradient(135deg, var(--color-clip-selected), var(--color-clip-selected-dark));
 }
 </style>

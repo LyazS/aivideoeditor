@@ -26,10 +26,7 @@
 
     <!-- 动态渲染的内容区域（使用模板组件） -->
     <div class="clip-content">
-      <component
-        :is="templateComponent"
-        v-bind="templateProps"
-      />
+      <component :is="templateComponent" v-bind="templateProps" />
     </div>
 
     <!-- 右侧调整把手 -->
@@ -57,10 +54,7 @@
 
 <script setup lang="ts">
 import { computed, ref, onUnmounted, h, inject } from 'vue'
-import type {
-  UnifiedTimelineClipProps,
-  ContentTemplateProps,
-} from '../types/clipRenderer'
+import type { UnifiedTimelineClipProps, ContentTemplateProps } from '../types/clipRenderer'
 import type { UnifiedTimeRange } from '@/unified/types/timeRange'
 import { ContentRendererFactory } from './renderers/ContentRendererFactory'
 import { useUnifiedStore } from '@/unified/unifiedStore'
@@ -156,7 +150,7 @@ const clipClasses = computed(() => {
 const combinedStyles = computed(() => {
   // 计算clip的高度和上边距
   const trackType = mapMediaTypeToTrackType(props.data.mediaType)
-  const clipHeight = getDefaultTrackHeight(trackType) - (DEFAULT_TRACK_PADDING * 2)
+  const clipHeight = getDefaultTrackHeight(trackType) - DEFAULT_TRACK_PADDING * 2
   const clipTopOffset = DEFAULT_TRACK_PADDING
 
   // 计算clip的位置和尺寸
@@ -183,7 +177,6 @@ const combinedStyles = computed(() => {
     width: `${width}px`,
   }
 })
-
 
 // ==================== 关键帧标记相关计算属性 ====================
 
@@ -257,7 +250,7 @@ function getKeyframeMarkerStyles(pixelPosition: number): Record<string, string> 
  */
 function handleSelect(event: MouseEvent) {
   event.stopPropagation()
-  emit('select', event, props.data.id)  // 传递事件对象和ID
+  emit('select', event, props.data.id) // 传递事件对象和ID
 }
 
 /**
@@ -309,7 +302,7 @@ function handleDragStart(event: DragEvent) {
   const clipRect = clipElement.getBoundingClientRect()
   const dragOffset = {
     x: event.clientX - clipRect.left,
-    y: event.clientY - clipRect.top
+    y: event.clientY - clipRect.top,
   }
   const dragData = dragUtils.setTimelineItemDragData(
     event,
@@ -401,9 +394,9 @@ function handleResize(event: MouseEvent) {
       // 计算吸附位置
       const snapOptions = {
         excludeClipIds: [props.data.id],
-        customThreshold: unifiedStore.snapConfig.threshold
+        customThreshold: unifiedStore.snapConfig.threshold,
       }
-      
+
       const snapResult = unifiedStore.calculateSnapPosition(newLeftFrames, snapOptions)
       if (snapResult) {
         newLeftFrames = snapResult.frame
@@ -412,7 +405,7 @@ function handleResize(event: MouseEvent) {
           snapped: true,
           frame: snapResult.frame,
           snapPoint: snapResult.snapPoint,
-          distance: snapResult.distance
+          distance: snapResult.distance,
         })
       } else {
         // 清除吸附指示器
@@ -440,9 +433,9 @@ function handleResize(event: MouseEvent) {
       // 计算吸附位置
       const snapOptions = {
         excludeClipIds: [props.data.id],
-        customThreshold: unifiedStore.snapConfig.threshold
+        customThreshold: unifiedStore.snapConfig.threshold,
       }
-      
+
       const snapResult = unifiedStore.calculateSnapPosition(newRightFrames, snapOptions)
       if (snapResult) {
         newRightFrames = snapResult.frame
@@ -451,7 +444,7 @@ function handleResize(event: MouseEvent) {
           snapped: true,
           frame: snapResult.frame,
           snapPoint: snapResult.snapPoint,
-          distance: snapResult.distance
+          distance: snapResult.distance,
         })
       } else {
         // 清除吸附指示器
@@ -545,7 +538,7 @@ function cleanupResize() {
   resizeDirection.value = null
   document.removeEventListener('mousemove', handleResize)
   document.removeEventListener('mouseup', stopResize)
-  
+
   // 结束拖拽阶段，清理缓存
   if (unifiedStore.snapConfig.enabled) {
     unifiedStore.endSnapDrag()
@@ -558,7 +551,6 @@ function cleanupResize() {
   }
 }
 
-
 /**
  * 跳转到指定关键帧
  */
@@ -570,7 +562,7 @@ function jumpToKeyframe(absoluteFrame: number) {
 
   // 暂停播放以便进行时间跳转
   pauseForEditing('关键帧跳转')
-  
+
   // 通过WebAV进行时间跳转，这会触发画布渲染更新
   try {
     // 使用webAVSeekTo方法，确保画布渲染得到更新
@@ -587,5 +579,4 @@ onUnmounted(() => {
 })
 </script>
 
-<style scoped>
-</style>
+<style scoped></style>

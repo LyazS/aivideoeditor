@@ -40,16 +40,8 @@
         </div>
       </div>
       <div class="dialog-footer">
-        <HoverButton
-          variant="large"
-          text="取消"
-          @click="closeDialog"
-        />
-        <HoverButton
-          variant="large"
-          @click="saveProject"
-          :disabled="!form.name.trim() || isSaving"
-        >
+        <HoverButton variant="large" text="取消" @click="closeDialog" />
+        <HoverButton variant="large" @click="saveProject" :disabled="!form.name.trim() || isSaving">
           {{ isSaving ? '保存中...' : '保存' }}
         </HoverButton>
       </div>

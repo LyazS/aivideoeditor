@@ -78,10 +78,10 @@ export class AudioVisibleSprite extends BaseVisibleSprite {
     // 将startOffset（帧数）转换为微秒后应用到时间上，传递给父类
     const startOffsetMicroseconds = framesToMicroseconds(this.#startOffset)
     const adjustedTime = time + startOffsetMicroseconds
-    
+
     // 调用父类的render方法获取音频数据
     const renderResult = super.render(ctx, adjustedTime)
-    
+
     // 如果有音频数据，根据静音状态、音量和增益调整
     if (renderResult.audio && renderResult.audio.length > 0) {
       // 计算实际音量：轨道静音或片段静音时为0，否则使用当前音量

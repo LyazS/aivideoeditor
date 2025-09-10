@@ -55,7 +55,11 @@ import {
   globalWebAVAnimationManager,
   updateWebAVAnimation,
 } from '@/unified/utils/webavAnimationManager'
-import { isReady, isVideoTimelineItem, isAudioTimelineItem } from '@/unified/timelineitem/TimelineItemQueries'
+import {
+  isReady,
+  isVideoTimelineItem,
+  isAudioTimelineItem,
+} from '@/unified/timelineitem/TimelineItemQueries'
 import { adjustKeyframesForDurationChange } from '@/unified/utils/unifiedKeyframeUtils'
 
 /**
@@ -595,9 +599,7 @@ export function createUnifiedTimelineModule(
         // 异步更新动画，不阻塞播放速度调整
         updateWebAVAnimation(item)
           .then(() => {
-            console.log(
-              '🎬 [Playback Rate] Animation duration updated after playback rate change',
-            )
+            console.log('🎬 [Playback Rate] Animation duration updated after playback rate change')
           })
           .catch((error) => {
             console.error('🎬 [Playback Rate] Failed to update animation duration:', error)
@@ -624,7 +626,7 @@ export function createUnifiedTimelineModule(
       } else if (isAudioTimelineItem(item)) {
         console.log('🎬 [ClipOperations] 音频播放速度调整:', {
           timelineItemId,
-          newRate: clampedRate
+          newRate: clampedRate,
         })
       } else {
         console.log('🎬 [ClipOperations] 图片不支持播放速度调整:', { timelineItemId })

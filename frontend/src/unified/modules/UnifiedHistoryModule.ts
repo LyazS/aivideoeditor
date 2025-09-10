@@ -63,15 +63,15 @@ export abstract class BaseBatchCommand implements SimpleCommand {
   dispose(): void {
     try {
       // 先清理所有子命令
-      this.subCommands.forEach(command => {
+      this.subCommands.forEach((command) => {
         if (typeof command.dispose === 'function') {
           command.dispose()
         }
       })
-      
+
       // 清空子命令数组
       this.subCommands = []
-      
+
       console.log(`🧹 批量命令资源已清理: ${this.description}`)
     } catch (error) {
       console.error(`❌ 清理批量命令资源失败: ${this.description}`, error)
@@ -181,7 +181,7 @@ class SimpleHistoryManager {
       if (this.currentIndex < this.commands.length - 1) {
         const removedCommands = this.commands.splice(this.currentIndex + 1)
         // 清理被移除命令的资源
-        removedCommands.forEach(command => this.disposeCommand(command))
+        removedCommands.forEach((command) => this.disposeCommand(command))
         console.log(`🧹 已清理 ${removedCommands.length} 个被移除命令的资源`)
       }
 
@@ -296,8 +296,8 @@ class SimpleHistoryManager {
   clear(): void {
     // 清理所有命令的资源
     const commandsToDispose = [...this.commands]
-    commandsToDispose.forEach(command => this.disposeCommand(command))
-    
+    commandsToDispose.forEach((command) => this.disposeCommand(command))
+
     this.commands = []
     this.currentIndex = -1
     console.log(`🗑️ 历史记录已清空，已清理 ${commandsToDispose.length} 个命令的资源`)
@@ -324,7 +324,7 @@ class SimpleHistoryManager {
       if (this.currentIndex < this.commands.length - 1) {
         const removedCommands = this.commands.splice(this.currentIndex + 1)
         // 清理被移除命令的资源
-        removedCommands.forEach(command => this.disposeCommand(command))
+        removedCommands.forEach((command) => this.disposeCommand(command))
         console.log(`🧹 已清理 ${removedCommands.length} 个被移除批量命令的资源`)
       }
 
@@ -373,7 +373,7 @@ class SimpleHistoryManager {
    * @returns 找到的命令或undefined
    */
   getCommand(id: string): SimpleCommand | undefined {
-    return this.commands.find(command => command.id === id)
+    return this.commands.find((command) => command.id === id)
   }
 }
 

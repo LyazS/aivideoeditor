@@ -110,7 +110,6 @@ export function useDialogs() {
     return confirm('确认删除素材', message)
   }
 
-
   return {
     // 基础提示方法
     showInfo,
@@ -118,7 +117,6 @@ export function useDialogs() {
     showWarning,
     showSuccess,
     confirm,
-
 
     // 确认对话框方法
     confirmDelete,

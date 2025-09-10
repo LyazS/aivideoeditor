@@ -5,7 +5,7 @@
 
 import type { UnifiedMediaItemData } from '@/unified/mediaitem/types'
 import { generateThumbnailForUnifiedMediaItem } from '@/unified/utils/thumbnailGenerator'
-import { ThumbnailMode,THUMBNAIL_CONSTANTS } from '@/unified/constants/ThumbnailConstants'
+import { ThumbnailMode, THUMBNAIL_CONSTANTS } from '@/unified/constants/ThumbnailConstants'
 
 export class RealtimeThumbnailManager {
   private generatingTasks = new Map<string, Promise<string | null>>()

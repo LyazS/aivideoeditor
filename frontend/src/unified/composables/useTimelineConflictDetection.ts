@@ -51,7 +51,7 @@ export function useTimelineConflictDetection() {
     trackItems: UnifiedTimelineItemData[],
   ): ConflictInfo[] {
     // 计算拖拽项目的时长
-    const draggedItem = trackItems.find(item => item.id === dragData.itemId)
+    const draggedItem = trackItems.find((item) => item.id === dragData.itemId)
     if (!draggedItem) return []
 
     const dragDuration =

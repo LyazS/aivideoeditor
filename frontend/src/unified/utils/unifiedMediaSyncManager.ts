@@ -498,10 +498,11 @@ function updateTimelineItemDimensions(
     const originalSize = UnifiedMediaItemQueries.getOriginalSize(mediaItem)
 
     // 更新config中的宽高 - 仅对视频和图片类型，并且有原始尺寸时才更新
-    if (originalSize && (
-      TimelineItemQueries.isVideoTimelineItem(timelineItem) ||
-      TimelineItemQueries.isImageTimelineItem(timelineItem)
-    )) {
+    if (
+      originalSize &&
+      (TimelineItemQueries.isVideoTimelineItem(timelineItem) ||
+        TimelineItemQueries.isImageTimelineItem(timelineItem))
+    ) {
       console.log(`📐 [UnifiedMediaSync] 更新时间轴项目尺寸: ${timelineItem.id}`, {
         originalWidth: originalSize.width,
         originalHeight: originalSize.height,

@@ -48,9 +48,7 @@ export class ContentRendererFactory {
    * 获取指定数据的模板组件
    * 优先基于状态选择，然后基于媒体类型选择
    */
-  static getTemplateComponent<T extends MediaType>(
-    data: UnifiedTimelineItemData<T>,
-  ): Component {
+  static getTemplateComponent<T extends MediaType>(data: UnifiedTimelineItemData<T>): Component {
     // 确保模板组件已初始化
     this.ensureTemplatesInitialized()
 
@@ -59,13 +57,13 @@ export class ContentRendererFactory {
       const statusComponent = this.statusTemplates.get(data.timelineStatus)
       if (statusComponent) return statusComponent
     }
-    
+
     // 第二优先级：媒体类型模板
     if (data.timelineStatus === 'ready') {
       const mediaTypeComponent = this.mediaTypeTemplates.get(data.mediaType)
       if (mediaTypeComponent) return mediaTypeComponent
     }
-    
+
     // 兜底：默认模板
     return this.defaultTemplate
   }

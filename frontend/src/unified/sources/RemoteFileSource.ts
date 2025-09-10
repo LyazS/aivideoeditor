@@ -80,7 +80,9 @@ export const RemoteFileTypeGuards = {
 /**
  * 默认下载配置
  */
-export const DEFAULT_REMOTE_CONFIG: Required<Pick<RemoteFileSourceData, 'headers' | 'timeout' | 'retryCount' | 'retryDelay'>> = {
+export const DEFAULT_REMOTE_CONFIG: Required<
+  Pick<RemoteFileSourceData, 'headers' | 'timeout' | 'retryCount' | 'retryDelay'>
+> = {
   headers: {},
   timeout: 30000, // 30秒超时
   retryCount: 3, // 重试3次
@@ -211,7 +213,9 @@ export const RemoteFileQueries = {
   /**
    * 获取下载配置
    */
-  getConfig(source: RemoteFileSourceData): Pick<RemoteFileSourceData, 'headers' | 'timeout' | 'retryCount' | 'retryDelay'> {
+  getConfig(
+    source: RemoteFileSourceData,
+  ): Pick<RemoteFileSourceData, 'headers' | 'timeout' | 'retryCount' | 'retryDelay'> {
     return {
       headers: source.headers,
       timeout: source.timeout,
@@ -235,20 +239,22 @@ export const RemoteFileQueries = {
 /**
  * 提取远程文件数据源的持久化数据
  */
-export function extractRemoteFileSourceData(source: RemoteFileSourceData): BaseRemoteFileSourceData {
+export function extractRemoteFileSourceData(
+  source: RemoteFileSourceData,
+): BaseRemoteFileSourceData {
   return {
     // 基础字段
     id: source.id,
     type: source.type,
     mediaReferenceId: source.mediaReferenceId,
-    
+
     // 特定字段 - 保存配置和URL，但不保存运行时状态
     remoteUrl: source.remoteUrl,
     headers: source.headers,
     timeout: source.timeout,
     retryCount: source.retryCount,
     retryDelay: source.retryDelay,
-    
+
     // 不需要保存运行时状态
     // downloadedBytes: source.downloadedBytes, // 重新加载时会重新下载
     // totalBytes: source.totalBytes, // 重新加载时会重新获取

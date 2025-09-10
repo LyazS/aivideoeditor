@@ -1,5 +1,9 @@
 import { ref, computed, type Ref } from 'vue'
-import type { UnifiedProjectConfig, UnifiedProjectContent, UnifiedMediaReference } from '@/unified/project/types'
+import type {
+  UnifiedProjectConfig,
+  UnifiedProjectContent,
+  UnifiedMediaReference,
+} from '@/unified/project/types'
 import { projectFileOperations } from '@/unified/utils/ProjectFileOperations'
 import type { VideoResolution } from '@/unified/types'
 import { TimelineItemFactory, TimelineItemQueries } from '@/unified/timelineitem'
@@ -50,10 +54,7 @@ export function createUnifiedProjectModule(
   },
   trackModule: {
     tracks: Ref<UnifiedTrackData[]>
-    addTrack: (
-      trackData: UnifiedTrackData,
-      position?: number,
-    ) => UnifiedTrackData
+    addTrack: (trackData: UnifiedTrackData, position?: number) => UnifiedTrackData
   },
   mediaModule: {
     mediaItems: Ref<UnifiedMediaItemData[]>
@@ -72,7 +73,6 @@ export function createUnifiedProjectModule(
     removeSprite: (sprite: VisibleSprite) => boolean
   },
 ) {
-  
   const thumbnailService = useProjectThumbnailService()
   // ==================== 状态定义 ====================
 
@@ -179,7 +179,7 @@ export function createUnifiedProjectModule(
         if (timelineModule.timelineItems.value.length > 0) {
           // 找到所有时间轴项目中的最大结束时间
           const maxEndTime = Math.max(
-            ...timelineModule.timelineItems.value.map(item => item.timeRange.timelineEndTime)
+            ...timelineModule.timelineItems.value.map((item) => item.timeRange.timelineEndTime),
           )
           // 将帧数转换为秒
           calculatedDuration = framesToSeconds(maxEndTime)
@@ -277,20 +277,22 @@ export function createUnifiedProjectModule(
         configModule.projectId.value,
         updatedProjectConfig,
         updatedProjectContent,
-        options
+        options,
       )
 
       console.log(`✅ 项目保存成功: ${configModule.projectName.value}`)
 
       // 异步启动缩略图生成（不等待）
       if (configChanged && timelineModule.timelineItems.value.length > 0) {
-        thumbnailService.generateProjectThumbnail(
-          configModule.projectId.value,
-          timelineModule.timelineItems.value,
-          mediaModule
-        ).catch(error => {
-          console.warn('缩略图生成失败:', error)
-        })
+        thumbnailService
+          .generateProjectThumbnail(
+            configModule.projectId.value,
+            timelineModule.timelineItems.value,
+            mediaModule,
+          )
+          .catch((error) => {
+            console.warn('缩略图生成失败:', error)
+          })
       }
     } catch (error) {
       console.error('保存项目失败:', error)
@@ -483,16 +485,13 @@ export function createUnifiedProjectModule(
       if (savedTracks && savedTracks.length > 0) {
         for (const trackData of savedTracks) {
           // 创建完整的轨道数据对象
-          const trackToAdd = createUnifiedTrackData(
-            trackData.type,
-            {
-              id: trackData.id, // 使用保存的轨道ID
-              name: trackData.name,
-              isVisible: trackData.isVisible,
-              isMuted: trackData.isMuted,
-              height: trackData.height,
-            }
-          )
+          const trackToAdd = createUnifiedTrackData(trackData.type, {
+            id: trackData.id, // 使用保存的轨道ID
+            name: trackData.name,
+            isVisible: trackData.isVisible,
+            isMuted: trackData.isMuted,
+            height: trackData.height,
+          })
 
           // 使用轨道模块的 addTrack 方法添加轨道
           trackModule.addTrack(trackToAdd, undefined)
@@ -516,7 +515,9 @@ export function createUnifiedProjectModule(
   /**
    * 恢复时间轴项目状态（用于项目加载）
    */
-  async function restoreTimelineItems(savedTimelineItems: UnifiedTimelineItemData[]): Promise<void> {
+  async function restoreTimelineItems(
+    savedTimelineItems: UnifiedTimelineItemData[],
+  ): Promise<void> {
     try {
       console.log('🎬 开始恢复时间轴项目状态...')
 
@@ -614,7 +615,6 @@ export function createUnifiedProjectModule(
       throw error
     }
   }
-
 
   /**
    * 清除当前项目

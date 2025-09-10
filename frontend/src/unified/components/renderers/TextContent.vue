@@ -19,7 +19,7 @@ const props = defineProps<ContentTemplateProps<'text'>>()
 const previewText = computed(() => {
   const config = props.data.config as any
   const content = config?.text || config?.content || '文本内容'
-  
+
   if (!content || content.trim() === '') {
     return '文本内容'
   }
@@ -71,10 +71,6 @@ const previewText = computed(() => {
 
 /* 选中状态样式 */
 .text-content.selected {
-  background: linear-gradient(
-    135deg,
-    var(--color-clip-selected),
-    var(--color-clip-selected-dark)
-  );
+  background: linear-gradient(135deg, var(--color-clip-selected), var(--color-clip-selected-dark));
 }
 </style>

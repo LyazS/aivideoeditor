@@ -105,7 +105,7 @@ export function useTimelineTrackManagement() {
     editingTrackId.value = track.id
     editingTrackName.value = track.name
     await nextTick()
-    
+
     // 使用轨道ID作为key获取对应的输入框
     const input = nameInputs.value[track.id]
     if (input && typeof input.focus === 'function') {
@@ -122,7 +122,10 @@ export function useTimelineTrackManagement() {
   async function finishRename() {
     if (editingTrackId.value && editingTrackName.value.trim()) {
       try {
-        await unifiedStore.renameTrackWithHistory(editingTrackId.value, editingTrackName.value.trim())
+        await unifiedStore.renameTrackWithHistory(
+          editingTrackId.value,
+          editingTrackName.value.trim(),
+        )
         console.log('✅ 轨道重命名成功')
       } catch (error) {
         console.error('❌ 重命名轨道时出错:', error)
@@ -185,7 +188,7 @@ export function useTimelineTrackManagement() {
     editingTrackId,
     editingTrackName,
     nameInputs,
-    
+
     // 方法
     addNewTrack,
     toggleVisibility,

@@ -118,11 +118,7 @@ class NotificationManager {
   /**
    * 显示成功通知
    */
-  success(
-    message: string,
-    duration?: number,
-    options?: { persistent?: boolean },
-  ): string {
+  success(message: string, duration?: number, options?: { persistent?: boolean }): string {
     // 检查重复通知
     if (this.hasDuplicate(message)) {
       console.log('🔄 跳过重复的成功通知:', message)
@@ -139,11 +135,7 @@ class NotificationManager {
   /**
    * 显示错误通知
    */
-  error(
-    message: string,
-    duration?: number,
-    options?: { persistent?: boolean },
-  ): string {
+  error(message: string, duration?: number, options?: { persistent?: boolean }): string {
     // 错误通知不检查重复，因为可能需要多次显示
     return this.show({
       type: 'error',
@@ -156,11 +148,7 @@ class NotificationManager {
   /**
    * 显示警告通知
    */
-  warning(
-    message: string,
-    duration?: number,
-    options?: { persistent?: boolean },
-  ): string {
+  warning(message: string, duration?: number, options?: { persistent?: boolean }): string {
     if (this.hasDuplicate(message)) {
       console.log('🔄 跳过重复的警告通知:', message)
       return ''
@@ -176,11 +164,7 @@ class NotificationManager {
   /**
    * 显示信息通知
    */
-  info(
-    message: string,
-    duration?: number,
-    options?: { persistent?: boolean },
-  ): string {
+  info(message: string, duration?: number, options?: { persistent?: boolean }): string {
     if (this.hasDuplicate(message)) {
       console.log('🔄 跳过重复的信息通知:', message)
       return ''
@@ -210,7 +194,9 @@ export function createUnifiedNotificationModule() {
    * 显示通知
    * @param notification 通知配置
    */
-  function showNotification(notification: Omit<Notification, 'id' | 'message'> & { message: string }): string {
+  function showNotification(
+    notification: Omit<Notification, 'id' | 'message'> & { message: string },
+  ): string {
     return notificationManager.show(notification)
   }
 

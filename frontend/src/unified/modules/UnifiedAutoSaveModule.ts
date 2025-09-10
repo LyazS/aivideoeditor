@@ -98,17 +98,24 @@ export function createUnifiedAutoSaveModule(
     clearTimers()
 
     // 创建新的防抖函数
-    debouncedSave = debounce((saveOptions?: { configChanged?: boolean; contentChanged?: boolean }) => {
-      performSave(saveOptions)
-    }, finalConfig.debounceTime)
+    debouncedSave = debounce(
+      (saveOptions?: { configChanged?: boolean; contentChanged?: boolean }) => {
+        performSave(saveOptions)
+      },
+      finalConfig.debounceTime,
+    )
 
     // 创建新的节流函数
-    throttledSave = throttle((saveOptions?: { configChanged?: boolean; contentChanged?: boolean }) => {
-      if (autoSaveState.value.isDirty) {
-        console.log('⏰ [AutoSave] 节流触发强制保存')
-        performSave(saveOptions)
-      }
-    }, finalConfig.throttleTime, { leading: false, trailing: true })
+    throttledSave = throttle(
+      (saveOptions?: { configChanged?: boolean; contentChanged?: boolean }) => {
+        if (autoSaveState.value.isDirty) {
+          console.log('⏰ [AutoSave] 节流触发强制保存')
+          performSave(saveOptions)
+        }
+      },
+      finalConfig.throttleTime,
+      { leading: false, trailing: true },
+    )
   }
 
   /**

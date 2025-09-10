@@ -71,24 +71,33 @@
     <!-- 调试按钮放在最右边 -->
     <div class="toolbar-section debug-section">
       <!-- 吸附开关按钮 -->
-      <HoverButton
-        @click="toggleSnap"
-        :active="snapEnabled"
-        :title="snapButtonTitle"
-      >
+      <HoverButton @click="toggleSnap" :active="snapEnabled" :title="snapButtonTitle">
         <template #icon>
           <!-- 吸附开启状态 - 实心磁铁图标 -->
           <svg v-if="snapEnabled" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M17,2H7A3,3 0 0,0 4,5V19A3,3 0 0,0 7,22H17A3,3 0 0,0 20,19V5A3,3 0 0,0 17,2M17,4A1,1 0 0,1 18,5V19A1,1 0 0,1 17,20H7A1,1 0 0,1 6,19V5A1,1 0 0,1 7,4H17M12,7L9,10H12V14H15V10H18L15,7H12Z" />
+            <path
+              d="M17,2H7A3,3 0 0,0 4,5V19A3,3 0 0,0 7,22H17A3,3 0 0,0 20,19V5A3,3 0 0,0 17,2M17,4A1,1 0 0,1 18,5V19A1,1 0 0,1 17,20H7A1,1 0 0,1 6,19V5A1,1 0 0,1 7,4H17M12,7L9,10H12V14H15V10H18L15,7H12Z"
+            />
           </svg>
           <!-- 吸附关闭状态 - 虚线磁铁图标 -->
-          <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="1.5" opacity="0.6">
-            <path d="M17,2H7A3,3 0 0,0 4,5V19A3,3 0 0,0 7,22H17A3,3 0 0,0 20,19V5A3,3 0 0,0 17,2M17,4A1,1 0 0,1 18,5V19A1,1 0 0,1 17,20H7A1,1 0 0,1 6,19V5A1,1 0 0,1 7,4H17M12,7L9,10H12V14H15V10H18L15,7H12Z" />
+          <svg
+            v-else
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="#666"
+            stroke-width="1.5"
+            opacity="0.6"
+          >
+            <path
+              d="M17,2H7A3,3 0 0,0 4,5V19A3,3 0 0,0 7,22H17A3,3 0 0,0 20,19V5A3,3 0 0,0 17,2M17,4A1,1 0 0,1 18,5V19A1,1 0 0,1 17,20H7A1,1 0 0,1 6,19V5A1,1 0 0,1 7,4H17M12,7L9,10H12V14H15V10H18L15,7H12Z"
+            />
           </svg>
         </template>
         吸附
       </HoverButton>
-      
+
       <!-- <HoverButton @click="debugTimeline" title="在控制台打印时间轴配置信息">
          <template #icon>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
@@ -163,10 +172,10 @@ const isSelectedItemReady = computed(() => {
   if (!unifiedStore.selectedTimelineItemId) return false
   const item = unifiedStore.getTimelineItem(unifiedStore.selectedTimelineItemId)
   if (!item) return false
-  
+
   const mediaItem = unifiedStore.getMediaItem(item.mediaItemId)
   if (!mediaItem) return false
-  
+
   // 只有ready状态的媒体项才能进行裁剪
   return mediaItem.mediaStatus === 'ready'
 })
@@ -194,15 +203,16 @@ const splitButtonTitle = computed(() => {
 
   // 检查媒体状态
   if (mediaItem.mediaStatus !== 'ready') {
-    const statusText = {
-      'pending': '等待处理中',
-      'asyncprocessing': '异步处理中',
-      'webavdecoding': '解码中',
-      'error': '媒体加载错误',
-      'cancelled': '处理已取消',
-      'missing': '媒体文件缺失'
-    }[mediaItem.mediaStatus] || '未知状态'
-    
+    const statusText =
+      {
+        pending: '等待处理中',
+        asyncprocessing: '异步处理中',
+        webavdecoding: '解码中',
+        error: '媒体加载错误',
+        cancelled: '处理已取消',
+        missing: '媒体文件缺失',
+      }[mediaItem.mediaStatus] || '未知状态'
+
     return `媒体${statusText}，无法裁剪`
   }
 
@@ -308,31 +318,32 @@ function debugTimeline() {
   // 轨道信息统计
   console.group('🎵 轨道统计信息')
   console.log('轨道总数:', unifiedStore.tracks.length)
-  const trackStats = unifiedStore.tracks.map(track => ({
+  const trackStats = unifiedStore.tracks.map((track) => ({
     name: track.name,
     type: track.type,
     itemCount: unifiedStore.getTimelineItemsByTrack(track.id).length,
     isVisible: track.isVisible,
-    isMuted: track.isMuted
+    isMuted: track.isMuted,
   }))
   console.table(trackStats)
   console.groupEnd()
 
   // 按轨道输出详细信息
   console.group('🎭 按轨道详细信息 (' + unifiedStore.tracks.length + ' 个轨道)')
-  
+
   unifiedStore.tracks.forEach((track, trackIndex) => {
     const trackItems = unifiedStore.getTimelineItemsByTrack(track.id)
-    const trackTypeIcon = {
-      'video': '🎥',
-      'audio': '🎵',
-      'text': '📝',
-      'subtitle': '💬',
-      'effect': '✨'
-    }[track.type] || '❓'
-    
+    const trackTypeIcon =
+      {
+        video: '🎥',
+        audio: '🎵',
+        text: '📝',
+        subtitle: '💬',
+        effect: '✨',
+      }[track.type] || '❓'
+
     console.group(`${trackTypeIcon} 轨道 ${trackIndex + 1}: ${track.name} (${track.type})`)
-    
+
     // 轨道基本信息
     console.group('📋 轨道属性')
     console.log('轨道ID:', track.id)
@@ -346,33 +357,40 @@ function debugTimeline() {
     // 轨道上的时间轴项目
     if (trackItems.length > 0) {
       console.group(`🎞️ 轨道项目详情 (${trackItems.length} 个)`)
-      
+
       // 按时间排序显示
-      const sortedItems = [...trackItems].sort((a, b) =>
-        a.timeRange.timelineStartTime - b.timeRange.timelineStartTime
+      const sortedItems = [...trackItems].sort(
+        (a, b) => a.timeRange.timelineStartTime - b.timeRange.timelineStartTime,
       )
-      
+
       sortedItems.forEach((item, itemIndex) => {
         const mediaItem = unifiedStore.getMediaItem(item.mediaItemId)
         const timeRange = item.timeRange
         const duration = timeRange.timelineEndTime - timeRange.timelineStartTime
-        const mediaTypeIcon = {
-          'video': '🎬',
-          'audio': '🎵',
-          'image': '🖼️',
-          'text': '📝',
-          'unknown': '❓'
-        }[item.mediaType] || '❓'
-        
+        const mediaTypeIcon =
+          {
+            video: '🎬',
+            audio: '🎵',
+            image: '🖼️',
+            text: '📝',
+            unknown: '❓',
+          }[item.mediaType] || '❓'
+
         console.group(`${mediaTypeIcon} 项目 ${itemIndex + 1}: ${mediaItem?.name || 'Unknown'}`)
         console.log('项目ID:', item.id)
         console.log('素材ID:', item.mediaItemId)
         console.log('媒体类型:', item.mediaType)
         console.log('状态:', item.timelineStatus)
-        console.log('时间轴开始:', `${timeRange.timelineStartTime}帧 (${framesToSeconds(timeRange.timelineStartTime)}秒)`)
-        console.log('时间轴结束:', `${timeRange.timelineEndTime}帧 (${framesToSeconds(timeRange.timelineEndTime)}秒)`)
+        console.log(
+          '时间轴开始:',
+          `${timeRange.timelineStartTime}帧 (${framesToSeconds(timeRange.timelineStartTime)}秒)`,
+        )
+        console.log(
+          '时间轴结束:',
+          `${timeRange.timelineEndTime}帧 (${framesToSeconds(timeRange.timelineEndTime)}秒)`,
+        )
         console.log('持续时长:', `${duration}帧 (${framesToSeconds(duration)}秒)`)
-        
+
         // 显示素材信息
         if (mediaItem) {
           const mediaDuration = mediaItem.duration || 0
@@ -383,19 +401,19 @@ function debugTimeline() {
             console.log('文件类型:', mediaItem.source.selectedFile.type)
           }
         }
-        
+
         // 显示配置信息（如果有的话）
         if (item.config && Object.keys(item.config).length > 0) {
           console.log('配置信息:', item.config)
         }
-        
+
         console.groupEnd()
       })
       console.groupEnd()
     } else {
       console.log('📭 该轨道暂无项目')
     }
-    
+
     console.groupEnd()
   })
   console.groupEnd()
@@ -407,15 +425,15 @@ function debugTimeline() {
     ready: unifiedStore.getReadyMediaItems().length,
     processing: unifiedStore.getProcessingMediaItems().length,
     error: unifiedStore.getErrorMediaItems().length,
-    byType: {} as Record<string, number>
+    byType: {} as Record<string, number>,
   }
-  
+
   // 按类型统计
-  unifiedStore.mediaItems.forEach(item => {
+  unifiedStore.mediaItems.forEach((item) => {
     const mediaType = item.mediaType as string
     mediaStats.byType[mediaType] = (mediaStats.byType[mediaType] || 0) + 1
   })
-  
+
   console.log('📊 素材统计:', mediaStats)
   console.groupEnd()
 
@@ -440,12 +458,12 @@ function debugTimeline() {
     console.log('时间轴开始 (秒):', framesToSeconds(timeRange.timelineStartTime))
     console.log('时间轴结束 (秒):', framesToSeconds(timeRange.timelineEndTime))
     console.log('持续时长 (秒):', framesToSeconds(duration))
-    
+
     // 显示配置信息
     if (item.config && Object.keys(item.config).length > 0) {
       console.log('配置信息:', item.config)
     }
-    
+
     console.groupEnd()
   })
   console.groupEnd()
@@ -455,13 +473,13 @@ function debugTimeline() {
 
 function debugHistory() {
   console.group('📚 历史操作记录调试信息')
-  
+
   // 使用 unifiedStore 提供的历史摘要方法
   const historySummary = unifiedStore.getHistorySummary()
-  
+
   // 输出摘要信息
   console.log('📊 历史记录摘要:', historySummary)
-  
+
   console.groupEnd()
 }
 </script>

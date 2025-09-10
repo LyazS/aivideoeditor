@@ -242,7 +242,7 @@ export {
   // 单项目文件操作类
   ProjectFileOperations,
   projectFileOperations,
-  
+
   // 类型定义
   type UnifiedLoadProjectOptions,
   type UnifiedProjectLoadResult,
@@ -263,7 +263,7 @@ export {
   createMP4Clip,
   createImgClip,
   createAudioClip,
-  
+
   // 克隆函数
   cloneMP4Clip,
   cloneImgClip,
@@ -282,14 +282,14 @@ export {
 export {
   // 核心类
   UnifiedMediaSyncManager,
-  
+
   // 主要功能函数
   setupMediaSync,
-  
+
   // 清理函数
   cleanupCommandMediaSync,
   cleanupProjectLoadMediaSync,
-  
+
   // 调试信息函数
   getUnifiedMediaSyncInfo as getProjectLoadMediaSyncInfo,
 } from './unifiedMediaSyncManager'

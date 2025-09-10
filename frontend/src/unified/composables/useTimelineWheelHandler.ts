@@ -8,7 +8,7 @@ export enum TimelineWheelSource {
   /** 时间刻度区域 */
   TIME_SCALE = 'time_scale',
   /** 时间轴主体区域 */
-  TIMELINE_BODY = 'timeline_body'
+  TIMELINE_BODY = 'timeline_body',
 }
 
 /**
@@ -21,13 +21,13 @@ export function useTimelineWheelHandler(
   options?: {
     /** 滚轮事件来源（用于区分不同的处理逻辑） */
     source?: TimelineWheelSource
-  }
+  },
 ) {
   const unifiedStore = useUnifiedStore()
-  
+
   const defaultOptions = {
     source: TimelineWheelSource.TIME_SCALE,
-    ...options
+    ...options,
   }
 
   /**
@@ -42,7 +42,7 @@ export function useTimelineWheelHandler(
 
       // 计算鼠标在时间轴上的位置
       let mouseX = event.clientX - rect.left
-      
+
       // 根据来源类型决定是否需要减去轨道控制区域宽度
       if (defaultOptions.source === TimelineWheelSource.TIMELINE_BODY) {
         mouseX -= 150 // 时间轴主体区域需要减去轨道控制区域宽度
@@ -68,7 +68,7 @@ export function useTimelineWheelHandler(
     } else if (event.shiftKey) {
       // Shift + 滚轮：水平滚动
       event.preventDefault()
-      
+
       // 跨平台兼容：macOS 上 deltaX 有值，Windows 上 deltaY 有值
       const scrollAmount = event.deltaX !== 0 ? event.deltaX : event.deltaY
 
@@ -87,6 +87,6 @@ export function useTimelineWheelHandler(
   }
 
   return {
-    handleWheel
+    handleWheel,
   }
 }

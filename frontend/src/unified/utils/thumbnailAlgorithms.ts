@@ -77,7 +77,8 @@ export function filterThumbnailVisible(
   // 过滤出可见的缩略图
   return layoutItems.filter((item) => {
     return (
-      item.timelineFramePosition >= visibleStartFrame - THUMBNAIL_CONSTANTS.VISIBILITY_BUFFER_FRAMES &&
+      item.timelineFramePosition >=
+        visibleStartFrame - THUMBNAIL_CONSTANTS.VISIBILITY_BUFFER_FRAMES &&
       item.timelineFramePosition <= visibleEndFrame + THUMBNAIL_CONSTANTS.VISIBILITY_BUFFER_FRAMES
     )
   })

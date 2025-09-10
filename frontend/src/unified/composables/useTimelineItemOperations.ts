@@ -8,7 +8,12 @@ import type {
   GetTimelineItemConfig,
   TimelineItemStatus,
 } from '@/unified/timelineitem/TimelineItemData'
-import type { VideoMediaConfig, ImageMediaConfig, AudioMediaConfig, TextMediaConfig } from '@/unified/timelineitem/TimelineItemData'
+import type {
+  VideoMediaConfig,
+  ImageMediaConfig,
+  AudioMediaConfig,
+  TextMediaConfig,
+} from '@/unified/timelineitem/TimelineItemData'
 
 /**
  * 时间轴项目操作模块
@@ -98,10 +103,7 @@ export function useTimelineItemOperations() {
       }
 
       // 创建增强的默认配置
-      const config = createEnhancedDefaultConfig(
-        knownMediaType,
-        originalResolution,
-      )
+      const config = createEnhancedDefaultConfig(knownMediaType, originalResolution)
 
       // 创建时间轴项目数据
       const timelineItemData: UnifiedTimelineItemData = {

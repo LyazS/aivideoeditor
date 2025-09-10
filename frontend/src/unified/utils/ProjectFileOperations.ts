@@ -160,7 +160,10 @@ export class ProjectFileOperations {
    * @param projectId 项目ID
    * @param projectContent 项目内容数据
    */
-  async saveProjectContent(projectId: string, projectContent: UnifiedProjectContent): Promise<void> {
+  async saveProjectContent(
+    projectId: string,
+    projectContent: UnifiedProjectContent,
+  ): Promise<void> {
     const workspaceHandle = await directoryManager.getWorkspaceHandle()
     if (!workspaceHandle) {
       throw new Error('未设置工作目录')
@@ -191,7 +194,7 @@ export class ProjectFileOperations {
     options?: {
       configChanged?: boolean
       contentChanged?: boolean
-    }
+    },
   ): Promise<void> {
     const { configChanged = false, contentChanged = false } = options || {}
 

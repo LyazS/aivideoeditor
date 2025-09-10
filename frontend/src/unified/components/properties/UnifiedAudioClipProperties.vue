@@ -35,7 +35,10 @@
       </div>
 
       <!-- 倍速控制 -->
-      <div v-if="selectedTimelineItem && isAudioTimelineItem(selectedTimelineItem)" class="property-item">
+      <div
+        v-if="selectedTimelineItem && isAudioTimelineItem(selectedTimelineItem)"
+        class="property-item"
+      >
         <label>倍速</label>
         <div class="speed-controls">
           <!-- 分段倍速滑块 -->
@@ -63,7 +66,10 @@
       </div>
 
       <!-- 音量控制 -->
-      <div v-if="selectedTimelineItem && isAudioTimelineItem(selectedTimelineItem)" class="property-item">
+      <div
+        v-if="selectedTimelineItem && isAudioTimelineItem(selectedTimelineItem)"
+        class="property-item"
+      >
         <label>音量</label>
         <div class="volume-controls">
           <SliderInput
@@ -106,7 +112,10 @@
       </div>
 
       <!-- 增益控制 -->
-      <div v-if="selectedTimelineItem && isAudioTimelineItem(selectedTimelineItem)" class="property-item">
+      <div
+        v-if="selectedTimelineItem && isAudioTimelineItem(selectedTimelineItem)"
+        class="property-item"
+      >
         <label>增益 (dB)</label>
         <div class="gain-controls">
           <SliderInput
@@ -151,10 +160,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useUnifiedStore } from '@/unified/unifiedStore'
-import {
-  isAudioTimelineItem,
-  hasAudioProperties,
-} from '@/unified/timelineitem/TimelineItemQueries'
+import { isAudioTimelineItem, hasAudioProperties } from '@/unified/timelineitem/TimelineItemQueries'
 import type { UnifiedTimelineItemData } from '@/unified/timelineitem/TimelineItemData'
 import { framesToTimecode, timecodeToFrames } from '@/unified/utils/timeUtils'
 import { useUnifiedKeyframeTransformControls } from '@/unified/composables'
@@ -398,9 +404,7 @@ const updateTargetDurationFromTimecode = async (event: Event) => {
     }
 
     // 显示错误通知
-    unifiedStore.showError(
-      `时间码格式错误：${errorMessage}`
-    )
+    unifiedStore.showError(`时间码格式错误：${errorMessage}`)
 
     // 恢复到当前值
     input.value = formattedDuration.value
@@ -424,7 +428,9 @@ const updateTargetDurationFrames = async (newDurationFrames: number) => {
     props.selectedTimelineItem.animation &&
     props.selectedTimelineItem.animation.keyframes.length > 0
   ) {
-    const { adjustKeyframesForDurationChange } = await import('@/unified/utils/unifiedKeyframeUtils')
+    const { adjustKeyframesForDurationChange } = await import(
+      '@/unified/utils/unifiedKeyframeUtils'
+    )
     adjustKeyframesForDurationChange(
       props.selectedTimelineItem,
       oldDurationFrames,
