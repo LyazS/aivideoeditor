@@ -19,7 +19,6 @@
 <script setup lang="ts">
 import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { useUnifiedStore } from '@/unified/unifiedStore'
-import type { SnapResult } from '@/types/snap'
 
 interface PlayheadProps {
   /** 时间轴容器宽度 */
@@ -35,17 +34,9 @@ const props = withDefaults(defineProps<PlayheadProps>(), {
   wheelContainer: undefined,
 })
 
-// Emits
-const emit = defineEmits<{
-  snapResultUpdate: [snapResult: SnapResult | null]
-}>()
-
 const unifiedStore = useUnifiedStore()
 const isDragging = ref(false)
 const playheadContainer = ref<HTMLElement>()
-
-// 吸附相关状态
-const snapResult = ref<SnapResult | null>(null)
 
 // 播放头手柄位置（相对于时间刻度区域）
 const playheadPosition = computed(() => {
@@ -113,28 +104,13 @@ const handleMouseMove = (event: MouseEvent) => {
         // 避免吸附到播放头自身位置
         const isSnappingToCurrentPlayhead = calculatedSnapResult.snapPoint?.type === 'playhead'
         if (!isSnappingToCurrentPlayhead) {
-          snapResult.value = {
-            frame: calculatedSnapResult.frame,
-            snapPoint: calculatedSnapResult.snapPoint,
-            distance: calculatedSnapResult.distance,
-          }
           frame = calculatedSnapResult.frame
-        } else {
-          snapResult.value = null
         }
-      } else {
-        snapResult.value = null
       }
-    } else {
-      // 如果吸附功能未启用，直接更新位置
-      snapResult.value = null
     }
 
     // 更新当前帧
     unifiedStore.setCurrentFrame(Math.max(0, Math.floor(frame)))
-
-    // 发送吸附结果更新事件
-    emit('snapResultUpdate', snapResult.value)
   }
 }
 
@@ -148,9 +124,6 @@ const handleMouseUp = () => {
   if (playheadContainer.value) {
     playheadContainer.value.style.cursor = 'grab'
   }
-
-  // 清理吸附状态
-  snapResult.value = null
 
   // 结束拖拽阶段，清理缓存
   if (unifiedStore.snapConfig.enabled && unifiedStore.snapConfig.playhead) {

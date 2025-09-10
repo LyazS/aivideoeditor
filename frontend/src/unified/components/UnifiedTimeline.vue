@@ -181,7 +181,6 @@
       :timeline-width="timelineWidth"
       :track-control-width="LayoutConstants.TRACK_CONTROL_WIDTH"
       :wheel-container="timelineBody"
-      @snapResultUpdate="handlePlayheadSnapResult"
     />
   </div>
 
@@ -299,11 +298,6 @@ const timelineWidth = ref<number>(LayoutConstants.TIMELINE_DEFAULT_WIDTH)
 // 时间刻度相关变量
 const scaleContainer = ref<HTMLElement>()
 
-// 处理时间刻度拖拽的吸附结果更新
-const handleTimeScaleSnapResult = (snapResult: any) => {
-  currentSnapResult.value = snapResult
-}
-
 // 初始化时间刻度模块
 const {
   timeMarks,
@@ -314,7 +308,7 @@ const {
   handleTimeScaleMouseMove,
   handleTimeScaleMouseUp,
   handleTimeScaleWheel,
-} = useTimelineTimeScale(scaleContainer, handleTimeScaleSnapResult)
+} = useTimelineTimeScale(scaleContainer)
 
 // 初始化项目操作模块
 const {
@@ -409,10 +403,6 @@ const {
 // 初始化网格线模块
 const { gridLines } = useTimelineGridLines(timelineWidth)
 
-// 处理播放头吸附结果更新
-const handlePlayheadSnapResult = (snapResult: any) => {
-  currentSnapResult.value = snapResult
-}
 
 /**
  * 更新时间轴宽度
