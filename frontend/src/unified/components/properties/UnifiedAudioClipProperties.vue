@@ -24,7 +24,7 @@
         <div class="duration-controls">
           <input
             type="text"
-            v-model="timecodeInput"
+            :value="timecodeInput"
             @blur="updateTargetDurationFromTimecode"
             @keyup.enter="updateTargetDurationFromTimecode"
             placeholder="HH:MM:SS.FF"
@@ -217,12 +217,7 @@ const formattedDuration = computed(() => {
 })
 
 // 时间码输入框的临时值
-const timecodeInput = computed({
-  get: () => formattedDuration.value,
-  set: () => {
-    // 这里不做任何操作，只在失焦或回车时更新
-  },
-})
+const timecodeInput = computed(() => formattedDuration.value)
 
 // 倍速分段配置
 const speedSegments = [
