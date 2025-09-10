@@ -36,18 +36,6 @@ export class UpdateTransformCommand implements SimpleCommand {
 
   constructor(
     private timelineItemId: string,
-    private propertyType:
-      | 'position'
-      | 'size'
-      | 'rotation'
-      | 'opacity'
-      | 'zIndex'
-      | 'duration'
-      | 'playbackRate'
-      | 'volume'
-      | 'audioState'
-      | 'gain'
-      | 'multiple',
     private oldValues: {
       x?: number
       y?: number
@@ -95,7 +83,6 @@ export class UpdateTransformCommand implements SimpleCommand {
 
     console.log('💾 保存变换属性操作数据:', {
       timelineItemId,
-      propertyType,
       oldValues,
       newValues,
     })

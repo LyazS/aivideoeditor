@@ -1,4 +1,17 @@
 import type { MediaType } from '@/unified'
+import type { Ref } from 'vue'
+import type { SimpleCommand } from '@/unified/modules/commands/types'
+import type { VisibleSprite } from '@webav/av-cliper'
+import type {
+  UnifiedTimelineItemData,
+  VideoMediaConfig,
+  AudioMediaConfig,
+} from '@/unified/timelineitem'
+import type { AudioVisibleSprite, VideoVisibleSprite } from '@/unified/visiblesprite'
+import type { UnifiedTimeRange } from '@/unified/types/timeRange'
+import type { UnifiedTrackType, UnifiedTrackData } from '@/unified/track/TrackTypes'
+import type { UnifiedMediaItemData } from '@/unified/mediaitem/types'
+import type { VideoResolution } from '@/unified/types'
 import {
   AddTimelineItemCommand,
   RemoveTimelineItemCommand,
@@ -12,51 +25,100 @@ import {
   ToggleTrackVisibilityCommand,
   ToggleTrackMuteCommand,
 } from '@/unified/modules/commands/timelineCommands'
-import {
-  BatchAutoArrangeTrackCommand,
-} from '@/unified/modules/commands/batchCommands'
-import type { UnifiedTimelineItemData } from '@/unified/timelineitem'
+import { BatchAutoArrangeTrackCommand } from '@/unified/modules/commands/batchCommands'
 import { TimelineItemQueries } from '@/unified/timelineitem/'
-import type { AudioVisibleSprite, VideoVisibleSprite } from '@/unified/visiblesprite'
-import type { UnifiedTimeRange } from '@/unified/types/timeRange'
-import type { UnifiedTrackType } from '@/unified/track/TrackTypes'
-import {
-  cloneTimelineItem,
-  duplicateTimelineItem,
-} from '@/unified/timelineitem/TimelineItemFactory'
+import { duplicateTimelineItem } from '@/unified/timelineitem/TimelineItemFactory'
 
-// 属性类型枚举
-export type PropertyType =
-  | 'position'
-  | 'size'
-  | 'rotation'
-  | 'opacity'
-  | 'zIndex'
-  | 'duration'
-  | 'playbackRate'
-  | 'volume'
-  | 'audioState'
-  | 'gain'
-  | 'multiple'
+// 模块接口类型定义
+interface UnifiedHistoryModule {
+  executeCommand: (command: SimpleCommand) => Promise<void>
+}
+
+interface UnifiedTimelineModule {
+  timelineItems: Ref<UnifiedTimelineItemData<MediaType>[]>
+  addTimelineItem: (item: UnifiedTimelineItemData<MediaType>) => Promise<void>
+  removeTimelineItem: (timelineItemId: string) => void
+  getTimelineItem: (timelineItemId: string) => UnifiedTimelineItemData<MediaType> | undefined
+  setupTimelineItemSprite: (item: UnifiedTimelineItemData<MediaType>) => Promise<void>
+  updateTimelineItemPosition: (
+    timelineItemId: string,
+    newPositionFrames: number,
+    newTrackId?: string,
+  ) => void
+  updateTimelineItemTransform: (timelineItemId: string, transform: TransformProperties) => void
+  updateTimelineItemPlaybackRate: (timelineItemId: string, newRate: number) => void
+}
+
+interface UnifiedWebavModule {
+  addSprite: (sprite: VisibleSprite) => Promise<boolean>
+  removeSprite: (sprite: VisibleSprite) => boolean
+}
+
+interface UnifiedMediaModule {
+  getMediaItem: (id: string) => UnifiedMediaItemData | undefined
+}
+
+interface UnifiedConfigModule {
+  videoResolution: Ref<VideoResolution>
+}
+
+interface UnifiedTrackModule {
+  tracks: Ref<UnifiedTrackData[]>
+  addTrack: (trackData: UnifiedTrackData, position?: number) => UnifiedTrackData
+  removeTrack: (
+    trackId: string,
+    timelineItems: Ref<UnifiedTimelineItemData<MediaType>[]>,
+    removeTimelineItemCallback?: (timelineItemId: string) => void,
+  ) => void
+  getTrack: (trackId: string) => UnifiedTrackData | undefined
+  renameTrack: (trackId: string, newName: string) => void
+  toggleTrackVisibility: (
+    trackId: string,
+    timelineItems?: Ref<UnifiedTimelineItemData<MediaType>[]>,
+  ) => void
+  toggleTrackMute: (
+    trackId: string,
+    timelineItems?: Ref<UnifiedTimelineItemData<MediaType>[]>,
+  ) => void
+}
+
+// 变换属性类型定义
+interface TransformProperties {
+  x?: number
+  y?: number
+  width?: number
+  height?: number
+  rotation?: number
+  opacity?: number
+  zIndex?: number
+  duration?: number // 时长（帧数）
+  playbackRate?: number // 倍速
+  volume?: number // 音量（0-1之间）
+  isMuted?: boolean // 静音状态
+  gain?: number // 音频增益（dB）
+}
 
 /**
  * 历史记录操作相关方法
  * 包括时间轴项目和轨道相关的历史记录操作方法
  */
 export function createHistoryOperations(
-  unifiedHistoryModule: any,
-  unifiedTimelineModule: any,
-  unifiedWebavModule: any,
-  unifiedMediaModule: any,
-  unifiedConfigModule: any,
-  unifiedTrackModule?: any,
+  unifiedHistoryModule: UnifiedHistoryModule,
+  unifiedTimelineModule: UnifiedTimelineModule,
+  unifiedWebavModule: UnifiedWebavModule,
+  unifiedMediaModule: UnifiedMediaModule,
+  unifiedConfigModule: UnifiedConfigModule,
+  unifiedTrackModule?: UnifiedTrackModule,
 ) {
   // ==================== 辅助函数 ====================
 
   /**
    * 检查变换属性是否有实际变化
    */
-  function checkTransformChanges(oldTransform: any, newTransform: any): boolean {
+  function checkTransformChanges(
+    oldTransform: TransformProperties,
+    newTransform: TransformProperties,
+  ): boolean {
     // 检查位置变化
     if (
       (newTransform.x !== undefined && oldTransform.x !== undefined) ||
@@ -139,32 +201,6 @@ export function createHistoryOperations(
     }
 
     return false
-  }
-
-  /**
-   * 确定属性类型
-   */
-  function determinePropertyType(transform: any): PropertyType {
-    const changedProperties = []
-
-    if (transform.x !== undefined || transform.y !== undefined) changedProperties.push('position')
-    if (transform.width !== undefined || transform.height !== undefined)
-      changedProperties.push('size')
-    if (transform.rotation !== undefined) changedProperties.push('rotation')
-    if (transform.opacity !== undefined) changedProperties.push('opacity')
-    if (transform.zIndex !== undefined) changedProperties.push('zIndex')
-    if (transform.duration !== undefined) changedProperties.push('duration')
-    if (transform.playbackRate !== undefined) changedProperties.push('playbackRate')
-    if (transform.volume !== undefined) changedProperties.push('volume')
-    if (transform.isMuted !== undefined) changedProperties.push('audioState')
-    if (transform.gain !== undefined) changedProperties.push('gain')
-
-    // 如果同时有音量和静音状态变化，归类为audioState
-    if (transform.volume !== undefined && transform.isMuted !== undefined) {
-      return 'audioState'
-    }
-
-    return changedProperties.length === 1 ? (changedProperties[0] as PropertyType) : 'multiple'
   }
 
   // ==================== 时间轴项目历史记录方法 ====================
@@ -279,20 +315,7 @@ export function createHistoryOperations(
    */
   async function updateTimelineItemTransformWithHistory(
     timelineItemId: string,
-    newTransform: {
-      x?: number
-      y?: number
-      width?: number
-      height?: number
-      rotation?: number
-      opacity?: number
-      zIndex?: number
-      duration?: number // 时长（帧数）
-      playbackRate?: number // 倍速
-      volume?: number // 音量（0-1之间）
-      isMuted?: boolean // 静音状态
-      gain?: number // 音频增益（dB）
-    },
+    newTransform: TransformProperties,
   ) {
     // 获取要更新的时间轴项目
     const timelineItem = unifiedTimelineModule.getTimelineItem(timelineItemId)
@@ -302,11 +325,11 @@ export function createHistoryOperations(
     }
 
     // 获取当前的变换属性（类型安全版本）
-    const oldTransform: typeof newTransform = {}
+    const oldTransform: TransformProperties = {}
 
     // 检查是否具有视觉属性
     if (TimelineItemQueries.hasVisualProperties(timelineItem)) {
-      const config = timelineItem.config as any
+      const config = timelineItem.config as VideoMediaConfig
       if (newTransform.x !== undefined) {
         oldTransform.x = config.x
       }
@@ -328,7 +351,7 @@ export function createHistoryOperations(
     }
 
     if (newTransform.zIndex !== undefined) {
-      const config = timelineItem.config as any
+      const config = timelineItem.config as VideoMediaConfig
       oldTransform.zIndex = config.zIndex
     }
 
@@ -358,7 +381,7 @@ export function createHistoryOperations(
 
     // 检查是否具有音频属性
     if (TimelineItemQueries.hasAudioProperties(timelineItem)) {
-      const config = timelineItem.config as any
+      const config = timelineItem.config as AudioMediaConfig
       if (newTransform.volume !== undefined) {
         oldTransform.volume = config.volume ?? 1
       }
@@ -369,7 +392,7 @@ export function createHistoryOperations(
 
     if (timelineItem.mediaType === 'audio' && newTransform.gain !== undefined) {
       // 获取当前增益（仅对音频有效）
-      const config = timelineItem.config as any
+      const config = timelineItem.config as AudioMediaConfig
       oldTransform.gain = config.gain ?? 0
     }
 
@@ -380,12 +403,8 @@ export function createHistoryOperations(
       return
     }
 
-    // 确定属性类型
-    const propertyType = determinePropertyType(newTransform)
-
     const command = new UpdateTransformCommand(
       timelineItemId,
-      propertyType,
       oldTransform,
       newTransform,
       {
@@ -492,20 +511,17 @@ export function createHistoryOperations(
 
   /**
    * 带历史记录的调整时间轴项目大小方法
-   * 支持两种调用方式：
-   * 1. 新架构方式：resizeTimelineItemWithHistory(timelineItemId, newTimeRange)
-   * 2. 兼容旧调用方式：resizeTimelineItemWithHistory(timelineItemId, newDurationFrames, resizeFromEnd)
+   * @param timelineItemId 要调整的时间轴项目ID
+   * @param newTimeRange 新的时间范围
    */
   async function resizeTimelineItemWithHistory(
     timelineItemId: string,
-    newTimeRangeOrDuration: UnifiedTimeRange | number,
-    resizeFromEnd?: boolean,
+    newTimeRange: UnifiedTimeRange,
   ): Promise<boolean> {
     try {
       console.log('🔧 [UnifiedStore] 调整时间轴项目大小:', {
         timelineItemId,
-        newTimeRangeOrDuration,
-        resizeFromEnd,
+        newTimeRange,
       })
 
       // 获取当前项目
@@ -513,37 +529,6 @@ export function createHistoryOperations(
       if (!currentItem) {
         console.error('❌ [UnifiedStore] 时间轴项目不存在:', timelineItemId)
         return false
-      }
-
-      let newTimeRange: UnifiedTimeRange
-
-      // 判断调用方式
-      if (typeof newTimeRangeOrDuration === 'number') {
-        // 兼容旧调用方式：传入的是 newDurationFrames
-        const newDurationFrames = newTimeRangeOrDuration
-        const currentTimeRange = currentItem.timeRange
-
-        if (resizeFromEnd === false) {
-          // 从左侧调整：保持结束时间不变，调整开始时间
-          const newStartTime = currentTimeRange.timelineEndTime - newDurationFrames
-          newTimeRange = {
-            timelineStartTime: Math.max(0, newStartTime),
-            timelineEndTime: currentTimeRange.timelineEndTime,
-            clipStartTime: currentTimeRange.clipStartTime,
-            clipEndTime: currentTimeRange.clipEndTime,
-          }
-        } else {
-          // 从右侧调整（默认）：保持开始时间不变，调整结束时间
-          newTimeRange = {
-            timelineStartTime: currentTimeRange.timelineStartTime,
-            timelineEndTime: currentTimeRange.timelineStartTime + newDurationFrames,
-            clipStartTime: currentTimeRange.clipStartTime,
-            clipEndTime: currentTimeRange.clipEndTime,
-          }
-        }
-      } else {
-        // 新架构方式：直接传入 newTimeRange
-        newTimeRange = newTimeRangeOrDuration
       }
 
       // 检查时间范围是否有变化
@@ -585,6 +570,10 @@ export function createHistoryOperations(
    * @param position 插入位置（可选）
    */
   async function addTrackWithHistory(type: UnifiedTrackType = 'video', position?: number) {
+    if (!unifiedTrackModule) {
+      console.warn('⚠️ 轨道模块未初始化，无法添加轨道')
+      return
+    }
     const command = new AddTrackCommand(type, position, {
       addTrack: unifiedTrackModule.addTrack,
       removeTrack: unifiedTrackModule.removeTrack,
@@ -598,6 +587,10 @@ export function createHistoryOperations(
    * @param trackId 要删除的轨道ID
    */
   async function removeTrackWithHistory(trackId: string) {
+    if (!unifiedTrackModule) {
+      console.warn('⚠️ 轨道模块未初始化，无法删除轨道')
+      return
+    }
     // 获取要删除的轨道
     const track = unifiedTrackModule.getTrack(trackId)
     if (!track) {
@@ -609,7 +602,8 @@ export function createHistoryOperations(
       trackId,
       {
         addTrack: unifiedTrackModule.addTrack,
-        removeTrack: unifiedTrackModule.removeTrack,
+        removeTrack: (id: string) =>
+          unifiedTrackModule!.removeTrack(id, unifiedTimelineModule.timelineItems),
         getTrack: unifiedTrackModule.getTrack,
         tracks: unifiedTrackModule.tracks,
       },
@@ -640,6 +634,10 @@ export function createHistoryOperations(
    * @param newName 新名称
    */
   async function renameTrackWithHistory(trackId: string, newName: string) {
+    if (!unifiedTrackModule) {
+      console.warn('⚠️ 轨道模块未初始化，无法重命名轨道')
+      return
+    }
     // 获取要重命名的轨道
     const track = unifiedTrackModule.getTrack(trackId)
     if (!track) {
@@ -662,9 +660,13 @@ export function createHistoryOperations(
    * @param trackId 要排列的轨道ID
    */
   async function autoArrangeTrackWithHistory(trackId: string) {
+    if (!unifiedTrackModule) {
+      console.warn('⚠️ 轨道模块未初始化，无法自动排列轨道')
+      return
+    }
     const command = new BatchAutoArrangeTrackCommand(
       trackId,
-      unifiedTimelineModule.timelineItems.value.filter((item: any) => item.trackId === trackId),
+      unifiedTimelineModule.timelineItems.value.filter((item) => item.trackId === trackId),
       {
         getTimelineItem: unifiedTimelineModule.getTimelineItem,
         updateTimelineItemPosition: unifiedTimelineModule.updateTimelineItemPosition,
@@ -684,6 +686,10 @@ export function createHistoryOperations(
    * @param trackId 要切换的轨道ID
    */
   async function toggleTrackVisibilityWithHistory(trackId: string) {
+    if (!unifiedTrackModule) {
+      console.warn('⚠️ 轨道模块未初始化，无法切换轨道可见性')
+      return
+    }
     // 获取要切换的轨道
     const track = unifiedTrackModule.getTrack(trackId)
     if (!track) {
@@ -695,7 +701,8 @@ export function createHistoryOperations(
       trackId,
       {
         getTrack: unifiedTrackModule.getTrack,
-        toggleTrackVisibility: unifiedTrackModule.toggleTrackVisibility,
+        toggleTrackVisibility: (id: string) =>
+          unifiedTrackModule!.toggleTrackVisibility(id, unifiedTimelineModule.timelineItems),
       },
       {
         timelineItems: unifiedTimelineModule.timelineItems,
@@ -709,6 +716,10 @@ export function createHistoryOperations(
    * @param trackId 要切换的轨道ID
    */
   async function toggleTrackMuteWithHistory(trackId: string) {
+    if (!unifiedTrackModule) {
+      console.warn('⚠️ 轨道模块未初始化，无法切换轨道静音')
+      return
+    }
     // 获取要切换的轨道
     const track = unifiedTrackModule.getTrack(trackId)
     if (!track) {
@@ -720,7 +731,8 @@ export function createHistoryOperations(
       trackId,
       {
         getTrack: unifiedTrackModule.getTrack,
-        toggleTrackMute: unifiedTrackModule.toggleTrackMute,
+        toggleTrackMute: (id: string) =>
+          unifiedTrackModule!.toggleTrackMute(id, unifiedTimelineModule.timelineItems),
       },
       {
         timelineItems: unifiedTimelineModule.timelineItems,
@@ -744,4 +756,15 @@ export function createHistoryOperations(
     toggleTrackVisibilityWithHistory,
     toggleTrackMuteWithHistory,
   }
+}
+
+// 导出类型定义供其他模块使用
+export type {
+  UnifiedHistoryModule,
+  UnifiedTimelineModule,
+  UnifiedWebavModule,
+  UnifiedMediaModule,
+  UnifiedConfigModule,
+  UnifiedTrackModule,
+  TransformProperties,
 }
