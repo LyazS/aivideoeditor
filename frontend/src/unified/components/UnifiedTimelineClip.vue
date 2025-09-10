@@ -14,7 +14,7 @@
   >
     <!-- 左侧调整把手 -->
     <div
-      v-if="data.timelineStatus === 'ready'"
+      v-if="data.timelineStatus === 'ready' && isSelected && !isMultiSelected"
       class="resize-handle resize-handle-left"
       @mousedown.stop="handleResizeStart('left', $event)"
     ></div>
@@ -31,7 +31,7 @@
 
     <!-- 右侧调整把手 -->
     <div
-      v-if="data.timelineStatus === 'ready'"
+      v-if="data.timelineStatus === 'ready' && isSelected && !isMultiSelected"
       class="resize-handle resize-handle-right"
       @mousedown.stop="handleResizeStart('right', $event)"
     ></div>
@@ -112,6 +112,7 @@ const emit = defineEmits<{
 const templateProps = computed<ContentTemplateProps>(() => ({
   data: props.data,
   isSelected: props.isSelected,
+  isMultiSelected: props.isMultiSelected,
   currentFrame: props.currentFrame,
   trackHeight: props.trackHeight,
   timelineWidth: props.timelineWidth,

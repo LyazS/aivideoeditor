@@ -28,3 +28,6 @@ export { useTimelineTimeScale } from './useTimelineTimeScale'
 
 // 重新导出 useTimelineWheelHandler 函数
 export { useTimelineWheelHandler } from './useTimelineWheelHandler'
+
+// 重新导出历史记录操作方法
+export { createHistoryOperations } from './useHistoryOperations'

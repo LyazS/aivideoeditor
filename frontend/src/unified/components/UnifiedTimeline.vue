@@ -422,6 +422,7 @@ function renderTimelineItem(item: UnifiedTimelineItemData | any, track: any) {
     // UnifiedTimelineClip 需要的核心属性
     data: item,
     isSelected: unifiedStore.isTimelineItemSelected(item.id),
+    isMultiSelected: unifiedStore.isMultiSelectMode, // 传入是否多选状态
     isDragging: false, // 默认非拖拽状态，组件内部维护实际的拖拽状态
     isResizing: false, // 默认非调整大小状态，组件内部维护实际的调整大小状态
     currentFrame: unifiedStore.currentFrame,
