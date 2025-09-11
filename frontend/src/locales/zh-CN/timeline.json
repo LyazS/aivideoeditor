@@ -1,0 +1,62 @@
+{
+  "timeline": {
+    "title": "时间轴",
+    "controls": {
+      "playhead": "播放头",
+      "currentTime": "当前时间",
+      "duration": "持续时间",
+      "frameRate": "帧率",
+      "timecode": "时间码",
+      "snapping": "吸附",
+      "ruler": "标尺",
+      "grid": "网格",
+      "markers": "标记",
+      "zoom": "缩放级别"
+    },
+    "operations": {
+      "cut": "剪切",
+      "copy": "复制",
+      "paste": "粘贴",
+      "delete": "删除",
+      "duplicate": "复制",
+      "split": "分割",
+      "trim": "修剪",
+      "extend": "延长",
+      "move": "移动",
+      "align": "对齐",
+      "group": "编组",
+      "ungroup": "取消编组",
+      "nudgeLeft": "向左微调",
+      "nudgeRight": "向右微调"
+    },
+    "tracks": {
+      "addVideoTrack": "添加视频轨道",
+      "addAudioTrack": "添加音频轨道",
+      "addTextTrack": "添加文字轨道",
+      "renameTrack": "重命名轨道",
+      "deleteTrack": "删除轨道",
+      "muteTrack": "静音轨道",
+      "soloTrack": "独奏轨道",
+      "lockTrack": "锁定轨道",
+      "hideTrack": "隐藏轨道",
+      "showTrack": "显示轨道",
+      "trackHeight": "轨道高度",
+      "collapseTrack": "折叠轨道",
+      "expandTrack": "展开轨道"
+    },
+    "clips": {
+      "videoClip": "视频片段",
+      "audioClip": "音频片段",
+      "textClip": "文字片段",
+      "imageClip": "图片片段",
+      "transition": "转场",
+      "effect": "效果",
+      "properties": "片段属性",
+      "duration": "片段时长",
+      "startTime": "开始时间",
+      "endTime": "结束时间",
+      "inPoint": "入点",
+      "outPoint": "出点"
+    }
+  }
+}

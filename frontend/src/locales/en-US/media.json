@@ -1,0 +1,79 @@
+{
+  "media": {
+    "title": "Media Library",
+    "library": {
+      "allMedia": "All Media",
+      "videos": "Videos",
+      "audio": "Audio",
+      "images": "Images",
+      "text": "Text",
+      "recent": "Recently Added",
+      "favorites": "Favorites",
+      "imported": "Imported",
+      "collections": "Collections"
+    },
+    "actions": {
+      "importFiles": "Import Files",
+      "importFolder": "Import Folder",
+      "scanFolder": "Scan Folder",
+      "refresh": "Refresh Library",
+      "createCollection": "Create Collection",
+      "delete": "Delete Media",
+      "rename": "Rename",
+      "addToFavorites": "Add to Favorites",
+      "removeFromFavorites": "Remove from Favorites",
+      "showInExplorer": "Show in Explorer",
+      "properties": "Properties"
+    },
+    "filters": {
+      "filterByType": "Filter by Type",
+      "filterByDate": "Filter by Date",
+      "filterBySize": "Filter by Size",
+      "filterByTags": "Filter by Tags",
+      "sortBy": "Sort By",
+      "name": "Name",
+      "date": "Date",
+      "size": "Size",
+      "type": "Type",
+      "ascending": "Ascending",
+      "descending": "Descending"
+    },
+    "info": {
+      "name": "Name",
+      "type": "Type",
+      "size": "Size",
+      "duration": "Duration",
+      "dimensions": "Dimensions",
+      "frameRate": "Frame Rate",
+      "bitrate": "Bitrate",
+      "codec": "Codec",
+      "sampleRate": "Sample Rate",
+      "channels": "Channels",
+      "created": "Created",
+      "modified": "Modified",
+      "path": "Path"
+    },
+    "preview": {
+      "preview": "Preview",
+      "play": "Play",
+      "pause": "Pause",
+      "stop": "Stop",
+      "volume": "Volume",
+      "mute": "Mute",
+      "fullscreen": "Fullscreen",
+      "fit": "Fit to Screen",
+      "actualSize": "Actual Size",
+      "previous": "Previous",
+      "next": "Next"
+    },
+    "status": {
+      "importing": "Importing...",
+      "processing": "Processing...",
+      "ready": "Ready",
+      "error": "Error",
+      "missing": "File Missing",
+      "loading": "Loading...",
+      "generatingThumbnails": "Generating Thumbnails..."
+    }
+  }
+}

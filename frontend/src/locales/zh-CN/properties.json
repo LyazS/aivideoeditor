@@ -1,0 +1,87 @@
+{
+  "properties": {
+    "title": "属性面板",
+    "transform": {
+      "title": "变换",
+      "position": {
+        "x": "位置 X",
+        "y": "位置 Y"
+      },
+      "rotation": "旋转",
+      "scale": {
+        "x": "缩放 X",
+        "y": "缩放 Y",
+        "uniform": "等比缩放"
+      },
+      "anchor": {
+        "x": "锚点 X",
+        "y": "锚点 Y"
+      },
+      "opacity": "透明度",
+      "blendMode": "混合模式"
+    },
+    "video": {
+      "title": "视频属性",
+      "speed": "播放速度",
+      "reverse": "反向播放",
+      "loop": "循环播放",
+      "volume": "音量",
+      "mute": "静音",
+      "fadeIn": "淡入",
+      "fadeOut": "淡出",
+      "startTime": "开始时间",
+      "endTime": "结束时间",
+      "duration": "持续时间"
+    },
+    "audio": {
+      "title": "音频属性",
+      "volume": "音量",
+      "pan": "声像",
+      "mute": "静音",
+      "solo": "独奏",
+      "fadeIn": "淡入",
+      "fadeOut": "淡出",
+      "equalizer": "均衡器",
+      "effects": "音频效果"
+    },
+    "text": {
+      "title": "文字属性",
+      "content": "文字内容",
+      "fontFamily": "字体",
+      "fontSize": "字体大小",
+      "fontWeight": "字体粗细",
+      "color": "文字颜色",
+      "backgroundColor": "背景颜色",
+      "alignment": "文字对齐",
+      "lineHeight": "行高",
+      "letterSpacing": "字间距",
+      "textDecoration": "文字装饰",
+      "textShadow": "文字阴影"
+    },
+    "effects": {
+      "title": "效果",
+      "addEffect": "添加效果",
+      "removeEffect": "移除效果",
+      "adjustments": "调整",
+      "filters": "滤镜",
+      "transitions": "转场",
+      "blur": "模糊",
+      "brightness": "亮度",
+      "contrast": "对比度",
+      "saturation": "饱和度",
+      "hue": "色相",
+      "gamma": "伽马"
+    },
+    "keyframes": {
+      "title": "关键帧",
+      "addKeyframe": "添加关键帧",
+      "removeKeyframe": "移除关键帧",
+      "clearKeyframes": "清除关键帧",
+      "easing": "缓动",
+      "linear": "线性",
+      "easeIn": "缓入",
+      "easeOut": "缓出",
+      "easeInOut": "缓入缓出"
+    }
+  }
+}

@@ -1,0 +1,62 @@
+{
+  "timeline": {
+    "title": "Timeline",
+    "controls": {
+      "playhead": "Playhead",
+      "currentTime": "Current Time",
+      "duration": "Duration",
+      "frameRate": "Frame Rate",
+      "timecode": "Timecode",
+      "snapping": "Snapping",
+      "ruler": "Ruler",
+      "grid": "Grid",
+      "markers": "Markers",
+      "zoom": "Zoom Level"
+    },
+    "operations": {
+      "cut": "Cut",
+      "copy": "Copy",
+      "paste": "Paste",
+      "delete": "Delete",
+      "duplicate": "Duplicate",
+      "split": "Split",
+      "trim": "Trim",
+      "extend": "Extend",
+      "move": "Move",
+      "align": "Align",
+      "group": "Group",
+      "ungroup": "Ungroup",
+      "nudgeLeft": "Nudge Left",
+      "nudgeRight": "Nudge Right"
+    },
+    "tracks": {
+      "addVideoTrack": "Add Video Track",
+      "addAudioTrack": "Add Audio Track",
+      "addTextTrack": "Add Text Track",
+      "renameTrack": "Rename Track",
+      "deleteTrack": "Delete Track",
+      "muteTrack": "Mute Track",
+      "soloTrack": "Solo Track",
+      "lockTrack": "Lock Track",
+      "hideTrack": "Hide Track",
+      "showTrack": "Show Track",
+      "trackHeight": "Track Height",
+      "collapseTrack": "Collapse Track",
+      "expandTrack": "Expand Track"
+    },
+    "clips": {
+      "videoClip": "Video Clip",
+      "audioClip": "Audio Clip",
+      "textClip": "Text Clip",
+      "imageClip": "Image Clip",
+      "transition": "Transition",
+      "effect": "Effect",
+      "properties": "Clip Properties",
+      "duration": "Clip Duration",
+      "startTime": "Start Time",
+      "endTime": "End Time",
+      "inPoint": "In Point",
+      "outPoint": "Out Point"
+    }
+  }
+}

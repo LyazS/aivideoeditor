@@ -1,0 +1,54 @@
+{
+  "editor": {
+    "title": "Video Editor",
+    "timeline": {
+      "addTrack": "Add Track",
+      "videoTrack": "Video Track",
+      "audioTrack": "Audio Track",
+      "textTrack": "Text Track",
+      "deleteTrack": "Delete Track",
+      "muteTrack": "Mute Track",
+      "lockTrack": "Lock Track",
+      "trackName": "Track Name",
+      "trackSettings": "Track Settings"
+    },
+    "toolbar": {
+      "play": "Play",
+      "pause": "Pause",
+      "stop": "Stop",
+      "rewind": "Rewind",
+      "fastForward": "Fast Forward",
+      "loop": "Loop",
+      "mute": "Mute",
+      "volume": "Volume",
+      "zoomIn": "Zoom In",
+      "zoomOut": "Zoom Out",
+      "fitToScreen": "Fit to Screen",
+      "actualSize": "Actual Size"
+    },
+    "properties": {
+      "transform": "Transform",
+      "position": "Position",
+      "rotation": "Rotation",
+      "scale": "Scale",
+      "opacity": "Opacity",
+      "blendMode": "Blend Mode",
+      "effects": "Effects",
+      "filters": "Filters",
+      "animation": "Animation",
+      "keyframes": "Keyframes"
+    },
+    "media": {
+      "importMedia": "Import Media",
+      "dragDrop": "Drag and drop files here",
+      "supportedFormats": "Supported formats:",
+      "videoFiles": "Video files",
+      "audioFiles": "Audio files",
+      "imageFiles": "Image files",
+      "textFiles": "Text files",
+      "recent": "Recent",
+      "favorites": "Favorites",
+      "searchMedia": "Search media..."
+    }
+  }
+}

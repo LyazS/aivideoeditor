@@ -1,0 +1,87 @@
+{
+  "properties": {
+    "title": "Properties",
+    "transform": {
+      "title": "Transform",
+      "position": {
+        "x": "Position X",
+        "y": "Position Y"
+      },
+      "rotation": "Rotation",
+      "scale": {
+        "x": "Scale X",
+        "y": "Scale Y",
+        "uniform": "Uniform Scale"
+      },
+      "anchor": {
+        "x": "Anchor X",
+        "y": "Anchor Y"
+      },
+      "opacity": "Opacity",
+      "blendMode": "Blend Mode"
+    },
+    "video": {
+      "title": "Video Properties",
+      "speed": "Playback Speed",
+      "reverse": "Reverse Playback",
+      "loop": "Loop Playback",
+      "volume": "Volume",
+      "mute": "Mute",
+      "fadeIn": "Fade In",
+      "fadeOut": "Fade Out",
+      "startTime": "Start Time",
+      "endTime": "End Time",
+      "duration": "Duration"
+    },
+    "audio": {
+      "title": "Audio Properties",
+      "volume": "Volume",
+      "pan": "Pan",
+      "mute": "Mute",
+      "solo": "Solo",
+      "fadeIn": "Fade In",
+      "fadeOut": "Fade Out",
+      "equalizer": "Equalizer",
+      "effects": "Audio Effects"
+    },
+    "text": {
+      "title": "Text Properties",
+      "content": "Text Content",
+      "fontFamily": "Font Family",
+      "fontSize": "Font Size",
+      "fontWeight": "Font Weight",
+      "color": "Text Color",
+      "backgroundColor": "Background Color",
+      "alignment": "Text Alignment",
+      "lineHeight": "Line Height",
+      "letterSpacing": "Letter Spacing",
+      "textDecoration": "Text Decoration",
+      "textShadow": "Text Shadow"
+    },
+    "effects": {
+      "title": "Effects",
+      "addEffect": "Add Effect",
+      "removeEffect": "Remove Effect",
+      "adjustments": "Adjustments",
+      "filters": "Filters",
+      "transitions": "Transitions",
+      "blur": "Blur",
+      "brightness": "Brightness",
+      "contrast": "Contrast",
+      "saturation": "Saturation",
+      "hue": "Hue",
+      "gamma": "Gamma"
+    },
+    "keyframes": {
+      "title": "Keyframes",
+      "addKeyframe": "Add Keyframe",
+      "removeKeyframe": "Remove Keyframe",
+      "clearKeyframes": "Clear Keyframes",
+      "easing": "Easing",
+      "linear": "Linear",
+      "easeIn": "Ease In",
+      "easeOut": "Ease Out",
+      "easeInOut": "Ease In Out"
+    }
+  }
+}
