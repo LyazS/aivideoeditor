@@ -1,4 +1,3 @@
-
 import type { MediaType } from '@/unified'
 import type { Ref } from 'vue'
 import type { SimpleCommand } from '@/unified/modules/commands/types'
@@ -97,6 +96,15 @@ interface UnifiedTrackModule {
   ) => void
 }
 
+interface UnifiedSelectionModule {
+  selectedTimelineItemIds: Ref<Set<string>>
+  selectTimelineItems: (
+    itemIds: string[],
+    mode?: 'replace' | 'toggle',
+    withHistory?: boolean,
+  ) => void
+}
+
 // 变换属性类型定义
 interface TransformProperties {
   x?: number
@@ -137,7 +145,8 @@ export function createHistoryOperations(
   unifiedWebavModule: UnifiedWebavModule,
   unifiedMediaModule: UnifiedMediaModule,
   unifiedConfigModule: UnifiedConfigModule,
-  unifiedTrackModule?: UnifiedTrackModule,
+  unifiedTrackModule: UnifiedTrackModule,
+  unifiedSelectionModule: UnifiedSelectionModule,
 ) {
   // ==================== 辅助函数 ====================
 
@@ -599,10 +608,6 @@ export function createHistoryOperations(
    * @param position 插入位置（可选）
    */
   async function addTrackWithHistory(type: UnifiedTrackType = 'video', position?: number) {
-    if (!unifiedTrackModule) {
-      console.warn('⚠️ 轨道模块未初始化，无法添加轨道')
-      return
-    }
     const command = new AddTrackCommand(type, position, {
       addTrack: unifiedTrackModule.addTrack,
       removeTrack: unifiedTrackModule.removeTrack,
@@ -616,10 +621,6 @@ export function createHistoryOperations(
    * @param trackId 要删除的轨道ID
    */
   async function removeTrackWithHistory(trackId: string) {
-    if (!unifiedTrackModule) {
-      console.warn('⚠️ 轨道模块未初始化，无法删除轨道')
-      return
-    }
     // 获取要删除的轨道
     const track = unifiedTrackModule.getTrack(trackId)
     if (!track) {
@@ -663,10 +664,6 @@ export function createHistoryOperations(
    * @param newName 新名称
    */
   async function renameTrackWithHistory(trackId: string, newName: string) {
-    if (!unifiedTrackModule) {
-      console.warn('⚠️ 轨道模块未初始化，无法重命名轨道')
-      return
-    }
     // 获取要重命名的轨道
     const track = unifiedTrackModule.getTrack(trackId)
     if (!track) {
@@ -689,10 +686,6 @@ export function createHistoryOperations(
    * @param trackId 要排列的轨道ID
    */
   async function autoArrangeTrackWithHistory(trackId: string) {
-    if (!unifiedTrackModule) {
-      console.warn('⚠️ 轨道模块未初始化，无法自动排列轨道')
-      return
-    }
     const command = new BatchAutoArrangeTrackCommand(
       trackId,
       unifiedTimelineModule.timelineItems.value.filter((item) => item.trackId === trackId),
@@ -715,10 +708,6 @@ export function createHistoryOperations(
    * @param trackId 要切换的轨道ID
    */
   async function toggleTrackVisibilityWithHistory(trackId: string) {
-    if (!unifiedTrackModule) {
-      console.warn('⚠️ 轨道模块未初始化，无法切换轨道可见性')
-      return
-    }
     // 获取要切换的轨道
     const track = unifiedTrackModule.getTrack(trackId)
     if (!track) {
@@ -745,10 +734,6 @@ export function createHistoryOperations(
    * @param trackId 要切换的轨道ID
    */
   async function toggleTrackMuteWithHistory(trackId: string) {
-    if (!unifiedTrackModule) {
-      console.warn('⚠️ 轨道模块未初始化，无法切换轨道静音')
-      return
-    }
     // 获取要切换的轨道
     const track = unifiedTrackModule.getTrack(trackId)
     if (!track) {
@@ -807,7 +792,10 @@ export function createHistoryOperations(
         newText.trim(),
         newStyle,
         {
-          getTimelineItem: (id: string) => unifiedTimelineModule.getTimelineItem(id) as UnifiedTimelineItemData<'text'> | undefined,
+          getTimelineItem: (id: string) =>
+            unifiedTimelineModule.getTimelineItem(id) as
+              | UnifiedTimelineItemData<'text'>
+              | undefined,
           setupBidirectionalSync: unifiedTimelineModule.setupTimelineItemSprite,
         },
         {
@@ -853,7 +841,7 @@ export function createHistoryOperations(
     }
 
     // 检查样式是否有实际变化
-    const hasChanges = Object.keys(newStyle).some(key => {
+    const hasChanges = Object.keys(newStyle).some((key) => {
       const styleKey = key as keyof TextStyleConfig
       return newStyle[styleKey] !== currentStyle[styleKey]
     })
@@ -867,7 +855,9 @@ export function createHistoryOperations(
       console.log('🔄 [useHistoryOperations] 更新文本样式:', {
         timelineItemId,
         styleChanges: Object.keys(newStyle),
-        currentText: timelineItem.config.text.substring(0, 20) + (timelineItem.config.text.length > 20 ? '...' : ''),
+        currentText:
+          timelineItem.config.text.substring(0, 20) +
+          (timelineItem.config.text.length > 20 ? '...' : ''),
       })
 
       // 创建更新文本命令（保持文本内容不变，只更新样式）
@@ -876,7 +866,10 @@ export function createHistoryOperations(
         timelineItem.config.text, // 保持文本内容不变
         newStyle,
         {
-          getTimelineItem: (id: string) => unifiedTimelineModule.getTimelineItem(id) as UnifiedTimelineItemData<'text'> | undefined,
+          getTimelineItem: (id: string) =>
+            unifiedTimelineModule.getTimelineItem(id) as
+              | UnifiedTimelineItemData<'text'>
+              | undefined,
           setupBidirectionalSync: unifiedTimelineModule.setupTimelineItemSprite,
         },
         {
@@ -907,19 +900,13 @@ export function createHistoryOperations(
   async function selectTimelineItemsWithHistory(
     itemIds: string[],
     mode: 'replace' | 'toggle' = 'replace',
-    selectionModule: {
-      selectedTimelineItemIds: { value: Set<string> }
-      selectTimelineItems: (itemIds: string[], mode: 'replace' | 'toggle', withHistory?: boolean) => void
-    },
-    getTimelineItem: (id: string) => UnifiedTimelineItemData | undefined,
-    getMediaItem: (id: string) => UnifiedMediaItemData | undefined,
   ) {
     // 防抖机制：避免短时间内重复执行相同的选择操作
     // 使用模块外部变量来维护防抖状态
     const now = Date.now()
 
     // 检查是否有实际的选择变化
-    const currentSelection = new Set(selectionModule.selectedTimelineItemIds.value)
+    const currentSelection = new Set(unifiedSelectionModule.selectedTimelineItemIds.value)
     const newSelection = calculateNewSelection(itemIds, mode, currentSelection)
 
     // 如果选择状态没有变化，不创建历史记录
@@ -940,9 +927,9 @@ export function createHistoryOperations(
       const command = new SelectTimelineItemsCommand(
         itemIds,
         mode,
-        selectionModule,
-        { getTimelineItem },
-        { getMediaItem },
+        unifiedSelectionModule,
+        unifiedTimelineModule,
+        unifiedMediaModule,
       )
 
       // 执行命令（带历史记录）
@@ -997,10 +984,7 @@ export function createHistoryOperations(
    * @param timelineItemId 时间轴项目ID
    * @param frame 帧数
    */
-  async function createKeyframeWithHistory(
-    timelineItemId: string,
-    frame: number,
-  ) {
+  async function createKeyframeWithHistory(timelineItemId: string, frame: number) {
     try {
       console.log('🎬 [useHistoryOperations] 创建关键帧:', { timelineItemId, frame })
 
@@ -1037,10 +1021,7 @@ export function createHistoryOperations(
    * @param timelineItemId 时间轴项目ID
    * @param frame 帧数
    */
-  async function deleteKeyframeWithHistory(
-    timelineItemId: string,
-    frame: number,
-  ) {
+  async function deleteKeyframeWithHistory(timelineItemId: string, frame: number) {
     try {
       console.log('🎬 [useHistoryOperations] 删除关键帧:', { timelineItemId, frame })
 
@@ -1085,7 +1066,12 @@ export function createHistoryOperations(
     value: any,
   ) {
     try {
-      console.log('🎬 [useHistoryOperations] 更新关键帧属性:', { timelineItemId, frame, property, value })
+      console.log('🎬 [useHistoryOperations] 更新关键帧属性:', {
+        timelineItemId,
+        frame,
+        property,
+        value,
+      })
 
       // 创建更新属性命令
       const command = new UpdatePropertyCommand(
@@ -1120,9 +1106,7 @@ export function createHistoryOperations(
    * 带历史记录的清除所有关键帧方法
    * @param timelineItemId 时间轴项目ID
    */
-  async function clearAllKeyframesWithHistory(
-    timelineItemId: string,
-  ) {
+  async function clearAllKeyframesWithHistory(timelineItemId: string) {
     try {
       console.log('🎬 [useHistoryOperations] 清除所有关键帧:', { timelineItemId })
 
@@ -1157,10 +1141,7 @@ export function createHistoryOperations(
    * @param timelineItemId 时间轴项目ID
    * @param frame 帧数
    */
-  async function toggleKeyframeWithHistory(
-    timelineItemId: string,
-    frame: number,
-  ) {
+  async function toggleKeyframeWithHistory(timelineItemId: string, frame: number) {
     try {
       console.log('🎬 [useHistoryOperations] 切换关键帧:', { timelineItemId, frame })
 

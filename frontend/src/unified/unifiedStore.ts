@@ -205,6 +205,7 @@ export const useUnifiedStore = defineStore('unified', () => {
     unifiedMediaModule,
     unifiedConfigModule,
     unifiedTrackModule,
+    unifiedSelectionModule,
   )
 
   /**
@@ -322,18 +323,7 @@ export const useUnifiedStore = defineStore('unified', () => {
     toggleTrackMuteWithHistory: historyOperations.toggleTrackMuteWithHistory,
     updateTextContentWithHistory: historyOperations.updateTextContentWithHistory,
     updateTextStyleWithHistory: historyOperations.updateTextStyleWithHistory,
-    selectTimelineItemsWithHistory: (itemIds: string[], mode?: 'replace' | 'toggle') => {
-      return historyOperations.selectTimelineItemsWithHistory(
-        itemIds,
-        mode,
-        {
-          selectedTimelineItemIds: unifiedSelectionModule.selectedTimelineItemIds,
-          selectTimelineItems: unifiedSelectionModule.selectTimelineItems,
-        },
-        unifiedTimelineModule.getTimelineItem,
-        unifiedMediaModule.getMediaItem,
-      )
-    },
+    selectTimelineItemsWithHistory:historyOperations.selectTimelineItemsWithHistory,
     // 关键帧历史记录方法
     createKeyframeWithHistory: historyOperations.createKeyframeWithHistory,
     deleteKeyframeWithHistory: historyOperations.deleteKeyframeWithHistory,
