@@ -13,6 +13,8 @@ import { directoryManager } from '@/unified/utils/DirectoryManager'
 import { generateUUID4 } from '@/unified/utils/idGenerator'
 import type { UnifiedMediaMetadata, UnifiedMediaReference } from '@/unified/project/types'
 import type { MediaType } from '@/unified/mediaitem/types'
+import { throttle } from 'lodash'
+import type { MP4Clip, ImgClip, AudioClip } from '@webav/av-cliper'
 
 // ==================== 类型定义 ====================
 
@@ -159,7 +161,11 @@ export class ProjectMediaManager {
    * @param clip WebAV Clip对象（可选，用于生成完整元数据）
    * @returns 媒体保存结果
    */
-  async saveMediaToProject(file: File, mediaType: MediaType, clip?: any): Promise<MediaSaveResult> {
+  async saveMediaToProject(
+    file: File,
+    mediaType: MediaType,
+    clip?: MP4Clip | ImgClip | AudioClip,
+  ): Promise<MediaSaveResult> {
     try {
       console.log(`💾 开始保存媒体文件到项目: ${file.name}`)
 
@@ -284,7 +290,7 @@ export class ProjectMediaManager {
    */
   async generateMediaMetadata(
     file: File,
-    clip: any,
+    clip: MP4Clip | ImgClip | AudioClip,
     mediaType: MediaType,
     mediaId: string,
     checksum: string,
@@ -523,7 +529,7 @@ export class ProjectMediaManager {
     try {
       await dirHandle.getFileHandle(sourceFileName)
       return true
-    } catch (error) {
+    } catch {
       return false
     }
   }
@@ -778,6 +784,120 @@ export class ProjectMediaManager {
 
     return report
   }
+
+  /**
+   * 分析媒体文件使用情况
+   * @returns 使用分析结果，包含使用中和未使用的文件信息
+   */
+  async analyzeMediaUsage(): Promise<{
+    totalFiles: number
+    usedFiles: number
+    unusedFiles: number
+    unusedMetaFiles: MetaFileInfo[]
+  }> {
+    try {
+      console.log(`📊 开始分析项目媒体文件使用情况`)
+
+      // 1. 获取所有本地媒体文件（通过meta文件）
+      const allMetaFiles = await this.scanAllMetaFiles()
+      console.log(`📁 发现 ${allMetaFiles.length} 个meta文件`)
+
+      // 2. 从 unifiedStore 获取当前项目中使用的媒体引用ID
+      // 动态导入unifiedStore以避免循环依赖
+      const { useUnifiedStore } = await import('@/unified/unifiedStore')
+      const unifiedStore = useUnifiedStore()
+
+      // 从mediaItems中获取正在使用的媒体引用ID
+      const usedMediaIds = unifiedStore.mediaItems
+        .filter((item) => item.mediaStatus === 'ready')
+        .map((item) => item.source?.mediaReferenceId)
+        .filter((id) => id) as string[] // 过滤掉 undefined/null
+
+      // 3. 对比分析
+      const unusedMetaFiles = allMetaFiles.filter((meta) => {
+        return !usedMediaIds.includes(meta.metadata.id)
+      })
+
+      const result = {
+        totalFiles: allMetaFiles.length,
+        usedFiles: usedMediaIds.length,
+        unusedFiles: unusedMetaFiles.length,
+        unusedMetaFiles,
+      }
+
+      console.log(`✅ 媒体文件使用分析完成:`, {
+        总数: result.totalFiles,
+        使用中: result.usedFiles,
+        未使用: result.unusedFiles,
+      })
+
+      return result
+    } catch (error) {
+      console.error('分析媒体文件使用情况失败:', error)
+      throw error
+    }
+  }
+
+  /**
+   * 执行媒体文件清理操作
+   * @param unusedMetaFiles 未使用的 meta 文件信息
+   */
+  private async performMediaCleanup(unusedMetaFiles: MetaFileInfo[]): Promise<{
+    cleaned: number
+    errors: number
+  }> {
+    let cleaned = 0
+    let errors = 0
+
+    for (const metaInfo of unusedMetaFiles) {
+      try {
+        // 1. 删除源文件
+        await metaInfo.dirHandle.removeEntry(metaInfo.sourceFileName)
+
+        // 2. 删除对应的 meta 文件
+        await metaInfo.dirHandle.removeEntry(metaInfo.metaFileName)
+
+        // 3. 从内存中移除引用
+        this.mediaReferences.delete(metaInfo.metadata.id)
+
+        cleaned++
+        console.log(`🗑️ 已清理: ${metaInfo.metadata.originalFileName}`)
+      } catch (error) {
+        errors++
+        console.error(`❌ 清理失败: ${metaInfo.metadata.originalFileName}`, error)
+      }
+    }
+
+    return { cleaned, errors }
+  }
+
+  /**
+   * 清理未使用的媒体文件
+   * 后台自动清理，无需用户交互
+   * 使用 lodash throttle 进行节流控制，限制清理频率
+   */
+  cleanupUnusedMediaFiles = throttle(async (): Promise<void> => {
+    try {
+      // 1. 分析使用情况
+      const usageAnalysis = await this.analyzeMediaUsage()
+
+      if (usageAnalysis.unusedFiles === 0) {
+        console.log('🎉 没有未使用的媒体文件需要清理')
+        return
+      }
+
+      console.log(`🧹 发现 ${usageAnalysis.unusedFiles} 个未使用的媒体文件，开始自动清理`)
+
+      // 2. 直接执行清理（后台自动清理，无需预览）
+      const cleanupResults = await this.performMediaCleanup(usageAnalysis.unusedMetaFiles)
+
+      console.log(
+        `✅ 自动清理完成: ${cleanupResults.cleaned} 个文件已清理, ${cleanupResults.errors} 个错误`,
+      )
+    } catch (error) {
+      console.error('自动清理未使用媒体文件失败:', error)
+    }
+  }, 60000) // 使用 lodash throttle，限制每分钟最多执行一次
 }
 
 // ==================== 页面级实例 ====================

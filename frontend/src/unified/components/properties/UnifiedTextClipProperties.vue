@@ -678,7 +678,7 @@ const updateTextStyle = async (styleUpdates: Partial<TextStyleConfig> = {}) => {
 
   try {
     // 直接使用传入的样式更新
-    let styleToUpdate = { ...styleUpdates }
+    const styleToUpdate = { ...styleUpdates }
 
     console.log('🎨 [UnifiedTextClipProperties] 更新文本样式:', styleToUpdate)
 

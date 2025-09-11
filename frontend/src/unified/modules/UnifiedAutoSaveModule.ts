@@ -1,5 +1,19 @@
 import { ref, watch, type Ref } from 'vue'
 import { debounce, throttle } from 'lodash'
+import { globalProjectMediaManager } from '@/unified/utils/ProjectMediaManager'
+import type { UnifiedTimelineItemData } from '@/unified/timelineitem'
+import type { UnifiedTrackData } from '@/unified/track'
+import type { UnifiedMediaItemData } from '@/unified/mediaitem'
+
+/**
+ * 视频分辨率类型定义 (来自 UnifiedProjectConfig)
+ */
+interface VideoResolution {
+  name: string
+  width: number
+  height: number
+  aspectRatio: string
+}
 
 /**
  * 自动保存配置
@@ -36,11 +50,11 @@ interface AutoSaveDependencies {
   }
   /** 需要监听的数据源 */
   dataWatchers: {
-    timelineItems: Ref<any[]>
-    tracks: Ref<any[]>
-    mediaItems: Ref<any[]>
+    timelineItems: Ref<UnifiedTimelineItemData[]>
+    tracks: Ref<UnifiedTrackData[]>
+    mediaItems: Ref<UnifiedMediaItemData[]>
     projectConfig: Ref<{
-      videoResolution: any
+      videoResolution: VideoResolution
       frameRate: number
       timelineDurationFrames: number
     }>
@@ -153,6 +167,10 @@ export function createUnifiedAutoSaveModule(
       retryCount = 0
 
       console.log('✅ [AutoSave] 自动保存成功')
+
+      // 后台自动清理未使用的媒体文件（静默执行，不影响用户体验）
+      globalProjectMediaManager.cleanupUnusedMediaFiles()
+
       return true
     } catch (error) {
       console.error('❌ [AutoSave] 自动保存失败:', error)
