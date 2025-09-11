@@ -480,14 +480,6 @@ const shadowColor = computed(() => {
   return '#000000'
 })
 
-const shadowBlur = computed(() => {
-  if (localStyle.value.textShadow) {
-    const shadowMatch = localStyle.value.textShadow.match(/(\d+)px\s*$/)
-    return shadowMatch ? parseInt(shadowMatch[1]) : 4
-  }
-  return 4
-})
-
 const shadowOffsetX = computed(() => {
   if (localStyle.value.textShadow) {
     const shadowMatch = localStyle.value.textShadow.match(/(-?\d+)px/)
@@ -502,6 +494,15 @@ const shadowOffsetY = computed(() => {
     return shadowMatch ? parseInt(shadowMatch[2]) : 2
   }
   return 2
+})
+
+const shadowBlur = computed(() => {
+  if (localStyle.value.textShadow) {
+    // 匹配第三个px值（模糊值），格式：offsetX offsetY blur color
+    const shadowMatch = localStyle.value.textShadow.match(/^(-?\d+)px\s+(-?\d+)px\s+(\d+)px/)
+    return shadowMatch ? parseInt(shadowMatch[3]) : 4
+  }
+  return 4
 })
 
 // 计算属性：描边效果状态
