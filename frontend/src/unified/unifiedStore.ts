@@ -608,6 +608,12 @@ export const useUnifiedStore = defineStore('unified', () => {
     executeBatchCommand: unifiedHistoryModule.executeBatchCommand,
 
     // ==================== 统一选择模块状态和方法 ====================
+    selectedMediaItemIds: unifiedSelectionModule.selectedMediaItemIds,
+    hasMediaSelection: unifiedSelectionModule.hasMediaSelection,
+    isMediaMultiSelectMode: unifiedSelectionModule.isMediaMultiSelectMode,
+    selectMediaItems: unifiedSelectionModule.selectMediaItems,
+    isMediaItemSelected: unifiedSelectionModule.isMediaItemSelected,
+    clearMediaSelection: unifiedSelectionModule.clearMediaSelection,
 
     // 选择状态
     selectedTimelineItemId: unifiedSelectionModule.selectedTimelineItemId,

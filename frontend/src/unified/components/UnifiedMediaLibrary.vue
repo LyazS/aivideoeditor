@@ -19,6 +19,29 @@
           </button>
         </div>
       </div>
+      <div class="header-center">
+        <!-- 选中状态提示 -->
+        <div
+          v-if="unifiedStore.hasMediaSelection"
+          class="selection-info"
+          @mouseenter="showSelectionTooltip = true"
+          @mouseleave="showSelectionTooltip = false"
+        >
+          <span>已选 {{ unifiedStore.selectedMediaItemIds.size }}</span>
+          <div v-if="showSelectionTooltip" class="selection-tooltip">
+            <div class="tooltip-content">
+              <div class="tooltip-title">已选中的素材：</div>
+              <div
+                v-for="id in Array.from(unifiedStore.selectedMediaItemIds)"
+                :key="id"
+                class="tooltip-item"
+              >
+                {{ getMediaItemName(id) }}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
       <div class="header-buttons">
         <!-- <HoverButton @click="debugMediaItems" title="调试统一媒体">
           <template #icon>
@@ -47,6 +70,7 @@
       @dragleave="handleDragLeave"
       @drop="handleDrop"
       @contextmenu="handleContextMenu"
+      @click="handleContainerClick"
     >
       <div
         v-if="filteredMediaItems.length === 0"
@@ -77,13 +101,27 @@
               item.mediaStatus,
             ),
             [`status-${item.mediaStatus}`]: true,
+            selected: unifiedStore.isMediaItemSelected(item.id),
           }"
           :data-media-item-id="item.id"
           :draggable="item.mediaType !== 'unknown' && (item.duration || 0) > 0"
           @dragstart="handleItemDragStart($event, item)"
           @dragend="handleItemDragEnd"
           @contextmenu="handleMediaItemContextMenu($event, item)"
+          @click="handleMediaItemClick($event, item)"
+          @mousedown="handleMediaItemMouseDown($event, item)"
         >
+          <!-- 复选框 -->
+          <div
+            v-if="unifiedStore.selectedMediaItemIds.size > 1"
+            class="media-checkbox"
+            :class="{ checked: unifiedStore.isMediaItemSelected(item.id) }"
+            @click.stop="handleCheckboxClick($event, item)"
+          >
+            <svg class="check-icon" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M9,16.17L4.83,12l-1.42,1.41L9,19L21,7l-1.41,-1.41L9,16.17Z" />
+            </svg>
+          </div>
           <div class="media-thumbnail">
             <!-- 异步处理项目：显示进度 -->
             <!-- 等待状态 -->
@@ -254,7 +292,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { generateUUID4 } from '@/unified/utils/idGenerator'
 import { useUnifiedStore } from '@/unified/unifiedStore'
 import { useDialogs, useDragUtils } from '@/unified/composables'
@@ -273,6 +311,9 @@ const dialogs = useDialogs()
 const dragUtils = useDragUtils()
 const fileInput = ref<HTMLInputElement>()
 const isDragOver = ref(false)
+const showCheckbox = ref(false)
+const showSelectionTooltip = ref(false)
+const lastSelectedItem = ref<UnifiedMediaItemData | null>(null)
 
 // 远程下载对话框状态
 const showRemoteDownloadDialog = ref(false)
@@ -327,13 +368,25 @@ type MenuItem = {
 // 动态菜单项配置
 const currentMenuItems = computed((): MenuItem[] => {
   if (contextMenuType.value === 'media-item' && selectedMediaItem.value) {
-    return [
-      {
+    const menuItems: MenuItem[] = []
+
+    // 如果有多个媒体项目被选中，显示批量删除选项
+    if (unifiedStore.hasMediaSelection && unifiedStore.selectedMediaItemIds.size > 1) {
+      menuItems.push({
+        label: `批量删除选中的 ${unifiedStore.selectedMediaItemIds.size} 个素材`,
+        icon: 'M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z',
+        onClick: () => handleBatchDeleteMediaItems(),
+      })
+    } else {
+      // 单个素材删除
+      menuItems.push({
         label: '删除素材',
         icon: 'M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z',
         onClick: () => handleDeleteMediaItem(),
-      },
-    ]
+      })
+    }
+
+    return menuItems
   } else {
     // 空白区域菜单
     return [
@@ -492,6 +545,40 @@ const handleEmptyAreaContextMenu = (event: MouseEvent) => {
 const handleDeleteMediaItem = () => {
   if (selectedMediaItem.value) {
     removeMediaItem(selectedMediaItem.value.id)
+  }
+  showContextMenu.value = false
+}
+
+const handleBatchDeleteMediaItems = () => {
+  const selectedCount = unifiedStore.selectedMediaItemIds.size
+  if (selectedCount === 0) return
+
+  if (dialogs.confirm(`确定要删除选中的 ${selectedCount} 个素材吗？`, '批量删除')) {
+    const selectedIds = Array.from(unifiedStore.selectedMediaItemIds)
+    const deletedNames: string[] = []
+    const failedNames: string[] = []
+
+    selectedIds.forEach((id) => {
+      const item = unifiedStore.getMediaItem(id)
+      if (item) {
+        try {
+          unifiedStore.removeMediaItem(id)
+          deletedNames.push(item.name)
+        } catch (error) {
+          failedNames.push(item.name)
+          console.error(`❌ 删除素材失败: ${item.name}`, error)
+        }
+      }
+    })
+
+    // 清除选择状态
+    unifiedStore.clearMediaSelection()
+
+    if (failedNames.length === 0) {
+      dialogs.showSuccess(`成功删除 ${deletedNames.length} 个素材`)
+    } else {
+      dialogs.showError(`删除完成：成功 ${deletedNames.length} 个，失败 ${failedNames.length} 个`)
+    }
   }
   showContextMenu.value = false
 }
@@ -739,6 +826,58 @@ const removeMediaItem = async (id: string) => {
   }
 }
 
+// 处理媒体项目点击事件
+function handleMediaItemClick(event: MouseEvent, item: UnifiedMediaItemData) {
+  if (event.ctrlKey || event.metaKey) {
+    // Ctrl+点击：切换选择状态（进入多选模式）
+    unifiedStore.selectMediaItems([item.id], 'toggle')
+    lastSelectedItem.value = item
+  } else if (event.shiftKey && lastSelectedItem.value) {
+    // Shift+点击：顺序多选
+    handleRangeSelection(lastSelectedItem.value, item)
+  } else {
+    // 普通点击：单选模式，清除其他选择且不显示复选框
+    unifiedStore.selectMediaItems([item.id], 'replace')
+    lastSelectedItem.value = item
+  }
+}
+
+// 处理媒体项目鼠标按下事件（用于显示复选框）
+function handleMediaItemMouseDown(event: MouseEvent, item: UnifiedMediaItemData) {
+  showCheckbox.value = true
+}
+
+// 处理复选框点击事件
+function handleCheckboxClick(event: MouseEvent, item: UnifiedMediaItemData) {
+  event.stopPropagation()
+  unifiedStore.selectMediaItems([item.id], 'toggle')
+  lastSelectedItem.value = item
+}
+
+// 顺序多选处理
+function handleRangeSelection(startItem: UnifiedMediaItemData, endItem: UnifiedMediaItemData) {
+  const allItems = filteredMediaItems.value
+  const startIndex = allItems.findIndex((item) => item.id === startItem.id)
+  const endIndex = allItems.findIndex((item) => item.id === endItem.id)
+
+  if (startIndex !== -1 && endIndex !== -1) {
+    const [minIndex, maxIndex] = [Math.min(startIndex, endIndex), Math.max(startIndex, endIndex)]
+    const rangeItems = allItems.slice(minIndex, maxIndex + 1)
+    unifiedStore.selectMediaItems(
+      rangeItems.map((item) => item.id),
+      'replace',
+    )
+  }
+}
+
+// 点击空白区域取消选择
+function handleContainerClick(event: MouseEvent) {
+  if (!event.target || !(event.target as Element).closest('.media-item')) {
+    unifiedStore.clearMediaSelection()
+    showCheckbox.value = false
+  }
+}
+
 // 素材项拖拽开始
 const handleItemDragStart = (event: DragEvent, item: UnifiedMediaItemData) => {
   console.log('🎯 [UnifiedMediaLibrary] 开始拖拽素材:', item.name, 'status:', item.mediaStatus)
@@ -885,6 +1024,30 @@ const debugMediaItems = () => {
   // 将unifiedStore暴露到全局，方便调试
   ;(window as any).unifiedStore = unifiedStore
 }
+
+// 获取媒体项目名称
+const getMediaItemName = (id: string): string => {
+  const item = unifiedStore.getMediaItem(id)
+  return item ? item.name : '未知素材'
+}
+
+// 键盘事件处理
+const handleKeyDown = (event: KeyboardEvent) => {
+  // Delete键删除选中的媒体项目
+  if ((event.key === 'Delete' || event.key === 'Backspace') && unifiedStore.hasMediaSelection) {
+    event.preventDefault()
+    handleBatchDeleteMediaItems()
+  }
+}
+
+// 组件生命周期
+onMounted(() => {
+  document.addEventListener('keydown', handleKeyDown)
+})
+
+onUnmounted(() => {
+  document.removeEventListener('keydown', handleKeyDown)
+})
 </script>
 
 <style scoped>
@@ -895,7 +1058,6 @@ const debugMediaItems = () => {
   border-radius: 4px;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
 }
 
 .library-header {
@@ -906,6 +1068,13 @@ const debugMediaItems = () => {
   justify-content: space-between;
   align-items: center;
   flex-shrink: 0;
+}
+
+.header-center {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 .header-left {
@@ -1005,6 +1174,63 @@ const debugMediaItems = () => {
   border: 2px dashed var(--color-accent-primary);
 }
 
+/* 选中状态提示样式 */
+.selection-info {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-xs);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  background-color: var(--color-bg-secondary);
+  border-radius: var(--border-radius-small);
+  cursor: pointer;
+  position: relative;
+  transition: all var(--transition-fast);
+}
+
+.selection-info:hover {
+  color: var(--color-text-primary);
+  background-color: var(--color-bg-hover);
+}
+
+.selection-tooltip {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-top: var(--spacing-xs);
+  background-color: var(--color-bg-primary);
+  border: 1px solid var(--color-border-secondary);
+  border-radius: var(--border-radius-medium);
+  padding: var(--spacing-sm);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  z-index: 100;
+  min-width: 200px;
+  max-width: 300px;
+}
+
+.tooltip-content {
+  white-space: normal;
+}
+
+.tooltip-title {
+  color: var(--color-text-primary);
+  font-weight: 500;
+  margin-bottom: var(--spacing-xs);
+  font-size: var(--font-size-sm);
+}
+
+.tooltip-item {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-xs);
+  padding: 2px 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tooltip-item:not(:last-child) {
+  border-bottom: 1px solid var(--color-border-primary);
+}
+
 /* 使用通用的 empty-state 和 hint 样式 */
 
 .media-list {
@@ -1033,6 +1259,45 @@ const debugMediaItems = () => {
 
 .media-item:active {
   cursor: grabbing;
+}
+
+/* 选中状态 */
+.media-item.selected {
+  background-color: rgba(59, 130, 246, 0.1);
+  border: 2px solid var(--color-accent-primary);
+}
+
+/* 复选框样式 */
+.media-checkbox {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--color-border-primary);
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.media-checkbox.checked {
+  background: var(--color-accent-primary);
+  border-color: var(--color-accent-primary);
+}
+
+.media-checkbox:hover {
+  border-color: var(--color-accent-secondary);
+}
+
+.check-icon {
+  width: 12px;
+  height: 12px;
+  color: white;
 }
 
 /* 解析中状态样式 */

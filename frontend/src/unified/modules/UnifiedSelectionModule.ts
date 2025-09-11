@@ -18,7 +18,8 @@ export function createUnifiedSelectionModule(
   // ==================== 状态定义 ====================
 
   // 统一选择状态：使用单一集合管理所有选择
-  const selectedTimelineItemIds = ref<Set<string>>(new Set()) // 选中项目ID集合
+  const selectedTimelineItemIds = ref<Set<string>>(new Set()) // 选中时间轴项目ID集合
+  const selectedMediaItemIds = ref<Set<string>>(new Set()) // 选中媒体项目ID集合
 
   // 计算属性：从集合派生的状态
   const selectedTimelineItemId = computed(() => {
@@ -30,6 +31,8 @@ export function createUnifiedSelectionModule(
 
   const isMultiSelectMode = computed(() => selectedTimelineItemIds.value.size > 1)
   const hasSelection = computed(() => selectedTimelineItemIds.value.size > 0)
+  const hasMediaSelection = computed(() => selectedMediaItemIds.value.size > 0)
+  const isMediaMultiSelectMode = computed(() => selectedMediaItemIds.value.size > 1)
 
   // ==================== 选择管理方法 ====================
 
@@ -71,6 +74,52 @@ export function createUnifiedSelectionModule(
       oldSelection: Array.from(oldSelection),
       newSelection: Array.from(selectedTimelineItemIds.value),
     })
+  }
+
+  /**
+   * 统一的媒体项目选择方法
+   * @param itemIds 要操作的媒体项目ID数组
+   * @param mode 操作模式：'replace'替换选择，'toggle'切换选择状态
+   */
+  function selectMediaItems(
+    itemIds: string[],
+    mode: 'replace' | 'toggle' = 'replace'
+  ) {
+    const oldSelection = new Set(selectedMediaItemIds.value)
+
+    if (mode === 'replace') {
+      // 替换模式：清空现有选择，设置新选择
+      selectedMediaItemIds.value.clear()
+      itemIds.forEach((id) => selectedMediaItemIds.value.add(id))
+    } else {
+      // 切换模式：切换每个项目的选择状态
+      itemIds.forEach((id) => {
+        if (selectedMediaItemIds.value.has(id)) {
+          selectedMediaItemIds.value.delete(id)
+        } else {
+          selectedMediaItemIds.value.add(id)
+        }
+      })
+    }
+
+    console.log('🎯 统一媒体选择操作:', {
+      mode,
+      itemIds,
+      oldSize: oldSelection.size,
+      newSize: selectedMediaItemIds.value.size,
+      isMultiSelect: isMediaMultiSelectMode.value,
+      oldSelection: Array.from(oldSelection),
+      newSelection: Array.from(selectedMediaItemIds.value),
+    })
+  }
+
+  /**
+   * 检查媒体项目是否被选中
+   * @param mediaItemId 媒体项目ID
+   * @returns 是否被选中
+   */
+  function isMediaItemSelected(mediaItemId: string): boolean {
+    return selectedMediaItemIds.value.has(mediaItemId)
   }
 
   /**
@@ -199,6 +248,14 @@ export function createUnifiedSelectionModule(
     console.log('🔄 选择状态已重置为默认值')
   }
 
+  /**
+   * 清除媒体项目选择
+   */
+  function clearMediaSelection() {
+    selectedMediaItemIds.value.clear()
+    console.log('🔄 媒体项目选择已清除')
+  }
+
   // ==================== 辅助方法 ====================
 
   // ==================== 导出接口 ====================
@@ -209,9 +266,13 @@ export function createUnifiedSelectionModule(
     selectedTimelineItemIds,
     isMultiSelectMode,
     hasSelection,
+    selectedMediaItemIds,
+    hasMediaSelection,
+    isMediaMultiSelectMode,
 
     // 统一选择API
     selectTimelineItems,
+    selectMediaItems,
 
     // 兼容性方法
     selectTimelineItem,
@@ -228,6 +289,10 @@ export function createUnifiedSelectionModule(
     toggleMultiSelection,
     clearMultiSelection,
     isInMultiSelection,
+
+    // 媒体项目选择方法
+    isMediaItemSelected,
+    clearMediaSelection,
   }
 }
 
