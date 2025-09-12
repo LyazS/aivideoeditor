@@ -3,7 +3,7 @@
   <div class="clip-management-toolbar">
     <!-- 历史管理工具栏 -->
     <div class="toolbar-section">
-      <HoverButton @click="undo" :disabled="!unifiedStore.canUndo" title="撤销上一个操作 (Ctrl+Z)">
+      <HoverButton @click="undo" :disabled="!unifiedStore.canUndo" :title="t('toolbar.history.undoTooltip')">
         <template #icon>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
             <path
@@ -11,9 +11,9 @@
             />
           </svg>
         </template>
-        撤销
+        {{ t('toolbar.history.undo') }}
       </HoverButton>
-      <HoverButton @click="redo" :disabled="!unifiedStore.canRedo" title="重做下一个操作 (Ctrl+Y)">
+      <HoverButton @click="redo" :disabled="!unifiedStore.canRedo" :title="t('toolbar.history.redoTooltip')">
         <template #icon>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
             <path
@@ -21,7 +21,7 @@
             />
           </svg>
         </template>
-        重做
+        {{ t('toolbar.history.redo') }}
       </HoverButton>
     </div>
 
@@ -30,7 +30,7 @@
         v-if="unifiedStore.selectedTimelineItemId"
         :disabled="isSplitButtonDisabled"
         @click="splitSelectedClip"
-        :title="splitButtonTitle"
+        :title="t('toolbar.clip.splitTooltip')"
       >
         <template #icon>
           <svg
@@ -47,12 +47,12 @@
             <path d="M14 6 L14 18 M14 6 L16 6 M14 18 L16 18" />
           </svg>
         </template>
-        裁剪
+        {{ t('toolbar.clip.split') }}
       </HoverButton>
       <HoverButton
         v-if="unifiedStore.selectedTimelineItemId"
         @click="deleteSelectedClip"
-        title="删除选中的片段"
+        :title="t('toolbar.clip.deleteTooltip')"
       >
         <template #icon>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="#ef4444">
@@ -61,17 +61,17 @@
             />
           </svg>
         </template>
-        删除
+        {{ t('toolbar.clip.delete') }}
       </HoverButton>
       <span v-if="overlappingCount > 0" class="overlap-warning">
-        ⚠️ {{ overlappingCount }} 个重叠
+        {{ t('toolbar.clip.overlapping', { count: overlappingCount }) }}
       </span>
     </div>
 
     <!-- 调试按钮放在最右边 -->
     <div class="toolbar-section debug-section">
       <!-- 吸附开关按钮 -->
-      <HoverButton @click="toggleSnap" :active="snapEnabled" :title="snapButtonTitle">
+      <HoverButton @click="toggleSnap" :active="snapEnabled" :title="snapEnabled ? t('toolbar.snap.enabledTooltip') : t('toolbar.snap.disabledTooltip')">
         <template #icon>
           <!-- 吸附开启状态 - 实心磁铁图标 -->
           <svg v-if="snapEnabled" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
@@ -95,7 +95,7 @@
             />
           </svg>
         </template>
-        吸附
+        {{ t('toolbar.snap.snap') }}
       </HoverButton>
 
       <!-- <HoverButton @click="debugTimeline" title="在控制台打印时间轴配置信息">
@@ -125,30 +125,24 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useUnifiedStore } from '@/unified/unifiedStore'
+import { useAppI18n } from '@/unified/composables/useI18n'
 import { formatFileSize, framesToSeconds } from '@/unified/utils/timeUtils'
 import { countOverlappingItems } from '@/unified/utils/timeOverlapUtils'
 import HoverButton from '@/components/HoverButton.vue'
 
 const unifiedStore = useUnifiedStore()
+const { t } = useAppI18n()
 
 const timelineItems = computed(() => unifiedStore.timelineItems)
 
 // 吸附功能状态
 const snapEnabled = computed(() => unifiedStore.snapConfig.enabled)
 
-// 吸附按钮提示文本
-const snapButtonTitle = computed(() => {
-  if (snapEnabled.value) {
-    return '吸附功能已开启 - 片段会自动对齐到相邻片段边缘和时间轴起点'
-  } else {
-    return '吸附功能已关闭 - 点击开启吸附功能，拖拽时将自动对齐片段'
-  }
-})
 
 // 切换吸附功能
 function toggleSnap() {
   unifiedStore.updateSnapConfig({ enabled: !snapEnabled.value })
-  console.log(`🧲 吸附功能${snapEnabled.value ? '已开启' : '已关闭'}`)
+  console.log(`🧲 ${t('toolbar.feedback.snapToggled', { status: snapEnabled.value ? '已关闭' : '已开启' })}`)
 }
 
 // 计算重叠时间轴项目数量（只计算同轨道内的重叠）
@@ -185,47 +179,6 @@ const isSplitButtonDisabled = computed(() => {
   return !selectedItemSupportsSplit.value || !isSelectedItemReady.value
 })
 
-// 裁剪按钮的提示文本
-const splitButtonTitle = computed(() => {
-  if (!unifiedStore.selectedTimelineItemId) {
-    return '请先选择一个片段'
-  }
-
-  const item = unifiedStore.getTimelineItem(unifiedStore.selectedTimelineItemId)
-  if (!item) {
-    return '片段不存在'
-  }
-
-  const mediaItem = unifiedStore.getMediaItem(item.mediaItemId)
-  if (!mediaItem) {
-    return '媒体素材不存在'
-  }
-
-  // 检查媒体状态
-  if (mediaItem.mediaStatus !== 'ready') {
-    const statusText =
-      {
-        pending: '等待处理中',
-        asyncprocessing: '异步处理中',
-        webavdecoding: '解码中',
-        error: '媒体加载错误',
-        cancelled: '处理已取消',
-        missing: '媒体文件缺失',
-      }[mediaItem.mediaStatus] || '未知状态'
-
-    return `媒体${statusText}，无法裁剪`
-  }
-
-  if (item.mediaType === 'text') {
-    return '文本类型不支持裁剪功能'
-  } else if (item.mediaType === 'image') {
-    return '图片类型不支持裁剪功能'
-  } else if (item.mediaType === 'video' || item.mediaType === 'audio') {
-    return '在当前时间位置裁剪选中的片段'
-  } else {
-    return '该类型不支持裁剪功能'
-  }
-})
 
 async function splitSelectedClip() {
   if (unifiedStore.selectedTimelineItemId) {
@@ -276,9 +229,9 @@ async function undo() {
   try {
     const success = await unifiedStore.undo()
     if (success) {
-      console.log('↩️ 撤销操作成功')
+      console.log('↩️', t('toolbar.debug.undoSuccess'))
     } else {
-      console.log('⚠️ 没有可撤销的操作')
+      console.log('⚠️', t('toolbar.debug.undoFailed'))
     }
   } catch (error) {
     console.error('❌ 撤销操作失败:', error)
@@ -292,9 +245,9 @@ async function redo() {
   try {
     const success = await unifiedStore.redo()
     if (success) {
-      console.log('↪️ 重做操作成功')
+      console.log('↪️', t('toolbar.debug.redoSuccess'))
     } else {
-      console.log('⚠️ 没有可重做的操作')
+      console.log('⚠️', t('toolbar.debug.redoFailed'))
     }
   } catch (error) {
     console.error('❌ 重做操作失败:', error)

@@ -20,11 +20,7 @@ import {
   getPreviousKeyframeFrame,
   getNextKeyframeFrame,
 } from '@/unified/utils/unifiedKeyframeUtils'
-import {
-  toggleKeyframe as toggleKeyframeWithCommand,
-  updateProperty as updatePropertyWithCommand,
-  clearAllKeyframes as clearAllKeyframesWithCommand,
-} from '@/unified/utils/keyframeCommandUtils'
+// 关键帧命令已经迁移到 unifiedStore
 import { isPlayheadInTimelineItem } from '@/unified/utils/timelineSearchUtils'
 import { updateWebAVAnimation } from '@/unified/utils/webavAnimationManager'
 
@@ -131,7 +127,7 @@ export function useUnifiedKeyframeUI(
 
     try {
       // 使用统一关键帧工具切换关键帧
-      toggleKeyframeWithCommand(timelineItem.value.id, currentFrame.value)
+      await unifiedStore.toggleKeyframeWithHistory(timelineItem.value.id, currentFrame.value)
 
       console.log('🎬 [Unified Keyframe UI] Keyframe toggled with command:', {
         itemId: timelineItem.value.id,
@@ -171,7 +167,12 @@ export function useUnifiedKeyframeUI(
 
     try {
       // 使用统一关键帧工具处理属性修改
-      await updatePropertyWithCommand(timelineItem.value.id, currentFrame.value, property, value)
+      await unifiedStore.updatePropertyWithHistory(
+        timelineItem.value.id,
+        currentFrame.value,
+        property,
+        value,
+      )
 
       console.log('🎬 [Unified Keyframe UI] Property changed with command:', {
         itemId: timelineItem.value.id,
@@ -217,7 +218,7 @@ export function useUnifiedKeyframeUI(
 
     try {
       // 使用统一关键帧工具清除所有关键帧
-      clearAllKeyframesWithCommand(timelineItem.value.id)
+      await unifiedStore.clearAllKeyframesWithHistory(timelineItem.value.id)
 
       console.log('🎬 [Unified Keyframe UI] All keyframes cleared with command:', {
         itemId: timelineItem.value.id,

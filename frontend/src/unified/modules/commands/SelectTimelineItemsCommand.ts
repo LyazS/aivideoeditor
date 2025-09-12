@@ -23,7 +23,6 @@ export class SelectTimelineItemsCommand implements SimpleCommand {
     private selectionModule: {
       selectedTimelineItemIds: { value: Set<string> }
       selectTimelineItems: (itemIds: string[], mode: 'replace' | 'toggle') => void
-      syncAVCanvasSelection: () => void
     },
     private timelineModule: {
       getTimelineItem: (id: string) => UnifiedTimelineItemData<MediaType> | undefined
@@ -148,8 +147,5 @@ export class SelectTimelineItemsCommand implements SimpleCommand {
     // 直接更新选择状态，不通过selectTimelineItems方法以避免循环调用
     this.selectionModule.selectedTimelineItemIds.value.clear()
     selection.forEach((id) => this.selectionModule.selectedTimelineItemIds.value.add(id))
-
-    // 手动触发AVCanvas同步逻辑
-    this.selectionModule.syncAVCanvasSelection()
   }
 }

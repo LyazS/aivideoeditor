@@ -10,8 +10,8 @@
     <!-- 顶部区域：轨道管理器头部 + 时间刻度 -->
     <div class="timeline-header">
       <div class="track-manager-header">
-        <h3>轨道</h3>
-        <HoverButton variant="small" @click="showAddTrackMenu($event)" title="添加新轨道">
+        <h3>{{ t('timeline.tracks') }}</h3>
+        <HoverButton variant="small" @click="showAddTrackMenu($event)" :title="t('timeline.addNewTrack')">
           <template #icon>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
               <path :d="CONTROL_ICONS.add" />
@@ -62,7 +62,7 @@
             <!-- 轨道类型图标和片段数量 -->
             <div
               class="track-type-info"
-              :title="`${getTrackTypeLabel(track.type)}轨道，共 ${getClipsForTrack(track.id).length} 个片段`"
+              :title="`${t('timeline.' + track.type + 'Track')}，${t('timeline.clips')} ${getClipsForTrack(track.id).length}`"
             >
               <div class="track-type-icon">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
@@ -100,7 +100,7 @@
                 v-if="track.type !== 'audio'"
                 variant="small"
                 :class="track.isVisible ? 'active' : ''"
-                :title="track.isVisible ? '隐藏轨道' : '显示轨道'"
+                :title="track.isVisible ? t('timeline.hideTrack') : t('timeline.showTrack')"
                 @click="toggleVisibility(track.id)"
               >
                 <template #icon>
@@ -115,7 +115,7 @@
                 v-if="track.type !== 'text'"
                 variant="small"
                 :class="!track.isMuted ? 'active' : ''"
-                :title="track.isMuted ? '取消静音' : '静音轨道'"
+                :title="track.isMuted ? t('timeline.unmuteTrack') : t('timeline.muteTrack')"
                 @click="toggleMute(track.id)"
               >
                 <template #icon>
@@ -136,6 +136,7 @@
             [`track-type-${track.type}`]: true,
           }"
           :data-track-id="track.id"
+          :data-hidden-text="!track.isVisible ? t('timeline.trackHidden') : ''"
           @click="handleTimelineClick"
           @wheel="handleWheel"
         >
@@ -234,6 +235,7 @@ import { ref, onMounted, onUnmounted, h, computed } from 'vue'
 import { calculateViewportFrameRange } from '@/unified/utils/thumbnailAlgorithms'
 import { useUnifiedStore } from '@/unified/unifiedStore'
 import { getDragPreviewManager } from '@/unified/composables'
+import { useAppI18n } from '@/unified/composables/useI18n'
 import type { UnifiedTimelineItemData } from '@/unified/timelineitem/TimelineItemData'
 
 import UnifiedPlayhead from './UnifiedPlayhead.vue'
@@ -272,6 +274,7 @@ defineOptions({
 
 const unifiedStore = useUnifiedStore()
 const dragPreviewManager = getDragPreviewManager()
+const { t } = useAppI18n()
 
 // 吸附指示器状态
 const currentSnapResult = ref<{
@@ -615,7 +618,7 @@ onUnmounted(() => {
 }
 
 .track-content.track-hidden::before {
-  content: '轨道已隐藏';
+  content: attr(data-hidden-text);
   position: absolute;
   top: 50%;
   left: 50%;

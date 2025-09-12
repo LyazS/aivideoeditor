@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import type { RouteRecordRaw } from 'vue-router'
+import { i18n } from '@/locales'
 
 // 懒加载组件
 const ProjectManagement = () => import('../views/ProjectManagement.vue')
@@ -11,7 +12,8 @@ const routes: RouteRecordRaw[] = [
     name: 'ProjectManagement',
     component: ProjectManagement,
     meta: {
-      title: '项目管理 - 光影绘梦',
+      title: 'app.title',
+      subtitle: 'editor.projectManagement',
     },
   },
   {
@@ -19,7 +21,8 @@ const routes: RouteRecordRaw[] = [
     name: 'VideoEditor',
     component: VideoEditor,
     meta: {
-      title: '视频编辑器 - 光影绘梦',
+      title: 'app.title',
+      subtitle: 'editor.videoEditor',
     },
   },
   {
@@ -37,7 +40,10 @@ const router = createRouter({
 // 路由守卫 - 更新页面标题
 router.beforeEach((to) => {
   if (to.meta?.title) {
-    document.title = to.meta.title as string
+    const { t } = i18n.global
+    const title = t(to.meta.title as string)
+    const subtitle = to.meta.subtitle ? t(to.meta.subtitle as string) : ''
+    document.title = subtitle ? `${subtitle} - ${title}` : title
   }
 })
 

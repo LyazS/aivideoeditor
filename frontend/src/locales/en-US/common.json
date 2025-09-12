@@ -1,0 +1,17 @@
+{
+  "common": {
+    "language": "Switch Language",
+    "settings": "Settings",
+    "play": "Play",
+    "pause": "Pause",
+    "stop": "Stop",
+    "playbackSpeed": "Playback Speed",
+    "cancel": "Cancel",
+    "save": "Save",
+    "close": "Close",
+    "processing": "Processing",
+    "saving": "Saving",
+    "name": "Name",
+    "description": "Description"
+  }
+}

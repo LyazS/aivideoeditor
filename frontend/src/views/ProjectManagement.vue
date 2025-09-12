@@ -4,23 +4,10 @@
     <header class="header">
       <div class="header-content">
         <div class="logo-section">
-          <h1 class="app-title">光影绘梦</h1>
-          <span class="app-subtitle">AI视频编辑器</span>
+          <h1 class="app-title">{{ t('app.title') }}</h1>
+          <span class="app-subtitle">{{ t('app.subtitle') }}</span>
         </div>
         <div class="header-actions">
-          <button
-            v-if="workspaceInfo"
-            class="workspace-info"
-            @click="changeWorkspace"
-            title="点击更改工作目录"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-              <path
-                d="M10,4H4C2.89,4 2,4.89 2,6V18A2,2 0 0,0 4,20H20A2,2 0 0,0 22,18V8C22,6.89 21.1,6 20,6H12L10,4Z"
-              />
-            </svg>
-            <span>{{ workspaceInfo.name }}</span>
-          </button>
           <button
             v-if="hasWorkspaceAccess && workspaceInfo"
             class="btn btn-primary"
@@ -30,7 +17,21 @@
             <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
               <path d="M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z" />
             </svg>
-            新建项目
+            {{ t('project.new') }}
+          </button>
+          <LanguageSelector />
+          <button
+            v-if="workspaceInfo"
+            class="workspace-info"
+            @click="changeWorkspace"
+            :title="t('workspace.change')"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+              <path
+                d="M10,4H4C2.89,4 2,4.89 2,6V18A2,2 0 0,0 4,20H20A2,2 0 0,0 22,18V8C22,6.89 21.1,6 20,6H12L10,4Z"
+              />
+            </svg>
+            <span>{{ workspaceInfo.name }}</span>
           </button>
         </div>
       </div>
@@ -53,10 +54,8 @@
                 />
               </svg>
             </div>
-            <h2>点击设置目录</h2>
-            <p>
-              为了管理您的视频编辑项目，请选择一个本地文件夹作为项目工作目录。所有项目文件将保存在此文件夹中。
-            </p>
+            <h2>{{ t('workspace.setup.title') }}</h2>
+            <p>{{ t('workspace.setup.description') }}</p>
 
             <div v-if="!isApiSupported" class="error-message">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
@@ -64,10 +63,7 @@
                   d="M13,13H11V7H13M13,17H11V15H13M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z"
                 />
               </svg>
-              <span
-                >当前浏览器不支持本地文件访问功能，请使用Chrome、Edge或其他支持File System Access
-                API的现代浏览器。</span
-              >
+              <span>{{ t('workspace.error.unsupported') }}</span>
             </div>
 
             <!-- 权限丢失提示 -->
@@ -77,7 +73,7 @@
                   d="M12,2C17.53,2 22,6.47 22,12C22,17.53 17.53,22 12,22C6.47,22 2,17.53 2,12C2,6.47 6.47,2 12,2M15.59,7L12,10.59L8.41,7L7,8.41L10.59,12L7,15.59L8.41,17L12,13.41L15.59,17L17,15.59L13.41,12L17,8.41L15.59,7Z"
                 />
               </svg>
-              <span>工作目录权限已丢失或目录不存在，请重新选择工作目录。</span>
+              <span>{{ t('workspace.error.permission') }}</span>
             </div>
           </div>
         </section>
@@ -85,13 +81,13 @@
         <!-- 项目列表区域 -->
         <section v-if="hasWorkspaceAccess" class="recent-projects">
           <div class="section-header">
-            <h2>我的项目</h2>
+            <h2>{{ t('project.list.title') }}</h2>
             <div class="header-actions">
               <button
                 class="refresh-btn"
                 @click="loadProjects"
                 :disabled="isLoading"
-                title="刷新项目列表"
+                :title="t('project.list.refresh')"
               >
                 <svg
                   width="16"
@@ -110,7 +106,7 @@
                   class="view-btn"
                   :class="{ active: viewMode === 'grid' }"
                   @click="viewMode = 'grid'"
-                  title="网格视图"
+                  :title="t('project.view.grid')"
                 >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M3,11H11V3H3M3,21H11V13H3M13,21H21V13H13M13,3V11H21V3" />
@@ -120,7 +116,7 @@
                   class="view-btn"
                   :class="{ active: viewMode === 'list' }"
                   @click="viewMode = 'list'"
-                  title="列表视图"
+                  :title="t('project.view.list')"
                 >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M3,5H21V7H3V5M3,13V11H21V13H3M3,19V17H21V19H3Z" />
@@ -132,7 +128,7 @@
 
           <div v-if="isLoading && projects.length === 0" class="loading-state">
             <div class="loading-spinner"></div>
-            <p>正在加载项目列表...</p>
+            <p>{{ t('project.loading') }}</p>
           </div>
 
           <div v-else-if="projects.length === 0" class="empty-state">
@@ -143,9 +139,11 @@
                 />
               </svg>
             </div>
-            <h3>还没有项目</h3>
-            <p>创建您的第一个视频编辑项目开始吧！</p>
-            <button class="btn btn-primary" @click="createNewProject">创建新项目</button>
+            <h3>{{ t('project.empty.title') }}</h3>
+            <p>{{ t('project.empty.description') }}</p>
+            <button class="btn btn-primary" @click="createNewProject">
+              {{ t('project.new') }}
+            </button>
           </div>
 
           <div v-else class="projects-grid" :class="{ 'list-view': viewMode === 'list' }">
@@ -169,7 +167,7 @@
                 <button
                   class="settings-btn-overlay"
                   @click.stop="showProjectMenu($event, project)"
-                  title="项目设置"
+                  :title="t('common.settings')"
                 >
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
                     <path
@@ -180,7 +178,9 @@
               </div>
               <div class="project-info">
                 <h3 class="project-name">{{ project.name }}</h3>
-                <p class="project-description">{{ project.description || '无描述' }}</p>
+                <p class="project-description">
+                  {{ project.description || t('project.noDescription') }}
+                </p>
                 <div class="project-meta">
                   <span class="project-date">{{ formatDate(project.updatedAt) }}</span>
                   <span class="project-duration">{{ formatDuration(project.duration) }}</span>
@@ -195,7 +195,7 @@
 
   <!-- 项目设置菜单 -->
   <ContextMenu v-model:show="showContextMenu" :options="contextMenuOptions">
-    <ContextMenuItem label="编辑项目" @click="showEditDialog(selectedProject!)">
+    <ContextMenuItem :label="t('project.edit')" @click="showEditDialog(selectedProject!)">
       <template #icon>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
           <path
@@ -205,7 +205,7 @@
       </template>
     </ContextMenuItem>
 
-    <ContextMenuItem label="删除项目" @click="confirmDeleteProject(selectedProject!)">
+    <ContextMenuItem :label="t('project.delete.title')" @click="confirmDeleteProject(selectedProject!)">
       <template #icon>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="#ff6b6b">
           <path
@@ -233,9 +233,12 @@ import { unifiedProjectManager } from '@/unified/utils/projectManager'
 import type { UnifiedProjectConfig } from '@/unified/project'
 import { ContextMenu, ContextMenuItem } from '@imengyu/vue3-context-menu'
 import EditProjectDialog from '../components/EditProjectDialog.vue'
+import LanguageSelector from '../components/LanguageSelector.vue'
 import { useProjectThumbnailService } from '@/unified/composables/useProjectThumbnailService'
+import { useAppI18n } from '@/unified/composables/useI18n'
 
 const router = useRouter()
+const { t, initLanguage } = useAppI18n()
 
 // 响应式数据
 const viewMode = ref<'grid' | 'list'>('grid')
@@ -440,7 +443,7 @@ function openProjectById(projectId: string) {
 }
 
 function confirmDeleteProject(project: UnifiedProjectConfig) {
-  if (confirm(`确定要删除项目"${project.name}"吗？此操作无法撤销。`)) {
+  if (confirm(t('project.delete.confirm', { name: project.name }))) {
     deleteProject(project.id)
   }
 }
@@ -544,6 +547,9 @@ function formatDuration(seconds: number): string {
 
 // 生命周期
 onMounted(async () => {
+  // 初始化语言设置
+  initLanguage()
+
   // 调试IndexedDB内容
   await directoryManager.debugIndexedDB()
 

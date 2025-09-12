@@ -2,9 +2,9 @@
   <div class="video-clip-properties">
     <!-- 基本信息 -->
     <div class="property-section">
-      <h4>基本信息</h4>
+      <h4>{{ t('properties.basic.basicInfo') }}</h4>
       <div class="property-item">
-        <label>名称</label>
+        <label>{{ t('properties.basic.name') }}</label>
         <input
           v-model="clipName"
           @blur="updateClipName"
@@ -14,7 +14,7 @@
       </div>
       <!-- 分辨率显示 -->
       <div class="property-item">
-        <label>分辨率</label>
+        <label>{{ t('properties.basic.resolution') }}</label>
         <div class="resolution-display">
           {{ currentResolution.width }} × {{ currentResolution.height }}
         </div>
@@ -26,18 +26,18 @@
       v-if="selectedTimelineItem && hasVisualProperties(selectedTimelineItem)"
       class="property-section"
     >
-      <h4>播放设置</h4>
+      <h4>{{ t('properties.playback.playbackSettings') }}</h4>
 
       <!-- 精确时长控制 -->
       <div class="property-item">
-        <label>目标时长</label>
+        <label>{{ t('properties.basic.targetDuration') }}</label>
         <div class="duration-controls">
           <input
             type="text"
-            v-model="timecodeInput"
+            :value="timecodeInput"
             @blur="updateTargetDurationFromTimecode"
             @keyup.enter="updateTargetDurationFromTimecode"
-            placeholder="HH:MM:SS.FF"
+            :placeholder="t('properties.timecodes.timecodeFormat')"
             :style="propertyInputStyle"
             class="timecode-input"
           />
@@ -49,7 +49,7 @@
         v-if="selectedTimelineItem && isVideoTimelineItem(selectedTimelineItem)"
         class="property-item"
       >
-        <label>倍速</label>
+        <label>{{ t('properties.playback.speed') }}</label>
         <div class="speed-controls">
           <!-- 分段倍速滑块 -->
           <SliderInput
@@ -69,7 +69,7 @@
             :step="0.1"
             :precision="1"
             :show-controls="false"
-            placeholder="倍速"
+            :placeholder="t('properties.placeholders.speed')"
             :input-style="speedInputStyle"
           />
         </div>
@@ -80,7 +80,7 @@
         v-if="selectedTimelineItem && isVideoTimelineItem(selectedTimelineItem)"
         class="property-item"
       >
-        <label>音量</label>
+        <label>{{ t('properties.playback.volume') }}</label>
         <div class="volume-controls">
           <SliderInput
             :model-value="volume"
@@ -98,14 +98,14 @@
             :step="0.01"
             :precision="2"
             :show-controls="false"
-            placeholder="音量"
+            :placeholder="t('properties.placeholders.volume')"
             :input-style="speedInputStyle"
           />
           <button
             @click="toggleMute"
             class="mute-btn"
             :class="{ muted: isMuted }"
-            :title="isMuted ? '取消静音' : '静音'"
+            :title="isMuted ? t('properties.playback.unmuteTitle') : t('properties.playback.muteTitle')"
           >
             <svg v-if="!isMuted" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
               <path
@@ -168,6 +168,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useAppI18n } from '@/unified/composables/useI18n'
 import { useUnifiedStore } from '@/unified/unifiedStore'
 import {
   isVideoTimelineItem,
@@ -191,6 +192,7 @@ interface Props {
 
 const props = defineProps<Props>()
 
+const { t } = useAppI18n()
 const unifiedStore = useUnifiedStore()
 
 // 关键帧动画和变换控制器
@@ -260,12 +262,7 @@ const formattedDuration = computed(() => {
 })
 
 // 时间码输入框的临时值
-const timecodeInput = computed({
-  get: () => formattedDuration.value,
-  set: () => {
-    // 这里不做任何操作，只在失焦或回车时更新
-  },
-})
+const timecodeInput = computed(() => formattedDuration.value)
 
 // 倍速分段配置
 const speedSegments = [
@@ -432,29 +429,29 @@ const updateTargetDurationFromTimecode = async (event: Event) => {
     console.warn('⚠️ 时间码格式无效:', timecodeValue, error)
 
     // 根据错误类型提供具体的错误信息
-    let errorMessage = '请使用正确的时间码格式：HH:MM:SS.FF'
+    let errorMessage = t('properties.errors.invalidTimecodeFormat')
     const errorStr = error instanceof Error ? error.message : String(error)
 
     if (errorStr.includes('Invalid timecode format')) {
       // 格式错误
-      errorMessage = `格式错误：请使用 HH:MM:SS.FF 格式
-示例：00:01:30.15（1分30秒15帧）
-当前输入：${timecodeValue}`
+      errorMessage = `${t('properties.errors.formatError')}: ${t('properties.errors.invalidTimecodeFormat')}
+${t('properties.errors.example')}: ${t('properties.errors.timecodeExample')}
+${t('properties.errors.currentInput')}: ${timecodeValue}`
     } else if (errorStr.includes('Invalid timecode values')) {
       // 数值范围错误
-      errorMessage = `数值超出范围：
-• 分钟和秒数应小于60
-• 帧数应小于30（30fps）
-当前输入：${timecodeValue}`
+      errorMessage = `${t('properties.errors.valueOutOfRange')}:
+${t('properties.errors.minutesAndSecondsShouldBeLessThan60')}
+${t('properties.errors.framesShouldBeLessThan30')}
+${t('properties.errors.currentInput')}: ${timecodeValue}`
     } else {
       // 其他错误
-      errorMessage = `时间码解析失败
-请检查格式：HH:MM:SS.FF
-当前输入：${timecodeValue}`
+      errorMessage = `${t('properties.errors.timecodeParsingFailed')}
+${t('properties.errors.pleaseCheckFormat')}: ${t('properties.errors.timecodeFormat')}
+${t('properties.errors.currentInput')}: ${timecodeValue}`
     }
 
     // 显示错误通知
-    unifiedStore.showError(`时间码格式错误：${errorMessage}`)
+    unifiedStore.showError(`${t('properties.errors.timecodeFormatError')}: ${errorMessage}`)
 
     // 恢复到当前值
     input.value = formattedDuration.value
@@ -607,7 +604,7 @@ const toggleMute = () => {
     isMuted: newMutedState,
   })
 
-  console.log('✅ 静音状态切换:', newMutedState ? '静音' : '有声', '音量保持:', config.volume)
+  console.log('✅ 静音状态切换:', newMutedState ? t('properties.playback.silenced') : t('properties.playback.audible'), t('properties.playback.volumeMaintained') + ':', config.volume)
 }
 
 // 将归一化值(0-100)转换为实际播放速度

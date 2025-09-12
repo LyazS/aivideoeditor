@@ -14,13 +14,12 @@ import type { UnifiedMediaItemData } from '@/unified/mediaitem/types'
  */
 export function createUnifiedSelectionModule(
   getTimelineItem: (id: string) => UnifiedTimelineItemData | undefined,
-  getMediaItem: (id: string) => UnifiedMediaItemData | undefined,
-  executeCommand: (command: any) => Promise<void>,
 ) {
   // ==================== 状态定义 ====================
 
   // 统一选择状态：使用单一集合管理所有选择
-  const selectedTimelineItemIds = ref<Set<string>>(new Set()) // 选中项目ID集合
+  const selectedTimelineItemIds = ref<Set<string>>(new Set()) // 选中时间轴项目ID集合
+  const selectedMediaItemIds = ref<Set<string>>(new Set()) // 选中媒体项目ID集合
 
   // 计算属性：从集合派生的状态
   const selectedTimelineItemId = computed(() => {
@@ -32,6 +31,8 @@ export function createUnifiedSelectionModule(
 
   const isMultiSelectMode = computed(() => selectedTimelineItemIds.value.size > 1)
   const hasSelection = computed(() => selectedTimelineItemIds.value.size > 0)
+  const hasMediaSelection = computed(() => selectedMediaItemIds.value.size > 0)
+  const isMediaMultiSelectMode = computed(() => selectedMediaItemIds.value.size > 1)
 
   // ==================== 选择管理方法 ====================
 
@@ -73,128 +74,52 @@ export function createUnifiedSelectionModule(
       oldSelection: Array.from(oldSelection),
       newSelection: Array.from(selectedTimelineItemIds.value),
     })
-
-    // 统一的AVCanvas同步逻辑
-    syncAVCanvasSelection()
   }
 
   /**
-   * AVCanvas选择同步逻辑（已简化，不再管理AVCanvas状态）
-   */
-  function syncAVCanvasSelection() {
-    // 注意：由于不再支持AVCanvas选择，这个函数现在只是一个占位符
-    // 保留是为了兼容性，避免破坏现有的调用
-    console.log('🔗 选择状态已更新（不再同步到AVCanvas）')
-  }
-
-  // 防抖机制：避免短时间内重复执行相同的选择操作
-  let lastSelectionCommand: { itemIds: string[]; mode: string; timestamp: number } | null = null
-  const SELECTION_DEBOUNCE_TIME = 100 // 100毫秒内的重复操作会被忽略
-
-  /**
-   * 带历史记录的时间轴项目选择方法
-   * @param itemIds 要操作的项目ID数组
+   * 统一的媒体项目选择方法
+   * @param itemIds 要操作的媒体项目ID数组
    * @param mode 操作模式：'replace'替换选择，'toggle'切换选择状态
    */
-  async function selectTimelineItemsWithHistory(
+  function selectMediaItems(
     itemIds: string[],
-    mode: 'replace' | 'toggle' = 'replace',
+    mode: 'replace' | 'toggle' = 'replace'
   ) {
-    const now = Date.now()
-
-    // 检查是否是重复的操作（防抖）
-    if (lastSelectionCommand) {
-      const timeDiff = now - lastSelectionCommand.timestamp
-      const isSameOperation =
-        lastSelectionCommand.mode === mode && arraysEqual(lastSelectionCommand.itemIds, itemIds)
-
-      if (isSameOperation && timeDiff < SELECTION_DEBOUNCE_TIME) {
-        console.log('🎯 检测到重复选择操作，跳过历史记录', { timeDiff, itemIds, mode })
-        return
-      }
-    }
-
-    // 检查是否有实际的选择变化
-    const currentSelection = new Set(selectedTimelineItemIds.value)
-    const newSelection = calculateNewSelection(itemIds, mode, currentSelection)
-
-    // 如果选择状态没有变化，不创建历史记录
-    if (setsEqual(currentSelection, newSelection)) {
-      console.log('🎯 选择状态无变化，跳过历史记录')
-      return
-    }
-
-    // 记录当前操作，用于防抖检测
-    lastSelectionCommand = { itemIds: [...itemIds], mode, timestamp: now }
-
-    // 动态导入命令类以避免循环依赖
-    const { SelectTimelineItemsCommand } = await import(
-      '@/unified/modules/commands/timelineCommands'
-    )
-
-    // 创建选择命令
-    const command = new SelectTimelineItemsCommand(
-      itemIds,
-      mode,
-      {
-        selectedTimelineItemIds: { value: selectedTimelineItemIds.value },
-        selectTimelineItems,
-        syncAVCanvasSelection,
-      },
-      { getTimelineItem },
-      { getMediaItem },
-    )
-
-    // 执行命令（这会自动添加到历史记录）
-    await executeCommand(command)
-  }
-
-  /**
-   * 计算新的选择状态
-   */
-  function calculateNewSelection(
-    itemIds: string[],
-    mode: 'replace' | 'toggle',
-    currentSelection: Set<string>,
-  ): Set<string> {
-    const newSelection = new Set(currentSelection)
+    const oldSelection = new Set(selectedMediaItemIds.value)
 
     if (mode === 'replace') {
-      newSelection.clear()
-      itemIds.forEach((id) => newSelection.add(id))
+      // 替换模式：清空现有选择，设置新选择
+      selectedMediaItemIds.value.clear()
+      itemIds.forEach((id) => selectedMediaItemIds.value.add(id))
     } else {
+      // 切换模式：切换每个项目的选择状态
       itemIds.forEach((id) => {
-        if (newSelection.has(id)) {
-          newSelection.delete(id)
+        if (selectedMediaItemIds.value.has(id)) {
+          selectedMediaItemIds.value.delete(id)
         } else {
-          newSelection.add(id)
+          selectedMediaItemIds.value.add(id)
         }
       })
     }
 
-    return newSelection
+    console.log('🎯 统一媒体选择操作:', {
+      mode,
+      itemIds,
+      oldSize: oldSelection.size,
+      newSize: selectedMediaItemIds.value.size,
+      isMultiSelect: isMediaMultiSelectMode.value,
+      oldSelection: Array.from(oldSelection),
+      newSelection: Array.from(selectedMediaItemIds.value),
+    })
   }
 
   /**
-   * 检查两个Set是否相等
+   * 检查媒体项目是否被选中
+   * @param mediaItemId 媒体项目ID
+   * @returns 是否被选中
    */
-  function setsEqual(set1: Set<string>, set2: Set<string>): boolean {
-    if (set1.size !== set2.size) return false
-    for (const item of set1) {
-      if (!set2.has(item)) return false
-    }
-    return true
-  }
-
-  /**
-   * 检查两个数组是否相等
-   */
-  function arraysEqual(arr1: string[], arr2: string[]): boolean {
-    if (arr1.length !== arr2.length) return false
-    for (let i = 0; i < arr1.length; i++) {
-      if (arr1[i] !== arr2[i]) return false
-    }
-    return true
+  function isMediaItemSelected(mediaItemId: string): boolean {
+    return selectedMediaItemIds.value.has(mediaItemId)
   }
 
   /**
@@ -323,6 +248,14 @@ export function createUnifiedSelectionModule(
     console.log('🔄 选择状态已重置为默认值')
   }
 
+  /**
+   * 清除媒体项目选择
+   */
+  function clearMediaSelection() {
+    selectedMediaItemIds.value.clear()
+    console.log('🔄 媒体项目选择已清除')
+  }
+
   // ==================== 辅助方法 ====================
 
   // ==================== 导出接口 ====================
@@ -333,11 +266,13 @@ export function createUnifiedSelectionModule(
     selectedTimelineItemIds,
     isMultiSelectMode,
     hasSelection,
+    selectedMediaItemIds,
+    hasMediaSelection,
+    isMediaMultiSelectMode,
 
     // 统一选择API
     selectTimelineItems,
-    selectTimelineItemsWithHistory,
-    syncAVCanvasSelection,
+    selectMediaItems,
 
     // 兼容性方法
     selectTimelineItem,
@@ -354,6 +289,10 @@ export function createUnifiedSelectionModule(
     toggleMultiSelection,
     clearMultiSelection,
     isInMultiSelection,
+
+    // 媒体项目选择方法
+    isMediaItemSelected,
+    clearMediaSelection,
   }
 }
 

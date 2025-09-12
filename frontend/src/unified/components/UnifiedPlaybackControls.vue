@@ -2,7 +2,7 @@
   <div class="playback-controls">
     <!-- 播放控制按钮 -->
     <div class="control-buttons">
-      <HoverButton variant="primary" @click="togglePlayPause" :title="isPlaying ? '暂停' : '播放'">
+      <HoverButton variant="primary" @click="togglePlayPause" :title="isPlaying ? t('common.pause') : t('common.play')">
         <template #icon>
           <svg v-if="!isPlaying" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
             <path d="M8,5.14V19.14L19,12.14L8,5.14Z" />
@@ -13,7 +13,7 @@
         </template>
       </HoverButton>
 
-      <HoverButton @click="stop" title="停止">
+      <HoverButton @click="stop" :title="t('common.stop')">
         <template #icon>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
             <path d="M18,18H6V6H18V18Z" />
@@ -24,7 +24,7 @@
 
     <!-- 播放速度控制 -->
     <div class="speed-control">
-      <select @change="handleSpeedChange" :value="playbackRate" title="播放速度">
+      <select @change="handleSpeedChange" :value="playbackRate" :title="t('common.playbackSpeed')">
         <option value="0.25">0.25x</option>
         <option value="0.5">0.5x</option>
         <option value="0.75">0.75x</option>
@@ -44,10 +44,12 @@
 import { computed } from 'vue'
 import { useUnifiedStore } from '@/unified/unifiedStore'
 import { usePlaybackControls } from '@/unified/composables'
+import { useAppI18n } from '@/unified/composables/useI18n'
 import HoverButton from '@/components/HoverButton.vue'
 
 const unifiedStore = useUnifiedStore()
 const { safePlaybackOperation, restartPlayback } = usePlaybackControls()
+const { t } = useAppI18n()
 
 const isPlaying = computed(() => unifiedStore.isPlaying)
 const playbackRate = computed(() => unifiedStore.playbackRate)
@@ -62,7 +64,7 @@ function togglePlayPause() {
       // 通过WebAV播放，WebAV会触发事件更新store状态
       unifiedStore.webAVPlay()
     }
-  }, '播放/暂停切换')
+  }, t('common.play') + '/' + t('common.pause') + t('common.toggle'))
 }
 
 function stop() {
@@ -71,7 +73,7 @@ function stop() {
     unifiedStore.webAVPause()
     // 只通过WebAV设置时间，WebAV会触发timeupdate事件更新Store
     unifiedStore.webAVSeekTo(0)
-  }, '停止播放')
+  }, t('common.stop') + t('common.playback'))
 }
 
 function handleSpeedChange(event: Event) {

@@ -49,27 +49,6 @@ import {
   duplicateTimelineItem,
 } from '@/unified/timelineitem/TimelineItemFactory'
 
-// ==================== 命令类导入 ====================
-import {
-  AddTimelineItemCommand,
-  RemoveTimelineItemCommand,
-  MoveTimelineItemCommand,
-  UpdateTransformCommand,
-  SplitTimelineItemCommand,
-  AddTrackCommand,
-  RemoveTrackCommand,
-  RenameTrackCommand,
-  ToggleTrackVisibilityCommand,
-  ToggleTrackMuteCommand,
-  ResizeTimelineItemCommand,
-} from '@/unified/modules/commands/timelineCommands'
-
-import {
-  BatchDeleteCommand,
-  BatchAutoArrangeTrackCommand,
-} from '@/unified/modules/commands/batchCommands'
-import type { AudioVisibleSprite, VideoVisibleSprite } from './visiblesprite'
-
 /**
  * 统一视频编辑器存储
  * 基于新的统一类型系统重构的主要状态管理
@@ -155,11 +134,7 @@ export const useUnifiedStore = defineStore('unified', () => {
   const unifiedHistoryModule = createUnifiedHistoryModule(unifiedNotificationModule)
 
   // 创建统一选择管理模块（需要在unifiedHistoryModule之后创建）
-  const unifiedSelectionModule = createUnifiedSelectionModule(
-    unifiedTimelineModule.getTimelineItem,
-    unifiedMediaModule.getMediaItem,
-    unifiedHistoryModule.executeCommand,
-  )
+  const unifiedSelectionModule = createUnifiedSelectionModule(unifiedTimelineModule.getTimelineItem)
 
   // 创建统一自动保存模块（需要在项目模块之后创建）
   const unifiedAutoSaveModule = createUnifiedAutoSaveModule(
@@ -209,6 +184,7 @@ export const useUnifiedStore = defineStore('unified', () => {
     unifiedMediaModule,
     unifiedConfigModule,
     unifiedTrackModule,
+    unifiedSelectionModule,
   )
 
   /**
@@ -324,6 +300,15 @@ export const useUnifiedStore = defineStore('unified', () => {
     autoArrangeTrackWithHistory: historyOperations.autoArrangeTrackWithHistory,
     toggleTrackVisibilityWithHistory: historyOperations.toggleTrackVisibilityWithHistory,
     toggleTrackMuteWithHistory: historyOperations.toggleTrackMuteWithHistory,
+    updateTextContentWithHistory: historyOperations.updateTextContentWithHistory,
+    updateTextStyleWithHistory: historyOperations.updateTextStyleWithHistory,
+    selectTimelineItemsWithHistory: historyOperations.selectTimelineItemsWithHistory,
+    // 关键帧历史记录方法
+    createKeyframeWithHistory: historyOperations.createKeyframeWithHistory,
+    deleteKeyframeWithHistory: historyOperations.deleteKeyframeWithHistory,
+    updatePropertyWithHistory: historyOperations.updatePropertyWithHistory,
+    clearAllKeyframesWithHistory: historyOperations.clearAllKeyframesWithHistory,
+    toggleKeyframeWithHistory: historyOperations.toggleKeyframeWithHistory,
 
     // ==================== 统一媒体模块状态和方法 ====================
 
@@ -373,8 +358,7 @@ export const useUnifiedStore = defineStore('unified', () => {
 
     // 轨道管理方法
     addTrack: unifiedTrackModule.addTrack,
-    removeTrack: (trackId: string) =>
-      unifiedTrackModule.removeTrack(trackId, unifiedTimelineModule.timelineItems),
+    removeTrack: unifiedTrackModule.removeTrack,
     renameTrack: unifiedTrackModule.renameTrack,
     getTrack: unifiedTrackModule.getTrack,
     setTrackHeight: unifiedTrackModule.setTrackHeight,
@@ -593,7 +577,6 @@ export const useUnifiedStore = defineStore('unified', () => {
     canRedo: unifiedHistoryModule.canRedo,
 
     // 历史操作方法
-    executeCommand: unifiedHistoryModule.executeCommand,
     undo: unifiedHistoryModule.undo,
     redo: unifiedHistoryModule.redo,
     clearHistory: unifiedHistoryModule.clear,
@@ -603,6 +586,12 @@ export const useUnifiedStore = defineStore('unified', () => {
     executeBatchCommand: unifiedHistoryModule.executeBatchCommand,
 
     // ==================== 统一选择模块状态和方法 ====================
+    selectedMediaItemIds: unifiedSelectionModule.selectedMediaItemIds,
+    hasMediaSelection: unifiedSelectionModule.hasMediaSelection,
+    isMediaMultiSelectMode: unifiedSelectionModule.isMediaMultiSelectMode,
+    selectMediaItems: unifiedSelectionModule.selectMediaItems,
+    isMediaItemSelected: unifiedSelectionModule.isMediaItemSelected,
+    clearMediaSelection: unifiedSelectionModule.clearMediaSelection,
 
     // 选择状态
     selectedTimelineItemId: unifiedSelectionModule.selectedTimelineItemId,
@@ -612,8 +601,6 @@ export const useUnifiedStore = defineStore('unified', () => {
 
     // 统一选择API
     selectTimelineItems: unifiedSelectionModule.selectTimelineItems,
-    selectTimelineItemsWithHistory: unifiedSelectionModule.selectTimelineItemsWithHistory,
-    syncAVCanvasSelection: unifiedSelectionModule.syncAVCanvasSelection,
 
     // 兼容性选择方法
     selectTimelineItem: unifiedSelectionModule.selectTimelineItem,

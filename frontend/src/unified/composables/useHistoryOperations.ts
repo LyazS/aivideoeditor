@@ -24,10 +24,24 @@ import {
   RenameTrackCommand,
   ToggleTrackVisibilityCommand,
   ToggleTrackMuteCommand,
+  SelectTimelineItemsCommand,
 } from '@/unified/modules/commands/timelineCommands'
 import { BatchAutoArrangeTrackCommand } from '@/unified/modules/commands/batchCommands'
 import { TimelineItemQueries } from '@/unified/timelineitem/'
 import { duplicateTimelineItem } from '@/unified/timelineitem/TimelineItemFactory'
+import { UpdateTextCommand } from '@/unified/modules/commands/UpdateTextCommand'
+import type { TextStyleConfig } from '@/unified/timelineitem'
+import {
+  CreateKeyframeCommand,
+  DeleteKeyframeCommand,
+  UpdatePropertyCommand,
+  ClearAllKeyframesCommand,
+  ToggleKeyframeCommand,
+  type TimelineModule as KeyframeTimelineModule,
+  type WebAVAnimationManager,
+  type PlaybackControls,
+} from '@/unified/modules/commands/keyframeCommands'
+import { updateWebAVAnimation } from '@/unified/utils/webavAnimationManager'
 
 // 模块接口类型定义
 interface UnifiedHistoryModule {
@@ -65,20 +79,19 @@ interface UnifiedConfigModule {
 interface UnifiedTrackModule {
   tracks: Ref<UnifiedTrackData[]>
   addTrack: (trackData: UnifiedTrackData, position?: number) => UnifiedTrackData
-  removeTrack: (
-    trackId: string,
-    timelineItems: Ref<UnifiedTimelineItemData<MediaType>[]>,
-    removeTimelineItemCallback?: (timelineItemId: string) => void,
-  ) => void
+  removeTrack: (trackId: string) => Promise<void>
   getTrack: (trackId: string) => UnifiedTrackData | undefined
   renameTrack: (trackId: string, newName: string) => void
-  toggleTrackVisibility: (
-    trackId: string,
-    timelineItems?: Ref<UnifiedTimelineItemData<MediaType>[]>,
-  ) => void
-  toggleTrackMute: (
-    trackId: string,
-    timelineItems?: Ref<UnifiedTimelineItemData<MediaType>[]>,
+  toggleTrackVisibility: (trackId: string) => Promise<void>
+  toggleTrackMute: (trackId: string) => Promise<void>
+}
+
+interface UnifiedSelectionModule {
+  selectedTimelineItemIds: Ref<Set<string>>
+  selectTimelineItems: (
+    itemIds: string[],
+    mode?: 'replace' | 'toggle',
+    withHistory?: boolean,
   ) => void
 }
 
@@ -98,6 +111,20 @@ interface TransformProperties {
   gain?: number // 音频增益（dB）
 }
 
+// 关键帧命令执行器接口
+interface UnifiedKeyframeCommandExecutor {
+  /** 时间轴模块 */
+  timelineModule: KeyframeTimelineModule
+  /** WebAV动画管理器 */
+  webavAnimationManager: WebAVAnimationManager
+  /** 历史记录模块 */
+  historyModule: {
+    executeCommand: (command: any) => Promise<void>
+  }
+  /** 播放控制模块 */
+  playbackControls: PlaybackControls
+}
+
 /**
  * 历史记录操作相关方法
  * 包括时间轴项目和轨道相关的历史记录操作方法
@@ -108,7 +135,8 @@ export function createHistoryOperations(
   unifiedWebavModule: UnifiedWebavModule,
   unifiedMediaModule: UnifiedMediaModule,
   unifiedConfigModule: UnifiedConfigModule,
-  unifiedTrackModule?: UnifiedTrackModule,
+  unifiedTrackModule: UnifiedTrackModule,
+  unifiedSelectionModule: UnifiedSelectionModule,
 ) {
   // ==================== 辅助函数 ====================
 
@@ -570,10 +598,6 @@ export function createHistoryOperations(
    * @param position 插入位置（可选）
    */
   async function addTrackWithHistory(type: UnifiedTrackType = 'video', position?: number) {
-    if (!unifiedTrackModule) {
-      console.warn('⚠️ 轨道模块未初始化，无法添加轨道')
-      return
-    }
     const command = new AddTrackCommand(type, position, {
       addTrack: unifiedTrackModule.addTrack,
       removeTrack: unifiedTrackModule.removeTrack,
@@ -587,10 +611,6 @@ export function createHistoryOperations(
    * @param trackId 要删除的轨道ID
    */
   async function removeTrackWithHistory(trackId: string) {
-    if (!unifiedTrackModule) {
-      console.warn('⚠️ 轨道模块未初始化，无法删除轨道')
-      return
-    }
     // 获取要删除的轨道
     const track = unifiedTrackModule.getTrack(trackId)
     if (!track) {
@@ -602,8 +622,7 @@ export function createHistoryOperations(
       trackId,
       {
         addTrack: unifiedTrackModule.addTrack,
-        removeTrack: (id: string) =>
-          unifiedTrackModule!.removeTrack(id, unifiedTimelineModule.timelineItems),
+        removeTrack: unifiedTrackModule.removeTrack,
         getTrack: unifiedTrackModule.getTrack,
         tracks: unifiedTrackModule.tracks,
       },
@@ -615,14 +634,7 @@ export function createHistoryOperations(
         timelineItems: unifiedTimelineModule.timelineItems,
       },
       {
-        addSprite: unifiedWebavModule.addSprite,
-        removeSprite: unifiedWebavModule.removeSprite,
-      },
-      {
         getMediaItem: unifiedMediaModule.getMediaItem,
-      },
-      {
-        videoResolution: unifiedConfigModule.videoResolution,
       },
     )
     await unifiedHistoryModule.executeCommand(command)
@@ -634,10 +646,6 @@ export function createHistoryOperations(
    * @param newName 新名称
    */
   async function renameTrackWithHistory(trackId: string, newName: string) {
-    if (!unifiedTrackModule) {
-      console.warn('⚠️ 轨道模块未初始化，无法重命名轨道')
-      return
-    }
     // 获取要重命名的轨道
     const track = unifiedTrackModule.getTrack(trackId)
     if (!track) {
@@ -660,10 +668,6 @@ export function createHistoryOperations(
    * @param trackId 要排列的轨道ID
    */
   async function autoArrangeTrackWithHistory(trackId: string) {
-    if (!unifiedTrackModule) {
-      console.warn('⚠️ 轨道模块未初始化，无法自动排列轨道')
-      return
-    }
     const command = new BatchAutoArrangeTrackCommand(
       trackId,
       unifiedTimelineModule.timelineItems.value.filter((item) => item.trackId === trackId),
@@ -686,10 +690,6 @@ export function createHistoryOperations(
    * @param trackId 要切换的轨道ID
    */
   async function toggleTrackVisibilityWithHistory(trackId: string) {
-    if (!unifiedTrackModule) {
-      console.warn('⚠️ 轨道模块未初始化，无法切换轨道可见性')
-      return
-    }
     // 获取要切换的轨道
     const track = unifiedTrackModule.getTrack(trackId)
     if (!track) {
@@ -701,11 +701,7 @@ export function createHistoryOperations(
       trackId,
       {
         getTrack: unifiedTrackModule.getTrack,
-        toggleTrackVisibility: (id: string) =>
-          unifiedTrackModule!.toggleTrackVisibility(id, unifiedTimelineModule.timelineItems),
-      },
-      {
-        timelineItems: unifiedTimelineModule.timelineItems,
+        toggleTrackVisibility: (id: string) => unifiedTrackModule.toggleTrackVisibility(id),
       },
     )
     await unifiedHistoryModule.executeCommand(command)
@@ -716,10 +712,6 @@ export function createHistoryOperations(
    * @param trackId 要切换的轨道ID
    */
   async function toggleTrackMuteWithHistory(trackId: string) {
-    if (!unifiedTrackModule) {
-      console.warn('⚠️ 轨道模块未初始化，无法切换轨道静音')
-      return
-    }
     // 获取要切换的轨道
     const track = unifiedTrackModule.getTrack(trackId)
     if (!track) {
@@ -731,14 +723,427 @@ export function createHistoryOperations(
       trackId,
       {
         getTrack: unifiedTrackModule.getTrack,
-        toggleTrackMute: (id: string) =>
-          unifiedTrackModule!.toggleTrackMute(id, unifiedTimelineModule.timelineItems),
-      },
-      {
-        timelineItems: unifiedTimelineModule.timelineItems,
+        toggleTrackMute: (id: string) => unifiedTrackModule.toggleTrackMute(id),
       },
     )
     await unifiedHistoryModule.executeCommand(command)
+  }
+
+  /**
+   * 带历史记录的更新文本内容方法
+   * @param timelineItemId 要更新的时间轴项目ID
+   * @param newText 新的文本内容
+   * @param newStyle 新的文本样式（可选）
+   */
+  async function updateTextContentWithHistory(
+    timelineItemId: string,
+    newText: string,
+    newStyle: Partial<TextStyleConfig> = {},
+  ) {
+    // 验证文本项目存在
+    const timelineItem = unifiedTimelineModule.getTimelineItem(timelineItemId)
+    if (!timelineItem || !TimelineItemQueries.isTextTimelineItem(timelineItem)) {
+      console.warn(`⚠️ 文本项目不存在或类型错误: ${timelineItemId}`)
+      return
+    }
+
+    // 检查文本内容是否有实际变化
+    if (timelineItem.config.text === newText.trim() && Object.keys(newStyle).length === 0) {
+      console.log('⚠️ 文本内容没有变化，跳过更新操作')
+      return
+    }
+
+    try {
+      console.log('🔄 [useHistoryOperations] 更新文本内容:', {
+        timelineItemId,
+        newText: newText.substring(0, 20) + (newText.length > 20 ? '...' : ''),
+        hasStyleUpdate: Object.keys(newStyle).length > 0,
+      })
+
+      // 创建更新文本命令
+      const command = new UpdateTextCommand(
+        timelineItemId,
+        newText.trim(),
+        newStyle,
+        {
+          getTimelineItem: (id: string) =>
+            unifiedTimelineModule.getTimelineItem(id) as
+              | UnifiedTimelineItemData<'text'>
+              | undefined,
+          setupBidirectionalSync: unifiedTimelineModule.setupTimelineItemSprite,
+        },
+        {
+          addSprite: unifiedWebavModule.addSprite,
+          removeSprite: unifiedWebavModule.removeSprite,
+        },
+        {
+          videoResolution: unifiedConfigModule.videoResolution.value,
+        },
+      )
+
+      // 执行命令（带历史记录）
+      await unifiedHistoryModule.executeCommand(command)
+
+      console.log('✅ [useHistoryOperations] 文本内容更新成功')
+    } catch (error) {
+      console.error('❌ [useHistoryOperations] 更新文本内容失败:', error)
+      throw error
+    }
+  }
+
+  /**
+   * 带历史记录的更新文本样式方法
+   * @param timelineItemId 要更新的时间轴项目ID
+   * @param newStyle 新的文本样式
+   */
+  async function updateTextStyleWithHistory(
+    timelineItemId: string,
+    newStyle: Partial<TextStyleConfig>,
+  ) {
+    // 验证文本项目存在
+    const timelineItem = unifiedTimelineModule.getTimelineItem(timelineItemId)
+    if (!timelineItem || !TimelineItemQueries.isTextTimelineItem(timelineItem)) {
+      console.warn(`⚠️ 文本项目不存在或类型错误: ${timelineItemId}`)
+      return
+    }
+
+    // 获取当前样式进行对比
+    const currentStyle = timelineItem.config.style
+    if (!currentStyle) {
+      console.warn(`⚠️ 文本项目样式数据不存在: ${timelineItemId}`)
+      return
+    }
+
+    // 检查样式是否有实际变化
+    const hasChanges = Object.keys(newStyle).some((key) => {
+      const styleKey = key as keyof TextStyleConfig
+      return newStyle[styleKey] !== currentStyle[styleKey]
+    })
+
+    if (!hasChanges) {
+      console.log('⚠️ 文本样式没有变化，跳过更新操作')
+      return
+    }
+
+    try {
+      console.log('🔄 [useHistoryOperations] 更新文本样式:', {
+        timelineItemId,
+        styleChanges: Object.keys(newStyle),
+        currentText:
+          timelineItem.config.text.substring(0, 20) +
+          (timelineItem.config.text.length > 20 ? '...' : ''),
+      })
+
+      // 创建更新文本命令（保持文本内容不变，只更新样式）
+      const command = new UpdateTextCommand(
+        timelineItemId,
+        timelineItem.config.text, // 保持文本内容不变
+        newStyle,
+        {
+          getTimelineItem: (id: string) =>
+            unifiedTimelineModule.getTimelineItem(id) as
+              | UnifiedTimelineItemData<'text'>
+              | undefined,
+          setupBidirectionalSync: unifiedTimelineModule.setupTimelineItemSprite,
+        },
+        {
+          addSprite: unifiedWebavModule.addSprite,
+          removeSprite: unifiedWebavModule.removeSprite,
+        },
+        {
+          videoResolution: unifiedConfigModule.videoResolution.value,
+        },
+      )
+
+      // 执行命令（带历史记录）
+      await unifiedHistoryModule.executeCommand(command)
+
+      console.log('✅ [useHistoryOperations] 文本样式更新成功')
+    } catch (error) {
+      console.error('❌ [useHistoryOperations] 更新文本样式失败:', error)
+      throw error
+    }
+  }
+
+  /**
+   * 带历史记录的选择时间轴项目方法
+   * @param itemIds 要操作的项目ID数组
+   * @param mode 操作模式：'replace'替换选择，'toggle'切换选择状态
+   * @param selectionModule 选择模块实例，提供选择状态和方法
+   */
+  async function selectTimelineItemsWithHistory(
+    itemIds: string[],
+    mode: 'replace' | 'toggle' = 'replace',
+  ) {
+    // 防抖机制：避免短时间内重复执行相同的选择操作
+    // 使用模块外部变量来维护防抖状态
+    const now = Date.now()
+
+    // 检查是否有实际的选择变化
+    const currentSelection = new Set(unifiedSelectionModule.selectedTimelineItemIds.value)
+    const newSelection = calculateNewSelection(itemIds, mode, currentSelection)
+
+    // 如果选择状态没有变化，不创建历史记录
+    if (setsEqual(currentSelection, newSelection)) {
+      console.log('🎯 选择状态无变化，跳过历史记录')
+      return
+    }
+
+    try {
+      console.log('🎯 [useHistoryOperations] 选择时间轴项目:', {
+        itemIds,
+        mode,
+        currentSelectionSize: currentSelection.size,
+        newSelectionSize: newSelection.size,
+      })
+
+      // 创建选择命令
+      const command = new SelectTimelineItemsCommand(
+        itemIds,
+        mode,
+        unifiedSelectionModule,
+        unifiedTimelineModule,
+        unifiedMediaModule,
+      )
+
+      // 执行命令（带历史记录）
+      await unifiedHistoryModule.executeCommand(command)
+
+      console.log('✅ [useHistoryOperations] 时间轴项目选择成功')
+    } catch (error) {
+      console.error('❌ [useHistoryOperations] 时间轴项目选择失败:', error)
+      throw error
+    }
+  }
+
+  /**
+   * 计算新的选择状态
+   */
+  function calculateNewSelection(
+    itemIds: string[],
+    mode: 'replace' | 'toggle',
+    currentSelection: Set<string>,
+  ): Set<string> {
+    const newSelection = new Set(currentSelection)
+
+    if (mode === 'replace') {
+      newSelection.clear()
+      itemIds.forEach((id) => newSelection.add(id))
+    } else {
+      itemIds.forEach((id) => {
+        if (newSelection.has(id)) {
+          newSelection.delete(id)
+        } else {
+          newSelection.add(id)
+        }
+      })
+    }
+
+    return newSelection
+  }
+
+  /**
+   * 检查两个Set是否相等
+   */
+  function setsEqual(set1: Set<string>, set2: Set<string>): boolean {
+    if (set1.size !== set2.size) return false
+    for (const item of set1) {
+      if (!set2.has(item)) return false
+    }
+    return true
+  }
+
+  /**
+   * 带历史记录的创建关键帧方法
+   * @param timelineItemId 时间轴项目ID
+   * @param frame 帧数
+   */
+  async function createKeyframeWithHistory(timelineItemId: string, frame: number) {
+    try {
+      console.log('🎬 [useHistoryOperations] 创建关键帧:', { timelineItemId, frame })
+
+      // 创建关键帧命令
+      const command = new CreateKeyframeCommand(
+        timelineItemId,
+        frame,
+        {
+          getTimelineItem: unifiedTimelineModule.getTimelineItem,
+        },
+        {
+          updateWebAVAnimation: updateWebAVAnimation,
+        },
+        {
+          seekTo: (frame: number) => {
+            // 播放头控制应该由调用方提供，这里简化为不控制播放头
+            console.log('🔍 关键帧操作播放头控制:', frame)
+          },
+        },
+      )
+
+      // 执行命令（带历史记录）
+      await unifiedHistoryModule.executeCommand(command)
+
+      console.log('✅ [useHistoryOperations] 关键帧创建成功')
+    } catch (error) {
+      console.error('❌ [useHistoryOperations] 关键帧创建失败:', error)
+      throw error
+    }
+  }
+
+  /**
+   * 带历史记录的删除关键帧方法
+   * @param timelineItemId 时间轴项目ID
+   * @param frame 帧数
+   */
+  async function deleteKeyframeWithHistory(timelineItemId: string, frame: number) {
+    try {
+      console.log('🎬 [useHistoryOperations] 删除关键帧:', { timelineItemId, frame })
+
+      // 创建删除关键帧命令
+      const command = new DeleteKeyframeCommand(
+        timelineItemId,
+        frame,
+        {
+          getTimelineItem: unifiedTimelineModule.getTimelineItem,
+        },
+        {
+          updateWebAVAnimation: updateWebAVAnimation,
+        },
+        {
+          seekTo: (frame: number) => {
+            console.log('🔍 关键帧操作播放头控制:', frame)
+          },
+        },
+      )
+
+      // 执行命令（带历史记录）
+      await unifiedHistoryModule.executeCommand(command)
+
+      console.log('✅ [useHistoryOperations] 关键帧删除成功')
+    } catch (error) {
+      console.error('❌ [useHistoryOperations] 关键帧删除失败:', error)
+      throw error
+    }
+  }
+
+  /**
+   * 带历史记录的更新关键帧属性方法
+   * @param timelineItemId 时间轴项目ID
+   * @param frame 帧数
+   * @param property 属性名
+   * @param value 新值
+   */
+  async function updatePropertyWithHistory(
+    timelineItemId: string,
+    frame: number,
+    property: string,
+    value: any,
+  ) {
+    try {
+      console.log('🎬 [useHistoryOperations] 更新关键帧属性:', {
+        timelineItemId,
+        frame,
+        property,
+        value,
+      })
+
+      // 创建更新属性命令
+      const command = new UpdatePropertyCommand(
+        timelineItemId,
+        frame,
+        property,
+        value,
+        {
+          getTimelineItem: unifiedTimelineModule.getTimelineItem,
+        },
+        {
+          updateWebAVAnimation: updateWebAVAnimation,
+        },
+        {
+          seekTo: (frame: number) => {
+            console.log('🔍 关键帧操作播放头控制:', frame)
+          },
+        },
+      )
+
+      // 执行命令（带历史记录）
+      await unifiedHistoryModule.executeCommand(command)
+
+      console.log('✅ [useHistoryOperations] 关键帧属性更新成功')
+    } catch (error) {
+      console.error('❌ [useHistoryOperations] 关键帧属性更新失败:', error)
+      throw error
+    }
+  }
+
+  /**
+   * 带历史记录的清除所有关键帧方法
+   * @param timelineItemId 时间轴项目ID
+   */
+  async function clearAllKeyframesWithHistory(timelineItemId: string) {
+    try {
+      console.log('🎬 [useHistoryOperations] 清除所有关键帧:', { timelineItemId })
+
+      // 创建清除所有关键帧命令
+      const command = new ClearAllKeyframesCommand(
+        timelineItemId,
+        {
+          getTimelineItem: unifiedTimelineModule.getTimelineItem,
+        },
+        {
+          updateWebAVAnimation: updateWebAVAnimation,
+        },
+        {
+          seekTo: (frame: number) => {
+            console.log('🔍 关键帧操作播放头控制:', frame)
+          },
+        },
+      )
+
+      // 执行命令（带历史记录）
+      await unifiedHistoryModule.executeCommand(command)
+
+      console.log('✅ [useHistoryOperations] 所有关键帧清除成功')
+    } catch (error) {
+      console.error('❌ [useHistoryOperations] 清除所有关键帧失败:', error)
+      throw error
+    }
+  }
+
+  /**
+   * 带历史记录的切换关键帧方法
+   * @param timelineItemId 时间轴项目ID
+   * @param frame 帧数
+   */
+  async function toggleKeyframeWithHistory(timelineItemId: string, frame: number) {
+    try {
+      console.log('🎬 [useHistoryOperations] 切换关键帧:', { timelineItemId, frame })
+
+      // 创建切换关键帧命令
+      const command = new ToggleKeyframeCommand(
+        timelineItemId,
+        frame,
+        {
+          getTimelineItem: unifiedTimelineModule.getTimelineItem,
+        },
+        {
+          updateWebAVAnimation: updateWebAVAnimation,
+        },
+        {
+          seekTo: (frame: number) => {
+            console.log('🔍 关键帧操作播放头控制:', frame)
+          },
+        },
+      )
+
+      // 执行命令（带历史记录）
+      await unifiedHistoryModule.executeCommand(command)
+
+      console.log('✅ [useHistoryOperations] 关键帧切换成功')
+    } catch (error) {
+      console.error('❌ [useHistoryOperations] 关键帧切换失败:', error)
+      throw error
+    }
   }
 
   return {
@@ -755,6 +1160,14 @@ export function createHistoryOperations(
     autoArrangeTrackWithHistory,
     toggleTrackVisibilityWithHistory,
     toggleTrackMuteWithHistory,
+    updateTextContentWithHistory,
+    updateTextStyleWithHistory,
+    selectTimelineItemsWithHistory,
+    createKeyframeWithHistory,
+    deleteKeyframeWithHistory,
+    updatePropertyWithHistory,
+    clearAllKeyframesWithHistory,
+    toggleKeyframeWithHistory,
   }
 }
 
@@ -767,4 +1180,5 @@ export type {
   UnifiedConfigModule,
   UnifiedTrackModule,
   TransformProperties,
+  UnifiedKeyframeCommandExecutor,
 }

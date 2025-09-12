@@ -1,0 +1,17 @@
+{
+  "common": {
+    "language": "切换语言",
+    "settings": "设置",
+    "play": "播放",
+    "pause": "暂停",
+    "stop": "停止",
+    "playbackSpeed": "播放速度",
+    "cancel": "取消",
+    "save": "保存",
+    "close": "关闭",
+    "processing": "处理中",
+    "saving": "保存中",
+    "name": "名称",
+    "description": "描述"
+  }
+}

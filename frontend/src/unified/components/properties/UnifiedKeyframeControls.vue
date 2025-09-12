@@ -1,7 +1,7 @@
 <template>
   <div class="property-section unified-keyframe-section">
     <div class="section-header">
-      <h4>关键帧动画</h4>
+      <h4>{{ t('properties.keyframes.keyframeAnimation') }}</h4>
     </div>
 
     <!-- 关键帧控制按钮组 - 一行显示 -->
@@ -27,7 +27,7 @@
         >
           <path d="M8 2L14 8L8 14L2 8L8 2Z" fill="currentColor" stroke="white" stroke-width="1" />
         </svg>
-        <span>关键帧</span>
+        <span>{{ t('properties.keyframes.keyframes') }}</span>
       </button>
 
       <!-- 上一个关键帧 -->
@@ -35,12 +35,12 @@
         @click="$emit('go-to-previous')"
         :disabled="!hasPreviousKeyframe || !canOperateKeyframes"
         class="keyframe-nav-btn"
-        title="上一个关键帧"
+        :title="t('properties.keyframes.previousKeyframe')"
       >
         <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
           <path d="M15.41,16.58L10.83,12L15.41,7.41L14,6L8,12L14,18L15.41,16.58Z" />
         </svg>
-        <span>上一帧</span>
+        <span>{{ t('properties.keyframes.goToPrevious') }}</span>
       </button>
 
       <!-- 下一个关键帧 -->
@@ -48,33 +48,37 @@
         @click="$emit('go-to-next')"
         :disabled="!hasNextKeyframe || !canOperateKeyframes"
         class="keyframe-nav-btn"
-        title="下一个关键帧"
+        :title="t('properties.keyframes.nextKeyframe')"
       >
-        <span>下一帧</span>
+        <span>{{ t('properties.keyframes.goToNext') }}</span>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
           <path d="M8.59,16.58L13.17,12L8.59,7.41L10,6L16,12L10,18L8.59,16.58Z" />
         </svg>
       </button>
 
       <!-- 调试按钮 - 开发时使用 -->
-      <button
+      <!-- <button
         v-if="showDebugButton"
         @click="$emit('debug-keyframes')"
         class="debug-btn"
-        title="输出统一关键帧调试信息"
+        :title="t('properties.keyframes.debugKeyframes')"
       >
         <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
           <path
             d="M9,3V4H4V6H5V19A2,2 0 0,0 7,21H17A2,2 0 0,0 19,19V6H20V4H15V3H9M7,6H17V19H7V6M9,8V17H11V8H9M13,8V17H15V8H13Z"
           />
         </svg>
-        <span>调试</span>
-      </button>
+        <span>{{ t('properties.keyframes.debugKeyframes') }}</span>
+      </button> -->
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import { useAppI18n } from '@/unified/composables/useI18n'
+
+const { t } = useAppI18n()
+
 interface Props {
   keyframeButtonState: 'none' | 'on-keyframe' | 'between-keyframes'
   canOperateKeyframes: boolean

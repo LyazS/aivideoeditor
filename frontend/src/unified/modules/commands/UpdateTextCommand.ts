@@ -42,6 +42,14 @@ export class UpdateTextCommand implements SimpleCommand {
     },
   ) {
     this.id = generateCommandId()
+    const item = this.timelineModule.getTimelineItem(this.timelineItemId)
+    if (!item || !TimelineItemQueries.isTextTimelineItem(item)) {
+      throw new Error(`文本项目不存在或类型错误: ${this.timelineItemId}`)
+    }
+
+    // 保存旧值用于撤销
+    this.oldText = item.config.text
+    this.oldStyle = { ...item.config.style }
     this.description = `更新文本: ${newText.substring(0, 10)}${newText.length > 10 ? '...' : ''}`
   }
 
@@ -56,10 +64,6 @@ export class UpdateTextCommand implements SimpleCommand {
       if (!item || !TimelineItemQueries.isTextTimelineItem(item)) {
         throw new Error(`文本项目不存在或类型错误: ${this.timelineItemId}`)
       }
-
-      // 保存旧值用于撤销
-      this.oldText = item.config.text
-      this.oldStyle = { ...item.config.style }
 
       // 保存原始项目数据用于撤销
       this.originalTimelineItemData = TimelineItemFactory.clone(item)

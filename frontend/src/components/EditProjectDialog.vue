@@ -3,8 +3,8 @@
   <div v-if="show" class="dialog-overlay" @click="handleOverlayClick">
     <div class="dialog-content" @click.stop>
       <div class="dialog-header">
-        <h3>编辑项目</h3>
-        <HoverButton class="close-btn" variant="primary" @click="closeDialog" title="关闭">
+        <h3>{{ t('project.edit') }}</h3>
+        <HoverButton class="close-btn" variant="primary" @click="closeDialog" :title="t('common.close')">
           <template #icon>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
               <path
@@ -16,33 +16,33 @@
       </div>
       <div class="dialog-body">
         <div class="form-group">
-          <label for="project-name">项目名称</label>
+          <label for="project-name">{{ t('common.name') }}</label>
           <input
             id="project-name"
             v-model="form.name"
             type="text"
             class="form-input"
-            placeholder="请输入项目名称"
+            :placeholder="t('project.namePlaceholder', '请输入项目名称')"
             maxlength="100"
             @keydown.enter="saveProject"
           />
         </div>
         <div class="form-group">
-          <label for="project-description">项目描述</label>
+          <label for="project-description">{{ t('common.description') }}</label>
           <textarea
             id="project-description"
             v-model="form.description"
             class="form-textarea"
-            placeholder="请输入项目描述（可选）"
+            :placeholder="t('project.descriptionPlaceholder', '请输入项目描述（可选）')"
             rows="4"
             maxlength="500"
           ></textarea>
         </div>
       </div>
       <div class="dialog-footer">
-        <HoverButton variant="large" text="取消" @click="closeDialog" />
+        <HoverButton variant="large" :text="t('common.cancel')" @click="closeDialog" />
         <HoverButton variant="large" @click="saveProject" :disabled="!form.name.trim() || isSaving">
-          {{ isSaving ? '保存中...' : '保存' }}
+          {{ isSaving ? t('common.saving') + '...' : t('common.save') }}
         </HoverButton>
       </div>
     </div>
@@ -52,7 +52,10 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import HoverButton from './HoverButton.vue'
+import { useAppI18n } from '@/unified/composables/useI18n'
 import type { UnifiedProjectConfig } from '@/unified/project/types'
+
+const { t } = useAppI18n()
 
 interface Props {
   show: boolean

@@ -31,3 +31,6 @@ export { useTimelineWheelHandler } from './useTimelineWheelHandler'
 
 // 重新导出历史记录操作方法
 export { createHistoryOperations } from './useHistoryOperations'
+
+// 重新导出国际化函数
+export { useAppI18n } from './useI18n'
