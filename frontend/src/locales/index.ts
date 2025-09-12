@@ -7,6 +7,10 @@ import enTimeline from './en-US/timeline.json'
 import enProperties from './en-US/properties.json'
 import enMedia from './en-US/media.json'
 import enProject from './en-US/project.json'
+import enApp from './en-US/app.json'
+import enMenu from './en-US/menu.json'
+import enWorkspace from './en-US/workspace.json'
+import enToolbar from './en-US/toolbar.json'
 
 // 导入中文语言包
 import zhCommon from './zh-CN/common.json'
@@ -15,6 +19,10 @@ import zhTimeline from './zh-CN/timeline.json'
 import zhProperties from './zh-CN/properties.json'
 import zhMedia from './zh-CN/media.json'
 import zhProject from './zh-CN/project.json'
+import zhApp from './zh-CN/app.json'
+import zhMenu from './zh-CN/menu.json'
+import zhWorkspace from './zh-CN/workspace.json'
+import zhToolbar from './zh-CN/toolbar.json'
 
 // 合并所有语言包
 const enUS = {
@@ -23,7 +31,11 @@ const enUS = {
   ...enTimeline,
   ...enProperties,
   ...enMedia,
-  ...enProject
+  ...enProject,
+  ...enApp,
+  ...enMenu,
+  ...enWorkspace,
+  ...enToolbar
 }
 
 const zhCN = {
@@ -32,7 +44,11 @@ const zhCN = {
   ...zhTimeline,
   ...zhProperties,
   ...zhMedia,
-  ...zhProject
+  ...zhProject,
+  ...zhApp,
+  ...zhMenu,
+  ...zhWorkspace,
+  ...zhToolbar
 }
 
 export const i18n = createI18n({

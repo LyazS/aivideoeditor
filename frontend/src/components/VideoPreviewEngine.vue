@@ -35,7 +35,7 @@
             </div>
             <!-- 右侧比例按钮 -->
             <div class="right-controls">
-              <button class="aspect-ratio-btn" @click="openResolutionModal" title="设置视频分辨率">
+              <button class="aspect-ratio-btn" @click="openResolutionModal" :title="t('editor.setVideoResolution')">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
                   <path
                     d="M19,12H22L18,8L14,12H17V16H7V12H10L6,8L2,12H5V16A2,2 0 0,0 7,18H17A2,2 0 0,0 19,16V12Z"
@@ -77,7 +77,7 @@
         <UnifiedTimeline v-if="unifiedStore.isWebAVReady" />
         <div v-else class="timeline-loading">
           <div class="loading-spinner"></div>
-          <p>正在初始化WebAV引擎...</p>
+          <p>{{ t('editor.initializingWebAV') }}</p>
         </div>
       </div>
     </div>
@@ -86,7 +86,7 @@
     <div v-if="showResolutionModal" class="modal-overlay" @click="showResolutionModal = false">
       <div class="resolution-modal" @click.stop>
         <div class="modal-header">
-          <h3>选择视频分辨率</h3>
+          <h3>{{ t('editor.selectVideoResolution') }}</h3>
           <button class="close-btn" @click="showResolutionModal = false">×</button>
         </div>
         <div class="modal-content">
@@ -122,7 +122,7 @@
                 :style="getPreviewStyle({ width: customWidth, height: customHeight })"
               ></div>
               <div class="resolution-info">
-                <div class="resolution-name">自定义</div>
+                <div class="resolution-name">{{ t('editor.custom') }}</div>
                 <div v-if="!showCustomResolution" class="resolution-size">
                   {{ customWidth }} × {{ customHeight }}
                 </div>
@@ -139,7 +139,7 @@
                       min="1"
                       max="7680"
                       class="custom-input"
-                      placeholder="宽度"
+                      :placeholder="t('editor.width')"
                       @click.stop
                     />
                     <span class="input-separator">×</span>
@@ -149,7 +149,7 @@
                       min="1"
                       max="4320"
                       class="custom-input"
-                      placeholder="高度"
+                      :placeholder="t('editor.height')"
                       @click.stop
                     />
                   </div>
@@ -161,8 +161,8 @@
 
           <!-- 确认按钮 -->
           <div class="modal-actions">
-            <button class="cancel-btn" @click="cancelSelection">取消</button>
-            <button class="confirm-btn" @click="confirmSelection">确认</button>
+            <button class="cancel-btn" @click="cancelSelection">{{ t('editor.cancel') }}</button>
+            <button class="confirm-btn" @click="confirmSelection">{{ t('editor.confirm') }}</button>
           </div>
         </div>
       </div>
@@ -182,8 +182,10 @@ import { useUnifiedStore } from '@/unified/unifiedStore'
 import { useKeyboardShortcuts } from '@/unified/composables'
 import { logWebAVReadyStateChange, logComponentLifecycle } from '@/unified/utils/webavDebug'
 import { framesToTimecode } from '@/unified/utils/timeUtils'
+import { useAppI18n } from '@/unified/composables/useI18n'
 
 const unifiedStore = useUnifiedStore()
+const { t } = useAppI18n()
 
 // 注册全局快捷键
 useKeyboardShortcuts()
@@ -237,11 +239,11 @@ const currentResolution = computed(() => {
   const resolution = unifiedStore.videoResolution
   // 根据分辨率判断类别
   const aspectRatio = resolution.width / resolution.height
-  let category = '横屏'
+  let category = t('editor.landscape')
   if (aspectRatio < 1) {
-    category = '竖屏'
+    category = t('editor.portrait')
   } else if (Math.abs(aspectRatio - 1) < 0.1) {
-    category = '方形'
+    category = t('editor.square')
   }
 
   return {
@@ -253,29 +255,29 @@ const currentResolution = computed(() => {
   }
 })
 
-const resolutionOptions = [
+const resolutionOptions = computed(() => [
   // 横屏 16:9
-  { name: '4K', width: 3840, height: 2160, aspectRatio: '16:9', category: '横屏' },
-  { name: '1440p', width: 2560, height: 1440, aspectRatio: '16:9', category: '横屏' },
-  { name: '1080p', width: 1920, height: 1080, aspectRatio: '16:9', category: '横屏' },
-  { name: '720p', width: 1280, height: 720, aspectRatio: '16:9', category: '横屏' },
-  { name: '480p', width: 854, height: 480, aspectRatio: '16:9', category: '横屏' },
+  { name: t('editor.resolution.4K'), width: 3840, height: 2160, aspectRatio: '16:9', category: t('editor.landscape') },
+  { name: t('editor.resolution.1440p'), width: 2560, height: 1440, aspectRatio: '16:9', category: t('editor.landscape') },
+  { name: t('editor.resolution.1080p'), width: 1920, height: 1080, aspectRatio: '16:9', category: t('editor.landscape') },
+  { name: t('editor.resolution.720p'), width: 1280, height: 720, aspectRatio: '16:9', category: t('editor.landscape') },
+  { name: t('editor.resolution.480p'), width: 854, height: 480, aspectRatio: '16:9', category: t('editor.landscape') },
 
   // 竖屏 9:16
-  { name: '4K 竖屏', width: 2160, height: 3840, aspectRatio: '9:16', category: '竖屏' },
-  { name: '1440p 竖屏', width: 1440, height: 2560, aspectRatio: '9:16', category: '竖屏' },
-  { name: '1080p 竖屏', width: 1080, height: 1920, aspectRatio: '9:16', category: '竖屏' },
-  { name: '720p 竖屏', width: 720, height: 1280, aspectRatio: '9:16', category: '竖屏' },
-  { name: '480p 竖屏', width: 480, height: 854, aspectRatio: '9:16', category: '竖屏' },
+  { name: t('editor.resolution.4KPortrait'), width: 2160, height: 3840, aspectRatio: '9:16', category: t('editor.portrait') },
+  { name: t('editor.resolution.1440pPortrait'), width: 1440, height: 2560, aspectRatio: '9:16', category: t('editor.portrait') },
+  { name: t('editor.resolution.1080pPortrait'), width: 1080, height: 1920, aspectRatio: '9:16', category: t('editor.portrait') },
+  { name: t('editor.resolution.720pPortrait'), width: 720, height: 1280, aspectRatio: '9:16', category: t('editor.portrait') },
+  { name: t('editor.resolution.480pPortrait'), width: 480, height: 854, aspectRatio: '9:16', category: t('editor.portrait') },
 
   // 正方形 1:1
-  { name: '1080×1080', width: 1080, height: 1080, aspectRatio: '1:1', category: '正方形' },
-  { name: '720×720', width: 720, height: 720, aspectRatio: '1:1', category: '正方形' },
+  { name: t('editor.resolution.1080x1080'), width: 1080, height: 1080, aspectRatio: '1:1', category: t('editor.square') },
+  { name: t('editor.resolution.720x720'), width: 720, height: 720, aspectRatio: '1:1', category: t('editor.square') },
 
   // 超宽屏
-  { name: '超宽屏 21:9', width: 2560, height: 1080, aspectRatio: '21:9', category: '超宽屏' },
-  { name: '超宽屏 32:9', width: 3840, height: 1080, aspectRatio: '32:9', category: '超宽屏' },
-]
+  { name: t('editor.resolution.ultrawide21x9'), width: 2560, height: 1080, aspectRatio: '21:9', category: t('editor.ultrawide') },
+  { name: t('editor.resolution.ultrawide32x9'), width: 3840, height: 1080, aspectRatio: '32:9', category: t('editor.ultrawide') },
+])
 
 const currentResolutionText = computed(() => {
   return `${currentResolution.value.aspectRatio}`
@@ -307,11 +309,11 @@ const customResolutionText = computed(() => {
 watch([customWidth, customHeight], () => {
   if (showCustomResolution.value) {
     tempSelectedResolution.value = {
-      name: '自定义',
+      name: t('editor.custom'),
       width: customWidth.value,
       height: customHeight.value,
       aspectRatio: customResolutionText.value,
-      category: '自定义',
+      category: t('editor.custom'),
     }
   }
 })
@@ -475,7 +477,7 @@ function confirmSelection() {
   if (showCustomResolution.value) {
     // 使用自定义分辨率
     selectedResolution = {
-      name: '自定义',
+      name: t('editor.custom'),
       width: customWidth.value,
       height: customHeight.value,
       aspectRatio: customResolutionText.value,
@@ -511,7 +513,7 @@ function cancelSelection() {
   }
 }
 
-function selectPresetResolution(resolution: (typeof resolutionOptions)[0]) {
+function selectPresetResolution(resolution: { name: string; width: number; height: number; aspectRatio: string; category: string }) {
   showCustomResolution.value = false
   tempSelectedResolution.value = resolution
 }

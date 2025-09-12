@@ -2,6 +2,7 @@ import { directoryManager } from '@/unified/utils/DirectoryManager'
 import type { UnifiedProjectConfig, UnifiedProjectContent } from '@/unified/project'
 import { createUnifiedTrackData } from '@/unified/track'
 import type { UnifiedTrackData } from '@/unified/track'
+import { i18n } from '@/locales'
 
 /**
  * 统一项目管理器
@@ -63,9 +64,16 @@ export class UnifiedProjectManager {
    * 创建默认轨道
    */
   private createDefaultTracks(): UnifiedTrackData[] {
-    const videoTrack = createUnifiedTrackData('video')
-    const audioTrack = createUnifiedTrackData('audio')
-    const textTrack = createUnifiedTrackData('text')
+    // 使用i18n获取当前语言的轨道名称
+    const trackNames = {
+      video: i18n.global.t('timeline.videoTrack'),
+      audio: i18n.global.t('timeline.audioTrack'),
+      text: i18n.global.t('timeline.textTrack')
+    }
+
+    const videoTrack = createUnifiedTrackData('video', { name: trackNames.video })
+    const audioTrack = createUnifiedTrackData('audio', { name: trackNames.audio })
+    const textTrack = createUnifiedTrackData('text', { name: trackNames.text })
 
     return [videoTrack, audioTrack, textTrack]
   }

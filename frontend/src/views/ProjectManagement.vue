@@ -8,22 +8,18 @@
           <span class="app-subtitle">{{ t('app.subtitle') }}</span>
         </div>
         <div class="header-actions">
-          <div class="language-selector">
-            <select
-              :value="locale"
-              @change="handleLanguageChange(($event.target as HTMLSelectElement).value as 'en-US' | 'zh-CN')"
-              class="language-select"
-              :title="t('common.language')"
-            >
-              <option
-                v-for="option in languageOptions"
-                :key="option.value"
-                :value="option.value"
-              >
-                {{ option.label }}
-              </option>
-            </select>
-          </div>
+          <button
+            v-if="hasWorkspaceAccess && workspaceInfo"
+            class="btn btn-primary"
+            @click="createNewProject"
+            :disabled="isLoading"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z" />
+            </svg>
+            {{ t('project.new') }}
+          </button>
+          <LanguageSelector />
           <button
             v-if="workspaceInfo"
             class="workspace-info"
@@ -36,17 +32,6 @@
               />
             </svg>
             <span>{{ workspaceInfo.name }}</span>
-          </button>
-          <button
-            v-if="hasWorkspaceAccess && workspaceInfo"
-            class="btn btn-primary"
-            @click="createNewProject"
-            :disabled="isLoading"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z" />
-            </svg>
-            {{ t('project.new') }}
           </button>
         </div>
       </div>
@@ -96,7 +81,7 @@
         <!-- 项目列表区域 -->
         <section v-if="hasWorkspaceAccess" class="recent-projects">
           <div class="section-header">
-           <h2>{{ t('project.list.title') }}</h2>
+            <h2>{{ t('project.list.title') }}</h2>
             <div class="header-actions">
               <button
                 class="refresh-btn"
@@ -156,7 +141,9 @@
             </div>
             <h3>{{ t('project.empty.title') }}</h3>
             <p>{{ t('project.empty.description') }}</p>
-            <button class="btn btn-primary" @click="createNewProject">{{ t('project.new') }}</button>
+            <button class="btn btn-primary" @click="createNewProject">
+              {{ t('project.new') }}
+            </button>
           </div>
 
           <div v-else class="projects-grid" :class="{ 'list-view': viewMode === 'list' }">
@@ -191,7 +178,9 @@
               </div>
               <div class="project-info">
                 <h3 class="project-name">{{ project.name }}</h3>
-                <p class="project-description">{{ project.description || t('project.noDescription') }}</p>
+                <p class="project-description">
+                  {{ project.description || t('project.noDescription') }}
+                </p>
                 <div class="project-meta">
                   <span class="project-date">{{ formatDate(project.updatedAt) }}</span>
                   <span class="project-duration">{{ formatDuration(project.duration) }}</span>
@@ -216,7 +205,7 @@
       </template>
     </ContextMenuItem>
 
-    <ContextMenuItem :label="t('project.delete')" @click="confirmDeleteProject(selectedProject!)">
+    <ContextMenuItem :label="t('project.delete.title')" @click="confirmDeleteProject(selectedProject!)">
       <template #icon>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="#ff6b6b">
           <path
@@ -244,11 +233,12 @@ import { unifiedProjectManager } from '@/unified/utils/projectManager'
 import type { UnifiedProjectConfig } from '@/unified/project'
 import { ContextMenu, ContextMenuItem } from '@imengyu/vue3-context-menu'
 import EditProjectDialog from '../components/EditProjectDialog.vue'
+import LanguageSelector from '../components/LanguageSelector.vue'
 import { useProjectThumbnailService } from '@/unified/composables/useProjectThumbnailService'
 import { useAppI18n } from '@/unified/composables/useI18n'
 
 const router = useRouter()
-const { t, locale, languageOptions, switchLanguage, initLanguage } = useAppI18n()
+const { t, initLanguage } = useAppI18n()
 
 // 响应式数据
 const viewMode = ref<'grid' | 'list'>('grid')
@@ -257,11 +247,6 @@ const isLoading = ref(false)
 const hasWorkspaceAccess = ref(false)
 const workspaceInfo = ref<{ name: string; path?: string } | null>(null)
 const permissionError = ref(false)
-
-// 语言切换处理函数
-const handleLanguageChange = (lang: 'en-US' | 'zh-CN') => {
-  switchLanguage(lang)
-}
 
 // 上下文菜单相关
 const showContextMenu = ref(false)
@@ -564,7 +549,7 @@ function formatDuration(seconds: number): string {
 onMounted(async () => {
   // 初始化语言设置
   initLanguage()
-  
+
   // 调试IndexedDB内容
   await directoryManager.debugIndexedDB()
 
@@ -627,38 +612,6 @@ onMounted(async () => {
 .change-indicator {
   opacity: 0.6;
   transition: all 0.2s ease;
-}
-
-.language-selector {
-  position: relative;
-}
-
-.language-select {
-  padding: 0.5rem 0.75rem;
-  background-color: var(--color-bg-tertiary);
-  border: 1px solid var(--color-border);
-  border-radius: var(--border-radius-medium);
-  font-size: 0.875rem;
-  color: var(--color-text-secondary);
-  cursor: pointer;
-  transition: all 0.2s ease;
-  outline: none;
-  appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='currentColor' d='M6 8.5L2.5 5h7L6 8.5z'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 0.5rem center;
-  padding-right: 2rem;
-}
-
-.language-select:hover {
-  background-color: var(--color-bg-hover);
-  border-color: var(--color-border-hover);
-  color: var(--color-text-primary);
-}
-
-.language-select:focus {
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 2px rgba(255, 107, 0, 0.2);
 }
 
 .logo-section {

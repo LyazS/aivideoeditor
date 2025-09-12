@@ -1,62 +1,61 @@
 {
   "timeline": {
-    "title": "Timeline",
-    "controls": {
-      "playhead": "Playhead",
-      "currentTime": "Current Time",
-      "duration": "Duration",
-      "frameRate": "Frame Rate",
-      "timecode": "Timecode",
-      "snapping": "Snapping",
-      "ruler": "Ruler",
-      "grid": "Grid",
-      "markers": "Markers",
-      "zoom": "Zoom Level"
+    "clip": {
+      "keyframeTooltip": "Keyframe - Frame {frame} (Click to jump)",
+      "multiSelectDragWarning": "Drag operation disabled in multi-select mode",
+      "dragStartReason": "Timeline item drag",
+      "resizeStartReason": "Clip resize",
+      "resizeSuccess": "Time range adjustment successful",
+      "resizeFailed": "Time range adjustment failed",
+      "keyframeJumpReason": "Keyframe jump"
     },
-    "operations": {
-      "cut": "Cut",
-      "copy": "Copy",
-      "paste": "Paste",
-      "delete": "Delete",
-      "duplicate": "Duplicate",
-      "split": "Split",
-      "trim": "Trim",
-      "extend": "Extend",
-      "move": "Move",
-      "align": "Align",
-      "group": "Group",
-      "ungroup": "Ungroup",
-      "nudgeLeft": "Nudge Left",
-      "nudgeRight": "Nudge Right"
+    "status": {
+      "pending": "Pending",
+      "asyncProcessing": "Async processing",
+      "webavDecoding": "Decoding",
+      "error": "Media loading error",
+      "cancelled": "Processing cancelled",
+      "missing": "Media file missing"
     },
-    "tracks": {
-      "addVideoTrack": "Add Video Track",
-      "addAudioTrack": "Add Audio Track",
-      "addTextTrack": "Add Text Track",
-      "renameTrack": "Rename Track",
-      "deleteTrack": "Delete Track",
-      "muteTrack": "Mute Track",
-      "soloTrack": "Solo Track",
-      "lockTrack": "Lock Track",
-      "hideTrack": "Hide Track",
-      "showTrack": "Show Track",
-      "trackHeight": "Track Height",
-      "collapseTrack": "Collapse Track",
-      "expandTrack": "Expand Track"
-    },
-    "clips": {
-      "videoClip": "Video Clip",
-      "audioClip": "Audio Clip",
-      "textClip": "Text Clip",
-      "imageClip": "Image Clip",
-      "transition": "Transition",
-      "effect": "Effect",
-      "properties": "Clip Properties",
-      "duration": "Clip Duration",
-      "startTime": "Start Time",
-      "endTime": "End Time",
-      "inPoint": "In Point",
-      "outPoint": "Out Point"
+    "hideTrack": "Hide Track",
+    "clips": "Clips",
+    "textTrack": "Text Track",
+    "audioTrack": "Audio Track",
+    "videoTrack": "Video Track",
+    "effectTrack": "Effect Track",
+    "subtitleTrack": "Subtitle Track",
+    "tracks": "Tracks",
+    "addNewTrack": "Add new track",
+    "muteTrack": "Mute/unmute track",
+    "unmuteTrack": "Unmute track",
+    "trackHidden": "Track hidden",
+    "showTrack": "Show track",
+    "contextMenu": {
+      "emptyArea": {
+        "addVideoTrack": "Add Video Track",
+        "addAudioTrack": "Add Audio Track",
+        "addTextTrack": "Add Text Track"
+      },
+      "clip": {
+        "duplicateClip": "Duplicate Clip",
+        "regenerateThumbnail": "Regenerate Thumbnail",
+        "deleteClip": "Delete Clip"
+      },
+      "track": {
+        "addText": "Add Text",
+        "autoArrangeClips": "Auto Arrange Clips",
+        "autoArrangeClipsEmpty": "Auto Arrange Clips (No Clips)",
+        "renameTrack": "Rename Track",
+        "hideTrack": "Hide Track",
+        "showTrack": "Show Track",
+        "muteTrack": "Mute Track",
+        "unmuteTrack": "Unmute Track",
+        "addNewTrack": "Add New Track",
+        "addVideoTrack": "Video Track",
+        "addAudioTrack": "Audio Track",
+        "addTextTrack": "Text Track",
+        "deleteTrack": "Delete Track"
+      }
     }
   }
 }

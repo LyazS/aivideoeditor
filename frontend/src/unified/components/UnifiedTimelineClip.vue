@@ -43,7 +43,7 @@
         :key="keyframe.framePosition"
         class="keyframe-marker"
         :style="getKeyframeMarkerStyles(keyframe.pixelPosition)"
-        :title="`关键帧 - 帧 ${keyframe.absoluteFrame} (点击跳转)`"
+        :title="t('timeline.clip.keyframeTooltip', { frame: keyframe.absoluteFrame })"
         @click.stop="jumpToKeyframe(keyframe.absoluteFrame)"
       >
         <div class="keyframe-diamond"></div>
@@ -59,6 +59,7 @@ import type { UnifiedTimeRange } from '@/unified/types/timeRange'
 import { ContentRendererFactory } from './renderers/ContentRendererFactory'
 import { useUnifiedStore } from '@/unified/unifiedStore'
 import { useDragUtils, usePlaybackControls } from '@/unified/composables'
+import { useAppI18n } from '@/unified/composables/useI18n'
 import { alignFramesToFrame } from '@/unified/utils/timeUtils'
 import { relativeFrameToAbsoluteFrame } from '@/unified/utils/unifiedKeyframeUtils'
 import { DEFAULT_TRACK_PADDING } from '@/unified/constants/TrackConstants'
@@ -73,6 +74,7 @@ const props = defineProps<UnifiedTimelineClipProps>()
 const unifiedStore = useUnifiedStore()
 const dragUtils = useDragUtils()
 const { pauseForEditing } = usePlaybackControls()
+const { t } = useAppI18n()
 
 // 获取素材名称
 const mediaItemName = computed(() => {
@@ -288,13 +290,13 @@ function handleDragStart(event: DragEvent) {
   if (unifiedStore.selectedTimelineItemIds.size > 1) {
     console.log('🚫 [UnifiedTimelineClip] 多选状态下禁止拖拽')
     // 显示警告通知
-    unifiedStore.showWarning('多选状态下禁止拖拽操作')
+    unifiedStore.showWarning(t('timeline.clip.multiSelectDragWarning'))
     event.preventDefault()
     return
   }
 
   // 暂停播放并处理拖拽
-  pauseForEditing('时间轴项目拖拽')
+  pauseForEditing(t('timeline.clip.dragStartReason'))
   dragUtils.ensureItemSelected(props.data.id)
 
   // 设置拖拽数据
@@ -339,7 +341,7 @@ function handleResizeStart(direction: 'left' | 'right', event: MouseEvent) {
   console.log('🔧 [UnifiedTimelineClip] 开始调整大小:', direction, props.data.id)
 
   // 暂停播放以便进行编辑
-  pauseForEditing('片段大小调整')
+  pauseForEditing(t('timeline.clip.resizeStartReason'))
 
   isResizing.value = true
   resizeDirection.value = direction
@@ -517,9 +519,9 @@ async function stopResize() {
       const success = await unifiedStore.resizeTimelineItemWithHistory(props.data.id, newTimeRange)
 
       if (success) {
-        console.log('✅ [UnifiedTimelineClip] 时间范围调整成功')
+        console.log('✅ [UnifiedTimelineClip]', t('timeline.clip.resizeSuccess'))
       } else {
-        console.error('❌ [UnifiedTimelineClip] 时间范围调整失败')
+        console.error('❌ [UnifiedTimelineClip]', t('timeline.clip.resizeFailed'))
       }
     } catch (error) {
       console.error('❌ [UnifiedTimelineClip] 调整大小失败:', error)
@@ -562,7 +564,7 @@ function jumpToKeyframe(absoluteFrame: number) {
   })
 
   // 暂停播放以便进行时间跳转
-  pauseForEditing('关键帧跳转')
+  pauseForEditing(t('timeline.clip.keyframeJumpReason'))
 
   // 通过WebAV进行时间跳转，这会触发画布渲染更新
   try {

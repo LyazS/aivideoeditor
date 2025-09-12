@@ -2,8 +2,8 @@
   <div v-if="show" class="dialog-overlay" @click="handleOverlayClick">
     <div class="dialog-container" @click.stop>
       <div class="dialog-header">
-        <h3>远程下载</h3>
-        <HoverButton variant="primary" class="close-btn" @click="closeDialog" title="关闭">
+        <h3>{{ t('remoteDownload.title') }}</h3>
+        <HoverButton variant="primary" class="close-btn" @click="closeDialog" :title="t('common.close')">
           <template #icon>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
               <path
@@ -17,12 +17,12 @@
       <div class="dialog-content">
         <!-- URL输入 -->
         <div class="form-group">
-          <label for="url">远程文件URL *</label>
+          <label for="url">{{ t('remoteDownload.urlLabel') }} *</label>
           <input
             id="url"
             v-model="form.url"
             type="url"
-            placeholder="https://example.com/video.mp4"
+            :placeholder="t('remoteDownload.urlPlaceholder')"
             required
             :disabled="isProcessing"
           />
@@ -31,35 +31,35 @@
 
         <!-- 预计时长 -->
         <div class="form-group">
-          <label for="duration">预计时长（秒）*</label>
+          <label for="duration">{{ t('remoteDownload.durationLabel') }} *</label>
           <input
             id="duration"
             v-model.number="form.duration"
             type="number"
             min="0.1"
             step="0.1"
-            placeholder="5.0"
+            :placeholder="t('remoteDownload.durationPlaceholder')"
             required
             :disabled="isProcessing"
           />
-          <div class="help-text">用于在时间轴上创建占位符，实际时长以下载后的文件为准</div>
+          <div class="help-text">{{ t('remoteDownload.durationHelp') }}</div>
         </div>
 
         <!-- 素材名称 -->
         <div class="form-group">
-          <label for="name">素材名称（可选）</label>
+          <label for="name">{{ t('remoteDownload.nameLabel') }}</label>
           <input
             id="name"
             v-model="form.name"
             type="text"
-            placeholder="自动从URL提取"
+            :placeholder="t('remoteDownload.namePlaceholder')"
             :disabled="isProcessing"
           />
         </div>
 
         <!-- 超时设置 -->
         <div class="form-group">
-          <label for="timeout">超时时间（秒）</label>
+          <label for="timeout">{{ t('remoteDownload.timeoutLabel') }}</label>
           <input
             id="timeout"
             v-model.number="form.timeout"
@@ -69,12 +69,12 @@
             step="10"
             :disabled="isProcessing"
           />
-          <div class="help-text">下载超时时间，默认30秒</div>
+          <div class="help-text">{{ t('remoteDownload.timeoutHelp', { default: 30 }) }}</div>
         </div>
 
         <!-- 支持格式提示 -->
         <div class="format-info">
-          <h4>支持的文件格式：</h4>
+          <h4>{{ t('remoteDownload.supportedFormats') }}</h4>
           <div class="format-list">
             <span class="format-tag">MP4</span>
             <span class="format-tag">WebM</span>
@@ -88,13 +88,13 @@
 
         <!-- 按钮组 -->
         <div class="dialog-actions">
-          <HoverButton variant="large" text="取消" @click="closeDialog" :disabled="isProcessing" />
+          <HoverButton variant="large" :text="t('common.cancel')" @click="closeDialog" :disabled="isProcessing" />
           <HoverButton
             variant="large"
             @click="handleSubmit"
             :disabled="!isFormValid || isProcessing"
           >
-            {{ isProcessing ? '处理中...' : '开始下载' }}
+            {{ isProcessing ? t('common.processing') + '...' : t('remoteDownload.startDownload') }}
           </HoverButton>
         </div>
       </div>
@@ -105,6 +105,9 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import HoverButton from './HoverButton.vue'
+import { useAppI18n } from '@/unified/composables/useI18n'
+
+const { t } = useAppI18n()
 
 /**
  * 远程下载配置
@@ -158,10 +161,10 @@ watch(
       try {
         const url = new URL(newUrl)
         if (!['http:', 'https:'].includes(url.protocol)) {
-          urlError.value = '只支持 HTTP 和 HTTPS 协议'
+          urlError.value = t('remoteDownload.urlProtocolError')
         }
       } catch {
-        urlError.value = '请输入有效的URL地址'
+        urlError.value = t('remoteDownload.urlInvalidError')
       }
     }
   },

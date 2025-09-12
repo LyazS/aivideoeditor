@@ -13,6 +13,7 @@ import type { UnifiedTrackData, UnifiedTrackType } from '@/unified/track/TrackTy
 import { createUnifiedTrackData } from '@/unified/track/TrackTypes'
 import type { UnifiedTimelineItemData } from '@/unified/timelineitem/TimelineItemData'
 import type { MediaType } from '@/unified/mediaitem/types'
+import { i18n } from '@/locales'
 
 /**
  * 添加轨道命令
@@ -39,10 +40,15 @@ export class AddTrackCommand implements SimpleCommand {
     },
   ) {
     this.id = generateCommandId()
-    this.description = `添加轨道: ${trackType}轨道${position !== undefined ? ` (位置: ${position})` : ''}`
+    
+    // 根据轨道类型获取i18n翻译名称
+    const trackTypeName = i18n.global.t(`timeline.${trackType}Track`)
+    this.description = `添加轨道: ${trackTypeName}${position !== undefined ? ` (位置: ${position})` : ''}`
 
-    // 在构造函数中创建完整的轨道数据
-    this.trackData = createUnifiedTrackData(trackType)
+    // 在构造函数中创建完整的轨道数据，使用i18n名称
+    this.trackData = createUnifiedTrackData(trackType, {
+      name: trackTypeName
+    })
 
     this.newTrackId = this.trackData.id
   }

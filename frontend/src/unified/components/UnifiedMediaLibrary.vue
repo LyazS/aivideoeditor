@@ -27,10 +27,10 @@
           @mouseenter="showSelectionTooltip = true"
           @mouseleave="showSelectionTooltip = false"
         >
-          <span>已选 {{ unifiedStore.selectedMediaItemIds.size }}</span>
+          <span>{{ t('media.selected') }} {{ unifiedStore.selectedMediaItemIds.size }}</span>
           <div v-if="showSelectionTooltip" class="selection-tooltip">
             <div class="tooltip-content">
-              <div class="tooltip-title">已选中的素材：</div>
+              <div class="tooltip-title">{{ t('media.selectedItems') }}</div>
               <div
                 v-for="id in Array.from(unifiedStore.selectedMediaItemIds)"
                 :key="id"
@@ -52,7 +52,7 @@
             </svg>
           </template>
         </HoverButton> -->
-        <HoverButton @click="showImportMenu" title="导入文件">
+        <HoverButton @click="showImportMenu" :title="t('media.importFiles')">
           <template #icon>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
               <path d="M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z" />
@@ -82,10 +82,10 @@
             d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"
           />
         </svg>
-        <p v-if="unifiedStore.getAllMediaItems().length === 0">拖拽文件到此处导入</p>
-        <p v-else>当前分类暂无素材</p>
+        <p v-if="unifiedStore.getAllMediaItems().length === 0">{{ t('media.dragFilesHere') }}</p>
+        <p v-else>{{ t('media.noItemsInCategory') }}</p>
         <p class="hint">
-          支持 MP4, WebM, AVI 等视频格式、JPG, PNG, GIF 等图片格式和 MP3, WAV, M4A 等音频格式
+          {{ t('media.supportedFormats') }}
         </p>
       </div>
 
@@ -128,7 +128,7 @@
             <template v-if="item.mediaStatus === 'pending'">
               <div class="async-processing-display">
                 <div class="processing-status pending">
-                  <div class="status-icon" title="等待中">
+                  <div class="status-icon" :title="t('media.waiting')">
                     <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor">
                       <path
                         d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4Z"
@@ -142,7 +142,7 @@
                 v-if="item.mediaType === 'video' || item.mediaType === 'audio'"
                 class="duration-badge"
               >
-                等待中
+                {{ t('media.waiting') }}
               </div>
             </template>
 
@@ -153,7 +153,7 @@
                   <div
                     class="progress-circle"
                     :style="{ '--progress': item.source.progress }"
-                    :title="`处理中 ${item.source.progress.toFixed(2)}%`"
+                    :title="`${t('media.processingItem')} ${item.source.progress.toFixed(2)}%`"
                   >
                     <div class="progress-text">{{ item.source.progress.toFixed(2) }}%</div>
                   </div>
@@ -164,7 +164,7 @@
                 v-if="item.mediaType === 'video' || item.mediaType === 'audio'"
                 class="duration-badge"
               >
-                分析中
+                {{ t('media.processingItem') }}
               </div>
             </template>
 
@@ -178,14 +178,14 @@
                 v-if="item.mediaType === 'video' || item.mediaType === 'audio'"
                 class="duration-badge"
               >
-                分析中
+                {{ t('media.processingItem') }}
               </div>
             </template>
 
             <!-- 错误状态 -->
             <template v-else-if="item.mediaStatus === 'error'">
               <div class="local-error-display">
-                <div class="status-icon" :title="item.source.errorMessage || '转换失败'">
+                <div class="status-icon" :title="item.source.errorMessage || t('media.conversionFailed')">
                   <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor">
                     <path
                       d="M12,2C17.53,2 22,6.47 22,12C22,17.53 17.53,22 12,22C6.47,22 2,17.53 2,12C2,6.47 6.47,2 12,2M15.59,7L12,10.59L8.41,7L7,8.41L10.59,12L7,15.59L8.41,17L12,13.41L15.59,17L17,15.59L13.41,12L17,8.41L15.59,7Z"
@@ -198,7 +198,7 @@
                 v-if="item.mediaType === 'video' || item.mediaType === 'audio'"
                 class="duration-badge"
               >
-                转换失败
+                {{ t('media.conversionFailed') }}
               </div>
             </template>
 
@@ -224,7 +224,7 @@
                 {{
                   item.mediaStatus === 'ready' && item.duration
                     ? formatDuration(item.duration)
-                    : '分析中'
+                    : t('media.processingItem')
                 }}
               </div>
             </template>
@@ -238,7 +238,7 @@
             class="remove-btn"
             @click.stop="removeMediaItem(item.id)"
             @mousedown.stop
-            title="移除素材"
+            :title="t('media.removeMedia')"
           >
             <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
               <path
@@ -297,6 +297,7 @@ import { generateUUID4 } from '@/unified/utils/idGenerator'
 import { useUnifiedStore } from '@/unified/unifiedStore'
 import { useDialogs, useDragUtils } from '@/unified/composables'
 import { framesToTimecode } from '@/unified/utils/timeUtils'
+import { useAppI18n } from '@/unified/composables/useI18n'
 import type { UnifiedMediaItemData, MediaType } from '@/unified'
 import { DataSourceFactory } from '@/unified'
 import { DEFAULT_REMOTE_CONFIG } from '@/unified/sources/RemoteFileSource'
@@ -309,6 +310,7 @@ import { ContextMenu, ContextMenuItem, ContextMenuSeparator } from '@imengyu/vue
 const unifiedStore = useUnifiedStore()
 const dialogs = useDialogs()
 const dragUtils = useDragUtils()
+const { t } = useAppI18n()
 const fileInput = ref<HTMLInputElement>()
 const isDragOver = ref(false)
 const showCheckbox = ref(false)
@@ -335,28 +337,28 @@ const contextMenuOptions = ref({
 })
 
 // Tab 配置
-const tabs = [
+const tabs = computed(() => [
   {
     type: 'all' as TabType,
-    label: '全部',
+    label: t('media.all'),
     icon: 'M4,6H20V8H4V6M4,11H20V13H4V11M4,16H20V18H4V16Z',
   },
   {
     type: 'video' as TabType,
-    label: '视频',
+    label: t('media.video'),
     icon: 'M17,10.5V7A1,1 0 0,0 16,6H4A1,1 0 0,0 3,7V17A1,1 0 0,0 4,18H16A1,1 0 0,0 17,17V13.5L21,17.5V6.5L17,10.5Z',
   },
   {
     type: 'audio' as TabType,
-    label: '音频',
+    label: t('media.audio'),
     icon: 'M14,3.23V5.29C16.89,6.15 19,8.83 19,12C19,15.17 16.89,17.85 14,18.71V20.77C18,19.86 21,16.28 21,12C21,7.72 18,4.14 14,3.23M16.5,12C16.5,10.23 15.5,8.71 14,7.97V16C15.5,15.29 16.5,13.76 16.5,12M3,9V15H7L12,20V4L7,9H3Z',
   },
   {
     type: 'processing' as TabType,
-    label: '处理中',
+    label: t('media.processing'),
     icon: 'M12,4V2A10,10 0 0,0 2,12H4A8,8 0 0,1 12,4Z', // 加载图标
   },
-]
+])
 
 // 菜单项类型定义
 type MenuItem = {
@@ -373,14 +375,14 @@ const currentMenuItems = computed((): MenuItem[] => {
     // 如果有多个媒体项目被选中，显示批量删除选项
     if (unifiedStore.hasMediaSelection && unifiedStore.selectedMediaItemIds.size > 1) {
       menuItems.push({
-        label: `批量删除选中的 ${unifiedStore.selectedMediaItemIds.size} 个素材`,
+        label: t('media.deleteSelectedItems', { count: unifiedStore.selectedMediaItemIds.size }),
         icon: 'M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z',
         onClick: () => handleBatchDeleteMediaItems(),
       })
     } else {
       // 单个素材删除
       menuItems.push({
-        label: '删除素材',
+        label: t('media.deleteMedia'),
         icon: 'M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z',
         onClick: () => handleDeleteMediaItem(),
       })
@@ -391,12 +393,12 @@ const currentMenuItems = computed((): MenuItem[] => {
     // 空白区域菜单
     return [
       {
-        label: '导入本地文件',
+        label: t('media.importLocalFiles'),
         icon: 'M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z',
         onClick: () => handleImportFromMenu(),
       },
       {
-        label: '远程下载',
+        label: t('media.remoteDownload'),
         icon: 'M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M11,19.93C7.05,19.44 4,16.08 4,12C4,11.38 4.08,10.78 4.21,10.21L9,15V16A1,1 0 0,0 10,17H11V19.93M17.9,17.39C17.64,16.58 16.9,16 16,16H15V13A1,1 0 0,0 14,12H8V10H10A1,1 0 0,0 11,9V7H13A2,2 0 0,0 15,5V4.59C17.93,5.77 20,8.64 20,12C20,14.08 19.2,15.97 17.9,17.39Z',
         onClick: () => handleRemoteDownload(),
       },
@@ -553,7 +555,7 @@ const handleBatchDeleteMediaItems = () => {
   const selectedCount = unifiedStore.selectedMediaItemIds.size
   if (selectedCount === 0) return
 
-  if (dialogs.confirm(`确定要删除选中的 ${selectedCount} 个素材吗？`, '批量删除')) {
+  if (dialogs.confirm(t('media.batchDeleteConfirmation', { count: selectedCount }), t('media.batchDelete'))) {
     const selectedIds = Array.from(unifiedStore.selectedMediaItemIds)
     const deletedNames: string[] = []
     const failedNames: string[] = []
@@ -575,9 +577,9 @@ const handleBatchDeleteMediaItems = () => {
     unifiedStore.clearMediaSelection()
 
     if (failedNames.length === 0) {
-      dialogs.showSuccess(`成功删除 ${deletedNames.length} 个素材`)
+      dialogs.showSuccess(t('media.deleteComplete', { success: deletedNames.length, failed: failedNames.length }))
     } else {
-      dialogs.showError(`删除完成：成功 ${deletedNames.length} 个，失败 ${failedNames.length} 个`)
+      dialogs.showError(t('media.deleteComplete', { success: deletedNames.length, failed: failedNames.length }))
     }
   }
   showContextMenu.value = false
@@ -721,7 +723,7 @@ const processFiles = async (files: File[]) => {
 
   if (successful === 0 && failed > 0) {
     // 所有文件都处理失败，显示提示
-    dialogs.showError('所选文件均无法处理，请检查文件格式是否支持')
+    dialogs.showError(t('media.allFilesFailed'))
     return
   }
 
@@ -817,10 +819,10 @@ const removeMediaItem = async (id: string) => {
         unifiedStore.removeMediaItem(id)
 
         console.log(`✅ 素材库项目删除完成: ${item.name}`)
-        dialogs.showSuccess(`素材 "${item.name}" 已从项目中删除`)
+        dialogs.showSuccess(t('media.mediaRemoved', { name: item.name }))
       } catch (error) {
         console.error(`❌ 删除素材失败: ${item.name}`, error)
-        dialogs.showError(`删除素材 "${item.name}" 时发生错误`)
+        dialogs.showError(t('media.mediaRemoveError', { name: item.name }))
       }
     }
   }
@@ -1028,7 +1030,7 @@ const debugMediaItems = () => {
 // 获取媒体项目名称
 const getMediaItemName = (id: string): string => {
   const item = unifiedStore.getMediaItem(id)
-  return item ? item.name : '未知素材'
+  return item ? item.name : t('media.unknownMedia')
 }
 
 // 键盘事件处理

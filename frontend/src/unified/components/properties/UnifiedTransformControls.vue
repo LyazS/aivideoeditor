@@ -3,15 +3,15 @@
     <!-- 位置大小 -->
     <div class="property-section">
       <div class="section-header">
-        <h4>位置大小</h4>
+        <h4>{{ t('properties.transform.positionSize') }}</h4>
       </div>
 
       <!-- 位置：XY在同一行 -->
       <div class="property-item">
-        <label>位置</label>
+        <label>{{ t('properties.transform.position') }}</label>
         <div class="position-controls">
           <div class="position-input-group">
-            <span class="position-label">X</span>
+            <span class="position-label">{{ t('properties.transform.positionX') }}</span>
             <NumberInput
               :model-value="transformX"
               @change="(value) => $emit('update-transform', { x: value })"
@@ -19,12 +19,12 @@
               :max="positionLimits.maxX"
               :step="1"
               :precision="0"
-              placeholder="中心为0"
+              :placeholder="t('properties.transform.centerFor0')"
               input-class="position-input"
             />
           </div>
           <div class="position-input-group">
-            <span class="position-label">Y</span>
+            <span class="position-label">{{ t('properties.transform.positionY') }}</span>
             <NumberInput
               :model-value="transformY"
               @change="(value) => $emit('update-transform', { y: value })"
@@ -32,7 +32,7 @@
               :max="positionLimits.maxY"
               :step="1"
               :precision="0"
-              placeholder="中心为0"
+              :placeholder="t('properties.transform.centerFor0')"
               input-class="position-input"
             />
           </div>
@@ -41,7 +41,7 @@
 
       <!-- 等比缩放选项 -->
       <div class="property-item">
-        <label>等比缩放</label>
+        <label>{{ t('properties.transform.proportionalScale') }}</label>
         <input
           :checked="proportionalScale"
           @change="$emit('toggle-proportional-scale')"
@@ -52,7 +52,7 @@
 
       <!-- 等比缩放时的统一缩放控制 -->
       <div v-if="proportionalScale" class="property-item">
-        <label>缩放</label>
+        <label>{{ t('properties.transform.scale') }}</label>
         <div class="scale-controls">
           <SliderInput
             :model-value="uniformScale"
@@ -77,7 +77,7 @@
       <!-- 非等比缩放时的独立XY缩放控制 -->
       <template v-else>
         <div class="property-item">
-          <label>X缩放</label>
+          <label>{{ t('properties.transform.scaleX') }}</label>
           <div class="scale-controls">
             <SliderInput
               :model-value="scaleX"
@@ -99,7 +99,7 @@
           </div>
         </div>
         <div class="property-item">
-          <label>Y缩放</label>
+          <label>{{ t('properties.transform.scaleY') }}</label>
           <div class="scale-controls">
             <SliderInput
               :model-value="scaleY"
@@ -124,9 +124,9 @@
 
       <!-- 水平对齐 -->
       <div class="property-item">
-        <label>水平对齐</label>
+        <label>{{ t('properties.transform.alignHorizontal') }}</label>
         <div class="alignment-controls">
-          <button @click="$emit('align-horizontal', 'left')" class="align-btn" title="左对齐">
+          <button @click="$emit('align-horizontal', 'left')" class="align-btn" :title="t('properties.transform.left')">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
               <rect x="2" y="4" width="8" height="2" />
               <rect x="2" y="7" width="6" height="2" />
@@ -134,7 +134,7 @@
               <line x1="1" y1="2" x2="1" y2="14" stroke="currentColor" stroke-width="1" />
             </svg>
           </button>
-          <button @click="$emit('align-horizontal', 'center')" class="align-btn" title="水平居中">
+          <button @click="$emit('align-horizontal', 'center')" class="align-btn" :title="t('properties.transform.center')">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
               <rect x="4" y="4" width="8" height="2" />
               <rect x="5" y="7" width="6" height="2" />
@@ -142,7 +142,7 @@
               <line x1="8" y1="2" x2="8" y2="14" stroke="currentColor" stroke-width="1" />
             </svg>
           </button>
-          <button @click="$emit('align-horizontal', 'right')" class="align-btn" title="右对齐">
+          <button @click="$emit('align-horizontal', 'right')" class="align-btn" :title="t('properties.transform.right')">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
               <rect x="6" y="4" width="8" height="2" />
               <rect x="8" y="7" width="6" height="2" />
@@ -155,9 +155,9 @@
 
       <!-- 垂直对齐 -->
       <div class="property-item">
-        <label>垂直对齐</label>
+        <label>{{ t('properties.transform.alignVertical') }}</label>
         <div class="alignment-controls">
-          <button @click="$emit('align-vertical', 'top')" class="align-btn" title="顶对齐">
+          <button @click="$emit('align-vertical', 'top')" class="align-btn" :title="t('properties.transform.top')">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
               <rect x="4" y="2" width="2" height="8" />
               <rect x="7" y="2" width="2" height="6" />
@@ -165,7 +165,7 @@
               <line x1="2" y1="1" x2="14" y2="1" stroke="currentColor" stroke-width="1" />
             </svg>
           </button>
-          <button @click="$emit('align-vertical', 'middle')" class="align-btn" title="垂直居中">
+          <button @click="$emit('align-vertical', 'middle')" class="align-btn" :title="t('properties.transform.middle')">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
               <rect x="4" y="4" width="2" height="8" />
               <rect x="7" y="5" width="2" height="6" />
@@ -173,7 +173,7 @@
               <line x1="2" y1="8" x2="14" y2="8" stroke="currentColor" stroke-width="1" />
             </svg>
           </button>
-          <button @click="$emit('align-vertical', 'bottom')" class="align-btn" title="底对齐">
+          <button @click="$emit('align-vertical', 'bottom')" class="align-btn" :title="t('properties.transform.bottom')">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
               <rect x="4" y="6" width="2" height="8" />
               <rect x="7" y="8" width="2" height="6" />
@@ -187,10 +187,10 @@
 
     <!-- 变换属性 -->
     <div class="property-section">
-      <h4>变换</h4>
+      <h4>{{ t('properties.transform.transform') }}</h4>
 
       <div class="property-item">
-        <label>旋转</label>
+        <label>{{ t('properties.transform.rotation') }}</label>
         <div class="rotation-controls">
           <SliderInput
             :model-value="rotation"
@@ -212,7 +212,7 @@
       </div>
 
       <div class="property-item">
-        <label>透明度</label>
+        <label>{{ t('properties.transform.opacity') }}</label>
         <div class="opacity-controls">
           <SliderInput
             :model-value="opacity"
@@ -236,7 +236,7 @@
       </div>
 
       <div class="property-item">
-        <label>层级</label>
+        <label>{{ t('properties.transform.zIndex') }}</label>
         <NumberInput
           :model-value="zIndex"
           @change="(value) => $emit('update-transform', { zIndex: value })"
@@ -245,6 +245,7 @@
           :precision="0"
           :show-controls="false"
           input-class="scale-input"
+          :placeholder="t('properties.transform.layer')"
         />
       </div>
     </div>
@@ -252,8 +253,11 @@
 </template>
 
 <script setup lang="ts">
+import { useAppI18n } from '@/unified/composables/useI18n'
 import NumberInput from '@/components/NumberInput.vue'
 import SliderInput from '@/components/SliderInput.vue'
+
+const { t } = useAppI18n()
 
 interface Props {
   // 变换属性
@@ -292,8 +296,6 @@ interface Emits {
 
 defineProps<Props>()
 defineEmits<Emits>()
-
-// 样式定义已移动到CSS中
 </script>
 
 <style scoped>

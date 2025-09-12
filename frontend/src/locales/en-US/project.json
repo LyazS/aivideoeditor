@@ -1,106 +1,37 @@
 {
   "project": {
-    "title": "Project Management",
     "new": "New Project",
-    "edit": "Edit Project",
-    "delete": "Delete Project",
+    "edit": "Edit",
+    "delete": {
+      "title": "Delete",
+      "confirm": "Are you sure you want to delete project '{name}'? This operation cannot be undone."
+    },
+    "name": "Project Name",
+    "description": "Project Description",
+    "namePlaceholder": "Please enter project name",
+    "descriptionPlaceholder": "Please enter project description (optional)",
     "list": {
-      "title": "My Projects",
-      "refresh": "Refresh Project List"
+      "title": "Recent Projects",
+      "refresh": "Refresh Projects"
     },
     "view": {
       "grid": "Grid View",
       "list": "List View"
     },
-    "loading": "Loading project list...",
+    "loading": "Loading Projects...",
     "empty": {
-      "title": "No Projects Yet",
-      "description": "Create your first video editing project to get started!"
+      "title": "No Projects Found",
+      "description": "Create your first project to get started with video editing"
     },
-    "noDescription": "No description",
-    "actions": {
-      "newProject": "New Project",
-      "openProject": "Open Project",
-      "saveProject": "Save Project",
-      "saveAs": "Save As",
-      "closeProject": "Close Project",
-      "exportProject": "Export Project",
-      "importProject": "Import Project",
-      "projectSettings": "Project Settings",
-      "projectInfo": "Project Information"
-    },
-    "properties": {
-      "name": "Project Name",
-      "description": "Project Description",
-      "resolution": "Resolution",
-      "frameRate": "Frame Rate",
-      "duration": "Duration",
-      "created": "Created",
-      "modified": "Modified",
-      "author": "Author",
-      "version": "Version",
-      "tags": "Tags",
-      "category": "Category"
-    },
-    "settings": {
-      "video": {
-        "resolution": "Resolution",
-        "width": "Width",
-        "height": "Height",
-        "aspectRatio": "Aspect Ratio",
-        "frameRate": "Frame Rate",
-        "background": "Background Color",
-        "rendering": "Rendering Quality",
-        "codec": "Video Codec",
-        "bitrate": "Bitrate"
-      },
-      "audio": {
-        "sampleRate": "Sample Rate",
-        "channels": "Channels",
-        "bitDepth": "Bit Depth",
-        "format": "Audio Format"
-      },
-      "export": {
-        "format": "Export Format",
-        "preset": "Export Preset",
-        "quality": "Quality",
-        "filename": "File Name",
-        "location": "Save Location",
-        "includeAudio": "Include Audio",
-        "includeVideo": "Include Video",
-        "includeMetadata": "Include Metadata"
-      },
-      "preferences": {
-        "interface": "Interface",
-        "language": "Language",
-        "theme": "Theme",
-        "autoSave": "Auto Save",
-        "backup": "Backup",
-        "shortcuts": "Keyboard Shortcuts",
-        "performance": "Performance",
-        "memory": "Memory Usage",
-        "cache": "Cache Settings"
-      }
-    },
-    "status": {
-      "unsaved": "Unsaved Changes",
-      "saving": "Saving...",
-      "loading": "Loading Project...",
-      "exporting": "Exporting...",
-      "importing": "Importing...",
-      "ready": "Ready",
-      "error": "Error",
-      "success": "Success"
-    },
-    "dialogs": {
-      "saveChanges": "Save changes to project?",
-      "discardChanges": "Discard changes?",
-      "overwrite": "Overwrite existing file?",
-      "deleteConfirm": "Are you sure you want to delete this project?",
-      "unsupportedFormat": "Unsupported file format",
-      "exportComplete": "Export completed successfully",
-      "importComplete": "Import completed successfully",
-      "delete": "Are you sure you want to delete the project \"{{name}}\"? This action cannot be undone."
+    "noDescription": "No Description",
+    "progress": {
+      "startContent": "Starting to load project content...",
+      "contentData": "Loading project content data...",
+      "mediaManager": "Initializing media manager...",
+      "rebuildMedia": "Rebuilding media items...",
+      "restoreTracks": "Restoring track data...",
+      "restoreTimeline": "Restoring timeline items...",
+      "contentComplete": "Project content loading complete"
     }
   }
 }

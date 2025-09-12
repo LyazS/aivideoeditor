@@ -1,106 +1,37 @@
 {
   "project": {
-    "title": "项目管理",
     "new": "新建项目",
-    "edit": "编辑项目",
-    "delete": "删除项目",
+    "edit": "编辑",
+    "delete": {
+      "title": "删除",
+      "confirm": "确定要删除项目 '{name}' 吗？此操作无法撤销。"
+    },
+    "name": "项目名称",
+    "description": "项目描述",
+    "namePlaceholder": "请输入项目名称",
+    "descriptionPlaceholder": "请输入项目描述（可选）",
     "list": {
-      "title": "我的项目",
-      "refresh": "刷新项目列表"
+      "title": "最近项目",
+      "refresh": "刷新项目"
     },
     "view": {
       "grid": "网格视图",
       "list": "列表视图"
     },
-    "loading": "正在加载项目列表...",
+    "loading": "正在加载项目...",
     "empty": {
-      "title": "还没有项目",
-      "description": "创建您的第一个视频编辑项目开始吧！"
+      "title": "未找到项目",
+      "description": "创建您的第一个项目开始视频编辑之旅"
     },
-    "noDescription": "无描述",
-    "actions": {
-      "newProject": "新建项目",
-      "openProject": "打开项目",
-      "saveProject": "保存项目",
-      "saveAs": "另存为",
-      "closeProject": "关闭项目",
-      "exportProject": "导出项目",
-      "importProject": "导入项目",
-      "projectSettings": "项目设置",
-      "projectInfo": "项目信息"
-    },
-    "properties": {
-      "name": "项目名称",
-      "description": "项目描述",
-      "resolution": "分辨率",
-      "frameRate": "帧率",
-      "duration": "时长",
-      "created": "创建时间",
-      "modified": "修改时间",
-      "author": "作者",
-      "version": "版本",
-      "tags": "标签",
-      "category": "分类"
-    },
-    "settings": {
-      "video": {
-        "resolution": "分辨率",
-        "width": "宽度",
-        "height": "高度",
-        "aspectRatio": "宽高比",
-        "frameRate": "帧率",
-        "background": "背景颜色",
-        "rendering": "渲染质量",
-        "codec": "视频编解码器",
-        "bitrate": "比特率"
-      },
-      "audio": {
-        "sampleRate": "采样率",
-        "channels": "声道",
-        "bitDepth": "位深度",
-        "format": "音频格式"
-      },
-      "export": {
-        "format": "导出格式",
-        "preset": "导出预设",
-        "quality": "质量",
-        "filename": "文件名",
-        "location": "保存位置",
-        "includeAudio": "包含音频",
-        "includeVideo": "包含视频",
-        "includeMetadata": "包含元数据"
-      },
-      "preferences": {
-        "interface": "界面",
-        "language": "语言",
-        "theme": "主题",
-        "autoSave": "自动保存",
-        "backup": "备份",
-        "shortcuts": "键盘快捷键",
-        "performance": "性能",
-        "memory": "内存使用",
-        "cache": "缓存设置"
-      }
-    },
-    "status": {
-      "unsaved": "未保存的更改",
-      "saving": "保存中...",
-      "loading": "加载项目中...",
-      "exporting": "导出中...",
-      "importing": "导入中...",
-      "ready": "就绪",
-      "error": "错误",
-      "success": "成功"
-    },
-    "dialogs": {
-      "saveChanges": "是否保存项目更改？",
-      "discardChanges": "是否放弃更改？",
-      "overwrite": "是否覆盖现有文件？",
-      "deleteConfirm": "确定要删除此项目吗？",
-      "unsupportedFormat": "不支持的文件格式",
-      "exportComplete": "导出成功完成",
-      "importComplete": "导入成功完成",
-      "delete": "确定要删除项目\"{{name}}\"吗？此操作无法撤销。"
+    "noDescription": "暂无描述",
+    "progress": {
+      "startContent": "开始加载项目内容...",
+      "contentData": "加载项目内容数据...",
+      "mediaManager": "初始化媒体管理器...",
+      "rebuildMedia": "重建媒体项目...",
+      "restoreTracks": "恢复轨道数据...",
+      "restoreTimeline": "恢复时间轴项目...",
+      "contentComplete": "项目内容加载完成"
     }
   }
 }

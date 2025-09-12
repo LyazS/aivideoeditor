@@ -2,27 +2,27 @@
   <div class="text-clip-properties">
     <!-- 基本信息 -->
     <div class="property-section">
-      <h4>基本信息</h4>
+      <h4>{{ t('properties.basic.basicInfo') }}</h4>
       <div class="property-item">
-        <label>文本内容</label>
+        <label>{{ t('properties.basic.textContent') }}</label>
         <textarea
           :value="localText"
           @blur="updateTextContent"
           @keyup.ctrl.enter="updateTextContent"
           class="text-content-input"
-          placeholder="输入文本内容..."
+          :placeholder="t('properties.placeholders.enterText')"
           rows="3"
         />
       </div>
       <div class="property-item">
-        <label>显示时长</label>
+        <label>{{ t('properties.basic.duration') }}</label>
         <div class="duration-controls">
           <input
             type="text"
             :value="timecodeInput"
             @blur="updateTargetDurationFromTimecode"
             @keyup.enter="updateTargetDurationFromTimecode"
-            placeholder="HH:MM:SS.FF"
+            :placeholder="t('properties.timecodes.timecodeFormat')"
             :style="propertyInputStyle"
             class="timecode-input"
           />
@@ -32,31 +32,31 @@
 
     <!-- 文本样式 -->
     <div class="property-section">
-      <h4>文本样式</h4>
+      <h4>{{ t('properties.effects.textStyle') }}</h4>
 
       <!-- 字体设置 -->
       <div class="property-item">
-        <label>字体</label>
+        <label>{{ t('properties.basic.fontFamily') }}</label>
         <div class="font-controls">
           <select
             :value="localStyle.fontFamily"
             @change="handleFontFamilyChange"
             class="font-family-select"
           >
-            <option value="Arial, sans-serif">Arial</option>
-            <option value="'Microsoft YaHei', sans-serif">微软雅黑</option>
-            <option value="'SimHei', sans-serif">黑体</option>
-            <option value="'SimSun', serif">宋体</option>
-            <option value="'KaiTi', serif">楷体</option>
-            <option value="'Times New Roman', serif">Times New Roman</option>
-            <option value="'Courier New', monospace">Courier New</option>
+            <option value="Arial, sans-serif">{{ t('properties.fonts.fontFamilyArial') }}</option>
+            <option value="'Microsoft YaHei', sans-serif">{{ t('properties.fonts.fontFamilyMicrosoftYaHei') }}</option>
+            <option value="'SimHei', sans-serif">{{ t('properties.fonts.fontFamilySimHei') }}</option>
+            <option value="'SimSun', serif">{{ t('properties.fonts.fontFamilySimSun') }}</option>
+            <option value="'KaiTi', serif">{{ t('properties.fonts.fontFamilyKaiTi') }}</option>
+            <option value="'Times New Roman', serif">{{ t('properties.fonts.fontFamilyTimesNewRoman') }}</option>
+            <option value="'Courier New', monospace">{{ t('properties.fonts.fontFamilyCourierNew') }}</option>
           </select>
         </div>
       </div>
 
       <!-- 字体大小 -->
       <div class="property-item">
-        <label>字体大小</label>
+        <label>{{ t('properties.basic.fontSize') }}</label>
         <div class="font-size-controls">
           <SliderInput
             :model-value="localStyle.fontSize"
@@ -74,7 +74,7 @@
             :step="1"
             :precision="0"
             :show-controls="false"
-            placeholder="字号"
+            :placeholder="t('properties.placeholders.fontSize')"
             :input-style="numberInputStyle"
           />
         </div>
@@ -82,31 +82,31 @@
 
       <!-- 字体样式 -->
       <div class="property-item">
-        <label>字体样式</label>
+        <label>{{ t('properties.basic.fontStyle') }}</label>
         <div class="font-style-controls">
           <select
             :value="localStyle.fontWeight"
             @change="handleFontWeightChange"
             class="font-weight-select"
           >
-            <option value="normal">正常</option>
-            <option value="bold">粗体</option>
-            <option value="lighter">细体</option>
+            <option value="normal">{{ t('properties.effects.normal') }}</option>
+            <option value="bold">{{ t('properties.effects.bold') }}</option>
+            <option value="lighter">{{ t('properties.effects.lighter') }}</option>
           </select>
           <select
             :value="localStyle.fontStyle"
             @change="handleFontStyleChange"
             class="font-style-select"
           >
-            <option value="normal">正常</option>
-            <option value="italic">斜体</option>
+            <option value="normal">{{ t('properties.fonts.fontStyleNormal') }}</option>
+            <option value="italic">{{ t('properties.fonts.fontStyleItalic') }}</option>
           </select>
         </div>
       </div>
 
       <!-- 文字颜色 -->
       <div class="property-item">
-        <label>文字颜色</label>
+        <label>{{ t('properties.effects.textColor') }}</label>
         <div class="color-controls">
           <input
             type="color"
@@ -119,7 +119,7 @@
 
       <!-- 背景颜色 -->
       <div class="property-item">
-        <label>背景颜色</label>
+        <label>{{ t('properties.effects.backgroundColor') }}</label>
         <div class="background-color-controls">
           <input
             type="color"
@@ -141,7 +141,7 @@
 
       <!-- 文本对齐 -->
       <div class="property-item">
-        <label>文本对齐</label>
+        <label>{{ t('properties.effects.textAlign') }}</label>
         <div class="text-align-controls">
           <button
             v-for="align in textAlignOptions"
@@ -149,7 +149,7 @@
             @click="updateTextAlign"
             class="align-btn"
             :class="{ active: localStyle.textAlign === align.value }"
-            :title="align.label"
+            :title="t(`properties.effects.${align.label.replace(' ', '').toLowerCase()}`)"
             :data-align="align.value"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
@@ -162,11 +162,11 @@
 
     <!-- 文本效果 -->
     <div class="property-section">
-      <h4>文本效果</h4>
+      <h4>{{ t('properties.effects.textEffects') }}</h4>
 
       <!-- 阴影效果 -->
       <div class="property-item">
-        <label>阴影</label>
+        <label>{{ t('properties.effects.shadow') }}</label>
         <div class="shadow-controls">
           <label class="checkbox-wrapper">
             <input
@@ -178,7 +178,7 @@
           </label>
           <div v-if="shadowEnabled" class="shadow-settings">
             <div class="shadow-setting-row">
-              <label class="setting-label">颜色</label>
+              <label class="setting-label">{{ t('properties.effects.effectColor') }}</label>
               <input
                 type="color"
                 :value="shadowColor"
@@ -187,7 +187,7 @@
               />
             </div>
             <div class="shadow-setting-row">
-              <label class="setting-label">模糊</label>
+              <label class="setting-label">{{ t('properties.effects.blur') }}</label>
               <SliderInput
                 :model-value="shadowBlur"
                 @input="updateShadowBlur"
@@ -204,12 +204,12 @@
                 :step="1"
                 :precision="0"
                 :show-controls="false"
-                placeholder="模糊"
+                :placeholder="t('properties.placeholders.blur')"
                 :input-style="smallNumberInputStyle"
               />
             </div>
             <div class="shadow-setting-row">
-              <label class="setting-label">偏移X</label>
+              <label class="setting-label">{{ t('properties.effects.shadowOffsetX') }}</label>
               <SliderInput
                 :model-value="shadowOffsetX"
                 @input="updateShadowOffsetX"
@@ -226,12 +226,12 @@
                 :step="1"
                 :precision="0"
                 :show-controls="false"
-                placeholder="X"
+                :placeholder="t('properties.placeholders.offsetX')"
                 :input-style="smallNumberInputStyle"
               />
             </div>
             <div class="shadow-setting-row">
-              <label class="setting-label">偏移Y</label>
+              <label class="setting-label">{{ t('properties.effects.shadowOffsetY') }}</label>
               <SliderInput
                 :model-value="shadowOffsetY"
                 @input="updateShadowOffsetY"
@@ -248,7 +248,7 @@
                 :step="1"
                 :precision="0"
                 :show-controls="false"
-                placeholder="Y"
+                :placeholder="t('properties.placeholders.offsetY')"
                 :input-style="smallNumberInputStyle"
               />
             </div>
@@ -258,7 +258,7 @@
 
       <!-- 描边效果 -->
       <div class="property-item">
-        <label>描边</label>
+        <label>{{ t('properties.effects.stroke') }}</label>
         <div class="stroke-controls">
           <label class="checkbox-wrapper">
             <input
@@ -270,7 +270,7 @@
           </label>
           <div v-if="strokeEnabled" class="stroke-settings">
             <div class="stroke-setting-row">
-              <label class="setting-label">颜色</label>
+              <label class="setting-label">{{ t('properties.effects.effectColor') }}</label>
               <input
                 type="color"
                 :value="strokeColor"
@@ -279,7 +279,7 @@
               />
             </div>
             <div class="stroke-setting-row">
-              <label class="setting-label">宽度</label>
+              <label class="setting-label">{{ t('properties.effects.width') }}</label>
               <SliderInput
                 :model-value="strokeWidth"
                 @input="updateStrokeWidth"
@@ -296,7 +296,7 @@
                 :step="0.5"
                 :precision="1"
                 :show-controls="false"
-                placeholder="宽度"
+                :placeholder="t('properties.placeholders.width')"
                 :input-style="smallNumberInputStyle"
               />
             </div>
@@ -306,7 +306,7 @@
 
       <!-- 发光效果 -->
       <div class="property-item">
-        <label>发光</label>
+        <label>{{ t('properties.effects.glow') }}</label>
         <div class="glow-controls">
           <label class="checkbox-wrapper">
             <input
@@ -318,7 +318,7 @@
           </label>
           <div v-if="glowEnabled" class="glow-settings">
             <div class="glow-setting-row">
-              <label class="setting-label">颜色</label>
+              <label class="setting-label">{{ t('properties.effects.effectColor') }}</label>
               <input
                 type="color"
                 :value="glowColor"
@@ -327,7 +327,7 @@
               />
             </div>
             <div class="glow-setting-row">
-              <label class="setting-label">模糊</label>
+              <label class="setting-label">{{ t('properties.effects.blur') }}</label>
               <SliderInput
                 :model-value="glowBlur"
                 @input="updateGlowBlur"
@@ -344,12 +344,12 @@
                 :step="1"
                 :precision="0"
                 :show-controls="false"
-                placeholder="模糊"
+                :placeholder="t('properties.placeholders.blur')"
                 :input-style="smallNumberInputStyle"
               />
             </div>
             <div class="glow-setting-row">
-              <label class="setting-label">扩散</label>
+              <label class="setting-label">{{ t('properties.effects.spread') }}</label>
               <SliderInput
                 :model-value="glowSpread"
                 @input="updateGlowSpread"
@@ -366,7 +366,7 @@
                 :step="1"
                 :precision="0"
                 :show-controls="false"
-                placeholder="扩散"
+                :placeholder="t('properties.placeholders.spread')"
                 :input-style="smallNumberInputStyle"
               />
             </div>
@@ -421,6 +421,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
+import { useAppI18n } from '@/unified/composables/useI18n'
 import { useUnifiedStore } from '@/unified/unifiedStore'
 import { isTextTimelineItem } from '@/unified/timelineitem/TimelineItemQueries'
 import type { UnifiedTimelineItemData } from '@/unified/timelineitem/TimelineItemData'
@@ -440,6 +441,7 @@ interface Props {
 
 const props = defineProps<Props>()
 
+const { t } = useAppI18n()
 const unifiedStore = useUnifiedStore()
 
 // 计算属性：获取当前选中文本片段的样式（类似 localText）
@@ -666,7 +668,7 @@ const updateTextContent = async (event: Event) => {
     console.log('✅ [UnifiedTextClipProperties] 文本内容更新成功')
   } catch (error) {
     console.error('❌ [UnifiedTextClipProperties] 更新文本内容失败:', error)
-    unifiedStore.showError('文本内容更新失败，请重试')
+    unifiedStore.showError(t('properties.errors.textContentUpdateFailed'))
   }
 }
 
@@ -688,7 +690,7 @@ const updateTextStyle = async (styleUpdates: Partial<TextStyleConfig> = {}) => {
     console.log('✅ [UnifiedTextClipProperties] 文本样式更新成功')
   } catch (error) {
     console.error('❌ [UnifiedTextClipProperties] 更新文本样式失败:', error)
-    unifiedStore.showError('文本样式更新失败，请重试')
+    unifiedStore.showError(t('properties.errors.textStyleUpdateFailed'))
   }
 }
 // 更新字体大小
@@ -954,24 +956,24 @@ const updateTargetDurationFromTimecode = async (event: Event) => {
 
     if (errorStr.includes('Invalid timecode format')) {
       // 格式错误
-      errorMessage = `格式错误：请使用 HH:MM:SS.FF 格式
-示例：00:01:30.15（1分30秒15帧）
-当前输入：${timecodeValue}`
+      errorMessage = `${t('properties.errors.formatError')}：${t('properties.errors.invalidTimecodeFormat')}
+${t('properties.errors.example')}：${t('properties.errors.timecodeExample')}
+${t('properties.errors.currentInput')}：${timecodeValue}`
     } else if (errorStr.includes('Invalid timecode values')) {
       // 数值范围错误
-      errorMessage = `数值超出范围：
-• 分钟和秒数应小于60
-• 帧数应小于30（30fps）
-当前输入：${timecodeValue}`
+      errorMessage = `${t('properties.errors.valueOutOfRange')}：
+${t('properties.errors.minutesAndSecondsShouldBeLessThan60')}
+${t('properties.errors.framesShouldBeLessThan30')}
+${t('properties.errors.currentInput')}：${timecodeValue}`
     } else {
       // 其他错误
-      errorMessage = `时间码解析失败
-请检查格式：HH:MM:SS.FF
-当前输入：${timecodeValue}`
+      errorMessage = `${t('properties.errors.timecodeParsingFailed')}
+${t('properties.errors.pleaseCheckFormat')}：${t('properties.errors.timecodeFormat')}
+${t('properties.errors.currentInput')}：${timecodeValue}`
     }
 
     // 显示错误通知
-    unifiedStore.showError(`时间码格式错误：${errorMessage}`)
+    unifiedStore.showError(`${t('properties.errors.timecodeFormatError')}：${errorMessage}`)
 
     // 恢复到当前值
     input.value = formattedDuration.value

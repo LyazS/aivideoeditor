@@ -9,7 +9,7 @@
         <div class="status-content">
           <!-- 左侧：返回按钮和保存状态 -->
           <div class="status-left">
-            <HoverButton @click="goBack" title="返回项目管理">
+            <HoverButton @click="goBack" :title="t('editor.backToProject')">
               <template #icon>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                   <path
@@ -17,7 +17,7 @@
                   />
                 </svg>
               </template>
-              返回
+              {{ t('editor.back') }}
             </HoverButton>
             <span class="project-status">{{ projectStatus }}</span>
           </div>
@@ -27,9 +27,11 @@
             <button
               class="project-title-btn"
               @click="showEditProjectDialog"
-              title="点击编辑项目信息"
+              :title="t('editor.editProjectInfo')"
             >
-              <span class="project-title">{{ unifiedStore.projectName || '未命名项目' }}</span>
+              <span class="project-title">{{
+                unifiedStore.projectName || t('editor.untitledProject')
+              }}</span>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" class="edit-icon">
                 <path
                   d="M20.71,7.04C21.1,6.65 21.1,6 20.71,5.63L18.37,3.29C18,2.9 17.35,2.9 16.96,3.29L15.12,5.12L18.87,8.87M3,17.25V21H6.75L17.81,9.93L14.06,6.18L3,17.25Z"
@@ -40,7 +42,9 @@
 
           <!-- 右侧：保存和导出按钮 -->
           <div class="status-right">
-            <HoverButton @click="saveProject" :disabled="isSaving" title="保存项目">
+            <LanguageSelector />
+
+            <HoverButton @click="saveProject" :disabled="isSaving" :title="t('editor.save')">
               <template #icon>
                 <svg
                   v-if="!isSaving"
@@ -64,10 +68,10 @@
                   <path d="M12,4V2A10,10 0 0,0 2,12H4A8,8 0 0,1 12,4Z" />
                 </svg>
               </template>
-              {{ isSaving ? '保存中...' : '保存' }}
+              {{ isSaving ? t('editor.saving') : t('editor.save') }}
             </HoverButton>
 
-            <HoverButton @click="exportProject" title="导出项目">
+            <HoverButton @click="exportProject" :title="t('editor.export')">
               <template #icon>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                   <path
@@ -75,7 +79,7 @@
                   />
                 </svg>
               </template>
-              导出
+              {{ t('editor.export') }}
             </HoverButton>
 
             <!-- <HoverButton @click="debugProject" title="调试：打印项目JSON">
@@ -104,11 +108,11 @@
     <!-- 加载进度覆盖层 -->
     <LoadingOverlay
       :visible="unifiedStore.showProjectLoadingProgress"
-      title="正在加载项目"
+      :title="t('editor.loading')"
       :stage="unifiedStore.projectLoadingStage"
       :progress="unifiedStore.projectLoadingProgress"
       :details="unifiedStore.projectLoadingDetails"
-      tipText="请稍候，正在为您准备编辑环境..."
+      :tipText="t('editor.loadTip')"
       :showTitle="true"
       :showStage="true"
       :showProgress="true"
@@ -119,10 +123,10 @@
     <!-- 导出进度覆盖层 -->
     <LoadingOverlay
       :visible="showExportProgress"
-      title="正在导出视频"
+      :title="t('editor.exporting')"
       :progress="exportProgress"
       :details="exportDetails"
-      tipText="视频导出可能需要一些时间，请耐心等待..."
+      :tipText="t('editor.exportTip')"
       :showTitle="true"
       :showStage="false"
       :showProgress="true"
@@ -148,10 +152,13 @@ import VideoPreviewEngine from '../components/VideoPreviewEngine.vue'
 import HoverButton from '../components/HoverButton.vue'
 import LoadingOverlay from '../components/LoadingOverlay.vue'
 import EditProjectDialog from '../components/EditProjectDialog.vue'
+import LanguageSelector from '../components/LanguageSelector.vue'
 import { exportProject as exportProjectUtil } from '@/unified/utils/projectExporter'
+import { useAppI18n } from '@/unified/composables/useI18n'
 
 const route = useRoute()
 const unifiedStore = useUnifiedStore()
+const { t, initLanguage } = useAppI18n()
 
 // 响应式数据
 const showEditDialog = ref(false)
@@ -241,12 +248,12 @@ async function exportProject() {
     console.log('✅ [导出] 视频导出完成')
 
     // 显示成功通知
-    unifiedStore.showSuccess('视频导出成功！')
+    unifiedStore.showSuccess(t('editor.exportSuccess'))
   } catch (error) {
     console.error('导出项目失败:', error)
 
     // 显示错误通知
-    unifiedStore.showError(error instanceof Error ? error.message : '导出过程中发生错误')
+    unifiedStore.showError(error instanceof Error ? error.message : t('editor.exportFailed'))
 
     // 重置导出状态
     isExporting.value = false
@@ -312,7 +319,9 @@ function handleKeydown(event: KeyboardEvent) {
 // 生命周期
 // 预加载项目设置（在所有子组件挂载前完成，确保WebAV初始化时使用正确的分辨率）
 onBeforeMount(async () => {
-  console.log('� [LIFECYCLE] VideoEditor.onBeforeMount 开始')
+  console.log(' [LIFECYCLE] VideoEditor.onBeforeMount 开始')
+  // 初始化语言设置
+  initLanguage()
 
   // 从路由参数获取项目ID
   const projectId = route.params.projectId as string
@@ -323,7 +332,7 @@ onBeforeMount(async () => {
   }
 
   try {
-    console.log('� [LIFECYCLE] VideoEditor 开始预加载项目设置')
+    console.log(' [LIFECYCLE] VideoEditor 开始预加载项目设置')
     await unifiedStore.preloadProjectSettings(projectId)
     console.log('🔄 [LIFECYCLE] VideoEditor 项目设置预加载完成')
   } catch (error) {
@@ -336,7 +345,7 @@ onBeforeMount(async () => {
 })
 
 onMounted(async () => {
-  console.log('� [LIFECYCLE] VideoEditor.onMounted 开始')
+  console.log(' [LIFECYCLE] VideoEditor.onMounted 开始')
 
   // 从路由参数获取项目ID
   const projectId = route.params.projectId as string

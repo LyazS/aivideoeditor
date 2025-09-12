@@ -28,6 +28,8 @@ import {
 } from '@/unified/utils/unifiedMediaSyncManager'
 import { generateCommandId } from '@/unified/utils/idGenerator'
 import { framesToSeconds } from '@/unified/utils/timeUtils'
+import { useAppI18n } from '@/unified/composables/useI18n'
+import { i18n } from '@/locales'
 
 /**
  * 统一项目管理模块
@@ -74,6 +76,10 @@ export function createUnifiedProjectModule(
   },
 ) {
   const thumbnailService = useProjectThumbnailService()
+  
+  // 获取i18n函数
+  const { t } = useAppI18n()
+  
   // ==================== 状态定义 ====================
 
   // 项目保存状态
@@ -95,10 +101,10 @@ export function createUnifiedProjectModule(
 
   // ==================== 计算属性 ====================
   /**
-   * 项目保存状态文本
+   * 项目保存状态文本（支持多语言）
    */
   const projectStatus = computed(() => {
-    if (isSaving.value) return '保存中...'
+    if (isSaving.value) return t('editor.savingStatus')
 
     // 格式化时间为 HH:MM:SS
     const lastSaved = new Date(configModule.projectUpdatedAt.value)
@@ -108,7 +114,7 @@ export function createUnifiedProjectModule(
       minute: '2-digit',
       second: '2-digit',
     })
-    return `${timeString} 已保存`
+    return t('editor.savedAt', { time: timeString })
   })
 
   /**
@@ -337,33 +343,33 @@ export function createUnifiedProjectModule(
   async function loadProjectContent(projectId: string): Promise<void> {
     try {
       isLoading.value = true
-      updateLoadingProgress('开始加载项目内容...', 5)
+      updateLoadingProgress(t('project.progress.startContent'), 5)
       console.log(`📂 [Content Load] 开始加载项目内容: ${projectId}`)
 
       // 1. 加载项目内容数据
-      updateLoadingProgress('加载项目内容数据...', 10)
+      updateLoadingProgress(t('project.progress.contentData'), 10)
       const projectContent = await projectFileOperations.loadProjectContent(projectId)
       if (!projectContent) {
         throw new Error('项目内容不存在')
       }
 
       // 2. 初始化页面级媒体管理器（内部包含扫描媒体目录逻辑）
-      updateLoadingProgress('初始化媒体管理器...', 20)
+      updateLoadingProgress(t('project.progress.mediaManager'), 20)
       await globalProjectMediaManager.initializeForProject(projectId)
 
       // 3. 构建媒体项目，启动数据源获取
-      updateLoadingProgress('重建媒体项目...', 50)
+      updateLoadingProgress(t('project.progress.rebuildMedia'), 50)
       await rebuildMediaItems(projectContent.mediaItems)
 
       // 4. 恢复轨道状态
-      updateLoadingProgress('恢复轨道数据...', 70)
+      updateLoadingProgress(t('project.progress.restoreTracks'), 70)
       await restoreTracks(projectContent.tracks)
 
       // 5. 恢复时间轴项目状态
-      updateLoadingProgress('恢复时间轴项目...', 90)
+      updateLoadingProgress(t('project.progress.restoreTimeline'), 90)
       await restoreTimelineItems(projectContent.timelineItems)
 
-      updateLoadingProgress('项目内容加载完成', 100)
+      updateLoadingProgress(t('project.progress.contentComplete'), 100)
       isProjectContentReady.value = true
     } catch (error) {
       console.error('❌ [Content Load] 加载项目内容失败:', error)
@@ -501,7 +507,9 @@ export function createUnifiedProjectModule(
       } else {
         // 如果没有保存的轨道，创建默认轨道
         console.log('🛤️ 没有保存的轨道数据，创建默认轨道')
-        const defaultTrack = createUnifiedTrackData('video')
+        const defaultTrack = createUnifiedTrackData('video', {
+          name: i18n.global.t('timeline.videoTrack')
+        })
         trackModule.addTrack(defaultTrack)
       }
 

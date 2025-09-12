@@ -1,7 +1,7 @@
 <template>
   <div class="properties-panel">
     <div class="panel-header">
-      <h3>属性</h3>
+      <h3>{{ t('properties.panelTitle') }}</h3>
     </div>
 
     <div class="panel-content">
@@ -10,16 +10,16 @@
         <svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor">
           <path d="M9,20.42L2.79,14.21L5.62,11.38L9,14.77L18.88,4.88L21.71,7.71L9,20.42Z" />
         </svg>
-        <p>已选择 {{ multiSelectInfo.count }} 个片段</p>
-        <p class="hint">批量操作功能开发中...</p>
+        <p>{{ t('properties.multiSelect.title', { count: multiSelectInfo.count }) }}</p>
+        <p class="hint">{{ t('properties.multiSelect.hint') }}</p>
 
         <!-- 选中项目列表 -->
         <div class="selected-items-list">
           <div v-for="item in multiSelectInfo.items" :key="item?.id" class="selected-item">
             <span class="item-name">
-              {{ item ? getItemDisplayName(item) : '未知素材' }}
+              {{ item ? getItemDisplayName(item) : t('properties.multiSelect.unknownMedia') }}
             </span>
-            <span class="item-type">{{ getItemTypeLabel(item?.mediaType) }}</span>
+            <span class="item-type">{{ t('properties.mediaTypes.' + (item?.mediaType || 'unknown')) }}</span>
           </div>
         </div>
       </div>
@@ -62,8 +62,8 @@
               <path d="M12,4V2A10,10 0 0,0 2,12H4A8,8 0 0,1 12,4Z" />
             </svg>
           </div>
-          <p class="loading-text">素材加载中，请稍候...</p>
-          <p class="loading-status">状态: {{ getStatusText(selectedTimelineItem) }}</p>
+          <p class="loading-text">{{ t('properties.singleSelect.loading') }}</p>
+          <p class="loading-status">{{ t('properties.singleSelect.loadingStatus', { status: getStatusText(selectedTimelineItem) }) }}</p>
         </div>
       </div>
 
@@ -74,8 +74,8 @@
             d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4M11,16.5L18,9.5L16.5,8L11,13.5L7.5,10L6,11.5L11,16.5Z"
           />
         </svg>
-        <p>选择片段查看属性</p>
-        <p class="hint">在时间轴上点击视频片段</p>
+        <p>{{ t('properties.singleSelect.emptyHint') }}</p>
+        <p class="hint">{{ t('properties.singleSelect.emptyHintDetail') }}</p>
       </div>
     </div>
   </div>
@@ -84,15 +84,17 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useUnifiedStore } from '@/unified/unifiedStore'
+import { useAppI18n } from '@/unified/composables/useI18n'
 import UnifiedVideoClipProperties from './properties/UnifiedVideoClipProperties.vue'
 import type { UnifiedTimelineItemData } from '@/unified/timelineitem/TimelineItemData'
 import { getStatusText } from '@/unified/timelineitem/TimelineItemQueries'
 
 // 导入文本和音频属性组件（待实现）
-import UnifiedTextClipProperties from './properties/UnifiedTextClipProperties.vue'
-import UnifiedAudioClipProperties from './properties/UnifiedAudioClipProperties.vue'
+import UnifiedTextClipProperties from './properties/UnifiedVideoClipProperties.vue'
+import UnifiedAudioClipProperties from './properties/UnifiedVideoClipProperties.vue'
 
 const unifiedStore = useUnifiedStore()
+const { t } = useAppI18n()
 
 // 选中的时间轴项目
 const selectedTimelineItem = computed(() => {
@@ -137,21 +139,6 @@ const getItemDisplayName = (item: any) => {
   }
 }
 
-// 获取项目类型标签
-const getItemTypeLabel = (mediaType: string | undefined) => {
-  switch (mediaType) {
-    case 'video':
-      return '视频'
-    case 'image':
-      return '图片'
-    case 'audio':
-      return '音频'
-    case 'text':
-      return '文本'
-    default:
-      return '未知'
-  }
-}
 </script>
 
 <style scoped>

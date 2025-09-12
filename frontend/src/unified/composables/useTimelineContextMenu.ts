@@ -1,6 +1,7 @@
 import { ref, computed, type Ref } from 'vue'
 import { useUnifiedStore } from '@/unified/unifiedStore'
 import { useDialogs } from '@/unified/composables'
+import { useAppI18n } from '@/unified/composables/useI18n'
 import {
   getTrackTypeIcon,
   getTrackTypeLabel,
@@ -51,6 +52,7 @@ export function useTimelineContextMenu(
 ) {
   const unifiedStore = useUnifiedStore()
   const dialogs = useDialogs()
+  const { t } = useAppI18n()
 
   // 右键菜单相关
   const showContextMenu = ref(false)
@@ -85,24 +87,24 @@ export function useTimelineContextMenu(
    * 获取空白区域菜单项
    */
   function getEmptyMenuItems(): MenuItem[] {
-    return [
-      {
-        label: '添加视频轨道',
-        icon: getTrackTypeIcon('video'),
-        onClick: () => addNewTrack('video'),
-      },
-      {
-        label: '添加音频轨道',
-        icon: getTrackTypeIcon('audio'),
-        onClick: () => addNewTrack('audio'),
-      },
-      {
-        label: '添加文本轨道',
-        icon: getTrackTypeIcon('text'),
-        onClick: () => addNewTrack('text'),
-      },
-    ]
-  }
+      return [
+        {
+          label: t('timeline.contextMenu.emptyArea.addVideoTrack'),
+          icon: getTrackTypeIcon('video'),
+          onClick: () => addNewTrack('video'),
+        },
+        {
+          label: t('timeline.contextMenu.emptyArea.addAudioTrack'),
+          icon: getTrackTypeIcon('audio'),
+          onClick: () => addNewTrack('audio'),
+        },
+        {
+          label: t('timeline.contextMenu.emptyArea.addTextTrack'),
+          icon: getTrackTypeIcon('text'),
+          onClick: () => addNewTrack('text'),
+        },
+      ]
+    }
 
   /**
    * 获取片段菜单项
@@ -118,7 +120,7 @@ export function useTimelineContextMenu(
 
     // 复制片段 - 所有类型都支持
     menuItems.push({
-      label: '复制片段',
+      label: t('timeline.contextMenu.clip.duplicateClip'),
       icon: MENU_ICONS.copy,
       onClick: () => duplicateClip(),
     })
@@ -126,7 +128,7 @@ export function useTimelineContextMenu(
     // 重新生成缩略图 - 只有视频和图片支持
     if (timelineItem.mediaType === 'video' || timelineItem.mediaType === 'image') {
       menuItems.push({
-        label: '重新生成缩略图',
+        label: t('timeline.contextMenu.clip.regenerateThumbnail'),
         icon: MENU_ICONS.refresh,
         onClick: () => regenerateThumbnail(),
       })
@@ -137,7 +139,7 @@ export function useTimelineContextMenu(
 
     // 删除片段 - 所有类型都支持
     menuItems.push({
-      label: '删除片段',
+      label: t('timeline.contextMenu.clip.deleteClip'),
       icon: MENU_ICONS.delete,
       onClick: () => removeClip(),
     })
@@ -163,7 +165,7 @@ export function useTimelineContextMenu(
     // 文本轨道专用菜单项
     if (track.type === 'text') {
       menuItems.push({
-        label: '添加文本',
+        label: t('timeline.contextMenu.track.addText'),
         icon: MENU_ICONS.addText,
         onClick: () => {
           const timePosition = getTimePositionFromContextMenu(contextMenuOptions.value)
@@ -179,12 +181,14 @@ export function useTimelineContextMenu(
     // 通用菜单项
     menuItems.push(
       {
-        label: hasClips ? '自动排列片段' : '自动排列片段（无片段）',
+        label: hasClips
+          ? t('timeline.contextMenu.track.autoArrangeClips')
+          : t('timeline.contextMenu.track.autoArrangeClipsEmpty'),
         icon: MENU_ICONS.autoArrange,
         onClick: hasClips ? () => autoArrangeTrack(trackId) : () => {},
       },
       {
-        label: '重命名轨道',
+        label: t('timeline.contextMenu.track.renameTrack'),
         icon: MENU_ICONS.rename,
         onClick: () => renameTrack(),
       },
@@ -193,7 +197,9 @@ export function useTimelineContextMenu(
     // 可见性控制 - 音频轨道不显示
     if (track.type !== 'audio') {
       menuItems.push({
-        label: track.isVisible ? '隐藏轨道' : '显示轨道',
+        label: track.isVisible
+          ? t('timeline.contextMenu.track.hideTrack')
+          : t('timeline.contextMenu.track.showTrack'),
         icon: getVisibilityIcon(track.isVisible),
         onClick: () => toggleVisibility(trackId),
       })
@@ -202,7 +208,9 @@ export function useTimelineContextMenu(
     // 静音控制 - 文本轨道不显示
     if (track.type !== 'text') {
       menuItems.push({
-        label: track.isMuted ? '取消静音' : '静音轨道',
+        label: track.isMuted
+          ? t('timeline.contextMenu.track.unmuteTrack')
+          : t('timeline.contextMenu.track.muteTrack'),
         icon: getMuteIcon(track.isMuted),
         onClick: () => toggleMute(trackId),
       })
@@ -210,21 +218,21 @@ export function useTimelineContextMenu(
 
     // 添加新轨道子菜单
     menuItems.push({ type: 'separator' } as MenuItem, {
-      label: '添加新轨道',
+      label: t('timeline.contextMenu.track.addNewTrack'),
       icon: MENU_ICONS.addTrack,
       children: [
         {
-          label: '视频轨道',
+          label: t('timeline.contextMenu.track.addVideoTrack'),
           icon: getTrackTypeIcon('video'),
           onClick: () => addNewTrack('video', trackId),
         },
         {
-          label: '音频轨道',
+          label: t('timeline.contextMenu.track.addAudioTrack'),
           icon: getTrackTypeIcon('audio'),
           onClick: () => addNewTrack('audio', trackId),
         },
         {
-          label: '文本轨道',
+          label: t('timeline.contextMenu.track.addTextTrack'),
           icon: getTrackTypeIcon('text'),
           onClick: () => addNewTrack('text', trackId),
         },
@@ -234,7 +242,7 @@ export function useTimelineContextMenu(
     // 删除轨道选项
     if (canDelete) {
       menuItems.push({
-        label: '删除轨道',
+        label: t('timeline.contextMenu.track.deleteTrack'),
         icon: MENU_ICONS.delete,
         onClick: () => removeTrack(trackId),
       })
