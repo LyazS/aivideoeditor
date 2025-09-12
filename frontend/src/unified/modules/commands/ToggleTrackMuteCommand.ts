@@ -1,12 +1,5 @@
 import { generateCommandId } from '@/unified/utils/idGenerator'
-import { ref, type Ref } from 'vue'
 import type { SimpleCommand } from '@/unified/modules/commands/types'
-
-// 类型导入
-import type { UnifiedTimelineItemData } from '@/unified/timelineitem/TimelineItemData'
-
-import type { MediaType, MediaTypeOrUnknown } from '@/unified/mediaitem/types'
-
 import type { UnifiedTrackData } from '@/unified/track/TrackTypes'
 
 /**
@@ -23,13 +16,7 @@ export class ToggleTrackMuteCommand implements SimpleCommand {
     private trackId: string,
     private trackModule: {
       getTrack: (trackId: string) => UnifiedTrackData | undefined
-      toggleTrackMute: (
-        trackId: string,
-        timelineItems?: Ref<UnifiedTimelineItemData<MediaType>[]>,
-      ) => void
-    },
-    private timelineModule: {
-      timelineItems: { value: UnifiedTimelineItemData<MediaType>[] }
+      toggleTrackMute: (trackId: string) => Promise<void>
     },
   ) {
     this.id = generateCommandId()
@@ -62,7 +49,7 @@ export class ToggleTrackMuteCommand implements SimpleCommand {
 
       // 调用trackModule的toggleTrackMute方法
       // 这会自动同步该轨道上所有TimelineItem的音频状态
-      this.trackModule.toggleTrackMute(this.trackId, ref(this.timelineModule.timelineItems.value))
+      await this.trackModule.toggleTrackMute(this.trackId)
 
       const newMuteState = track.isMuted
       console.log(`✅ 已切换轨道静音状态: ${track.name}, 新状态: ${newMuteState ? '静音' : '有声'}`)
@@ -87,7 +74,7 @@ export class ToggleTrackMuteCommand implements SimpleCommand {
 
       // 如果当前状态与原始状态不同，则再次切换
       if (track.isMuted !== this.previousMuteState) {
-        this.trackModule.toggleTrackMute(this.trackId, ref(this.timelineModule.timelineItems.value))
+        await this.trackModule.toggleTrackMute(this.trackId)
       }
 
       console.log(

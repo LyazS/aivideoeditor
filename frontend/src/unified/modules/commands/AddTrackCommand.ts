@@ -5,14 +5,11 @@
  */
 
 import { generateCommandId } from '@/unified/utils/idGenerator'
-import { ref, type Ref } from 'vue'
 import type { SimpleCommand } from '@/unified/modules/commands/types'
 
 // ==================== 新架构类型导入 ====================
 import type { UnifiedTrackData, UnifiedTrackType } from '@/unified/track/TrackTypes'
 import { createUnifiedTrackData } from '@/unified/track/TrackTypes'
-import type { UnifiedTimelineItemData } from '@/unified/timelineitem/TimelineItemData'
-import type { MediaType } from '@/unified/mediaitem/types'
 import { i18n } from '@/locales'
 
 /**
@@ -31,11 +28,7 @@ export class AddTrackCommand implements SimpleCommand {
     private position: number | undefined, // 插入位置（可选）
     private trackModule: {
       addTrack: (trackData: UnifiedTrackData, position?: number) => UnifiedTrackData
-      removeTrack: (
-        trackId: string,
-        timelineItems: Ref<UnifiedTimelineItemData<MediaType>[]>,
-        removeTimelineItemCallback?: (id: string) => void,
-      ) => void
+      removeTrack: (trackId: string) => Promise<void>
       getTrack: (trackId: string) => UnifiedTrackData | undefined
     },
   ) {
@@ -85,7 +78,7 @@ export class AddTrackCommand implements SimpleCommand {
       // 删除添加的轨道
       // 注意：这里传入空的timelineItems和回调，因为新添加的轨道上不应该有任何项目
       if (this.newTrackId) {
-        this.trackModule.removeTrack(this.newTrackId, ref([]), undefined)
+        await this.trackModule.removeTrack(this.newTrackId)
         console.log(`↩️ 已撤销添加轨道: ${this.trackData.name}`)
       } else {
         throw new Error(`无法撤销添加轨道操作：轨道ID不存在 (轨道名称: ${this.trackData.name})`)

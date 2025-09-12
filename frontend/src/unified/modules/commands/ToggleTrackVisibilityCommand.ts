@@ -1,12 +1,7 @@
 import { generateCommandId } from '@/unified/utils/idGenerator'
-import { ref, type Ref } from 'vue'
 import type { SimpleCommand } from '@/unified/modules/commands/types'
-
-// 类型导入
 import type { UnifiedTimelineItemData } from '@/unified/timelineitem/TimelineItemData'
-
 import type { MediaType } from '@/unified/mediaitem/types'
-
 import type { UnifiedTrackData } from '@/unified/track/TrackTypes'
 
 /**
@@ -23,13 +18,7 @@ export class ToggleTrackVisibilityCommand implements SimpleCommand {
     private trackId: string,
     private trackModule: {
       getTrack: (trackId: string) => UnifiedTrackData | undefined
-      toggleTrackVisibility: (
-        trackId: string,
-        timelineItems?: Ref<UnifiedTimelineItemData<MediaType>[]>,
-      ) => void
-    },
-    private timelineModule: {
-      timelineItems: { value: UnifiedTimelineItemData<MediaType>[] }
+      toggleTrackVisibility: (trackId: string) => Promise<void>
     },
   ) {
     this.id = generateCommandId()
@@ -62,10 +51,7 @@ export class ToggleTrackVisibilityCommand implements SimpleCommand {
 
       // 调用trackModule的toggleTrackVisibility方法
       // 这会自动同步该轨道上所有TimelineItem的sprite可见性
-      this.trackModule.toggleTrackVisibility(
-        this.trackId,
-        ref(this.timelineModule.timelineItems.value),
-      )
+      await this.trackModule.toggleTrackVisibility(this.trackId)
 
       const newVisibility = track.isVisible
       console.log(`✅ 已切换轨道可见性: ${track.name}, 新状态: ${newVisibility ? '可见' : '隐藏'}`)
@@ -90,10 +76,7 @@ export class ToggleTrackVisibilityCommand implements SimpleCommand {
 
       // 如果当前状态与原始状态不同，则再次切换
       if (track.isVisible !== this.previousVisibility) {
-        this.trackModule.toggleTrackVisibility(
-          this.trackId,
-          ref(this.timelineModule.timelineItems.value),
-        )
+        await this.trackModule.toggleTrackVisibility(this.trackId)
       }
 
       console.log(

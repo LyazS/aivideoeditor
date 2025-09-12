@@ -6,15 +6,10 @@ import type { SimpleCommand } from '@/unified/modules/commands/types'
 
 // 类型导入
 import type { UnifiedTimelineItemData } from '@/unified/timelineitem/TimelineItemData'
-
 import type { UnifiedMediaItemData, MediaType } from '@/unified/mediaitem/types'
-
 import type { UnifiedTrackData, UnifiedTrackType } from '@/unified/track/TrackTypes'
-
 import { TimelineItemFactory } from '@/unified/timelineitem'
-
 import { setupMediaSync } from '@/unified/utils/unifiedMediaSyncManager'
-
 import { TimelineItemQueries } from '@/unified/timelineitem/TimelineItemQueries'
 
 /**
@@ -32,11 +27,7 @@ export class RemoveTrackCommand implements SimpleCommand {
     private trackId: string,
     private trackModule: {
       addTrack: (trackData: UnifiedTrackData, position?: number) => UnifiedTrackData
-      removeTrack: (
-        trackId: string,
-        timelineItems: Ref<UnifiedTimelineItemData<MediaType>[]>,
-        removeTimelineItemCallback?: (id: string) => void,
-      ) => void
+      removeTrack: (trackId: string) => Promise<void>
       getTrack: (trackId: string) => UnifiedTrackData | undefined
       tracks: { value: UnifiedTrackData[] }
     },
@@ -47,15 +38,8 @@ export class RemoveTrackCommand implements SimpleCommand {
       setupTimelineItemSprite: (item: UnifiedTimelineItemData<MediaType>) => Promise<void>
       timelineItems: Ref<UnifiedTimelineItemData<MediaType>[]>
     },
-    private webavModule: {
-      addSprite: (sprite: VisibleSprite) => Promise<boolean>
-      removeSprite: (sprite: VisibleSprite) => boolean
-    },
     private mediaModule: {
       getMediaItem: (id: string) => UnifiedMediaItemData | undefined
-    },
-    private configModule: {
-      videoResolution: Ref<VideoResolution>
     },
   ) {
     this.id = generateCommandId()
@@ -119,11 +103,7 @@ export class RemoveTrackCommand implements SimpleCommand {
       }
 
       // 删除轨道（这会自动删除轨道上的所有时间轴项目）
-      this.trackModule.removeTrack(
-        this.trackId,
-        this.timelineModule.timelineItems,
-        this.timelineModule.removeTimelineItem,
-      )
+      await this.trackModule.removeTrack(this.trackId)
 
       console.log(
         `✅ 已删除轨道: ${this.trackData.name}, 删除了 ${this.affectedTimelineItems.length} 个时间轴项目`,

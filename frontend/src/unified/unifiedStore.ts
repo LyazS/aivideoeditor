@@ -49,27 +49,6 @@ import {
   duplicateTimelineItem,
 } from '@/unified/timelineitem/TimelineItemFactory'
 
-// ==================== 命令类导入 ====================
-import {
-  AddTimelineItemCommand,
-  RemoveTimelineItemCommand,
-  MoveTimelineItemCommand,
-  UpdateTransformCommand,
-  SplitTimelineItemCommand,
-  AddTrackCommand,
-  RemoveTrackCommand,
-  RenameTrackCommand,
-  ToggleTrackVisibilityCommand,
-  ToggleTrackMuteCommand,
-  ResizeTimelineItemCommand,
-} from '@/unified/modules/commands/timelineCommands'
-
-import {
-  BatchDeleteCommand,
-  BatchAutoArrangeTrackCommand,
-} from '@/unified/modules/commands/batchCommands'
-import type { AudioVisibleSprite, VideoVisibleSprite } from './visiblesprite'
-
 /**
  * 统一视频编辑器存储
  * 基于新的统一类型系统重构的主要状态管理
@@ -323,7 +302,7 @@ export const useUnifiedStore = defineStore('unified', () => {
     toggleTrackMuteWithHistory: historyOperations.toggleTrackMuteWithHistory,
     updateTextContentWithHistory: historyOperations.updateTextContentWithHistory,
     updateTextStyleWithHistory: historyOperations.updateTextStyleWithHistory,
-    selectTimelineItemsWithHistory:historyOperations.selectTimelineItemsWithHistory,
+    selectTimelineItemsWithHistory: historyOperations.selectTimelineItemsWithHistory,
     // 关键帧历史记录方法
     createKeyframeWithHistory: historyOperations.createKeyframeWithHistory,
     deleteKeyframeWithHistory: historyOperations.deleteKeyframeWithHistory,
@@ -379,8 +358,7 @@ export const useUnifiedStore = defineStore('unified', () => {
 
     // 轨道管理方法
     addTrack: unifiedTrackModule.addTrack,
-    removeTrack: (trackId: string) =>
-      unifiedTrackModule.removeTrack(trackId, unifiedTimelineModule.timelineItems),
+    removeTrack: unifiedTrackModule.removeTrack,
     renameTrack: unifiedTrackModule.renameTrack,
     getTrack: unifiedTrackModule.getTrack,
     setTrackHeight: unifiedTrackModule.setTrackHeight,

@@ -79,21 +79,11 @@ interface UnifiedConfigModule {
 interface UnifiedTrackModule {
   tracks: Ref<UnifiedTrackData[]>
   addTrack: (trackData: UnifiedTrackData, position?: number) => UnifiedTrackData
-  removeTrack: (
-    trackId: string,
-    timelineItems: Ref<UnifiedTimelineItemData<MediaType>[]>,
-    removeTimelineItemCallback?: (timelineItemId: string) => void,
-  ) => void
+  removeTrack: (trackId: string) => Promise<void>
   getTrack: (trackId: string) => UnifiedTrackData | undefined
   renameTrack: (trackId: string, newName: string) => void
-  toggleTrackVisibility: (
-    trackId: string,
-    timelineItems?: Ref<UnifiedTimelineItemData<MediaType>[]>,
-  ) => void
-  toggleTrackMute: (
-    trackId: string,
-    timelineItems?: Ref<UnifiedTimelineItemData<MediaType>[]>,
-  ) => void
+  toggleTrackVisibility: (trackId: string) => Promise<void>
+  toggleTrackMute: (trackId: string) => Promise<void>
 }
 
 interface UnifiedSelectionModule {
@@ -632,8 +622,7 @@ export function createHistoryOperations(
       trackId,
       {
         addTrack: unifiedTrackModule.addTrack,
-        removeTrack: (id: string) =>
-          unifiedTrackModule!.removeTrack(id, unifiedTimelineModule.timelineItems),
+        removeTrack: unifiedTrackModule.removeTrack,
         getTrack: unifiedTrackModule.getTrack,
         tracks: unifiedTrackModule.tracks,
       },
@@ -645,14 +634,7 @@ export function createHistoryOperations(
         timelineItems: unifiedTimelineModule.timelineItems,
       },
       {
-        addSprite: unifiedWebavModule.addSprite,
-        removeSprite: unifiedWebavModule.removeSprite,
-      },
-      {
         getMediaItem: unifiedMediaModule.getMediaItem,
-      },
-      {
-        videoResolution: unifiedConfigModule.videoResolution,
       },
     )
     await unifiedHistoryModule.executeCommand(command)
@@ -719,11 +701,7 @@ export function createHistoryOperations(
       trackId,
       {
         getTrack: unifiedTrackModule.getTrack,
-        toggleTrackVisibility: (id: string) =>
-          unifiedTrackModule!.toggleTrackVisibility(id, unifiedTimelineModule.timelineItems),
-      },
-      {
-        timelineItems: unifiedTimelineModule.timelineItems,
+        toggleTrackVisibility: (id: string) => unifiedTrackModule.toggleTrackVisibility(id),
       },
     )
     await unifiedHistoryModule.executeCommand(command)
@@ -745,11 +723,7 @@ export function createHistoryOperations(
       trackId,
       {
         getTrack: unifiedTrackModule.getTrack,
-        toggleTrackMute: (id: string) =>
-          unifiedTrackModule!.toggleTrackMute(id, unifiedTimelineModule.timelineItems),
-      },
-      {
-        timelineItems: unifiedTimelineModule.timelineItems,
+        toggleTrackMute: (id: string) => unifiedTrackModule.toggleTrackMute(id),
       },
     )
     await unifiedHistoryModule.executeCommand(command)
