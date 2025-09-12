@@ -1,5 +1,16 @@
 <script setup lang="ts">
+import { watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import NotificationContainer from './components/NotificationContainer.vue'
+import { useAppI18n } from '@/unified/composables/useI18n'
+
+const { locale } = useI18n()
+const { updatePageTitle } = useAppI18n()
+
+// 监听语言变化，更新页面标题
+watch(locale, () => {
+  updatePageTitle()
+})
 </script>
 
 <template>

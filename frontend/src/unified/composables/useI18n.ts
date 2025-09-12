@@ -1,13 +1,28 @@
 import { useI18n } from 'vue-i18n'
 import type { I18nSchema } from '@/locales'
+import { useRouter } from 'vue-router'
 
 export function useAppI18n() {
   const { t, locale, availableLocales } = useI18n<[I18nSchema], 'en-US' | 'zh-CN'>()
+  const router = useRouter()
   
   // 语言切换功能
   const switchLanguage = (lang: 'en-US' | 'zh-CN') => {
     locale.value = lang
     localStorage.setItem('preferred-language', lang)
+    
+    // 更新当前页面的标题
+    updatePageTitle()
+  }
+  
+  // 更新页面标题
+  const updatePageTitle = () => {
+    const currentRoute = router.currentRoute.value
+    if (currentRoute.meta?.title) {
+      const title = t(currentRoute.meta.title as string)
+      const subtitle = currentRoute.meta.subtitle ? t(currentRoute.meta.subtitle as string) : ''
+      document.title = subtitle ? `${subtitle} - ${title}` : title
+    }
   }
   
   // 初始化语言设置
@@ -48,7 +63,8 @@ export function useAppI18n() {
     switchLanguage,
     initLanguage,
     getLanguageName,
-    languageOptions
+    languageOptions,
+    updatePageTitle
   }
 }
 

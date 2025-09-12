@@ -32,6 +32,8 @@
     "portrait": "Portrait",
     "square": "Square",
     "ultrawide": "Ultrawide",
+    "projectManagement": "Project Management",
+    "videoEditor": "Video Editor",
     "resolution": {
       "4K": "4K",
       "1440p": "1440p",

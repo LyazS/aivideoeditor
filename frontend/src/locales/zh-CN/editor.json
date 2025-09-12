@@ -32,6 +32,8 @@
     "portrait": "竖屏",
     "square": "方形",
     "ultrawide": "超宽屏",
+    "projectManagement": "项目管理",
+    "videoEditor": "视频编辑器",
     "resolution": {
       "4K": "4K",
       "1440p": "1440p",
