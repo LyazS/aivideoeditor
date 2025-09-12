@@ -8,7 +8,7 @@ import { useUnifiedStore } from '@/unified/unifiedStore'
 import { uiDegreesToWebAVRadians, webAVRadiansToUIDegrees } from '@/unified/utils/rotationTransform'
 import { useUnifiedKeyframeUI } from '@/unified/composables/useUnifiedKeyframeUI'
 import type { UnifiedTimelineItemData } from '@/unified/timelineitem'
-import { TimelineItemQueries } from '@/unified/timelineitem'
+import { TimelineItemQueries } from '@/unified/timelineitem/TimelineItemQueries'
 
 interface UnifiedKeyframeTransformControlsOptions {
   selectedTimelineItem: Ref<UnifiedTimelineItemData | null>

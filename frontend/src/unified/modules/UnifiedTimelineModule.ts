@@ -4,7 +4,7 @@ import type {
   UnifiedTimelineItemData,
   UnknownMediaConfig,
 } from '@/unified/timelineitem/TimelineItemData'
-import { TimelineItemQueries } from '@/unified/timelineitem'
+import { TimelineItemQueries } from '@/unified/timelineitem/TimelineItemQueries'
 import type { UnifiedMediaItemData } from '@/unified/mediaitem/types'
 import type { UnifiedTrackData } from '@/unified/track/TrackTypes'
 import type { MediaType } from '@/unified/mediaitem/types'
