@@ -14,7 +14,8 @@ import type { VideoResolution } from '@/unified/types'
 import type { UnifiedTimelineItemData } from '@/unified/timelineitem/TimelineItemData'
 import type { MediaType } from '@/unified/mediaitem'
 // ==================== 新架构工具导入 ====================
-import { TimelineItemQueries, TimelineItemFactory } from '@/unified/timelineitem'
+import { TimelineItemQueries } from '@/unified/timelineitem/TimelineItemQueries'
+import { TimelineItemFactory } from '@/unified/timelineitem/TimelineItemFactory'
 import { TextVisibleSprite } from '@/unified/visiblesprite/TextVisibleSprite'
 import type { TextStyleConfig } from '@/unified/timelineitem'
 

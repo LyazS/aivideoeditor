@@ -10,7 +10,7 @@ import type { UnifiedMediaItemData, MediaType } from '@/unified/mediaitem/types'
 
 import type { UnifiedTimeRange } from '@/unified/types/timeRange'
 
-import { TimelineItemQueries } from '@/unified/timelineitem'
+import { TimelineItemQueries } from '@/unified/timelineitem/TimelineItemQueries'
 
 /**
  * 调整时间轴项目大小命令

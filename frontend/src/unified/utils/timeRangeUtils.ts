@@ -5,7 +5,7 @@
 
 import type { UnifiedTimelineItemData } from '@/unified/timelineitem/TimelineItemData'
 import type { UnifiedTimeRange } from '@/unified/types/timeRange'
-import { TimelineItemQueries } from '@/unified/timelineitem'
+import { TimelineItemQueries } from '@/unified/timelineitem/TimelineItemQueries'
 
 // ==================== 时间范围同步工具 ====================
 
