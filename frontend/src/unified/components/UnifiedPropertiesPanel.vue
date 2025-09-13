@@ -85,13 +85,12 @@
 import { computed } from 'vue'
 import { useUnifiedStore } from '@/unified/unifiedStore'
 import { useAppI18n } from '@/unified/composables/useI18n'
-import UnifiedVideoClipProperties from './properties/UnifiedVideoClipProperties.vue'
 import type { UnifiedTimelineItemData } from '@/unified/timelineitem/TimelineItemData'
 import { getStatusText } from '@/unified/timelineitem/TimelineItemQueries'
 
-// 导入文本和音频属性组件（待实现）
-import UnifiedTextClipProperties from './properties/UnifiedVideoClipProperties.vue'
-import UnifiedAudioClipProperties from './properties/UnifiedVideoClipProperties.vue'
+import UnifiedVideoClipProperties from './properties/UnifiedVideoClipProperties.vue'
+import UnifiedTextClipProperties from './properties/UnifiedTextClipProperties.vue'
+import UnifiedAudioClipProperties from './properties/UnifiedAudioClipProperties.vue'
 
 const unifiedStore = useUnifiedStore()
 const { t } = useAppI18n()

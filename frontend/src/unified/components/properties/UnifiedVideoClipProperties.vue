@@ -6,9 +6,8 @@
       <div class="property-item">
         <label>{{ t('properties.basic.name') }}</label>
         <input
-          v-model="clipName"
-          @blur="updateClipName"
-          @keyup.enter="updateClipName"
+          :value="clipName"
+          readonly
           class="property-input"
         />
       </div>
@@ -292,14 +291,7 @@ const currentResolution = computed(() => {
 })
 
 // 其他响应式属性
-const clipName = computed({
-  get: () => selectedMediaItem.value?.name || '',
-  set: (value) => {
-    if (selectedMediaItem.value && value.trim()) {
-      unifiedStore.updateMediaItemName(selectedMediaItem.value.id, value.trim())
-    }
-  },
-})
+const clipName = computed(() => selectedMediaItem.value?.name || '')
 
 const playbackRate = computed(() => {
   if (!props.selectedTimelineItem) return 1
@@ -380,12 +372,6 @@ const speedInputStyle = {
   textAlign: 'center' as const,
 }
 
-// 更新片段名称
-const updateClipName = () => {
-  if (selectedMediaItem.value && clipName.value.trim()) {
-    unifiedStore.updateMediaItemName(selectedMediaItem.value.id, clipName.value.trim())
-  }
-}
 
 // 更新播放速度（仅对视频有效）- 使用带历史记录的方法
 const updatePlaybackRate = async (newRate?: number) => {
