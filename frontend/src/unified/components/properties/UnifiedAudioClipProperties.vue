@@ -140,19 +140,6 @@
       </div>
     </div>
 
-    <!-- 关键帧控制（音频只支持音量关键帧） -->
-    <UnifiedKeyframeControls
-      :keyframe-button-state="unifiedKeyframeButtonState"
-      :can-operate-keyframes="canOperateUnifiedKeyframes"
-      :has-previous-keyframe="hasUnifiedPreviousKeyframe"
-      :has-next-keyframe="hasUnifiedNextKeyframe"
-      :keyframe-tooltip="getUnifiedKeyframeTooltip()"
-      :show-debug-button="true"
-      @toggle-keyframe="toggleUnifiedKeyframe"
-      @go-to-previous="goToPreviousUnifiedKeyframe"
-      @go-to-next="goToNextUnifiedKeyframe"
-      @debug-keyframes="debugUnifiedKeyframes"
-    />
   </div>
 </template>
 
@@ -163,11 +150,9 @@ import { useUnifiedStore } from '@/unified/unifiedStore'
 import { isAudioTimelineItem, hasAudioProperties } from '@/unified/timelineitem/TimelineItemQueries'
 import type { UnifiedTimelineItemData } from '@/unified/timelineitem/TimelineItemData'
 import { framesToTimecode, timecodeToFrames } from '@/unified/utils/timeUtils'
-import { useUnifiedKeyframeTransformControls } from '@/unified/composables'
 import { updateWebAVAnimation } from '@/unified/utils/webavAnimationManager'
 import NumberInput from '@/components/NumberInput.vue'
 import SliderInput from '@/components/SliderInput.vue'
-import UnifiedKeyframeControls from './UnifiedKeyframeControls.vue'
 
 interface Props {
   selectedTimelineItem: UnifiedTimelineItemData | null
@@ -179,24 +164,6 @@ const props = defineProps<Props>()
 const { t } = useAppI18n()
 const unifiedStore = useUnifiedStore()
 
-// 关键帧动画控制器（音频仅支持音量等属性的关键帧）
-const {
-  // 关键帧状态
-  unifiedKeyframeButtonState,
-  canOperateUnifiedKeyframes,
-  hasUnifiedPreviousKeyframe,
-  hasUnifiedNextKeyframe,
-
-  // 关键帧控制方法
-  toggleUnifiedKeyframe,
-  goToPreviousUnifiedKeyframe,
-  goToNextUnifiedKeyframe,
-  getUnifiedKeyframeTooltip,
-  debugUnifiedKeyframes,
-} = useUnifiedKeyframeTransformControls({
-  selectedTimelineItem: computed(() => props.selectedTimelineItem),
-  currentFrame: computed(() => props.currentFrame),
-})
 
 // 选中项目对应的素材
 const selectedMediaItem = computed(() => {
