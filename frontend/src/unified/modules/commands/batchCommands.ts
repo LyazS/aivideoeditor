@@ -128,7 +128,7 @@ export class BatchAutoArrangeTrackCommand extends BaseBatchCommand {
 
       // 检查是否需要移动（避免创建无意义的命令）
       const positionChanged =
-        Math.abs(timeRange.timelineStartTime - newTimeRange.timelineStartTime) > 1 // 1帧误差容忍
+        Math.abs(timeRange.timelineStartTime - newTimeRange.timelineStartTime) > 0 // 1帧误差容忍
 
       if (positionChanged) {
         const moveCommand = new MoveTimelineItemCommand(

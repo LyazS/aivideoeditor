@@ -199,20 +199,20 @@ export function createHistoryOperations(
 
     // 检查时长变化
     if (newTransform.duration !== undefined && oldTransform.duration !== undefined) {
-      const durationChanged = Math.abs(oldTransform.duration - newTransform.duration) > 0.1 // 0.1秒误差容忍
+      const durationChanged = Math.abs(oldTransform.duration - newTransform.duration) > 0
       if (durationChanged) return true
     }
 
     // 检查倍速变化
     if (newTransform.playbackRate !== undefined && oldTransform.playbackRate !== undefined) {
       const playbackRateChanged =
-        Math.abs(oldTransform.playbackRate - newTransform.playbackRate) > 0.01 // 0.01倍速误差容忍
+        Math.abs(oldTransform.playbackRate - newTransform.playbackRate) >= 0.01 // 0.01倍速误差容忍
       if (playbackRateChanged) return true
     }
 
     // 检查音量变化
     if (newTransform.volume !== undefined && oldTransform.volume !== undefined) {
-      const volumeChanged = Math.abs(oldTransform.volume - newTransform.volume) > 0.01 // 0.01音量误差容忍
+      const volumeChanged = Math.abs(oldTransform.volume - newTransform.volume) >= 0.01 // 0.01音量误差容忍
       if (volumeChanged) return true
     }
 
@@ -224,7 +224,7 @@ export function createHistoryOperations(
 
     // 检查增益变化
     if (newTransform.gain !== undefined && oldTransform.gain !== undefined) {
-      const gainChanged = Math.abs(oldTransform.gain - newTransform.gain) > 0.1 // 0.1dB误差容忍
+      const gainChanged = Math.abs(oldTransform.gain - newTransform.gain) >= 0.1 // 0.1dB误差容忍
       if (gainChanged) return true
     }
 
