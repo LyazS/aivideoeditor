@@ -54,16 +54,6 @@ export function relativeFrameToAbsoluteFrame(
   return clipStartFrame + relativeFrame
 }
 
-/**
- * 计算关键帧位置的精度阈值（基于帧数）
- * @param timeRange clip的时间范围
- * @returns 精度阈值（帧数）
- */
-export function getKeyframePositionTolerance(timeRange: UnifiedTimeRange): number {
-  // 使用0帧作为精确匹配，确保只有完全相同的帧数才被认为是关键帧位置
-  return 0
-}
-
 // ==================== 关键帧基础操作 ====================
 
 /**
@@ -73,7 +63,7 @@ export function getKeyframePositionTolerance(timeRange: UnifiedTimeRange): numbe
 export function initializeAnimation(item: UnifiedTimelineItemData): void {
   if (!item.animation) {
     // 类型断言为any以绕过readonly限制，这在实际使用中需要谨慎
-    ;(item as any).animation = {
+    item.animation = {
       keyframes: [],
       isEnabled: false,
       easing: 'linear',
@@ -155,11 +145,8 @@ export function isCurrentFrameOnKeyframe(
   if (!item.animation) return false
 
   const relativeFrame = absoluteFrameToRelativeFrame(absoluteFrame, item.timeRange)
-  const tolerance = getKeyframePositionTolerance(item.timeRange)
 
-  return item.animation.keyframes.some(
-    (kf) => Math.abs(kf.framePosition - relativeFrame) <= tolerance,
-  )
+  return item.animation.keyframes.some((kf) => kf.framePosition === relativeFrame)
 }
 
 /**
@@ -205,19 +192,17 @@ function findKeyframeAtFrame(
   if (!item.animation) return undefined
 
   const relativeFrame = absoluteFrameToRelativeFrame(absoluteFrame, item.timeRange)
-  const tolerance = getKeyframePositionTolerance(item.timeRange)
 
-  return item.animation.keyframes.find(
-    (kf) => Math.abs(kf.framePosition - relativeFrame) <= tolerance,
-  )
+  return item.animation.keyframes.find((kf) => kf.framePosition === relativeFrame)
 }
 
 /**
  * 启用动画
  */
 export function enableAnimation(item: UnifiedTimelineItemData): void {
-  initializeAnimation(item)
-  ;(item.animation as any)!.isEnabled = true
+  if (item.animation) {
+    item.animation.isEnabled = true
+  }
 }
 
 /**
@@ -225,8 +210,8 @@ export function enableAnimation(item: UnifiedTimelineItemData): void {
  */
 export function disableAnimation(item: UnifiedTimelineItemData): void {
   if (item.animation) {
-    ;(item.animation as any).isEnabled = false
-    ;(item.animation as any).keyframes = []
+    item.animation.isEnabled = false
+    item.animation.keyframes = []
   }
 }
 
@@ -237,22 +222,22 @@ export function removeKeyframeAtFrame(
   item: UnifiedTimelineItemData,
   absoluteFrame: number,
 ): boolean {
-  if (!item.animation) return false
+  if (item.animation) {
+    const relativeFrame = absoluteFrameToRelativeFrame(absoluteFrame, item.timeRange)
+    const initialLength = item.animation.keyframes.length
 
-  const relativeFrame = absoluteFrameToRelativeFrame(absoluteFrame, item.timeRange)
-  const tolerance = getKeyframePositionTolerance(item.timeRange)
-  const initialLength = item.animation.keyframes.length
+    ;(item.animation as any).keyframes = item.animation.keyframes.filter(
+      (kf) => kf.framePosition !== relativeFrame,
+    )
 
-  ;(item.animation as any).keyframes = item.animation.keyframes.filter(
-    (kf) => Math.abs(kf.framePosition - relativeFrame) > tolerance,
-  )
+    const removed = item.animation.keyframes.length < initialLength
+    if (removed) {
+      console.log('🎬 [Unified Keyframe] Removed keyframe at frame:', absoluteFrame)
+    }
 
-  const removed = item.animation.keyframes.length < initialLength
-  if (removed) {
-    console.log('🎬 [Unified Keyframe] Removed keyframe at frame:', absoluteFrame)
+    return removed
   }
-
-  return removed
+  return false
 }
 
 // ==================== 关键帧时长变化处理 ====================

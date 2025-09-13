@@ -178,7 +178,6 @@ export {
   // 关键帧位置转换工具函数
   absoluteFrameToRelativeFrame,
   relativeFrameToAbsoluteFrame,
-  getKeyframePositionTolerance,
 
   // 关键帧基础操作
   initializeAnimation,

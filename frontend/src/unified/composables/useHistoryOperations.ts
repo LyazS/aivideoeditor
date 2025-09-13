@@ -653,8 +653,6 @@ export function createHistoryOperations(
       return
     }
 
-    const oldName = track.name
-
     const command = new RenameTrackCommand(trackId, newName, {
       renameTrack: unifiedTrackModule.renameTrack,
       getTrack: unifiedTrackModule.getTrack,
@@ -697,13 +695,10 @@ export function createHistoryOperations(
       return
     }
 
-    const command = new ToggleTrackVisibilityCommand(
-      trackId,
-      {
-        getTrack: unifiedTrackModule.getTrack,
-        toggleTrackVisibility: (id: string) => unifiedTrackModule.toggleTrackVisibility(id),
-      },
-    )
+    const command = new ToggleTrackVisibilityCommand(trackId, {
+      getTrack: unifiedTrackModule.getTrack,
+      toggleTrackVisibility: (id: string) => unifiedTrackModule.toggleTrackVisibility(id),
+    })
     await unifiedHistoryModule.executeCommand(command)
   }
 
@@ -719,13 +714,10 @@ export function createHistoryOperations(
       return
     }
 
-    const command = new ToggleTrackMuteCommand(
-      trackId,
-      {
-        getTrack: unifiedTrackModule.getTrack,
-        toggleTrackMute: (id: string) => unifiedTrackModule.toggleTrackMute(id),
-      },
-    )
+    const command = new ToggleTrackMuteCommand(trackId, {
+      getTrack: unifiedTrackModule.getTrack,
+      toggleTrackMute: (id: string) => unifiedTrackModule.toggleTrackMute(id),
+    })
     await unifiedHistoryModule.executeCommand(command)
   }
 
@@ -875,10 +867,6 @@ export function createHistoryOperations(
     itemIds: string[],
     mode: 'replace' | 'toggle' = 'replace',
   ) {
-    // 防抖机制：避免短时间内重复执行相同的选择操作
-    // 使用模块外部变量来维护防抖状态
-    const now = Date.now()
-
     // 检查是否有实际的选择变化
     const currentSelection = new Set(unifiedSelectionModule.selectedTimelineItemIds.value)
     const newSelection = calculateNewSelection(itemIds, mode, currentSelection)
