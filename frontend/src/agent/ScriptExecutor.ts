@@ -1,18 +1,18 @@
 /**
  * 脚本执行器 - 在沙箱环境中执行用户JS代码
  * 负责将用户函数调用转换为操作配置
- * 
+ *
  * 设计为一次性使用，执行完成后自动清理资源
  */
-/**
- * 操作配置接口 - 简化版本，只保留核心字段
- */
+import { ConfigValidator } from './ConfigValidator'
+
 interface OperationConfig {
   type: string
   params: any
 }
 
 export class ScriptExecutor {
+  private configValidator = new ConfigValidator()
   private worker: Worker | null = null;
 
   constructor() {
@@ -34,9 +34,13 @@ export class ScriptExecutor {
   }
 
   /**
-   * 执行用户代码并生成操作配置 - 简化的同步执行
+   * 执行用户代码并生成操作配置 - 执行并验证配置
+   * @param script 用户JavaScript代码
+   * @param timeout 超时时间（毫秒）
+   * @param validate 是否验证操作配置（默认启用）
+   * @returns 验证通过的操作配置数组
    */
-  async executeScript(script: string, timeout: number = 5000): Promise<OperationConfig[]> {
+  async executeScript(script: string, timeout: number = 5000, validate: boolean = true): Promise<OperationConfig[]> {
     if (!this.worker) {
       throw new Error('Worker未初始化');
     }
@@ -64,7 +68,27 @@ export class ScriptExecutor {
         const { success, operations, error } = event.data;
         
         if (success) {
-          resolve(operations || []);
+          let resultOperations = operations || [];
+          
+          // 如果启用了验证，对生成的操作进行验证
+          if (validate) {
+            const validationResult = this.configValidator.validateOperations(resultOperations);
+            
+            if (validationResult.errors.length > 0) {
+              // 验证失败，生成详细的错误消息
+              const errorMessages = validationResult.errors.map(e =>
+                `操作 ${e.operation.type}: ${e.error}`
+              ).join('\n');
+              
+              reject(new Error(`配置验证失败:\n${errorMessages}`));
+              return;
+            }
+            
+            // 验证通过，使用验证后的操作（即使为空数组也保留）
+            resultOperations = validationResult.validOperations || resultOperations;
+          }
+          
+          resolve(resultOperations);
         } else {
           reject(new Error(`脚本执行失败: ${error}`));
         }

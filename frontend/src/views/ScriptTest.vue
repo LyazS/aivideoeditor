@@ -19,6 +19,11 @@
           <button @click="loadExample5">加载示例5: 死循环测试 - 无限递归</button>
           <button @click="loadExample6">加载示例6: 死循环测试 - 密集计算</button>
           <button @click="loadExample7">加载示例7: 循环添加项目</button>
+          <button @click="loadExample8">加载示例8: 配置验证错误 - 时间码</button>
+          <button @click="loadExample9">加载示例9: 配置验证错误 - 轨道类型</button>
+          <button @click="loadExample10">加载示例10: 配置验证错误 - 文本样式</button>
+          <button @click="loadExample11">加载示例11: 配置验证错误 - 变换属性</button>
+          <button @click="loadExample12">加载示例12: 完整项目示例 - 所有API</button>
         </div>
       </div>
 
@@ -75,48 +80,58 @@ const exampleScripts = {
   example1: `// 添加轨道和项目
 addTrack("video", 0);
 addTimelineItem({
-  type: "video",
-  trackId: "track_1",
-  duration: 5000,
-  position: 0
+  mediaItemId: "video-1",
+  trackId: "track-1",
+  timeRange: {
+    start: "00:00:00.00",
+    end: "00:00:10.00"
+  }
 });
 addTrack("audio", 1);
 addTimelineItem({
-  type: "audio", 
-  trackId: "track_2",
-  duration: 3000,
-  position: 1000
+  mediaItemId: "audio-1",
+  trackId: "track-2",
+  timeRange: {
+    start: "00:00:00.00",
+    end: "00:00:03.00"
+  }
 });`,
 
   example2: `// 文本操作
 addTrack("text", 2);
 addTimelineItem({
-  type: "text",
-  trackId: "track_3", 
-  duration: 2000,
-  position: 0,
-  text: "Hello World"
+  mediaItemId: "text-1",
+  trackId: "track-3",
+  timeRange: {
+    start: "00:00:00.00",
+    end: "00:00:02.00"
+  }
 });
-updateTextContent("item_1", "Updated Text", {
+updateTextContent("text-1", "Updated Text", {
   fontSize: 24,
   color: "#ff0000",
-  fontWeight: "bold"
+  fontWeight: "normal",
+  fontStyle: "normal",
+  textAlign: "left"
 });`,
 
+  // 关键帧操作 - 基于新格式
   example3: `// 关键帧操作
 addTrack("video", 0);
 addTimelineItem({
-  type: "video",
-  trackId: "track_1",
-  duration: 10000,
-  position: 0
+  mediaItemId: "video-1",
+  trackId: "track-1",
+  timeRange: {
+    start: "00:00:00.00",
+    end: "00:00:10.00"
+  }
 });
-createKeyframe("item_1", "0%");
-createKeyframe("item_1", "50%");
-createKeyframe("item_1", "100%");
-updateKeyframeProperty("item_1", "0%", "opacity", 0);
-updateKeyframeProperty("item_1", "50%", "opacity", 0.5);
-updateKeyframeProperty("item_1", "100%", "opacity", 1);`,
+createKeyframe("video-1", "00:00:01.00");
+createKeyframe("video-1", "00:00:05.00");
+createKeyframe("video-1", "00:00:09.00");
+updateKeyframeProperty("video-1", "00:00:01.00", "opacity", 0);
+updateKeyframeProperty("video-1", "00:00:05.00", "opacity", 0.5);
+updateKeyframeProperty("video-1", "00:00:09.00", "opacity", 1);`,
 
   example4: `// 死循环测试 - while(true)
 let counter = 0;
@@ -149,41 +164,245 @@ function intensiveCalculation() {
 intensiveCalculation();`,
 
   example7: `// 循环遍历数组添加项目
-const items = [
-  { type: "video", duration: 3000, position: 0, text: "视频1" },
-  { type: "audio", duration: 2000, position: 500, text: "音频1" },
-  { type: "text", duration: 1500, position: 1000, text: "标题文本" },
-  { type: "video", duration: 4000, position: 2000, text: "视频2" },
-  { type: "audio", duration: 2500, position: 3000, text: "音频2" }
-];
-
-// 添加轨道
 addTrack("video", 0);
 addTrack("audio", 1);
 addTrack("text", 2);
 
-// 循环添加项目
-items.forEach((item, index) => {
-  const trackIndex = item.type === "video" ? 0 : item.type === "audio" ? 1 : 2;
-  const trackId = \`track_\${trackIndex + 1}\`;
-  
-  const timelineItem = {
-    type: item.type,
-    trackId: trackId,
-    duration: item.duration,
-    position: item.position
-  };
-  
-  // 如果是文本类型，添加文本内容
-  if (item.type === "text") {
-    timelineItem.text = item.text;
+addTimelineItem({
+  mediaItemId: "video-1",
+  trackId: "track-1",
+  timeRange: {
+    start: "00:00:00.00",
+    end: "00:00:03.00"
   }
-  
-  console.log(\`添加项目 \${index + 1}: \${item.type} - \${item.text}\`);
-  addTimelineItem(timelineItem);
+});
+addTimelineItem({
+  mediaItemId: "audio-1",
+  trackId: "track-2",
+  timeRange: {
+    start: "00:00:00.00",
+    end: "00:00:02.00"
+  }
+});
+addTimelineItem({
+  mediaItemId: "text-1",
+  trackId: "track-3",
+  timeRange: {
+    start: "00:00:00.00",
+    end: "00:00:01.30"
+  }
+});`,
+
+  // 配置验证错误示例
+  example8: `// 配置验证错误 - 时间码格式错误
+addTrack("video", 0);
+addTimelineItem({
+  mediaItemId: "video-1",
+  trackId: "track-1",
+  timeRange: {
+    start: "invalid-timecode", // 错误的时间码格式
+    end: "invalid-end-time"
+  }
+});`,
+
+  example9: `// 配置验证错误 - 无效轨道类型
+addTrack("invalid-type"); // 不支持 track 类型
+addTimelineItem({
+  mediaItemId: "video-1",
+  trackId: "track-1",
+  timeRange: {
+    start: "00:00:00.00",
+    end: "00:00:10.00"
+  }
+});`,
+
+  example10: `// 配置验证错误 - 文本样式无效
+addTrack("text");
+addTimelineItem({
+  mediaItemId: "text-1",
+  trackId: "text-track-1",
+  timeRange: {
+    start: "00:00:00.00",
+    end: "00:00:05.00"
+  }
+});
+updateTextContent("text-1", "Hello World", {
+  fontSize: 0, // 字体大小必须大于0
+  color: "not-a-color-code", // 应该是颜色字符串
+  textAlign: "invalid-align" // 不支持的文本对齐方式
+});`,
+
+  example11: `// 配置验证错误 - 变换属性无效
+addTrack("video");
+addTimelineItem({
+  mediaItemId: "video-1",
+  trackId: "video-track-1",
+  timeRange: {
+    start: "00:00:00.00",
+    end: "00:00:10.00"
+  }
+});
+updateTimelineItemTransform("video-1", {
+  opacity: 1.5, // 超出范围 (应该是 0-1)
+  volume: -0.5, // 超出范围 (应该是 0-1)
+  rotation: 720, // 应该验证数值类型
+  duration: "not-a-duration-format" // 错误的时间码格式
+});`,
+
+  example12: `// 完整项目示例 - 展示所有可用API
+console.log("=== 开始构建视频项目 ===");
+
+// 添加轨道 - 使用不同位置
+addTrack("video", 0);
+addTrack("video", 1);
+addTrack("audio", 2);
+addTrack("text", 3);
+addTrack("audio", 4);
+
+// 修改轨道名称
+renameTrack("track-2", "main-video");
+renameTrack("track-3", "overlay-video");
+renameTrack("track-4", "narration-audio");
+renameTrack("track-5", "titles-text");
+renameTrack("track-6", "background-audio");
+
+// 添加各种时间轴项目
+
+// 主视频项目
+addTimelineItem({
+  mediaItemId: "main-video-1",
+  trackId: "track-1",
+  timeRange: {
+    start: "00:00:00.00",
+    end: "00:02:30.00"
+  }
 });
 
-console.log("所有项目添加完成，共添加 " + items.length + " 个项目");`,
+// 叠加视频项目
+addTimelineItem({
+  mediaItemId: "overlay-video-1",
+  trackId: "main-video",
+  timeRange: {
+    start: "00:00:15.00",
+    end: "00:00:45.00"
+  }
+});
+
+// 旁白音频
+addTimelineItem({
+  mediaItemId: "narration-1",
+  trackId: "narration-audio",
+  timeRange: {
+    start: "00:00:00.00",
+    end: "00:02:00.00"
+  }
+});
+
+// 标题文本
+addTimelineItem({
+  mediaItemId: "title-text-1",
+  trackId: "titles-text",
+  timeRange: {
+    start: "00:00:05.00",
+    end: "00:00:25.00"
+  }
+});
+
+// 背景音频
+addTimelineItem({
+  mediaItemId: "bg-music-1",
+  trackId: "background-audio",
+  timeRange: {
+    start: "00:00:10.00",
+    end: "02:00:00.00"
+  }
+});
+
+// 更新文本内容
+updateTextContent("title-text-1", "视频标题 - 产品介绍", {
+  fontSize: 48,
+  color: "#ffffff",
+  backgroundColor: "rgba(0,0,0,0.7)",
+  fontWeight: "bold",
+  fontStyle: "normal",
+  textAlign: "center",
+  textShadow: "2px 2px 4px rgba(0,0,0,0.8)",
+  fontFamily: "Arial, sans-serif"
+});
+
+// 更新文本样式
+updateTextStyle("title-text-1", {
+  fontSize: 36,
+  color: "#00ff88",
+  textAlign: "left",
+  maxWidth: 300,
+  lineHeight: 1.4
+});
+
+// 创建关键帧动画
+createKeyframe("main-video-1", "00:00:10.00");
+createKeyframe("main-video-1", "00:00:30.00");
+createKeyframe("main-video-1", "00:01:00.00");
+
+// 设置关键帧属性
+updateKeyframeProperty("main-video-1", "00:00:10.00", "opacity", 0.8);
+updateKeyframeProperty("main-video-1", "00:00:30.00", "opacity", 0.6);
+updateKeyframeProperty("main-video-1", "00:01:00.00", "opacity", 1.0);
+updateKeyframeProperty("main-video-1", "00:00:10.00", "rotation", 0);
+updateKeyframeProperty("main-video-1", "00:00:30.00", "rotation", 45);
+updateKeyframeProperty("main-video-1", "00:01:00.00", "rotation", 0);
+
+// 更新视频变换属性
+updateTimelineItemTransform("overlay-video-1", {
+  x: 50,
+  y: 50,
+  width: 320,
+  height: 240,
+  opacity: 0.9,
+  zIndex: 10,
+  duration: "00:00:30.00",
+  playbackRate: 1.2,
+  volume: 0.8,
+  isMuted: false,
+  gain: 2.0,
+  rotation: 15
+});
+
+// 调整时间轴项目大小
+resizeTimelineItem("overlay-video-1", {
+  timelineStart: "00:00:15.00",
+  timelineEnd: "00:00:45.00",
+  clipStart: "00:00:10.00",
+  clipEnd: "00:00:30.00"
+});
+
+// 分割和复制项目
+splitTimelineItem("bg-music-1", "00:00:30.00");
+cpTimelineItem("overlay-video-1", "00:01:30.00", "track-1");
+mvTimelineItem("overlay-video-1", "00:01:20.00", "track-1");
+
+// 轨道控制操作
+autoArrangeTrack("main-video");
+toggleTrackVisibility("background-audio", true);
+toggleTrackMute("background-audio", false);
+
+// 删除不用的关键帧
+deleteKeyframe("main-video-1", "00:00:10.00");
+// 清除所有关键帧测试
+clearAllKeyframes("overlay-video-1");
+// 然后重新创建一些
+createKeyframe("overlay-video-1", "00:00:20.00");
+createKeyframe("overlay-video-1", "00:00:40.00");
+
+// 最终轨道重命名
+renameTrack("track-1", "final-main-video");
+
+console.log("=== 视频项目构建完成 ===");
+console.log("总视频长度: 02:30:00.00");
+console.log("轨道数量: 5个");
+console.log("时间轴项目: 5个");
+console.log("关键帧动画: 8个");
+console.log("变换效果: 2个");`
 }
 
 function loadExample1() {
@@ -212,6 +431,26 @@ function loadExample6() {
 
 function loadExample7() {
   testScript.value = exampleScripts.example7
+}
+
+function loadExample8() {
+  testScript.value = exampleScripts.example8
+}
+
+function loadExample9() {
+  testScript.value = exampleScripts.example9
+}
+
+function loadExample10() {
+  testScript.value = exampleScripts.example10
+}
+
+function loadExample11() {
+  testScript.value = exampleScripts.example11
+}
+
+function loadExample12() {
+  testScript.value = exampleScripts.example12
 }
 
 async function executeScript() {

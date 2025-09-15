@@ -7,3 +7,6 @@
 
 // 脚本执行器 - 核心组件
 export { ScriptExecutor } from './ScriptExecutor'
+
+// 配置验证器 - 验证操作配置的合法性
+export { ConfigValidator } from './ConfigValidator'

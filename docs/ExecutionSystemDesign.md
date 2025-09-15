@@ -36,270 +36,36 @@ BaseBatchCommand执行
 
 ### 1. ScriptExecutor - 脚本执行器
 
-```typescript
-/**
- * 脚本执行器 - 在沙箱环境中执行用户JS代码
- * 负责将用户函数调用转换为操作配置
- */
-class ScriptExecutor {
-  private operations: OperationConfig[] = []
-  private api: ExecutionAPI
+ScriptExecutor采用一次性Web Worker设计，在沙箱环境中安全执行用户JavaScript代码。主要特性：
 
-  constructor() {
-    this.api = this.createExecutionAPI()
-  }
+- **一次性使用**: 每次执行完成后自动清理Worker资源，避免内存泄漏
+- **超时控制**: 支持自定义执行超时时间（默认5秒）
+- **错误隔离**: Worker线程崩溃不会影响主线程
+- **自动清理**: 执行完成或超时后自动终止Worker释放资源
 
-  // 创建安全的API接口
-  private createExecutionAPI(): ExecutionAPI {
-    return {
-      // 时间轴项目操作
-      addTimelineItem: (item) => this.recordOperation('addTimelineItem', item),
-      rmTimelineItem: (id) => this.recordOperation('rmTimelineItem', { timelineItemId: id }),
-      mvTimelineItem: (id, position, trackId) =>
-        this.recordOperation('mvTimelineItem', { timelineItemId: id, newPosition: position, newTrackId: trackId }),
-      
-      // 轨道操作
-      addTrack: (type = 'video', position) => this.recordOperation('addTrack', { type, position }),
-      rmTrack: (id) => this.recordOperation('rmTrack', { trackId: id }),
-      renameTrack: (id, name) => this.recordOperation('renameTrack', { trackId: id, newName: name }),
-      
-      // 文本操作
-      updateTextContent: (id, text, style) =>
-        this.recordOperation('updateTextContent', { timelineItemId: id, newText: text, newStyle: style }),
-      updateTextStyle: (id, style) =>
-        this.recordOperation('updateTextStyle', { timelineItemId: id, newStyle: style }),
-      
-      // 关键帧操作
-      createKeyframe: (id, position) =>
-        this.recordOperation('createKeyframe', { timelineItemId: id, position }),
-      deleteKeyframe: (id, position) =>
-        this.recordOperation('deleteKeyframe', { timelineItemId: id, position }),
-      updateKeyframeProperty: (id, position, property, value) =>
-        this.recordOperation('updateKeyframeProperty', {
-          timelineItemId: id, position, property, value
-        }),
-      clearAllKeyframes: (id) =>
-        this.recordOperation('clearAllKeyframes', { timelineItemId: id }),
-      
-      // 其他操作
-      splitTimelineItem: (id, position) =>
-        this.recordOperation('splitTimelineItem', { timelineItemId: id, splitPosition: position }),
-      cpTimelineItem: (id, position, trackId) =>
-        this.recordOperation('cpTimelineItem', {
-          timelineItemId: id, newPosition: position, newTrackId: trackId
-        }),
-      resizeTimelineItem: (id, timeRange) =>
-        this.recordOperation('resizeTimelineItem', { timelineItemId: id, newTimeRange: timeRange }),
-      updateTimelineItemTransform: (id, transform) =>
-        this.recordOperation('updateTimelineItemTransform', { timelineItemId: id, newTransform: transform }),
-      
-      autoArrangeTrack: (id) => this.recordOperation('autoArrangeTrack', { trackId: id }),
-      toggleTrackVisibility: (id, visible) =>
-        this.recordOperation('toggleTrackVisibility', { trackId: id, visible }),
-      toggleTrackMute: (id, muted) =>
-        this.recordOperation('toggleTrackMute', { trackId: id, muted }),
-    }
-  }
+执行流程：
+1. 初始化Web Worker实例
+2. 传递用户脚本到Worker执行
+3. 接收执行结果并生成操作配置
+4. 处理超时和异常情况
+5. 自动清理Worker资源
 
-  // 执行用户代码并生成操作配置 - 基于Web Worker的安全执行
-  async executeScript(script: string): Promise<OperationConfig[]> {
-    this.operations = []
-    
-    try {
-      // 获取所有API方法
-      const api = this.createExecutionAPI()
-      
-      // 使用Web Worker执行器
-      const executor = this.createWebWorkerExecutor();
-      
-      // 注册所有API函数到Worker
-      const fnMap = Object.keys(api).reduce((map, key) => {
-        map[key] = api[key as keyof ExecutionAPI].toString();
-        return map;
-      }, {} as Record<string, string>);
-      
-      await executor.registerFunctions(fnMap);
-      
-      // 执行用户脚本
-      const result = await executor.exec(`
-        ${script}
-        return {
-          operations: operations,
-          success: true
-        };
-      `, {});
-      
-      return result.operations || [];
-      
-    } catch (error) {
-      throw new Error(`脚本执行失败: ${error.message}`)
-    }
-  }
-
-  // 创建Web Worker执行器
-  private createWebWorkerExecutor(defaultTimeout = 5000) {
-    const workerCode = `
-      const registry = {};
-      self.onmessage = function (e) {
-        const { id, type, name, fnStr, fnMap, code, args } = e.data;
-        try {
-          if (type === 'register') {
-            registry[name] = eval('(' + fnStr + ')');
-            self.postMessage({ id, result: true });
-            return;
-          }
-          if (type === 'registerBatch') {
-            for (let key in fnMap) {
-              registry[key] = eval('(' + fnMap[key] + ')');
-            }
-            self.postMessage({ id, result: true });
-            return;
-          }
-          if (type === 'exec') {
-            const fn = new Function(...Object.keys(args), 'registry', code);
-            const result = fn(...Object.values(args), registry);
-            if (result instanceof Promise) {
-              result
-                .then(res => self.postMessage({ id, result: res }))
-                .catch(err => self.postMessage({ id, error: err.message }));
-            } else {
-              self.postMessage({ id, result });
-            }
-            return;
-          }
-          throw new Error('Unknown message type: ' + type);
-        } catch (err) {
-          self.postMessage({ id, error: err.message });
-        }
-      };
-    `;
-
-    let worker: Worker;
-    let workerUrl: string;
-    let callbacks = new Map<string, {resolve: Function, reject: Function}>();
-    
-    const genId = () => Math.random().toString(36).slice(2);
-
-    const initWorker = () => {
-      if (worker) worker.terminate();
-      if (workerUrl) URL.revokeObjectURL(workerUrl);
-      
-      const blob = new Blob([workerCode], { type: 'application/javascript' });
-      workerUrl = URL.createObjectURL(blob);
-      worker = new Worker(workerUrl);
-      
-      worker.onmessage = (e) => {
-        const { id, result, error } = e.data;
-        const cb = callbacks.get(id);
-        if (cb) {
-          if (error) cb.reject(new Error(error));
-          else cb.resolve(result);
-          callbacks.delete(id);
-        }
-      };
-    };
-
-    initWorker();
-
-    return {
-      registerFunctions: async (fnMap: Record<string, string>) => {
-        return new Promise((resolve, reject) => {
-          const id = genId();
-          callbacks.set(id, { resolve, reject });
-          worker.postMessage({
-            id,
-            type: 'registerBatch',
-            fnMap
-          });
-        });
-      },
-
-      exec: async (code: string, args: Record<string, any> = {}, timeout = defaultTimeout) => {
-        return new Promise((resolve, reject) => {
-          const id = genId();
-          callbacks.set(id, { resolve, reject });
-          
-          worker.postMessage({
-            id,
-            type: 'exec',
-            code,
-            args
-          });
-
-          // 超时终止逻辑
-          const timer = setTimeout(() => {
-            if (callbacks.has(id)) {
-              callbacks.get(id)?.reject(new Error(`执行超时(${timeout}ms)`));
-              callbacks.delete(id);
-              
-              // 重建Worker
-              initWorker();
-            }
-          }, timeout);
-          
-          // 超时完成时清除定时器
-          const origResolve = resolve;
-          const origReject = reject;
-          callbacks.set(id, {
-            resolve: (val: any) => {
-              clearTimeout(timer);
-              origResolve(val);
-            },
-            reject: (err: any) => {
-              clearTimeout(timer);
-              origReject(err);
-            }
-          });
-        });
-      },
-
-      terminate: () => {
-        worker.terminate();
-        URL.revokeObjectURL(workerUrl);
-        callbacks.clear();
-      }
-    };
-  }
-}
-```
 
 ### 2. ConfigValidator - 配置验证器
 
-```typescript
-/**
- * 配置验证器 - 验证操作配置的合法性
- * 确保所有操作参数符合系统要求
- */
-class ConfigValidator {
-  validateOperations(operations: OperationConfig[]): ValidationResult {
-    const errors: ValidationError[] = []
-    const validOperations: OperationConfig[] = []
+ConfigValidator负责验证操作配置的合法性，确保所有参数符合系统要求。主要特性：
 
-    for (const op of operations) {
-      try {
-        this.validateSingleOperation(op)
-        validOperations.push(op)
-      } catch (error) {
-        errors.push({ operation: op, error: error.message })
-      }
-    }
+- **全面验证**: 支持所有音视频编辑操作的参数验证
+- **类型检查**: 严格的参数类型和格式验证
+- **时间码验证**: 验证HH:MM:SS.FF格式的时间码
+- **错误收集**: 批量收集所有验证错误，便于调试
+- **性能优化**: 高效的验证流程，支持大批量操作验证
 
-    return { validOperations, errors }
-  }
-
-  private validateSingleOperation(op: OperationConfig) {
-    switch (op.type) {
-      case 'addTimelineItem':
-        this.validateTimelineItemData(op.params)
-        break
-      case 'rmTimelineItem':
-        this.validateTimelineItemId(op.params.timelineItemId)
-        break
-      // ... 其他操作类型的验证
-    }
-  }
-}
-```
+验证流程：
+1. 接收操作配置数组
+2. 逐个验证操作参数合法性
+3. 收集验证错误和有效操作
+4. 返回验证结果供后续处理
 
 ### 3. BatchCommandExecutor - 批量命令执行器
 
@@ -423,12 +189,10 @@ class VideoEditExecutionSystem {
 ## 类型定义
 
 ```typescript
-// 操作配置接口
+// 操作配置接口 - 简化版本，只保留核心字段
 interface OperationConfig {
   type: string
   params: any
-  timestamp: number
-  id: string
 }
 
 // 执行结果接口
@@ -580,30 +344,29 @@ if (result.success) {
 ## 执行环境说明
 
 ### 函数调用方式
-用户脚本中的函数调用会被自动映射到对应的API方法，例如：
-```javascript
-// 用户编写的代码
-addTrack('video')
-addTimelineItem({...})
+用户脚本中的函数调用通过独立的ScriptExecutor.worker.ts处理，实际API映射逻辑在worker中实现。
 
-// 实际执行时相当于
-addTrack('video')
-addTimelineItem({...})
-```
+#### 支持的API函数
+- **时间轴项目操作**: `addTimelineItem()`, `rmTimelineItem()`, `mvTimelineItem()`
+- **轨道操作**: `addTrack()`, `rmTrack()`, `renameTrack()`
+- **文本操作**: `updateTextContent()`, `updateTextStyle()`
+- **关键帧操作**: `createKeyframe()`, `deleteKeyframe()`, `updateKeyframeProperty()`, `clearAllKeyframes()`
+- **其他操作**: `splitTimelineItem()`, `cpTimelineItem()`, `resizeTimelineItem()`, `updateTimelineItemTransform()`
+- **轨道控制**: `autoArrangeTrack()`, `toggleTrackVisibility()`, `toggleTrackMute()`
 
 ### Web Worker安全性优势
 - ✅ **完全隔离**: 用户脚本在独立的Worker线程中执行
 - ✅ **计算限制**: 支持执行超时设置（默认5秒）
 - ✅ **内存隔离**: Worker线程崩溃不会影响到主线程
-- ✅ **自动恢复**: Worker异常后可自动重建
+- ✅ **自动清理**: 执行完成后自动终止Worker释放资源
 - ✅ **无全局污染**: 不会注入主线程的任何全局变量
 
 ### 执行流程
-1. 创建Web Worker
-2. 将API函数注册到Worker的registry中
-3. 传递用户脚本到Worker执行
-4. 接收执行结果
-5. 处理超时和异常情况
+1. 创建Web Worker实例
+2. 传递用户脚本到Worker执行
+3. 接收执行结果并生成操作配置
+4. 处理超时和异常情况
+5. 自动清理Worker资源
 
 ## 集成现有系统
 
@@ -731,23 +494,23 @@ if (result.success) {
 
 ### 1. **安全性**
 - Worker线程完全隔离，无法访问主线程的全局变量
-- 支持设置执行超时时间
-- 自动处理异常的Worker重建
+- 支持设置执行超时时间（默认5秒）
+- 自动清理Worker资源，防止内存泄漏
 
 ### 2. **性能**
 - 在用户脚本执行期间不会阻塞主线程UI
-- 支持并发执行多个用户脚本
 - 内存使用更加可控
+- 一次性使用设计，避免资源占用
 
 ### 3. **错误处理**
 - Worker内部错误不会导致主线程崩溃
-- 详细的错误信息和堆栈跟踪
-- 支持异常重试机制
+- 详细的错误信息和超时提示
+- 自动异常处理和资源清理
 
 ### 4. **超时控制**
 ```typescript
-const executor = this.createWebWorkerExecutor(10000); // 设置10秒超时
-const result = await executionSystem.executeUserScript(userScript);
+// 支持自定义超时时间
+const operations = await scriptExecutor.executeScript(userScript, 10000); // 10秒超时
 ```
 
 ## 扩展性设计
@@ -759,4 +522,4 @@ const result = await executionSystem.executeUserScript(userScript);
 
 ## 总结
 
-这个执行系统设计充分利用了现有的音视频编辑基础设施，提供了安全、高效的用户脚本执行能力。通过三阶段的执行流程（脚本执行→配置验证→批量执行），确保了系统的稳定性和可靠性，同时保持了良好的扩展性和维护性。
+这个执行系统设计充分利用了现有的音视频编辑基础设施，提供了安全、高效的用户脚本执行能力。ScriptExecutor采用简化的一次性Web Worker设计，自动处理资源清理和错误恢复。通过三阶段的执行流程（脚本执行→配置验证→批量执行），确保了系统的稳定性和可靠性，同时保持了良好的扩展性和维护性。

@@ -1,13 +1,57 @@
 # 音视频编辑 SDK 文档
 
-本文档详细描述了 `useHistoryOperations.ts` 中所有操作及其参数类型。
-
 ## 时间码格式
-`HH:MM:SS.FF`，例如 `01:02:03.04`，表示第1小时2分3秒4帧，帧率为30帧/秒。
 
-## SDK接口
+`HH:MM:SS.FF`，例如 `01:02:03.04`，表示第 1 小时 2 分 3 秒 4 帧，帧率为 30 帧/秒。
+
+## SDK 接口
+
 ```typescript
-interface TimelineItemData {
+/**
+ * 文本样式配置接口
+ */
+interface TextStyleConfig {
+  // 基础字体属性
+  fontSize: number; // 字体大小 (px)
+  fontFamily: string; // 字体族
+  fontWeight: string | number; // 字重
+  fontStyle: "normal" | "italic"; // 字体样式
+
+  // 颜色属性
+  color: string; // 文字颜色
+  backgroundColor?: string; // 背景颜色
+
+  // 文本效果
+  textShadow?: string; // 文字阴影
+  textStroke?: {
+    // 文字描边
+    width: number;
+    color: string;
+  };
+  textGlow?: {
+    // 文字发光
+    color: string;
+    blur: number;
+    spread?: number;
+  };
+
+  // 布局属性
+  textAlign: "left" | "center" | "right"; // 文本对齐
+  lineHeight?: number; // 行高
+  maxWidth?: number; // 最大宽度
+
+  // 自定义字体
+  customFont?: {
+    name: string;
+    url: string;
+  };
+}
+
+/**
+ * 添加时间轴项目
+ * @param timelineItem 要添加的时间轴项目数据
+ */
+function addTimelineItem(timelineItem: {
   mediaItemId: string; // 媒体项目ID
   trackId: string; // 轨道ID
   timeRange: {
@@ -16,13 +60,7 @@ interface TimelineItemData {
     /** 时间轴结束时间（时间码） - 在整个项目时间轴上的结束位置 */
     end: string;
   };
-}
-
-/**
- * 添加时间轴项目
- * @param timelineItem 要添加的时间轴项目数据
- */
-function addTimelineItem(timelineItem: TimelineItemData);
+});
 
 /**
  * 删除时间轴项目
@@ -49,7 +87,20 @@ function mvTimelineItem(
  */
 function updateTimelineItemTransform(
   timelineItemId: string,
-  newTransform: TransformProperties
+  newTransform: {
+    x?: number; // x轴偏移量
+    y?: number; // y轴偏移量
+    width?: number; // 宽度
+    height?: number; // 高度
+    rotation?: number; // 旋转角度
+    opacity?: number; // 透明度
+    zIndex?: number; // 层级
+    duration?: string; // 时长（时间码）
+    playbackRate?: number; // 倍速
+    volume?: number; // 音量（0-1之间）
+    isMuted?: boolean; // 静音状态
+    gain?: number; // 音频增益（dB）
+  }
 );
 
 /**
@@ -78,7 +129,16 @@ function cpTimelineItem(
  */
 function resizeTimelineItem(
   timelineItemId: string,
-  newTimeRange: UnifiedTimeRange
+  newTimeRange: {
+    /** 时间轴开始时间（时间码） - 在整个项目时间轴上的开始位置 */
+    timelineStart: string;
+    /** 时间轴结束时间（时间码） - 在整个项目时间轴上的结束位置 */
+    timelineEnd: string;
+    /** 素材内部开始时间（时间码） - 从素材的哪个帧开始播放 */
+    clipStart: string;
+    /** 素材内部结束时间（时间码） - 播放到素材的哪个帧结束 */
+    clipEnd: string;
+  }
 );
 
 /**
@@ -86,7 +146,10 @@ function resizeTimelineItem(
  * @param type 轨道类型，默认为 'video'
  * @param position 插入位置（可选）
  */
-function addTrack(type: UnifiedTrackType = "video", position?: number);
+function addTrack(
+  type: "video" | "audio" | "text" = "video",
+  position?: number
+);
 
 /**
  * 删除轨道
