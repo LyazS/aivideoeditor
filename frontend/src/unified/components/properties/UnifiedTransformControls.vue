@@ -15,6 +15,7 @@
             <NumberInput
               :model-value="transformX"
               @change="(value) => $emit('update-transform', { x: value })"
+              :disabled="!canOperateTransforms"
               :min="positionLimits.minX"
               :max="positionLimits.maxX"
               :step="1"
@@ -28,6 +29,7 @@
             <NumberInput
               :model-value="transformY"
               @change="(value) => $emit('update-transform', { y: value })"
+              :disabled="!canOperateTransforms"
               :min="positionLimits.minY"
               :max="positionLimits.maxY"
               :step="1"
@@ -44,6 +46,7 @@
         <div class="alignment-controls">
           <button
             @click="$emit('align-horizontal', 'left')"
+            :disabled="!canOperateTransforms"
             class="align-btn"
             :title="t('properties.transform.left')"
           >
@@ -56,6 +59,7 @@
           </button>
           <button
             @click="$emit('align-horizontal', 'center')"
+            :disabled="!canOperateTransforms"
             class="align-btn"
             :title="t('properties.transform.center')"
           >
@@ -68,6 +72,7 @@
           </button>
           <button
             @click="$emit('align-horizontal', 'right')"
+            :disabled="!canOperateTransforms"
             class="align-btn"
             :title="t('properties.transform.right')"
           >
@@ -87,6 +92,7 @@
         <div class="alignment-controls">
           <button
             @click="$emit('align-vertical', 'top')"
+            :disabled="!canOperateTransforms"
             class="align-btn"
             :title="t('properties.transform.top')"
           >
@@ -99,6 +105,7 @@
           </button>
           <button
             @click="$emit('align-vertical', 'middle')"
+            :disabled="!canOperateTransforms"
             class="align-btn"
             :title="t('properties.transform.middle')"
           >
@@ -111,6 +118,7 @@
           </button>
           <button
             @click="$emit('align-vertical', 'bottom')"
+            :disabled="!canOperateTransforms"
             class="align-btn"
             :title="t('properties.transform.bottom')"
           >
@@ -129,6 +137,7 @@
         <input
           :checked="proportionalScale"
           @change="$emit('toggle-proportional-scale')"
+          :disabled="!canOperateTransforms"
           type="checkbox"
           class="checkbox-input"
         />
@@ -141,6 +150,7 @@
           <SliderInput
             :model-value="uniformScale"
             @input="(value) => $emit('update-uniform-scale', value)"
+            :disabled="!canOperateTransforms"
             :min="0.01"
             :max="5"
             :step="0.01"
@@ -148,6 +158,7 @@
           <NumberInput
             :model-value="uniformScale"
             @change="(value) => $emit('update-uniform-scale', value)"
+            :disabled="!canOperateTransforms"
             :min="0.01"
             :max="5"
             :step="0.01"
@@ -166,6 +177,7 @@
             <SliderInput
               :model-value="scaleX"
               @input="(value) => $emit('set-scale-x', value)"
+              :disabled="!canOperateTransforms"
               :min="0.01"
               :max="5"
               :step="0.01"
@@ -173,6 +185,7 @@
             <NumberInput
               :model-value="scaleX"
               @change="(value) => $emit('set-scale-x', value)"
+              :disabled="!canOperateTransforms"
               :min="0.01"
               :max="5"
               :step="0.01"
@@ -188,6 +201,7 @@
             <SliderInput
               :model-value="scaleY"
               @input="(value) => $emit('set-scale-y', value)"
+              :disabled="!canOperateTransforms"
               :min="0.01"
               :max="5"
               :step="0.01"
@@ -195,6 +209,7 @@
             <NumberInput
               :model-value="scaleY"
               @change="(value) => $emit('set-scale-y', value)"
+              :disabled="!canOperateTransforms"
               :min="0.01"
               :max="5"
               :step="0.01"
@@ -209,10 +224,10 @@
       <div class="property-item">
         <label>{{ t('properties.transform.scalePresets') }}</label>
         <div class="scale-preset-controls">
-          <button @click="handleFitToCanvas" class="preset-btn">
+          <button @click="handleFitToCanvas" :disabled="!canOperateTransforms" class="preset-btn">
             {{ t('properties.transform.fitToCanvas') }}
           </button>
-          <button @click="handleFillCanvas" class="preset-btn">
+          <button @click="handleFillCanvas" :disabled="!canOperateTransforms" class="preset-btn">
             {{ t('properties.transform.fillCanvas') }}
           </button>
         </div>
@@ -229,6 +244,7 @@
           <SliderInput
             :model-value="rotation"
             @input="(value) => $emit('set-rotation', value)"
+            :disabled="!canOperateTransforms"
             :min="-180"
             :max="180"
             :step="0.1"
@@ -237,6 +253,7 @@
           <NumberInput
             :model-value="rotation"
             @change="(value) => $emit('set-rotation', value)"
+            :disabled="!canOperateTransforms"
             :step="1"
             :precision="1"
             :show-controls="false"
@@ -251,6 +268,7 @@
           <SliderInput
             :model-value="opacity"
             @input="(value) => $emit('set-opacity', value)"
+            :disabled="!canOperateTransforms"
             :min="0"
             :max="1"
             :step="0.01"
@@ -259,6 +277,7 @@
           <NumberInput
             :model-value="opacity"
             @change="(value) => $emit('set-opacity', value)"
+            :disabled="!canOperateTransforms"
             :min="0"
             :max="1"
             :step="0.01"
@@ -274,6 +293,7 @@
         <NumberInput
           :model-value="zIndex"
           @change="(value) => $emit('update-transform', { zIndex: value })"
+          :disabled="!canOperateTransforms"
           :min="0"
           :step="1"
           :precision="0"
@@ -312,6 +332,9 @@ interface Props {
   // 元素原始尺寸（用于缩放预设）
   elementWidth: number
   elementHeight: number
+
+  // 操作状态
+  canOperateTransforms: boolean
 
   // 位置限制
   positionLimits: {
@@ -486,6 +509,20 @@ const handleFillCanvas = () => {
   transform: translateY(1px);
 }
 
+.align-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  background: var(--color-bg-disabled);
+  color: var(--color-text-disabled);
+  border-color: var(--color-border-disabled);
+  box-shadow: none;
+}
+
+.align-btn:disabled:hover {
+  transform: none;
+  box-shadow: none;
+}
+
 .align-btn svg {
   width: 14px;
   height: 14px;
@@ -497,6 +534,39 @@ const handleFillCanvas = () => {
   align-items: center;
   gap: var(--spacing-xs);
   flex: 1;
+}
+
+/* 禁用状态样式 */
+.transform-controls input:disabled,
+.transform-controls button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  background: var(--color-bg-disabled);
+  color: var(--color-text-disabled);
+  border-color: var(--color-border-disabled);
+  box-shadow: none;
+}
+
+.transform-controls input:disabled:hover,
+.transform-controls button:disabled:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+.preset-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  background: var(--color-bg-disabled);
+  color: var(--color-text-disabled);
+  border-color: var(--color-border-disabled);
+  box-shadow: none;
+}
+
+.preset-btn:disabled:hover {
+  background: var(--color-bg-disabled);
+  border-color: var(--color-border-disabled);
+  transform: none;
+  box-shadow: none;
 }
 
 /* 位置输入框样式 */

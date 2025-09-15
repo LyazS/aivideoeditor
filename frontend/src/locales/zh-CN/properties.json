@@ -148,6 +148,9 @@
       "emptyHint": "选择时间轴项目以查看属性",
       "emptyHintDetail": "选择音频、视频、图片或文本片段来编辑其设置"
     },
-    "panelTitle": "属性"
+    "panelTitle": "属性",
+    "playheadStatus": {
+      "outOfRange": "播放头不在区间"
+    }
   }
 }

@@ -148,6 +148,9 @@
       "emptyHint": "Select a timeline item to view properties",
       "emptyHintDetail": "Choose audio, video, image, or text clips to edit their settings"
     },
-    "panelTitle": "Properties"
+    "panelTitle": "Properties",
+    "playheadStatus": {
+      "outOfRange": "Playhead out of range"
+    }
   }
 }

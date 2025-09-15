@@ -402,6 +402,7 @@
       :uniform-scale="uniformScale"
       :element-width="elementWidth"
       :element-height="elementHeight"
+      :can-operate-transforms="canOperateTransforms"
       :position-limits="{
         minX: -unifiedStore.videoResolution.width,
         maxX: unifiedStore.videoResolution.width,
@@ -565,6 +566,9 @@ const {
   canOperateUnifiedKeyframes,
   hasUnifiedPreviousKeyframe,
   hasUnifiedNextKeyframe,
+
+  // 变换操作状态
+  canOperateTransforms,
 
   // 变换属性
   transformX,

@@ -6,6 +6,7 @@
       @keyup.enter="handleConfirm"
       @input="handleInput"
       type="number"
+      :disabled="disabled"
       :step="step"
       :min="min"
       :max="max"
@@ -14,8 +15,16 @@
       :class="['number-input', inputClass]"
     />
     <div v-if="showControls" class="number-controls">
-      <button @click="handleIncrement" class="number-btn number-btn-up">▲</button>
-      <button @click="handleDecrement" class="number-btn number-btn-down">▼</button>
+      <button
+        @click="handleIncrement"
+        :disabled="disabled"
+        class="number-btn number-btn-up"
+      >▲</button>
+      <button
+        @click="handleDecrement"
+        :disabled="disabled"
+        class="number-btn number-btn-down"
+      >▼</button>
     </div>
     <span v-if="unit" class="number-unit">{{ unit }}</span>
   </div>
@@ -47,6 +56,8 @@ interface Props {
   inputClass?: string
   /** 是否实时更新（input事件），否则只在确认时更新 */
   realtime?: boolean
+  /** 是否禁用输入 */
+  disabled?: boolean
 }
 
 interface Emits {
@@ -65,6 +76,7 @@ const props = withDefaults(defineProps<Props>(), {
   inputStyle: () => ({}),
   inputClass: '',
   realtime: false,
+  disabled: false,
 })
 
 const emit = defineEmits<Emits>()
@@ -253,6 +265,25 @@ const handleDecrement = () => {
 .number-btn-down {
   border-radius: 0 0 var(--border-radius-small) 0;
   border-top: 0.5px solid var(--color-bg-quaternary);
+}
+
+/* 禁用状态样式 */
+.number-input:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  background: var(--color-bg-disabled);
+  color: var(--color-text-disabled);
+}
+
+.number-input-container .number-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  background: var(--color-bg-disabled);
+  color: var(--color-text-disabled);
+}
+
+.number-input-container .number-btn:disabled:hover {
+  background: var(--color-bg-disabled);
 }
 
 /* 单位文本 */

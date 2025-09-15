@@ -2,6 +2,7 @@
   <div class="properties-panel">
     <div class="panel-header">
       <h3>{{ t('properties.panelTitle') }}</h3>
+      <span v-if="showPlayheadOutOfRangeHint" class="playhead-hint"> {{ t('properties.playheadStatus.outOfRange') }} </span>
     </div>
 
     <div class="panel-content">
@@ -19,7 +20,9 @@
             <span class="item-name">
               {{ item ? getItemDisplayName(item) : t('properties.multiSelect.unknownMedia') }}
             </span>
-            <span class="item-type">{{ t('properties.mediaTypes.' + (item?.mediaType || 'unknown')) }}</span>
+            <span class="item-type">{{
+              t('properties.mediaTypes.' + (item?.mediaType || 'unknown'))
+            }}</span>
           </div>
         </div>
       </div>
@@ -63,7 +66,13 @@
             </svg>
           </div>
           <p class="loading-text">{{ t('properties.singleSelect.loading') }}</p>
-          <p class="loading-status">{{ t('properties.singleSelect.loadingStatus', { status: getStatusText(selectedTimelineItem) }) }}</p>
+          <p class="loading-status">
+            {{
+              t('properties.singleSelect.loadingStatus', {
+                status: getStatusText(selectedTimelineItem),
+              })
+            }}
+          </p>
         </div>
       </div>
 
@@ -87,6 +96,7 @@ import { useUnifiedStore } from '@/unified/unifiedStore'
 import { useAppI18n } from '@/unified/composables/useI18n'
 import type { UnifiedTimelineItemData } from '@/unified/timelineitem/TimelineItemData'
 import { getStatusText } from '@/unified/timelineitem/TimelineItemQueries'
+import { isPlayheadInTimelineItem } from '@/unified/utils/timelineSearchUtils'
 
 import UnifiedVideoClipProperties from './properties/UnifiedVideoClipProperties.vue'
 import UnifiedTextClipProperties from './properties/UnifiedTextClipProperties.vue'
@@ -138,6 +148,16 @@ const getItemDisplayName = (item: any) => {
   }
 }
 
+// 播放头位置状态计算属性
+const isPlayheadInSelectedItem = computed(() => {
+  if (!selectedTimelineItem.value) return false
+  return isPlayheadInTimelineItem(selectedTimelineItem.value, currentFrame.value)
+})
+
+// 是否显示播放头不在区间提示
+const showPlayheadOutOfRangeHint = computed(() => {
+  return selectedTimelineItem.value && !isPlayheadInSelectedItem.value
+})
 </script>
 
 <style scoped>
@@ -646,5 +666,28 @@ const getItemDisplayName = (item: any) => {
   100% {
     transform: rotate(360deg);
   }
+}
+
+/* 播放头位置提示样式 */
+.playhead-hint {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-hint);
+  margin-left: var(--spacing-sm);
+  font-weight: normal;
+}
+
+/* 调整标题区域布局 */
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-md) var(--spacing-lg);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.panel-header h3 {
+  margin: 0;
+  font-size: var(--font-size-lg);
+  color: var(--color-text-primary);
 }
 </style>

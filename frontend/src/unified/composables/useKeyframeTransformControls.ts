@@ -9,6 +9,7 @@ import { uiDegreesToWebAVRadians, webAVRadiansToUIDegrees } from '@/unified/util
 import { useUnifiedKeyframeUI } from '@/unified/composables/useUnifiedKeyframeUI'
 import type { UnifiedTimelineItemData } from '@/unified/timelineitem'
 import { TimelineItemQueries } from '@/unified/timelineitem/TimelineItemQueries'
+import { isPlayheadInTimelineItem } from '@/unified/utils/timelineSearchUtils'
 
 interface UnifiedKeyframeTransformControlsOptions {
   selectedTimelineItem: Ref<UnifiedTimelineItemData | null>
@@ -36,6 +37,15 @@ export function useUnifiedKeyframeTransformControls(
     hasNextKeyframe: hasUnifiedNextKeyframe,
     canOperateKeyframes: canOperateUnifiedKeyframes,
   } = useUnifiedKeyframeUI(selectedTimelineItem, currentFrame)
+
+  // 添加播放头检测计算属性（用于变换控制UI状态）
+  const canOperateTransforms = computed(() => {
+    if (!selectedTimelineItem.value) return false
+    return isPlayheadInTimelineItem(
+      selectedTimelineItem.value,
+      currentFrame.value
+    )
+  })
 
   // ==================== 变换属性计算 ====================
 
@@ -472,6 +482,9 @@ export function useUnifiedKeyframeTransformControls(
     canOperateUnifiedKeyframes,
     hasUnifiedPreviousKeyframe,
     hasUnifiedNextKeyframe,
+
+    // 变换操作状态
+    canOperateTransforms,
 
     // 变换属性
     transformX,
