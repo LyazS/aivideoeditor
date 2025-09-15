@@ -7,10 +7,3 @@
 
 // 脚本执行器 - 核心组件
 export { ScriptExecutor } from './ScriptExecutor'
-
-// 类型定义
-export type { 
-  OperationConfig, 
-  ExecutionAPI, 
-  WebWorkerExecutor 
-} from './ScriptExecutorTypes'
