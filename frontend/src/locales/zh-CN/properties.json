@@ -93,7 +93,10 @@
       "centerFor0": "中心为0",
       "proportionalScale": "等比缩放",
       "proportional": "等比",
-      "uniform": "统一"
+      "uniform": "统一",
+      "scalePresets": "缩放预设",
+      "fitToCanvas": "适应画布",
+      "fillCanvas": "填满画布"
     },
     "fonts": {
       "fontFamilyArial": "Arial",

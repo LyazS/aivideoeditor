@@ -93,7 +93,10 @@
       "centerFor0": "Center is 0",
       "proportionalScale": "Proportional Scale",
       "proportional": "Proportional",
-      "uniform": "Uniform"
+      "uniform": "Uniform",
+      "scalePresets": "Scale Presets",
+      "fitToCanvas": "Fit to Canvas",
+      "fillCanvas": "Fill Canvas"
     },
     "fonts": {
       "fontFamilyArial": "Arial",

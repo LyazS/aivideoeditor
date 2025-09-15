@@ -135,6 +135,25 @@ export function useUnifiedKeyframeTransformControls(
   // 等比缩放相关
   const uniformScale = computed(() => scaleX.value) // 使用X缩放值作为统一缩放值
 
+  // 元素原始尺寸获取
+  const elementWidth = computed(() => {
+    if (
+      !selectedTimelineItem.value ||
+      !TimelineItemQueries.hasVisualProperties(selectedTimelineItem.value)
+    )
+      return 0
+    return selectedTimelineItem.value.config.originalWidth
+  })
+
+  const elementHeight = computed(() => {
+    if (
+      !selectedTimelineItem.value ||
+      !TimelineItemQueries.hasVisualProperties(selectedTimelineItem.value)
+    )
+      return 0
+    return selectedTimelineItem.value.config.originalHeight
+  })
+
   // ==================== 关键帧控制方法 ====================
 
   /**
@@ -464,6 +483,8 @@ export function useUnifiedKeyframeTransformControls(
     zIndex,
     proportionalScale,
     uniformScale,
+    elementWidth,
+    elementHeight,
 
     // 关键帧控制方法
     toggleUnifiedKeyframe,

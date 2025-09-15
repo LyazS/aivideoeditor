@@ -146,6 +146,8 @@
       :z-index="zIndex"
       :proportional-scale="proportionalScale"
       :uniform-scale="uniformScale"
+      :element-width="elementWidth"
+      :element-height="elementHeight"
       :position-limits="{
         minX: -unifiedStore.videoResolution.width,
         maxX: unifiedStore.videoResolution.width,
@@ -212,6 +214,8 @@ const {
   zIndex,
   proportionalScale,
   uniformScale,
+  elementWidth,
+  elementHeight,
 
   // 关键帧控制方法
   toggleUnifiedKeyframe,

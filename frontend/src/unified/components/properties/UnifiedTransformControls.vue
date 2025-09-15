@@ -38,7 +38,91 @@
           </div>
         </div>
       </div>
+      <!-- 水平对齐 -->
+      <div class="property-item">
+        <label>{{ t('properties.transform.alignHorizontal') }}</label>
+        <div class="alignment-controls">
+          <button
+            @click="$emit('align-horizontal', 'left')"
+            class="align-btn"
+            :title="t('properties.transform.left')"
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+              <rect x="2" y="4" width="8" height="2" />
+              <rect x="2" y="7" width="6" height="2" />
+              <rect x="2" y="10" width="10" height="2" />
+              <line x1="1" y1="2" x2="1" y2="14" stroke="currentColor" stroke-width="1" />
+            </svg>
+          </button>
+          <button
+            @click="$emit('align-horizontal', 'center')"
+            class="align-btn"
+            :title="t('properties.transform.center')"
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+              <rect x="4" y="4" width="8" height="2" />
+              <rect x="5" y="7" width="6" height="2" />
+              <rect x="3" y="10" width="10" height="2" />
+              <line x1="8" y1="2" x2="8" y2="14" stroke="currentColor" stroke-width="1" />
+            </svg>
+          </button>
+          <button
+            @click="$emit('align-horizontal', 'right')"
+            class="align-btn"
+            :title="t('properties.transform.right')"
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+              <rect x="6" y="4" width="8" height="2" />
+              <rect x="8" y="7" width="6" height="2" />
+              <rect x="4" y="10" width="10" height="2" />
+              <line x1="15" y1="2" x2="15" y2="14" stroke="currentColor" stroke-width="1" />
+            </svg>
+          </button>
+        </div>
+      </div>
 
+      <!-- 垂直对齐 -->
+      <div class="property-item">
+        <label>{{ t('properties.transform.alignVertical') }}</label>
+        <div class="alignment-controls">
+          <button
+            @click="$emit('align-vertical', 'top')"
+            class="align-btn"
+            :title="t('properties.transform.top')"
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+              <rect x="4" y="2" width="2" height="8" />
+              <rect x="7" y="2" width="2" height="6" />
+              <rect x="10" y="2" width="2" height="10" />
+              <line x1="2" y1="1" x2="14" y2="1" stroke="currentColor" stroke-width="1" />
+            </svg>
+          </button>
+          <button
+            @click="$emit('align-vertical', 'middle')"
+            class="align-btn"
+            :title="t('properties.transform.middle')"
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+              <rect x="4" y="4" width="2" height="8" />
+              <rect x="7" y="5" width="2" height="6" />
+              <rect x="10" y="3" width="2" height="10" />
+              <line x1="2" y1="8" x2="14" y2="8" stroke="currentColor" stroke-width="1" />
+            </svg>
+          </button>
+          <button
+            @click="$emit('align-vertical', 'bottom')"
+            class="align-btn"
+            :title="t('properties.transform.bottom')"
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+              <rect x="4" y="6" width="2" height="8" />
+              <rect x="7" y="8" width="2" height="6" />
+              <rect x="10" y="4" width="2" height="10" />
+              <line x1="2" y1="15" x2="14" y2="15" stroke="currentColor" stroke-width="1" />
+            </svg>
+          </button>
+        </div>
+      </div>
       <!-- 等比缩放选项 -->
       <div class="property-item">
         <label>{{ t('properties.transform.proportionalScale') }}</label>
@@ -121,65 +205,15 @@
           </div>
         </div>
       </template>
-
-      <!-- 水平对齐 -->
+      <!-- 缩放预设按钮 -->
       <div class="property-item">
-        <label>{{ t('properties.transform.alignHorizontal') }}</label>
-        <div class="alignment-controls">
-          <button @click="$emit('align-horizontal', 'left')" class="align-btn" :title="t('properties.transform.left')">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-              <rect x="2" y="4" width="8" height="2" />
-              <rect x="2" y="7" width="6" height="2" />
-              <rect x="2" y="10" width="10" height="2" />
-              <line x1="1" y1="2" x2="1" y2="14" stroke="currentColor" stroke-width="1" />
-            </svg>
+        <label>{{ t('properties.transform.scalePresets') }}</label>
+        <div class="scale-preset-controls">
+          <button @click="handleFitToCanvas" class="preset-btn">
+            {{ t('properties.transform.fitToCanvas') }}
           </button>
-          <button @click="$emit('align-horizontal', 'center')" class="align-btn" :title="t('properties.transform.center')">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-              <rect x="4" y="4" width="8" height="2" />
-              <rect x="5" y="7" width="6" height="2" />
-              <rect x="3" y="10" width="10" height="2" />
-              <line x1="8" y1="2" x2="8" y2="14" stroke="currentColor" stroke-width="1" />
-            </svg>
-          </button>
-          <button @click="$emit('align-horizontal', 'right')" class="align-btn" :title="t('properties.transform.right')">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-              <rect x="6" y="4" width="8" height="2" />
-              <rect x="8" y="7" width="6" height="2" />
-              <rect x="4" y="10" width="10" height="2" />
-              <line x1="15" y1="2" x2="15" y2="14" stroke="currentColor" stroke-width="1" />
-            </svg>
-          </button>
-        </div>
-      </div>
-
-      <!-- 垂直对齐 -->
-      <div class="property-item">
-        <label>{{ t('properties.transform.alignVertical') }}</label>
-        <div class="alignment-controls">
-          <button @click="$emit('align-vertical', 'top')" class="align-btn" :title="t('properties.transform.top')">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-              <rect x="4" y="2" width="2" height="8" />
-              <rect x="7" y="2" width="2" height="6" />
-              <rect x="10" y="2" width="2" height="10" />
-              <line x1="2" y1="1" x2="14" y2="1" stroke="currentColor" stroke-width="1" />
-            </svg>
-          </button>
-          <button @click="$emit('align-vertical', 'middle')" class="align-btn" :title="t('properties.transform.middle')">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-              <rect x="4" y="4" width="2" height="8" />
-              <rect x="7" y="5" width="2" height="6" />
-              <rect x="10" y="3" width="2" height="10" />
-              <line x1="2" y1="8" x2="14" y2="8" stroke="currentColor" stroke-width="1" />
-            </svg>
-          </button>
-          <button @click="$emit('align-vertical', 'bottom')" class="align-btn" :title="t('properties.transform.bottom')">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-              <rect x="4" y="6" width="2" height="8" />
-              <rect x="7" y="8" width="2" height="6" />
-              <rect x="10" y="4" width="2" height="10" />
-              <line x1="2" y1="15" x2="14" y2="15" stroke="currentColor" stroke-width="1" />
-            </svg>
+          <button @click="handleFillCanvas" class="preset-btn">
+            {{ t('properties.transform.fillCanvas') }}
           </button>
         </div>
       </div>
@@ -254,10 +288,12 @@
 
 <script setup lang="ts">
 import { useAppI18n } from '@/unified/composables/useI18n'
+import { useUnifiedStore } from '@/unified/unifiedStore'
 import NumberInput from '@/components/NumberInput.vue'
 import SliderInput from '@/components/SliderInput.vue'
 
 const { t } = useAppI18n()
+const unifiedStore = useUnifiedStore()
 
 interface Props {
   // 变换属性
@@ -272,6 +308,10 @@ interface Props {
   // 缩放相关
   proportionalScale: boolean
   uniformScale: number
+
+  // 元素原始尺寸（用于缩放预设）
+  elementWidth: number
+  elementHeight: number
 
   // 位置限制
   positionLimits: {
@@ -294,8 +334,54 @@ interface Emits {
   (e: 'align-vertical', alignment: 'top' | 'middle' | 'bottom'): void
 }
 
-defineProps<Props>()
-defineEmits<Emits>()
+const props = defineProps<Props>()
+const emit = defineEmits<Emits>()
+
+// 处理适应画布按钮点击
+const handleFitToCanvas = () => {
+  const { elementWidth, elementHeight } = props
+
+  if (elementWidth <= 0 || elementHeight <= 0) {
+    console.warn('无法计算缩放：元素尺寸无效', { elementWidth, elementHeight })
+    return
+  }
+
+  // 获取画布尺寸
+  const canvasWidth = unifiedStore.videoResolution.width
+  const canvasHeight = unifiedStore.videoResolution.height
+
+  // 计算适应画布的缩放比例（最小比例，确保元素完全显示在画布内）
+  const scale = Math.min(canvasWidth / elementWidth, canvasHeight / elementHeight)
+
+  console.log(
+    `适应画布：元素尺寸 ${elementWidth}x${elementHeight}, 画布尺寸 ${canvasWidth}x${canvasHeight}, 缩放比例 ${scale}`,
+  )
+
+  emit('update-uniform-scale', scale)
+}
+
+// 处理填满画布按钮点击
+const handleFillCanvas = () => {
+  const { elementWidth, elementHeight } = props
+
+  if (elementWidth <= 0 || elementHeight <= 0) {
+    console.warn('无法计算缩放：元素尺寸无效', { elementWidth, elementHeight })
+    return
+  }
+
+  // 获取画布尺寸
+  const canvasWidth = unifiedStore.videoResolution.width
+  const canvasHeight = unifiedStore.videoResolution.height
+
+  // 计算填满画布的缩放比例（最大比例，确保画布被完全覆盖）
+  const scale = Math.max(canvasWidth / elementWidth, canvasHeight / elementHeight)
+
+  console.log(
+    `填满画布：元素尺寸 ${elementWidth}x${elementHeight}, 画布尺寸 ${canvasWidth}x${canvasHeight}, 缩放比例 ${scale}`,
+  )
+
+  emit('update-uniform-scale', scale)
+}
 </script>
 
 <style scoped>
@@ -338,6 +424,12 @@ defineEmits<Emits>()
   flex: 1;
 }
 
+.scale-preset-controls {
+  display: flex;
+  gap: var(--spacing-xs);
+  flex: 1;
+}
+
 .alignment-controls {
   display: flex;
   gap: var(--spacing-xs);
@@ -357,6 +449,30 @@ defineEmits<Emits>()
   flex: 1;
   min-width: 28px;
   height: 24px;
+}
+
+.preset-btn {
+  background: var(--color-bg-active);
+  border: 1px solid var(--color-border-secondary);
+  border-radius: var(--border-radius-medium);
+  color: var(--color-text-secondary);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  transition: all var(--transition-fast);
+  flex: 1;
+  min-height: 24px;
+}
+
+.preset-btn:hover {
+  background: var(--color-border-secondary);
+  color: var(--color-text-primary);
+  border-color: var(--color-border-hover);
+}
+
+.preset-btn:active {
+  background: var(--color-border-hover);
+  transform: translateY(1px);
 }
 
 .align-btn:hover {
