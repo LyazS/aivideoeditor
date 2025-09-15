@@ -1,21 +1,16 @@
 <template>
   <div class="script-test-container">
-    <div class="header">
-      <h1>Script Executor 测试页面</h1>
-      <button class="back-btn" @click="goBack">返回</button>
-    </div>
-    
     <div class="test-section">
       <div class="input-section">
         <label for="scriptInput">测试脚本:</label>
-        <textarea 
+        <textarea
           id="scriptInput"
-          v-model="testScript" 
+          v-model="testScript"
           placeholder="在此输入要测试的脚本代码..."
           rows="10"
           cols="60"
         ></textarea>
-        
+
         <div class="example-buttons">
           <button @click="loadExample1">加载示例1: 添加轨道和项目</button>
           <button @click="loadExample2">加载示例2: 文本操作</button>
@@ -23,16 +18,17 @@
           <button @click="loadExample4">加载示例4: 死循环测试 - while(true)</button>
           <button @click="loadExample5">加载示例5: 死循环测试 - 无限递归</button>
           <button @click="loadExample6">加载示例6: 死循环测试 - 密集计算</button>
+          <button @click="loadExample7">加载示例7: 循环添加项目</button>
         </div>
       </div>
-      
+
       <div class="control-section">
         <button @click="executeScript" :disabled="isExecuting">
           {{ isExecuting ? '执行中...' : '执行脚本' }}
         </button>
         <button @click="clearResults">清除结果</button>
       </div>
-      
+
       <div class="results-section">
         <h3>执行结果:</h3>
         <div v-if="errorMessage" class="error-message">
@@ -41,19 +37,13 @@
         <div v-if="successMessage" class="success-message">
           {{ successMessage }}
         </div>
-        
+
         <div v-if="operations.length > 0">
           <h4>生成的操作列表:</h4>
           <div class="operations-list">
-            <div
-              v-for="(op, index) in operations"
-              :key="index"
-              class="operation-item"
-            >
+            <div v-for="(op, index) in operations" :key="index" class="operation-item">
               <strong>操作 {{ index + 1 }}:</strong> {{ op.type }}
-              <div class="operation-params">
-                参数: {{ JSON.stringify(op.params, null, 2) }}
-              </div>
+              <div class="operation-params">参数: {{ JSON.stringify(op.params, null, 2) }}</div>
             </div>
           </div>
         </div>
@@ -156,7 +146,44 @@ function intensiveCalculation() {
     console.log('计算结果: ' + result);
   }
 }
-intensiveCalculation();`
+intensiveCalculation();`,
+
+  example7: `// 循环遍历数组添加项目
+const items = [
+  { type: "video", duration: 3000, position: 0, text: "视频1" },
+  { type: "audio", duration: 2000, position: 500, text: "音频1" },
+  { type: "text", duration: 1500, position: 1000, text: "标题文本" },
+  { type: "video", duration: 4000, position: 2000, text: "视频2" },
+  { type: "audio", duration: 2500, position: 3000, text: "音频2" }
+];
+
+// 添加轨道
+addTrack("video", 0);
+addTrack("audio", 1);
+addTrack("text", 2);
+
+// 循环添加项目
+items.forEach((item, index) => {
+  const trackIndex = item.type === "video" ? 0 : item.type === "audio" ? 1 : 2;
+  const trackId = \`track_\${trackIndex + 1}\`;
+  
+  const timelineItem = {
+    type: item.type,
+    trackId: trackId,
+    duration: item.duration,
+    position: item.position
+  };
+  
+  // 如果是文本类型，添加文本内容
+  if (item.type === "text") {
+    timelineItem.text = item.text;
+  }
+  
+  console.log(\`添加项目 \${index + 1}: \${item.type} - \${item.text}\`);
+  addTimelineItem(timelineItem);
+});
+
+console.log("所有项目添加完成，共添加 " + items.length + " 个项目");`,
 }
 
 function loadExample1() {
@@ -181,6 +208,10 @@ function loadExample5() {
 
 function loadExample6() {
   testScript.value = exampleScripts.example6
+}
+
+function loadExample7() {
+  testScript.value = exampleScripts.example7
 }
 
 async function executeScript() {
@@ -213,9 +244,6 @@ function clearResults() {
   successMessage.value = ''
 }
 
-function goBack() {
-  router.push('/')
-}
 </script>
 
 <style scoped>
@@ -224,6 +252,7 @@ function goBack() {
   margin: 0 auto;
   padding: 20px;
   font-family: Arial, sans-serif;
+  height: 100%;
 }
 
 .header {
@@ -376,7 +405,8 @@ textarea {
   color: #666;
 }
 
-h3, h4 {
+h3,
+h4 {
   margin-top: 0;
   color: #333;
 }
