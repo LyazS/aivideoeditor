@@ -23,7 +23,6 @@ import type {
 } from '@/unified/timelineitem/TimelineItemData'
 import { TimelineItemQueries } from '@/unified/timelineitem/TimelineItemQueries'
 import { UnifiedMediaItemQueries } from '@/unified/mediaitem'
-import { regenerateThumbnailForUnifiedTimelineItem } from '@/unified/utils/thumbnailGenerator'
 import {
   createSpriteFromUnifiedTimelineItem,
   createSpriteFromUnifiedMediaItem,
@@ -293,8 +292,6 @@ export async function rebuildTimelineItemForCmd(
         // 4. 设置sprite属性
         await setupTimelineItemSprite(newTimelineItem)
 
-        // 5. 重新生成缩略图（异步执行，不阻塞重建过程）
-        await regenerateThumbnailForUnifiedTimelineItem(newTimelineItem, mediaItem)
 
         console.log(`🔄 [${logIdentifier}] 重建ready状态时间轴项目完成:`, {
           id: newTimelineItem.id,

@@ -11,7 +11,6 @@ import {
 } from '@/unified/constants/timelineIcons'
 import type { UnifiedTrackType, UnifiedTrackData } from '@/unified/track/TrackTypes'
 import type { UnifiedTimelineItemData } from '@/unified/timelineitem/TimelineItemData'
-import { regenerateThumbnailForUnifiedTimelineItem } from '@/unified/utils/thumbnailGenerator'
 import { LayoutConstants } from '@/unified/constants/LayoutConstants'
 
 /**
@@ -360,20 +359,11 @@ export function useTimelineContextMenu(
 
   /**
    * 重新生成缩略图
+   * @deprecated 缩略图现在由独立的缓存系统管理，此功能已废弃
    */
   async function regenerateThumbnail() {
     if (contextMenuTarget.value.clipId) {
-      try {
-        const timelineItem = unifiedStore.getTimelineItem(contextMenuTarget.value.clipId)
-        const mediaItem = timelineItem ? unifiedStore.getMediaItem(timelineItem.mediaItemId) : null
-
-        // 只对本地时间轴项目进行缩略图重新生成
-        if (timelineItem && mediaItem) {
-          await regenerateThumbnailForUnifiedTimelineItem(timelineItem, mediaItem)
-        }
-      } catch (error) {
-        console.error('❌ 重新生成缩略图失败:', error)
-      }
+      console.warn('⚠️ 手动重新生成缩略图功能已废弃，缩略图现在由系统自动管理')
       showContextMenu.value = false
     }
   }

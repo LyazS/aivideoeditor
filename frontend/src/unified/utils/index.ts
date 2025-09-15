@@ -112,8 +112,6 @@ export {
   // 统一媒体项目缩略图生成
   generateThumbnailForUnifiedMediaItem,
 
-  // 统一时间轴项目缩略图重新生成
-  regenerateThumbnailForUnifiedTimelineItem,
 } from './thumbnailGenerator'
 
 // ==================== 统一时间轴搜索工具 ====================

@@ -28,7 +28,6 @@ import type {
 import type { UnifiedTimeRange } from '@/unified/types/timeRange'
 
 // ==================== 新架构工具导入 ====================
-import { regenerateThumbnailForUnifiedTimelineItem } from '@/unified/utils/thumbnailGenerator'
 
 import { TimelineItemFactory } from '@/unified/timelineitem'
 

@@ -11,7 +11,6 @@ import { UnifiedMediaItemQueries } from '@/unified/mediaitem'
 import { TimelineItemQueries } from '@/unified/timelineitem/TimelineItemQueries'
 import { useUnifiedStore } from '@/unified/unifiedStore'
 import { createSpriteFromUnifiedMediaItem } from '@/unified/utils/spriteFactory'
-import { regenerateThumbnailForUnifiedTimelineItem } from '@/unified/utils/thumbnailGenerator'
 import {
   globalWebAVAnimationManager,
   updateWebAVAnimation,
@@ -418,32 +417,6 @@ async function transitionTimelineItemToReady(
       }
     }
 
-    // 5. 生成缩略图（仅对视频和图片类型）
-    if (UnifiedMediaItemQueries.isVisualMedia(mediaItem)) {
-      try {
-        console.log(`🖼️ [UnifiedMediaSync] 为时间轴项目生成缩略图: ${timelineItemId}`)
-        const thumbnailUrl = await regenerateThumbnailForUnifiedTimelineItem(
-          timelineItem,
-          mediaItem,
-        )
-
-        if (thumbnailUrl) {
-          timelineItem.runtime.thumbnailUrl = thumbnailUrl
-          console.log(`✅ [UnifiedMediaSync] 缩略图生成成功: ${timelineItemId}`, {
-            thumbnailUrl: thumbnailUrl.substring(0, 50) + '...',
-          })
-        } else {
-          console.log(`⚠️ [UnifiedMediaSync] 缩略图生成返回空结果: ${timelineItemId}`)
-        }
-      } catch (thumbnailError) {
-        console.error(`❌ [UnifiedMediaSync] 生成缩略图失败: ${timelineItemId}`, thumbnailError)
-        // 缩略图生成失败不影响后续操作
-      }
-    } else {
-      console.log(
-        `🎵 [UnifiedMediaSync] ${mediaItem.mediaType}类型不需要生成缩略图: ${timelineItemId}`,
-      )
-    }
 
     // 6. 更新时间轴项目状态
     timelineItem.timelineStatus = 'ready'

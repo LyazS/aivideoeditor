@@ -360,9 +360,6 @@ export interface UnifiedTimelineItemRuntime {
   /** Sprite引用 - 与时间轴项目生命周期一致 */
   sprite?: Raw<UnifiedSprite>
 
-  /** 缩略图URL - 运行时生成的Blob URL */
-  thumbnailUrl?: string
-
   /** 预留：未来可能的运行时字段 */
   // renderCache?: RenderCacheData
   // animationState?: AnimationRuntimeState
