@@ -13,13 +13,15 @@ export class ToggleTrackVisibilityCommand implements SimpleCommand {
   public readonly id: string
   public readonly description: string
   private previousVisibility: boolean // 保存切换前的可见性状态
+  private targetVisibility?: boolean // 外部指定的目标可见性状态
 
   constructor(
     private trackId: string,
     private trackModule: {
       getTrack: (trackId: string) => UnifiedTrackData | undefined
-      toggleTrackVisibility: (trackId: string) => Promise<void>
+      toggleTrackVisibility: (trackId: string, targetVisibleState?: boolean) => Promise<void>
     },
+    targetVisibility?: boolean, // 外部传入的可见性设置（可选）
   ) {
     this.id = generateCommandId()
 
@@ -30,10 +32,14 @@ export class ToggleTrackVisibilityCommand implements SimpleCommand {
     }
 
     this.previousVisibility = track.isVisible
-    this.description = `${track.isVisible ? '隐藏' : '显示'}轨道: ${track.name}`
+    this.targetVisibility = targetVisibility
+    
+    // 确定最终的目标状态：如果有外部指定则使用，否则切换当前状态
+    const finalTargetState = targetVisibility !== undefined ? targetVisibility : !track.isVisible
+    this.description = `${finalTargetState ? '显示' : '隐藏'}轨道: ${track.name}`
 
     console.log(
-      `📋 准备切换轨道可见性: ${track.name}, 当前状态: ${track.isVisible ? '可见' : '隐藏'}`,
+      `📋 准备切换轨道可见性: ${track.name}, 当前状态: ${track.isVisible ? '可见' : '隐藏'}, 目标状态: ${finalTargetState ? '可见' : '隐藏'}`,
     )
   }
 
@@ -49,9 +55,12 @@ export class ToggleTrackVisibilityCommand implements SimpleCommand {
 
       console.log(`🔄 执行切换轨道可见性操作: ${track.name}...`)
 
-      // 调用trackModule的toggleTrackVisibility方法
-      // 这会自动同步该轨道上所有TimelineItem的sprite可见性
-      await this.trackModule.toggleTrackVisibility(this.trackId)
+      // 始终使用确定性的目标状态（即使未外部传入，也在构造函数中确定了切换后的状态）
+      const targetState = this.targetVisibility !== undefined
+        ? this.targetVisibility
+        : !this.previousVisibility
+      
+      await this.trackModule.toggleTrackVisibility(this.trackId, targetState)
 
       const newVisibility = track.isVisible
       console.log(`✅ 已切换轨道可见性: ${track.name}, 新状态: ${newVisibility ? '可见' : '隐藏'}`)
@@ -76,7 +85,8 @@ export class ToggleTrackVisibilityCommand implements SimpleCommand {
 
       // 如果当前状态与原始状态不同，则再次切换
       if (track.isVisible !== this.previousVisibility) {
-        await this.trackModule.toggleTrackVisibility(this.trackId)
+        // 撤销时始终使用原始状态作为目标状态，确保完全恢复
+        await this.trackModule.toggleTrackVisibility(this.trackId, this.previousVisibility)
       }
 
       console.log(

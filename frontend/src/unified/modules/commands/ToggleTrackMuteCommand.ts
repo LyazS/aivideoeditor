@@ -11,15 +11,18 @@ export class ToggleTrackMuteCommand implements SimpleCommand {
   public readonly id: string
   public readonly description: string
   private previousMuteState: boolean // 保存切换前的静音状态
+  private targetMuteState?: boolean // 外部指定的目标静音状态
 
   constructor(
     private trackId: string,
     private trackModule: {
       getTrack: (trackId: string) => UnifiedTrackData | undefined
-      toggleTrackMute: (trackId: string) => Promise<void>
+      toggleTrackMute: (trackId: string, targetMuteState?: boolean) => Promise<void>
     },
+    targetMuteState?: boolean, // 外部传入的静音设置（可选）
   ) {
     this.id = generateCommandId()
+    this.targetMuteState = targetMuteState
 
     // 获取轨道信息
     const track = this.trackModule.getTrack(trackId)
@@ -28,10 +31,14 @@ export class ToggleTrackMuteCommand implements SimpleCommand {
     }
 
     this.previousMuteState = track.isMuted
-    this.description = `${track.isMuted ? '取消静音' : '静音'}轨道: ${track.name}`
+    this.targetMuteState = targetMuteState
+    
+    // 确定最终的目标状态：如果有外部指定则使用，否则切换当前状态
+    const finalTargetState = targetMuteState !== undefined ? targetMuteState : !track.isMuted
+    this.description = `${finalTargetState ? '静音' : '取消静音'}轨道: ${track.name}`
 
     console.log(
-      `📋 准备切换轨道静音状态: ${track.name}, 当前状态: ${track.isMuted ? '静音' : '有声'}`,
+      `📋 准备切换轨道静音状态: ${track.name}, 当前状态: ${track.isMuted ? '静音' : '有声'}, 目标状态: ${finalTargetState ? '静音' : '有声'}`,
     )
   }
 
@@ -47,9 +54,12 @@ export class ToggleTrackMuteCommand implements SimpleCommand {
 
       console.log(`🔄 执行切换轨道静音状态操作: ${track.name}...`)
 
-      // 调用trackModule的toggleTrackMute方法
-      // 这会自动同步该轨道上所有TimelineItem的音频状态
-      await this.trackModule.toggleTrackMute(this.trackId)
+      // 始终使用确定性的目标状态（即使未外部传入，也在构造函数中确定了切换后的状态）
+      const targetState = this.targetMuteState !== undefined
+        ? this.targetMuteState
+        : !this.previousMuteState
+      
+      await this.trackModule.toggleTrackMute(this.trackId, targetState)
 
       const newMuteState = track.isMuted
       console.log(`✅ 已切换轨道静音状态: ${track.name}, 新状态: ${newMuteState ? '静音' : '有声'}`)
@@ -74,7 +84,8 @@ export class ToggleTrackMuteCommand implements SimpleCommand {
 
       // 如果当前状态与原始状态不同，则再次切换
       if (track.isMuted !== this.previousMuteState) {
-        await this.trackModule.toggleTrackMute(this.trackId)
+        // 撤销时始终使用原始状态作为目标状态，确保完全恢复
+        await this.trackModule.toggleTrackMute(this.trackId, this.previousMuteState)
       }
 
       console.log(

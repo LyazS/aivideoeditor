@@ -14,7 +14,7 @@ import { createUnifiedHistoryModule } from '@/unified/modules/UnifiedHistoryModu
 import { createUnifiedAutoSaveModule } from '@/unified/modules/UnifiedAutoSaveModule'
 import { createUnifiedVideoThumbnailModule } from '@/unified/modules/UnifiedVideoThumbnailModule'
 import { createUnifiedSnapModule } from '@/unified/modules/UnifiedSnapModule'
-import { createHistoryOperations } from '@/unified/composables/useHistoryOperations'
+import { useHistoryOperations } from '@/unified/composables/useHistoryOperations'
 import { calculateTotalDurationFrames } from '@/unified/utils/durationUtils'
 import type { MediaType, MediaTypeOrUnknown } from '@/unified'
 import type { UnifiedTimelineItemData } from '@/unified/timelineitem'
@@ -177,7 +177,7 @@ export const useUnifiedStore = defineStore('unified', () => {
   )
 
   // 创建历史记录操作模块
-  const historyOperations = createHistoryOperations(
+  const historyOperations = useHistoryOperations(
     unifiedHistoryModule,
     unifiedTimelineModule,
     unifiedWebavModule,

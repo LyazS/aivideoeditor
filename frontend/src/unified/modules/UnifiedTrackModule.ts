@@ -98,8 +98,9 @@ export function createUnifiedTrackModule() {
   /**
    * 切换轨道可见性
    * @param trackId 轨道ID
+   * @param targetVisibleState 目标可见性状态（可选），如果提供则将轨道设置为指定状态
    */
-  async function toggleTrackVisibility(trackId: string) {
+  async function toggleTrackVisibility(trackId: string, targetVisibleState?: boolean) {
     // 动态导入 store 以避免循环依赖
     const { useUnifiedStore } = await import('@/unified/unifiedStore')
     const store = useUnifiedStore()
@@ -116,8 +117,12 @@ export function createUnifiedTrackModule() {
       return
     }
 
-    // 切换可见性状态
-    track.isVisible = !track.isVisible
+    // 设置可见性状态：如果有外部指定状态则使用，否则切换当前状态
+    if (targetVisibleState !== undefined) {
+      track.isVisible = targetVisibleState
+    } else {
+      track.isVisible = !track.isVisible
+    }
 
     // 同步该轨道上所有TimelineItem的sprite可见性（仅限视觉轨道）
     const trackItems = store.timelineItems.filter((item: any) => item.trackId === trackId)
@@ -135,14 +140,16 @@ export function createUnifiedTrackModule() {
       trackType: track.type,
       isVisible: track.isVisible,
       affectedClips: trackItems.length,
+      targetState: targetVisibleState,
     })
   }
 
   /**
    * 切换轨道静音状态
    * @param trackId 轨道ID
+   * @param targetMuteState 目标静音状态（可选），如果提供则将轨道设置为指定状态
    */
-  async function toggleTrackMute(trackId: string) {
+  async function toggleTrackMute(trackId: string, targetMuteState?: boolean) {
     // 动态导入 store 以避免循环依赖
     const { useUnifiedStore } = await import('@/unified/unifiedStore')
     const store = useUnifiedStore()
@@ -159,8 +166,12 @@ export function createUnifiedTrackModule() {
       return
     }
 
-    // 切换静音状态
-    track.isMuted = !track.isMuted
+    // 设置静音状态：如果有外部指定状态则使用，否则切换当前状态
+    if (targetMuteState !== undefined) {
+      track.isMuted = targetMuteState
+    } else {
+      track.isMuted = !track.isMuted
+    }
 
     // 同步该轨道上所有TimelineItem的sprite静音状态
     const trackItems = store.timelineItems.filter((item: any) => item.trackId === trackId)
@@ -184,6 +195,7 @@ export function createUnifiedTrackModule() {
       trackType: track.type,
       isMuted: track.isMuted,
       affectedClips,
+      targetState: targetMuteState,
     })
   }
 

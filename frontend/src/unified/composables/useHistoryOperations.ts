@@ -129,7 +129,7 @@ interface UnifiedKeyframeCommandExecutor {
  * 历史记录操作相关方法
  * 包括时间轴项目和轨道相关的历史记录操作方法
  */
-export function createHistoryOperations(
+export function useHistoryOperations(
   unifiedHistoryModule: UnifiedHistoryModule,
   unifiedTimelineModule: UnifiedTimelineModule,
   unifiedWebavModule: UnifiedWebavModule,
