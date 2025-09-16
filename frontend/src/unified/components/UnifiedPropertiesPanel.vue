@@ -2,7 +2,7 @@
   <div class="properties-panel">
     <div class="panel-header">
       <h3>{{ t('properties.panelTitle') }}</h3>
-      <span v-if="showPlayheadOutOfRangeHint" class="playhead-hint"> {{ t('properties.playheadStatus.outOfRange') }} </span>
+      <span v-if="playheadStatus.showHint" class="playhead-hint"> {{ t('properties.playheadStatus.outOfRange') }} </span>
     </div>
 
     <div class="panel-content">
@@ -148,15 +148,16 @@ const getItemDisplayName = (item: any) => {
   }
 }
 
-// 播放头位置状态计算属性
-const isPlayheadInSelectedItem = computed(() => {
-  if (!selectedTimelineItem.value) return false
-  return isPlayheadInTimelineItem(selectedTimelineItem.value, currentFrame.value)
-})
-
-// 是否显示播放头不在区间提示
-const showPlayheadOutOfRangeHint = computed(() => {
-  return selectedTimelineItem.value && !isPlayheadInSelectedItem.value
+// 播放头位置状态计算属性 - 合并检查播放头是否在选中项目以及是否需要显示提示
+const playheadStatus = computed(() => {
+  if (!selectedTimelineItem.value) {
+    return { isInItem: false, showHint: false }
+  }
+  const isInItem = isPlayheadInTimelineItem(selectedTimelineItem.value, currentFrame.value)
+  return {
+    isInItem,
+    showHint: !isInItem // 播放头不在项目中时显示提示
+  }
 })
 </script>
 
@@ -671,7 +672,7 @@ const showPlayheadOutOfRangeHint = computed(() => {
 /* 播放头位置提示样式 */
 .playhead-hint {
   font-size: var(--font-size-sm);
-  color: var(--color-text-hint);
+  color: var(--color-accent-error);
   margin-left: var(--spacing-sm);
   font-weight: normal;
 }
