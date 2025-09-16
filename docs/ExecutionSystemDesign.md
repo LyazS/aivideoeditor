@@ -69,128 +69,44 @@ ConfigValidator负责验证操作配置的合法性，确保所有参数符合�
 
 ### 3. BatchCommandBuilder - 批量命令构建器
 
-```typescript
-/**
- * 批量命令构建器 - 将操作配置转换为具体命令
- * 专注于命令构建，不负责执行
- */
-class BatchCommandBuilder {
-  constructor(
-    private historyModule: UnifiedHistoryModule,
-    private timelineModule: UnifiedTimelineModule,
-    private webavModule: UnifiedWebavModule,
-    private mediaModule: UnifiedMediaModule,
-    private configModule: UnifiedConfigModule,
-    private trackModule: UnifiedTrackModule,
-    private selectionModule: UnifiedSelectionModule
-  ) {}
+BatchCommandBuilder采用组合式API设计，将操作配置转换为可执行的命令对象。主要特性：
 
-  buildOperations(operations: OperationConfig[]): {
-    batchCommand: BaseBatchCommand,
-    buildResults: OperationResult[]
-  } {
-    const batchBuilder = this.historyModule.startBatch('用户脚本批量操作')
-    const buildResults: OperationResult[] = []
+- **职责分离**: 专注于命令构建，不负责执行操作
+- **组合式API**: 提供灵活的函数式接口，便于集成和使用
+- **类型安全**: 完整的TypeScript类型定义，支持所有音视频编辑操作
+- **错误处理**: 单个操作失败不影响批量构建过程
+- **模块化设计**: 通过依赖注入集成各功能模块
 
-    for (const op of operations) {
-      try {
-        const command = this.createCommandFromOperation(op)
-        batchBuilder.addCommand(command)
-        buildResults.push({ success: true, operation: op })
-      } catch (error) {
-        buildResults.push({ success: false, operation: op, error: error.message })
-      }
-    }
-
-    return {
-      batchCommand: batchBuilder.build(),
-      buildResults
-    }
-  }
-
-  private createCommandFromOperation(op: OperationConfig): SimpleCommand {
-    switch (op.type) {
-      case 'addTimelineItem':
-        return new AddTimelineItemCommand(
-          op.params,
-          this.getTimelineModuleInterface(),
-          this.getWebavModuleInterface(),
-          this.getMediaModuleInterface(),
-          this.getConfigModuleInterface()
-        )
-      case 'rmTimelineItem':
-        return new RemoveTimelineItemCommand(
-          op.params.timelineItemId,
-          this.getTimelineModuleInterface(),
-          this.getWebavModuleInterface(),
-          this.getMediaModuleInterface(),
-          this.getConfigModuleInterface()
-        )
-      // ... 其他命令创建
-    }
-  }
-}
-```
+构建流程：
+1. 接收验证后的操作配置数组
+2. 逐个创建对应的命令对象
+3. 收集构建结果和错误信息
+4. 生成批量命令供执行系统调用
+5. 返回构建结果和状态信息
 
 ### 4. VideoEditExecutionSystem - 主执行系统
 
-```typescript
-/**
- * 音视频编辑执行系统 - 主协调器
- * 协调脚本执行、配置验证、命令构建和命令执行的全流程
- */
-class VideoEditExecutionSystem {
-  private scriptExecutor = new ScriptExecutor()
-  private configValidator = new ConfigValidator()
-  private commandBuilder: BatchCommandBuilder
+为了与BatchCommandBuilder的组合式API设计保持一致，VideoEditExecutionSystem应采用组合式API而非类设计。这种设计模式能够更好地实现职责分离，提供更灵活的依赖注入和更好的可测试性。
 
-  constructor(modules: ExecutionModules) {
-    this.commandBuilder = new BatchCommandBuilder(
-      modules.historyModule,
-      modules.timelineModule,
-      modules.webavModule,
-      modules.mediaModule,
-      modules.configModule,
-      modules.trackModule,
-      modules.selectionModule
-    )
-  }
+**设计理念：**
+- **职责分离**：将脚本执行、配置验证、命令构建和命令执行四个阶段解耦
+- **函数式架构**：通过组合式函数提供清晰的接口，避免类的复杂状态管理
+- **依赖注入优化**：通过函数参数而非构造函数传递依赖，更加灵活
+- **与现有系统一致**：与useBatchCommandBuilder的组合式API设计保持一致性
 
-  async executeUserScript(script: string): Promise<ExecutionSummary> {
-    // 第一阶段：执行JS代码生成配置
-    const operations = await this.scriptExecutor.executeScript(script)
-    
-    // 第二阶段：验证配置合法性
-    const validationResult = this.configValidator.validateOperations(operations)
-    
-    if (validationResult.errors.length > 0) {
-      return {
-        success: false,
-        executedCount: 0,
-        errorCount: validationResult.errors.length,
-        errors: validationResult.errors
-      }
-    }
+**核心函数设计：**
+- **useVideoEditExecutionSystem()**：主要的组合式函数，接收执行模块作为参数
+- **executeUserScript()**：核心执行函数，协调四阶段执行流程
+- **executeOperations()**：批量操作执行函数，处理验证后的操作配置
+- **handleExecutionResult()**：结果处理函数，统一错误处理和状态返回
 
-    // 第三阶段：构建批量命令（由BatchCommandBuilder负责）
-    const { batchCommand, buildResults } = this.commandBuilder.buildOperations(
-      validationResult.validOperations
-    )
+**执行流程优势：**
+1. **更清晰的状态管理**：避免类内部复杂的状态维护
+2. **更好的模块化解耦**：每个阶段都可以独立测试和替换
+3. **更灵活的依赖组合**：可以根据需要组合不同的执行策略
+4. **更友好的Vue集成**：符合Vue 3组合式API的最佳实践
 
-    // 第四阶段：执行批量命令（由主执行系统控制）
-    if (batchCommand.getCommandCount() > 0) {
-      await this.historyModule.executeBatchCommand(batchCommand)
-    }
-
-    return {
-      success: buildResults.every(r => r.success),
-      executedCount: buildResults.length,
-      errorCount: buildResults.filter(r => !r.success).length,
-      results: buildResults
-    }
-  }
-}
-```
+这种设计模式能够充分发挥组合式API的优势，同时保持了原有四阶段执行流程的完整性和可靠性。
 
 ## 类型定义
 
@@ -323,8 +239,8 @@ autoArrangeTrack('track-1')
 
 ### 系统调用示例
 ```typescript
-// 创建执行系统实例
-const executionSystem = new VideoEditExecutionSystem({
+// 使用组合式API创建执行系统
+const { executeUserScript } = useVideoEditExecutionSystem({
   historyModule: unifiedHistoryModule,
   timelineModule: unifiedTimelineModule,
   webavModule: unifiedWebavModule,
@@ -335,7 +251,7 @@ const executionSystem = new VideoEditExecutionSystem({
 })
 
 // 执行用户脚本
-const result = await executionSystem.executeUserScript(userScript)
+const result = await executeUserScript(userScript)
 
 // 处理执行结果
 if (result.success) {
@@ -481,7 +397,7 @@ updateKeyframeProperty('video-1', '00:00:02.00', 'opacity', 0.8)
 `
 
 // 执行用户脚本（支持自定义超时时间，默认5秒）
-const result = await executionSystem.executeUserScript(userScript)
+const result = await executeUserScript(userScript)
 
 // 处理执行结果
 if (result.success) {

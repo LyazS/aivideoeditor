@@ -18,3 +18,7 @@ export type {
   OperationResult,
   BuildResult,
 } from './useBatchCommandBuilder'
+
+// 视频编辑执行系统 - 主执行系统（组合式API）
+export { useVideoEditExecutionSystem } from './useVideoEditExecutionSystem'
+// 类型定义已经在文件内部导出，这里不需要重复导出
