@@ -12,6 +12,15 @@ import type { UnifiedTimeRange } from '@/unified/types/timeRange'
 import type { UnifiedTrackType, UnifiedTrackData } from '@/unified/track/TrackTypes'
 import type { UnifiedMediaItemData } from '@/unified/mediaitem/types'
 import type { VideoResolution } from '@/unified/types'
+import type {
+  UnifiedHistoryModule,
+  UnifiedTimelineModule,
+  UnifiedWebavModule,
+  UnifiedMediaModule,
+  UnifiedConfigModule,
+  UnifiedTrackModule,
+  UnifiedSelectionModule,
+} from '@/unified/modules'
 import {
   AddTimelineItemCommand,
   RemoveTimelineItemCommand,
@@ -42,58 +51,6 @@ import {
   type PlaybackControls,
 } from '@/unified/modules/commands/keyframeCommands'
 import { updateWebAVAnimation } from '@/unified/utils/webavAnimationManager'
-
-// 模块接口类型定义
-interface UnifiedHistoryModule {
-  executeCommand: (command: SimpleCommand) => Promise<void>
-}
-
-interface UnifiedTimelineModule {
-  timelineItems: Ref<UnifiedTimelineItemData<MediaType>[]>
-  addTimelineItem: (item: UnifiedTimelineItemData<MediaType>) => Promise<void>
-  removeTimelineItem: (timelineItemId: string) => void
-  getTimelineItem: (timelineItemId: string) => UnifiedTimelineItemData<MediaType> | undefined
-  setupTimelineItemSprite: (item: UnifiedTimelineItemData<MediaType>) => Promise<void>
-  updateTimelineItemPosition: (
-    timelineItemId: string,
-    newPositionFrames: number,
-    newTrackId?: string,
-  ) => void
-  updateTimelineItemTransform: (timelineItemId: string, transform: TransformProperties) => void
-  updateTimelineItemPlaybackRate: (timelineItemId: string, newRate: number) => void
-}
-
-interface UnifiedWebavModule {
-  addSprite: (sprite: VisibleSprite) => Promise<boolean>
-  removeSprite: (sprite: VisibleSprite) => boolean
-}
-
-interface UnifiedMediaModule {
-  getMediaItem: (id: string) => UnifiedMediaItemData | undefined
-}
-
-interface UnifiedConfigModule {
-  videoResolution: Ref<VideoResolution>
-}
-
-interface UnifiedTrackModule {
-  tracks: Ref<UnifiedTrackData[]>
-  addTrack: (trackData: UnifiedTrackData, position?: number) => UnifiedTrackData
-  removeTrack: (trackId: string) => Promise<void>
-  getTrack: (trackId: string) => UnifiedTrackData | undefined
-  renameTrack: (trackId: string, newName: string) => void
-  toggleTrackVisibility: (trackId: string) => Promise<void>
-  toggleTrackMute: (trackId: string) => Promise<void>
-}
-
-interface UnifiedSelectionModule {
-  selectedTimelineItemIds: Ref<Set<string>>
-  selectTimelineItems: (
-    itemIds: string[],
-    mode?: 'replace' | 'toggle',
-    withHistory?: boolean,
-  ) => void
-}
 
 // 变换属性类型定义
 interface TransformProperties {
@@ -240,22 +197,10 @@ export function useHistoryOperations(
   async function addTimelineItemWithHistory(timelineItem: UnifiedTimelineItemData<MediaType>) {
     const command = new AddTimelineItemCommand(
       timelineItem,
-      {
-        addTimelineItem: unifiedTimelineModule.addTimelineItem,
-        removeTimelineItem: unifiedTimelineModule.removeTimelineItem,
-        getTimelineItem: unifiedTimelineModule.getTimelineItem,
-        setupTimelineItemSprite: unifiedTimelineModule.setupTimelineItemSprite,
-      },
-      {
-        addSprite: unifiedWebavModule.addSprite,
-        removeSprite: unifiedWebavModule.removeSprite,
-      },
-      {
-        getMediaItem: unifiedMediaModule.getMediaItem,
-      },
-      {
-        videoResolution: unifiedConfigModule.videoResolution,
-      },
+      unifiedTimelineModule,
+      unifiedWebavModule,
+      unifiedMediaModule,
+      unifiedConfigModule,
     )
     await unifiedHistoryModule.executeCommand(command)
   }
@@ -267,22 +212,10 @@ export function useHistoryOperations(
   async function removeTimelineItemWithHistory(timelineItemId: string) {
     const command = new RemoveTimelineItemCommand(
       timelineItemId,
-      {
-        addTimelineItem: unifiedTimelineModule.addTimelineItem,
-        removeTimelineItem: unifiedTimelineModule.removeTimelineItem,
-        getTimelineItem: unifiedTimelineModule.getTimelineItem,
-        setupTimelineItemSprite: unifiedTimelineModule.setupTimelineItemSprite,
-      },
-      {
-        addSprite: unifiedWebavModule.addSprite,
-        removeSprite: unifiedWebavModule.removeSprite,
-      },
-      {
-        getMediaItem: unifiedMediaModule.getMediaItem,
-      },
-      {
-        videoResolution: unifiedConfigModule.videoResolution,
-      },
+      unifiedTimelineModule,
+      unifiedWebavModule,
+      unifiedMediaModule,
+      unifiedConfigModule,
     )
     await unifiedHistoryModule.executeCommand(command)
   }
@@ -325,13 +258,8 @@ export function useHistoryOperations(
       newPositionFrames,
       oldTrackId,
       finalNewTrackId,
-      {
-        updateTimelineItemPosition: unifiedTimelineModule.updateTimelineItemPosition,
-        getTimelineItem: unifiedTimelineModule.getTimelineItem,
-      },
-      {
-        getMediaItem: unifiedMediaModule.getMediaItem,
-      },
+      unifiedTimelineModule,
+      unifiedMediaModule,
     )
     await unifiedHistoryModule.executeCommand(command)
   }
@@ -435,14 +363,8 @@ export function useHistoryOperations(
       timelineItemId,
       oldTransform,
       newTransform,
-      {
-        updateTimelineItemTransform: unifiedTimelineModule.updateTimelineItemTransform,
-        getTimelineItem: unifiedTimelineModule.getTimelineItem,
-        updateTimelineItemPlaybackRate: unifiedTimelineModule.updateTimelineItemPlaybackRate,
-      },
-      {
-        getMediaItem: unifiedMediaModule.getMediaItem,
-      },
+      unifiedTimelineModule,
+      unifiedMediaModule,
     )
     await unifiedHistoryModule.executeCommand(command)
   }
@@ -467,19 +389,9 @@ export function useHistoryOperations(
       timelineItemId,
       timelineItem,
       splitTimeFrames,
-      {
-        addTimelineItem: unifiedTimelineModule.addTimelineItem,
-        removeTimelineItem: unifiedTimelineModule.removeTimelineItem,
-        getTimelineItem: unifiedTimelineModule.getTimelineItem,
-        setupTimelineItemSprite: unifiedTimelineModule.setupTimelineItemSprite,
-      },
-      {
-        addSprite: unifiedWebavModule.addSprite,
-        removeSprite: unifiedWebavModule.removeSprite,
-      },
-      {
-        getMediaItem: unifiedMediaModule.getMediaItem,
-      },
+      unifiedTimelineModule,
+      unifiedWebavModule,
+      unifiedMediaModule,
     )
     await unifiedHistoryModule.executeCommand(command)
   }
@@ -517,22 +429,10 @@ export function useHistoryOperations(
     // 使用 AddTimelineItemCommand 添加复制后的项目
     const command = new AddTimelineItemCommand(
       duplicatedItem,
-      {
-        addTimelineItem: unifiedTimelineModule.addTimelineItem,
-        removeTimelineItem: unifiedTimelineModule.removeTimelineItem,
-        getTimelineItem: unifiedTimelineModule.getTimelineItem,
-        setupTimelineItemSprite: unifiedTimelineModule.setupTimelineItemSprite,
-      },
-      {
-        addSprite: unifiedWebavModule.addSprite,
-        removeSprite: unifiedWebavModule.removeSprite,
-      },
-      {
-        getMediaItem: unifiedMediaModule.getMediaItem,
-      },
-      {
-        videoResolution: unifiedConfigModule.videoResolution,
-      },
+      unifiedTimelineModule,
+      unifiedWebavModule,
+      unifiedMediaModule,
+      unifiedConfigModule,
     )
     await unifiedHistoryModule.executeCommand(command)
   }
@@ -574,12 +474,8 @@ export function useHistoryOperations(
         timelineItemId,
         currentTimeRange,
         newTimeRange,
-        {
-          getTimelineItem: unifiedTimelineModule.getTimelineItem,
-        },
-        {
-          getMediaItem: unifiedMediaModule.getMediaItem,
-        },
+        unifiedTimelineModule,
+        unifiedMediaModule,
       )
 
       // 执行命令
@@ -598,11 +494,7 @@ export function useHistoryOperations(
    * @param position 插入位置（可选）
    */
   async function addTrackWithHistory(type: UnifiedTrackType = 'video', position?: number) {
-    const command = new AddTrackCommand(type, position, {
-      addTrack: unifiedTrackModule.addTrack,
-      removeTrack: unifiedTrackModule.removeTrack,
-      getTrack: unifiedTrackModule.getTrack,
-    })
+    const command = new AddTrackCommand(type, position, unifiedTrackModule)
     await unifiedHistoryModule.executeCommand(command)
   }
 
@@ -620,22 +512,9 @@ export function useHistoryOperations(
 
     const command = new RemoveTrackCommand(
       trackId,
-      {
-        addTrack: unifiedTrackModule.addTrack,
-        removeTrack: unifiedTrackModule.removeTrack,
-        getTrack: unifiedTrackModule.getTrack,
-        tracks: unifiedTrackModule.tracks,
-      },
-      {
-        addTimelineItem: unifiedTimelineModule.addTimelineItem,
-        removeTimelineItem: unifiedTimelineModule.removeTimelineItem,
-        getTimelineItem: unifiedTimelineModule.getTimelineItem,
-        setupTimelineItemSprite: unifiedTimelineModule.setupTimelineItemSprite,
-        timelineItems: unifiedTimelineModule.timelineItems,
-      },
-      {
-        getMediaItem: unifiedMediaModule.getMediaItem,
-      },
+      unifiedTrackModule,
+      unifiedTimelineModule,
+      unifiedMediaModule,
     )
     await unifiedHistoryModule.executeCommand(command)
   }
@@ -653,10 +532,7 @@ export function useHistoryOperations(
       return
     }
 
-    const command = new RenameTrackCommand(trackId, newName, {
-      renameTrack: unifiedTrackModule.renameTrack,
-      getTrack: unifiedTrackModule.getTrack,
-    })
+    const command = new RenameTrackCommand(trackId, newName, unifiedTrackModule)
     await unifiedHistoryModule.executeCommand(command)
   }
 
@@ -669,16 +545,9 @@ export function useHistoryOperations(
     const command = new BatchAutoArrangeTrackCommand(
       trackId,
       unifiedTimelineModule.timelineItems.value.filter((item) => item.trackId === trackId),
-      {
-        getTimelineItem: unifiedTimelineModule.getTimelineItem,
-        updateTimelineItemPosition: unifiedTimelineModule.updateTimelineItemPosition,
-      },
-      {
-        getMediaItem: unifiedMediaModule.getMediaItem,
-      },
-      {
-        getTrack: unifiedTrackModule.getTrack,
-      },
+      unifiedTimelineModule,
+      unifiedMediaModule,
+      unifiedTrackModule,
     )
     await unifiedHistoryModule.executeCommand(command)
   }
@@ -695,10 +564,7 @@ export function useHistoryOperations(
       return
     }
 
-    const command = new ToggleTrackVisibilityCommand(trackId, {
-      getTrack: unifiedTrackModule.getTrack,
-      toggleTrackVisibility: (id: string) => unifiedTrackModule.toggleTrackVisibility(id),
-    })
+    const command = new ToggleTrackVisibilityCommand(trackId, unifiedTrackModule)
     await unifiedHistoryModule.executeCommand(command)
   }
 
@@ -714,10 +580,7 @@ export function useHistoryOperations(
       return
     }
 
-    const command = new ToggleTrackMuteCommand(trackId, {
-      getTrack: unifiedTrackModule.getTrack,
-      toggleTrackMute: (id: string) => unifiedTrackModule.toggleTrackMute(id),
-    })
+    const command = new ToggleTrackMuteCommand(trackId, unifiedTrackModule)
     await unifiedHistoryModule.executeCommand(command)
   }
 
@@ -764,13 +627,8 @@ export function useHistoryOperations(
               | undefined,
           setupBidirectionalSync: unifiedTimelineModule.setupTimelineItemSprite,
         },
-        {
-          addSprite: unifiedWebavModule.addSprite,
-          removeSprite: unifiedWebavModule.removeSprite,
-        },
-        {
-          videoResolution: unifiedConfigModule.videoResolution.value,
-        },
+        unifiedWebavModule,
+        unifiedConfigModule,
       )
 
       // 执行命令（带历史记录）
@@ -838,13 +696,8 @@ export function useHistoryOperations(
               | undefined,
           setupBidirectionalSync: unifiedTimelineModule.setupTimelineItemSprite,
         },
-        {
-          addSprite: unifiedWebavModule.addSprite,
-          removeSprite: unifiedWebavModule.removeSprite,
-        },
-        {
-          videoResolution: unifiedConfigModule.videoResolution.value,
-        },
+        unifiedWebavModule,
+        unifiedConfigModule,
       )
 
       // 执行命令（带历史记录）
@@ -954,9 +807,7 @@ export function useHistoryOperations(
       const command = new CreateKeyframeCommand(
         timelineItemId,
         frame,
-        {
-          getTimelineItem: unifiedTimelineModule.getTimelineItem,
-        },
+        unifiedTimelineModule,
         {
           updateWebAVAnimation: updateWebAVAnimation,
         },
@@ -991,9 +842,7 @@ export function useHistoryOperations(
       const command = new DeleteKeyframeCommand(
         timelineItemId,
         frame,
-        {
-          getTimelineItem: unifiedTimelineModule.getTimelineItem,
-        },
+        unifiedTimelineModule,
         {
           updateWebAVAnimation: updateWebAVAnimation,
         },
@@ -1041,9 +890,7 @@ export function useHistoryOperations(
         frame,
         property,
         value,
-        {
-          getTimelineItem: unifiedTimelineModule.getTimelineItem,
-        },
+        unifiedTimelineModule,
         {
           updateWebAVAnimation: updateWebAVAnimation,
         },
@@ -1075,9 +922,7 @@ export function useHistoryOperations(
       // 创建清除所有关键帧命令
       const command = new ClearAllKeyframesCommand(
         timelineItemId,
-        {
-          getTimelineItem: unifiedTimelineModule.getTimelineItem,
-        },
+        unifiedTimelineModule,
         {
           updateWebAVAnimation: updateWebAVAnimation,
         },
@@ -1111,9 +956,7 @@ export function useHistoryOperations(
       const command = new ToggleKeyframeCommand(
         timelineItemId,
         frame,
-        {
-          getTimelineItem: unifiedTimelineModule.getTimelineItem,
-        },
+        unifiedTimelineModule,
         {
           updateWebAVAnimation: updateWebAVAnimation,
         },

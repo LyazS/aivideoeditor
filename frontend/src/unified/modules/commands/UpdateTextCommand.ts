@@ -39,7 +39,7 @@ export class UpdateTextCommand implements SimpleCommand {
       removeSprite: (sprite: VisibleSprite) => boolean
     },
     private configModule: {
-      videoResolution: VideoResolution
+      videoResolution: Ref<VideoResolution>
     },
   ) {
     this.id = generateCommandId()
@@ -157,8 +157,8 @@ export class UpdateTextCommand implements SimpleCommand {
       item.config.y,
       newWidth,
       newHeight,
-      this.configModule.videoResolution.width,
-      this.configModule.videoResolution.height,
+      this.configModule.videoResolution.value.width,
+      this.configModule.videoResolution.value.height,
     )
 
     // 设置新sprite的位置和尺寸

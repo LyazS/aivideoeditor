@@ -495,3 +495,4 @@ export function createUnifiedHistoryModule(notificationManager: NotificationMana
     executeBatchCommand,
   }
 }
+export type UnifiedHistoryModule = ReturnType<typeof createUnifiedHistoryModule>

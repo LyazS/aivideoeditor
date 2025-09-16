@@ -30,6 +30,7 @@ export {
   BaseBatchCommand,
   BatchBuilder,
   GenericBatchCommand,
+  type UnifiedHistoryModule,
 } from './UnifiedHistoryModule'
 
 // ==================== 统一通知模块 ====================

@@ -25,9 +25,9 @@
     ↓
 配置验证器 (ConfigValidator)
     ↓
-批量命令构建器 (BatchCommandExecutor)
+批量命令构建器 (BatchCommandBuilder) → 构建批量命令
     ↓
-BaseBatchCommand执行
+VideoEditExecutionSystem → 执行批量命令
     ↓
 结果返回 & 状态更新
 ```
@@ -67,14 +67,14 @@ ConfigValidator负责验证操作配置的合法性，确保所有参数符合�
 3. 收集验证错误和有效操作
 4. 返回验证结果供后续处理
 
-### 3. BatchCommandExecutor - 批量命令执行器
+### 3. BatchCommandBuilder - 批量命令构建器
 
 ```typescript
 /**
- * 批量命令执行器 - 将操作配置转换为具体命令
- * 利用BaseBatchCommand进行批量执行
+ * 批量命令构建器 - 将操作配置转换为具体命令
+ * 专注于命令构建，不负责执行
  */
-class BatchCommandExecutor {
+class BatchCommandBuilder {
   constructor(
     private historyModule: UnifiedHistoryModule,
     private timelineModule: UnifiedTimelineModule,
@@ -85,26 +85,27 @@ class BatchCommandExecutor {
     private selectionModule: UnifiedSelectionModule
   ) {}
 
-  async executeOperations(operations: OperationConfig[]): Promise<ExecutionResult> {
+  buildOperations(operations: OperationConfig[]): {
+    batchCommand: BaseBatchCommand,
+    buildResults: OperationResult[]
+  } {
     const batchBuilder = this.historyModule.startBatch('用户脚本批量操作')
-    const results: OperationResult[] = []
+    const buildResults: OperationResult[] = []
 
     for (const op of operations) {
       try {
         const command = this.createCommandFromOperation(op)
         batchBuilder.addCommand(command)
-        results.push({ success: true, operation: op })
+        buildResults.push({ success: true, operation: op })
       } catch (error) {
-        results.push({ success: false, operation: op, error: error.message })
+        buildResults.push({ success: false, operation: op, error: error.message })
       }
     }
 
-    if (batchBuilder.getCommandCount() > 0) {
-      const batchCommand = batchBuilder.build()
-      await this.historyModule.executeBatchCommand(batchCommand)
+    return {
+      batchCommand: batchBuilder.build(),
+      buildResults
     }
-
-    return { results }
   }
 
   private createCommandFromOperation(op: OperationConfig): SimpleCommand {
@@ -136,15 +137,15 @@ class BatchCommandExecutor {
 ```typescript
 /**
  * 音视频编辑执行系统 - 主协调器
- * 协调脚本执行、配置验证和命令执行的全流程
+ * 协调脚本执行、配置验证、命令构建和命令执行的全流程
  */
 class VideoEditExecutionSystem {
   private scriptExecutor = new ScriptExecutor()
   private configValidator = new ConfigValidator()
-  private commandExecutor: BatchCommandExecutor
+  private commandBuilder: BatchCommandBuilder
 
   constructor(modules: ExecutionModules) {
-    this.commandExecutor = new BatchCommandExecutor(
+    this.commandBuilder = new BatchCommandBuilder(
       modules.historyModule,
       modules.timelineModule,
       modules.webavModule,
@@ -171,16 +172,21 @@ class VideoEditExecutionSystem {
       }
     }
 
-    // 第三阶段：执行批量命令
-    const executionResult = await this.commandExecutor.executeOperations(
+    // 第三阶段：构建批量命令（由BatchCommandBuilder负责）
+    const { batchCommand, buildResults } = this.commandBuilder.buildOperations(
       validationResult.validOperations
     )
 
+    // 第四阶段：执行批量命令（由主执行系统控制）
+    if (batchCommand.getCommandCount() > 0) {
+      await this.historyModule.executeBatchCommand(batchCommand)
+    }
+
     return {
-      success: executionResult.results.every(r => r.success),
-      executedCount: executionResult.results.length,
-      errorCount: executionResult.results.filter(r => !r.success).length,
-      results: executionResult.results
+      success: buildResults.every(r => r.success),
+      executedCount: buildResults.length,
+      errorCount: buildResults.filter(r => !r.success).length,
+      results: buildResults
     }
   }
 }
@@ -195,9 +201,10 @@ interface OperationConfig {
   params: any
 }
 
-// 执行结果接口
-interface ExecutionResult {
-  results: OperationResult[]
+// 构建结果接口
+interface BuildResult {
+  batchCommand: BaseBatchCommand
+  buildResults: OperationResult[]
 }
 
 interface OperationResult {
@@ -387,10 +394,11 @@ if (result.success) {
 
 ## 性能考虑
 
-1. **批量执行优化**: 利用BaseBatchCommand的批量执行能力
-2. **内存管理**: 及时清理临时配置和命令对象
-3. **并发控制**: 避免同时执行多个用户脚本
-4. **资源限制**: 监控CPU和内存使用情况
+1. **职责分离**: BatchCommandBuilder专注于命令构建，VideoEditExecutionSystem控制执行
+2. **批量执行优化**: 利用BaseBatchCommand的批量执行能力
+3. **内存管理**: 及时清理临时配置和命令对象
+4. **并发控制**: 避免同时执行多个用户脚本
+5. **资源限制**: 监控CPU和内存使用情况
 
 ## 完整使用示例
 
@@ -522,4 +530,4 @@ const operations = await scriptExecutor.executeScript(userScript, 10000); // 10�
 
 ## 总结
 
-这个执行系统设计充分利用了现有的音视频编辑基础设施，提供了安全、高效的用户脚本执行能力。ScriptExecutor采用简化的一次性Web Worker设计，自动处理资源清理和错误恢复。通过三阶段的执行流程（脚本执行→配置验证→批量执行），确保了系统的稳定性和可靠性，同时保持了良好的扩展性和维护性。
+这个执行系统设计充分利用了现有的音视频编辑基础设施，提供了安全、高效的用户脚本执行能力。ScriptExecutor采用简化的一次性Web Worker设计，自动处理资源清理和错误恢复。通过四阶段的执行流程（脚本执行→配置验证→命令构建→批量执行），并采用职责分离原则（BatchCommandBuilder专注于构建，VideoEditExecutionSystem控制执行），确保了系统的稳定性和可靠性，同时保持了良好的扩展性和维护性。

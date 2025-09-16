@@ -54,12 +54,18 @@ interface TextStyleConfig {
 function addTimelineItem(timelineItem: {
   mediaItemId: string; // 媒体项目ID
   trackId: string; // 轨道ID
-  timeRange: {
-    /** 时间轴开始时间（时间码） - 在整个项目时间轴上的开始位置 */
-    start: string;
-    /** 时间轴结束时间（时间码） - 在整个项目时间轴上的结束位置 */
-    end: string;
-  };
+  position: string; // 时间轴位置（时间码）
+});
+
+/**
+ * 添加文本时间轴项目
+ * @param timelineItem 要添加的时间轴项目数据
+ */
+function addTextTimelineItem(timelineItem: {
+  content: string; // 文本内容
+  trackId: string; // 轨道ID
+  startPostion: string; // 时间轴开始时间（时间码）
+  endPostion: string; // 时间轴结束时间（时间码）
 });
 
 /**

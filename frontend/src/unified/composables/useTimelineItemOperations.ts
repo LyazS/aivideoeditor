@@ -121,8 +121,6 @@ export function useTimelineItemOperations() {
         animation: undefined, // 新创建的项目默认没有动画
         timelineStatus: timelineStatus, // 根据素材状态设置时间轴项目状态
         runtime: {}, // 添加必需的 runtime 字段
-        // 如果统一架构支持，添加媒体名称
-        ...(storeMediaItem.name && { mediaName: storeMediaItem.name }),
       }
 
       console.log('🔄 [UnifiedTimeline] 时间轴项目数据:', {
