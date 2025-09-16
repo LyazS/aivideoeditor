@@ -16,6 +16,7 @@ import { createUnifiedVideoThumbnailModule } from '@/unified/modules/UnifiedVide
 import { createUnifiedSnapModule } from '@/unified/modules/UnifiedSnapModule'
 import { useHistoryOperations } from '@/unified/composables/useHistoryOperations'
 import { calculateTotalDurationFrames } from '@/unified/utils/durationUtils'
+import { useVideoEditExecutionSystem } from '@/agent/useVideoEditExecutionSystem'
 import type { MediaType, MediaTypeOrUnknown } from '@/unified'
 import type { UnifiedTimelineItemData } from '@/unified/timelineitem'
 import { frameToPixel, pixelToFrame } from '@/unified/utils/coordinateUtils'
@@ -186,6 +187,17 @@ export const useUnifiedStore = defineStore('unified', () => {
     unifiedTrackModule,
     unifiedSelectionModule,
   )
+
+  // 创建视频编辑执行系统
+  const { executeUserScript } = useVideoEditExecutionSystem({
+    historyModule: unifiedHistoryModule,
+    timelineModule: unifiedTimelineModule,
+    webavModule: unifiedWebavModule,
+    mediaModule: unifiedMediaModule,
+    configModule: unifiedConfigModule,
+    trackModule: unifiedTrackModule,
+    selectionModule: unifiedSelectionModule,
+  })
 
   /**
    * 媒体项目统计信息
@@ -759,5 +771,8 @@ export const useUnifiedStore = defineStore('unified', () => {
     // 拖拽集成方法
     startSnapDrag: unifiedSnapModule.startDrag,
     endSnapDrag: unifiedSnapModule.endDrag,
+
+    // ==================== 执行系统集成 ====================
+    executeUserScript,
   }
 })

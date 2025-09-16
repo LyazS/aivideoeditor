@@ -18,13 +18,13 @@
         ref="textInput"
         v-model="message"
         class="message-input"
-        placeholder="请输入消息..."
+        placeholder="请输入JavaScript代码，例如：addTrack('video')"
         @keydown.enter.prevent="handleEnterKey"
       ></textarea>
     </div>
     <div class="chat-footer">
-      <button class="send-btn" @click="sendMessage" :disabled="!message.trim()">
-        发送
+      <button class="send-btn" @click="executeCode" :disabled="!message.trim() || isExecuting">
+        {{ isExecuting ? '执行中...' : '执行代码' }}
       </button>
     </div>
   </div>
@@ -32,6 +32,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, nextTick } from 'vue'
+import { useUnifiedStore } from '@/unified/unifiedStore'
 
 const props = defineProps<{
   show: boolean
@@ -46,6 +47,12 @@ const emit = defineEmits<{
 
 const message = ref('')
 const textInput = ref<HTMLTextAreaElement>()
+
+// 添加执行状态
+const isExecuting = ref(false)
+
+// 获取统一存储实例
+const unifiedStore = useUnifiedStore()
 
 const popupStyle = computed(() => {
   // 计算弹出窗口位置，避免超出屏幕边界
@@ -92,20 +99,38 @@ const closeChat = () => {
   emit('close')
 }
 
-const sendMessage = () => {
-  const trimmedMessage = message.value.trim()
-  if (trimmedMessage) {
-    emit('send', trimmedMessage)
-    message.value = ''
-    closeChat()
+async function executeCode() {
+  const trimmedCode = message.value.trim()
+  if (!trimmedCode || isExecuting.value) return
+
+  isExecuting.value = true
+  try {
+    const result = await unifiedStore.executeUserScript(trimmedCode, 5000, true)
+    
+    // 简单反馈显示在输入框中
+    if (result.success) {
+      message.value = `✅ 成功执行 ${result.executedCount} 个操作`
+    } else {
+      message.value = `❌ 失败: ${result.errorCount} 个错误`
+    }
+    
+    // 2秒后清空，方便重新输入
+    setTimeout(() => {
+      if (!isExecuting.value) message.value = ''
+    }, 2000)
+  } catch (error) {
+    message.value = `❌ 执行异常: ${error instanceof Error ? error.message : String(error)}`
+  } finally {
+    isExecuting.value = false
   }
 }
 
 const handleEnterKey = (event: KeyboardEvent) => {
-  if (event.key === 'Enter' && !event.shiftKey) {
+  if (event.ctrlKey && event.key === 'Enter') {
     event.preventDefault()
-    sendMessage()
+    executeCode()
   }
+  // Enter保持换行功能（原有逻辑）
 }
 </script>
 
