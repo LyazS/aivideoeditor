@@ -1,27 +1,16 @@
-/**
- * 视频编辑执行系统 - 主执行系统
- *
- * 采用组合式API设计，协调四阶段执行流程：
- * 1. 脚本执行 → 2. 配置验证 → 3. 命令构建 → 4. 批量执行
- *
- * 与useBatchCommandBuilder保持一致的设计理念，提供函数式架构
- */
-
-import type { Ref } from 'vue'
 import { ScriptExecutor } from './ScriptExecutor'
-import { ConfigValidator } from './ConfigValidator'
-import {
-  useBatchCommandBuilder,
-  type OperationConfig,
-  type BuildResult,
-  type OperationResult as BuildOperationResult,
-} from './useBatchCommandBuilder'
+import { useBatchCommandBuilder } from './useBatchCommandBuilder'
 
-// 重新定义OperationConfig以避免类型冲突
-type ScriptOperationConfig = {
-  type: string
-  params: any
-}
+// 导入共享类型定义
+import type {
+  OperationConfig,
+  BuildResult,
+  OperationResult as BuildOperationResult,
+  ExecutionResult,
+  ExecutionOperationResult,
+  ExecutionError,
+  ExecutionSystemConfig
+} from './types'
 import type {
   UnifiedHistoryModule,
   UnifiedTimelineModule,
@@ -32,156 +21,92 @@ import type {
   UnifiedSelectionModule,
 } from '@/unified/modules'
 
-// 执行结果接口
-export interface ExecutionResult {
-  success: boolean
-  executedCount: number
-  errorCount: number
-  results: ExecutionOperationResult[]
-  errors?: ExecutionError[]
-}
-
-export interface ExecutionOperationResult {
-  success: boolean
-  operation: OperationConfig
-  error?: string
-}
-
-export interface ExecutionError {
-  operation?: OperationConfig
-  error: string
-  type: 'script' | 'validation' | 'build' | 'execution'
-}
-
-// 执行系统配置接口
-export interface ExecutionSystemConfig {
-  historyModule: UnifiedHistoryModule
-  timelineModule: UnifiedTimelineModule
-  webavModule: UnifiedWebavModule
-  mediaModule: UnifiedMediaModule
-  configModule: UnifiedConfigModule
-  trackModule: UnifiedTrackModule
-  selectionModule: UnifiedSelectionModule
-}
 
 /**
- * 视频编辑执行系统组合式函数
+ * 音视频编辑SDK组合式函数
  *
- * 提供完整的四阶段执行流程协调功能
+ * 提供完整的三阶段执行流程协调功能
  */
-export function useVideoEditExecutionSystem(config: ExecutionSystemConfig) {
-  // 创建执行器实例
-  const scriptExecutor = new ScriptExecutor()
-  const configValidator = new ConfigValidator()
-
+export function useEditSDK(
+  unifiedHistoryModule: UnifiedHistoryModule,
+  unifiedTimelineModule: UnifiedTimelineModule,
+  unifiedWebavModule: UnifiedWebavModule,
+  unifiedMediaModule: UnifiedMediaModule,
+  unifiedConfigModule: UnifiedConfigModule,
+  unifiedTrackModule: UnifiedTrackModule,
+  unifiedSelectionModule: UnifiedSelectionModule,
+) {
   // 创建批量命令构建器
   const batchCommandBuilder = useBatchCommandBuilder(
-    config.historyModule,
-    config.timelineModule,
-    config.webavModule,
-    config.mediaModule,
-    config.configModule,
-    config.trackModule,
-    config.selectionModule,
+    unifiedHistoryModule,
+    unifiedTimelineModule,
+    unifiedWebavModule,
+    unifiedMediaModule,
+    unifiedConfigModule,
+    unifiedTrackModule,
+    unifiedSelectionModule,
   )
 
   /**
    * 执行用户脚本 - 核心执行函数
    *
-   * 协调四阶段执行流程：
-   * 1. 脚本执行 → 2. 配置验证 → 3. 命令构建 → 4. 批量执行
+   * 协调音视频编辑三阶段执行流程：
+   * 1. 脚本执行（包含内置验证）→ 2. 命令构建 → 3. 批量执行
    */
   async function executeUserScript(
     userScript: string,
     timeout: number = 5000,
-    validateConfig: boolean = true,
   ): Promise<ExecutionResult> {
     try {
-      // 阶段1: 脚本执行
-      const operations = await executeScriptPhase(userScript, timeout, validateConfig)
+      // 阶段1: 脚本执行（包含内置验证）
+      const operations = await executeScriptPhase(userScript, timeout)
 
       if (operations.length === 0) {
         return createSuccessResult([], '未生成任何操作')
       }
 
-      // 阶段2: 配置验证
-      const validationResult = await validateOperationsPhase(operations, validateConfig)
-
-      if (validationResult.errors.length > 0) {
-        return createValidationErrorResult(validationResult.errors)
-      }
-
-      if (validationResult.validOperations.length === 0) {
-        return createSuccessResult([], '没有有效的操作可供执行')
-      }
-
-      // 阶段3: 命令构建
-      const buildResult = await buildCommandsPhase(validationResult.validOperations)
+      // 阶段2: 命令构建
+      const buildResult = await buildCommandsPhase(operations as OperationConfig[])
 
       if (buildResult.buildResults.some((r) => !r.success)) {
         return createBuildErrorResult(buildResult.buildResults)
       }
 
-      // 阶段4: 批量执行
+      // 阶段3: 批量执行
       return await executeCommandsPhase(buildResult)
     } catch (error: any) {
       // 处理脚本执行阶段的错误
       return createScriptErrorResult(error.message)
-    } finally {
-      // 确保资源清理
-      cleanupResources()
     }
   }
 
   /**
    * 阶段1: 脚本执行
    *
-   * 在沙箱环境中执行用户代码，生成操作配置
+   * 在沙箱环境中执行用户代码，生成音视频编辑操作配置
    */
   async function executeScriptPhase(
     userScript: string,
     timeout: number,
-    validateConfig: boolean,
-  ): Promise<ScriptOperationConfig[]> {
+  ): Promise<OperationConfig[]> {
     try {
-      return await scriptExecutor.executeScript(userScript, timeout, validateConfig)
+      // 每次执行时创建新的ScriptExecutor实例
+      const scriptExecutor = new ScriptExecutor()
+      try {
+        return await scriptExecutor.executeScript(userScript, timeout)
+      } finally {
+        // 确保资源被清理
+        scriptExecutor.destroy()
+      }
     } catch (error: any) {
       throw new Error(`脚本执行失败: ${error.message}`)
     }
   }
 
   /**
-   * 阶段2: 配置验证
+   * 阶段2: 命令构建
    *
-   * 验证操作配置的合法性
-   */
-  async function validateOperationsPhase(
-    operations: ScriptOperationConfig[],
-    validateConfig: boolean,
-  ): Promise<{ validOperations: OperationConfig[]; errors: ExecutionError[] }> {
-    if (!validateConfig || operations.length === 0) {
-      // 直接返回空数组，避免类型冲突
-      return { validOperations: [], errors: [] }
-    }
-
-    const validationResult = configValidator.validateOperations(operations as any)
-
-    const errors: ExecutionError[] = validationResult.errors.map((error) => ({
-      operation: error.operation as OperationConfig,
-      error: error.error,
-      type: 'validation',
-    }))
-
-    return {
-      validOperations: validationResult.validOperations as OperationConfig[],
-      errors,
-    }
-  }
-
-  /**
-   * 阶段3: 命令构建
-   *
-   * 将验证后的操作配置转换为可执行的命令
+   * 将验证后的音视频操作配置转换为可执行的命令
    */
   async function buildCommandsPhase(validOperations: OperationConfig[]): Promise<BuildResult> {
     try {
@@ -192,9 +117,9 @@ export function useVideoEditExecutionSystem(config: ExecutionSystemConfig) {
   }
 
   /**
-   * 阶段4: 批量执行
+   * 阶段3: 批量执行
    *
-   * 执行构建好的批量命令
+   * 执行构建好的音视频编辑批量命令
    */
   async function executeCommandsPhase(buildResult: BuildResult): Promise<ExecutionResult> {
     try {
@@ -334,29 +259,10 @@ export function useVideoEditExecutionSystem(config: ExecutionSystemConfig) {
     return result
   }
 
-  /**
-   * 清理资源 - 确保所有资源被正确释放
-   */
-  function cleanupResources(): void {
-    // ScriptExecutor在每次执行后都会自动清理
-    // 这里可以添加其他需要清理的资源
-  }
-
-  /**
-   * 销毁执行系统 - 释放所有资源
-   */
-  function destroy(): void {
-    scriptExecutor.destroy()
-    // 清理其他资源
-  }
-
   // 返回组合式API接口
   return {
     // 核心函数
     executeUserScript,
     handleExecutionResult,
-
-    // 工具函数
-    destroy,
   }
 }

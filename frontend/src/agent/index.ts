@@ -5,20 +5,5 @@
  * 控制音视频编辑操作，系统会安全地执行这些脚本并生成相应的操作配置。
  */
 
-// 脚本执行器 - 核心组件
-export { ScriptExecutor } from './ScriptExecutor'
-
-// 配置验证器 - 验证操作配置的合法性
-export { ConfigValidator } from './ConfigValidator'
-
-// 批量命令构建器 - 组合式API版本
-export { useBatchCommandBuilder } from './useBatchCommandBuilder'
-export type {
-  OperationConfig,
-  OperationResult,
-  BuildResult,
-} from './useBatchCommandBuilder'
-
 // 视频编辑执行系统 - 主执行系统（组合式API）
-export { useVideoEditExecutionSystem } from './useVideoEditExecutionSystem'
-// 类型定义已经在文件内部导出，这里不需要重复导出
+export { useEditSDK } from './useEditSDK'
