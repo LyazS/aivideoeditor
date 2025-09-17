@@ -1,6 +1,64 @@
 // 脚本执行Worker - 在沙箱环境中执行用户代码
 let operations: any[] = [];
 
+// 保存原始的console方法
+const originalConsole = {
+  log: console.log,
+  info: console.info,
+  warn: console.warn,
+  error: console.error,
+  debug: console.debug
+};
+
+// 日志数组
+const logs: any[] = [];
+
+// 重写console方法以捕获输出
+console.log = (...args: any[]) => {
+  const message = args.map(arg => String(arg)).join(' ');
+  logs.push({
+    type: 'log',
+    message
+  });
+  originalConsole.log(...args);
+};
+
+console.info = (...args: any[]) => {
+  const message = args.map(arg => String(arg)).join(' ');
+  logs.push({
+    type: 'info',
+    message
+  });
+  originalConsole.info(...args);
+};
+
+console.warn = (...args: any[]) => {
+  const message = args.map(arg => String(arg)).join(' ');
+  logs.push({
+    type: 'warn',
+    message
+  });
+  originalConsole.warn(...args);
+};
+
+console.error = (...args: any[]) => {
+  const message = args.map(arg => String(arg)).join(' ');
+  logs.push({
+    type: 'error',
+    message
+  });
+  originalConsole.error(...args);
+};
+
+console.debug = (...args: any[]) => {
+  const message = args.map(arg => String(arg)).join(' ');
+  logs.push({
+    type: 'debug',
+    message
+  });
+  originalConsole.debug(...args);
+};
+
 // 构建API对象 - 直接定义函数避免字符串转换
 const buildAPI = () => {
   return {
@@ -130,8 +188,9 @@ self.onmessage = async function (e) {
   const { script } = e.data;
   
   try {
-    // 重置操作数组
+    // 重置操作数组和日志数组
     operations = [];
+    logs.length = 0;
     
     // 创建API上下文
     const api = buildAPI();
@@ -146,12 +205,15 @@ self.onmessage = async function (e) {
     // 返回结果
     self.postMessage({
       success: true,
-      operations: operations
+      operations: operations,
+      logs: logs
     });
   } catch (error) {
     self.postMessage({
       success: false,
-      error: error instanceof Error ? error.message : String(error)
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      logs: logs  // 即使出错也发送已捕获的日志
     });
   }
 };

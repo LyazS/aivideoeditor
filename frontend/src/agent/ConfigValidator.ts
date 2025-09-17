@@ -5,28 +5,25 @@
 
 import type {
   BaseOperationConfig,
-  ValidationError,
-  ValidationResult
+  ValidationError
 } from './types'
 
 export class ConfigValidator {
   /**
    * 验证操作配置数组
    */
-  validateOperations(operations: BaseOperationConfig[]): ValidationResult {
+  validateOperations(operations: BaseOperationConfig[]): ValidationError[] {
     const errors: ValidationError[] = []
-    const validOperations: BaseOperationConfig[] = []
 
     for (const op of operations) {
       try {
         this.validateSingleOperation(op)
-        validOperations.push(op)
       } catch (error: any) {
         errors.push({ operation: op, error: error.message })
       }
     }
 
-    return { validOperations, errors }
+    return errors
   }
 
   /**

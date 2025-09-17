@@ -468,8 +468,10 @@ async function executeScript() {
     // 每次执行都重新实例化 ScriptExecutor
     const scriptExecutor = new ScriptExecutor()
     const result = await scriptExecutor.executeScript(testScript.value)
-    operations.value = result
-    successMessage.value = `脚本执行成功！生成了 ${result.length} 个操作`
+    operations.value = result.operations || []
+    const logCount = result.logs?.length || 0
+    const operationCount = result.operations?.length || 0
+    successMessage.value = `脚本执行成功！生成了 ${operationCount} 个操作，捕获 ${logCount} 条日志`
   } catch (error) {
     errorMessage.value = `脚本执行失败: ${error instanceof Error ? error.message : String(error)}`
   } finally {

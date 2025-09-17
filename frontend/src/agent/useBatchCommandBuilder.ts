@@ -32,7 +32,7 @@ import { UnifiedMediaItemQueries } from '@/unified/mediaitem/queries'
 import type {
   AddTimelineItemOperation,
   OperationConfig,
-  OperationResult,
+  BuildOperationResult,
   BuildResult
 } from './types'
 
@@ -59,7 +59,7 @@ export function useBatchCommandBuilder(
    */
   function buildOperations(operations: OperationConfig[]): BuildResult {
     const batchBuilder = unifiedStore.startBatch('用户脚本批量操作')
-    const buildResults: OperationResult[] = []
+    const buildResults: BuildOperationResult[] = []
 
     for (const op of operations) {
       try {

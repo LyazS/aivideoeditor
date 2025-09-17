@@ -1,26 +1,41 @@
 <template>
-  <div
-    v-show="show"
-    class="chat-popup"
-    :style="popupStyle"
-    @click.stop
-  >
-    <div class="chat-header">
+  <div v-show="show" class="chat-popup" :style="popupStyle" @click.stop>
+    <div class="chat-header" @mousedown="startResize">
       <h3 class="chat-title">快速聊天</h3>
       <button class="close-btn" @click="closeChat">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z" />
+          <path
+            d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z"
+          />
         </svg>
       </button>
     </div>
     <div class="chat-body">
-      <textarea
-        ref="textInput"
-        v-model="message"
-        class="message-input"
-        placeholder="请输入JavaScript代码，例如：addTrack('video')"
-        @keydown.enter.prevent="handleEnterKey"
-      ></textarea>
+      <div class="input-output-container">
+        <textarea
+          ref="textInput"
+          v-model="message"
+          class="message-input"
+          placeholder="请输入JavaScript代码，例如：addTrack('video')"
+          :style="{ flex: inputHeightRatio }"
+        ></textarea>
+        <div
+          class="panel-resize-handle"
+          :class="{ dragging: isResizingPanels }"
+          @mousedown="startPanelResize"
+          :style="{
+            transform: isResizingPanels ? 'scaleY(2)' : '',
+            background: isResizingPanels ? 'var(--color-accent-primary)' : '',
+          }"
+        ></div>
+        <textarea
+          v-model="outputMessage"
+          class="output-textarea"
+          placeholder="执行结果将显示在这里..."
+          readonly
+          :style="{ flex: 1 - inputHeightRatio }"
+        ></textarea>
+      </div>
     </div>
     <div class="chat-footer">
       <button class="send-btn" @click="executeCode" :disabled="!message.trim() || isExecuting">
@@ -31,7 +46,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, nextTick } from 'vue'
+import { ref, computed, watch, nextTick, onUnmounted } from 'vue'
 import { useUnifiedStore } from '@/unified/unifiedStore'
 
 const props = defineProps<{
@@ -46,10 +61,24 @@ const emit = defineEmits<{
 }>()
 
 const message = ref('')
+const outputMessage = ref('')
 const textInput = ref<HTMLTextAreaElement>()
 
 // 添加执行状态
 const isExecuting = ref(false)
+
+// 拖拽状态管理
+const isResizing = ref(false)
+const popupHeight = ref(Math.max(250, Math.floor(window.innerHeight * 0.4))) // 默认占屏幕高度40%，最小250px
+const startY = ref(0)
+const startHeight = ref(0)
+
+// 输入框和显示框的高度比例管理
+const inputHeightRatio = ref(0.6) // 输入框占总高度的60%
+const isResizingPanels = ref(false)
+const panelStartY = ref(0)
+const panelStartInputRatio = ref(0)
+const panelHandlePosition = ref(0) // 分割条跟随鼠标的位置
 
 // 获取统一存储实例
 const unifiedStore = useUnifiedStore()
@@ -57,12 +86,11 @@ const unifiedStore = useUnifiedStore()
 const popupStyle = computed(() => {
   // 计算弹出窗口位置，避免超出屏幕边界
   const popupWidth = 300
-  const popupHeight = 200
   const margin = 10
   const buttonSize = 50
 
   let left = props.anchorX + buttonSize + margin
-  let top = props.anchorY - popupHeight / 2
+  let top = props.anchorY - popupHeight.value / 2
 
   // 检查右边界
   if (left + popupWidth > window.innerWidth) {
@@ -75,28 +103,115 @@ const popupStyle = computed(() => {
   }
 
   // 检查下边界
-  if (top + popupHeight > window.innerHeight - margin) {
-    top = window.innerHeight - popupHeight - margin
+  if (top + popupHeight.value > window.innerHeight - margin) {
+    top = window.innerHeight - popupHeight.value - margin
   }
 
   return {
     left: left + 'px',
-    top: top + 'px'
+    top: top + 'px',
+    height: popupHeight.value + 'px',
   }
 })
 
-watch(() => props.show, (newValue) => {
-  if (newValue) {
-    // 对话框显示时聚焦到输入框
-    nextTick(() => {
-      textInput.value?.focus()
-    })
-  }
-  // 不再在关闭时清空消息，保持输入内容
-})
+watch(
+  () => props.show,
+  (newValue) => {
+    if (newValue) {
+      // 对话框显示时聚焦到输入框
+      nextTick(() => {
+        textInput.value?.focus()
+      })
+    }
+    // 不再在关闭时清空消息，保持输入内容
+  },
+)
 
 const closeChat = () => {
   emit('close')
+}
+
+// 拖拽相关函数
+const startResize = (event: MouseEvent) => {
+  // 如果点击的是关闭按钮，不触发拖拽
+  if ((event.target as HTMLElement).closest('.close-btn')) {
+    return
+  }
+
+  isResizing.value = true
+  startY.value = event.clientY
+  startHeight.value = popupHeight.value
+
+  // 添加全局事件监听器
+  document.addEventListener('mousemove', handleResize)
+  document.addEventListener('mouseup', stopResize)
+
+  // 阻止默认行为
+  event.preventDefault()
+}
+
+const handleResize = (event: MouseEvent) => {
+  if (!isResizing.value) return
+
+  const deltaY = startY.value - event.clientY // 向上拖拽增加高度，向下拖拽减少高度
+  const newHeight = Math.max(200, Math.min(window.innerHeight * 0.8, startHeight.value + deltaY)) // 最小200px，最大80%屏幕高度
+
+  popupHeight.value = newHeight
+}
+
+const stopResize = () => {
+  isResizing.value = false
+
+  // 移除全局事件监听器
+  document.removeEventListener('mousemove', handleResize)
+  document.removeEventListener('mouseup', stopResize)
+}
+
+// 面板之间的拖拽调整
+const startPanelResize = (event: MouseEvent) => {
+  isResizingPanels.value = true
+  panelStartY.value = event.clientY
+  panelStartInputRatio.value = inputHeightRatio.value
+  panelHandlePosition.value = event.clientY // 初始化手柄位置
+
+  // 添加全局事件监听器
+  document.addEventListener('mousemove', handlePanelResize)
+  document.addEventListener('mouseup', stopPanelResize)
+
+  // 阻止默认行为
+  event.preventDefault()
+  event.stopPropagation()
+}
+
+const handlePanelResize = (event: MouseEvent) => {
+  if (!isResizingPanels.value) return
+
+  // 更新手柄位置跟随鼠标
+  panelHandlePosition.value = event.clientY
+
+  // 直接计算拖拽方向和距离
+  const dragUp = event.clientY < panelStartY.value // 是否向上拖拽
+
+  const sensitivity = 0.001
+  const dragDistance = Math.abs(event.clientY - panelStartY.value)
+
+  // 向上拖拽：减少输入框比例（增加输出框比例）
+  let newRatio = dragUp
+    ? panelStartInputRatio.value - dragDistance * sensitivity // 向上拖拽减少输入框
+    : panelStartInputRatio.value + dragDistance * sensitivity // 向下拖拽增加输入框
+
+  // 限制比例范围：输入框最小30%，最大80%
+  newRatio = Math.max(0.3, Math.min(0.8, newRatio))
+
+  inputHeightRatio.value = newRatio
+}
+
+const stopPanelResize = () => {
+  isResizingPanels.value = false
+
+  // 移除全局事件监听器
+  document.removeEventListener('mousemove', handlePanelResize)
+  document.removeEventListener('mouseup', stopPanelResize)
 }
 
 async function executeCode() {
@@ -104,34 +219,29 @@ async function executeCode() {
   if (!trimmedCode || isExecuting.value) return
 
   isExecuting.value = true
+  outputMessage.value = '' // 清空之前的输出
+
   try {
-    const result = await unifiedStore.executeUserScript(trimmedCode, 5000, true)
-    
-    // 简单反馈显示在输入框中
-    if (result.success) {
-      message.value = `✅ 成功执行 ${result.executedCount} 个操作`
-    } else {
-      message.value = `❌ 失败: ${result.errorCount} 个错误`
-    }
-    
-    // 2秒后清空，方便重新输入
-    setTimeout(() => {
-      if (!isExecuting.value) message.value = ''
-    }, 2000)
+    const report = await unifiedStore.executeUserScript(trimmedCode, 5000)
+    outputMessage.value = report
   } catch (error) {
-    message.value = `❌ 执行异常: ${error instanceof Error ? error.message : String(error)}`
+    outputMessage.value = `❌ 执行异常: ${error instanceof Error ? error.message : String(error)}`
   } finally {
     isExecuting.value = false
   }
 }
 
-const handleEnterKey = (event: KeyboardEvent) => {
-  if (event.ctrlKey && event.key === 'Enter') {
-    event.preventDefault()
-    executeCode()
+// 组件卸载时清理事件监听器
+onUnmounted(() => {
+  if (isResizing.value) {
+    document.removeEventListener('mousemove', handleResize)
+    document.removeEventListener('mouseup', stopResize)
   }
-  // Enter保持换行功能（原有逻辑）
-}
+  if (isResizingPanels.value) {
+    document.removeEventListener('mousemove', handlePanelResize)
+    document.removeEventListener('mouseup', stopPanelResize)
+  }
+})
 </script>
 
 <style scoped>
@@ -139,7 +249,6 @@ const handleEnterKey = (event: KeyboardEvent) => {
   position: fixed;
   z-index: 9999;
   width: 300px;
-  height: 200px;
   background-color: var(--color-bg-secondary);
   border: 1px solid var(--color-border-primary);
   border-radius: var(--border-radius-medium);
@@ -147,6 +256,8 @@ const handleEnterKey = (event: KeyboardEvent) => {
   display: flex;
   flex-direction: column;
   backdrop-filter: blur(10px);
+  min-height: 200px; /* 最小高度 */
+  max-height: 80vh; /* 最大高度为屏幕高度的80% */
 }
 
 .chat-header {
@@ -157,6 +268,7 @@ const handleEnterKey = (event: KeyboardEvent) => {
   border-bottom: 1px solid var(--color-border-primary);
   background-color: var(--color-bg-tertiary);
   flex-shrink: 0;
+  cursor: ns-resize; /* 整个顶部区域都可以拖拽 */
 }
 
 .chat-title {
@@ -189,9 +301,51 @@ const handleEnterKey = (event: KeyboardEvent) => {
   display: flex;
 }
 
+.input-output-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.panel-resize-handle {
+  height: 4px;
+  background: var(--color-border-secondary);
+  cursor: ns-resize;
+  transition: all 0.2s ease;
+  position: relative;
+  margin: 2px 0; /* 添加上下间距 */
+}
+
+.panel-resize-handle:hover {
+  background: var(--color-accent-primary);
+  height: 6px;
+  margin: 1px 0; /* 调整间距 */
+}
+
+.panel-resize-handle:active,
+.panel-resize-handle.dragging {
+  background: var(--color-accent-primary-hover);
+  height: 8px;
+  margin: 0; /* 拖拽时充满空间 */
+  box-shadow: 0 2px 4px rgba(76, 175, 80, 0.3);
+}
+
+/* 拖拽时的视觉增强效果 */
+.panel-resize-handle.dragging::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(76, 175, 80, 0.1);
+  z-index: 9998;
+  pointer-events: none;
+}
+
 .message-input {
   width: 100%;
-  height: 100%;
+  min-height: 80px; /* 最小高度 */
   padding: var(--spacing-sm);
   border: 1px solid var(--color-border-secondary);
   border-radius: var(--border-radius-medium);
@@ -206,6 +360,29 @@ const handleEnterKey = (event: KeyboardEvent) => {
   outline: none;
   border-color: var(--color-border-focus);
   box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
+}
+
+.output-textarea {
+  width: 100%;
+  min-height: 60px; /* 最小高度 */
+  padding: var(--spacing-sm);
+  border: 1px solid var(--color-border-secondary);
+  border-radius: var(--border-radius-medium);
+  background-color: var(--color-bg-quaternary);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-sm);
+  resize: none;
+  font-family: inherit;
+  cursor: default;
+}
+
+.output-textarea:focus {
+  outline: none;
+  border-color: var(--color-border-secondary);
+}
+
+.output-textarea::placeholder {
+  color: var(--color-text-hint);
 }
 
 .message-input::placeholder {

@@ -2,6 +2,7 @@
  * 代理系统共享类型定义
  * 统一管理所有代理相关的类型定义，避免重复定义
  */
+import type { BaseBatchCommand } from '@/unified/modules/UnifiedHistoryModule'
 
 /**
  * 基础操作配置接口
@@ -37,17 +38,9 @@ export interface ValidationError {
 }
 
 /**
- * 验证结果接口
- */
-export interface ValidationResult {
-  validOperations: BaseOperationConfig[]
-  errors: ValidationError[]
-}
-
-/**
  * 操作结果接口
  */
-export interface OperationResult {
+export interface BuildOperationResult {
   success: boolean
   operation: OperationConfig
   error?: string
@@ -57,26 +50,16 @@ export interface OperationResult {
  * 构建结果接口
  */
 export interface BuildResult {
-  batchCommand: any // BaseBatchCommand 类型
-  buildResults: OperationResult[]
+  batchCommand: BaseBatchCommand
+  buildResults: BuildOperationResult[]
 }
 
 /**
- * 执行操作结果接口
+ * 日志消息接口
  */
-export interface ExecutionOperationResult {
-  success: boolean
-  operation: OperationConfig
-  error?: string
-}
-
-/**
- * 执行错误接口
- */
-export interface ExecutionError {
-  operation?: OperationConfig
-  error: string
-  type: 'script' | 'validation' | 'build' | 'execution'
+export interface LogMessage {
+  type: 'log' | 'info' | 'warn' | 'error' | 'debug'
+  message: string
 }
 
 /**
@@ -84,21 +67,22 @@ export interface ExecutionError {
  */
 export interface ExecutionResult {
   success: boolean
-  executedCount: number
-  errorCount: number
-  results: ExecutionOperationResult[]
-  errors?: ExecutionError[]
+  operationCount?: number // 操作数量
+  logs?: LogMessage[] // 脚本执行的调试打印日志
+  scriptExecutionError?: string // 脚本执行阶段的详细错误信息
+  validationErrors?: ValidationError[] // 验证阶段的错误信息
+  buildOperationErrors?: BuildOperationResult[] // 构建阶段的错误信息
+  batchExecutionError?: string // 批量命令执行阶段的错误信息
+  error?: string // 执行期间的错误
 }
 
 /**
- * 执行系统配置接口
+ * 脚本执行结果接口（包含完整执行信息）
  */
-export interface ExecutionSystemConfig {
-  historyModule: any // UnifiedHistoryModule
-  timelineModule: any // UnifiedTimelineModule
-  webavModule: any // UnifiedWebavModule
-  mediaModule: any // UnifiedMediaModule
-  configModule: any // UnifiedConfigModule
-  trackModule: any // UnifiedTrackModule
-  selectionModule: any // UnifiedSelectionModule
+export interface ScriptExecutionResult {
+  success: boolean
+  operations?: OperationConfig[]
+  error?: string
+  stack?: string
+  logs?: LogMessage[]
 }

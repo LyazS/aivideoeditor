@@ -4,12 +4,9 @@
  *
  * 设计为一次性使用，执行完成后自动清理资源
  */
-import { ConfigValidator } from './ConfigValidator'
-
-import type { OperationConfig } from './types'
+import type { LogMessage, ScriptExecutionResult } from './types'
 
 export class ScriptExecutor {
-  private configValidator = new ConfigValidator()
   private worker: Worker | null = null
 
   constructor() {
@@ -36,15 +33,12 @@ export class ScriptExecutor {
    * @param timeout 超时时间（毫秒）
    * @returns 验证通过的操作配置数组
    */
-  async executeScript(
-    script: string,
-    timeout: number = 5000,
-  ): Promise<OperationConfig[]> {
+  async executeScript(script: string, timeout: number = 5000): Promise<ScriptExecutionResult> {
     if (!this.worker) {
       throw new Error('Worker未初始化')
     }
 
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
       let timeoutId: number
       let isResolved = false
 
@@ -53,7 +47,10 @@ export class ScriptExecutor {
         if (!isResolved) {
           isResolved = true
           this.cleanup()
-          reject(new Error(`执行超时(${timeout}ms)`))
+          resolve({
+            success: false,
+            error: `执行超时(${timeout}ms)`,
+          })
         }
       }, timeout)
 
@@ -64,31 +61,19 @@ export class ScriptExecutor {
         isResolved = true
         clearTimeout(timeoutId)
 
-        const { success, operations, error } = event.data
+        const { success, operations, error, stack, logs } = event.data
 
-        if (success) {
-          let resultOperations = operations || []
+        // 无论成功与否都返回resolve，提供完整信息给外层处理
+        const resultOperations = operations || []
+        const executionLogs: LogMessage[] = logs || []
 
-          // 总是对生成的操作进行验证
-          const validationResult = this.configValidator.validateOperations(resultOperations)
-
-          if (validationResult.errors.length > 0) {
-            // 验证失败，生成详细的错误消息
-            const errorMessages = validationResult.errors
-              .map((e) => `操作 ${e.operation.type}: ${e.error}`)
-              .join('\n')
-
-            reject(new Error(`配置验证失败:\n${errorMessages}`))
-            return
-          }
-
-          // 验证通过，使用验证后的操作（即使为空数组也保留）
-          resultOperations = validationResult.validOperations || resultOperations
-
-          resolve(resultOperations)
-        } else {
-          reject(new Error(`脚本执行失败: ${error}`))
-        }
+        resolve({
+          success: success,
+          operations: resultOperations,
+          error: error,
+          stack: stack,
+          logs: executionLogs,
+        })
 
         // 自动清理资源
         this.cleanup()
@@ -96,7 +81,10 @@ export class ScriptExecutor {
 
       // 再次检查 worker 状态
       if (!this.worker) {
-        reject(new Error('Worker在执行过程中被释放'))
+        resolve({
+          success: false,
+          error: 'Worker在执行过程中被释放',
+        })
         return
       }
 
@@ -107,7 +95,10 @@ export class ScriptExecutor {
           if (!isResolved) {
             isResolved = true
             clearTimeout(timeoutId)
-            reject(new Error(`Worker错误: ${error.message}`))
+            resolve({
+              success: false,
+              error: `Worker错误: ${error.message}`,
+            })
             this.cleanup()
           }
         },
