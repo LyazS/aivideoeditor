@@ -12,7 +12,16 @@
       </slot>
     </div>
     
-    <QuickChatPopup
+    <!-- QuickChatPopup 已替换为 QuickChatBubble -->
+    <!-- <QuickChatPopup
+      v-model:show="showQuickChat"
+      :anchor-x="x"
+      :anchor-y="y"
+      @close="closeQuickChatDialog"
+      @send="handleSendMessage"
+    /> -->
+    
+    <QuickChatBubble
       v-model:show="showQuickChat"
       :anchor-x="x"
       :anchor-y="y"
@@ -24,7 +33,8 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import QuickChatPopup from './QuickChatPopup.vue'
+// import QuickChatPopup from './QuickChatPopup.vue'
+import QuickChatBubble from './QuickChatBubble.vue'
 import RemixIcon from './icons/RemixIcon.vue'
 
 const x = ref(0)
