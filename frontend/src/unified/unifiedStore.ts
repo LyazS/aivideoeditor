@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { computed, ref } from 'vue'
+import { computed } from 'vue'
 import { createUnifiedMediaModule } from '@/unified/modules/UnifiedMediaModule'
 import { createUnifiedTrackModule } from '@/unified/modules/UnifiedTrackModule'
 import { createUnifiedTimelineModule } from '@/unified/modules/UnifiedTimelineModule'
@@ -18,7 +18,7 @@ import { ModuleRegistry, MODULE_NAMES } from '@/unified/modules/ModuleRegistry'
 import { useHistoryOperations } from '@/unified/composables/useHistoryOperations'
 import { calculateTotalDurationFrames } from '@/unified/utils/durationUtils'
 import { useEditSDK } from '@/agent'
-import type { MediaType, MediaTypeOrUnknown } from '@/unified'
+import type { MediaTypeOrUnknown } from '@/unified'
 import type { UnifiedTimelineItemData } from '@/unified/timelineitem'
 import { frameToPixel, pixelToFrame } from '@/unified/utils/coordinateUtils'
 import {
@@ -148,98 +148,6 @@ export const useUnifiedStore = defineStore('unified', () => {
     unifiedSelectionModule,
   )
 
-  /**
-   * 媒体项目统计信息
-   */
-  const mediaStats = computed(() => {
-    return unifiedMediaModule.getMediaItemsStats()
-  })
-
-  /**
-   * 就绪的媒体项目数量
-   */
-  const readyMediaCount = computed(() => {
-    return unifiedMediaModule.getReadyMediaItems().length
-  })
-
-  /**
-   * 是否有正在处理的媒体项目
-   */
-  const hasProcessingMedia = computed(() => {
-    return unifiedMediaModule.getProcessingMediaItems().length > 0
-  })
-
-  /**
-   * 是否有错误的媒体项目
-   */
-  const hasErrorMedia = computed(() => {
-    return unifiedMediaModule.getErrorMediaItems().length > 0
-  })
-
-  /**
-   * WebAV是否可用（保留，因为是方法调用的计算属性）
-   */
-  const isWebAVAvailable = computed(() => {
-    return unifiedWebavModule.isWebAVAvailable()
-  })
-
-  // ==================== 批量操作方法（带日志） ====================
-
-  /**
-   * 批量重试错误的媒体项目
-   */
-  function retryAllErrorItems() {
-    unifiedMediaModule.retryAllErrorItems()
-    console.log('🔄 [UnifiedStore] 批量重试错误项目')
-  }
-
-  /**
-   * 清理已取消的媒体项目
-   */
-  function clearCancelledItems() {
-    unifiedMediaModule.clearCancelledItems()
-    console.log('🧹 [UnifiedStore] 清理已取消项目')
-  }
-
-  // ==================== 需要特殊处理的方法 ====================
-
-  /**
-   * 按类型获取媒体项目（保留类型检查）
-   * @param mediaType 媒体类型
-   */
-  function getMediaItemsByType(mediaType: MediaType | 'unknown') {
-    return unifiedMediaModule.getMediaItemsByType(mediaType)
-  }
-
-  // ==================== 系统状态方法（带日志） ====================
-
-  /**
-   * 重置所有模块到默认状态
-   */
-  function resetToDefaults() {
-    unifiedConfigModule.resetToDefaults()
-    unifiedPlaybackModule.resetToDefaults()
-    unifiedWebavModule.resetToDefaults()
-    unifiedTrackModule.resetTracksToDefaults()
-    unifiedProjectModule.resetLoadingState()
-    unifiedViewportModule.resetViewport()
-    unifiedNotificationModule.clearNotifications(true) // 清空所有通知，包括持久化通知
-    unifiedHistoryModule.clear() // 清空历史记录
-    unifiedSelectionModule.resetToDefaults() // 重置选择状态
-    // 注意：UnifiedMediaModule和UnifiedTimelineModule没有resetToDefaults方法
-    // 这些统一模块的状态通过清空数组或重置内部状态来实现重置功能
-    unifiedAutoSaveModule.resetAutoSaveState() // 重置自动保存状态
-    console.log('🔄 [UnifiedStore] 重置所有模块到默认状态')
-  }
-
-  /**
-   * 销毁所有模块资源
-   */
-  function destroyAllModules() {
-    unifiedAutoSaveModule.destroy() // 销毁自动保存模块
-    console.log('🧹 [UnifiedStore] 销毁所有模块资源')
-  }
-
   // ==================== 导出接口 ====================
 
   return {
@@ -299,13 +207,8 @@ export const useUnifiedStore = defineStore('unified', () => {
     getReadyMediaItems: unifiedMediaModule.getReadyMediaItems,
     getProcessingMediaItems: unifiedMediaModule.getProcessingMediaItems,
     getErrorMediaItems: unifiedMediaModule.getErrorMediaItems,
-    getMediaItemsByType,
     getMediaItemsBySourceType: unifiedMediaModule.getMediaItemsBySourceType,
     getMediaItemsStats: unifiedMediaModule.getMediaItemsStats,
-
-    // 批量操作方法
-    retryAllErrorItems,
-    clearCancelledItems,
 
     // 工厂函数和查询函数
     createUnifiedMediaItemData: unifiedMediaModule.createUnifiedMediaItemData,
@@ -474,18 +377,8 @@ export const useUnifiedStore = defineStore('unified', () => {
     destroyCanvas: unifiedWebavModule.destroyCanvas,
     recreateCanvas: unifiedWebavModule.recreateCanvas,
 
-    // ==================== Sprite操作工具 ====================
-
-    // 注意：SpriteLifecycleManager已移除，Sprite操作现在通过TimelineItemData直接管理
-    // 相关方法已集成到统一时间轴模块中，如：updateTimelineItemSprite, addSpriteToCanvas, removeSpriteFromCanvas等
-
     // ==================== 计算属性 ====================
 
-    mediaStats,
-    readyMediaCount,
-    hasProcessingMedia,
-    hasErrorMedia,
-    isWebAVAvailable,
     totalDurationFrames,
 
     // ==================== 统一视口模块状态和方法 ====================
@@ -580,8 +473,6 @@ export const useUnifiedStore = defineStore('unified', () => {
     isInMultiSelection: unifiedSelectionModule.isInMultiSelection,
 
     // ==================== 系统状态方法 ====================
-
-    resetToDefaults, // 保留封装，因为需要重置所有模块
 
     // ==================== 坐标转换方法 ====================
     frameToPixel: (frames: number, timelineWidth: number) =>
@@ -689,10 +580,6 @@ export const useUnifiedStore = defineStore('unified', () => {
     manualSave: unifiedAutoSaveModule.manualSave,
     triggerAutoSave: unifiedAutoSaveModule.triggerAutoSave,
     resetAutoSaveState: unifiedAutoSaveModule.resetAutoSaveState,
-
-    // ==================== 模块生命周期管理 ====================
-
-    destroyAllModules, // 新增：销毁所有模块资源的方法
 
     // ==================== 视频缩略图方法 ====================
     requestThumbnails: unifiedVideoThumbnailModule.requestThumbnails,

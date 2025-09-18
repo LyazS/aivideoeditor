@@ -913,7 +913,7 @@ const handleItemDragEnd = () => {
 // 调试统一媒体项目
 const debugMediaItems = () => {
   const allItems = unifiedStore.getAllMediaItems()
-  const stats = unifiedStore.mediaStats
+  const stats = unifiedStore.getMediaItemsStats()
 
   console.group('🔍 [调试] 统一媒体库状态')
 
