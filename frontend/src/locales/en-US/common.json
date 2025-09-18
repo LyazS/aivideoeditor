@@ -14,6 +14,7 @@
     "saving": "Saving",
     "name": "Name",
     "description": "Description",
-    "toggle": "Toggle"
+    "toggle": "Toggle",
+    "unknownError": "Unknown error"
   }
 }

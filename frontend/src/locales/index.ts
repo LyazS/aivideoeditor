@@ -11,6 +11,7 @@ import enApp from './en-US/app.json'
 import enMenu from './en-US/menu.json'
 import enWorkspace from './en-US/workspace.json'
 import enToolbar from './en-US/toolbar.json'
+import enNotification from './en-US/notification.json'
 
 // 导入中文语言包
 import zhCommon from './zh-CN/common.json'
@@ -23,6 +24,7 @@ import zhApp from './zh-CN/app.json'
 import zhMenu from './zh-CN/menu.json'
 import zhWorkspace from './zh-CN/workspace.json'
 import zhToolbar from './zh-CN/toolbar.json'
+import zhNotification from './zh-CN/notification.json'
 
 // 合并所有语言包
 const enUS = {
@@ -35,7 +37,8 @@ const enUS = {
   ...enApp,
   ...enMenu,
   ...enWorkspace,
-  ...enToolbar
+  ...enToolbar,
+  ...enNotification
 }
 
 const zhCN = {
@@ -48,7 +51,8 @@ const zhCN = {
   ...zhApp,
   ...zhMenu,
   ...zhWorkspace,
-  ...zhToolbar
+  ...zhToolbar,
+  ...zhNotification
 }
 
 export const i18n = createI18n({

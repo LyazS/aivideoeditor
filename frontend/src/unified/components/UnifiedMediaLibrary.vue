@@ -11,7 +11,7 @@
             :class="{ active: activeTab === tab.type }"
             @click="setActiveTab(tab.type)"
           >
-            <RemixIcon name="grid-line" size="lg" />
+            <RemixIcon :name="tab.icon" size="lg" />
             <span>{{ tab.label }}</span>
             <span class="tab-count">({{ getTabCount(tab.type) }})</span>
           </button>
@@ -43,12 +43,12 @@
       <div class="header-buttons">
         <!-- <HoverButton @click="debugMediaItems" title="调试统一媒体">
           <template #icon>
-            <RemixIcon name="tools-line" size="lg" />
+            <RemixIcon :name="MEDIA_LIBRARY_ICONS.tools" size="lg" />
           </template>
         </HoverButton> -->
         <HoverButton @click="showImportMenu" :title="t('media.importFiles')">
           <template #icon>
-            <RemixIcon name="add-line" size="lg" />
+            <RemixIcon :name="MEDIA_LIBRARY_ICONS.import" size="lg" />
           </template>
         </HoverButton>
       </div>
@@ -69,7 +69,7 @@
         class="empty-state"
         @contextmenu="handleEmptyAreaContextMenu"
       >
-        <RemixIcon name="file-line" size="xl" />
+        <RemixIcon :name="MEDIA_LIBRARY_ICONS.file" size="xl" />
         <p v-if="unifiedStore.getAllMediaItems().length === 0">{{ t('media.dragFilesHere') }}</p>
         <p v-else>{{ t('media.noItemsInCategory') }}</p>
         <p class="hint">
@@ -106,7 +106,7 @@
             :class="{ checked: unifiedStore.isMediaItemSelected(item.id) }"
             @click.stop="handleCheckboxClick($event, item)"
           >
-            <RemixIcon name="check-line" size="sm" class="check-icon" />
+            <RemixIcon :name="MEDIA_LIBRARY_ICONS.success" size="sm" class="check-icon" />
           </div>
           <div class="media-thumbnail">
             <!-- 异步处理项目：显示进度 -->
@@ -115,7 +115,7 @@
               <div class="async-processing-display">
                 <div class="processing-status pending">
                   <div class="status-icon" :title="t('media.waiting')">
-                    <RemixIcon name="loader-4-line" size="lg" spin />
+                    <RemixIcon :name="MEDIA_LIBRARY_ICONS.pending" size="lg" spin />
                   </div>
                 </div>
               </div>
@@ -168,7 +168,7 @@
             <template v-else-if="item.mediaStatus === 'error'">
               <div class="local-error-display">
                 <div class="status-icon" :title="item.source.errorMessage || t('media.conversionFailed')">
-                  <RemixIcon name="close-circle-line" size="lg" />
+                  <RemixIcon :name="MEDIA_LIBRARY_ICONS.error" size="lg" />
                 </div>
               </div>
               <!-- 时长标签 -->
@@ -191,7 +191,7 @@
               />
               <!-- 缩略图生成中的占位符 -->
               <div v-else class="thumbnail-placeholder">
-                <div class="loading-spinner"></div>
+                <RemixIcon :name="MEDIA_LIBRARY_ICONS.pending" size="lg" spin />
               </div>
 
               <!-- 右上角时长标签（视频和音频显示） -->
@@ -218,7 +218,7 @@
             @mousedown.stop
             :title="t('media.removeMedia')"
           >
-            <RemixIcon name="close-line" size="sm" />
+            <RemixIcon :name="MEDIA_LIBRARY_ICONS.close" size="sm" />
           </button>
         </div>
       </div>
@@ -245,7 +245,7 @@
         >
           <template #icon>
             <RemixIcon
-              :name="item.label.includes('删除') ? 'delete-bin-line' : 'check-line'"
+              :name="item.icon"
               size="sm"
               :color="item.label.includes('删除') ? '#ff6b6b' : undefined"
             />
@@ -278,6 +278,7 @@ import HoverButton from '@/components/HoverButton.vue'
 import RemoteDownloadDialog from '@/components/RemoteDownloadDialog.vue'
 import RemixIcon from '@/components/icons/RemixIcon.vue'
 import { ContextMenu, ContextMenuItem, ContextMenuSeparator } from '@imengyu/vue3-context-menu'
+import { MEDIA_LIBRARY_ICONS } from '@/constants/remixIcons'
 
 const unifiedStore = useUnifiedStore()
 const dialogs = useDialogs()
@@ -309,28 +310,36 @@ const contextMenuOptions = ref({
 })
 
 // Tab 配置
-const tabs = computed(() => [
-  {
-    type: 'all' as TabType,
-    label: t('media.all'),
-    icon: 'M4,6H20V8H4V6M4,11H20V13H4V11M4,16H20V18H4V16Z',
-  },
-  {
-    type: 'video' as TabType,
-    label: t('media.video'),
-    icon: 'M17,10.5V7A1,1 0 0,0 16,6H4A1,1 0 0,0 3,7V17A1,1 0 0,0 4,18H16A1,1 0 0,0 17,17V13.5L21,17.5V6.5L17,10.5Z',
-  },
-  {
-    type: 'audio' as TabType,
-    label: t('media.audio'),
-    icon: 'M14,3.23V5.29C16.89,6.15 19,8.83 19,12C19,15.17 16.89,17.85 14,18.71V20.77C18,19.86 21,16.28 21,12C21,7.72 18,4.14 14,3.23M16.5,12C16.5,10.23 15.5,8.71 14,7.97V16C15.5,15.29 16.5,13.76 16.5,12M3,9V15H7L12,20V4L7,9H3Z',
-  },
-  {
-    type: 'processing' as TabType,
-    label: t('media.processing'),
-    icon: 'M12,4V2A10,10 0 0,0 2,12H4A8,8 0 0,1 12,4Z', // 加载图标
-  },
-])
+const tabs = computed(() => {
+  const allTabs = [
+    {
+      type: 'all' as TabType,
+      label: t('media.all'),
+      icon: MEDIA_LIBRARY_ICONS.all as string,
+    },
+    {
+      type: 'video' as TabType,
+      label: t('media.video'),
+      icon: MEDIA_LIBRARY_ICONS.video as string,
+    },
+    {
+      type: 'audio' as TabType,
+      label: t('media.audio'),
+      icon: MEDIA_LIBRARY_ICONS.audio as string,
+    },
+  ]
+  
+  // 如果有处理中的项目，添加processing标签
+  if (getTabCount('processing') > 0) {
+    allTabs.push({
+      type: 'processing' as TabType,
+      label: t('media.processing'),
+      icon: MEDIA_LIBRARY_ICONS.processing as string,
+    })
+  }
+  
+  return allTabs
+})
 
 // 菜单项类型定义
 type MenuItem = {
@@ -348,14 +357,14 @@ const currentMenuItems = computed((): MenuItem[] => {
     if (unifiedStore.hasMediaSelection && unifiedStore.selectedMediaItemIds.size > 1) {
       menuItems.push({
         label: t('media.deleteSelectedItems', { count: unifiedStore.selectedMediaItemIds.size }),
-        icon: 'M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z',
+        icon: MEDIA_LIBRARY_ICONS.delete,
         onClick: () => handleBatchDeleteMediaItems(),
       })
     } else {
       // 单个素材删除
       menuItems.push({
         label: t('media.deleteMedia'),
-        icon: 'M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z',
+        icon: MEDIA_LIBRARY_ICONS.delete,
         onClick: () => handleDeleteMediaItem(),
       })
     }
@@ -366,12 +375,12 @@ const currentMenuItems = computed((): MenuItem[] => {
     return [
       {
         label: t('media.importLocalFiles'),
-        icon: 'M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z',
+        icon: MEDIA_LIBRARY_ICONS.importLocal,
         onClick: () => handleImportFromMenu(),
       },
       {
         label: t('media.remoteDownload'),
-        icon: 'M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M11,19.93C7.05,19.44 4,16.08 4,12C4,11.38 4.08,10.78 4.21,10.21L9,15V16A1,1 0 0,0 10,17H11V19.93M17.9,17.39C17.64,16.58 16.9,16 16,16H15V13A1,1 0 0,0 14,12H8V10H10A1,1 0 0,0 11,9V7H13A2,2 0 0,0 15,5V4.59C17.93,5.77 20,8.64 20,12C20,14.08 19.2,15.97 17.9,17.39Z',
+        icon: MEDIA_LIBRARY_ICONS.remoteDownload,
         onClick: () => handleRemoteDownload(),
       },
     ]

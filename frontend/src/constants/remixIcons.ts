@@ -9,7 +9,7 @@
 export const TRACK_TYPE_ICONS = {
   video: 'vidicon-line',
   audio: 'volume-up-line',
-  text: 'text-line',
+  text: 'text',
   subtitle: 'subtitles-line',
 } as const
 
@@ -92,6 +92,36 @@ export const STATUS_ICONS = {
   success: 'check-line',
   error: 'close-line',
   empty: 'inbox-line',
+} as const
+
+/**
+ * 媒体库图标映射
+ */
+export const MEDIA_LIBRARY_ICONS = {
+  // 文件类型
+  grid: 'grid-line',
+  file: 'file-line',
+  
+  // 操作按钮
+  import: 'add-line',
+  tools: 'tools-line',
+  close: 'close-line',
+  
+  // 状态指示
+  pending: 'loader-4-line',
+  error: 'close-circle-line',
+  delete: 'delete-bin-line',
+  success: 'check-line',
+  
+  // 媒体类型
+  all: 'grid-line',
+  video: 'vidicon-line',
+  audio: 'volume-up-line',
+  processing: 'loader-4-line',
+  
+  // 右键菜单
+  importLocal: 'add-line',
+  remoteDownload: 'download-cloud-line',
 } as const
 
 /**

@@ -8,7 +8,7 @@
     :class="{ dragging: isDragging }"
     >
       <slot>
-        <RemixIcon name="more-line" size="md" />
+        <RemixIcon name="sparkling-2-fill" size="lg" />
       </slot>
     </div>
     

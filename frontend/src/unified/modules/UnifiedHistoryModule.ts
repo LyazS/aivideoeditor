@@ -3,6 +3,7 @@ import type { SimpleCommand } from '@/unified/modules/commands/types'
 import type { ModuleRegistry } from './ModuleRegistry'
 import { MODULE_NAMES } from './ModuleRegistry'
 import type { UnifiedNotificationModule } from './UnifiedNotificationModule'
+import { useAppI18n } from '@/unified/composables/useI18n'
 
 /**
  * 通知管理器接口
@@ -135,24 +136,40 @@ export class GenericBatchCommand extends BaseBatchCommand {
   }
 }
 
-/**
- * 简单历史管理器
- * 阶段1的最简实现，管理命令历史栈和撤销/重做逻辑
- */
-class SimpleHistoryManager {
-  private commands: SimpleCommand[] = []
-  private currentIndex = -1
-  private notificationManager: NotificationManager
 
-  constructor(notificationManager: NotificationManager) {
-    this.notificationManager = notificationManager
+/**
+ * 历史管理模块
+ * 提供响应式的撤销/重做状态和方法
+ */
+export function createUnifiedHistoryModule(registry: ModuleRegistry) {
+  // 通过注册中心获取通知模块
+  const notificationModule = registry.get<UnifiedNotificationModule>(MODULE_NAMES.NOTIFICATION)
+  const notificationManager: NotificationManager = {
+    showSuccess: notificationModule.showSuccess,
+    showError: notificationModule.showError,
+    showWarning: notificationModule.showWarning,
+    showInfo: notificationModule.showInfo,
   }
+  
+  // 获取多语言函数
+  const { t } = useAppI18n()
+  // ==================== 状态定义 ====================
+
+  // 历史管理相关变量（原SimpleHistoryManager的功能）
+  const commands: SimpleCommand[] = []
+  let currentIndex = -1
+
+  // 响应式状态
+  const canUndo = ref(false)
+  const canRedo = ref(false)
+
+  // ==================== 内部方法 ====================
 
   /**
    * 安全地调用命令的 dispose 方法
    * @param command 要清理的命令
    */
-  private disposeCommand(command: SimpleCommand): void {
+  function disposeCommand(command: SimpleCommand): void {
     try {
       // 检查命令是否已被清理
       if (command.isDisposed) {
@@ -172,69 +189,104 @@ class SimpleHistoryManager {
   }
 
   /**
+   * 检查是否可以撤销
+   * @returns 是否可以撤销
+   */
+  function canUndoInternal(): boolean {
+    return currentIndex >= 0
+  }
+
+  /**
+   * 检查是否可以重做
+   * @returns 是否可以重做
+   */
+  function canRedoInternal(): boolean {
+    return currentIndex < commands.length - 1
+  }
+
+  /**
+   * 更新响应式状态
+   */
+  function updateReactiveState() {
+    canUndo.value = canUndoInternal()
+    canRedo.value = canRedoInternal()
+  }
+
+  // ==================== 公共方法 ====================
+
+  /**
    * 执行命令并添加到历史记录
    * @param command 要执行的命令
    */
-  async executeCommand(command: SimpleCommand): Promise<void> {
+  async function executeCommand(command: SimpleCommand): Promise<void> {
     try {
       // 执行命令
       await command.execute()
 
       // 清除当前位置之后的所有命令（如果用户在历史中间执行了新命令）
-      if (this.currentIndex < this.commands.length - 1) {
-        const removedCommands = this.commands.splice(this.currentIndex + 1)
+      if (currentIndex < commands.length - 1) {
+        const removedCommands = commands.splice(currentIndex + 1)
         // 清理被移除命令的资源
-        removedCommands.forEach((command) => this.disposeCommand(command))
+        removedCommands.forEach((command) => disposeCommand(command))
         console.log(`🧹 已清理 ${removedCommands.length} 个被移除命令的资源`)
       }
 
       // 添加新命令到历史记录
-      this.commands.push(command)
-      this.currentIndex++
+      commands.push(command)
+      currentIndex++
 
       console.log(`✅ 命令已执行: ${command.description}`)
-      console.log(`📊 历史记录: ${this.currentIndex + 1}/${this.commands.length}`)
+      console.log(`📊 历史记录: ${currentIndex + 1}/${commands.length}`)
     } catch (error) {
       console.error(`❌ 命令执行失败: ${command.description}`, error)
 
       // 显示错误通知
-      this.notificationManager.showError(
-        `无法执行操作: ${command.description}。${error instanceof Error ? error.message : '未知错误'}`,
+      notificationManager.showError(
+        t('notification.executeFailed', {
+          description: command.description,
+          error: error instanceof Error ? error.message : t('common.unknownError', {}, 'Unknown error')
+        }),
       )
 
       throw error
     }
+    updateReactiveState()
   }
 
   /**
    * 撤销上一个命令
    * @returns 是否成功撤销
    */
-  async undo(): Promise<boolean> {
-    if (!this.canUndo()) {
+  async function undo(): Promise<boolean> {
+    if (!canUndoInternal()) {
       console.log('⚠️ 没有可撤销的操作')
-      this.notificationManager.showWarning('无法撤销：没有可撤销的操作')
+      notificationManager.showWarning(t('notification.cannotUndo'))
       return false
     }
 
     try {
-      const command = this.commands[this.currentIndex]
+      const command = commands[currentIndex]
       await command.undo()
-      this.currentIndex--
+      currentIndex--
 
       console.log(`↩️ 已撤销: ${command.description}`)
-      console.log(`📊 历史记录: ${this.currentIndex + 1}/${this.commands.length}`)
+      console.log(`📊 历史记录: ${currentIndex + 1}/${commands.length}`)
 
       // 显示成功通知
-      this.notificationManager.showSuccess(`已撤销: ${command.description}`)
+      notificationManager.showSuccess(
+        t('notification.undoSuccess', { description: command.description })
+      )
 
+      updateReactiveState()
       return true
     } catch (error) {
       console.error('❌ 撤销操作失败', error)
 
       // 显示错误通知
-      this.notificationManager.showError(
-        `撤销失败：撤销操作时发生错误。${error instanceof Error ? error.message : '未知错误'}`,
+      notificationManager.showError(
+        t('notification.undoFailed', {
+          error: error instanceof Error ? error.message : t('common.unknownError', {}, 'Unknown error')
+        }),
       )
 
       return false
@@ -245,218 +297,76 @@ class SimpleHistoryManager {
    * 重做下一个命令
    * @returns 是否成功重做
    */
-  async redo(): Promise<boolean> {
-    if (!this.canRedo()) {
+  async function redo(): Promise<boolean> {
+    if (!canRedoInternal()) {
       console.log('⚠️ 没有可重做的操作')
-      this.notificationManager.showWarning('无法重做：没有可重做的操作')
+      notificationManager.showWarning(t('notification.cannotRedo'))
       return false
     }
 
     try {
-      this.currentIndex++
-      const command = this.commands[this.currentIndex]
+      currentIndex++
+      const command = commands[currentIndex]
       await command.execute()
 
       console.log(`↪️ 已重做: ${command.description}`)
-      console.log(`📊 历史记录: ${this.currentIndex + 1}/${this.commands.length}`)
+      console.log(`📊 历史记录: ${currentIndex + 1}/${commands.length}`)
 
       // 显示成功通知
-      this.notificationManager.showSuccess(`已重做: ${command.description}`)
+      notificationManager.showSuccess(
+        t('notification.redoSuccess', { description: command.description })
+      )
 
+      updateReactiveState()
       return true
     } catch (error) {
       console.error('❌ 重做操作失败', error)
-      this.currentIndex-- // 回滚索引
+      currentIndex-- // 回滚索引
 
       // 显示错误通知
-      this.notificationManager.showError(
-        `重做失败：重做操作时发生错误。${error instanceof Error ? error.message : '未知错误'}`,
+      notificationManager.showError(
+        t('notification.redoFailed', {
+          error: error instanceof Error ? error.message : t('common.unknownError', {}, 'Unknown error')
+        }),
       )
 
       return false
     }
-  }
-
-  /**
-   * 检查是否可以撤销
-   * @returns 是否可以撤销
-   */
-  canUndo(): boolean {
-    return this.currentIndex >= 0
-  }
-
-  /**
-   * 检查是否可以重做
-   * @returns 是否可以重做
-   */
-  canRedo(): boolean {
-    return this.currentIndex < this.commands.length - 1
-  }
-
-  /**
-   * 清空历史记录
-   */
-  clear(): void {
-    // 清理所有命令的资源
-    const commandsToDispose = [...this.commands]
-    commandsToDispose.forEach((command) => this.disposeCommand(command))
-
-    this.commands = []
-    this.currentIndex = -1
-    console.log(`🗑️ 历史记录已清空，已清理 ${commandsToDispose.length} 个命令的资源`)
-  }
-
-  /**
-   * 开始批量操作
-   * @param description 批量操作描述
-   * @returns 批量操作构建器
-   */
-  startBatch(description: string): BatchBuilder {
-    return new BatchBuilder(description)
-  }
-
-  /**
-   * 执行批量命令
-   * @param batchCommand 要执行的批量命令
-   */
-  async executeBatchCommand(batchCommand: BaseBatchCommand): Promise<void> {
-    try {
-      await batchCommand.execute()
-
-      // 添加到历史记录（作为单个条目）
-      if (this.currentIndex < this.commands.length - 1) {
-        const removedCommands = this.commands.splice(this.currentIndex + 1)
-        // 清理被移除命令的资源
-        removedCommands.forEach((command) => this.disposeCommand(command))
-        console.log(`🧹 已清理 ${removedCommands.length} 个被移除批量命令的资源`)
-      }
-
-      this.commands.push(batchCommand)
-      this.currentIndex++
-
-      console.log(`✅ 批量命令已执行: ${batchCommand.getBatchSummary()}`)
-
-      // 显示批量操作成功通知
-      this.notificationManager.showSuccess(`批量操作完成：${batchCommand.getBatchSummary()}`)
-    } catch (error) {
-      console.error(`❌ 批量命令执行失败: ${batchCommand.description}`, error)
-
-      this.notificationManager.showError(
-        `批量操作失败：${batchCommand.description}执行失败。${error instanceof Error ? error.message : '未知错误'}`,
-      )
-
-      throw error
-    }
-  }
-
-  /**
-   * 获取历史记录摘要（用于调试）
-   * @returns 历史记录摘要
-   */
-  getHistorySummary() {
-    return {
-      totalCommands: this.commands.length,
-      currentIndex: this.currentIndex,
-      canUndo: this.canUndo(),
-      canRedo: this.canRedo(),
-      commands: this.commands.map((cmd, index) => ({
-        id: cmd.id,
-        description: cmd.description,
-        isCurrent: index === this.currentIndex,
-        isExecuted: index <= this.currentIndex,
-        isBatch: cmd instanceof BaseBatchCommand,
-        batchSummary: cmd instanceof BaseBatchCommand ? cmd.getBatchSummary() : undefined,
-      })),
-    }
-  }
-
-  /**
-   * 根据命令ID获取命令
-   * @param id 命令ID
-   * @returns 找到的命令或undefined
-   */
-  getCommand(id: string): SimpleCommand | undefined {
-    return this.commands.find((command) => command.id === id)
-  }
-}
-
-/**
- * 历史管理模块
- * 提供响应式的撤销/重做状态和方法
- */
-export function createUnifiedHistoryModule(registry: ModuleRegistry) {
-  // 通过注册中心获取通知模块
-  const notificationModule = registry.get<UnifiedNotificationModule>(MODULE_NAMES.NOTIFICATION)
-  const notificationManager: NotificationManager = {
-    showSuccess: notificationModule.showSuccess,
-    showError: notificationModule.showError,
-    showWarning: notificationModule.showWarning,
-    showInfo: notificationModule.showInfo,
-  }
-  // ==================== 状态定义 ====================
-
-  // 创建历史管理器
-  const historyManager = new SimpleHistoryManager(notificationManager)
-
-  // 响应式状态
-  const canUndo = ref(false)
-  const canRedo = ref(false)
-
-  // ==================== 内部方法 ====================
-
-  /**
-   * 更新响应式状态
-   */
-  function updateReactiveState() {
-    canUndo.value = historyManager.canUndo()
-    canRedo.value = historyManager.canRedo()
-  }
-
-  // ==================== 公共方法 ====================
-
-  /**
-   * 执行命令
-   * @param command 要执行的命令
-   */
-  async function executeCommand(command: SimpleCommand): Promise<void> {
-    await historyManager.executeCommand(command)
-    updateReactiveState()
-  }
-
-  /**
-   * 撤销操作
-   * @returns 是否成功撤销
-   */
-  async function undo(): Promise<boolean> {
-    const result = await historyManager.undo()
-    updateReactiveState()
-    return result
-  }
-
-  /**
-   * 重做操作
-   * @returns 是否成功重做
-   */
-  async function redo(): Promise<boolean> {
-    const result = await historyManager.redo()
-    updateReactiveState()
-    return result
   }
 
   /**
    * 清空历史记录
    */
   function clear(): void {
-    historyManager.clear()
+    // 清理所有命令的资源
+    const commandsToDispose = [...commands]
+    commandsToDispose.forEach((command) => disposeCommand(command))
+
+    commands.length = 0
+    currentIndex = -1
+    console.log(`🗑️ 历史记录已清空，已清理 ${commandsToDispose.length} 个命令的资源`)
     updateReactiveState()
   }
 
   /**
-   * 获取历史记录摘要
+   * 获取历史记录摘要（用于调试）
    * @returns 历史记录摘要
    */
   function getHistorySummary() {
-    return historyManager.getHistorySummary()
+    return {
+      totalCommands: commands.length,
+      currentIndex: currentIndex,
+      canUndo: canUndoInternal(),
+      canRedo: canRedoInternal(),
+      commands: commands.map((cmd, index) => ({
+        id: cmd.id,
+        description: cmd.description,
+        isCurrent: index === currentIndex,
+        isExecuted: index <= currentIndex,
+        isBatch: cmd instanceof BaseBatchCommand,
+        batchSummary: cmd instanceof BaseBatchCommand ? cmd.getBatchSummary() : undefined,
+      })),
+    }
   }
 
   /**
@@ -465,7 +375,7 @@ export function createUnifiedHistoryModule(registry: ModuleRegistry) {
    * @returns 批量操作构建器
    */
   function startBatch(description: string): BatchBuilder {
-    return historyManager.startBatch(description)
+    return new BatchBuilder(description)
   }
 
   /**
@@ -473,7 +383,38 @@ export function createUnifiedHistoryModule(registry: ModuleRegistry) {
    * @param batchCommand 要执行的批量命令
    */
   async function executeBatchCommand(batchCommand: BaseBatchCommand): Promise<void> {
-    await historyManager.executeBatchCommand(batchCommand)
+    try {
+      await batchCommand.execute()
+
+      // 添加到历史记录（作为单个条目）
+      if (currentIndex < commands.length - 1) {
+        const removedCommands = commands.splice(currentIndex + 1)
+        // 清理被移除命令的资源
+        removedCommands.forEach((command) => disposeCommand(command))
+        console.log(`🧹 已清理 ${removedCommands.length} 个被移除批量命令的资源`)
+      }
+
+      commands.push(batchCommand)
+      currentIndex++
+
+      console.log(`✅ 批量命令已执行: ${batchCommand.getBatchSummary()}`)
+
+      // 显示批量操作成功通知
+      notificationManager.showSuccess(
+        t('notification.batchSuccess', { summary: batchCommand.getBatchSummary() })
+      )
+    } catch (error) {
+      console.error(`❌ 批量命令执行失败: ${batchCommand.description}`, error)
+
+      notificationManager.showError(
+        t('notification.batchFailed', {
+          description: batchCommand.description,
+          error: error instanceof Error ? error.message : t('common.unknownError', {}, 'Unknown error')
+        }),
+      )
+
+      throw error
+    }
     updateReactiveState()
   }
 
@@ -483,7 +424,7 @@ export function createUnifiedHistoryModule(registry: ModuleRegistry) {
    * @returns 找到的命令或undefined
    */
   function getCommand(id: string): SimpleCommand | undefined {
-    return historyManager.getCommand(id)
+    return commands.find((command) => command.id === id)
   }
 
   // ==================== 导出接口 ====================

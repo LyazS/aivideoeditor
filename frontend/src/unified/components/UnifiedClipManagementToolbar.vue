@@ -50,10 +50,8 @@
       <HoverButton @click="toggleSnap" :active="snapEnabled" :title="snapEnabled ? t('toolbar.snap.enabledTooltip') : t('toolbar.snap.disabledTooltip')">
         <template #icon>
           <RemixIcon
-            :name="snapEnabled ? 'magnet-line' : 'magnet-line'"
-            size="md"
-            :color="snapEnabled ? 'currentColor' : '#666'"
-            :className="snapEnabled ? '' : 'snap-disabled-icon'"
+            :name="snapEnabled ? 'pushpin-fill' : 'unpin-line'"
+            size="lg"
           />
         </template>
         {{ t('toolbar.snap.snap') }}
@@ -496,10 +494,6 @@ function debugHistory() {
 
 .toolbar-btn:disabled:hover {
   background-color: #6c757d;
-}
-
-.snap-disabled-icon {
-  opacity: 0.6;
 }
 
 .toolbar-btn svg {
