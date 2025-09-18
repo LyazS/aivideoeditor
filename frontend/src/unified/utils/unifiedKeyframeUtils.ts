@@ -200,6 +200,7 @@ function findKeyframeAtFrame(
  * 启用动画
  */
 export function enableAnimation(item: UnifiedTimelineItemData): void {
+  initializeAnimation(item)
   if (item.animation) {
     item.animation.isEnabled = true
   }
