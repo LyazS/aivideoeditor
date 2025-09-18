@@ -5,6 +5,7 @@
     "play": "播放",
     "pause": "暂停",
     "stop": "停止",
+    "playback": "播放控制",
     "playbackSpeed": "播放速度",
     "cancel": "取消",
     "save": "保存",

@@ -5,11 +5,7 @@
         <h3>{{ t('remoteDownload.title') }}</h3>
         <HoverButton variant="primary" class="close-btn" @click="closeDialog" :title="t('common.close')">
           <template #icon>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-              <path
-                d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z"
-              />
-            </svg>
+            <RemixIcon name="close-line" size="sm" />
           </template>
         </HoverButton>
       </div>
@@ -105,6 +101,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import HoverButton from './HoverButton.vue'
+import RemixIcon from './icons/RemixIcon.vue'
 import { useAppI18n } from '@/unified/composables/useI18n'
 
 const { t } = useAppI18n()

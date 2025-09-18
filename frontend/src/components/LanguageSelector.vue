@@ -1,22 +1,15 @@
 <template>
   <div class="language-selector">
     <div class="language-dropdown">
-      <button
-        class="language-button"
-        @click="showLanguageDropdown = !showLanguageDropdown"
+      <HoverButton
+        variant="small"
         :title="t('common.language')"
+        @click="showLanguageDropdown = !showLanguageDropdown"
       >
-        {{ locale === 'zh-CN' ? '语言' : 'Language' }}
-        <svg
-          width="12"
-          height="12"
-          viewBox="0 0 24 24"
-          fill="currentColor"
-          class="dropdown-arrow"
-        >
-          <path d="M7,10L12,15L17,10H7Z" />
-        </svg>
-      </button>
+        <template #icon>
+          <RemixIcon name="translate" size="xl" />
+        </template>
+      </HoverButton>
 
       <div v-if="showLanguageDropdown" class="language-dropdown-menu">
         <div
@@ -34,8 +27,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onUnmounted } from 'vue'
 import { useAppI18n } from '@/unified/composables/useI18n'
+import RemixIcon from './icons/RemixIcon.vue'
+import HoverButton from './HoverButton.vue'
 
 const { t, locale, languageOptions, switchLanguage } = useAppI18n()
 const showLanguageDropdown = ref(false)
@@ -58,7 +53,6 @@ const handleClickOutside = (event: MouseEvent) => {
 window.addEventListener('click', handleClickOutside)
 
 // 组件卸载时清理事件监听
-import { onUnmounted } from 'vue'
 onUnmounted(() => {
   window.removeEventListener('click', handleClickOutside)
 })
@@ -71,37 +65,6 @@ onUnmounted(() => {
 
 .language-dropdown {
   position: relative;
-}
-
-.language-button {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 0.75rem;
-  background-color: var(--color-bg-tertiary);
-  border: 1px solid var(--color-border);
-  border-radius: var(--border-radius-medium);
-  font-size: 0.875rem;
-  color: var(--color-text-secondary);
-  cursor: pointer;
-  transition: all 0.2s ease;
-  outline: none;
-  min-width: 80px;
-  justify-content: space-between;
-}
-
-.language-button:hover {
-  background-color: var(--color-bg-hover);
-  border-color: var(--color-border-hover);
-  color: var(--color-text-primary);
-}
-
-.dropdown-arrow {
-  transition: transform 0.2s ease;
-}
-
-.language-dropdown:hover .dropdown-arrow {
-  transform: rotate(180deg);
 }
 
 .language-dropdown-menu {

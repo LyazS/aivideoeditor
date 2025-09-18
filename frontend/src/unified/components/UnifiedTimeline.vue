@@ -13,9 +13,7 @@
         <h3>{{ t('timeline.tracks') }}</h3>
         <HoverButton variant="small" @click="showAddTrackMenu($event)" :title="t('timeline.addNewTrack')">
           <template #icon>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-              <path :d="CONTROL_ICONS.add" />
-            </svg>
+            <RemixIcon name="add-line" size="sm" />
           </template>
         </HoverButton>
       </div>
@@ -65,9 +63,7 @@
               :title="`${t('timeline.' + track.type + 'Track')}，${t('timeline.clips')} ${getClipsForTrack(track.id).length}`"
             >
               <div class="track-type-icon">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                  <path :d="getTrackTypeIcon(track.type)" />
-                </svg>
+                <RemixIcon :name="getTrackTypeIcon(track.type)" size="sm" />
               </div>
               <div class="clip-count">
                 {{ getClipsForTrack(track.id).length }}
@@ -104,9 +100,7 @@
                 @click="toggleVisibility(track.id)"
               >
                 <template #icon>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                    <path :d="getVisibilityIcon(track.isVisible)" />
-                  </svg>
+                  <RemixIcon :name="getVisibilityIcon(track.isVisible)" size="sm" />
                 </template>
               </HoverButton>
 
@@ -119,9 +113,7 @@
                 @click="toggleMute(track.id)"
               >
                 <template #icon>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                    <path :d="getMuteIcon(track.isMuted)" />
-                  </svg>
+                  <RemixIcon :name="getMuteIcon(track.isMuted)" size="sm" />
                 </template>
               </HoverButton>
             </div>
@@ -195,21 +187,16 @@
         @click="item.onClick"
       >
         <template #icon>
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            :fill="item.label.includes('删除') ? '#ff6b6b' : 'currentColor'"
-          >
-            <path :d="item.icon" />
-          </svg>
+          <RemixIcon
+            :name="item.icon"
+            size="sm"
+            :color="item.label.includes('删除') ? '#ff6b6b' : undefined"
+          />
         </template>
       </ContextMenuItem>
       <ContextMenuGroup v-else-if="'label' in item && 'children' in item" :label="item.label">
         <template #icon>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-            <path :d="item.icon" />
-          </svg>
+          <RemixIcon :name="item.icon" size="sm" />
         </template>
         <template v-for="(child, childIndex) in item.children" :key="childIndex">
           <ContextMenuSeparator v-if="'type' in child && child.type === 'separator'" />
@@ -219,9 +206,7 @@
             @click="child.onClick"
           >
             <template #icon>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                <path :d="child.icon" />
-              </svg>
+              <RemixIcon :name="child.icon" size="sm" />
             </template>
           </ContextMenuItem>
         </template>
@@ -255,6 +240,7 @@ import {
   getMuteIcon,
   CONTROL_ICONS,
 } from '@/unified/constants/timelineIcons'
+import RemixIcon from '@/components/icons/RemixIcon.vue'
 import { LayoutConstants } from '@/unified/constants/LayoutConstants'
 
 // 导入创建的模块
@@ -374,7 +360,6 @@ const {
   handleTimelineItemContextMenu,
   removeClip,
   duplicateClip,
-  regenerateThumbnail,
   renameTrack,
   showAddTrackMenu,
 } = useTimelineContextMenu(

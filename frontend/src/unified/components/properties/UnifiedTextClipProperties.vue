@@ -149,12 +149,15 @@
             @click="updateTextAlign"
             class="align-btn"
             :class="{ active: localStyle.textAlign === align.value }"
-            :title="t(`properties.effects.${align.label.replace(' ', '').toLowerCase()}`)"
+            :title="t(`properties.effects.textAlign${align.value.charAt(0).toUpperCase() + align.value.slice(1)}`)"
             :data-align="align.value"
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-              <path :d="align.icon" />
-            </svg>
+            <RemixIcon
+              :name="align.value === 'left' ? 'align-left' :
+                     align.value === 'center' ? 'align-center' :
+                     'align-right'"
+              size="sm"
+            />
           </button>
         </div>
       </div>
@@ -434,6 +437,7 @@ import { useUnifiedKeyframeTransformControls } from '@/unified/composables'
 import { updateWebAVAnimation } from '@/unified/utils/webavAnimationManager'
 import NumberInput from '@/components/NumberInput.vue'
 import SliderInput from '@/components/SliderInput.vue'
+import RemixIcon from '@/components/icons/RemixIcon.vue'
 import UnifiedKeyframeControls from './UnifiedKeyframeControls.vue'
 import UnifiedTransformControls from './UnifiedTransformControls.vue'
 
@@ -545,17 +549,17 @@ const textAlignOptions = [
   {
     value: 'left' as const,
     label: '左对齐',
-    icon: 'M3,3H21V5H3V3M3,7H15V9H3V7M3,11H21V13H3V11M3,15H15V17H3V15M3,19H21V21H3V19Z',
+    iconName: 'align-left',
   },
   {
     value: 'center' as const,
     label: '居中对齐',
-    icon: 'M3,3H21V5H3V3M7,7H17V9H7V7M3,11H21V13H3V11M7,15H17V17H7V15M3,19H21V21H3V19Z',
+    iconName: 'align-center',
   },
   {
     value: 'right' as const,
     label: '右对齐',
-    icon: 'M3,3H21V5H3V3M9,7H21V9H9V7M3,11H21V13H3V11M9,15H21V17H9V15M3,19H21V21H3V19Z',
+    iconName: 'align-right',
   },
 ]
 

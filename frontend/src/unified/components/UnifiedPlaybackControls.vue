@@ -4,20 +4,13 @@
     <div class="control-buttons">
       <HoverButton variant="primary" @click="togglePlayPause" :title="isPlaying ? t('common.pause') : t('common.play')">
         <template #icon>
-          <svg v-if="!isPlaying" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M8,5.14V19.14L19,12.14L8,5.14Z" />
-          </svg>
-          <svg v-else width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M14,19H18V5H14M6,19H10V5H6V19Z" />
-          </svg>
+          <RemixIcon :name="isPlaying ? 'pause-large-fill' : 'play-large-fill'" size="lg" />
         </template>
       </HoverButton>
 
       <HoverButton @click="stop" :title="t('common.stop')">
         <template #icon>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M18,18H6V6H18V18Z" />
-          </svg>
+          <RemixIcon name="stop-large-fill" size="md" />
         </template>
       </HoverButton>
     </div>
@@ -46,6 +39,7 @@ import { useUnifiedStore } from '@/unified/unifiedStore'
 import { usePlaybackControls } from '@/unified/composables'
 import { useAppI18n } from '@/unified/composables/useI18n'
 import HoverButton from '@/components/HoverButton.vue'
+import RemixIcon from '@/components/icons/RemixIcon.vue'
 
 const unifiedStore = useUnifiedStore()
 const { safePlaybackOperation, restartPlayback } = usePlaybackControls()

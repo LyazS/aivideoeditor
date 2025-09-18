@@ -6,11 +6,7 @@
         <h3>{{ t('project.edit') }}</h3>
         <HoverButton class="close-btn" variant="primary" @click="closeDialog" :title="t('common.close')">
           <template #icon>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-              <path
-                d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z"
-              />
-            </svg>
+            <RemixIcon name="close-line" size="md" />
           </template>
         </HoverButton>
       </div>
@@ -52,6 +48,7 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import HoverButton from './HoverButton.vue'
+import RemixIcon from './icons/RemixIcon.vue'
 import { useAppI18n } from '@/unified/composables/useI18n'
 import type { UnifiedProjectConfig } from '@/unified/project/types'
 

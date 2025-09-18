@@ -11,9 +11,7 @@
             :class="{ active: activeTab === tab.type }"
             @click="setActiveTab(tab.type)"
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-              <path :d="tab.icon" />
-            </svg>
+            <RemixIcon name="grid-line" size="lg" />
             <span>{{ tab.label }}</span>
             <span class="tab-count">({{ getTabCount(tab.type) }})</span>
           </button>
@@ -45,18 +43,12 @@
       <div class="header-buttons">
         <!-- <HoverButton @click="debugMediaItems" title="调试统一媒体">
           <template #icon>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-              <path
-                d="M20,8H17.19C16.74,7.22 16.12,6.55 15.37,6.04L17,4.41L15.59,3L13.42,5.17C12.96,5.06 12.49,5 12,5C11.51,5 11.04,5.06 10.59,5.17L8.41,3L7,4.41L8.62,6.04C7.88,6.55 7.26,7.22 6.81,8H4V10H6.09C6.04,10.33 6,10.66 6,11V12H4V14H6V15C6,15.34 6.04,15.67 6.09,16H4V18H6.81C7.85,19.79 9.78,21 12,21C14.22,21 16.15,19.79 17.19,18H20V16H17.91C17.96,15.67 18,15.34 18,15V14H20V12H18V11C18,10.66 17.96,10.33 17.91,10H20V8M16,15A4,4 0 0,1 12,19A4,4 0 0,1 8,15V11A4,4 0 0,1 12,7A4,4 0 0,1 16,11V15Z"
-              />
-            </svg>
+            <RemixIcon name="tools-line" size="lg" />
           </template>
         </HoverButton> -->
         <HoverButton @click="showImportMenu" :title="t('media.importFiles')">
           <template #icon>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z" />
-            </svg>
+            <RemixIcon name="add-line" size="lg" />
           </template>
         </HoverButton>
       </div>
@@ -77,11 +69,7 @@
         class="empty-state"
         @contextmenu="handleEmptyAreaContextMenu"
       >
-        <svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor">
-          <path
-            d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"
-          />
-        </svg>
+        <RemixIcon name="file-line" size="xl" />
         <p v-if="unifiedStore.getAllMediaItems().length === 0">{{ t('media.dragFilesHere') }}</p>
         <p v-else>{{ t('media.noItemsInCategory') }}</p>
         <p class="hint">
@@ -118,9 +106,7 @@
             :class="{ checked: unifiedStore.isMediaItemSelected(item.id) }"
             @click.stop="handleCheckboxClick($event, item)"
           >
-            <svg class="check-icon" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M9,16.17L4.83,12l-1.42,1.41L9,19L21,7l-1.41,-1.41L9,16.17Z" />
-            </svg>
+            <RemixIcon name="check-line" size="sm" class="check-icon" />
           </div>
           <div class="media-thumbnail">
             <!-- 异步处理项目：显示进度 -->
@@ -129,11 +115,7 @@
               <div class="async-processing-display">
                 <div class="processing-status pending">
                   <div class="status-icon" :title="t('media.waiting')">
-                    <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor">
-                      <path
-                        d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4Z"
-                      />
-                    </svg>
+                    <RemixIcon name="loader-4-line" size="lg" spin />
                   </div>
                 </div>
               </div>
@@ -186,11 +168,7 @@
             <template v-else-if="item.mediaStatus === 'error'">
               <div class="local-error-display">
                 <div class="status-icon" :title="item.source.errorMessage || t('media.conversionFailed')">
-                  <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor">
-                    <path
-                      d="M12,2C17.53,2 22,6.47 22,12C22,17.53 17.53,22 12,22C6.47,22 2,17.53 2,12C2,6.47 6.47,2 12,2M15.59,7L12,10.59L8.41,7L7,8.41L10.59,12L7,15.59L8.41,17L12,13.41L15.59,17L17,15.59L13.41,12L17,8.41L15.59,7Z"
-                    />
-                  </svg>
+                  <RemixIcon name="close-circle-line" size="lg" />
                 </div>
               </div>
               <!-- 时长标签 -->
@@ -240,11 +218,7 @@
             @mousedown.stop
             :title="t('media.removeMedia')"
           >
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-              <path
-                d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z"
-              />
-            </svg>
+            <RemixIcon name="close-line" size="sm" />
           </button>
         </div>
       </div>
@@ -270,14 +244,11 @@
           @click="item.onClick"
         >
           <template #icon>
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              :fill="item.label.includes('删除') ? '#ff6b6b' : 'currentColor'"
-            >
-              <path :d="item.icon" />
-            </svg>
+            <RemixIcon
+              :name="item.label.includes('删除') ? 'delete-bin-line' : 'check-line'"
+              size="sm"
+              :color="item.label.includes('删除') ? '#ff6b6b' : undefined"
+            />
           </template>
         </ContextMenuItem>
       </template>
@@ -305,6 +276,7 @@ import { UnifiedMediaItemQueries } from '@/unified/mediaitem/actions'
 
 import HoverButton from '@/components/HoverButton.vue'
 import RemoteDownloadDialog from '@/components/RemoteDownloadDialog.vue'
+import RemixIcon from '@/components/icons/RemixIcon.vue'
 import { ContextMenu, ContextMenuItem, ContextMenuSeparator } from '@imengyu/vue3-context-menu'
 
 const unifiedStore = useUnifiedStore()

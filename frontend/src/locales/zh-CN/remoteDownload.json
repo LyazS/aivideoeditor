@@ -1,0 +1,17 @@
+{
+  "remoteDownload": {
+    "title": "远程下载",
+    "urlLabel": "文件URL",
+    "urlPlaceholder": "输入要下载的文件URL",
+    "urlInvalidError": "无效的URL地址",
+    "urlProtocolError": "只支持 HTTP 和 HTTPS 协议的URL",
+    "nameLabel": "文件名",
+    "namePlaceholder": "输入保存的文件名",
+    "durationLabel": "持续时间",
+    "durationPlaceholder": "视频持续时间（秒）",
+    "durationHelp": "设置为0则自动检测持续时间",
+    "timeoutLabel": "下载超时（秒）",
+    "supportedFormats": "支持的格式：MP4, MOV, AVI, MP3, WAV 等",
+    "startDownload": "开始下载"
+  }
+}

@@ -1,11 +1,13 @@
 /**
- * 音频图标常量
+ * 音频图标常量 - Remix Icon 版本
  * 提供全局统一的音频默认图标
  */
 
+import { TRACK_TYPE_ICONS } from '../../constants/remixIcons'
+
 /**
  * 音频默认图标的SVG内容
- * 使用绿色背景和白色音频波形图标
+ * 使用绿色背景和白色音频波形图标（兼容旧版本）
  */
 const AUDIO_ICON_SVG = `<svg width="60" height="40" xmlns="http://www.w3.org/2000/svg">
   <rect width="60" height="40" fill="#4CAF50" rx="4"/>
@@ -23,3 +25,8 @@ const AUDIO_ICON_SVG = `<svg width="60" height="40" xmlns="http://www.w3.org/200
  * 使用Data URL格式，可以直接作为图片源使用
  */
 export const AUDIO_DEFAULT_THUMBNAIL_URL = `data:image/svg+xml;base64,${btoa(AUDIO_ICON_SVG)}`
+
+/**
+ * 音频轨道图标名称（Remix Icon）
+ */
+export const AUDIO_TRACK_ICON = TRACK_TYPE_ICONS.audio

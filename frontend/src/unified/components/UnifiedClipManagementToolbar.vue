@@ -5,21 +5,13 @@
     <div class="toolbar-section">
       <HoverButton @click="undo" :disabled="!unifiedStore.canUndo" :title="t('toolbar.history.undoTooltip')">
         <template #icon>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-            <path
-              d="M12.5,8C9.85,8 7.45,9 5.6,10.6L2,7V16H11L7.38,12.38C8.77,11.22 10.54,10.5 12.5,10.5C16.04,10.5 19.05,12.81 20.1,16L22.47,15.22C21.08,11.03 17.15,8 12.5,8Z"
-            />
-          </svg>
+          <RemixIcon name="arrow-go-back-line" size="md" />
         </template>
         {{ t('toolbar.history.undo') }}
       </HoverButton>
       <HoverButton @click="redo" :disabled="!unifiedStore.canRedo" :title="t('toolbar.history.redoTooltip')">
         <template #icon>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-            <path
-              d="M18.4,10.6C16.55,9 14.15,8 11.5,8C6.85,8 2.92,11.03 1.53,15.22L3.9,16C4.95,12.81 7.96,10.5 11.5,10.5C13.46,10.5 15.23,11.22 16.62,12.38L13,16H22V7L18.4,10.6Z"
-            />
-          </svg>
+          <RemixIcon name="arrow-go-forward-line" size="md" />
         </template>
         {{ t('toolbar.history.redo') }}
       </HoverButton>
@@ -33,19 +25,7 @@
         :title="t('toolbar.clip.splitTooltip')"
       >
         <template #icon>
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-          >
-            <!-- 左方括号 [ -->
-            <path d="M10 6 L10 18 M8 6 L10 6 M8 18 L10 18" />
-            <!-- 右方括号 ] -->
-            <path d="M14 6 L14 18 M14 6 L16 6 M14 18 L16 18" />
-          </svg>
+          <RemixIcon name="scissors-line" size="md" />
         </template>
         {{ t('toolbar.clip.split') }}
       </HoverButton>
@@ -55,11 +35,7 @@
         :title="t('toolbar.clip.deleteTooltip')"
       >
         <template #icon>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="#ef4444">
-            <path
-              d="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z"
-            />
-          </svg>
+          <RemixIcon name="delete-bin-line" size="md" color="#ef4444" />
         </template>
         {{ t('toolbar.clip.delete') }}
       </HoverButton>
@@ -73,48 +49,25 @@
       <!-- 吸附开关按钮 -->
       <HoverButton @click="toggleSnap" :active="snapEnabled" :title="snapEnabled ? t('toolbar.snap.enabledTooltip') : t('toolbar.snap.disabledTooltip')">
         <template #icon>
-          <!-- 吸附开启状态 - 实心磁铁图标 -->
-          <svg v-if="snapEnabled" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-            <path
-              d="M17,2H7A3,3 0 0,0 4,5V19A3,3 0 0,0 7,22H17A3,3 0 0,0 20,19V5A3,3 0 0,0 17,2M17,4A1,1 0 0,1 18,5V19A1,1 0 0,1 17,20H7A1,1 0 0,1 6,19V5A1,1 0 0,1 7,4H17M12,7L9,10H12V14H15V10H18L15,7H12Z"
-            />
-          </svg>
-          <!-- 吸附关闭状态 - 虚线磁铁图标 -->
-          <svg
-            v-else
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="#666"
-            stroke-width="1.5"
-            opacity="0.6"
-          >
-            <path
-              d="M17,2H7A3,3 0 0,0 4,5V19A3,3 0 0,0 7,22H17A3,3 0 0,0 20,19V5A3,3 0 0,0 17,2M17,4A1,1 0 0,1 18,5V19A1,1 0 0,1 17,20H7A1,1 0 0,1 6,19V5A1,1 0 0,1 7,4H17M12,7L9,10H12V14H15V10H18L15,7H12Z"
-            />
-          </svg>
+          <RemixIcon
+            :name="snapEnabled ? 'magnet-line' : 'magnet-line'"
+            size="md"
+            :color="snapEnabled ? 'currentColor' : '#666'"
+            :className="snapEnabled ? '' : 'snap-disabled-icon'"
+          />
         </template>
         {{ t('toolbar.snap.snap') }}
       </HoverButton>
 
       <!-- <HoverButton @click="debugTimeline" title="在控制台打印时间轴配置信息">
          <template #icon>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-              <path
-                d="M20,8H17.19C16.74,7.22 16.12,6.55 15.37,6.04L17,4.41L15.59,3L13.42,5.17C12.96,5.06 12.49,5 12,5C11.51,5 11.04,5.06 10.59,5.17L8.41,3L7,4.41L8.62,6.04C7.88,6.55 7.26,7.22 6.81,8H4V10H6.09C6.04,10.33 6,10.66 6,11V12H4V14H6V15C6,15.34 6.04,15.67 6.09,16H4V18H6.81C7.85,19.79 9.78,21 12,21C14.22,21 16.15,19.79 17.19,18H20V16H17.91C17.96,15.67 18,15.34 18,15V14H20V12H18V11C18,10.66 17.96,10.33 17.91,10H20V8M16,15A4,4 0 0,1 12,19A4,4 0 0,1 8,15V11A4,4 0 0,1 12,7A4,4 0 0,1 16,11V15Z"
-              />
-            </svg>
+            <RemixIcon name="tools-line" size="md" />
           </template>
         调试
       </HoverButton>
       <HoverButton @click="debugHistory" title="在控制台打印历史操作记录信息">
         <template #icon>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-            <path
-              d="M12,20A8,8 0 0,0 20,12A8,8 0 0,0 12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22C6.47,22 2,17.5 2,12A10,10 0 0,1 12,2M12.5,7V12.25L17,14.92L16.25,16.15L11,13V7H12.5Z"
-            />
-          </svg>
+          <RemixIcon name="history-line" size="md" />
         </template>
         历史
       </HoverButton> -->
@@ -129,6 +82,7 @@ import { useAppI18n } from '@/unified/composables/useI18n'
 import { formatFileSize, framesToSeconds } from '@/unified/utils/timeUtils'
 import { countOverlappingItems } from '@/unified/utils/timeOverlapUtils'
 import HoverButton from '@/components/HoverButton.vue'
+import RemixIcon from '@/components/icons/RemixIcon.vue'
 
 const unifiedStore = useUnifiedStore()
 const { t } = useAppI18n()
@@ -542,6 +496,10 @@ function debugHistory() {
 
 .toolbar-btn:disabled:hover {
   background-color: #6c757d;
+}
+
+.snap-disabled-icon {
+  opacity: 0.6;
 }
 
 .toolbar-btn svg {

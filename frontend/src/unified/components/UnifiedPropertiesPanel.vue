@@ -8,9 +8,7 @@
     <div class="panel-content">
       <!-- 多选状态 -->
       <div v-if="multiSelectInfo" class="multi-select-state">
-        <svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M9,20.42L2.79,14.21L5.62,11.38L9,14.77L18.88,4.88L21.71,7.71L9,20.42Z" />
-        </svg>
+        <RemixIcon name="checkbox-multiple-line" size="xl" />
         <p>{{ t('properties.multiSelect.title', { count: multiSelectInfo.count }) }}</p>
         <p class="hint">{{ t('properties.multiSelect.hint') }}</p>
 
@@ -61,9 +59,7 @@
         <!-- 非ready状态时显示加载状态或简化属性 -->
         <div v-else class="loading-properties">
           <div class="loading-icon">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12,4V2A10,10 0 0,0 2,12H4A8,8 0 0,1 12,4Z" />
-            </svg>
+            <RemixIcon name="loader-4-line" size="lg" spin />
           </div>
           <p class="loading-text">{{ t('properties.singleSelect.loading') }}</p>
           <p class="loading-status">
@@ -78,11 +74,7 @@
 
       <!-- 无选择状态 -->
       <div v-else class="empty-state">
-        <svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor">
-          <path
-            d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4M11,16.5L18,9.5L16.5,8L11,13.5L7.5,10L6,11.5L11,16.5Z"
-          />
-        </svg>
+        <RemixIcon name="checkbox-blank-line" size="xl" />
         <p>{{ t('properties.singleSelect.emptyHint') }}</p>
         <p class="hint">{{ t('properties.singleSelect.emptyHintDetail') }}</p>
       </div>
@@ -101,6 +93,7 @@ import { isPlayheadInTimelineItem } from '@/unified/utils/timelineSearchUtils'
 import UnifiedVideoClipProperties from './properties/UnifiedVideoClipProperties.vue'
 import UnifiedTextClipProperties from './properties/UnifiedTextClipProperties.vue'
 import UnifiedAudioClipProperties from './properties/UnifiedAudioClipProperties.vue'
+import RemixIcon from '@/components/icons/RemixIcon.vue'
 
 const unifiedStore = useUnifiedStore()
 const { t } = useAppI18n()

@@ -36,11 +36,7 @@
             <!-- 右侧比例按钮 -->
             <div class="right-controls">
               <button class="aspect-ratio-btn" @click="openResolutionModal" :title="t('editor.setVideoResolution')">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                  <path
-                    d="M19,12H22L18,8L14,12H17V16H7V12H10L6,8L2,12H5V16A2,2 0 0,0 7,18H17A2,2 0 0,0 19,16V12Z"
-                  />
-                </svg>
+                <RemixIcon name="aspect-ratio" size="md" />
                 <span class="aspect-ratio-text">{{ currentResolutionText }}</span>
               </button>
             </div>
@@ -178,6 +174,7 @@ import UnifiedTimeline from '@/unified/components/UnifiedTimeline.vue'
 import UnifiedPlaybackControls from '@/unified/components/UnifiedPlaybackControls.vue'
 import UnifiedClipManagementToolbar from '@/unified/components/UnifiedClipManagementToolbar.vue'
 import UnifiedPropertiesPanel from '@/unified/components/UnifiedPropertiesPanel.vue'
+import RemixIcon from './icons/RemixIcon.vue'
 import { useUnifiedStore } from '@/unified/unifiedStore'
 import { useKeyboardShortcuts } from '@/unified/composables'
 import { logWebAVReadyStateChange, logComponentLifecycle } from '@/unified/utils/webavDebug'

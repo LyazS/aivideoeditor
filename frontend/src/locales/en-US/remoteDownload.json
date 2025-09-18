@@ -1,0 +1,17 @@
+{
+  "remoteDownload": {
+    "title": "Remote Download",
+    "urlLabel": "File URL",
+    "urlPlaceholder": "Enter the URL of the file to download",
+    "urlInvalidError": "Invalid URL address",
+    "urlProtocolError": "Only HTTP and HTTPS protocol URLs are supported",
+    "nameLabel": "File Name",
+    "namePlaceholder": "Enter the file name to save",
+    "durationLabel": "Duration",
+    "durationPlaceholder": "Video duration (seconds)",
+    "durationHelp": "Set to 0 to auto-detect duration",
+    "timeoutLabel": "Download Timeout (seconds)",
+    "supportedFormats": "Supported formats: MP4, MOV, AVI, MP3, WAV, etc.",
+    "startDownload": "Start Download"
+  }
+}

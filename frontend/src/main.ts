@@ -5,6 +5,7 @@ import router from './router'
 import { i18n } from './locales'
 import '@imengyu/vue3-context-menu/lib/vue3-context-menu.css'
 import ContextMenu from '@imengyu/vue3-context-menu'
+import 'remixicon/fonts/remixicon.css'
 
 const app = createApp(App)
 

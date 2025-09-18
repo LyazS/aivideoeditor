@@ -14,9 +14,7 @@
             @click="createNewProject"
             :disabled="isLoading"
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z" />
-            </svg>
+            <RemixIcon name="add-line" size="lg" />
             {{ t('project.new') }}
           </button>
           <LanguageSelector />
@@ -26,11 +24,7 @@
             @click="changeWorkspace"
             :title="t('workspace.change')"
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-              <path
-                d="M10,4H4C2.89,4 2,4.89 2,6V18A2,2 0 0,0 4,20H20A2,2 0 0,0 22,18V8C22,6.89 21.1,6 20,6H12L10,4Z"
-              />
-            </svg>
+            <RemixIcon name="folder-line" size="lg" />
             <span>{{ workspaceInfo.name }}</span>
           </button>
         </div>
@@ -48,31 +42,19 @@
             @click="isApiSupported && !permissionError && !isLoading ? setupWorkspace() : null"
           >
             <div class="setup-icon">
-              <svg width="64" height="64" viewBox="0 0 24 24" fill="currentColor">
-                <path
-                  d="M10,4H4C2.89,4 2,4.89 2,6V18A2,2 0 0,0 4,20H20A2,2 0 0,0 22,18V8C22,6.89 21.1,6 20,6H12L10,4Z"
-                />
-              </svg>
+              <RemixIcon name="folder-line" size="xl" />
             </div>
             <h2>{{ t('workspace.setup.title') }}</h2>
             <p>{{ t('workspace.setup.description') }}</p>
 
             <div v-if="!isApiSupported" class="error-message">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                <path
-                  d="M13,13H11V7H13M13,17H11V15H13M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z"
-                />
-              </svg>
+              <RemixIcon name="error-warning-line" size="sm" />
               <span>{{ t('workspace.error.unsupported') }}</span>
             </div>
 
             <!-- 权限丢失提示 -->
             <div v-else-if="permissionError" class="error-message">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                <path
-                  d="M12,2C17.53,2 22,6.47 22,12C22,17.53 17.53,22 12,22C6.47,22 2,17.53 2,12C2,6.47 6.47,2 12,2M15.59,7L12,10.59L8.41,7L7,8.41L10.59,12L7,15.59L8.41,17L12,13.41L15.59,17L17,15.59L13.41,12L17,8.41L15.59,7Z"
-                />
-              </svg>
+              <RemixIcon name="close-circle-line" size="sm" />
               <span>{{ t('workspace.error.permission') }}</span>
             </div>
           </div>
@@ -83,45 +65,34 @@
           <div class="section-header">
             <h2>{{ t('project.list.title') }}</h2>
             <div class="header-actions">
-              <button
+              <HoverButton
                 class="refresh-btn"
                 @click="loadProjects"
                 :disabled="isLoading"
                 :title="t('project.list.refresh')"
               >
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="currentColor"
+                <RemixIcon
+                  name="refresh-line"
+                  size="xl"
+                  :spin="isLoading"
                   :class="{ spinning: isLoading }"
-                >
-                  <path
-                    d="M17.65,6.35C16.2,4.9 14.21,4 12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20C15.73,20 18.84,17.45 19.73,14H17.65C16.83,16.33 14.61,18 12,18A6,6 0 0,1 6,12A6,6 0 0,1 12,6C13.66,6 15.14,6.69 16.22,7.78L13,11H20V4L17.65,6.35Z"
-                  />
-                </svg>
-              </button>
+                />
+              </HoverButton>
               <div class="view-options">
-                <button
-                  class="view-btn"
-                  :class="{ active: viewMode === 'grid' }"
+                <HoverButton
+                  v-if="viewMode !== 'grid'"
                   @click="viewMode = 'grid'"
                   :title="t('project.view.grid')"
                 >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M3,11H11V3H3M3,21H11V13H3M13,21H21V13H13M13,3V11H21V3" />
-                  </svg>
-                </button>
-                <button
-                  class="view-btn"
-                  :class="{ active: viewMode === 'list' }"
+                  <RemixIcon name="grid-line" size="xl" />
+                </HoverButton>
+                <HoverButton
+                  v-if="viewMode !== 'list'"
                   @click="viewMode = 'list'"
                   :title="t('project.view.list')"
                 >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M3,5H21V7H3V5M3,13V11H21V13H3M3,19V17H21V19H3Z" />
-                  </svg>
-                </button>
+                  <RemixIcon name="list-check" size="xl" />
+                </HoverButton>
               </div>
             </div>
           </div>
@@ -133,15 +104,12 @@
 
           <div v-else-if="projects.length === 0" class="empty-state">
             <div class="empty-icon">
-              <svg width="64" height="64" viewBox="0 0 24 24" fill="currentColor">
-                <path
-                  d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"
-                />
-              </svg>
+              <RemixIcon name="inbox-line" size="xl" />
             </div>
             <h3>{{ t('project.empty.title') }}</h3>
             <p>{{ t('project.empty.description') }}</p>
             <button class="btn btn-primary" @click="createNewProject">
+              <RemixIcon name="add-line" size="sm" />
               {{ t('project.new') }}
             </button>
           </div>
@@ -157,24 +125,17 @@
               <div class="project-thumbnail">
                 <img v-if="project.thumbnail" :src="project.thumbnail" :alt="project.name" />
                 <div v-else class="thumbnail-placeholder">
-                  <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor">
-                    <path
-                      d="M17,10.5V7A1,1 0 0,0 16,6H4A1,1 0 0,0 3,7V17A1,1 0 0,0 4,18H16A1,1 0 0,0 17,17V13.5L21,17.5V6.5L17,10.5Z"
-                    />
-                  </svg>
+                  <RemixIcon name="video-line" size="lg" />
                 </div>
                 <!-- 设置按钮移到缩略图右上角 -->
-                <button
+                <HoverButton
+                  variant="small"
                   class="settings-btn-overlay"
                   @click.stop="showProjectMenu($event, project)"
                   :title="t('common.settings')"
                 >
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                    <path
-                      d="M16,12A2,2 0 0,1 18,10A2,2 0 0,1 20,12A2,2 0 0,1 18,14A2,2 0 0,1 16,12M10,12A2,2 0 0,1 12,10A2,2 0 0,1 14,12A2,2 0 0,1 12,14A2,2 0 0,1 10,12M4,12A2,2 0 0,1 6,10A2,2 0 0,1 8,12A2,2 0 0,1 6,14A2,2 0 0,1 4,12Z"
-                    />
-                  </svg>
-                </button>
+                  <RemixIcon name="more-2-fill" size="lg" />
+                </HoverButton>
               </div>
               <div class="project-info">
                 <h3 class="project-name">{{ project.name }}</h3>
@@ -197,21 +158,13 @@
   <ContextMenu v-model:show="showContextMenu" :options="contextMenuOptions">
     <ContextMenuItem :label="t('project.edit')" @click="showEditDialog(selectedProject!)">
       <template #icon>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-          <path
-            d="M20.71,7.04C21.1,6.65 21.1,6 20.71,5.63L18.37,3.29C18,2.9 17.35,2.9 16.96,3.29L15.12,5.12L18.87,8.87M3,17.25V21H6.75L17.81,9.93L14.06,6.18L3,17.25Z"
-          />
-        </svg>
+        <RemixIcon name="edit-line" size="sm" />
       </template>
     </ContextMenuItem>
 
     <ContextMenuItem :label="t('project.delete.title')" @click="confirmDeleteProject(selectedProject!)">
       <template #icon>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="#ff6b6b">
-          <path
-            d="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z"
-          />
-        </svg>
+        <RemixIcon name="delete-bin-line" size="sm" color="#ff6b6b" />
       </template>
     </ContextMenuItem>
   </ContextMenu>
@@ -234,6 +187,8 @@ import type { UnifiedProjectConfig } from '@/unified/project'
 import { ContextMenu, ContextMenuItem } from '@imengyu/vue3-context-menu'
 import EditProjectDialog from '../components/EditProjectDialog.vue'
 import LanguageSelector from '../components/LanguageSelector.vue'
+import RemixIcon from '../components/icons/RemixIcon.vue'
+import HoverButton from '../components/HoverButton.vue'
 import { useProjectThumbnailService } from '@/unified/composables/useProjectThumbnailService'
 import { useAppI18n } from '@/unified/composables/useI18n'
 
@@ -764,7 +719,7 @@ onMounted(async () => {
 .recent-projects h2 {
   font-size: 1.25rem;
   font-weight: 600;
-  margin-bottom: 1rem;
+  margin: 0;  /* 移除 margin-bottom 以确保垂直居中 */
   color: var(--color-text-primary);
 }
 

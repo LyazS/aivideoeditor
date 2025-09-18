@@ -11,11 +11,7 @@
           <div class="status-left">
             <HoverButton @click="goBack" :title="t('editor.backToProject')">
               <template #icon>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                  <path
-                    d="M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z"
-                  />
-                </svg>
+                <RemixIcon name="arrow-left-line" size="lg" />
               </template>
               {{ t('editor.back') }}
             </HoverButton>
@@ -32,11 +28,7 @@
               <span class="project-title">{{
                 unifiedStore.projectName || t('editor.untitledProject')
               }}</span>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" class="edit-icon">
-                <path
-                  d="M20.71,7.04C21.1,6.65 21.1,6 20.71,5.63L18.37,3.29C18,2.9 17.35,2.9 16.96,3.29L15.12,5.12L18.87,8.87M3,17.25V21H6.75L17.81,9.93L14.06,6.18L3,17.25Z"
-                />
-              </svg>
+              <RemixIcon name="edit-line" size="lg" class="edit-icon" />
             </button>
           </div>
 
@@ -46,49 +38,32 @@
 
             <HoverButton @click="saveProject" :disabled="isSaving" :title="t('editor.save')">
               <template #icon>
-                <svg
+                <RemixIcon
                   v-if="!isSaving"
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="currentColor"
-                >
-                  <path
-                    d="M15,9H5V5H15M12,19A3,3 0 0,1 9,16A3,3 0 0,1 12,13A3,3 0 0,1 15,16A3,3 0 0,1 12,19M17,3H5C3.89,3 3,3.9 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V7L17,3Z"
-                  />
-                </svg>
-                <svg
+                  name="save-line"
+                  size="lg"
+                />
+                <RemixIcon
                   v-else
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="currentColor"
+                  name="loader-4-line"
+                  size="lg"
+                  spin
                   class="spinning"
-                >
-                  <path d="M12,4V2A10,10 0 0,0 2,12H4A8,8 0 0,1 12,4Z" />
-                </svg>
+                />
               </template>
               {{ isSaving ? t('editor.saving') : t('editor.save') }}
             </HoverButton>
 
             <HoverButton @click="exportProject" :title="t('editor.export')">
               <template #icon>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                  <path
-                    d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"
-                  />
-                </svg>
+                <RemixIcon name="download-line" size="lg" />
               </template>
               {{ t('editor.export') }}
             </HoverButton>
 
             <!-- <HoverButton @click="debugProject" title="调试：打印项目JSON">
               <template #icon>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                  <path
-                    d="M20,19V7H4V19H20M20,3A2,2 0 0,1 22,5V19A2,2 0 0,1 20,21H4A2,2 0 0,1 2,19V5A2,2 0 0,1 4,3H20M13,17V15H18V17H13M9.58,13L5.57,9H8.4L11.7,12.3C12.09,12.69 12.09,13.33 11.7,13.72L8.42,17H5.59L9.58,13Z"
-                  />
-                </svg>
+                <RemixIcon name="tools-line" size="lg" />
               </template>
               调试
             </HoverButton> -->
@@ -157,6 +132,7 @@ import LoadingOverlay from '../components/LoadingOverlay.vue'
 import EditProjectDialog from '../components/EditProjectDialog.vue'
 import LanguageSelector from '../components/LanguageSelector.vue'
 import QuickChatButton from '../components/QuickChatButton.vue'
+import RemixIcon from '../components/icons/RemixIcon.vue'
 import { exportProject as exportProjectUtil } from '@/unified/utils/projectExporter'
 import { useAppI18n } from '@/unified/composables/useI18n'
 

@@ -50,12 +50,7 @@
             class="align-btn"
             :title="t('properties.transform.left')"
           >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-              <rect x="2" y="4" width="8" height="2" />
-              <rect x="2" y="7" width="6" height="2" />
-              <rect x="2" y="10" width="10" height="2" />
-              <line x1="1" y1="2" x2="1" y2="14" stroke="currentColor" stroke-width="1" />
-            </svg>
+            <RemixIcon name="align-item-left-fill" size="sm" />
           </button>
           <button
             @click="$emit('align-horizontal', 'center')"
@@ -63,12 +58,7 @@
             class="align-btn"
             :title="t('properties.transform.center')"
           >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-              <rect x="4" y="4" width="8" height="2" />
-              <rect x="5" y="7" width="6" height="2" />
-              <rect x="3" y="10" width="10" height="2" />
-              <line x1="8" y1="2" x2="8" y2="14" stroke="currentColor" stroke-width="1" />
-            </svg>
+            <RemixIcon name="align-item-horizontal-center-fill" size="sm" />
           </button>
           <button
             @click="$emit('align-horizontal', 'right')"
@@ -76,12 +66,7 @@
             class="align-btn"
             :title="t('properties.transform.right')"
           >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-              <rect x="6" y="4" width="8" height="2" />
-              <rect x="8" y="7" width="6" height="2" />
-              <rect x="4" y="10" width="10" height="2" />
-              <line x1="15" y1="2" x2="15" y2="14" stroke="currentColor" stroke-width="1" />
-            </svg>
+            <RemixIcon name="align-item-right-fill" size="sm" />
           </button>
         </div>
       </div>
@@ -96,12 +81,7 @@
             class="align-btn"
             :title="t('properties.transform.top')"
           >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-              <rect x="4" y="2" width="2" height="8" />
-              <rect x="7" y="2" width="2" height="6" />
-              <rect x="10" y="2" width="2" height="10" />
-              <line x1="2" y1="1" x2="14" y2="1" stroke="currentColor" stroke-width="1" />
-            </svg>
+            <RemixIcon name="align-item-top-fill" size="sm" />
           </button>
           <button
             @click="$emit('align-vertical', 'middle')"
@@ -109,12 +89,7 @@
             class="align-btn"
             :title="t('properties.transform.middle')"
           >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-              <rect x="4" y="4" width="2" height="8" />
-              <rect x="7" y="5" width="2" height="6" />
-              <rect x="10" y="3" width="2" height="10" />
-              <line x1="2" y1="8" x2="14" y2="8" stroke="currentColor" stroke-width="1" />
-            </svg>
+            <RemixIcon name="align-item-vertical-center-fill" size="sm" />
           </button>
           <button
             @click="$emit('align-vertical', 'bottom')"
@@ -122,12 +97,7 @@
             class="align-btn"
             :title="t('properties.transform.bottom')"
           >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-              <rect x="4" y="6" width="2" height="8" />
-              <rect x="7" y="8" width="2" height="6" />
-              <rect x="10" y="4" width="2" height="10" />
-              <line x1="2" y1="15" x2="14" y2="15" stroke="currentColor" stroke-width="1" />
-            </svg>
+            <RemixIcon name="align-item-bottom-fill" size="sm" />
           </button>
         </div>
       </div>
@@ -311,6 +281,7 @@ import { useAppI18n } from '@/unified/composables/useI18n'
 import { useUnifiedStore } from '@/unified/unifiedStore'
 import NumberInput from '@/components/NumberInput.vue'
 import SliderInput from '@/components/SliderInput.vue'
+import RemixIcon from '@/components/icons/RemixIcon.vue'
 
 const { t } = useAppI18n()
 const unifiedStore = useUnifiedStore()

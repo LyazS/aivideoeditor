@@ -90,20 +90,15 @@ function removeNotification(id: string) {
 
 .notification__icon {
   flex-shrink: 0;
-  width: 14px;
-  height: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: currentColor;
-  border-radius: 50%;
-  padding: 2px;
 }
 
 .notification__icon svg {
-  width: 10px;
-  height: 10px;
-  color: var(--color-bg-quaternary);
+  width: 16px;
+  height: 16px;
+  color: currentColor;
 }
 
 .notification__message {

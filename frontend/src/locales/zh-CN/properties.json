@@ -20,10 +20,13 @@
       "unmuteTitle": "取消静音",
       "muted": "已静音",
       "silenced": "静音中",
+      "audible": "有声",
+      "volumeMaintained": "音量保持",
       "playbackRate": "播放速率",
       "normalizedSpeed": "归一化速度"
     },
     "effects": {
+      "textStyle": "文本样式",
       "textEffects": "文本效果",
       "shadow": "阴影",
       "stroke": "描边",
@@ -140,17 +143,20 @@
       "framesShouldBeLessThan30": "• 帧数应小于30（30fps）",
       "timecodeParsingFailed": "时间码解析失败",
       "pleaseCheckFormat": "请检查格式",
+      "timecodeFormat": "时间码格式",
       "timecodeFormatError": "时间码格式错误",
       "audible": "有声",
       "volumeMaintained": "音量保持"
     },
     "singleSelect": {
       "emptyHint": "选择时间轴项目以查看属性",
-      "emptyHintDetail": "选择音频、视频、图片或文本片段来编辑其设置"
+      "emptyHintDetail": "选择音频、视频、图片或文本片段来编辑其设置",
+      "loading": "加载中..."
     },
     "multiSelect": {
       "title": "已选择 {count} 个项目",
-      "hint": "多选属性暂不支持"
+      "hint": "多选属性暂不支持",
+      "unknownMedia": "未知媒体"
     },
     "mediaTypes": {
       "video": "视频",

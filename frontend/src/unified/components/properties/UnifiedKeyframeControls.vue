@@ -18,15 +18,7 @@
         :disabled="!canOperateKeyframes"
         :title="keyframeTooltip"
       >
-        <svg
-          width="16"
-          height="16"
-          viewBox="0 0 16 16"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path d="M8 2L14 8L8 14L2 8L8 2Z" fill="currentColor" stroke="white" stroke-width="1" />
-        </svg>
+        <RemixIcon name="checkbox-blank-circle-line" size="sm" />
         <span>{{ t('properties.keyframes.keyframes') }}</span>
       </button>
 
@@ -37,9 +29,7 @@
         class="keyframe-nav-btn"
         :title="t('properties.keyframes.previousKeyframe')"
       >
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M15.41,16.58L10.83,12L15.41,7.41L14,6L8,12L14,18L15.41,16.58Z" />
-        </svg>
+        <RemixIcon name="arrow-left-s-line" size="sm" />
         <span>{{ t('properties.keyframes.goToPrevious') }}</span>
       </button>
 
@@ -51,9 +41,7 @@
         :title="t('properties.keyframes.nextKeyframe')"
       >
         <span>{{ t('properties.keyframes.goToNext') }}</span>
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M8.59,16.58L13.17,12L8.59,7.41L10,6L16,12L10,18L8.59,16.58Z" />
-        </svg>
+        <RemixIcon name="arrow-right-s-line" size="sm" />
       </button>
 
       <!-- 调试按钮 - 开发时使用 -->
@@ -63,11 +51,7 @@
         class="debug-btn"
         :title="t('properties.keyframes.debugKeyframes')"
       >
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-          <path
-            d="M9,3V4H4V6H5V19A2,2 0 0,0 7,21H17A2,2 0 0,0 19,19V6H20V4H15V3H9M7,6H17V19H7V6M9,8V17H11V8H9M13,8V17H15V8H13Z"
-          />
-        </svg>
+        <RemixIcon name="delete-bin-line" size="sm" />
         <span>{{ t('properties.keyframes.debugKeyframes') }}</span>
       </button> -->
     </div>
@@ -76,6 +60,7 @@
 
 <script setup lang="ts">
 import { useAppI18n } from '@/unified/composables/useI18n'
+import RemixIcon from '@/components/icons/RemixIcon.vue'
 
 const { t } = useAppI18n()
 

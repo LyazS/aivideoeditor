@@ -20,10 +20,13 @@
       "unmuteTitle": "Unmute",
       "muted": "Muted",
       "silenced": "Silenced",
+      "audible": "Audible",
+      "volumeMaintained": "Volume maintained",
       "playbackRate": "Playback Rate",
       "normalizedSpeed": "Normalized Speed"
     },
     "effects": {
+      "textStyle": "Text Style",
       "textEffects": "Text Effects",
       "shadow": "Shadow",
       "stroke": "Stroke",
@@ -140,17 +143,20 @@
       "framesShouldBeLessThan30": "• Frames should be less than 30 (30fps)",
       "timecodeParsingFailed": "Timecode parsing failed",
       "pleaseCheckFormat": "Please check format",
+      "timecodeFormat": "Timecode format",
       "timecodeFormatError": "Timecode format error",
       "audible": "Audible",
       "volumeMaintained": "Volume maintained"
     },
     "singleSelect": {
       "emptyHint": "Select a timeline item to view properties",
-      "emptyHintDetail": "Choose audio, video, image, or text clips to edit their settings"
+      "emptyHintDetail": "Choose audio, video, image, or text clips to edit their settings",
+      "loading": "Loading..."
     },
     "multiSelect": {
       "title": "Multiple Items Selected ({count})",
-      "hint": "Properties for multiple selection are not supported yet"
+      "hint": "Properties for multiple selection are not supported yet",
+      "unknownMedia": "Unknown Media"
     },
     "mediaTypes": {
       "video": "Video",

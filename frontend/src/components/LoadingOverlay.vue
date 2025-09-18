@@ -4,31 +4,7 @@
       <div class="loading-content">
         <!-- 加载图标 -->
         <div class="loading-icon">
-          <svg width="64" height="64" viewBox="0 0 24 24" fill="none" class="loading-spinner">
-            <circle
-              cx="12"
-              cy="12"
-              r="10"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-dasharray="31.416"
-              stroke-dashoffset="31.416"
-            >
-              <animate
-                attributeName="stroke-dasharray"
-                dur="2s"
-                values="0 31.416;15.708 15.708;0 31.416"
-                repeatCount="indefinite"
-              />
-              <animate
-                attributeName="stroke-dashoffset"
-                dur="2s"
-                values="0;-15.708;-31.416"
-                repeatCount="indefinite"
-              />
-            </circle>
-          </svg>
+          <RemixIcon name="loader-4-line" size="xl" spin class="loading-spinner" />
         </div>
 
         <!-- 加载标题 -->
@@ -64,6 +40,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import RemixIcon from './icons/RemixIcon.vue'
 
 // Props
 interface Props {
