@@ -162,7 +162,7 @@ onMounted(() => {
 
 .draggable-btn {
   position: fixed;
-  z-index: 9999;
+  z-index: 8888;
   width: 50px;
   height: 50px;
   border-radius: 50%;
