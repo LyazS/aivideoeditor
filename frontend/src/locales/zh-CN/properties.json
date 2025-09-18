@@ -148,6 +148,17 @@
       "emptyHint": "选择时间轴项目以查看属性",
       "emptyHintDetail": "选择音频、视频、图片或文本片段来编辑其设置"
     },
+    "multiSelect": {
+      "title": "已选择 {count} 个项目",
+      "hint": "多选属性暂不支持"
+    },
+    "mediaTypes": {
+      "video": "视频",
+      "image": "图片",
+      "audio": "音频",
+      "text": "文本",
+      "unknown": "未知"
+    },
     "panelTitle": "属性",
     "playheadStatus": {
       "outOfRange": "播放头不在区间"

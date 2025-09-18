@@ -23,6 +23,7 @@ import type { UnifiedConfigModule } from './UnifiedConfigModule'
 import type { UnifiedWebavModule } from './UnifiedWebavModule'
 import type { UnifiedTrackModule } from './UnifiedTrackModule'
 import type { UnifiedMediaModule } from './UnifiedMediaModule'
+import type { UnifiedSelectionModule } from './UnifiedSelectionModule'
 
 /**
  * 扩展的WebAV属性变化事件类型
@@ -308,9 +309,16 @@ export function createUnifiedTimelineModule(registry: ModuleRegistry) {
       // 直接使用registry.get获取所需模块
       const webavModule = registry.get<UnifiedWebavModule>(MODULE_NAMES.WEBAV)
       const mediaModule = registry.get<UnifiedMediaModule>(MODULE_NAMES.MEDIA)
+      const selectionModule = registry.get<UnifiedSelectionModule>(MODULE_NAMES.SELECTION)
 
       const item = timelineItems.value[index]
       const mediaItem = mediaModule.getMediaItem(item.mediaItemId)
+
+      // 🆕 同步清理选择集合中的对应ID
+      if (selectionModule.isTimelineItemSelected(timelineItemId)) {
+        selectionModule.removeFromMultiSelection(timelineItemId)
+        console.log(`🗑️ 已从选择集合中移除已删除的项目: ${timelineItemId}`)
+      }
 
       // 🆕 增强的清理逻辑：无论状态如何，都检查并清理sprite
       if (item.runtime.sprite) {
