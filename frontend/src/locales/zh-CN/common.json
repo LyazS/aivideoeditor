@@ -12,6 +12,7 @@
     "processing": "处理中",
     "saving": "保存中",
     "name": "名称",
-    "description": "描述"
+    "description": "描述",
+    "toggle": "切换"
   }
 }

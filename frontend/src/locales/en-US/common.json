@@ -12,6 +12,7 @@
     "processing": "Processing",
     "saving": "Saving",
     "name": "Name",
-    "description": "Description"
+    "description": "Description",
+    "toggle": "Toggle"
   }
 }
