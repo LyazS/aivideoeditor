@@ -43,8 +43,6 @@ import {
   findOverlappingTimelineItemsOnTrack,
   findOrphanedTimelineItems,
 } from '@/unified/utils/timelineSearchUtils'
-
-// 从TimelineItemFactory导入工厂函数
 import {
   cloneTimelineItem,
   duplicateTimelineItem,
