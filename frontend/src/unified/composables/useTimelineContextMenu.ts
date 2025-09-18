@@ -124,14 +124,6 @@ export function useTimelineContextMenu(
       onClick: () => duplicateClip(),
     })
 
-    // 重新生成缩略图 - 只有视频和图片支持
-    if (timelineItem.mediaType === 'video' || timelineItem.mediaType === 'image') {
-      menuItems.push({
-        label: t('timeline.contextMenu.clip.regenerateThumbnail'),
-        icon: MENU_ICONS.refresh,
-        onClick: () => regenerateThumbnail(),
-      })
-    }
 
     // 分隔符
     menuItems.push({ type: 'separator' } as MenuItem)
@@ -358,17 +350,6 @@ export function useTimelineContextMenu(
   }
 
   /**
-   * 重新生成缩略图
-   * @deprecated 缩略图现在由独立的缓存系统管理，此功能已废弃
-   */
-  async function regenerateThumbnail() {
-    if (contextMenuTarget.value.clipId) {
-      console.warn('⚠️ 手动重新生成缩略图功能已废弃，缩略图现在由系统自动管理')
-      showContextMenu.value = false
-    }
-  }
-
-  /**
    * 重命名轨道
    */
   function renameTrack() {
@@ -442,7 +423,6 @@ export function useTimelineContextMenu(
     handleTimelineItemContextMenu,
     removeClip,
     duplicateClip,
-    regenerateThumbnail,
     renameTrack,
     showAddTrackMenu,
   }
