@@ -1,84 +1,56 @@
 <template>
-  <div class="language-selector">
-    <div class="language-dropdown">
+  <Dropdown
+    placement="bottom-end"
+    :close-on-click-outside="true"
+  >
+    <!-- 自定义触发按钮 -->
+    <template #trigger="{ toggle }">
       <HoverButton
         variant="small"
         :title="t('common.language')"
-        @click="showLanguageDropdown = !showLanguageDropdown"
+        @click="toggle"
       >
         <template #icon>
           <RemixIcon name="translate" size="xl" />
         </template>
       </HoverButton>
+    </template>
 
-      <div v-if="showLanguageDropdown" class="language-dropdown-menu">
+    <!-- 语言选项具体内容 -->
+    <template #default="{ close }">
+      <div class="language-dropdown-menu">
         <div
           v-for="option in languageOptions"
           :key="option.value"
           class="language-option"
           :class="{ active: option.value === locale }"
-          @click="handleLanguageChange(option.value)"
+          @click="handleLanguageChange(option.value, close)"
         >
           {{ option.label }}
         </div>
       </div>
-    </div>
-  </div>
+    </template>
+  </Dropdown>
 </template>
 
 <script setup lang="ts">
-import { ref, onUnmounted } from 'vue'
 import { useAppI18n } from '@/unified/composables/useI18n'
 import RemixIcon from './icons/RemixIcon.vue'
 import HoverButton from './HoverButton.vue'
+import Dropdown from './Dropdown.vue'
 
 const { t, locale, languageOptions, switchLanguage } = useAppI18n()
-const showLanguageDropdown = ref(false)
 
 // 语言切换处理函数
-const handleLanguageChange = (lang: 'en-US' | 'zh-CN') => {
+const handleLanguageChange = (lang: 'en-US' | 'zh-CN', close: () => void) => {
   switchLanguage(lang)
-  showLanguageDropdown.value = false
+  close()
 }
-
-// 点击外部关闭下拉菜单
-const handleClickOutside = (event: MouseEvent) => {
-  const target = event.target as Element
-  if (!target.closest('.language-dropdown')) {
-    showLanguageDropdown.value = false
-  }
-}
-
-// 添加全局点击事件监听
-window.addEventListener('click', handleClickOutside)
-
-// 组件卸载时清理事件监听
-onUnmounted(() => {
-  window.removeEventListener('click', handleClickOutside)
-})
 </script>
 
 <style scoped>
-.language-selector {
-  position: relative;
-}
-
-.language-dropdown {
-  position: relative;
-}
-
 .language-dropdown-menu {
-  position: absolute;
-  top: 100%;
-  right: 0;
-  margin-top: 0.25rem;
-  background-color: var(--color-bg-secondary);
-  border: 1px solid var(--color-border);
-  border-radius: var(--border-radius-medium);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  z-index: 1000;
   min-width: 120px;
-  overflow: hidden;
 }
 
 .language-option {

@@ -1,13 +1,28 @@
 <template>
   <button :class="buttonClasses" :disabled="disabled" :title="title" @click="handleClick">
-    <!-- 图标插槽 -->
-    <slot name="icon" v-if="$slots.icon" />
+    <!-- 图标在前的情况 -->
+    <template v-if="props.iconPosition === 'before'">
+      <!-- 图标插槽 -->
+      <slot name="icon" v-if="$slots.icon" />
 
-    <!-- 默认内容插槽 -->
-    <slot />
+      <!-- 默认内容插槽 -->
+      <slot />
 
-    <!-- 文本内容 -->
-    <span v-if="text && !$slots.default" class="button-text">{{ text }}</span>
+      <!-- 文本内容 -->
+      <span v-if="text && !$slots.default" class="button-text">{{ text }}</span>
+    </template>
+
+    <!-- 图标在后的情况 -->
+    <template v-else>
+      <!-- 默认内容插槽 -->
+      <slot />
+
+      <!-- 文本内容 -->
+      <span v-if="text && !$slots.default" class="button-text">{{ text }}</span>
+
+      <!-- 图标插槽 -->
+      <slot name="icon" v-if="$slots.icon" />
+    </template>
   </button>
 </template>
 
@@ -25,6 +40,8 @@ interface Props {
   title?: string
   /** 额外的CSS类 */
   class?: string
+  /** 图标位置 - 'before' 图标在文字前，'after' 图标在文字后 */
+  iconPosition?: 'before' | 'after'
 }
 
 interface Emits {
@@ -34,6 +51,7 @@ interface Emits {
 const props = withDefaults(defineProps<Props>(), {
   variant: 'default',
   disabled: false,
+  iconPosition: 'before',
 })
 
 const emit = defineEmits<Emits>()
