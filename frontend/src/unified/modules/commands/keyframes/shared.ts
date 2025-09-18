@@ -5,12 +5,12 @@
 
 import type {
   UnifiedTimelineItemData,
-  AnimationConfig,
   VideoMediaConfig,
   AudioMediaConfig,
   ImageMediaConfig,
   TextMediaConfig,
 } from '@/unified/timelineitem/TimelineItemData'
+import type { AnimationConfig } from '@/unified/timelineitem/AnimationTypes'
 import { hasVisualProperties } from '@/unified/timelineitem/TimelineItemQueries'
 import { generateCommandId as generateId } from '@/unified/utils/idGenerator'
 import { isPlayheadInTimelineItem as checkPlayheadInTimelineItem } from '@/unified/utils/timelineSearchUtils'
@@ -89,8 +89,6 @@ export async function applyKeyframeSnapshot(
         framePosition: kf.framePosition,
         properties: { ...kf.properties },
       })),
-      isEnabled: snapshot.animationConfig.isEnabled,
-      easing: snapshot.animationConfig.easing,
     }
   } else {
     ;(item as any).animation = undefined

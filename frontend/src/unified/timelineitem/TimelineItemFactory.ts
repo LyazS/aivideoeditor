@@ -18,9 +18,9 @@ import type { UnifiedTimeRange } from '@/unified/types/timeRange'
 import type {
   UnifiedTimelineItemData,
   UnknownMediaConfig,
-  AnimationConfig,
   TimelineItemStatus,
 } from '@/unified/timelineitem/TimelineItemData'
+import type { AnimationConfig } from './AnimationTypes'
 import { TimelineItemQueries } from '@/unified/timelineitem/TimelineItemQueries'
 import { UnifiedMediaItemQueries } from '@/unified/mediaitem'
 import {

@@ -233,13 +233,11 @@ export function createUnifiedTimelineModule(registry: ModuleRegistry) {
     // 应用动画配置到sprite（如果有）
     if (
       timelineItem.animation &&
-      timelineItem.animation.isEnabled &&
       timelineItem.animation.keyframes.length > 0
     ) {
       try {
         console.log(`🎬 [UnifiedTimelineModule] 应用动画配置到sprite: ${timelineItem.id}`, {
           keyframeCount: timelineItem.animation.keyframes.length,
-          isEnabled: timelineItem.animation.isEnabled,
         })
 
         // 使用WebAVAnimationManager来应用动画
@@ -605,7 +603,7 @@ export function createUnifiedTimelineModule(registry: ModuleRegistry) {
       syncTimeRange(item)
 
       // 如果有动画，需要重新设置WebAV动画时长
-      if (item.animation && item.animation.isEnabled) {
+      if (item.animation && item.animation.keyframes.length > 0) {
         // 异步更新动画，不阻塞播放速度调整
         updateWebAVAnimation(item)
           .then(() => {

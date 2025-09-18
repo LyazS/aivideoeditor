@@ -7,7 +7,6 @@
 import type { UnifiedTimelineItemData } from '@/unified/timelineitem/TimelineItemData'
 import { convertToWebAVAnimation, isValidAnimationConfig } from '@/unified/utils/animationConverter'
 import { hasAnimation } from '@/unified/utils/unifiedKeyframeUtils'
-import { debugWebAVAnimationUpdate, isKeyframeDebugEnabled } from '@/unified/utils/keyframeDebugger'
 
 // ==================== WebAV动画管理器 ====================
 
@@ -50,10 +49,6 @@ export class WebAVAnimationManager {
       if (!isValidAnimationConfig(animationConfig)) {
         console.warn('🎬 [WebAV Animation] Invalid animation config for:', this.timelineItem.id)
 
-        // 在调试模式下提供详细信息
-        if (isKeyframeDebugEnabled()) {
-          debugWebAVAnimationUpdate(this.timelineItem)
-        }
         return
       }
 

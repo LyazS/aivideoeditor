@@ -4,12 +4,12 @@
  * 适配新架构版本
  */
 
+import type { UnifiedTimelineItemData } from '@/unified/timelineitem/TimelineItemData'
 import type {
-  UnifiedTimelineItemData,
   Keyframe,
   KeyframeButtonState,
   KeyframeUIState,
-} from '@/unified/timelineitem/TimelineItemData'
+} from '@/unified/timelineitem/AnimationTypes'
 import type { UnifiedTimeRange } from '@/unified/types/timeRange'
 import {
   hasVisualProperties,
@@ -65,8 +65,6 @@ export function initializeAnimation(item: UnifiedTimelineItemData): void {
     // 类型断言为any以绕过readonly限制，这在实际使用中需要谨慎
     item.animation = {
       keyframes: [],
-      isEnabled: false,
-      easing: 'linear',
     }
   }
 }
@@ -132,7 +130,7 @@ export function createKeyframe(item: UnifiedTimelineItemData, absoluteFrame: num
  * 检查是否有动画
  */
 export function hasAnimation(item: UnifiedTimelineItemData): boolean {
-  return !!(item.animation && item.animation.isEnabled && item.animation.keyframes.length > 0)
+  return !!(item.animation && item.animation.keyframes.length > 0)
 }
 
 /**
@@ -201,19 +199,14 @@ function findKeyframeAtFrame(
  */
 export function enableAnimation(item: UnifiedTimelineItemData): void {
   initializeAnimation(item)
-  if (item.animation) {
-    item.animation.isEnabled = true
-  }
+  // 启用动画只需要确保 animation 字段存在即可
 }
 
 /**
  * 禁用动画
  */
 export function disableAnimation(item: UnifiedTimelineItemData): void {
-  if (item.animation) {
-    item.animation.isEnabled = false
-    item.animation.keyframes = []
-  }
+  item.animation = undefined
 }
 
 /**
@@ -801,7 +794,6 @@ export function getNextKeyframeFrame(
 export function clearAllKeyframes(item: UnifiedTimelineItemData): void {
   if (!item.animation) return
   ;(item.animation as any).keyframes = []
-  ;(item.animation as any).isEnabled = false
 
   console.log('🎬 [Unified Keyframe] Cleared all keyframes:', {
     itemId: item.id,
@@ -899,8 +891,6 @@ export function debugKeyframes(item: UnifiedTimelineItemData): void {
 
   if (item.animation) {
     console.log('Animation Config:', {
-      isEnabled: item.animation.isEnabled,
-      easing: item.animation.easing,
       keyframes: item.animation.keyframes,
     })
 

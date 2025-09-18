@@ -189,7 +189,6 @@ const combinedStyles = computed(() => {
 const hasKeyframes = computed(() => {
   return !!(
     props.data.animation &&
-    props.data.animation.isEnabled &&
     props.data.animation.keyframes.length > 0
   )
 })

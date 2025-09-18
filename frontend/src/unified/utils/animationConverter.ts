@@ -8,7 +8,7 @@ import type {
   AnimationConfig,
   WebAVAnimationConfig,
   Keyframe,
-} from '@/unified/timelineitem/TimelineItemData'
+} from '@/unified/timelineitem/AnimationTypes'
 import type { UnifiedTimeRange } from '@/unified/types/timeRange'
 import { framesToMicroseconds } from '@/unified/utils/timeUtils'
 import { projectToWebavCoords } from '@/unified/utils/coordinateTransform'
@@ -183,7 +183,6 @@ export function convertToWebAVAnimation(
     options: {
       duration: Math.max(0, durationMicroseconds), // 确保时长不为负数
       iterCount: 1, // 默认播放一次
-      easing: animationConfig.easing,
     },
   }
 }
@@ -198,11 +197,6 @@ export function convertToWebAVAnimation(
 export function isValidAnimationConfig(animationConfig: AnimationConfig): boolean {
   // 检查基本结构
   if (!animationConfig || !Array.isArray(animationConfig.keyframes)) {
-    return false
-  }
-
-  // 检查是否启用
-  if (!animationConfig.isEnabled) {
     return false
   }
 

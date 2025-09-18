@@ -16,6 +16,15 @@ export type {
   AudioMediaConfig,
 } from './TimelineItemData'
 
+// 动画类型导出
+export type {
+  AnimationConfig,
+  Keyframe,
+  KeyframeButtonState,
+  KeyframeUIState,
+  WebAVAnimationConfig,
+} from './AnimationTypes'
+
 // 从mediaitem模块导入MediaType
 export type { MediaType } from '../mediaitem'
 

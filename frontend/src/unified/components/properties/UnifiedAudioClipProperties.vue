@@ -408,7 +408,7 @@ const updateTargetDurationFrames = async (newDurationFrames: number) => {
   }
 
   // 如果有动画，需要重新设置WebAV动画时长
-  if (props.selectedTimelineItem.animation && props.selectedTimelineItem.animation.isEnabled) {
+  if (props.selectedTimelineItem.animation && props.selectedTimelineItem.animation.keyframes.length > 0) {
     await updateWebAVAnimation(props.selectedTimelineItem)
     console.log('🎬 [Duration Update] Animation duration updated after clip duration change')
   }

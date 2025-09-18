@@ -9,7 +9,7 @@ import type {
   KeyframeUIState,
   KeyframeButtonState,
   KeyframeProperties,
-} from '@/unified/timelineitem/TimelineItemData'
+} from '@/unified/timelineitem/AnimationTypes'
 // WebAV功能现在通过unifiedStore提供
 import { useUnifiedStore } from '@/unified/unifiedStore'
 import {
@@ -48,7 +48,6 @@ export function useUnifiedKeyframeUI(
 
     // 显式访问需要追踪的深层属性，让 Vue 建立依赖关系
     timelineItem.value.animation?.keyframes.length
-    timelineItem.value.animation?.isEnabled
 
     return getKeyframeUIState(timelineItem.value, currentFrame.value)
   })
@@ -63,7 +62,6 @@ export function useUnifiedKeyframeUI(
 
     // 显式访问需要追踪的深层属性，让 Vue 建立依赖关系
     timelineItem.value.animation?.keyframes.length
-    timelineItem.value.animation?.isEnabled
 
     return getKeyframeButtonState(timelineItem.value, currentFrame.value)
   })

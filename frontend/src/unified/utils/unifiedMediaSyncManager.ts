@@ -398,13 +398,11 @@ async function transitionTimelineItemToReady(
     // 5. 应用动画配置到sprite（如果有）
     if (
       timelineItem.animation &&
-      timelineItem.animation.isEnabled &&
       timelineItem.animation.keyframes.length > 0
     ) {
       try {
         console.log(`🎬 [UnifiedMediaSync] 应用动画配置到sprite: ${timelineItemId}`, {
           keyframeCount: timelineItem.animation.keyframes.length,
-          isEnabled: timelineItem.animation.isEnabled,
         })
 
         // 使用WebAVAnimationManager来应用动画
@@ -527,7 +525,6 @@ async function applyTimelineItemConfigToSprite(timelineItem: any): Promise<void>
       mediaType: timelineItem.mediaType,
       hasAnimation: !!(
         timelineItem.animation &&
-        timelineItem.animation.isEnabled &&
         timelineItem.animation.keyframes.length > 0
       ),
     })

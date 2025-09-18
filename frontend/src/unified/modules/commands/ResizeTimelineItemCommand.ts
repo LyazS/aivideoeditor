@@ -60,7 +60,6 @@ export class ResizeTimelineItemCommand implements SimpleCommand {
       // 检查是否有动画
       this.hasAnimation = !!(
         timelineItem.animation &&
-        timelineItem.animation.isEnabled &&
         timelineItem.animation.keyframes.length > 0
       )
     }

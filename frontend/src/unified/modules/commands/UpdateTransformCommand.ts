@@ -430,7 +430,7 @@ export class UpdateTransformCommand implements SimpleCommand {
     timelineItem.timeRange = sprite.getTimeRange()
 
     // 如果有动画，需要重新设置WebAV动画时长
-    if (timelineItem.animation && timelineItem.animation.isEnabled) {
+    if (timelineItem.animation && timelineItem.animation.keyframes.length > 0) {
       // 异步更新动画，不阻塞命令执行
       console.log(
         '🎬 [Command] Timeline item has animation, but animation update is not yet implemented in unified architecture',

@@ -215,21 +215,6 @@ export {
   debugKeyframes,
 } from './unifiedKeyframeUtils'
 
-// ==================== 关键帧调试工具 ====================
-export {
-  // 调试函数
-  getKeyframeDebugInfo,
-  logKeyframeDebugInfo,
-  debugWebAVAnimationUpdate,
-
-  // 调试开关
-  enableKeyframeDebug,
-  disableKeyframeDebug,
-  isKeyframeDebugEnabled,
-
-  // 快速调试
-  debugCurrentItem,
-} from './keyframeDebugger'
 
 // ==================== 统一项目管理器 ====================
 export { unifiedProjectManager } from './projectManager'
