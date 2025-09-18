@@ -31,51 +31,24 @@ import { generateCommandId } from '@/unified/utils/idGenerator'
 import { framesToSeconds } from '@/unified/utils/timeUtils'
 import { useAppI18n } from '@/unified/composables/useI18n'
 import { i18n } from '@/locales'
+import { ModuleRegistry, MODULE_NAMES } from './ModuleRegistry'
+import type { UnifiedConfigModule } from './UnifiedConfigModule'
+import type { UnifiedTimelineModule } from './UnifiedTimelineModule'
+import type { UnifiedTrackModule } from './UnifiedTrackModule'
+import type { UnifiedMediaModule } from './UnifiedMediaModule'
+import type { UnifiedWebavModule } from './UnifiedWebavModule'
 
 /**
  * 统一项目管理模块
  * 基于新架构统一类型系统的项目管理，参考原projectModule设计
  */
-export function createUnifiedProjectModule(
-  configModule: {
-    projectId: Ref<string>
-    projectName: Ref<string>
-    projectDescription: Ref<string>
-    projectCreatedAt: Ref<string>
-    projectUpdatedAt: Ref<string>
-    projectVersion: Ref<string>
-    projectThumbnail: Ref<string | undefined | null>
-    videoResolution: Ref<VideoResolution>
-    frameRate: Ref<number>
-    timelineDurationFrames: Ref<number>
-    restoreFromProjectSettings: (pid: string, pconifg: UnifiedProjectConfig) => void
-  },
-  timelineModule: {
-    timelineItems: Ref<UnifiedTimelineItemData<MediaType>[]>
-    addTimelineItem: (item: UnifiedTimelineItemData<MediaType>) => Promise<void>
-    setupTimelineItemSprite: (item: UnifiedTimelineItemData<MediaType>) => Promise<void>
-  },
-  trackModule: {
-    tracks: Ref<UnifiedTrackData[]>
-    addTrack: (trackData: UnifiedTrackData, position?: number) => UnifiedTrackData
-  },
-  mediaModule: {
-    mediaItems: Ref<UnifiedMediaItemData[]>
-    createUnifiedMediaItemData: (
-      id: string,
-      name: string,
-      source: any,
-      options?: any,
-    ) => UnifiedMediaItemData
-    getMediaItem: (id: string) => UnifiedMediaItemData | undefined
-    addMediaItem: (item: UnifiedMediaItemData) => void
-    startMediaProcessing: (item: UnifiedMediaItemData) => void
-  },
-  webavModule: {
-    addSprite: (sprite: VisibleSprite) => Promise<boolean>
-    removeSprite: (sprite: VisibleSprite) => boolean
-  },
-) {
+export function createUnifiedProjectModule(registry: ModuleRegistry) {
+  // 通过注册中心获取依赖模块
+  const configModule = registry.get<UnifiedConfigModule>(MODULE_NAMES.CONFIG)
+  const timelineModule = registry.get<UnifiedTimelineModule>(MODULE_NAMES.TIMELINE)
+  const trackModule = registry.get<UnifiedTrackModule>(MODULE_NAMES.TRACK)
+  const mediaModule = registry.get<UnifiedMediaModule>(MODULE_NAMES.MEDIA)
+  const webavModule = registry.get<UnifiedWebavModule>(MODULE_NAMES.WEBAV)
   const thumbnailService = useProjectThumbnailService()
   
   // 获取i18n函数

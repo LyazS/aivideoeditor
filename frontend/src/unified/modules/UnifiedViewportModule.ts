@@ -9,6 +9,11 @@ import {
   calculateMaxVisibleDurationFrames,
 } from '@/unified/utils/durationUtils'
 import type { UnifiedTimelineItemData } from '@/unified/timelineitem/TimelineItemData'
+import type { ModuleRegistry } from './ModuleRegistry'
+import { MODULE_NAMES } from './ModuleRegistry'
+import type { UnifiedTimelineModule } from './UnifiedTimelineModule'
+import type { UnifiedConfigModule } from './UnifiedConfigModule'
+import { calculateTotalDurationFrames } from '@/unified/utils/durationUtils'
 
 /**
  * 统一缩放滚动管理模块
@@ -19,12 +24,25 @@ import type { UnifiedTimelineItemData } from '@/unified/timelineitem/TimelineIte
  * 2. 使用统一的时间轴项目类型和状态管理系统
  * 3. 保持与原有模块相同的API接口，便于迁移
  * 4. 支持更丰富的时间轴项目状态和属性管理
+ * 5. 使用模块注册中心模式获取依赖，解决循环依赖问题
  */
 export function createUnifiedViewportModule(
-  timelineItems: Ref<UnifiedTimelineItemData[]>,
-  totalDurationFrames: Ref<number>,
-  timelineDurationFrames: Ref<number>,
+  registry: ModuleRegistry,
 ) {
+  // 通过注册中心获取依赖模块
+  const timelineModule = registry.get<UnifiedTimelineModule>(MODULE_NAMES.TIMELINE)
+  const configModule = registry.get<UnifiedConfigModule>(MODULE_NAMES.CONFIG)
+  
+  const timelineItems = timelineModule.timelineItems
+  const timelineDurationFrames = configModule.timelineDurationFrames
+  
+  // 计算总时长
+  const totalDurationFrames = computed(() => {
+    return calculateTotalDurationFrames(
+      timelineItems.value,
+      timelineDurationFrames.value,
+    )
+  })
   // ==================== 状态定义 ====================
 
   // 缩放和滚动状态

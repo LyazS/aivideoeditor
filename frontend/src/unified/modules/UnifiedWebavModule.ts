@@ -28,6 +28,10 @@ import {
 import type { UnifiedTimelineItemData } from '@/unified/timelineitem'
 import { TimelineItemFactory } from '@/unified/timelineitem'
 import type { MediaType, UnifiedMediaItemData } from '@/unified/mediaitem/types'
+import { ModuleRegistry, MODULE_NAMES } from './ModuleRegistry'
+import type { UnifiedPlaybackModule } from './UnifiedPlaybackModule'
+import type { UnifiedTimelineModule } from './UnifiedTimelineModule'
+import type { UnifiedMediaModule } from './UnifiedMediaModule'
 /**
  * 播放选项接口
  */
@@ -56,13 +60,9 @@ let globalCanvasContainer: HTMLElement | null = null
  * 3. 使用时间同步锁防止循环调用
  * 4. timeupdate事件是Store状态更新的唯一入口
  */
-export function createUnifiedWebavModule(playbackModule: {
-  currentFrame: Ref<number>
-  currentWebAVFrame: Ref<number>
-  isPlaying: Ref<boolean>
-  setCurrentFrame: (frames: number) => void
-  setPlaying: (playing: boolean) => void
-}) {
+export function createUnifiedWebavModule(registry: ModuleRegistry) {
+  // 通过注册中心获取依赖模块
+  const playbackModule = registry.get<UnifiedPlaybackModule>(MODULE_NAMES.PLAYBACK)
   // ==================== 状态定义 ====================
 
   // WebAV核心对象 - 使用markRaw避免Vue响应式包装

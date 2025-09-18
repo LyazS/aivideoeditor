@@ -1,11 +1,16 @@
 import { ref, computed } from 'vue'
 import { alignFramesToFrame, framesToTimecode } from '../utils/timeUtils'
+import { ModuleRegistry, MODULE_NAMES } from './ModuleRegistry'
+import type { UnifiedConfigModule } from './UnifiedConfigModule'
 
 /**
  * 播放控制管理模块
  * 负责管理播放状态和时间控制
  */
-export function createUnifiedPlaybackModule(frameRate: { value: number }) {
+export function createUnifiedPlaybackModule(registry: ModuleRegistry) {
+  // 通过注册中心获取依赖模块
+  const configModule = registry.get<UnifiedConfigModule>(MODULE_NAMES.CONFIG)
+  const frameRate = configModule.frameRate
   // ==================== 状态定义 ====================
 
   // 播放相关状态

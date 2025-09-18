@@ -14,6 +14,7 @@ import { createUnifiedHistoryModule } from '@/unified/modules/UnifiedHistoryModu
 import { createUnifiedAutoSaveModule } from '@/unified/modules/UnifiedAutoSaveModule'
 import { createUnifiedVideoThumbnailModule } from '@/unified/modules/UnifiedVideoThumbnailModule'
 import { createUnifiedSnapModule } from '@/unified/modules/UnifiedSnapModule'
+import { ModuleRegistry, MODULE_NAMES } from '@/unified/modules/ModuleRegistry'
 import { useHistoryOperations } from '@/unified/composables/useHistoryOperations'
 import { calculateTotalDurationFrames } from '@/unified/utils/durationUtils'
 import { useEditSDK } from '@/agent'
@@ -42,7 +43,6 @@ import {
   findOverlappingTimelineItemsOnTrack,
   findOrphanedTimelineItems,
 } from '@/unified/utils/timelineSearchUtils'
-import { TimelineItemQueries } from '@/unified/timelineitem/'
 
 // 从TimelineItemFactory导入工厂函数
 import {
@@ -55,65 +55,47 @@ import {
  * 基于新的统一类型系统重构的主要状态管理
  *
  * 架构特点：
- * 1. 使用 UnifiedMediaModule 管理统一媒体项目
- * 2. 使用 UnifiedTrackModule 管理统一轨道系统
- * 3. 使用 UnifiedTimelineModule 管理统一时间轴项目
- * 4. 使用 UnifiedProjectModule 管理统一项目配置
- * 5. 使用 UnifiedViewportModule 管理统一视口缩放滚动
- * 6. 使用 UnifiedSelectionModule 管理时间轴项目和媒体项目的选择状态
- * 7. 使用 UnifiedConfigModule 管理视频编辑器全局配置
- * 9. 使用 UnifiedPlaybackModule 管理播放控制功能
- * 10. 使用 UnifiedWebavModule 管理WebAV集成和画布操作
- * 11. 集成 UnifiedNotificationModule 提供通知管理功能
- * 12. 集成 UnifiedHistoryModule 提供撤销重做功能
- * 13. 保持模块化设计，各模块职责清晰
- * 14. 提供完整的视频编辑功能支持
+ * 1. 使用模块注册中心模式管理所有模块依赖
+ * 2. 采用"先创建后注册"模式解决循环依赖问题
+ * 3. 各模块通过注册中心动态获取依赖
+ * 4. 保持模块化设计，各模块职责清晰
+ * 5. 提供完整的视频编辑功能支持
  */
 export const useUnifiedStore = defineStore('unified', () => {
-  // ==================== 核心模块初始化 ====================
+  // ==================== 模块注册中心初始化 ====================
 
-  // 创建配置管理模块
+  // 创建模块注册中心
+  const registry = new ModuleRegistry()
+
+  // ==================== 分阶段模块创建和注册 ====================
+
+  // 阶段1: 创建基础模块（无依赖或只有配置依赖）
   const unifiedConfigModule = createUnifiedConfigModule()
+  registry.register(MODULE_NAMES.CONFIG, unifiedConfigModule)
 
-  // 创建播放控制模块
-  const unifiedPlaybackModule = createUnifiedPlaybackModule(unifiedConfigModule.frameRate)
+  const unifiedPlaybackModule = createUnifiedPlaybackModule(registry)
+  registry.register(MODULE_NAMES.PLAYBACK, unifiedPlaybackModule)
 
-  // 创建WebAV集成模块
-  const unifiedWebavModule = createUnifiedWebavModule({
-    currentFrame: unifiedPlaybackModule.currentFrame,
-    currentWebAVFrame: unifiedPlaybackModule.currentWebAVFrame,
-    isPlaying: unifiedPlaybackModule.isPlaying,
-    setCurrentFrame: unifiedPlaybackModule.setCurrentFrame,
-    setPlaying: unifiedPlaybackModule.setPlaying,
-  })
-  // 创建统一媒体管理模块（替代原有的mediaModule）
+  const unifiedWebavModule = createUnifiedWebavModule(registry)
+  registry.register(MODULE_NAMES.WEBAV, unifiedWebavModule)
+
   const unifiedMediaModule = createUnifiedMediaModule()
+  registry.register(MODULE_NAMES.MEDIA, unifiedMediaModule)
 
-  // 创建统一轨道管理模块
   const unifiedTrackModule = createUnifiedTrackModule()
+  registry.register(MODULE_NAMES.TRACK, unifiedTrackModule)
 
-  // 创建统一时间轴管理模块（需要依赖其他模块）
-  const unifiedTimelineModule = createUnifiedTimelineModule(
-    unifiedConfigModule,
-    unifiedWebavModule,
-    unifiedMediaModule,
-    unifiedTrackModule,
-  )
+  const unifiedNotificationModule = createUnifiedNotificationModule()
+  registry.register(MODULE_NAMES.NOTIFICATION, unifiedNotificationModule)
 
-  // 创建统一项目管理模块
-  const unifiedProjectModule = createUnifiedProjectModule(
-    unifiedConfigModule,
-    unifiedTimelineModule,
-    unifiedTrackModule,
-    unifiedMediaModule,
-    unifiedWebavModule,
-  )
+  // 阶段2: 创建需要依赖的模块
+  const unifiedTimelineModule = createUnifiedTimelineModule(registry)
+  registry.register(MODULE_NAMES.TIMELINE, unifiedTimelineModule)
 
-  // ==================== 计算属性 ====================
+  const unifiedProjectModule = createUnifiedProjectModule(registry)
+  registry.register(MODULE_NAMES.PROJECT, unifiedProjectModule)
 
-  /**
-   * 总时长（帧数版本）
-   */
+  // 计算总时长（需要在timeline模块之后）
   const totalDurationFrames = computed(() => {
     return calculateTotalDurationFrames(
       unifiedTimelineModule.timelineItems.value,
@@ -121,61 +103,28 @@ export const useUnifiedStore = defineStore('unified', () => {
     )
   })
 
-  // 创建统一视口管理模块（需要在totalDurationFrames之后创建）
-  const unifiedViewportModule = createUnifiedViewportModule(
-    unifiedTimelineModule.timelineItems,
-    totalDurationFrames,
-    unifiedConfigModule.timelineDurationFrames,
-  )
+  const unifiedViewportModule = createUnifiedViewportModule(registry)
+  registry.register(MODULE_NAMES.VIEWPORT, unifiedViewportModule)
 
-  // 创建通知管理模块
-  const unifiedNotificationModule = createUnifiedNotificationModule()
+  const unifiedHistoryModule = createUnifiedHistoryModule(registry)
+  registry.register(MODULE_NAMES.HISTORY, unifiedHistoryModule)
 
-  // 创建历史管理模块（需要在unifiedNotificationModule之后创建）
-  const unifiedHistoryModule = createUnifiedHistoryModule(unifiedNotificationModule)
+  const unifiedSelectionModule = createUnifiedSelectionModule(registry)
+  registry.register(MODULE_NAMES.SELECTION, unifiedSelectionModule)
 
-  // 创建统一选择管理模块（需要在unifiedHistoryModule之后创建）
-  const unifiedSelectionModule = createUnifiedSelectionModule(unifiedTimelineModule.getTimelineItem)
+  const unifiedAutoSaveModule = createUnifiedAutoSaveModule(registry, {
+    enabled: true,
+    debounceTime: 2000,
+    throttleTime: 30000,
+    maxRetries: 3,
+  })
+  registry.register(MODULE_NAMES.AUTOSAVE, unifiedAutoSaveModule)
 
-  // 创建统一自动保存模块（需要在项目模块之后创建）
-  const unifiedAutoSaveModule = createUnifiedAutoSaveModule(
-    {
-      projectModule: {
-        saveCurrentProject: unifiedProjectModule.saveCurrentProject,
-        isSaving: unifiedProjectModule.isSaving,
-      },
-      dataWatchers: {
-        timelineItems: unifiedTimelineModule.timelineItems,
-        tracks: unifiedTrackModule.tracks,
-        mediaItems: unifiedMediaModule.mediaItems,
-        projectConfig: computed(() => ({
-          videoResolution: unifiedConfigModule.videoResolution.value,
-          frameRate: unifiedConfigModule.frameRate.value,
-          timelineDurationFrames: unifiedConfigModule.timelineDurationFrames.value,
-        })),
-      },
-    },
-    {
-      // 可以在这里传入自定义配置
-      enabled: true,
-      debounceTime: 2000,
-      throttleTime: 30000,
-      maxRetries: 3,
-    },
-  )
+  const unifiedVideoThumbnailModule = createUnifiedVideoThumbnailModule(registry)
+  registry.register(MODULE_NAMES.VIDEOTHUMBNAIL, unifiedVideoThumbnailModule)
 
-  // 创建视频缩略图模块
-  const unifiedVideoThumbnailModule = createUnifiedVideoThumbnailModule(
-    unifiedTimelineModule,
-    unifiedMediaModule,
-  )
-
-  // 创建统一吸附管理模块
-  const unifiedSnapModule = createUnifiedSnapModule(
-    unifiedTimelineModule.timelineItems,
-    unifiedPlaybackModule.currentFrame,
-    unifiedConfigModule,
-  )
+  const unifiedSnapModule = createUnifiedSnapModule(registry)
+  registry.register(MODULE_NAMES.SNAP, unifiedSnapModule)
 
   // 创建历史记录操作模块
   const historyOperations = useHistoryOperations(

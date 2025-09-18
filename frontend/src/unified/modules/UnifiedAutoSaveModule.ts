@@ -1,9 +1,16 @@
-import { ref, watch, type Ref } from 'vue'
+import { ref, watch, type Ref, computed } from 'vue'
 import { debounce, throttle } from 'lodash'
 import { globalProjectMediaManager } from '@/unified/utils/ProjectMediaManager'
 import type { UnifiedTimelineItemData } from '@/unified/timelineitem'
 import type { UnifiedTrackData } from '@/unified/track'
 import type { UnifiedMediaItemData } from '@/unified/mediaitem'
+import type { ModuleRegistry } from './ModuleRegistry'
+import { MODULE_NAMES } from './ModuleRegistry'
+import type { UnifiedProjectModule } from './UnifiedProjectModule'
+import type { UnifiedTimelineModule } from './UnifiedTimelineModule'
+import type { UnifiedTrackModule } from './UnifiedTrackModule'
+import type { UnifiedMediaModule } from './UnifiedMediaModule'
+import type { UnifiedConfigModule } from './UnifiedConfigModule'
 
 /**
  * 视频分辨率类型定义 (来自 UnifiedProjectConfig)
@@ -37,39 +44,31 @@ interface AutoSaveState {
 }
 
 /**
- * 自动保存模块依赖接口
- */
-interface AutoSaveDependencies {
-  /** 项目模块 */
-  projectModule: {
-    saveCurrentProject: (options?: {
-      configChanged?: boolean
-      contentChanged?: boolean
-    }) => Promise<void>
-    isSaving: Ref<boolean>
-  }
-  /** 需要监听的数据源 */
-  dataWatchers: {
-    timelineItems: Ref<UnifiedTimelineItemData[]>
-    tracks: Ref<UnifiedTrackData[]>
-    mediaItems: Ref<UnifiedMediaItemData[]>
-    projectConfig: Ref<{
-      videoResolution: VideoResolution
-      frameRate: number
-      timelineDurationFrames: number
-    }>
-  }
-}
-
-/**
  * 统一自动保存模块
  * 提供防抖+节流的自动保存策略，适配新架构的模块化设计
  */
 export function createUnifiedAutoSaveModule(
-  dependencies: AutoSaveDependencies,
+  registry: ModuleRegistry,
   config: Partial<AutoSaveConfig> = {},
 ) {
-  const { projectModule, dataWatchers } = dependencies
+  // 通过注册中心获取依赖模块
+  const projectModule = registry.get<UnifiedProjectModule>(MODULE_NAMES.PROJECT)
+  const timelineModule = registry.get<UnifiedTimelineModule>(MODULE_NAMES.TIMELINE)
+  const trackModule = registry.get<UnifiedTrackModule>(MODULE_NAMES.TRACK)
+  const mediaModule = registry.get<UnifiedMediaModule>(MODULE_NAMES.MEDIA)
+  const configModule = registry.get<UnifiedConfigModule>(MODULE_NAMES.CONFIG)
+
+  // 数据监听器配置
+  const dataWatchers = {
+    timelineItems: timelineModule.timelineItems,
+    tracks: trackModule.tracks,
+    mediaItems: mediaModule.mediaItems,
+    projectConfig: computed(() => ({
+      videoResolution: configModule.videoResolution.value,
+      frameRate: configModule.frameRate.value,
+      timelineDurationFrames: configModule.timelineDurationFrames.value,
+    })),
+  }
 
   // ==================== 配置管理 ====================
 

@@ -20,15 +20,17 @@ import {
 import { framesToMicroseconds } from '@/unified/utils/timeUtils'
 import { ThumbnailMode, THUMBNAIL_CONSTANTS } from '@/unified/constants/ThumbnailConstants'
 import { UnifiedMediaItemQueries } from '@/unified/mediaitem/queries'
+import type { ModuleRegistry } from './ModuleRegistry'
+import { MODULE_NAMES } from './ModuleRegistry'
+import type { UnifiedTimelineModule } from './UnifiedTimelineModule'
+import type { UnifiedMediaModule } from './UnifiedMediaModule'
 
 export function createUnifiedVideoThumbnailModule(
-  timelineModule: {
-    getTimelineItem: (id: string) => UnifiedTimelineItemData | undefined
-  },
-  mediaModule: {
-    getMediaItem: (id: string) => UnifiedMediaItemData | undefined
-  },
+  registry: ModuleRegistry,
 ) {
+  // 通过注册中心获取依赖模块
+  const timelineModule = registry.get<UnifiedTimelineModule>(MODULE_NAMES.TIMELINE)
+  const mediaModule = registry.get<UnifiedMediaModule>(MODULE_NAMES.MEDIA)
   // 状态定义
   const pendingRequests = ref(
     new Map<string, Array<{ framePosition: number; timestamp: number }>>(),

@@ -1,5 +1,8 @@
 import { ref } from 'vue'
 import type { SimpleCommand } from '@/unified/modules/commands/types'
+import type { ModuleRegistry } from './ModuleRegistry'
+import { MODULE_NAMES } from './ModuleRegistry'
+import type { UnifiedNotificationModule } from './UnifiedNotificationModule'
 
 /**
  * 通知管理器接口
@@ -381,7 +384,15 @@ class SimpleHistoryManager {
  * 历史管理模块
  * 提供响应式的撤销/重做状态和方法
  */
-export function createUnifiedHistoryModule(notificationManager: NotificationManager) {
+export function createUnifiedHistoryModule(registry: ModuleRegistry) {
+  // 通过注册中心获取通知模块
+  const notificationModule = registry.get<UnifiedNotificationModule>(MODULE_NAMES.NOTIFICATION)
+  const notificationManager: NotificationManager = {
+    showSuccess: notificationModule.showSuccess,
+    showError: notificationModule.showError,
+    showWarning: notificationModule.showWarning,
+    showInfo: notificationModule.showInfo,
+  }
   // ==================== 状态定义 ====================
 
   // 创建历史管理器

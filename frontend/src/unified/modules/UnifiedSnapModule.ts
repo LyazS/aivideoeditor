@@ -1,4 +1,4 @@
-import { ref, type Ref } from 'vue'
+import { ref, type Ref, computed } from 'vue'
 import type {
   SnapConfig,
   SnapPoint,
@@ -13,6 +13,12 @@ import type {
 import { DEFAULT_SNAP_CONFIG } from '@/types/snap'
 import type { UnifiedTimelineItemData } from '@/unified/timelineitem/TimelineItemData'
 import { relativeFrameToAbsoluteFrame } from '@/unified/utils/unifiedKeyframeUtils'
+import type { ModuleRegistry } from './ModuleRegistry'
+import { MODULE_NAMES } from './ModuleRegistry'
+import type { UnifiedTimelineModule } from './UnifiedTimelineModule'
+import type { UnifiedPlaybackModule } from './UnifiedPlaybackModule'
+import type { UnifiedConfigModule } from './UnifiedConfigModule'
+import type { UnifiedMediaModule } from './UnifiedMediaModule'
 
 /**
  * 吸附缓存接口
@@ -39,10 +45,19 @@ function createEmptySnapCache(): SnapCache {
  * 负责管理时间轴吸附功能，提供无阻塞的吸附计算
  */
 export function createUnifiedSnapModule(
-  timelineItems: Ref<UnifiedTimelineItemData[]>,
-  currentFrame: Ref<number>,
-  configModule: any, // UnifiedConfigModule
+  registry: ModuleRegistry,
 ) {
+  // 通过注册中心获取依赖模块
+  const timelineModule = registry.get<UnifiedTimelineModule>(MODULE_NAMES.TIMELINE)
+  const playbackModule = registry.get<UnifiedPlaybackModule>(MODULE_NAMES.PLAYBACK)
+  const configModule = registry.get<UnifiedConfigModule>(MODULE_NAMES.CONFIG)
+  const mediaModule = registry.get<UnifiedMediaModule>(MODULE_NAMES.MEDIA)
+
+  const timelineItems = timelineModule.timelineItems
+  const currentFrame = playbackModule.currentFrame
+  
+  // 获取媒体项目的getMediaItem方法
+  const getMediaItem = (id: string) => mediaModule.getMediaItem(id)
   // ==================== 状态定义 ====================
 
   // 吸附配置
@@ -103,7 +118,7 @@ export function createUnifiedSnapModule(
           }
 
           // 获取媒体项目名称
-          const mediaItem = configModule.getMediaItem?.(item.mediaItemId)
+          const mediaItem = getMediaItem(item.mediaItemId)
           const clipName = mediaItem?.name || `片段 ${item.id.slice(0, 8)}`
 
           // 添加开始位置吸附点

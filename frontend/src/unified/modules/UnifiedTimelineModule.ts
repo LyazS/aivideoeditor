@@ -18,6 +18,11 @@ import { ImageVisibleSprite } from '@/unified/visiblesprite/ImageVisibleSprite'
 import { AudioVisibleSprite } from '@/unified/visiblesprite/AudioVisibleSprite'
 import { webavToProjectCoords, projectToWebavCoords } from '@/unified/utils/coordinateTransform'
 import type { VideoResolution } from '@/unified/types'
+import { ModuleRegistry, MODULE_NAMES } from './ModuleRegistry'
+import type { UnifiedConfigModule } from './UnifiedConfigModule'
+import type { UnifiedWebavModule } from './UnifiedWebavModule'
+import type { UnifiedTrackModule } from './UnifiedTrackModule'
+import type { UnifiedMediaModule } from './UnifiedMediaModule'
 
 /**
  * 扩展的WebAV属性变化事件类型
@@ -72,21 +77,7 @@ import { adjustKeyframesForDurationChange } from '@/unified/utils/unifiedKeyfram
  * 3. 保持与原有模块相同的API接口，便于迁移
  * 4. 支持更丰富的时间轴项目状态和属性管理
  */
-export function createUnifiedTimelineModule(
-  configModule: { videoResolution: Ref<VideoResolution> },
-  webavModule: {
-    addSprite: (sprite: VisibleSprite) => Promise<boolean>
-    removeSprite: (sprite: VisibleSprite) => boolean
-  },
-  mediaModule: {
-    getMediaItem: (id: string) => UnifiedMediaItemData | undefined
-    mediaItems: Ref<UnifiedMediaItemData[]>
-    getAllMediaItems: () => UnifiedMediaItemData[]
-  },
-  trackModule: {
-    tracks: Ref<UnifiedTrackData[]>
-  },
-) {
+export function createUnifiedTimelineModule(registry: ModuleRegistry) {
   // ==================== 状态定义 ====================
 
   const timelineItems = ref<UnifiedTimelineItemData<MediaType>[]>([])
@@ -117,6 +108,9 @@ export function createUnifiedTimelineModule(
     if (!sprite) {
       return
     }
+
+    // 直接使用registry.get获取所需模块
+    const configModule = registry.get<UnifiedConfigModule>(MODULE_NAMES.CONFIG)
 
     unifiedDebugLog('设置双向同步', { timelineItemId: timelineItem.id })
 
@@ -185,6 +179,11 @@ export function createUnifiedTimelineModule(
     timelineItem: UnifiedTimelineItemData<MediaType>,
   ): Promise<void> {
     if (!timelineItem.runtime.sprite) return
+
+    // 直接使用registry.get获取所需模块
+    const configModule = registry.get<UnifiedConfigModule>(MODULE_NAMES.CONFIG)
+    const webavModule = registry.get<UnifiedWebavModule>(MODULE_NAMES.WEBAV)
+    const trackModule = registry.get<UnifiedTrackModule>(MODULE_NAMES.TRACK)
 
     const sprite = timelineItem.runtime.sprite
 
@@ -308,6 +307,10 @@ export function createUnifiedTimelineModule(
       (item: UnifiedTimelineItemData<MediaType>) => item.id === timelineItemId,
     )
     if (index > -1) {
+      // 直接使用registry.get获取所需模块
+      const webavModule = registry.get<UnifiedWebavModule>(MODULE_NAMES.WEBAV)
+      const mediaModule = registry.get<UnifiedMediaModule>(MODULE_NAMES.MEDIA)
+
       const item = timelineItems.value[index]
       const mediaItem = mediaModule.getMediaItem(item.mediaItemId)
 
@@ -386,6 +389,10 @@ export function createUnifiedTimelineModule(
   ) {
     const item = getTimelineItem(timelineItemId)
     if (item) {
+      // 直接使用registry.get获取所需模块
+      const mediaModule = registry.get<UnifiedMediaModule>(MODULE_NAMES.MEDIA)
+      const trackModule = registry.get<UnifiedTrackModule>(MODULE_NAMES.TRACK)
+
       const oldPositionFrames = item.timeRange.timelineStartTime // 帧数
       const oldTrackId = item.trackId
       const mediaItem = mediaModule.getMediaItem(item.mediaItemId)
@@ -468,6 +475,9 @@ export function createUnifiedTimelineModule(
   ) {
     const item = getReadyTimelineItem(timelineItemId)
     if (!item || !item.runtime.sprite) return
+
+    // 直接使用registry.get获取所需模块
+    const configModule = registry.get<UnifiedConfigModule>(MODULE_NAMES.CONFIG)
 
     const sprite = item.runtime.sprite
 

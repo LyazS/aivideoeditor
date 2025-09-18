@@ -1,6 +1,9 @@
 import { ref, computed, type Raw, type Ref } from 'vue'
 import type { UnifiedTimelineItemData } from '@/unified/timelineitem/TimelineItemData'
 import type { UnifiedMediaItemData } from '@/unified/mediaitem/types'
+import type { ModuleRegistry } from './ModuleRegistry'
+import { MODULE_NAMES } from './ModuleRegistry'
+import type { UnifiedTimelineModule } from './UnifiedTimelineModule'
 
 /**
  * 统一选择管理模块
@@ -11,10 +14,14 @@ import type { UnifiedMediaItemData } from '@/unified/mediaitem/types'
  * 2. 使用 UnifiedMediaItemData 替代原有的 LocalMediaItem
  * 3. 保持与原有模块相同的API接口，便于迁移
  * 4. 支持统一的时间轴项目选择状态管理
+ * 5. 使用模块注册中心模式获取依赖，解决循环依赖问题
  */
 export function createUnifiedSelectionModule(
-  getTimelineItem: (id: string) => UnifiedTimelineItemData | undefined,
+  registry: ModuleRegistry,
 ) {
+  // 通过注册中心获取依赖模块
+  const timelineModule = registry.get<UnifiedTimelineModule>(MODULE_NAMES.TIMELINE)
+  const getTimelineItem = (id: string) => timelineModule.getTimelineItem(id)
   // ==================== 状态定义 ====================
 
   // 统一选择状态：使用单一集合管理所有选择
