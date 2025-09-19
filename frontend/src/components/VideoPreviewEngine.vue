@@ -562,7 +562,7 @@ onUnmounted(() => {
 <style scoped>
 .video-preview-engine {
   width: 100%;
-  height: 100vh;
+  height: 100%;
   display: flex;
   flex-direction: column;
   background-color: var(--color-bg-primary);
@@ -647,7 +647,6 @@ onUnmounted(() => {
 .timeline-section {
   background-color: var(--color-bg-secondary);
   border-radius: var(--border-radius-medium);
-  margin-bottom: 35px; /* 底部gap空间 */
   display: flex;
   flex-direction: column;
   overflow: hidden;
