@@ -1,9 +1,7 @@
 <template>
   <div class="video-preview-engine">
-    <!-- 主内容区域：左侧预览和时间轴，右侧面板 -->
-    <div class="main-content">
-      <!-- 左侧：预览区域和时间轴 -->
-      <div class="left-content" :style="{ width: leftContentWidth + '%' }">
+    <!-- 左侧：预览区域和时间轴 -->
+    <div class="left-content" :style="{ width: computedLeftContentWidth + '%' }">
         <!-- 预览区域：三列布局 -->
         <div class="preview-section" :style="{ height: previewHeight + '%' }">
           <!-- 左侧：素材库 -->
@@ -58,24 +56,18 @@
         </div>
       </div>
 
-      <!-- 中间垂直分割器 -->
+      <!-- 中间垂直分割器（仅在聊天面板显示时显示） -->
       <div
+        v-if="props.isChatPanelVisible"
         class="splitter vertical"
         @mousedown="startMainResize"
         :class="{ dragging: isMainDragging }"
       ></div>
 
-      <!-- 右侧：新面板 -->
-      <div class="right-panel" :style="{ width: rightPanelWidthPercent + '%' }">
-        <div class="right-panel-header">
-          <h3>右侧：新面板</h3>
-        </div>
-        <div class="right-panel-content">
-          <!-- 这里可以添加新面板的内容 -->
-          <p>这里可以添加新面板的内容</p>
-        </div>
+      <!-- 右侧：聊天气泡面板 -->
+      <div class="right-panel" :style="{ width: computedRightPanelWidthPercent + '%' }" v-show="props.isChatPanelVisible">
+        <ChatBubblePanel @close="handleCloseChatPanel" />
       </div>
-    </div>
   </div>
 </template>
 
@@ -86,10 +78,25 @@ import UnifiedMediaLibrary from '@/unified/components/UnifiedMediaLibrary.vue'
 import UnifiedTimeline from '@/unified/components/UnifiedTimeline.vue'
 import UnifiedClipManagementToolbar from '@/unified/components/UnifiedClipManagementToolbar.vue'
 import UnifiedPropertiesPanel from '@/unified/components/UnifiedPropertiesPanel.vue'
+import ChatBubblePanel from '@/agent/components/ChatBubblePanel.vue'
 import { useUnifiedStore } from '@/unified/unifiedStore'
 import { useKeyboardShortcuts } from '@/unified/composables'
 import { logWebAVReadyStateChange, logComponentLifecycle } from '@/unified/utils/webavDebug'
 import { useAppI18n } from '@/unified/composables/useI18n'
+
+// 定义props和emit
+const props = defineProps<{
+  isChatPanelVisible: boolean
+}>()
+
+const emit = defineEmits<{
+  'update:isChatPanelVisible': [value: boolean]
+}>()
+
+// 处理关闭聊天面板
+const handleCloseChatPanel = () => {
+  emit('update:isChatPanelVisible', false)
+}
 
 const unifiedStore = useUnifiedStore()
 const { t } = useAppI18n()
@@ -148,6 +155,15 @@ const isRightDragging = ref(false)
 const leftContentWidth = ref(75) // 左侧内容区域占75%
 const rightPanelWidthPercent = ref(25) // 右侧面板占25%
 const isMainDragging = ref(false)
+
+// 计算属性：根据聊天面板显示状态调整左侧宽度
+const computedLeftContentWidth = computed(() => {
+  return props.isChatPanelVisible ? leftContentWidth.value : 100
+})
+
+const computedRightPanelWidthPercent = computed(() => {
+  return props.isChatPanelVisible ? rightPanelWidthPercent.value : 0
+})
 
 let startY = 0
 let startPreviewHeight = 0
@@ -332,20 +348,13 @@ onUnmounted(() => {
   width: 100%;
   height: 100%;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   background-color: var(--color-bg-primary);
   color: var(--color-text-primary);
   padding: var(--spacing-sm);
   overflow: hidden;
 }
 
-.main-content {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  flex-direction: row;
-  overflow: hidden;
-}
 
 .left-content {
   height: 100%;

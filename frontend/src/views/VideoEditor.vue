@@ -36,6 +36,12 @@
           <div class="status-right">
             <LanguageSelector />
 
+            <HoverButton @click="toggleChatPanel" :title="t('editor.toggleChatPanel')" :active="isChatPanelVisible">
+              <template #icon>
+                <RemixIcon name="message-3-line" size="lg" />
+              </template>
+            </HoverButton>
+
             <HoverButton @click="saveProject" :disabled="isSaving" :title="t('editor.save')">
               <template #icon>
                 <RemixIcon
@@ -77,7 +83,7 @@
       class="editor-content"
       :class="{ 'loading-hidden': unifiedStore.showProjectLoadingProgress }"
     >
-      <VideoPreviewEngine />
+      <VideoPreviewEngine v-model:is-chat-panel-visible="isChatPanelVisible" />
     </div>
 
     <!-- 加载进度覆盖层 -->
@@ -139,6 +145,7 @@ const { t, initLanguage } = useAppI18n()
 
 // 响应式数据
 const showEditDialog = ref(false)
+const isChatPanelVisible = ref(false) // 控制聊天气泡面板显示/隐藏
 
 // 导出进度状态（本地管理，替代使用单独模块）
 const isExporting = ref(false)
@@ -172,6 +179,10 @@ const currentProject = computed(() => {
 })
 
 // 方法
+function toggleChatPanel() {
+  isChatPanelVisible.value = !isChatPanelVisible.value
+}
+
 function goBack() {
   // 如果有未保存的更改，可以在这里添加确认对话框
   // 使用 window.location.href 直接跳转，彻底重新加载页面

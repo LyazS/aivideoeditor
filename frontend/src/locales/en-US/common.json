@@ -15,6 +15,10 @@
     "name": "Name",
     "description": "Description",
     "toggle": "Toggle",
-    "unknownError": "Unknown error"
+    "unknownError": "Unknown error",
+    "chat": {
+      "inputPlaceholder": "Type a message...",
+      "send": "Send"
+    }
   }
 }
