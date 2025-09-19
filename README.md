@@ -1,5 +1,5 @@
 
-# 光影绘梦 (LightDream)
+# 光影绘梦 (LightCut)
 ![alt text](docs/image.png)
 一个基于Web技术的AI视频编辑器，支持本地文件和远程网络素材的处理与编辑。
 
