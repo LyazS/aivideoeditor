@@ -1,97 +1,63 @@
 <template>
   <div class="video-preview-engine">
-    <div class="main-content">
-      <!-- 预览区域：三列布局 -->
-      <div class="preview-section" :style="{ height: previewHeight + '%' }">
-        <!-- 左侧：素材库 -->
-        <div class="media-library-panel" :style="{ width: leftPanelWidth + 'px' }">
-          <UnifiedMediaLibrary />
-        </div>
-
-        <!-- 左侧分割器 -->
-        <div
-          class="splitter vertical left-splitter"
-          @mousedown="startLeftResize"
-          :class="{ dragging: isLeftDragging }"
-        ></div>
-
-        <!-- 中间：预览窗口和控制面板 -->
-        <div class="preview-center">
-          <PreviewWindow />
-          <!-- 播放控制面板紧贴在预览窗口下方 -->
-          <div class="controls-section">
-            <!-- 时间显示 -->
-            <div class="time-display">
-              {{ framesToTimecode(unifiedStore.currentFrame) }} /
-              {{
-                framesToTimecode(
-                  unifiedStore.contentEndTimeFrames || unifiedStore.totalDurationFrames,
-                )
-              }}
-            </div>
-            <!-- 中间播放控制 -->
-            <div class="center-controls">
-              <UnifiedPlaybackControls />
-            </div>
-            <!-- 右侧比例按钮 -->
-            <div class="right-controls">
-              <button class="aspect-ratio-btn" @click="openResolutionModal" :title="t('editor.setVideoResolution')">
-                <RemixIcon name="aspect-ratio" size="md" />
-                <span class="aspect-ratio-text">{{ currentResolutionText }}</span>
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <!-- 右侧分割器 -->
-        <div
-          class="splitter vertical right-splitter"
-          @mousedown="startRightResize"
-          :class="{ dragging: isRightDragging }"
-        ></div>
-
-        <!-- 右侧：属性面板 -->
-        <div class="properties-panel-container" :style="{ width: rightPanelWidth + 'px' }">
-          <UnifiedPropertiesPanel />
-        </div>
+    <!-- 预览区域：三列布局 -->
+    <div class="preview-section" :style="{ height: previewHeight + '%' }">
+      <!-- 左侧：素材库 -->
+      <div class="media-library-panel" :style="{ width: leftPanelWidth + 'px' }">
+        <UnifiedMediaLibrary />
       </div>
 
-      <!-- 可拖动的分割器 -->
+      <!-- 左侧分割器 -->
       <div
-        class="splitter horizontal"
-        @mousedown="startResize"
-        :class="{ dragging: isDragging }"
+        class="splitter vertical left-splitter"
+        @mousedown="startLeftResize"
+        :class="{ dragging: isLeftDragging }"
       ></div>
 
-      <!-- 时间轴区域 -->
-      <div class="timeline-section" :style="{ height: timelineHeight + '%' }">
-        <!-- 片段管理工具栏在时间刻度上方 -->
-        <div class="clip-management-toolbar">
-          <UnifiedClipManagementToolbar />
-        </div>
-        <!-- 只有WebAV初始化完成后才显示Timeline -->
-        <UnifiedTimeline v-if="unifiedStore.isWebAVReady" />
-        <div v-else class="timeline-loading">
-          <div class="loading-spinner"></div>
-          <p>{{ t('editor.initializingWebAV') }}</p>
-        </div>
+      <!-- 中间：预览窗口（包含控制面板和分辨率弹窗） -->
+      <div class="preview-center">
+        <PreviewWindow />
+      </div>
+
+      <!-- 右侧分割器 -->
+      <div
+        class="splitter vertical right-splitter"
+        @mousedown="startRightResize"
+        :class="{ dragging: isRightDragging }"
+      ></div>
+
+      <!-- 右侧：属性面板 -->
+      <div class="properties-panel-container" :style="{ width: rightPanelWidth + 'px' }">
+        <UnifiedPropertiesPanel />
       </div>
     </div>
 
-    <!-- 分辨率选择弹窗 -->
-    <ResolutionModal
-      :show="showResolutionModal"
-      :current-resolution="currentResolution"
-      @update:show="showResolutionModal = $event"
-      @confirm="handleResolutionConfirm"
-    />
+    <!-- 可拖动的分割器 -->
+    <div
+      class="splitter horizontal"
+      @mousedown="startResize"
+      :class="{ dragging: isDragging }"
+    ></div>
+
+    <!-- 时间轴区域 -->
+    <div class="timeline-section" :style="{ height: timelineHeight + '%' }">
+      <!-- 片段管理工具栏在时间刻度上方 -->
+      <div class="clip-management-toolbar">
+        <UnifiedClipManagementToolbar />
+      </div>
+      <!-- 只有WebAV初始化完成后才显示Timeline -->
+      <UnifiedTimeline v-if="unifiedStore.isWebAVReady" />
+      <div v-else class="timeline-loading">
+        <div class="loading-spinner"></div>
+        <p>{{ t('editor.initializingWebAV') }}</p>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, watch, onUnmounted, onMounted } from 'vue'
 import PreviewWindow from './PreviewWindow.vue'
-import ResolutionModal from './ResolutionModal.vue'
 import UnifiedMediaLibrary from '@/unified/components/UnifiedMediaLibrary.vue'
 import UnifiedTimeline from '@/unified/components/UnifiedTimeline.vue'
 import UnifiedPlaybackControls from '@/unified/components/UnifiedPlaybackControls.vue'
@@ -121,8 +87,8 @@ watch(
 
 // 窗口大小变化时调整面板宽度
 const adjustPanelWidths = () => {
-  const mainContent = document.querySelector('.main-content')
-  const containerWidth = mainContent ? mainContent.clientWidth : window.innerWidth
+  const container = document.querySelector('.video-preview-engine')
+  const containerWidth = container ? container.clientWidth : window.innerWidth
 
   // 计算最大允许宽度
   const totalPanelWidth = leftPanelWidth.value + rightPanelWidth.value
@@ -150,36 +116,6 @@ onMounted(() => {
 const previewHeight = ref(45) // 默认预览窗口占45%
 const timelineHeight = ref(55) // 默认时间轴占55%
 const isDragging = ref(false)
-
-// 分辨率相关
-const showResolutionModal = ref(false)
-
-// 从videoStore获取当前分辨率，而不是使用硬编码的默认值
-const currentResolution = computed(() => {
-  const resolution = unifiedStore.videoResolution
-  // 根据分辨率判断类别
-  const aspectRatio = resolution.width / resolution.height
-  let category = t('editor.landscape')
-  if (aspectRatio < 1) {
-    category = t('editor.portrait')
-  } else if (Math.abs(aspectRatio - 1) < 0.1) {
-    category = t('editor.square')
-  }
-
-  return {
-    name: resolution.name,
-    width: resolution.width,
-    height: resolution.height,
-    aspectRatio: resolution.aspectRatio,
-    category: category,
-  }
-})
-
-
-const currentResolutionText = computed(() => {
-  return `${currentResolution.value.aspectRatio}`
-})
-
 
 // 垂直分割器相关
 const leftPanelWidth = ref(400) // 左侧素材库宽度
@@ -210,7 +146,8 @@ const handleResize = (event: MouseEvent) => {
   if (!isDragging.value) return
 
   const deltaY = event.clientY - startY
-  const containerHeight = document.querySelector('.main-content')?.clientHeight || 600
+  const container = document.querySelector('.video-preview-engine')
+  const containerHeight = container ? container.clientHeight : 600
   const deltaPercent = (deltaY / containerHeight) * 100
 
   let newPreviewHeight = startPreviewHeight + deltaPercent
@@ -249,9 +186,9 @@ const handleLeftResize = (event: MouseEvent) => {
   const deltaX = event.clientX - startX
   let newWidth = startLeftWidth + deltaX
 
-  // 获取主内容区域的宽度
-  const mainContent = document.querySelector('.main-content')
-  const containerWidth = mainContent ? mainContent.clientWidth : window.innerWidth
+  // 获取容器宽度
+  const container = document.querySelector('.video-preview-engine')
+  const containerWidth = container ? container.clientWidth : window.innerWidth
 
   // 计算可用宽度（总宽度减去右侧面板宽度和分割器宽度）
   const availableWidth = containerWidth - rightPanelWidth.value - 20 // 20px为分割器宽度
@@ -289,9 +226,9 @@ const handleRightResize = (event: MouseEvent) => {
   const deltaX = event.clientX - startX
   let newWidth = startRightWidth - deltaX // 注意：右侧是反向的
 
-  // 获取主内容区域的宽度
-  const mainContent = document.querySelector('.main-content')
-  const containerWidth = mainContent ? mainContent.clientWidth : window.innerWidth
+  // 获取容器宽度
+  const container = document.querySelector('.video-preview-engine')
+  const containerWidth = container ? container.clientWidth : window.innerWidth
 
   // 计算可用宽度（总宽度减去左侧面板宽度和分割器宽度）
   const availableWidth = containerWidth - leftPanelWidth.value - 20 // 20px为分割器宽度
@@ -309,16 +246,6 @@ const stopRightResize = () => {
   document.removeEventListener('mouseup', stopRightResize)
   document.body.style.cursor = ''
   document.body.style.userSelect = ''
-}
-
-function openResolutionModal() {
-  showResolutionModal.value = true
-}
-
-function handleResolutionConfirm(resolution: { name: string; width: number; height: number; aspectRatio: string }) {
-  // 更新videoStore中的分辨率
-  unifiedStore.setVideoResolution(resolution)
-  console.log('确认选择分辨率:', resolution)
 }
 
 // 清理事件监听器
@@ -341,15 +268,8 @@ onUnmounted(() => {
   flex-direction: column;
   background-color: var(--color-bg-primary);
   color: var(--color-text-primary);
-}
-
-.main-content {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
   padding: var(--spacing-sm);
   overflow: hidden;
-  height: 100%;
 }
 
 .preview-section {
@@ -516,6 +436,4 @@ onUnmounted(() => {
 .aspect-ratio-text {
   font-family: monospace;
 }
-
-
 </style>
