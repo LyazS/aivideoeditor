@@ -15,50 +15,35 @@
               </template>
               {{ t('editor.back') }}
             </HoverButton>
-            <span class="project-status">{{ projectStatus }}</span>
+            <HoverButton @click="saveProject" :disabled="isSaving" :title="t('editor.save')">
+              <span class="project-status">{{ projectStatus }}</span>
+            </HoverButton>
           </div>
 
           <!-- 中间：项目名称 -->
           <div class="status-center">
-            <button
-              class="project-title-btn"
-              @click="showEditProjectDialog"
-              :title="t('editor.editProjectInfo')"
-            >
+            <HoverButton @click="showEditProjectDialog" :title="t('editor.editProjectInfo')">
               <span class="project-title">{{
                 unifiedStore.projectName || t('editor.untitledProject')
               }}</span>
-              <RemixIcon name="edit-line" size="lg" class="edit-icon" />
-            </button>
+              <template #icon>
+                <RemixIcon name="edit-line" size="lg" class="edit-icon" />
+              </template>
+            </HoverButton>
           </div>
 
-          <!-- 右侧：保存和导出按钮 -->
+          <!-- 右侧：导出按钮 -->
           <div class="status-right">
-            <LanguageSelector />
-
-            <HoverButton @click="toggleChatPanel" :title="t('editor.toggleChatPanel')" :active="isChatPanelVisible">
+            <HoverButton
+              @click="toggleChatPanel"
+              :title="t('editor.toggleChatPanel')"
+              :active="isChatPanelVisible"
+            >
               <template #icon>
                 <RemixIcon name="message-3-line" size="lg" />
               </template>
             </HoverButton>
-
-            <HoverButton @click="saveProject" :disabled="isSaving" :title="t('editor.save')">
-              <template #icon>
-                <RemixIcon
-                  v-if="!isSaving"
-                  name="save-line"
-                  size="lg"
-                />
-                <RemixIcon
-                  v-else
-                  name="loader-4-line"
-                  size="lg"
-                  spin
-                  class="spinning"
-                />
-              </template>
-              {{ isSaving ? t('editor.saving') : t('editor.save') }}
-            </HoverButton>
+            <LanguageSelector />
 
             <HoverButton @click="exportProject" :title="t('editor.export')">
               <template #icon>
@@ -122,7 +107,6 @@
       :is-saving="isSaving"
       @save="handleSaveProject"
     />
-
   </div>
 </template>
 
@@ -302,6 +286,12 @@ function handleKeydown(event: KeyboardEvent) {
     event.preventDefault()
     debugProject()
   }
+
+  // Ctrl+B 切换聊天面板
+  if (event.ctrlKey && event.key === 'b') {
+    event.preventDefault()
+    toggleChatPanel()
+  }
 }
 
 // 生命周期
@@ -425,32 +415,9 @@ onUnmounted(() => {
 .status-right {
   display: flex;
   align-items: center;
-  gap: var(--spacing-xs);
+  gap: var(--spacing-md);
   flex: 0 0 200px; /* 固定右侧宽度，与左侧对称 */
   justify-content: flex-end;
-}
-
-/* 旧的按钮样式已移除，现在使用 HoverButton 组件 */
-
-.project-title-btn {
-  background: none;
-  border: none;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 0.75rem;
-  border-radius: var(--border-radius-medium);
-  transition: all 0.2s ease;
-  color: var(--color-text-primary);
-}
-
-.project-title-btn:hover {
-  background: var(--color-bg-hover);
-}
-
-.project-title-btn:hover .edit-icon {
-  opacity: 1;
 }
 
 .project-title {

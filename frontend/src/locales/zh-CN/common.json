@@ -18,7 +18,8 @@
     "unknownError": "未知错误",
     "chat": {
       "inputPlaceholder": "输入消息...",
-      "send": "发送"
+      "send": "发送",
+      "agent": "智能助手"
     }
   }
 }

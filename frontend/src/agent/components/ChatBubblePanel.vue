@@ -2,7 +2,7 @@
   <div class="chat-bubble-panel">
     <!-- 顶部标题栏 -->
     <div class="chat-panel-header">
-      <h3 class="chat-panel-title">Agent</h3>
+      <h3 class="chat-panel-title">{{ t('common.chat.agent') }}</h3>
       <button class="close-button" @click="$emit('close')" :title="t('common.close')">
         <RemixIcon name="close-line" size="sm" />
       </button>

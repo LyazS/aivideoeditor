@@ -18,7 +18,8 @@
     "unknownError": "Unknown error",
     "chat": {
       "inputPlaceholder": "Type a message...",
-      "send": "Send"
+      "send": "Send",
+      "agent": "Agent"
     }
   }
 }
