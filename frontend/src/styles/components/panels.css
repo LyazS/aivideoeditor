@@ -7,16 +7,39 @@
 }
 
 .panel-header {
-  padding: var(--spacing-md) var(--spacing-lg);
+  padding: var(--spacing-sm) var(--spacing-lg);
   background-color: var(--color-bg-tertiary);
   border-bottom: 1px solid var(--color-border-primary);
   flex-shrink: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .panel-header h3 {
   margin: 0;
   font-size: var(--font-size-lg);
   color: var(--color-text-primary);
+}
+
+/* 面板header布局类 */
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.header-center {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.header-buttons {
+  display: flex;
+  gap: var(--spacing-sm);
+  align-items: center;
 }
 
 .panel-content {

@@ -1,15 +1,20 @@
 <template>
-  <div class="chat-bubble-panel">
+  <div class="panel">
     <!-- 顶部标题栏 -->
-    <div class="chat-panel-header">
-      <h3 class="chat-panel-title">{{ t('common.chat.agent') }}</h3>
-      <button class="close-button" @click="$emit('close')" :title="t('common.close')">
-        <RemixIcon name="close-line" size="sm" />
-      </button>
+    <div class="panel-header">
+      <div class="header-left">
+        <RemixIcon name="sparkling-2-fill" size="md" />
+        <h3>{{ t('common.chat.agent') }}</h3>
+      </div>
+      <HoverButton @click="$emit('close')" :title="t('common.close')">
+        <template #icon>
+          <RemixIcon name="close-line" size="lg" />
+        </template>
+      </HoverButton>
     </div>
 
     <!-- 消息列表 -->
-    <div class="chat-messages-container" ref="messagesContainer">
+    <div class="panel-content chat-messages-container" ref="messagesContainer">
       <div 
         v-for="message in messages" 
         :key="message.id"
@@ -49,6 +54,7 @@
 <script setup lang="ts">
 import { ref, nextTick, watch } from 'vue'
 import RemixIcon from '@/components/icons/RemixIcon.vue'
+import HoverButton from '@/components/HoverButton.vue'
 import { useAppI18n } from '@/unified/composables/useI18n'
 
 const { t } = useAppI18n()
@@ -167,50 +173,20 @@ scrollToBottom()
 </script>
 
 <style scoped>
-.chat-bubble-panel {
+/* 确保聊天面板占满整个高度 */
+.panel {
   width: 100%;
   height: 100%;
   display: flex;
   flex-direction: column;
-  background-color: var(--color-bg-secondary);
-  border-radius: var(--border-radius-medium);
-  overflow: hidden;
 }
 
-.chat-panel-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: var(--spacing-md);
-  border-bottom: 1px solid var(--color-border-primary);
-  background-color: var(--color-bg-tertiary);
-  flex-shrink: 0;
-}
-
-.chat-panel-title {
-  margin: 0;
-  font-size: var(--font-size-lg);
-  color: var(--color-text-primary);
-  font-weight: 500;
-}
-
-.close-button {
-  background: none;
-  border: none;
-  color: var(--color-text-secondary);
-  cursor: pointer;
-  padding: var(--spacing-xs);
-  border-radius: var(--border-radius-small);
+.header-left {
   display: flex;
   align-items: center;
-  justify-content: center;
-  transition: all var(--transition-fast);
+  gap: var(--spacing-sm);
 }
 
-.close-button:hover {
-  background-color: var(--color-bg-quaternary);
-  color: var(--color-text-primary);
-}
 
 .chat-messages-container {
   flex: 1;

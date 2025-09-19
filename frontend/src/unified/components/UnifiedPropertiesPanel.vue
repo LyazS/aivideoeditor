@@ -1,10 +1,5 @@
 <template>
   <div class="properties-panel">
-    <div class="panel-header">
-      <h3>{{ t('properties.panelTitle') }}</h3>
-      <span v-if="playheadStatus.showHint" class="playhead-hint"> {{ t('properties.playheadStatus.outOfRange') }} </span>
-    </div>
-
     <div class="panel-content">
       <!-- 多选状态 -->
       <div v-if="multiSelectInfo" class="multi-select-state">
@@ -141,17 +136,6 @@ const getItemDisplayName = (item: any) => {
   }
 }
 
-// 播放头位置状态计算属性 - 合并检查播放头是否在选中项目以及是否需要显示提示
-const playheadStatus = computed(() => {
-  if (!selectedTimelineItem.value) {
-    return { isInItem: false, showHint: false }
-  }
-  const isInItem = isPlayheadInTimelineItem(selectedTimelineItem.value, currentFrame.value)
-  return {
-    isInItem,
-    showHint: !isInItem // 播放头不在项目中时显示提示
-  }
-})
 </script>
 
 <style scoped>
@@ -165,13 +149,11 @@ const playheadStatus = computed(() => {
   overflow: hidden;
 }
 
-/* 使用通用的 panel-header, panel-content, empty-state, hint 样式 */
+/* 属性面板特定样式 - 通用属性样式已迁移到 styles/components/panels.css 和 styles/components/inputs.css */
 
 .properties-content {
   padding: var(--spacing-md) var(--spacing-lg);
 }
-
-/* 属性面板特定样式 - 通用属性样式已迁移到 styles/components/panels.css 和 styles/components/inputs.css */
 
 /* 时长控制样式 */
 .duration-controls {
@@ -662,26 +644,4 @@ const playheadStatus = computed(() => {
   }
 }
 
-/* 播放头位置提示样式 */
-.playhead-hint {
-  font-size: var(--font-size-sm);
-  color: var(--color-accent-error);
-  margin-left: var(--spacing-sm);
-  font-weight: normal;
-}
-
-/* 调整标题区域布局 */
-.panel-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: var(--spacing-md) var(--spacing-lg);
-  border-bottom: 1px solid var(--color-border);
-}
-
-.panel-header h3 {
-  margin: 0;
-  font-size: var(--font-size-lg);
-  color: var(--color-text-primary);
-}
 </style>

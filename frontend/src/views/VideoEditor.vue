@@ -40,7 +40,7 @@
               :active="isChatPanelVisible"
             >
               <template #icon>
-                <RemixIcon name="message-3-line" size="lg" />
+                <RemixIcon name="chat-ai-fill" size="lg" />
               </template>
             </HoverButton>
             <LanguageSelector />
