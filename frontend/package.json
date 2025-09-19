@@ -14,9 +14,12 @@
   },
   "dependencies": {
     "@imengyu/vue3-context-menu": "^1.5.2",
+    "@types/markdown-it": "^14.1.2",
     "@webav/av-canvas": "^1.1.17",
     "@webav/av-cliper": "^1.1.17",
+    "github-markdown-css": "^5.8.1",
     "lodash": "^4.17.21",
+    "markdown-it": "^14.1.0",
     "pinia": "^3.0.3",
     "remixicon": "^4.6.0",
     "vue": "^3.5.18",

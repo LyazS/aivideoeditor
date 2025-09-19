@@ -196,8 +196,8 @@ const isLeftDragging = ref(false)
 const isRightDragging = ref(false)
 
 // 主内容区域分割相关
-const leftContentWidth = ref(75)
-const rightPanelWidthPercent = ref(25)
+const leftContentWidth = ref(60)  // 左侧内容宽度从75%改为60%
+const rightPanelWidthPercent = ref(40)  // 右侧面板宽度从25%改为40%
 const isMainDragging = ref(false)
 
 // 计算属性：根据聊天面板显示状态调整左侧宽度

@@ -14,58 +14,27 @@
     </div>
 
     <!-- 消息列表 -->
-    <div class="panel-content chat-messages-container" ref="messagesContainer">
-      <div 
-        v-for="message in messages" 
-        :key="message.id"
-        class="chat-message"
-        :class="message.type"
-      >
-        <div class="message-bubble">
-          <div class="message-content">{{ message.content }}</div>
-          <div class="message-timestamp">{{ message.timestamp }}</div>
-        </div>
-      </div>
-    </div>
+    <ChatMessageList :messages="messages" />
 
     <!-- 底部输入框 -->
-    <div class="chat-input-container">
-      <div class="chat-input-wrapper">
-        <input
-          v-model="inputMessage"
-          type="text"
-          class="chat-input"
-          :placeholder="t('common.chat.inputPlaceholder')"
-          @keyup.enter="sendMessage"
-        />
-        <button 
-          class="send-button" 
-          @click="sendMessage"
-          :disabled="!inputMessage.trim()"
-          :title="t('common.chat.send')"
-        >
-          <RemixIcon name="send-plane-line" size="sm" />
-        </button>
-      </div>
-    </div>
+    <ChatInput
+      :placeholder="t('common.chat.inputPlaceholder')"
+      :send-title="t('common.chat.send')"
+      @send="handleSendMessage"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, nextTick, watch } from 'vue'
+import { ref } from 'vue'
 import RemixIcon from '@/components/icons/RemixIcon.vue'
 import HoverButton from '@/components/HoverButton.vue'
+import ChatMessageList from '@/agent/components/ChatMessageList.vue'
+import ChatInput from '@/agent/components/ChatInput.vue'
 import { useAppI18n } from '@/unified/composables/useI18n'
+import type { ChatMessage } from './types'
 
 const { t } = useAppI18n()
-
-// 消息数据结构
-interface ChatMessage {
-  id: string
-  type: 'user' | 'ai'
-  content: string
-  timestamp: string
-}
 
 // 定义事件
 const emit = defineEmits<{
@@ -77,7 +46,16 @@ const messages = ref<ChatMessage[]>([
   {
     id: '1',
     type: 'ai',
-    content: '你好！我是AI助手，可以帮助你分析视频内容、提供编辑建议等。有什么可以帮助你的吗？',
+    content: `你好！我是AI助手，可以帮助你分析视频内容、提供编辑建议等。
+
+## 我可以帮你做什么：
+
+- **视频分析**：识别视频中的场景、物体和人物
+- **编辑建议**：提供专业的视频编辑建议
+- **效果推荐**：推荐适合的过渡效果和滤镜
+- **音频处理**：音频优化和背景音乐建议
+
+有什么可以帮助你的吗？`,
     timestamp: '10:00'
   },
   {
@@ -89,87 +67,230 @@ const messages = ref<ChatMessage[]>([
   {
     id: '3',
     type: 'ai',
-    content: '我看到这是一个关于城市风景的视频，包含了多个场景切换。建议你可以添加一些过渡效果来让场景转换更加自然。',
+    content: `我看到这是一个关于城市风景的视频，包含了多个场景切换。
+
+### 主要发现：
+
+1. **场景数量**：检测到5个不同的城市场景
+2. **拍摄质量**：画面清晰，色彩饱和度良好
+3. **节奏控制**：场景切换较为自然
+
+### 建议改进：
+
+> 建议你可以添加一些**过渡效果**来让场景转换更加自然，比如：
+> - \`淡入淡出\`效果
+> - \`滑动切换\`效果
+> - \`溶解过渡\`效果
+
+需要我详细解释这些效果吗？`,
     timestamp: '10:02'
+  },
+  {
+    id: '4',
+    type: 'ai',
+    content: `## 技术参数分析
+
+| 参数 | 数值 | 评价 |
+|------|------|------|
+| 分辨率 | 1920×1080 | ✅ 高清 |
+| 帧率 | 30fps | ✅ 标准 |
+| 时长 | 2:34 | ✅ 适中 |
+| 码率 | 8.5Mbps | ✅ 良好 |
+
+### 代码示例
+如果你需要添加转场效果，可以使用以下代码：
+
+\`\`\`javascript
+const addTransition = (scene1, scene2, type = 'fade') => {
+  return {
+    from: scene1,
+    to: scene2,
+    transition: type,
+    duration: '1s'
+  };
+};
+\`\`\`
+
+**总体评价**：这是一个制作精良的城市风景视频！`,
+    timestamp: '10:03'
   }
 ])
 
-// 输入框内容
-const inputMessage = ref('')
+// 简单的AI回复逻辑
+const getAIResponse = (userInput: string): string => {
+  const responses = [
+    `## 分析结果
 
-// 消息容器引用
-const messagesContainer = ref<HTMLElement>()
+这是一个很好的问题！让我为你分析一下视频内容：
 
-// 滚动到最新消息
-const scrollToBottom = async () => {
-  await nextTick()
-  if (messagesContainer.value) {
-    messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight
+- **画面质量**：清晰度良好
+- **色彩搭配**：色调协调
+- **节奏控制**：过渡自然
+
+### 建议改进：
+1. 可以调整亮度对比度
+2. 添加一些过渡效果
+3. 考虑音频同步优化`,
+    
+    `## 特效建议
+
+根据视频内容，我建议你可以尝试以下特效：
+
+### 视觉效果：
+- **模糊转场**：营造梦幻感
+- **色彩调整**：增强视觉冲击力
+- **动态文字**：添加说明信息
+
+> 💡 **专业提示**：特效要适度使用，避免过度处理。`,
+    
+    `## 音频优化建议
+
+我注意到视频的节奏很好，音频处理建议：
+
+| 音频元素 | 建议 |
+|----------|------|
+| 背景音乐 | 选择节奏匹配的音乐 |
+| 音量平衡 | 确保对话清晰度 |
+| 音效添加 | 适当增强关键节点 |
+
+\`\`\`javascript
+// 音频处理示例
+const optimizeAudio = (audioTrack) => {
+  return audioTrack
+    .normalize()
+    .compress()
+    .enhance();
+};
+\`\`\``,
+    
+    `## 色彩分析
+
+这个视频的画面质量很不错！
+
+**色彩统计**：
+- 主色调：暖色系 🔴
+- 饱和度：适中 📊
+- 对比度：良好 ⚡
+
+建议你可以：
+1. 使用 \`色彩平衡\` 工具微调
+2. 添加 \`LUT滤镜\` 增强氛围
+3. 调整 \`色温\` 让画面更生动`,
+    
+    `## 编辑建议
+
+看起来你在视频编辑方面很有经验！
+
+### 下一步建议：
+- [ ] 添加转场效果
+- [ ] 优化音频同步
+- [ ] 调整色彩参数
+- [ ] 导出最终版本
+
+有什么具体的编辑需求吗？我很乐意为你提供详细指导！`
+  ]
+  
+  // 根据输入内容返回相关回复
+  if (userInput.includes('分析') || userInput.includes('内容')) {
+    return `## 深度分析报告
+
+我已经全面分析了你的视频内容：
+
+### 📊 内容分析
+- **主题识别**：${userInput.includes('城市') ? '城市风景' : '视频内容'}
+- **场景检测**：发现多个场景切换
+- **质量评估**：制作精良，技术参数良好
+
+### 🎯 关键发现
+1. **视觉元素丰富**，构图合理
+2. **节奏控制得当**，过渡自然
+3. **技术质量达标**，观感良好
+
+### 💡 个性化建议
+建议你可以添加一些**文字说明**和**标注**来帮助观众更好地理解内容。
+
+需要我详细解释某个方面吗？`
+  } else if (userInput.includes('效果') || userInput.includes('特效')) {
+    return `## 特效推荐方案
+
+根据你的需求，我建议以下**过渡效果**：
+
+### 🎬 视觉过渡
+- **\`淡入淡出\`**：最自然的选择
+- **\`滑动切换\`**：动感十足
+- **\`溶解过渡\`**：梦幻效果
+
+### ⚙️ 技术实现
+\`\`\`css
+/* CSS过渡效果示例 */
+.transition-fade {
+  transition: opacity 0.5s ease-in-out;
+}
+\`\`\`
+
+### 📈 效果对比
+| 效果类型 | 适用场景 | 强度 |
+|----------|----------|------|
+| 淡入淡出 | 自然过渡 | ⭐⭐⭐ |
+| 滑动切换 | 动感场景 | ⭐⭐⭐⭐ |
+| 溶解过渡 | 梦幻效果 | ⭐⭐⭐⭐⭐ |
+
+需要我详细解释这些效果吗？`
+  } else if (userInput.includes('音乐') || userInput.includes('音频')) {
+    return `## 音频处理专业指南
+
+音频是视频的重要组成部分！
+
+### 🎵 音乐选择原则
+- **节奏匹配**：BPM与视频节奏同步
+- **情感契合**：音乐情绪与内容匹配
+- **版权安全**：使用授权音乐
+
+### 🔧 技术处理
+\`\`\`javascript
+// 音频处理流程
+const processAudio = (audioTrack, videoBPM) => {
+  return audioTrack
+    .matchBPM(videoBPM)     // 节奏匹配
+    .normalize(-14)         // 音量标准化
+    .compress(3:1)          // 动态压缩
+    .EQ('gentle')           // 均衡器调整
+    .limit(-1);             // 限幅处理
+};
+\`\`\`
+
+### ⚖️ 音量平衡技巧
+> **黄金法则**：背景音乐不超过-18dB，主要音频保持-12dB到-6dB
+
+需要更详细的音频处理指导吗？`
+  } else {
+    return responses[Math.floor(Math.random() * responses.length)]
   }
 }
 
-// 发送消息
-const sendMessage = () => {
-  if (!inputMessage.value.trim()) return
-
+// 处理发送消息
+const handleSendMessage = (message: string) => {
   // 添加用户消息
   const userMessage: ChatMessage = {
     id: Date.now().toString(),
     type: 'user',
-    content: inputMessage.value.trim(),
+    content: message,
     timestamp: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
   }
   
   messages.value.push(userMessage)
-  
-  // 清空输入框
-  const userInput = inputMessage.value
-  inputMessage.value = ''
   
   // 模拟AI回复
   setTimeout(() => {
     const aiMessage: ChatMessage = {
       id: (Date.now() + 1).toString(),
       type: 'ai',
-      content: getAIResponse(userInput),
+      content: getAIResponse(message),
       timestamp: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
     }
     messages.value.push(aiMessage)
-    scrollToBottom()
   }, 1000)
-  
-  scrollToBottom()
 }
-
-// 简单的AI回复逻辑
-const getAIResponse = (userInput: string): string => {
-  const responses = [
-    '这是一个很好的问题！让我为你分析一下...',
-    '根据视频内容，我建议你可以尝试添加一些特效来增强视觉效果。',
-    '我注意到视频的节奏很好，可以考虑添加背景音乐来提升观看体验。',
-    '这个视频的画面质量很不错，建议你可以调整一下色彩饱和度让画面更生动。',
-    '看起来你在视频编辑方面很有经验！有什么具体的编辑需求吗？'
-  ]
-  
-  // 根据输入内容返回相关回复
-  if (userInput.includes('分析') || userInput.includes('内容')) {
-    return '我已经分析了你的视频内容。这是一个制作精良的视频，包含了丰富的视觉元素。建议你可以添加一些文字说明来帮助观众更好地理解内容。'
-  } else if (userInput.includes('效果') || userInput.includes('特效')) {
-    return '我建议你可以尝试添加一些过渡效果，比如淡入淡出或者滑动效果，这样可以让场景切换更加自然流畅。'
-  } else if (userInput.includes('音乐') || userInput.includes('音频')) {
-    return '音频是视频的重要组成部分。你可以考虑添加一些背景音乐来增强视频的氛围，但要注意音量平衡，确保不会盖过主要内容。'
-  } else {
-    return responses[Math.floor(Math.random() * responses.length)]
-  }
-}
-
-// 监听消息变化，自动滚动到底部
-watch(messages, () => {
-  scrollToBottom()
-}, { deep: true })
-
-// 初始化时滚动到底部
-scrollToBottom()
 </script>
 
 <style scoped>
@@ -185,134 +306,5 @@ scrollToBottom()
   display: flex;
   align-items: center;
   gap: var(--spacing-sm);
-}
-
-
-.chat-messages-container {
-  flex: 1;
-  overflow-y: auto;
-  padding: var(--spacing-md);
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-sm);
-}
-
-.chat-message {
-  display: flex;
-  margin-bottom: var(--spacing-sm);
-}
-
-.chat-message.user {
-  justify-content: flex-end;
-}
-
-.chat-message.ai {
-  justify-content: flex-start;
-}
-
-.message-bubble {
-  max-width: 70%;
-  padding: var(--spacing-sm) var(--spacing-md);
-  border-radius: var(--border-radius-large);
-  position: relative;
-}
-
-.chat-message.user .message-bubble {
-  background-color: var(--color-primary);
-  color: white;
-  border-bottom-right-radius: var(--border-radius-small);
-}
-
-.chat-message.ai .message-bubble {
-  background-color: var(--color-bg-tertiary);
-  color: var(--color-text-primary);
-  border-bottom-left-radius: var(--border-radius-small);
-}
-
-.message-content {
-  font-size: var(--font-size-base);
-  line-height: 1.4;
-  margin-bottom: var(--spacing-xs);
-}
-
-.message-timestamp {
-  font-size: var(--font-size-xs);
-  opacity: 0.7;
-  text-align: right;
-}
-
-.chat-input-container {
-  padding: var(--spacing-md);
-  border-top: 1px solid var(--color-border-primary);
-  background-color: var(--color-bg-tertiary);
-  flex-shrink: 0;
-}
-
-.chat-input-wrapper {
-  display: flex;
-  gap: var(--spacing-sm);
-  align-items: center;
-}
-
-.chat-input {
-  flex: 1;
-  padding: var(--spacing-sm) var(--spacing-md);
-  border: 1px solid var(--color-border-primary);
-  border-radius: var(--border-radius-medium);
-  background-color: var(--color-bg-primary);
-  color: var(--color-text-primary);
-  font-size: var(--font-size-base);
-  outline: none;
-  transition: border-color var(--transition-fast);
-}
-
-.chat-input:focus {
-  border-color: var(--color-primary);
-}
-
-.chat-input::placeholder {
-  color: var(--color-text-secondary);
-}
-
-.send-button {
-  background-color: var(--color-primary);
-  color: white;
-  border: none;
-  padding: var(--spacing-sm) var(--spacing-md);
-  border-radius: var(--border-radius-medium);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all var(--transition-fast);
-}
-
-.send-button:hover:not(:disabled) {
-  background-color: var(--color-primary-hover);
-}
-
-.send-button:disabled {
-  background-color: var(--color-bg-quaternary);
-  color: var(--color-text-secondary);
-  cursor: not-allowed;
-}
-
-/* 滚动条样式 */
-.chat-messages-container::-webkit-scrollbar {
-  width: 6px;
-}
-
-.chat-messages-container::-webkit-scrollbar-track {
-  background: var(--color-bg-primary);
-  border-radius: 3px;
-}
-
-.chat-messages-container::-webkit-scrollbar-thumb {
-  background: var(--color-border-secondary);
-  border-radius: 3px;
-}
-
-.chat-messages-container::-webkit-scrollbar-thumb:hover {
-  background: var(--color-border-primary);
 }
 </style>
