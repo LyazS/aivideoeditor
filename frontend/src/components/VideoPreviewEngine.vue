@@ -2,77 +2,81 @@
   <div class="video-preview-engine">
     <!-- 左侧：预览区域和时间轴 -->
     <div class="left-content" :style="{ width: computedLeftContentWidth + '%' }">
-        <!-- 预览区域：三列布局 -->
-        <div class="preview-section" :style="{ height: previewHeight + '%' }">
-          <!-- 左侧：素材库 -->
-          <div class="media-library-panel" :style="{ width: leftPanelWidth + 'px' }">
-            <UnifiedMediaLibrary />
-          </div>
-
-          <!-- 左侧分割器 -->
-          <div
-            class="splitter vertical"
-            @mousedown="startLeftResize"
-            :class="{ dragging: isLeftDragging }"
-          ></div>
-
-          <!-- 中间：预览窗口（包含控制面板和分辨率弹窗） -->
-          <div class="preview-center">
-            <PreviewWindow />
-          </div>
-
-          <!-- 右侧分割器 -->
-          <div
-            class="splitter vertical"
-            @mousedown="startRightResize"
-            :class="{ dragging: isRightDragging }"
-          ></div>
-
-          <!-- 右侧：属性面板 -->
-          <div class="properties-panel-container" :style="{ width: rightPanelWidth + 'px' }">
-            <UnifiedPropertiesPanel />
-          </div>
+      <!-- 预览区域：三列布局 -->
+      <div class="preview-section" :style="{ height: previewHeight + '%' }">
+        <!-- 左侧：素材库 -->
+        <div class="media-library-panel" :style="{ width: leftPanelPercent + '%' }">
+          <UnifiedMediaLibrary />
         </div>
 
-        <!-- 可拖动的分割器 -->
+        <!-- 左侧分割器 -->
         <div
-          class="splitter horizontal"
-          @mousedown="startResize"
-          :class="{ dragging: isDragging }"
+          class="splitter vertical"
+          @mousedown="startLeftResize"
+          :class="{ dragging: isLeftDragging }"
         ></div>
 
-        <!-- 时间轴区域 -->
-        <div class="timeline-section" :style="{ height: timelineHeight + '%' }">
-          <!-- 片段管理工具栏在时间刻度上方 -->
-          <div class="clip-management-toolbar">
-            <UnifiedClipManagementToolbar />
-          </div>
-          <!-- 只有WebAV初始化完成后才显示Timeline -->
-          <UnifiedTimeline v-if="unifiedStore.isWebAVReady" />
-          <div v-else class="timeline-loading">
-            <div class="loading-spinner"></div>
-            <p>{{ t('editor.initializingWebAV') }}</p>
-          </div>
+        <!-- 中间：预览窗口（包含控制面板和分辨率弹窗） -->
+        <div class="preview-center" :style="{ width: centerPanelPercent + '%' }">
+          <PreviewWindow />
+        </div>
+
+        <!-- 右侧分割器 -->
+        <div
+          class="splitter vertical"
+          @mousedown="startRightResize"
+          :class="{ dragging: isRightDragging }"
+        ></div>
+
+        <!-- 右侧：属性面板 -->
+        <div class="properties-panel-container" :style="{ width: rightPanelPercent + '%' }">
+          <UnifiedPropertiesPanel />
         </div>
       </div>
 
-      <!-- 中间垂直分割器（仅在聊天面板显示时显示） -->
+      <!-- 可拖动的分割器 -->
       <div
-        v-if="props.isChatPanelVisible"
-        class="splitter vertical"
-        @mousedown="startMainResize"
-        :class="{ dragging: isMainDragging }"
+        class="splitter horizontal"
+        @mousedown="startResize"
+        :class="{ dragging: isDragging }"
       ></div>
 
-      <!-- 右侧：聊天气泡面板 -->
-      <div class="right-panel" :style="{ width: computedRightPanelWidthPercent + '%' }" v-show="props.isChatPanelVisible">
-        <ChatBubblePanel @close="handleCloseChatPanel" />
+      <!-- 时间轴区域 -->
+      <div class="timeline-section" :style="{ height: timelineHeight + '%' }">
+        <!-- 片段管理工具栏在时间刻度上方 -->
+        <div class="clip-management-toolbar">
+          <UnifiedClipManagementToolbar />
+        </div>
+        <!-- 只有WebAV初始化完成后才显示Timeline -->
+        <UnifiedTimeline v-if="unifiedStore.isWebAVReady" />
+        <div v-else class="timeline-loading">
+          <div class="loading-spinner"></div>
+          <p>{{ t('editor.initializingWebAV') }}</p>
+        </div>
       </div>
+    </div>
+
+    <!-- 中间垂直分割器（仅在聊天面板显示时显示） -->
+    <div
+      v-if="props.isChatPanelVisible"
+      class="splitter vertical"
+      @mousedown="startMainResize"
+      :class="{ dragging: isMainDragging }"
+    ></div>
+
+    <!-- 右侧：聊天气泡面板 -->
+    <div
+      class="right-panel"
+      :style="{ width: computedRightPanelWidthPercent + '%' }"
+      v-show="props.isChatPanelVisible"
+    >
+      <ChatBubblePanel @close="handleCloseChatPanel" />
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onUnmounted, onMounted } from 'vue'
+import { ref, computed, watch, onUnmounted, onMounted, nextTick } from 'vue'
 import PreviewWindow from './PreviewWindow.vue'
 import UnifiedMediaLibrary from '@/unified/components/UnifiedMediaLibrary.vue'
 import UnifiedTimeline from '@/unified/components/UnifiedTimeline.vue'
@@ -100,6 +104,9 @@ const handleCloseChatPanel = () => {
 
 const unifiedStore = useUnifiedStore()
 const { t } = useAppI18n()
+
+// 分割条宽度常量（像素）
+const SPLITTER_WIDTH = 8
 
 // 注册全局快捷键
 useKeyboardShortcuts()
@@ -136,24 +143,61 @@ onMounted(() => {
     hasAVCanvas: !!unifiedStore.avCanvas,
   })
 
+  // 初始化百分比宽度（基于当前像素宽度）
+  initializePanelPercentages()
+
   // 添加窗口大小变化监听器
   window.addEventListener('resize', adjustPanelWidths)
 })
 
+// 初始化百分比宽度
+const initializePanelPercentages = () => {
+  // 等待DOM渲染完成后计算
+  nextTick(() => {
+    const previewSection = document.querySelector('.preview-section')
+    if (previewSection) {
+      const containerWidth = previewSection.clientWidth
+      const availableWidth = containerWidth - (SPLITTER_WIDTH * 2) // 减去两个分割条占用的宽度
+      
+      if (availableWidth > 0) {
+        // 将当前像素宽度转换为可用宽度的百分比
+        const leftPercent = Math.round((leftPanelWidth.value / availableWidth) * 100)
+        const rightPercent = Math.round((rightPanelWidth.value / availableWidth) * 100)
+        
+        // 确保百分比在合理范围内
+        leftPanelPercent.value = Math.max(15, Math.min(35, leftPercent))  // 15%-35%
+        rightPanelPercent.value = Math.max(15, Math.min(35, rightPercent)) // 15%-35%
+        centerPanelPercent.value = 100 - leftPanelPercent.value - rightPanelPercent.value
+        
+        // 如果中间区域太小，调整左右区域
+        if (centerPanelPercent.value < 30) {
+          const adjust = (30 - centerPanelPercent.value) / 2
+          leftPanelPercent.value = Math.max(15, leftPanelPercent.value - adjust)
+          rightPanelPercent.value = Math.max(15, rightPanelPercent.value - adjust)
+          centerPanelPercent.value = 100 - leftPanelPercent.value - rightPanelPercent.value
+        }
+      }
+    }
+  })
+}
+
 // 响应式数据
-const previewHeight = ref(45) // 默认预览窗口占45%
-const timelineHeight = ref(55) // 默认时间轴占55%
+const previewHeight = ref(45)
+const timelineHeight = ref(55)
 const isDragging = ref(false)
 
 // 垂直分割器相关
-const leftPanelWidth = ref(400) // 左侧素材库宽度
-const rightPanelWidth = ref(400) // 右侧属性面板宽度
+const leftPanelWidth = ref(400)
+const rightPanelWidth = ref(400)
+const leftPanelPercent = ref(20)
+const centerPanelPercent = ref(60)
+const rightPanelPercent = ref(20)
 const isLeftDragging = ref(false)
 const isRightDragging = ref(false)
 
 // 主内容区域分割相关
-const leftContentWidth = ref(75) // 左侧内容区域占75%
-const rightPanelWidthPercent = ref(25) // 右侧面板占25%
+const leftContentWidth = ref(75)
+const rightPanelWidthPercent = ref(25)
 const isMainDragging = ref(false)
 
 // 计算属性：根据聊天面板显示状态调整左侧宽度
@@ -163,6 +207,18 @@ const computedLeftContentWidth = computed(() => {
 
 const computedRightPanelWidthPercent = computed(() => {
   return props.isChatPanelVisible ? rightPanelWidthPercent.value : 0
+})
+
+
+
+// 监听百分比变化，自动调整
+watch([leftPanelPercent, rightPanelPercent], ([newLeft, newRight]) => {
+  const total = newLeft + newRight
+  if (total > 70) { // 给中间区域至少留30%
+    centerPanelPercent.value = 100 - total
+  } else {
+    centerPanelPercent.value = Math.max(30, 100 - total)
+  }
 })
 
 let startY = 0
@@ -216,7 +272,7 @@ const stopResize = () => {
 const startLeftResize = (event: MouseEvent) => {
   isLeftDragging.value = true
   startX = event.clientX
-  startLeftWidth = leftPanelWidth.value
+  startLeftWidth = leftPanelPercent.value
 
   document.addEventListener('mousemove', handleLeftResize)
   document.addEventListener('mouseup', stopLeftResize)
@@ -228,20 +284,31 @@ const handleLeftResize = (event: MouseEvent) => {
   if (!isLeftDragging.value) return
 
   const deltaX = event.clientX - startX
-  let newWidth = startLeftWidth + deltaX
-
-  // 获取容器宽度
-  const container = document.querySelector('.video-preview-engine')
+  const container = document.querySelector('.preview-section')
   const containerWidth = container ? container.clientWidth : window.innerWidth
+  const availableWidth = containerWidth - (SPLITTER_WIDTH * 2) // 减去两个分割条占用的宽度
+  const deltaPercent = (deltaX / availableWidth) * 100
 
-  // 计算可用宽度（总宽度减去右侧面板宽度和分割器宽度）
-  const availableWidth = containerWidth - rightPanelWidth.value - 20 // 20px为分割器宽度
+  let newLeftPercent = startLeftWidth + deltaPercent
 
-  // 限制最小宽度和最大宽度，确保不超出可用空间
-  const maxAllowedWidth = Math.min(800, availableWidth - 200) // 至少保留200px给中间预览区域
-  newWidth = Math.max(100, Math.min(maxAllowedWidth, newWidth))
+  // 限制最小和最大百分比
+  newLeftPercent = Math.max(15, Math.min(35, newLeftPercent))
 
-  leftPanelWidth.value = newWidth
+  // 按比例调整其他列
+  const oldLeftPercent = leftPanelPercent.value
+  const percentChange = newLeftPercent - oldLeftPercent
+  
+  // 确保中间区域最小30%
+  const newCenterPercent = centerPanelPercent.value - percentChange
+  if (newCenterPercent >= 30) {
+    centerPanelPercent.value = newCenterPercent
+    leftPanelPercent.value = newLeftPercent
+  } else {
+    // 如果中间区域会太小，限制左侧扩展
+    const maxLeftPercent = 100 - rightPanelPercent.value - 30
+    leftPanelPercent.value = Math.min(maxLeftPercent, newLeftPercent)
+    centerPanelPercent.value = 100 - leftPanelPercent.value - rightPanelPercent.value
+  }
 }
 
 const stopLeftResize = () => {
@@ -256,7 +323,7 @@ const stopLeftResize = () => {
 const startRightResize = (event: MouseEvent) => {
   isRightDragging.value = true
   startX = event.clientX
-  startRightWidth = rightPanelWidth.value
+  startRightWidth = rightPanelPercent.value
 
   document.addEventListener('mousemove', handleRightResize)
   document.addEventListener('mouseup', stopRightResize)
@@ -268,20 +335,31 @@ const handleRightResize = (event: MouseEvent) => {
   if (!isRightDragging.value) return
 
   const deltaX = event.clientX - startX
-  let newWidth = startRightWidth - deltaX // 注意：右侧是反向的
-
-  // 获取容器宽度
-  const container = document.querySelector('.video-preview-engine')
+  const container = document.querySelector('.preview-section')
   const containerWidth = container ? container.clientWidth : window.innerWidth
+  const availableWidth = containerWidth - (SPLITTER_WIDTH * 2) // 减去两个分割条占用的宽度
+  const deltaPercent = (deltaX / availableWidth) * 100
 
-  // 计算可用宽度（总宽度减去左侧面板宽度和分割器宽度）
-  const availableWidth = containerWidth - leftPanelWidth.value - 20 // 20px为分割器宽度
+  let newRightPercent = startRightWidth - deltaPercent // 注意：右侧是反向的
 
-  // 限制最小宽度和最大宽度，确保不超出可用空间
-  const maxAllowedWidth = Math.min(800, availableWidth - 200) // 至少保留200px给中间预览区域
-  newWidth = Math.max(100, Math.min(maxAllowedWidth, newWidth))
+  // 限制最小和最大百分比
+  newRightPercent = Math.max(15, Math.min(35, newRightPercent))
 
-  rightPanelWidth.value = newWidth
+  // 按比例调整其他列
+  const oldRightPercent = rightPanelPercent.value
+  const percentChange = newRightPercent - oldRightPercent
+  
+  // 确保中间区域最小30%
+  const newCenterPercent = centerPanelPercent.value - percentChange
+  if (newCenterPercent >= 30) {
+    centerPanelPercent.value = newCenterPercent
+    rightPanelPercent.value = newRightPercent
+  } else {
+    // 如果中间区域会太小，限制右侧扩展
+    const maxRightPercent = 100 - leftPanelPercent.value - 30
+    rightPanelPercent.value = Math.min(maxRightPercent, newRightPercent)
+    centerPanelPercent.value = 100 - leftPanelPercent.value - rightPanelPercent.value
+  }
 }
 
 const stopRightResize = () => {
@@ -355,7 +433,6 @@ onUnmounted(() => {
   overflow: hidden;
 }
 
-
 .left-content {
   height: 100%;
   display: flex;
@@ -373,11 +450,11 @@ onUnmounted(() => {
 }
 
 .media-library-panel {
-  flex-shrink: 0;
   background-color: var(--color-bg-secondary);
   border-radius: var(--border-radius-medium);
-  min-width: 100px;
-  max-width: 800px;
+  min-width: 100px; /* 最小像素宽度 */
+  max-width: 800px; /* 最大像素宽度 */
+  overflow: hidden;
 }
 
 /* 分割器样式 - 从 common.css 迁移 */
@@ -411,22 +488,21 @@ onUnmounted(() => {
 }
 
 .preview-center {
-  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 10px;
-  min-width: 200px;
+  min-width: 200px; /* 最小像素宽度 */
   overflow: hidden;
   background-color: var(--color-bg-primary);
 }
 
 .properties-panel-container {
-  flex-shrink: 0;
   background-color: var(--color-bg-secondary);
   border-radius: var(--border-radius-medium);
-  min-width: 100px;
-  max-width: 800px;
+  min-width: 100px; /* 最小像素宽度 */
+  max-width: 800px; /* 最大像素宽度 */
+  overflow: hidden;
 }
 
 .timeline-section {
