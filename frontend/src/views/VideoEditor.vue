@@ -117,8 +117,6 @@
       @save="handleSaveProject"
     />
 
-    <!-- 可拖拽悬浮按钮（集成快速聊天功能）-->
-    <QuickChatButton />
   </div>
 </template>
 
@@ -131,7 +129,6 @@ import HoverButton from '@/components/HoverButton.vue'
 import LoadingOverlay from '@/components/LoadingOverlay.vue'
 import EditProjectDialog from '@/components/EditProjectDialog.vue'
 import LanguageSelector from '@/components/LanguageSelector.vue'
-import QuickChatButton from '@/agent/components/QuickChatButton.vue'
 import RemixIcon from '@/components/icons/RemixIcon.vue'
 import { exportProject as exportProjectUtil } from '@/unified/utils/projectExporter'
 import { useAppI18n } from '@/unified/composables/useI18n'

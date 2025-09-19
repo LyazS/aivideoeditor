@@ -1,55 +1,79 @@
 <template>
   <div class="video-preview-engine">
-    <!-- 预览区域：三列布局 -->
-    <div class="preview-section" :style="{ height: previewHeight + '%' }">
-      <!-- 左侧：素材库 -->
-      <div class="media-library-panel" :style="{ width: leftPanelWidth + 'px' }">
-        <UnifiedMediaLibrary />
+    <!-- 主内容区域：左侧预览和时间轴，右侧面板 -->
+    <div class="main-content">
+      <!-- 左侧：预览区域和时间轴 -->
+      <div class="left-content" :style="{ width: leftContentWidth + '%' }">
+        <!-- 预览区域：三列布局 -->
+        <div class="preview-section" :style="{ height: previewHeight + '%' }">
+          <!-- 左侧：素材库 -->
+          <div class="media-library-panel" :style="{ width: leftPanelWidth + 'px' }">
+            <UnifiedMediaLibrary />
+          </div>
+
+          <!-- 左侧分割器 -->
+          <div
+            class="splitter vertical"
+            @mousedown="startLeftResize"
+            :class="{ dragging: isLeftDragging }"
+          ></div>
+
+          <!-- 中间：预览窗口（包含控制面板和分辨率弹窗） -->
+          <div class="preview-center">
+            <PreviewWindow />
+          </div>
+
+          <!-- 右侧分割器 -->
+          <div
+            class="splitter vertical"
+            @mousedown="startRightResize"
+            :class="{ dragging: isRightDragging }"
+          ></div>
+
+          <!-- 右侧：属性面板 -->
+          <div class="properties-panel-container" :style="{ width: rightPanelWidth + 'px' }">
+            <UnifiedPropertiesPanel />
+          </div>
+        </div>
+
+        <!-- 可拖动的分割器 -->
+        <div
+          class="splitter horizontal"
+          @mousedown="startResize"
+          :class="{ dragging: isDragging }"
+        ></div>
+
+        <!-- 时间轴区域 -->
+        <div class="timeline-section" :style="{ height: timelineHeight + '%' }">
+          <!-- 片段管理工具栏在时间刻度上方 -->
+          <div class="clip-management-toolbar">
+            <UnifiedClipManagementToolbar />
+          </div>
+          <!-- 只有WebAV初始化完成后才显示Timeline -->
+          <UnifiedTimeline v-if="unifiedStore.isWebAVReady" />
+          <div v-else class="timeline-loading">
+            <div class="loading-spinner"></div>
+            <p>{{ t('editor.initializingWebAV') }}</p>
+          </div>
+        </div>
       </div>
 
-      <!-- 左侧分割器 -->
+      <!-- 中间垂直分割器 -->
       <div
-        class="splitter vertical left-splitter"
-        @mousedown="startLeftResize"
-        :class="{ dragging: isLeftDragging }"
+        class="splitter vertical"
+        @mousedown="startMainResize"
+        :class="{ dragging: isMainDragging }"
       ></div>
 
-      <!-- 中间：预览窗口（包含控制面板和分辨率弹窗） -->
-      <div class="preview-center">
-        <PreviewWindow />
-      </div>
-
-      <!-- 右侧分割器 -->
-      <div
-        class="splitter vertical right-splitter"
-        @mousedown="startRightResize"
-        :class="{ dragging: isRightDragging }"
-      ></div>
-
-      <!-- 右侧：属性面板 -->
-      <div class="properties-panel-container" :style="{ width: rightPanelWidth + 'px' }">
-        <UnifiedPropertiesPanel />
-      </div>
-    </div>
-
-    <!-- 可拖动的分割器 -->
-    <div
-      class="splitter horizontal"
-      @mousedown="startResize"
-      :class="{ dragging: isDragging }"
-    ></div>
-
-    <!-- 时间轴区域 -->
-    <div class="timeline-section" :style="{ height: timelineHeight + '%' }">
-      <!-- 片段管理工具栏在时间刻度上方 -->
-      <div class="clip-management-toolbar">
-        <UnifiedClipManagementToolbar />
-      </div>
-      <!-- 只有WebAV初始化完成后才显示Timeline -->
-      <UnifiedTimeline v-if="unifiedStore.isWebAVReady" />
-      <div v-else class="timeline-loading">
-        <div class="loading-spinner"></div>
-        <p>{{ t('editor.initializingWebAV') }}</p>
+      <!-- 右侧：新面板 -->
+      <div class="right-panel" :style="{ width: rightPanelWidthPercent + '%' }">
+        <div class="right-panel-header">
+          <h3>右侧：新面板</h3>
+        </div>
+        <div class="right-panel-content">
+          <!-- 这里可以添加新面板的内容 -->
+          <p>这里可以添加新面板的内容</p>
+        </div>
       </div>
     </div>
   </div>
@@ -60,14 +84,11 @@ import { ref, computed, watch, onUnmounted, onMounted } from 'vue'
 import PreviewWindow from './PreviewWindow.vue'
 import UnifiedMediaLibrary from '@/unified/components/UnifiedMediaLibrary.vue'
 import UnifiedTimeline from '@/unified/components/UnifiedTimeline.vue'
-import UnifiedPlaybackControls from '@/unified/components/UnifiedPlaybackControls.vue'
 import UnifiedClipManagementToolbar from '@/unified/components/UnifiedClipManagementToolbar.vue'
 import UnifiedPropertiesPanel from '@/unified/components/UnifiedPropertiesPanel.vue'
-import RemixIcon from './icons/RemixIcon.vue'
 import { useUnifiedStore } from '@/unified/unifiedStore'
 import { useKeyboardShortcuts } from '@/unified/composables'
 import { logWebAVReadyStateChange, logComponentLifecycle } from '@/unified/utils/webavDebug'
-import { framesToTimecode } from '@/unified/utils/timeUtils'
 import { useAppI18n } from '@/unified/composables/useI18n'
 
 const unifiedStore = useUnifiedStore()
@@ -123,11 +144,18 @@ const rightPanelWidth = ref(400) // 右侧属性面板宽度
 const isLeftDragging = ref(false)
 const isRightDragging = ref(false)
 
+// 主内容区域分割相关
+const leftContentWidth = ref(75) // 左侧内容区域占75%
+const rightPanelWidthPercent = ref(25) // 右侧面板占25%
+const isMainDragging = ref(false)
+
 let startY = 0
 let startPreviewHeight = 0
 let startX = 0
 let startLeftWidth = 0
 let startRightWidth = 0
+let startMainX = 0
+let startLeftContentWidth = 0
 
 // 开始拖动
 const startResize = (event: MouseEvent) => {
@@ -248,6 +276,43 @@ const stopRightResize = () => {
   document.body.style.userSelect = ''
 }
 
+// 主分割器拖拽
+const startMainResize = (event: MouseEvent) => {
+  isMainDragging.value = true
+  startMainX = event.clientX
+  startLeftContentWidth = leftContentWidth.value
+
+  document.addEventListener('mousemove', handleMainResize)
+  document.addEventListener('mouseup', stopMainResize)
+  document.body.style.cursor = 'ew-resize'
+  document.body.style.userSelect = 'none'
+}
+
+const handleMainResize = (event: MouseEvent) => {
+  if (!isMainDragging.value) return
+
+  const deltaX = event.clientX - startMainX
+  const container = document.querySelector('.video-preview-engine')
+  const containerWidth = container ? container.clientWidth : window.innerWidth
+  const deltaPercent = (deltaX / containerWidth) * 100
+
+  let newLeftContentWidth = startLeftContentWidth + deltaPercent
+
+  // 限制最小和最大宽度
+  newLeftContentWidth = Math.max(50, Math.min(90, newLeftContentWidth))
+
+  leftContentWidth.value = newLeftContentWidth
+  rightPanelWidthPercent.value = 100 - newLeftContentWidth
+}
+
+const stopMainResize = () => {
+  isMainDragging.value = false
+  document.removeEventListener('mousemove', handleMainResize)
+  document.removeEventListener('mouseup', stopMainResize)
+  document.body.style.cursor = ''
+  document.body.style.userSelect = ''
+}
+
 // 清理事件监听器
 onUnmounted(() => {
   document.removeEventListener('mousemove', handleResize)
@@ -256,6 +321,8 @@ onUnmounted(() => {
   document.removeEventListener('mouseup', stopLeftResize)
   document.removeEventListener('mousemove', handleRightResize)
   document.removeEventListener('mouseup', stopRightResize)
+  document.removeEventListener('mousemove', handleMainResize)
+  document.removeEventListener('mouseup', stopMainResize)
   window.removeEventListener('resize', adjustPanelWidths)
 })
 </script>
@@ -269,6 +336,21 @@ onUnmounted(() => {
   background-color: var(--color-bg-primary);
   color: var(--color-text-primary);
   padding: var(--spacing-sm);
+  overflow: hidden;
+}
+
+.main-content {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: row;
+  overflow: hidden;
+}
+
+.left-content {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
 }
 
@@ -435,5 +517,38 @@ onUnmounted(() => {
 
 .aspect-ratio-text {
   font-family: monospace;
+}
+
+/* 右侧面板样式 */
+.right-panel {
+  flex-shrink: 0;
+  background-color: var(--color-bg-secondary);
+  border-radius: var(--border-radius-medium);
+  min-width: 100px;
+  max-width: 50%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.right-panel-header {
+  padding: var(--spacing-md);
+  border-bottom: 1px solid var(--color-border-primary);
+  background-color: var(--color-bg-tertiary);
+  flex-shrink: 0;
+}
+
+.right-panel-header h3 {
+  margin: 0;
+  font-size: var(--font-size-lg);
+  color: var(--color-text-primary);
+  font-weight: 500;
+}
+
+.right-panel-content {
+  flex: 1;
+  padding: var(--spacing-md);
+  overflow-y: auto;
+  color: var(--color-text-secondary);
 }
 </style>
