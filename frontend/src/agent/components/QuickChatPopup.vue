@@ -44,7 +44,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick, onUnmounted } from 'vue'
 import { useUnifiedStore } from '@/unified/unifiedStore'
-import RemixIcon from './icons/RemixIcon.vue'
+import RemixIcon from '@/components/icons/RemixIcon.vue'
 
 const props = defineProps<{
   show: boolean

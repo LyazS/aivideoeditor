@@ -35,7 +35,7 @@
 import { ref, onMounted } from 'vue'
 // import QuickChatPopup from './QuickChatPopup.vue'
 import QuickChatBubble from './QuickChatBubble.vue'
-import RemixIcon from './icons/RemixIcon.vue'
+import RemixIcon from '@/components/icons/RemixIcon.vue'
 
 const x = ref(0)
 const y = ref(0)
