@@ -6,11 +6,19 @@
         <RemixIcon name="sparkling-2-fill" size="md" />
         <h3>{{ t('common.chat.agent') }}</h3>
       </div>
-      <HoverButton @click="$emit('close')" :title="t('common.close')">
-        <template #icon>
-          <RemixIcon name="close-line" size="lg" />
-        </template>
-      </HoverButton>
+
+      <div class="header-buttons">
+        <HoverButton>
+          <template #icon>
+            <RemixIcon name="history-line" size="lg" />
+          </template>
+        </HoverButton>
+        <HoverButton @click="$emit('close')" :title="t('common.close')">
+          <template #icon>
+            <RemixIcon name="close-line" size="lg" />
+          </template>
+        </HoverButton>
+      </div>
     </div>
 
     <!-- 消息列表 -->
@@ -56,13 +64,13 @@ const messages = ref<ChatMessage[]>([
 - **音频处理**：音频优化和背景音乐建议
 
 有什么可以帮助你的吗？`,
-    timestamp: '10:00'
+    timestamp: '10:00',
   },
   {
     id: '2',
     type: 'user',
     content: '请帮我分析这个视频的主要内容',
-    timestamp: '10:01'
+    timestamp: '10:01',
   },
   {
     id: '3',
@@ -83,7 +91,7 @@ const messages = ref<ChatMessage[]>([
 > - \`溶解过渡\`效果
 
 需要我详细解释这些效果吗？`,
-    timestamp: '10:02'
+    timestamp: '10:02',
   },
   {
     id: '4',
@@ -112,8 +120,8 @@ const addTransition = (scene1, scene2, type = 'fade') => {
 \`\`\`
 
 **总体评价**：这是一个制作精良的城市风景视频！`,
-    timestamp: '10:03'
-  }
+    timestamp: '10:03',
+  },
 ])
 
 // 简单的AI回复逻辑
@@ -131,7 +139,7 @@ const getAIResponse = (userInput: string): string => {
 1. 可以调整亮度对比度
 2. 添加一些过渡效果
 3. 考虑音频同步优化`,
-    
+
     `## 特效建议
 
 根据视频内容，我建议你可以尝试以下特效：
@@ -142,7 +150,7 @@ const getAIResponse = (userInput: string): string => {
 - **动态文字**：添加说明信息
 
 > 💡 **专业提示**：特效要适度使用，避免过度处理。`,
-    
+
     `## 音频优化建议
 
 我注意到视频的节奏很好，音频处理建议：
@@ -162,7 +170,7 @@ const optimizeAudio = (audioTrack) => {
     .enhance();
 };
 \`\`\``,
-    
+
     `## 色彩分析
 
 这个视频的画面质量很不错！
@@ -176,7 +184,7 @@ const optimizeAudio = (audioTrack) => {
 1. 使用 \`色彩平衡\` 工具微调
 2. 添加 \`LUT滤镜\` 增强氛围
 3. 调整 \`色温\` 让画面更生动`,
-    
+
     `## 编辑建议
 
 看起来你在视频编辑方面很有经验！
@@ -187,9 +195,9 @@ const optimizeAudio = (audioTrack) => {
 - [ ] 调整色彩参数
 - [ ] 导出最终版本
 
-有什么具体的编辑需求吗？我很乐意为你提供详细指导！`
+有什么具体的编辑需求吗？我很乐意为你提供详细指导！`,
   ]
-  
+
   // 根据输入内容返回相关回复
   if (userInput.includes('分析') || userInput.includes('内容')) {
     return `## 深度分析报告
@@ -275,18 +283,18 @@ const handleSendMessage = (message: string) => {
     id: Date.now().toString(),
     type: 'user',
     content: message,
-    timestamp: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+    timestamp: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
   }
-  
+
   messages.value.push(userMessage)
-  
+
   // 模拟AI回复
   setTimeout(() => {
     const aiMessage: ChatMessage = {
       id: (Date.now() + 1).toString(),
       type: 'ai',
       content: getAIResponse(message),
-      timestamp: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+      timestamp: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
     }
     messages.value.push(aiMessage)
   }, 1000)
@@ -300,11 +308,5 @@ const handleSendMessage = (message: string) => {
   height: 100%;
   display: flex;
   flex-direction: column;
-}
-
-.header-left {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-sm);
 }
 </style>
