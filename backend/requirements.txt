@@ -1,3 +1,11 @@
-fastapi==0.104.1
-uvicorn[standard]==0.24.0
-python-multipart==0.0.6
+fastapi
+uvicorn[standard]
+python-multipart
+pydantic
+typing-extensions
+openai
+loguru
+pytest
+pytest-asyncio
+httpx
+python-dotenv

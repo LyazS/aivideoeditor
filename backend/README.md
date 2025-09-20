@@ -1,61 +1,109 @@
-# AI Video Editor Backend
+# AI聊天后端
 
-一个简单的FastAPI后端，用于测试网络素材功能。
+基于FastAPI的流式AI聊天后端服务，支持会话管理和纯文本流式响应。
 
-## 安装依赖
+## 功能特性
 
+- ✅ 会话创建与管理
+- ✅ 消息历史记录
+- ✅ 纯文本流式响应
+- ✅ 异步处理
+- ✅ 内存存储（开发环境）
+
+## API端点
+
+### 1. 创建会话
+```http
+POST /api/chat/create-session
+```
+响应：
+```json
+{
+    "session_id": "chat_7f8a9b2c_3d4e_5f6g_7h8i_9j0k1l2m3n4o",
+    "created_at": "2025-01-20T12:15:30Z"
+}
+```
+
+### 2. 发送消息（流式响应）
+```http
+POST /api/chat/send-message
+Content-Type: application/json
+
+{
+    "session_id": "chat_7f8a9b2c_3d4e_5f6g_7h8i_9j0k1l2m3n4o",
+    "message": "用户输入的消息内容"
+}
+```
+响应：`StreamingResponse` (text/plain) - 纯文本流式传输
+
+### 3. 获取会话历史
+```http
+GET /api/chat/session/{session_id}/history
+```
+响应：
+```json
+{
+    "session_id": "chat_7f8a9b2c_3d4e_5f6g_7h8i_9j0k1l2m3n4o",
+    "messages": [
+        {
+            "role": "user",
+            "content": "你好",
+            "timestamp": "2025-01-20T12:15:35Z"
+        }
+    ]
+}
+```
+
+### 4. 健康检查
+```http
+GET /health
+```
+
+## 快速开始
+
+### 安装依赖
 ```bash
 pip install -r requirements.txt
 ```
 
-## 运行服务器
-
+### 启动服务
 ```bash
 python main.py
 ```
-
-服务器将在 `http://localhost:8900` 启动。
-
-## API 端点
-
-### 1. 获取媒体文件
-- **URL**: `GET /media/{file_name}`
-- **描述**: 根据文件名获取媒体文件
-- **参数**: 
-  - `file_name`: 要获取的文件名
-- **示例**: `GET /media/video.mp4`
-
-### 2. 列出所有媒体文件
-- **URL**: `GET /media`
-- **描述**: 获取所有可用媒体文件的列表（自动过滤非媒体文件）
-- **支持的格式**:
-  - 视频: mp4, avi, mov, mkv, wmv, flv, webm, m4v, 3gp
-  - 音频: mp3, wav, aac, flac, ogg, m4a, wma
-  - 图片: jpg, jpeg, png, gif, bmp, webp, svg, tiff
-- **返回**: 包含文件信息的JSON数组，每个文件包含name、size、url、type字段
-
-### 3. 健康检查
-- **URL**: `GET /`
-- **描述**: 检查服务器是否正常运行
-
-## 配置
-
-在 `main.py` 中修改 `MEDIA_FILES_PATH` 变量来指定媒体文件存储路径：
-
-```python
-MEDIA_FILES_PATH = "./media_files"  # 修改为你想要的路径
+或使用uvicorn：
+```bash
+uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-## 使用说明
+### 测试
+运行测试脚本：
+```bash
+python test_chat.py
+```
 
-1. 将你的测试媒体文件放在 `MEDIA_FILES_PATH` 指定的目录中
-2. 启动服务器
-3. 通过 `http://localhost:8900/media/文件名` 访问文件
-4. 通过 `http://localhost:8900/media` 查看所有可用文件
+## 配置参数
 
-## 示例
+- 会话过期时间：24小时
+- 最大消息长度：4000字符
+- 最大历史消息数：10条
+- 流式分块大小：1024字节
+- 流式响应超时：30秒
 
-假设你在 `./media_files` 目录中放了一个 `test.mp4` 文件：
+## 错误处理
 
-- 访问文件: `http://localhost:8900/media/test.mp4`
-- 查看所有文件: `http://localhost:8900/media`
+- `400 Bad Request`: 请求参数错误
+- `404 Not Found`: 会话不存在
+- `413 Payload Too Large`: 消息过长
+- `500 Internal Server Error`: AI服务异常
+
+## 开发说明
+
+当前版本使用内存存储，适合开发测试环境。生产环境建议使用Redis或数据库存储。
+
+## 测试示例
+
+测试脚本会自动执行以下测试：
+1. 健康检查
+2. 创建会话
+3. 多轮对话测试
+4. 获取会话历史
