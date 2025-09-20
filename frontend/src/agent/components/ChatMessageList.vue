@@ -1,6 +1,7 @@
 <template>
   <div class="chat-messages-container" ref="messagesContainer">
-    <ChatMessageComponent
+    <component
+      :is="getMessageComponent(message.type)"
       v-for="message in messages"
       :key="message.id"
       :message="message"
@@ -9,9 +10,30 @@
 </template>
 
 <script setup lang="ts">
-import { ref, nextTick, watch } from 'vue'
-import ChatMessageComponent from '@/agent/components/ChatMessage.vue'
+import { ref, nextTick, watch, provide } from 'vue'
+import MarkdownIt from 'markdown-it'
+import UserChatMessage from '@/agent/components/UserChatMessage.vue'
+import AIChatMessage from '@/agent/components/AIChatMessage.vue'
 import type { ChatMessage } from './types'
+
+// 根据消息类型返回对应的组件
+const getMessageComponent = (type: 'user' | 'ai') => {
+  return type === 'user' ? UserChatMessage : AIChatMessage
+}
+
+// 创建共享的markdown-it实例
+const md = new MarkdownIt({
+  html: true,
+  linkify: true,
+  typographer: true
+})
+
+// 提供markdown渲染函数给子组件
+const renderMarkdown = (content: string) => {
+  return md.render(content)
+}
+
+provide('renderMarkdown', renderMarkdown)
 
 const props = defineProps<{
   messages: ChatMessage[]

@@ -63,216 +63,189 @@ const messages = ref<ChatMessage[]>([
 - **效果推荐**：推荐适合的过渡效果和滤镜
 - **音频处理**：音频优化和背景音乐建议
 
+### 支持的格式示例：
+
+**Markdown 格式支持：**
+- 标题、列表、表格、代码块
+- 引用、链接、图片
+- 任务清单、强调文本
+
+**XML 工具标签：**
+- 文件搜索、读取、列表
+- 项目分析和处理
+
 有什么可以帮助你的吗？`,
     timestamp: '10:00',
   },
   {
     id: '2',
     type: 'user',
-    content: '请帮我分析这个视频的主要内容',
+    content: '请展示 XML 工具的使用示例',
     timestamp: '10:01',
   },
   {
     id: '3',
     type: 'ai',
-    content: `我看到这是一个关于城市风景的视频，包含了多个场景切换。
+    content: `## XML 工具使用示例
 
-### 主要发现：
+我可以帮你使用各种 XML 工具来分析和处理项目文件：
 
-1. **场景数量**：检测到5个不同的城市场景
-2. **拍摄质量**：画面清晰，色彩饱和度良好
-3. **节奏控制**：场景切换较为自然
+### 🔧 标准工具示例：
 
-### 建议改进：
+**1. 搜索文件：**
+<search_contents>
+<path>src</path>
+<regex>function.*test</regex>
+<file_pattern>*.ts</file_pattern>
+</search_contents>
 
-> 建议你可以添加一些**过渡效果**来让场景转换更加自然，比如：
-> - \`淡入淡出\`效果
-> - \`滑动切换\`效果
-> - \`溶解过渡\`效果
+**2. 读取文件：**
+<read_content>
+<path>/Users/airzostorm/Documents/aivideoeditor/package.json</path>
+<start_line>1</start_line>
+<end_line>20</end_line>
+</read_content>
 
-需要我详细解释这些效果吗？`,
+**3. 列出目录：**
+<list_contents>
+<path>/Users/airzostorm/Documents/aivideoeditor/src/components</path>
+<recursive>true</recursive>
+</list_contents>
+
+### 📋 可用的 XML 工具：
+
+1. **search_contents** - 搜索文件内容
+2. **read_content** - 读取文件内容
+3. **list_contents** - 列出目录文件
+
+### 🎯 使用场景：
+
+- 📁 **文件管理**：查找特定类型的文件
+- 🔍 **代码搜索**：搜索特定的代码模式
+- 📖 **文档查看**：读取配置文件或文档
+
+需要我帮你使用这些工具吗？`,
     timestamp: '10:02',
-  },
-  {
-    id: '4',
-    type: 'ai',
-    content: `## 技术参数分析
-
-| 参数 | 数值 | 评价 |
-|------|------|------|
-| 分辨率 | 1920×1080 | ✅ 高清 |
-| 帧率 | 30fps | ✅ 标准 |
-| 时长 | 2:34 | ✅ 适中 |
-| 码率 | 8.5Mbps | ✅ 良好 |
-
-### 代码示例
-如果你需要添加转场效果，可以使用以下代码：
-
-\`\`\`javascript
-const addTransition = (scene1, scene2, type = 'fade') => {
-  return {
-    from: scene1,
-    to: scene2,
-    transition: type,
-    duration: '1s'
-  };
-};
-\`\`\`
-
-**总体评价**：这是一个制作精良的城市风景视频！`,
-    timestamp: '10:03',
   },
 ])
 
 // 简单的AI回复逻辑
 const getAIResponse = (userInput: string): string => {
-  const responses = [
-    `## 分析结果
-
-这是一个很好的问题！让我为你分析一下视频内容：
-
-- **画面质量**：清晰度良好
-- **色彩搭配**：色调协调
-- **节奏控制**：过渡自然
-
-### 建议改进：
-1. 可以调整亮度对比度
-2. 添加一些过渡效果
-3. 考虑音频同步优化`,
-
-    `## 特效建议
-
-根据视频内容，我建议你可以尝试以下特效：
-
-### 视觉效果：
-- **模糊转场**：营造梦幻感
-- **色彩调整**：增强视觉冲击力
-- **动态文字**：添加说明信息
-
-> 💡 **专业提示**：特效要适度使用，避免过度处理。`,
-
-    `## 音频优化建议
-
-我注意到视频的节奏很好，音频处理建议：
-
-| 音频元素 | 建议 |
-|----------|------|
-| 背景音乐 | 选择节奏匹配的音乐 |
-| 音量平衡 | 确保对话清晰度 |
-| 音效添加 | 适当增强关键节点 |
-
-\`\`\`javascript
-// 音频处理示例
-const optimizeAudio = (audioTrack) => {
-  return audioTrack
-    .normalize()
-    .compress()
-    .enhance();
-};
-\`\`\``,
-
-    `## 色彩分析
-
-这个视频的画面质量很不错！
-
-**色彩统计**：
-- 主色调：暖色系 🔴
-- 饱和度：适中 📊
-- 对比度：良好 ⚡
-
-建议你可以：
-1. 使用 \`色彩平衡\` 工具微调
-2. 添加 \`LUT滤镜\` 增强氛围
-3. 调整 \`色温\` 让画面更生动`,
-
-    `## 编辑建议
-
-看起来你在视频编辑方面很有经验！
-
-### 下一步建议：
-- [ ] 添加转场效果
-- [ ] 优化音频同步
-- [ ] 调整色彩参数
-- [ ] 导出最终版本
-
-有什么具体的编辑需求吗？我很乐意为你提供详细指导！`,
-  ]
-
   // 根据输入内容返回相关回复
-  if (userInput.includes('分析') || userInput.includes('内容')) {
-    return `## 深度分析报告
+  if (userInput.includes('xml') || userInput.includes('工具')) {
+    return `## XML 工具使用指南
 
-我已经全面分析了你的视频内容：
+我可以帮你使用各种 XML 工具来分析和处理项目！
 
-### 📊 内容分析
-- **主题识别**：${userInput.includes('城市') ? '城市风景' : '视频内容'}
-- **场景检测**：发现多个场景切换
-- **质量评估**：制作精良，技术参数良好
+### 🔧 标准工具示例：
 
-### 🎯 关键发现
-1. **视觉元素丰富**，构图合理
-2. **节奏控制得当**，过渡自然
-3. **技术质量达标**，观感良好
+**1. 搜索文件：**
+<search_contents>
+<path>src</path>
+<regex>function.*test</regex>
+<file_pattern>*.ts</file_pattern>
+</search_contents>
 
-### 💡 个性化建议
-建议你可以添加一些**文字说明**和**标注**来帮助观众更好地理解内容。
+**2. 读取文件：**
+<read_content>
+<path>/Users/airzostorm/Documents/aivideoeditor/package.json</path>
+<start_line>1</start_line>
+<end_line>20</end_line>
+</read_content>
 
-需要我详细解释某个方面吗？`
-  } else if (userInput.includes('效果') || userInput.includes('特效')) {
-    return `## 特效推荐方案
+**3. 列出目录：**
+<list_contents>
+<path>/Users/airzostorm/Documents/aivideoeditor/src/components</path>
+<recursive>true</recursive>
+</list_contents>
 
-根据你的需求，我建议以下**过渡效果**：
+### ⚠️ 错误使用示例：
 
-### 🎬 视觉过渡
-- **\`淡入淡出\`**：最自然的选择
-- **\`滑动切换\`**：动感十足
-- **\`溶解过渡\`**：梦幻效果
+**1. 缺少必需参数：**
+<search_contents>
+<path>src</path>
+</search_contents>
 
-### ⚙️ 技术实现
-\`\`\`css
-/* CSS过渡效果示例 */
-.transition-fade {
-  transition: opacity 0.5s ease-in-out;
-}
-\`\`\`
+**2. 行号逻辑错误：**
+<read_content>
+<path>/Users/airzostorm/Documents/aivideoeditor/README.md</path>
+<start_line>50</start_line>
+<end_line>10</end_line>
+</read_content>
 
-### 📈 效果对比
-| 效果类型 | 适用场景 | 强度 |
-|----------|----------|------|
-| 淡入淡出 | 自然过渡 | ⭐⭐⭐ |
-| 滑动切换 | 动感场景 | ⭐⭐⭐⭐ |
-| 溶解过渡 | 梦幻效果 | ⭐⭐⭐⭐⭐ |
+### 📋 可用的 XML 工具：
 
-需要我详细解释这些效果吗？`
-  } else if (userInput.includes('音乐') || userInput.includes('音频')) {
-    return `## 音频处理专业指南
+1. **search_contents** - 搜索文件内容
+2. **read_content** - 读取文件内容
+3. **list_contents** - 列出目录文件
 
-音频是视频的重要组成部分！
+### 🎯 使用场景：
 
-### 🎵 音乐选择原则
-- **节奏匹配**：BPM与视频节奏同步
-- **情感契合**：音乐情绪与内容匹配
-- **版权安全**：使用授权音乐
+- 📁 **文件管理**：查找特定类型的文件
+- 🔍 **代码搜索**：搜索特定的代码模式
+- 📖 **文档查看**：读取配置文件或文档
 
-### 🔧 技术处理
+需要我帮你使用这些工具吗？`
+  } else if (userInput.includes('markdown') || userInput.includes('格式')) {
+    return `## Markdown 格式支持
+
+我支持各种 Markdown 格式来让回复更清晰：
+
+### 📝 基础格式：
+
+**标题：**
+# 一级标题
+## 二级标题
+### 三级标题
+
+**列表：**
+- 无序列表项
+- 另一个项目
+  - 子项目
+
+**强调：**
+- *斜体文本*
+- **粗体文本**
+- \`代码片段\`
+
+### 📊 高级格式：
+
+**表格：**
+| 工具名称 | 功能描述 | 使用场景 |
+|----------|----------|----------|
+| search_contents | 搜索文件 | 代码查找 |
+| read_content | 读取文件 | 文档查看 |
+| list_contents | 列出目录 | 文件管理 |
+
+**代码块：**
 \`\`\`javascript
-// 音频处理流程
-const processAudio = (audioTrack, videoBPM) => {
-  return audioTrack
-    .matchBPM(videoBPM)     // 节奏匹配
-    .normalize(-14)         // 音量标准化
-    .compress(3:1)          // 动态压缩
-    .EQ('gentle')           // 均衡器调整
-    .limit(-1);             // 限幅处理
+// JavaScript 代码示例
+const example = () => {
+  console.log('Hello World!');
 };
 \`\`\`
 
-### ⚖️ 音量平衡技巧
-> **黄金法则**：背景音乐不超过-18dB，主要音频保持-12dB到-6dB
+**引用：**
+> 这是一个引用块
+> 可以包含重要提示
 
-需要更详细的音频处理指导吗？`
+需要我展示其他格式吗？`
   } else {
-    return responses[Math.floor(Math.random() * responses.length)]
+    return `## 示例回复
+
+这是一个使用 **Markdown** 格式的示例回复：
+
+### 主要功能：
+- ✅ 支持各种文本格式
+- ✅ 可以包含代码示例
+- ✅ 支持表格和列表
+
+\`\`\`javascript
+// 代码示例
+const example = "Hello World";
+\`\`\`
+
+需要了解 **XML 工具** 或 **Markdown 格式** 的更多信息吗？`
   }
 }
 
